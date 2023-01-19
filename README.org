@@ -1,0 +1,54 @@
+#+TITLE: Operating Systems Capstone 2023
+#+OPTIONS: toc:nil
+
+This repository is used for homework submission.
+
+*To protect your rights, please create a pull request (PR) before the demo and*
+*make sure the TA has merged your PR after the demo.*
+
+* How To Submit Homework
+
+** Overview
+For those who are familiar with git.
+1. TA creates a branch named your student ID.
+2. You fork this repo.
+3. Base on the =<student id>= branch, you do your labs and put your code in the
+   forked repo.
+4. Create a PR to the =<student id>= branch in this repo to submit the homework.
+5. TA merges the PR as a proof that you have demo the lab.
+
+** Fork The Repo
+Fork the repository on Github.
+Uncheck the "Copy the =main= branch only".
+If you don't want to see a lot of redundant branches in the forked repo, keep
+the checkbox checked and follow the [[git-usage.org][guide]] to fetch your own branch.
+
+** Clone To Your Computer
+Clone the forked repo and switch to the branch named your student id.
+If you cannot find your branch, ask TAs for help.
+
+** Specify Personal Information
+Write down the following info in your =README.md= (or =README.org=, =README.rst=
+etc.)
++ Github account name
++ Student ID
++ Your name
++ Any other information you want
+
+** Implement Your Kernel
+Design and implement your kernel in the forked repository.
+#+BEGIN_QUOTE
+  Make good use of =.gitignore=. In the git history, we do not want to see
+  binaries, objetive files, __MACOSX, python caches, super large test files,
+  or any file that can be compiled from your source code.
+#+END_QUOTE
+
+** Create PR
+Create a Github pull request before your demo. Once the PR is created, you can
+always push additional commits to your forked repo before the PR is merged. The
+changes will automatically appear within the PR.
+
+* Happy Coding ~
+As long as you meet the above requirements and the PR can be merged without
+conflicts, we do not care about what the forked repo look like. You can rename
+your branch, change the default branch, or do whatever you want.
