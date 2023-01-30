@@ -4,7 +4,7 @@
 This repository is used for homework submission.
 
 *To protect your rights, please create a pull request (PR) before the demo and*
-*make sure the TA has merged your PR after the demo.*
+*make sure the TA merges your PR after the demo.*
 
 * How To Submit Homework
 
