@@ -5,17 +5,18 @@
 
 1. Add osc2023 as the upstream
    #+BEGIN_SRC shell
-   git remote upstream https://github.com/oscapstone/osc2023.git
+     git remote add -t <your student id> upstream https://github.com/oscapstone/osc2023.git
+     git fetch upstream
    #+END_SRC
 
 2. Checkout your branch from the upstream
   #+BEGIN_SRC shell
-  git checkout --track upstream/<your student id>
+    git checkout -b <local branch name> upstream/<your student id>
   #+END_SRC
 
 3. Push the branch to your forked repo
   #+BEGIN_SRC shell
-  git push origin <your student id>
+    git push -u origin <local branch name>
   #+END_SRC
 
 ** How to remove a file from the git history?
