@@ -55,8 +55,8 @@ Here is an example [[https://github.com/psychicalcoder/osc2023/blob/0816171/READ
 Design and implement your kernel in the forked repository.
 #+BEGIN_QUOTE
   Make good use of =.gitignore=. In the git history, we do not want to see
-  binaries, objetive files, __MACOSX, python caches, super large test files,
-  or any file that can be compiled from your source code.
+  binaries, objective files, __MACOSX, python caches, super large test files,
+  or any files that can be compiled from your source code.
 #+END_QUOTE
 
 ** Create a PR
