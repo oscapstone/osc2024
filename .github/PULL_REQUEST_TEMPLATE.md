@@ -1,5 +1,5 @@
 ## Self-Check
-- [ ] The base branch is belong to me.
+- [ ] The base branch belongs to me.
 - [ ] There are no large files, useless binaries, or temporary files in the new commits.
 - [ ] The PR name contains my student ID and lab assignment number. eg. `0816171 lab0`
 
