@@ -30,7 +30,7 @@ SRC_ASM = $(wildcard $(SRC_DIR)/*.S)
 SRC_OBJS = $(SRC_C:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
 SRC_OBJS += $(SRC_ASM:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
 
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude -c
+CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude -c -g
 
 TOOLCHAIN = aarch64-none-linux-gnu
 # TOOLCHAIN = /Users/robert/Downloads/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu
@@ -60,6 +60,9 @@ run:
 
 tty:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial pty
+
+gdb:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s
 
 # utility
 

@@ -29,7 +29,7 @@ SRC_C = $(wildcard $(SRC_DIR)/*.c)
 SRC_ASM = $(wildcard $(SRC_DIR)/*.S)
 SRC_OBJS = $(SRC_C:$(SRC_DIR)/%.c=$(BUILD_DIR)/src/%.o)
 SRC_OBJS += $(SRC_ASM:$(SRC_DIR)/%.S=$(BUILD_DIR)/src/%.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude -Ilibrary -c
+CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude -Ilibrary -c -g
 
 TOOLCHAIN = aarch64-none-linux-gnu
 # TOOLCHAIN = /Users/robert/Downloads/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu
@@ -75,6 +75,9 @@ dtb: initramfs.cpio
 
 tty:
 	qemu-system-aarch64 -M raspi3b -serial null -serial pty
+
+gdb:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial stdio -S -s
 
 sendimg:
 	python sendimg.py kernel8.img /dev/cu.usbserial-0001

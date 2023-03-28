@@ -125,13 +125,66 @@ void initrd_cat()
     uart_puts("File not found\n");
 }
 
+void initrd_usr_prog()
+{
+    char *buf = cpio_base;
+    // if (memcmp(buf, "070701", 6))
+    //     return;
+    
+    // if it's a cpio newc archive. Cpio also has a trailer entry
+    while(!memcmp(buf,"070701",6) && memcmp(buf+sizeof(cpio_f),"TRAILER!!",9)) {
+        cpio_f *header = (cpio_f*) buf;
+        int ns = hex2bin(header->namesize, 8);
+        int fs = hex2bin(header->filesize, 8);
+
+        // check filename with buffer
+        if (!strcmp("user_program", buf + sizeof(cpio_f))) {
+            if (fs == 0) {
+                uart_send('\n');
+                uart_puts("user_program is empty.\n");
+                return;
+            } else {
+                uart_puts("Into user_program.\n");
+                // get program start address
+                char *prog_addr = buf + sizeof(cpio_f) + ns;
+                
+                // Setup execution level
+                
+                // set spsr_el1 to 0x3c0
+                asm volatile (
+                    "mov x0, 0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
+                    "msr spsr_el1, x0\n\t"
+                    "msr elr_el1, %0\n\t"::"r"(prog_addr)
+                );
+
+
+                unsigned long el;
+                asm volatile ("mov %0, x30\n\t" : "=r" (el));
+
+                uart_puts("Current lr is: ");
+                uart_hex(el);
+                uart_puts("\n");
+
+                // jump to user_program and execute
+
+                
+                return;
+            }
+        }
+
+        // jump to the next file
+        buf+=(sizeof(cpio_f) + ns + fs);
+    }
+    uart_puts("File not found\n");
+}
+
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
 {
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
-        cpio_base = bswap_32(load_addr);
+        cpio_base = (char *) bswap_32(load_addr);
         uart_puts("cpio_base: ");
-        uart_hex(cpio_base);
+        uart_hex((int) cpio_base);
         uart_send('\n');
     }
 }

@@ -38,12 +38,54 @@ _start:
 2:  // cpu id == 0
 
     // get the dtb address
-    //ldr     x1, =__dtb_address
-    //str     x0, [x1]
+    ldr     x1, =__dtb_address
+    str     x0, [x1]
 
     // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     ldr     x1, =_start
-    mov     sp, x1
+
+    // set up EL1
+    mrs     x0, CurrentEL // get current EL
+    and     x0, x0, #12 // clear reserved bits
+
+    // running at EL3?
+    cmp     x0, #12
+    bne     5f
+    // should never be executed, just for completeness
+    mov     x2, #0x5b1
+    msr     scr_el3, x2 // secure comfiguration register for el 3
+    mov     x2, #0x3c9
+    msr     spsr_el3, x2 // saved program status register for el 3
+    adr     x2, 5f
+    msr     elr_el3, x2 // exception link register for el 3
+    eret
+
+    // running at EL2?
+5:  cmp     x0, #4
+    beq     5f
+    // sp_el1 is the stack pointer in el1
+    msr     sp_el1, x1 // address _start is now in x1, put it to sp_el1
+
+    // enable CNTP for EL1
+    mrs     x0, cnthctl_el2
+    orr     x0, x0, #3
+    msr     cnthctl_el2, x0
+    msr     cntvoff_el2, xzr
+
+    // enable AArch64 in EL1
+    mov     x0, #(1 << 31)      // AArch64
+    orr     x0, x0, #(1 << 1)   // SWIO hardwired on Pi3
+    msr     hcr_el2, x0
+    mrs     x0, hcr_el2
+
+    // change execution level to EL1
+    mov     x2, #0x3c4
+    msr     spsr_el2, x2 // set program status register
+    adr     x2, 5f
+    msr     elr_el2, x2 // set program counter to addr of"5f"
+    eret
+
+5:  mov     sp, x1
 
     // clear bss
     ldr     x1, =__bss_start
@@ -54,6 +96,16 @@ _start:
     cbnz    w2, 3b
 
     // jump to C code, should not return
-4:  bl      main
+4:  
+    //bl from_el2_to_el1
+    bl      main
     // for failsafe, halt this core too
     b       1b
+
+from_el2_to_el1:
+    mov x0, (1 << 31) // EL1 uses aarch64
+    msr hcr_el2, x0
+    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
+    msr spsr_el2, x0
+    msr elr_el2, x30
+    eret // return to EL1

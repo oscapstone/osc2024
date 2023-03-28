@@ -35,23 +35,20 @@
 
 void main()
 {
-    fdt_init();
     shell_init();
-
-    // get_board_revision();
-    // get_memory_info();
-
-    uart_hex(return_available());
-    uart_send('\n');
-    char *string1 = (char *) simple_malloc(sizeof(char) * 8);
-    uart_hex(string1);
-    uart_send('\n');
-
-    char *string2 = (char *) simple_malloc(sizeof(char) * 20);
-    uart_hex(string2);
-    uart_send('\n');
-
+    fdt_init();
     fdt_traverse(initramfs_callback);
+
+
+    // read the current level from system register
+    unsigned long el;
+    asm volatile ("mrs %0, CurrentEL" : "=r" (el));
+
+    uart_puts("Current EL is: ");
+    uart_hex((el>>2)&3);
+    uart_puts("\n");
+
+    initrd_usr_prog();
 
     while(1) {
         uart_puts("# ");
