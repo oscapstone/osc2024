@@ -147,23 +147,42 @@ void initrd_usr_prog()
                 uart_puts("Into user_program.\n");
                 // get program start address
                 char *prog_addr = buf + sizeof(cpio_f) + ns;
+                uart_puts("prog_addr: ");
+                uart_hex((int) prog_addr);
+                uart_send('\n');
                 
                 // Setup execution level
-                
                 // set spsr_el1 to 0x3c0
-                asm volatile (
-                    "mov x0, 0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
+                // load proper stack pointer to sp_el0
+                // asm volatile (
+                //     "mov x0, 0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
+                //     "msr spsr_el1, x0\n\t" // write to spsr_el1
+                //     "msr elr_el1, %0\n\t"::"r"(prog_addr) // write to elr_el1
+                // );
+                // asm volatile (
+                //     "mov x0, 0x60000\n\t" // EL1h (SPSel = 1) with interrupt disabled
+                //     "msr sp_el0, x0\n\t" // write to sp_el0
+                // );
+                // asm volatile (
+                //     "nop\n\t" // return to el1
+                // );
+
+                // asm volatile (
+                //     "eret\n\t" // return to el1
+                // );
+
+                asm volatile(
+                    "mov x0, 0x0\n\t"
                     "msr spsr_el1, x0\n\t"
-                    "msr elr_el1, %0\n\t"::"r"(prog_addr)
+                    "msr elr_el1, %0\n\t"
+                    "msr sp_el0, %1\n\t"
+                    "eret\n\t"
+                    ::"r"(prog_addr), 
+                    "r"(0x60000)
+                    : "x0"
                 );
 
 
-                unsigned long el;
-                asm volatile ("mov %0, x30\n\t" : "=r" (el));
-
-                uart_puts("Current lr is: ");
-                uart_hex(el);
-                uart_puts("\n");
 
                 // jump to user_program and execute
 

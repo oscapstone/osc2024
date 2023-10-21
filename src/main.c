@@ -48,7 +48,7 @@ void main()
     uart_hex((el>>2)&3);
     uart_puts("\n");
 
-    initrd_usr_prog();
+    // initrd_usr_prog();
 
     while(1) {
         uart_puts("# ");

@@ -31,7 +31,8 @@ SRC_OBJS = $(SRC_C:$(SRC_DIR)/%.c=$(BUILD_DIR)/src/%.o)
 SRC_OBJS += $(SRC_ASM:$(SRC_DIR)/%.S=$(BUILD_DIR)/src/%.o)
 CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude -Ilibrary -c -g
 
-TOOLCHAIN = aarch64-none-linux-gnu
+# TOOLCHAIN = aarch64-none-linux-gnu
+TOOLCHAIN = aarch64-none-elf
 # TOOLCHAIN = /Users/robert/Downloads/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu
 
 .PHONY: all clean
@@ -56,7 +57,7 @@ initramfs.cpio:
 	ls . | cpio -o -H newc > ../initramfs.cpio
 
 rd.o: ramdisk
-	aarch64-none-linux-gnu-ld -r -b binary -o rd.o ramdisk
+	${TOOLCHAIN}-ld -r -b binary -o rd.o ramdisk
 
 kernel8.img: $(SRC_OBJS) rd.o
 	$(TOOLCHAIN)-ld -nostdlib $(SRC_OBJS) rd.o -T link.ld -o kernel8.elf
