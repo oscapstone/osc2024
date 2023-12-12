@@ -154,38 +154,27 @@ void initrd_usr_prog()
                 // Setup execution level
                 // set spsr_el1 to 0x3c0
                 // load proper stack pointer to sp_el0
-                // asm volatile (
-                //     "mov x0, 0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
-                //     "msr spsr_el1, x0\n\t" // write to spsr_el1
-                //     "msr elr_el1, %0\n\t"::"r"(prog_addr) // write to elr_el1
-                // );
-                // asm volatile (
-                //     "mov x0, 0x60000\n\t" // EL1h (SPSel = 1) with interrupt disabled
-                //     "msr sp_el0, x0\n\t" // write to sp_el0
-                // );
-                // asm volatile (
-                //     "nop\n\t" // return to el1
-                // );
-
-                // asm volatile (
-                //     "eret\n\t" // return to el1
-                // );
-
-                asm volatile(
-                    "mov x0, 0x0\n\t"
-                    "msr spsr_el1, x0\n\t"
+                asm volatile (
+                    "mov x0, #0x3c5\n\t" // EL1h (SPSel = 1) with interrupt disabled
+                    "msr spsr_el1, x0\n\t" // write to spsr_el1
                     "msr elr_el1, %0\n\t"
-                    "msr sp_el0, %1\n\t"
-                    "eret\n\t"
-                    ::"r"(prog_addr), 
-                    "r"(0x60000)
-                    : "x0"
+                    "mov x0, #0x8000000\n\t"
+                    "msr sp_el0, x0\n\t"
+                    "eret\n\t"::"r"(prog_addr) // write to elr_el1
                 );
 
-
-
-                // jump to user_program and execute
-
+                uart_puts("End of user program\n");
+                // // Someones code
+                // asm volatile(
+                //     "mov x0, 0x0\n\t"
+                //     "msr spsr_el1, x0\n\t"
+                //     "msr elr_el1, %0\n\t"
+                //     "msr sp_el0, %1\n\t"
+                //     "eret\n\t"
+                //     ::"r"(prog_addr), 
+                //     "r"(0x60000)
+                //     : "x0"
+                // );
                 
                 return;
             }

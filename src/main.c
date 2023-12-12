@@ -42,7 +42,7 @@ void main()
 
     // read the current level from system register
     unsigned long el;
-    asm volatile ("mrs %0, CurrentEL" : "=r" (el));
+    asm volatile ("mrs %0, CurrentEL\n\t" : "=r" (el));
 
     uart_puts("Current EL is: ");
     uart_hex((el>>2)&3);

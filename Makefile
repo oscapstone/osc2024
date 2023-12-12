@@ -55,6 +55,7 @@ cpio:
 initramfs.cpio:
 	cd rootfs
 	ls . | cpio -o -H newc > ../initramfs.cpio
+	cd ..
 
 rd.o: ramdisk
 	${TOOLCHAIN}-ld -r -b binary -o rd.o ramdisk
@@ -77,11 +78,14 @@ dtb: initramfs.cpio
 tty:
 	qemu-system-aarch64 -M raspi3b -serial null -serial pty
 
-gdb:
+gdb: initramfs.cpio
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial stdio -S -s
 
 sendimg:
 	python sendimg.py kernel8.img /dev/cu.usbserial-0001
+
+user_prog:
+	$(TOOLCHAIN)-gcc -c user_program.S -o user_program
 
 commu:
 	python communicate.py /dev/cu.usbserial-0001
