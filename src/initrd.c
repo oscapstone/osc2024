@@ -151,32 +151,44 @@ void initrd_usr_prog(char *cmd)
                 uart_hex((int) prog_addr);
                 uart_send('\n');
                 
-                // Setup execution level
-                // set spsr_el1 to 0x3c0
-                // load proper stack pointer to sp_el0
-                asm volatile (
-                    "mov x0, #0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
-                    "msr spsr_el1, x0\n\t" // write to spsr_el1
-                    "msr elr_el1, %0\n\t"
-                    "mov x0, #0x90000\n\t"
-                    "msr sp_el0, x0\n\t"::"r"(prog_addr) // write to elr_el1
-                );
-                asm volatile ("nop\n\t");
-                asm volatile ("eret\n\t");
+                char *program_position = (char *)0x10A0000;
 
-                // // Someones code
-                // asm volatile(
-                //     "mov x0, 0x0\n\t"
-                //     "msr spsr_el1, x0\n\t"
+                while (fs--)
+                {
+                    *program_position = *prog_addr;
+                    program_position++;
+                    prog_addr++;
+                }
+
+                asm volatile(
+                    "mov x0, 0          \n\t"
+                    "msr spsr_el1, x0       \n\t"
+                    "mov x0, 0x10A0000      \n\t"
+                    "msr elr_el1, x0        \n\t"
+                    "mov x0, 0x60000        \n\t"
+                    "msr sp_el0, x0         \n\t"
+                    "eret                   \n\t");
+
+                // // move data from prog_addr to 0x90000
+
+                // char *dest = (char *) 0x90000;
+                // for (int i = 0; i < fs; i++) {
+                //     dest[i] = prog_addr[i];
+                // }
+                
+                // // Setup execution level
+                // // set spsr_el1 to 0x3c0
+                // // load proper stack pointer to sp_el0
+                // asm volatile (
+                //     "mov x0, #0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
+                //     "msr spsr_el1, x0\n\t" // write to spsr_el1
                 //     "msr elr_el1, %0\n\t"
-                //     "msr sp_el0, %1\n\t"
-                //     "eret\n\t"
-                //     ::"r"(prog_addr), 
-                //     "r"(0x60000)
-                //     : "x0"
+                //     "mov x0, #0x90000\n\t"
+                //     "msr sp_el0, x0\n\t"
+                //     "eret\n\t"::"r"(dest) // write to elr_el1
                 // );
                 
-                return;
+                // return;
             }
         }
 
