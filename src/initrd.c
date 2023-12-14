@@ -147,9 +147,6 @@ void initrd_usr_prog(char *cmd)
                 uart_puts("Into user_program.\n");
                 // get program start address
                 char *prog_addr = buf + sizeof(cpio_f) + ns;
-                uart_puts("prog_addr: ");
-                uart_hex((int) prog_addr);
-                uart_send('\n');
                 
                 char *program_position = (char *)0x10A0000;
 
