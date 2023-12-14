@@ -125,7 +125,7 @@ void initrd_cat()
     uart_puts("File not found\n");
 }
 
-void initrd_usr_prog()
+void initrd_usr_prog(char *cmd)
 {
     char *buf = cpio_base;
     // if (memcmp(buf, "070701", 6))
@@ -138,7 +138,7 @@ void initrd_usr_prog()
         int fs = hex2bin(header->filesize, 8);
 
         // check filename with buffer
-        if (!strcmp("user_program", buf + sizeof(cpio_f))) {
+        if (!strcmp(cmd, buf + sizeof(cpio_f))) {
             if (fs == 0) {
                 uart_send('\n');
                 uart_puts("user_program is empty.\n");
@@ -155,15 +155,15 @@ void initrd_usr_prog()
                 // set spsr_el1 to 0x3c0
                 // load proper stack pointer to sp_el0
                 asm volatile (
-                    "mov x0, #0x3c5\n\t" // EL1h (SPSel = 1) with interrupt disabled
+                    "mov x0, #0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
                     "msr spsr_el1, x0\n\t" // write to spsr_el1
                     "msr elr_el1, %0\n\t"
-                    "mov x0, #0x8000000\n\t"
-                    "msr sp_el0, x0\n\t"
-                    "eret\n\t"::"r"(prog_addr) // write to elr_el1
+                    "mov x0, #0x90000\n\t"
+                    "msr sp_el0, x0\n\t"::"r"(prog_addr) // write to elr_el1
                 );
+                asm volatile ("nop\n\t");
+                asm volatile ("eret\n\t");
 
-                uart_puts("End of user program\n");
                 // // Someones code
                 // asm volatile(
                 //     "mov x0, 0x0\n\t"

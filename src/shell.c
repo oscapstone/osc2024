@@ -33,7 +33,7 @@ void shell_controller(char *cmd)
         uart_puts("ls        : list file in initramfs.cpio\n");
         uart_puts("cat       : show the file content\n");
         uart_puts("reboot    : reboot the device\n");
-        uart_puts("usr_prog  : load user program\n");
+        uart_puts("run       : load user program and run\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_puts("Hello World!\n");
     } else if (!strcmp(cmd, "reboot")) {
@@ -46,8 +46,10 @@ void shell_controller(char *cmd)
         initrd_list();
     } else if (!strcmp(cmd, "cat")) {
         initrd_cat();
-    } else if (!strcmp(cmd, "usr_prog")) {
-        initrd_usr_prog();
+    } else if (!strcmp(cmd, "run")) {
+        uart_puts("name  :");
+        shell_input(cmd);
+        initrd_usr_prog(cmd);
     } else {
         uart_puts("shell: command not found\n");
     }

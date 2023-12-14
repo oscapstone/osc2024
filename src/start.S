@@ -45,27 +45,15 @@ _start:
     bl      set_exception_vector_table
     // change exception level to EL2
     bl      from_el2_to_el1
-    bl      from_el1_to_el0
     
     // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     ldr     x1, =_start
     mov     sp, x1 // set stack pointer
-    
-    // // set up EL1
-    mrs     x0, CurrentEL // get current EL
-    and     x0, x0, #12 // clear reserved bits
 
-    // // running at EL3?
-    cmp     x0, #12
-    bne     5f
-    // should never be executed, just for completeness
-    mov     x2, #0x5b1
-    msr     scr_el3, x2 // secure comfiguration register for el 3
-    mov     x2, #0x3c9
-    msr     spsr_el3, x2 // saved program status register for el 3
-    adr     x2, 5f
-    msr     elr_el3, x2 // exception link register for el 3
-    eret
+    // turn on the accessibility to SIMD and floating registers
+    //mrs     x1, cpacr_el1
+    //orr     x1, x1, 0x300000
+    //msr     cpacr_el1, x1
 
 5:  
     // clear bss
@@ -91,14 +79,6 @@ from_el2_to_el1:
     msr spsr_el2, x0
     msr elr_el2, lr
     eret // return to EL1
-
-from_el1_to_el0:
-    mov x0, #(1 << 31) // EL1 uses aarch64
-    // msr hcr_el1, x0
-    mov x0, #0x3c0 // EL0t (SPSel = 0) with interrupt disabled
-    msr spsr_el1, x0
-    msr elr_el1, lr
-    eret // return to EL0
 
 // save general registers to stack
 .macro save_all
