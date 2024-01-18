@@ -8,11 +8,17 @@
 
 * a cross-compiler for aarch64
 * (optional) qemu-system-arm
+* Modification at Makefile
 
-## Build 
+## Build kernel img
 
 ```
 make
+```
+
+## Build user program and produce "initramfs.cpio"
+```
+./compile_user_program.sh
 ```
 
 ## Test kernel8.img with QEMU

@@ -23,7 +23,7 @@
 #
 #
 
-TOOLCHAIN = /Applications/ArmGNUToolchain/13.2.Rel1/aarch64-none-elf/bin/aarch64-none-elf
+TOOLCHAIN = aarch64-none-elf
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 CFLAGS = -Wall -ffreestanding -nostdinc -nostdlib -nostartfiles

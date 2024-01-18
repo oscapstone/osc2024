@@ -10,7 +10,7 @@
     "name": "GDB debug - custom",
     "type": "cppdbg",
     "request": "launch",
-    "program": "~/Desktop/osc2023/kernel8.elf",
+    "program": "~/Desktop/osc2023_robert/kernel8.elf",
     "args": [],
     "stopAtEntry": true,
     "cwd": "${workspaceFolder}",
