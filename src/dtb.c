@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "string.h"
 #include "initrd.h"
+#include "stddef.h"
 
 extern unsigned char __dtb_address;
 
@@ -23,7 +24,7 @@ void fdt_traverse(void (*callback)(fdt_prop *, char *, char *))
     uint32_t *struct_sp = (uint32_t *) ((char *)dtb_address + bswap_32(dtb_address->off_dt_struct));
     char *string_sp = (char *) ((uint32_t) dtb_address + bswap_32(dtb_address->off_dt_strings));
     
-    char *node_name;
+    char *node_name = NULL;
     bool END = false;
 
     while (!END) {

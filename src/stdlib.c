@@ -11,8 +11,3 @@ void *simple_malloc(size_t size)
     available += size;
     return returned_pointer;
 }
-
-int return_available()
-{
-    return (int) BASE + available;
-}
