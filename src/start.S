@@ -35,14 +35,14 @@ _start:
     // cpu id > 0, stop
 1:  wfe
     b       1b
-2:  // cpu id == 0
-
+2:  // cpu id == 0, continue
     // get the dtb address
     ldr     x1, =__dtb_address
     str     x0, [x1] // store the dtb address to the address given by the linker script
 
     // set exception vector table
     bl      set_exception_vector_table
+
     // change exception level to EL2
     bl      from_el2_to_el1
     
@@ -79,7 +79,6 @@ from_el2_to_el1:
     msr spsr_el2, x0
     msr elr_el2, lr
     eret // return to EL1
-
 
 // save general registers to stack
 .macro save_all
@@ -123,60 +122,62 @@ from_el2_to_el1:
     add sp, sp, 32 * 8
 .endm
 
-
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
-    // synchronous
-    .align 7
+    // Exception from the current EL while using SP_EL0
+    .align 7 // synchronous
     mov     x0, #0
     b exception_handler
-    .align 7
+    .align 7 // irq
     mov     x0, #1
     b exception_handler
-    .align 7
+    .align 7 // fiq
     mov     x0, #2
     b exception_handler
-    .align 7
+    .align 7 // serr
     mov     x0, #3
     b exception_handler
 
-    .align 7
+    // Exception from the current EL while using SP_ELx (x = 1 or 2)
+    .align 7 // synchronous
     mov     x0, #0
     b exception_handler
-    .align 7
+    .align 7 // irq
     mov     x0, #1
     b exception_handler
-    .align 7
+    .align 7 // fiq
     mov     x0, #2
     b exception_handler
-    .align 7
+    .align 7 // serr
     mov     x0, #3
     b exception_handler
 
-     .align 7
+    // Exception from a lower Exception level and at least one lower Exception level uses AArch64
+     .align 7 // synchronous
     mov     x0, #0
     b exception_handler
-    .align 7
+    .align 7 // irq
     mov     x0, #1
     b exception_handler
-    .align 7
+    .align 7 // fiq
     mov     x0, #2
     b exception_handler
-    .align 7
+    .align 7 // serr
     mov     x0, #3
     b exception_handler
 
-    .align 7
+    // Exception from a lower Exception level and all lower Exception levels use AArch32
+    .align 7 // synchronous
     mov     x0, #0
     b exception_handler
-    .align 7
+    .align 7 // irq
     mov     x0, #1
     b exception_handler
-    .align 7
+    .align 7 // fiq
     mov     x0, #2
     b exception_handler
-    .align 7
+    .align 7 // serr
     mov     x0, #3
     b exception_handler
 
@@ -191,9 +192,6 @@ exception_handler:
     mrs     x2, elr_el1
     mrs     x3, spsr_el1
     mrs     x4, far_el1
-
-    // trap frame
-    // mov     x3, sp
     bl exc_handler
     load_all
     eret

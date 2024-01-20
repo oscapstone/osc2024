@@ -43,8 +43,6 @@ $(BUILD_DIR)/src/%.o: $(SRC_DIR)/%.S
 	mkdir -p $(@D)
 	$(TOOLCHAIN)-gcc $(CFLAGS) -c $< -o $@
 
-# %.o: %.c
-# 	$(TOOLCHAIN)-gcc $(CFLAGS) -c $< -o $@
 $(BUILD_DIR)/src/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
 	$(TOOLCHAIN)-gcc $(CFLAGS) $< -o $@
@@ -52,15 +50,10 @@ $(BUILD_DIR)/src/%.o: $(SRC_DIR)/%.c
 cpio:
 	# ls *.md *.py | cpio -H hpodc -o >ramdisk
 
-initramfs.cpio:
-	cd rootfs
-	ls . | cpio -o -H newc > ../initramfs.cpio
-	cd ..
-
 rd.o: ramdisk
 	${TOOLCHAIN}-ld -r -b binary -o rd.o ramdisk
 
-kernel8.img: $(SRC_OBJS) rd.o initramfs.cpio
+kernel8.img: $(SRC_OBJS) rd.o link.ld
 	$(TOOLCHAIN)-ld -nostdlib $(SRC_OBJS) rd.o -T link.ld -o kernel8.elf
 	$(TOOLCHAIN)-objcopy -O binary kernel8.elf kernel8.img
 

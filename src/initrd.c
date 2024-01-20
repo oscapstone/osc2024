@@ -146,7 +146,7 @@ void initrd_usr_prog(char *cmd)
             } else {
                 uart_puts("\nInto user_program: ");
                 uart_puts(buf + sizeof(cpio_f));
-                uart_puts("\naddress: ");
+                uart_puts("\nAddress: ");
                 uart_hex((int) buf + sizeof(cpio_f));
                 uart_send('\n');
                 // get program start address
@@ -160,7 +160,6 @@ void initrd_usr_prog(char *cmd)
                     program_position++;
                     prog_addr++;
                 }
-
                 asm volatile(
                     "mov x0, 0          \n\t"
                     "msr spsr_el1, x0       \n\t"
@@ -169,27 +168,6 @@ void initrd_usr_prog(char *cmd)
                     "mov x0, 0x60000        \n\t"
                     "msr sp_el0, x0         \n\t"
                     "eret                   \n\t");
-
-                // // move data from prog_addr to 0x90000
-
-                // char *dest = (char *) 0x90000;
-                // for (int i = 0; i < fs; i++) {
-                //     dest[i] = prog_addr[i];
-                // }
-                
-                // // Setup execution level
-                // // set spsr_el1 to 0x3c0
-                // // load proper stack pointer to sp_el0
-                // asm volatile (
-                //     "mov x0, #0x3c0\n\t" // EL1h (SPSel = 1) with interrupt disabled
-                //     "msr spsr_el1, x0\n\t" // write to spsr_el1
-                //     "msr elr_el1, %0\n\t"
-                //     "mov x0, #0x90000\n\t"
-                //     "msr sp_el0, x0\n\t"
-                //     "eret\n\t"::"r"(dest) // write to elr_el1
-                // );
-                
-                // return;
             }
         }
         // jump to the next file
