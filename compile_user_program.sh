@@ -3,7 +3,7 @@
 # Compile user program
 cd user_program
 make clean && make
-cp user.img ../rootfs/user2.img
+cp user.img ../rootfs/user.img
 cd ..
 
 

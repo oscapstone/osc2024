@@ -68,3 +68,21 @@ void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsig
     // no return from exception for now
     // while(1);
 }
+
+void irq_router(unsigned long type, unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
+{
+    // print_timestamp(cntpct, cntfrq); // cntpct_el0 / cntfrq_el0 is the seconds after booting up.
+    int seconds;
+    asm volatile(
+        "mrs x0, cntpct_el0     \n\t"
+        "mrs x1, cntfrq_el0     \n\t"
+        "udiv %0, x0, x1        \n\t": "=r" (seconds));
+    uart_puts("seconds: ");
+    uart_hex(seconds);
+    uart_send('\n');
+    asm volatile(
+        "mrs x0, cntfrq_el0     \n\t"
+        "mov x1, 2              \n\t"
+        "mul x0, x0, x1         \n\t"
+        "msr cntp_tval_el0, x0  \n\t");
+}

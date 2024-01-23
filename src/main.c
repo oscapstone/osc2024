@@ -39,13 +39,15 @@ void main()
     fdt_init();
     fdt_traverse(initramfs_callback);
 
+    // init timer, otherwise core timer interrupt will not work
+    asm volatile("msr daifclr, 0xf     \n\t");
 
     // read the current level from system register
     unsigned long el;
     asm volatile ("mrs %0, CurrentEL\n\t" : "=r" (el));
 
     uart_puts("Current EL is: ");
-    uart_hex((el>>2)&3);
+    uart_hex((el >> 2) & 3);
     uart_puts("\n");
 
     // initrd_usr_prog();
