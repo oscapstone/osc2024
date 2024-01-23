@@ -83,11 +83,9 @@ void uart_init()
 void uart_send(unsigned int c)
 {
     /* wait until we can send */
-    do{
-        asm volatile("nop");
-    } while (*UART0_FR & 0x20);
+    do{asm volatile("nop");}while(*UART0_FR&0x20);
     /* write the character to the buffer */
-    *UART0_DR=c;
+    *UART0_DR = c;
 }
 
 /**
@@ -97,9 +95,7 @@ char uart_getc()
 {
     char r;
     /* wait until something is in the buffer */
-    do{
-        asm volatile("nop");
-    } while (*UART0_FR & 0x10);
+    do{asm volatile("nop");}while(*UART0_FR&0x10);
     /* read it and return */
     r = (char) (*UART0_DR);
     /* convert carrige return to newline */
@@ -122,11 +118,10 @@ char uart_getb()
 /**
  * Display a string
  */
-void uart_puts(char *s)
-{
+void uart_puts(char *s) {
     while(*s != '\0') {
         /* convert newline to carrige return + newline */
-        if(*s == '\n')
+        if(*s=='\n')
             uart_send('\r');
         uart_send(*s++);
     }
@@ -148,10 +143,7 @@ void uart_hex(unsigned int d)
     }
 }
 
-int check_digit(char ch) 
-{ 
-    return (ch >= '0') && (ch <= '9');
-}
+int check_digit(char ch) { return (ch >= '0') && (ch <= '9'); }
 
 int uart_geti()
 {
