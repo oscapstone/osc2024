@@ -68,7 +68,7 @@ void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsig
     uart_puts("\n");
 
     // no return from exception for now
-    // while(1);
+    while(1);
 }
 
 void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)

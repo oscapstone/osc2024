@@ -16,4 +16,7 @@
 
 #define SPSR_EL2_VALUE              (SPSR_MASK_D | SPSR_MASK_A | SPSR_MASK_I | SPSR_MASK_F | SPSR_EL1h) // 0x3c5
 
+#define CPACR_EL1_FPEN              (0b11 << 20) // enable floating point
+#define CPACR_EL1_VALUE             CPACR_EL1_FPEN
+
 #endif

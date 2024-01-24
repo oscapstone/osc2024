@@ -1,12 +1,37 @@
+#include "reg.h"
+
 .global from_el2_to_el1
 from_el2_to_el1:
+    ldr x1, =0
+    msr sctlr_el1, x1 // disable MMU
+
     mov x0, #(1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
+
+    // turn on the accessibility to SIMD and floating registers
+    ldr x1, =0x300000 // 0b11 << 20
+    msr cpacr_el1, x1
 
     mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
     msr spsr_el2, x0
     msr elr_el2, lr
+
+    mov x0, 0x60000
+    msr sp_el1, x0
+
     eret // return to EL1
+
+.global from_el1_to_el0
+from_el1_to_el0:
+    mov x0, 0x40000
+    msr sp_el0, x0
+
+    ldr x1, =0
+    msr spsr_el1, x1
+
+    msr elr_el1, lr
+
+    eret // return to EL0
 
 // save general registers to stack
 .macro save_all
@@ -95,9 +120,9 @@ exception_vector_table:
 
 .global set_exception_vector_table
 set_exception_vector_table:
-  adr x0, exception_vector_table
-  msr vbar_el1, x0
-  ret
+    adr x0, exception_vector_table
+    msr vbar_el1, x0
+    ret
 
 exception_handler:
     save_all

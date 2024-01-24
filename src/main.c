@@ -36,26 +36,26 @@
 void main()
 {
     shell_init();
-    uart_async_init();
+    // uart_async_init();
     fdt_init();
     fdt_traverse(initramfs_callback);
 
-    asm volatile("msr daifclr, 0xf     \n\t"); // enable IRQ, FIQ, SError, Debug exceptions
+    // asm volatile("msr daifclr, 0xf     \n\t"); // enable IRQ, FIQ, SError, Debug exceptions. If we were el0 with spsr_el1 == 0, no need to do this?
 
-    // read the current level from system register
-    unsigned long el;
-    asm volatile ("mrs %0, CurrentEL\n\t" : "=r" (el));
+    // read the current level from system register. If we were el0 with spsr_el1 == 0, we can't access CurrentEL.
+    // unsigned long el;
+    // asm volatile ("mrs %0, CurrentEL\n\t" : "=r" (el));
 
-    uart_puts("Current EL is: ");
-    uart_hex((el >> 2) & 3);
-    uart_puts("\n");
+    // uart_puts("Current EL is: ");
+    // uart_hex((el >> 2) & 3);
+    // uart_puts("\n");
 
     // initrd_usr_prog();
 
     while(1) {
-        // uart_puts("# ");
-        // char cmd[CMD_LEN];
-        // shell_input(cmd);
-        // shell_controller(cmd);
+        uart_puts("# ");
+        char cmd[CMD_LEN];
+        shell_input(cmd);
+        shell_controller(cmd);
     }
 }

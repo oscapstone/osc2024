@@ -41,17 +41,14 @@ _start:
 
     // set exception vector table
     bl      set_exception_vector_table
-    // change exception level to EL2
+    // change exception level to EL1
     bl      from_el2_to_el1
+    // change exception level to EL0
+    bl      from_el1_to_el0
     
-    // set top of stack just before our code (stack grows to a lower address per AAPCS64)
-    ldr     x1, =_start
-    mov     sp, x1 // set stack pointer
-
-    // turn on the accessibility to SIMD and floating registers
-    mrs     x1, cpacr_el1
-    orr     x1, x1, 0x300000
-    msr     cpacr_el1, x1
+    // If we don't set the sp_elx before `eret`, we have to setup the stack pointer manually.
+    //ldr     x1, =_start
+    //mov     sp, x1 // set stack pointer
 
     // clear bss
     ldr     x1, =__bss_start

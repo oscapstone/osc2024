@@ -63,8 +63,8 @@ void uart_init()
 void uart_async_init()
 {
 
-    *AUX_MU_IER = 0x1; // enable interrupt. Send interrupt when receive FIFO is not empty
-    *IRQ_ENABLE1 |= (1 << 29); // // set IRQ_ENABLE to enable mini UART receive interrupt (at pending bit 29)
+    *AUX_MU_IER = 0x1; // enable receive interrupt. Send interrupt when receive FIFO is not empty
+    *IRQ_ENABLE1 |= (1 << 29); // set IRQ_ENABLE to enable mini UART receive interrupt (at pending bit 29)
 }
 
 /**
