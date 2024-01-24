@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "exception.h"
 
 
 /**
@@ -65,13 +66,45 @@ void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsig
     uart_hex(far>>32);
     uart_hex(far);
     uart_puts("\n");
+
     // no return from exception for now
     // while(1);
 }
 
-void irq_router(unsigned long type, unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
+void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
 {
-    // print_timestamp(cntpct, cntfrq); // cntpct_el0 / cntfrq_el0 is the seconds after booting up.
+    // uart_puts("IRQ handler\n");
+    int irq_core0 = *CORE0_IRQ_SOURCE;
+    int irq_pend1 = *IRQ_PEND1;
+    if (irq_core0 & 0x2) {
+        uart_puts("Timer interrupt: ");
+        core_timer_handler();
+    } else if (irq_pend1 & (1 << 29)) {
+        uart_interrupt_handler();
+    }
+}
+
+uart_interrupt_handler()
+{
+    if (*AUX_MU_IIR & 0x2) { // Transmit holds register empty
+        uart_puts("Transmit holds register empty, should not be here right now\n"); // cause we only enable receive interrupt
+    } else if (*AUX_MU_IIR & 0x4) { // Receiver holds valid bytes
+        if (*AUX_MU_LSR & 0x1) { // Receiver FIFO holds valid bytes
+            char r = (char) (*AUX_MU_IO); // If we take char from AUX_MU_IO, the interrupt will be cleared.
+            r = (r == '\r') ? '\n' : r;
+
+            // ouput the char to screen (uart_send without pooling)
+            if (*AUX_MU_LSR & 0x20)
+                *AUX_MU_IO = r;
+        } else {
+            uart_puts("Something unexpected\n");
+        }
+    } else 
+        uart_puts("Something unexpected\n");
+}
+
+void core_timer_handler()
+{
     int seconds;
     asm volatile(
         "mrs x0, cntpct_el0     \n\t"

@@ -36,11 +36,11 @@
 void main()
 {
     shell_init();
+    uart_async_init();
     fdt_init();
     fdt_traverse(initramfs_callback);
 
-    // init timer, otherwise core timer interrupt will not work
-    asm volatile("msr daifclr, 0xf     \n\t");
+    asm volatile("msr daifclr, 0xf     \n\t"); // enable IRQ, FIQ, SError, Debug exceptions
 
     // read the current level from system register
     unsigned long el;
@@ -53,9 +53,9 @@ void main()
     // initrd_usr_prog();
 
     while(1) {
-        uart_puts("# ");
-        char cmd[CMD_LEN];
-        shell_input(cmd);
-        shell_controller(cmd);
+        // uart_puts("# ");
+        // char cmd[CMD_LEN];
+        // shell_input(cmd);
+        // shell_controller(cmd);
     }
 }
