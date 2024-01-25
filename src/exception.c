@@ -5,16 +5,8 @@
 /**
  * common exception handler
  */
-void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
+void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
 {
-    // print out interruption type
-    switch(type) {
-        case 0: uart_puts("Synchronous"); break;
-        case 1: uart_puts("IRQ"); break;
-        case 2: uart_puts("FIQ"); break;
-        case 3: uart_puts("SError"); break;
-    }
-    uart_puts(": ");
     // decode exception type (some, not all. See ARM DDI0487B_b chapter D10.2.28)
     switch(esr >> 26) {
         case 0b000000: uart_puts("Unknown"); break;
@@ -68,12 +60,68 @@ void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsig
     uart_puts("\n");
 
     // no return from exception for now
-    while(1);
+    // while(1);
+}
+
+void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
+{
+    int svc_num = esr & 0xffff;
+    char cmd[64];
+
+    if (esr >> 26 != 0b010101) {
+        uart_puts("Not a svc call\n");
+        return;
+    }
+    switch (svc_num) {
+        case 0: 
+            uart_puts("svc 0: print reg information\n");
+            uart_puts(" ESR_EL1 ");
+            uart_hex(esr>>32);
+            uart_hex(esr);
+            uart_puts(" ELR_EL1 ");
+            uart_hex(elr>>32);
+            uart_hex(elr);
+            uart_puts("\n SPSR_EL1 ");
+            uart_hex(spsr>>32);
+            uart_hex(spsr);
+            uart_puts(" FAR_EL1 ");
+            uart_hex(far>>32);
+            uart_hex(far);
+            uart_puts("\n");
+            break;
+        case 1:
+            uart_puts("svc 1: user program\n");
+            uart_puts("name :");
+            shell_input(cmd);
+            initrd_usr_prog(cmd);
+            break;
+        case 2:
+            uart_puts("svc 2: enable timer\n");
+            asm volatile("msr daifclr, 0xf");
+            core_timer_enable();
+            break;
+        default:
+            uart_puts("Unknown svc\n");
+            uart_puts(" ESR_EL1 ");
+            uart_hex(esr>>32);
+            uart_hex(esr);
+            uart_puts(" ELR_EL1 ");
+            uart_hex(elr>>32);
+            uart_hex(elr);
+            uart_puts("\n SPSR_EL1 ");
+            uart_hex(spsr>>32);
+            uart_hex(spsr);
+            uart_puts(" FAR_EL1 ");
+            uart_hex(far>>32);
+            uart_hex(far);
+            uart_puts("\n");
+            break;
+    }
 }
 
 void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
 {
-    // uart_puts("IRQ handler\n");
+    uart_puts("IRQ handler\n");
     int irq_core0 = *CORE0_IRQ_SOURCE;
     int irq_pend1 = *IRQ_PEND1;
     if (irq_core0 & 0x2) {

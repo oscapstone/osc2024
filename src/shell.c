@@ -48,12 +48,9 @@ void shell_controller(char *cmd)
     } else if (!strcmp(cmd, "cat")) {
         initrd_cat();
     } else if (!strcmp(cmd, "run")) {
-        uart_puts("name  :");
-        shell_input(cmd);
-        initrd_usr_prog(cmd);
+        asm volatile ("svc 1");
     } else if (!strcmp(cmd, "timer_on")) {
-        // asm volatile ("svc 1");
-        core_timer_enable();
+        asm volatile ("svc 2");
     } else {
         uart_puts("shell: command not found\n");
     }

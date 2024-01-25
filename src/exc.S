@@ -14,6 +14,7 @@ from_el2_to_el1:
 
     mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
     msr spsr_el2, x0
+
     msr elr_el2, lr
 
     mov x0, 0x60000
@@ -26,7 +27,7 @@ from_el1_to_el0:
     mov x0, 0x40000
     msr sp_el0, x0
 
-    ldr x1, =0
+    mov x1, #0x0 // same effect as `ldr x1, =0`
     msr spsr_el1, x1
 
     msr elr_el1, lr
@@ -102,7 +103,7 @@ exception_vector_table:
      .align 7 // synchronous
     b exception_handler
     .align 7 // irq
-    b non_handler
+    b irq_handler
     .align 7 // fiq
     b non_handler
     .align 7 // serr
@@ -126,12 +127,12 @@ set_exception_vector_table:
 
 exception_handler:
     save_all
-    mov     x0, #0
-    mrs     x1, esr_el1
-    mrs     x2, elr_el1
-    mrs     x3, spsr_el1
-    mrs     x4, far_el1
-    bl exc_handler
+    mrs     x0, esr_el1
+    mrs     x1, elr_el1
+    mrs     x2, spsr_el1
+    mrs     x3, far_el1
+    //bl exc_handler // general exception handler
+    bl svc_handler
     load_all
     eret
 
