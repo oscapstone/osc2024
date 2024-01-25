@@ -40,19 +40,15 @@ void main()
     fdt_init();
     fdt_traverse(initramfs_callback);
 
-    asm volatile("msr daifclr, 0xf     \n\t"); // enable IRQ, FIQ, SError, Debug exceptions. If we were el0 with spsr_el1 == 0, no need to do this?
-
     // read the current level from system register. If we were el0 with spsr_el1 == 0, we can't access CurrentEL.
-    // unsigned long el;
-    // asm volatile ("mrs %0, CurrentEL\n\t" : "=r" (el));
+    unsigned long el;
+    asm volatile ("mrs %0, CurrentEL\n\t" : "=r" (el));
+    uart_puts("Current EL is: ");
+    uart_hex((el >> 2) & 3);
+    uart_puts("\n");
 
-    // uart_puts("Current EL is: ");
-    // uart_hex((el >> 2) & 3);
-    // uart_puts("\n");
-
-    // initrd_usr_prog();
-    asm volatile("bl from_el1_to_el0     \n\t");
-
+    /* Switch to el0 before running shell */
+    asm volatile("bl from_el1_to_el0");
     while(1) {
         uart_puts("# ");
         char cmd[CMD_LEN];

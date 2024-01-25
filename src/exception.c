@@ -75,19 +75,7 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     switch (svc_num) {
         case 0: 
             uart_puts("svc 0: print reg information\n");
-            uart_puts(" ESR_EL1 ");
-            uart_hex(esr>>32);
-            uart_hex(esr);
-            uart_puts(" ELR_EL1 ");
-            uart_hex(elr>>32);
-            uart_hex(elr);
-            uart_puts("\n SPSR_EL1 ");
-            uart_hex(spsr>>32);
-            uart_hex(spsr);
-            uart_puts(" FAR_EL1 ");
-            uart_hex(far>>32);
-            uart_hex(far);
-            uart_puts("\n");
+            exc_handler(esr, elr, spsr, far);
             break;
         case 1:
             uart_puts("svc 1: user program\n");
@@ -97,24 +85,11 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
             break;
         case 2:
             uart_puts("svc 2: enable timer\n");
-            asm volatile("msr daifclr, 0xf");
             core_timer_enable();
             break;
         default:
-            uart_puts("Unknown svc\n");
-            uart_puts(" ESR_EL1 ");
-            uart_hex(esr>>32);
-            uart_hex(esr);
-            uart_puts(" ELR_EL1 ");
-            uart_hex(elr>>32);
-            uart_hex(elr);
-            uart_puts("\n SPSR_EL1 ");
-            uart_hex(spsr>>32);
-            uart_hex(spsr);
-            uart_puts(" FAR_EL1 ");
-            uart_hex(far>>32);
-            uart_hex(far);
-            uart_puts("\n");
+            uart_puts("Unknown svc, print reg information\n");
+            exc_handler(esr, elr, spsr, far);
             break;
     }
 }

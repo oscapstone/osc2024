@@ -41,6 +41,9 @@ _start:
 
     // set exception vector table
     bl      set_exception_vector_table
+
+    // change exception level to EL1
+    bl      from_el2_to_el1
     
     // If we don't set the sp_elx before `eret`, we have to setup the stack pointer manually.
     //ldr     x1, =_start
@@ -54,20 +57,8 @@ _start:
     str     xzr, [x1], #8
     sub     w2, w2, #1
     cbnz    w2, 3b
-
-    // jump to C code, should not return
 4:
-    // change exception level to EL1
-    bl      from_el2_to_el1
-    //msr     daifclr, 0xf
-    msr DAIFClr, 0xf
-    // change exception level to EL0
-    //bl      from_el1_to_el0
-
-    /* If we don't set the sp_elx register before `eret`, we have to setup the stack pointer manually. */
-    //ldr     x1, =_start
-    //mov     sp, x1 // set stack pointer
-6:
+    // jump to C code, should not return
     bl      main
     // for failsafe, halt this core too
     b       1b

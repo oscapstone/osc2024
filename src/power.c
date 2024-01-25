@@ -41,15 +41,15 @@ void power_off()
     unsigned long r;
 
     // power off devices one by one
-    for(r=0;r<16;r++) {
-        mbox[0]=8*4;
-        mbox[1]=MBOX_REQUEST;
-        mbox[2]=MBOX_TAG_SETPOWER; // set power state
-        mbox[3]=8;
-        mbox[4]=8;
-        mbox[5]=(unsigned int)r;   // device id
-        mbox[6]=0;                 // bit 0: off, bit 1: no wait
-        mbox[7]=MBOX_TAG_LAST;
+    for(r = 0; r < 16; r++) {
+        mbox[0] = 8 * 4;
+        mbox[1] = MBOX_REQUEST;
+        mbox[2] = MBOX_TAG_SETPOWER; // set power state
+        mbox[3] = 8;
+        mbox[4] = 8;
+        mbox[5] = (unsigned int) r;   // device id
+        mbox[6] = 0;                 // bit 0: off, bit 1: no wait
+        mbox[7] = MBOX_TAG_LAST;
         mbox_call(MBOX_CH_PROP);
     }
 

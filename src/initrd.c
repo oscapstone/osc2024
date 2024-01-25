@@ -120,7 +120,7 @@ void initrd_cat()
         }
 
         // jump to the next file
-        buf+=(sizeof(cpio_f) + ns + fs);
+        buf += (sizeof(cpio_f) + ns + fs);
     }
     uart_puts("File not found\n");
 }
