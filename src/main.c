@@ -6,8 +6,7 @@
 #include "dtb.h"
 #include "initrd.h"
 #include "exception.h"
-#include "delays.h"
-#include "timer.h"
+#include "sched.h"
 
 #define CMD_LEN 128
 
@@ -21,18 +20,18 @@ void main()
     fdt_init();
     fdt_traverse(initramfs_callback);
 
-    // read the current level from system register. If we were el0 with spsr_el1 == 0, we can't access CurrentEL.
-    unsigned long el;
-    asm volatile ("mrs %0, CurrentEL\n\t" : "=r" (el));
-    uart_puts("Current EL is: ");
-    uart_hex((el >> 2) & 3);
-    uart_puts("\n");
-
     timer_init();
     core_timer_enable();
+    print_current_el(); // read the current level from system register.
 
-    /* Switch to el0 before running shell */
-    move_to_user_mode();
+    task_init();
+
+    disable_interrupt();
+
+    sched_init(); // start schedule
+
+    /* Switch to el0 before running shell. Unnessasary in lab 4*/
+    // move_to_user_mode();
     while(1) {
         uart_puts("# ");
         char cmd[CMD_LEN];

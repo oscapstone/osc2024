@@ -4,6 +4,9 @@
 #include "shell.h"
 #include "string.h"
 #include "timer.h"
+#include "time.h"
+#include "sched.h"
+#include "syscall.h"
 
 
 extern void from_el1_to_el0(void);
@@ -70,7 +73,28 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     while(1);
 }
 
-void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
+/**
+ * System call handler. Take system call number from trap frame (x8 register).
+*/
+void syscall_handler(struct trapframe *trapframe)
+{
+    int syscall_num = trapframe->x[8];
+
+    // I wanna use a system call handler table
+    if (syscall_num >= 0 && syscall_num < SYSCALL_NUM) {
+        if (sys_call_table[syscall_num](trapframe)) {
+            uart_puts("System call failed\n");
+        }
+    } else {
+        uart_puts("Unknown syscall\n");
+    }
+    return;
+}
+
+/**
+ * svc handler
+ */
+void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far, struct trapframe *trapframe)
 {
     int svc_num = esr & 0xffff;
     char cmd[64];
@@ -82,8 +106,9 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     }
     switch (svc_num) {
         case 0: 
-            uart_puts("svc 0: print reg information\n");
-            exc_handler(esr, elr, spsr, far);
+            // uart_puts("svc 0: System call\n");
+            // exc_handler(esr, elr, spsr, far); // for Lab 3, print out the reg info.
+            syscall_handler(trapframe);
             break;
         case 1:
             uart_puts("svc 1: user program\n");
