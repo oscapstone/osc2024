@@ -12,7 +12,7 @@ fdt_header *dtb_address;
 
 void fdt_init()
 {
-    uint32_t *tmp_pointer = (uint32_t *) &__dtb_address;
+    uint64_t *tmp_pointer = (uint64_t *) &__dtb_address;
     dtb_address = (fdt_header *) *tmp_pointer;
 }
 

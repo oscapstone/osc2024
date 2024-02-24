@@ -1,6 +1,11 @@
 #include "uart.h"
 #include "exception.h"
+#include "initrd.h"
+#include "shell.h"
 
+
+extern void from_el1_to_el0(void);
+extern void core_timer_enable(void);
 
 /**
  * common exception handler
@@ -94,20 +99,9 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     }
 }
 
-void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
-{
-    uart_puts("IRQ handler\n");
-    int irq_core0 = *CORE0_IRQ_SOURCE;
-    int irq_pend1 = *IRQ_PEND1;
-    if (irq_core0 & 0x2) {
-        uart_puts("Timer interrupt: ");
-        core_timer_handler();
-    } else if (irq_pend1 & (1 << 29)) {
-        uart_interrupt_handler();
-    }
-}
 
-uart_interrupt_handler()
+
+void uart_interrupt_handler()
 {
     if (*AUX_MU_IIR & 0x2) { // Transmit holds register empty
         uart_puts("Transmit holds register empty, should not be here right now\n"); // cause we only enable receive interrupt
@@ -126,6 +120,19 @@ uart_interrupt_handler()
         uart_puts("Something unexpected\n");
 }
 
+void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
+{
+    uart_puts("IRQ handler\n");
+    int irq_core0 = *CORE0_IRQ_SOURCE;
+    int irq_pend1 = *IRQ_PEND1;
+    if (irq_core0 & 0x2) {
+        uart_puts("Timer interrupt: ");
+        core_timer_handler();
+    } else if (irq_pend1 & (1 << 29)) {
+        uart_interrupt_handler();
+    }
+}
+
 void core_timer_handler()
 {
     int seconds;
@@ -141,4 +148,10 @@ void core_timer_handler()
         "mov x1, 2              \n\t"
         "mul x0, x0, x1         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
+}
+
+/* Move to user mode (el0) */
+void move_to_user_mode(void)
+{
+    from_el1_to_el0();
 }

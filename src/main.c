@@ -30,6 +30,7 @@
 #include "stdlib.h"
 #include "dtb.h"
 #include "initrd.h"
+#include "exception.h"
 
 #define CMD_LEN 128
 
@@ -48,7 +49,8 @@ void main()
     uart_puts("\n");
 
     /* Switch to el0 before running shell */
-    asm volatile("bl from_el1_to_el0");
+    // asm volatile("bl from_el1_to_el0");
+    move_to_user_mode();
     while(1) {
         uart_puts("# ");
         char cmd[CMD_LEN];

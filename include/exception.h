@@ -7,5 +7,7 @@
 void core_timer_handler();
 void uart_interrupt_handler();
 
+void move_to_user_mode();
+
 
 #endif // __EXCEPTION_H__
