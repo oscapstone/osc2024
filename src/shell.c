@@ -31,10 +31,11 @@ void shell_controller(char *cmd)
         uart_puts("help           : print this help menu\n");
         uart_puts("hello          : print Hello World!\n");
         uart_puts("ls             : list file in initramfs.cpio\n");
-        uart_puts("cat            : show the file content\n");
-        uart_puts("reboot         : reboot the device\n");
-        uart_puts("run            : load user program and run\n");
-        uart_puts("timer_on       : enable timer\n");
+        uart_puts("cat            : show the file content.\n");
+        uart_puts("reboot         : reboot the device.\n");
+        uart_puts("run            : load user program and run.\n");
+        uart_puts("timer_on       : enable timer and print out current second periodiccally.\n");
+        uart_puts("setTimeout     : set the timer to trigger an interrupt after given second.\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_puts("Hello World!\n");
     } else if (!strcmp(cmd, "reboot")) {
@@ -51,6 +52,8 @@ void shell_controller(char *cmd)
         asm volatile ("svc 1");
     } else if (!strcmp(cmd, "timer_on")) {
         asm volatile ("svc 2");
+    } else if (!strcmp(cmd, "setTimeout")) {
+        
     } else {
         uart_puts("shell: command not found\n");
     }

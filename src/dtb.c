@@ -6,7 +6,7 @@
 #include "initrd.h"
 #include "stddef.h"
 
-extern unsigned char __dtb_address;
+extern unsigned long __dtb_address;
 
 fdt_header *dtb_address;
 
