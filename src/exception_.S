@@ -22,8 +22,9 @@ from_el2_to_el1:
 
     eret // return to EL1
 
-.global from_el1_to_el0
-from_el1_to_el0:
+/* From el1 to el0 */
+.global move_to_user_mode
+move_to_user_mode:
     mov x0, 0x40000
     msr sp_el0, x0
 

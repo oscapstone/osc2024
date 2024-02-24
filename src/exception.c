@@ -2,6 +2,8 @@
 #include "exception.h"
 #include "initrd.h"
 #include "shell.h"
+#include "string.h"
+#include "timer.h"
 
 
 extern void from_el1_to_el0(void);
@@ -65,7 +67,7 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     uart_puts("\n");
 
     // no return from exception for now
-    // while(1);
+    while(1);
 }
 
 void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
@@ -75,6 +77,7 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
 
     if (esr >> 26 != 0b010101) {
         uart_puts("Not a svc call\n");
+        exc_handler(esr, elr, spsr, far);
         return;
     }
     switch (svc_num) {
@@ -92,14 +95,25 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
             uart_puts("svc 2: enable timer\n");
             core_timer_enable();
             break;
+        case 3:
+            unsigned long timeout;
+            char message[64];
+            uart_puts("svc 3: set timeout\n");
+            uart_puts("timeout: ");
+            shell_input(cmd);
+            timeout = (unsigned long) atoi(cmd);
+
+            uart_puts("\nmessage: ");
+            shell_input(message);
+            uart_puts("\n");
+            timer_set(timeout, message);
+            break;
         default:
             uart_puts("Unknown svc, print reg information\n");
             exc_handler(esr, elr, spsr, far);
             break;
     }
 }
-
-
 
 void uart_interrupt_handler()
 {
@@ -122,11 +136,11 @@ void uart_interrupt_handler()
 
 void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
 {
-    uart_puts("IRQ handler\n");
+    // uart_puts("IRQ handler\n");
     int irq_core0 = *CORE0_IRQ_SOURCE;
     int irq_pend1 = *IRQ_PEND1;
     if (irq_core0 & 0x2) {
-        uart_puts("Timer interrupt: ");
+        // uart_puts("\nTimer interrupt: ");
         core_timer_handler();
     } else if (irq_pend1 & (1 << 29)) {
         uart_interrupt_handler();
@@ -135,23 +149,18 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
 
 void core_timer_handler()
 {
-    int seconds;
+    unsigned int seconds;
     asm volatile(
         "mrs x0, cntpct_el0     \n\t"
         "mrs x1, cntfrq_el0     \n\t"
         "udiv %0, x0, x1        \n\t": "=r" (seconds));
-    uart_puts("seconds: ");
-    uart_hex(seconds);
-    uart_send('\n');
+    // uart_puts("seconds: ");
+    // uart_hex(seconds);
+    // uart_puts("\n# ");
+    timer_update();
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
-        "mov x1, 2              \n\t"
+        "mov x1, #1             \n\t"
         "mul x0, x0, x1         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
-}
-
-/* Move to user mode (el0) */
-void move_to_user_mode(void)
-{
-    from_el1_to_el0();
 }

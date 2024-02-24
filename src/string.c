@@ -1,7 +1,3 @@
-
-
-
-
 /**
  * Helper function to convert ASCII octal number into binary
  * s string
@@ -60,4 +56,29 @@ int strlen(char *str)
         str++;
     }
     return count;
+}
+
+int strcpy(char *dst, char *src)
+{
+    int i = 0;
+    while (src[i] != '\0') {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = '\0';
+    return i;
+}
+
+int atoi(char *s)
+{
+    int n = 0, sign = 1;
+    if (*s == '-') {
+        sign = -1;
+        s++;
+    }
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + (*s - '0');
+        s++;
+    }
+    return n * sign;
 }

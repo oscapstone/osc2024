@@ -35,7 +35,7 @@ void shell_controller(char *cmd)
         uart_puts("reboot         : reboot the device.\n");
         uart_puts("run            : load user program and run.\n");
         uart_puts("timer_on       : enable timer and print out current second periodiccally.\n");
-        uart_puts("setTimeout     : set the timer to trigger an interrupt after given second.\n");
+        uart_puts("set_timeout    : set the timer to trigger an interrupt after given second.\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_puts("Hello World!\n");
     } else if (!strcmp(cmd, "reboot")) {
@@ -52,8 +52,8 @@ void shell_controller(char *cmd)
         asm volatile ("svc 1");
     } else if (!strcmp(cmd, "timer_on")) {
         asm volatile ("svc 2");
-    } else if (!strcmp(cmd, "setTimeout")) {
-        
+    } else if (!strcmp(cmd, "set_timeout")) {
+        asm volatile ("svc 3");
     } else {
         uart_puts("shell: command not found\n");
     }
