@@ -35,14 +35,13 @@ int timer_set(unsigned long timeout, char *message)
         if (timer_pool[i].enable == TIMER_DISABLE) {
             timer_pool[i].enable = TIMER_ENABLE;
             timer_pool[i].start_time = get_current_time();
-            timer_pool[i].timeout = timeout; // the timeout value is weird.
-            // uart_puts(message);
+            timer_pool[i].timeout = timeout;
             strcpy(timer_pool[i].message, message);
             return i;
         }
     }
 
-    uart_puts("No more timer available.\n");
+    printf("No more timer available.\n");
     return -1;
 }
 
@@ -50,7 +49,6 @@ int timer_set(unsigned long timeout, char *message)
 /* Get current time and compare with every timer inside the timer pool */
 void timer_update()
 {
-    // uart_puts("timer update\n");
     /* Get the current time and compare with the timeout */
     unsigned long current = get_current_time();
     for (int i = 0; i < NR_TIMER; i++) {
@@ -58,9 +56,7 @@ void timer_update()
             continue;
         unsigned long deadline = timer_pool[i].start_time + timer_pool[i].timeout;
         if (timer_pool[i].enable == TIMER_ENABLE && deadline < current) {
-            uart_puts("One timer is timeout:");
-            uart_puts(timer_pool[i].message);
-            uart_puts("\n# ");
+            printf("One timer is timeout: %s\n", timer_pool[i].message);
             timer_pool[i].enable = TIMER_DISABLE;
             timer_pool[i].timeout = 0;
             timer_pool[i].message[0] = '\0';

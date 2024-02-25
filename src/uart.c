@@ -27,6 +27,9 @@
 #include "mbox.h"
 #include "delays.h"
 #include "uart.h"
+#include "sprintf.h"
+
+extern unsigned char _end;
 
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
@@ -132,7 +135,8 @@ int check_digit(char ch)
 /**
  * Display a string
  */
-void printf(char *fmt, ...) {
+void printf(char *fmt, ...)
+{
     __builtin_va_list args;
     __builtin_va_start(args, fmt);
     // we don't have memory allocation yet, so we

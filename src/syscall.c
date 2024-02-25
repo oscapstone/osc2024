@@ -14,7 +14,6 @@ syscall_t sys_call_table[SYSCALL_NUM] = {
     sys_exit
 };
 
-
 /* As a handler function for svc, setup the return value to trapframe */
 int sys_get_taskid(struct trapframe *trapframe)
 {
@@ -25,8 +24,8 @@ int sys_get_taskid(struct trapframe *trapframe)
 int sys_uart_read(struct trapframe *trapframe)
 {
     /* x0: buffer address, x1: buffer size */
-    char *buff_addr = trapframe->x[0];
-    size_t buff_size = trapframe->x[1];
+    char *buff_addr = (char *) trapframe->x[0];
+    size_t buff_size = (size_t) trapframe->x[1];
     for (int i = 0; i < buff_size; i++) {
         buff_addr[i] = uart_getc();
         uart_send(buff_addr[i]); // show the user input
@@ -38,8 +37,8 @@ int sys_uart_read(struct trapframe *trapframe)
 int sys_uart_write(struct trapframe *trapframe)
 {
     /* x0: buffer address, x1: buffer size */
-    char *buff_addr = trapframe->x[0];
-    size_t buff_size = trapframe->x[1];
+    char *buff_addr = (char *) trapframe->x[0];
+    size_t buff_size = (size_t) trapframe->x[1];
     for (int i = 0; i < buff_size; i++)
         uart_send(buff_addr[i]); // show the string from buffer given by user.
     trapframe->x[0] = buff_size; // return the number of bytes read
@@ -62,7 +61,7 @@ int sys_fork(struct trapframe *trapframe)
     *child_task = *current;
     child_task->task_id = child_task_id;
     child_task->counter = child_task->priority;
-    child_task->tss.lr = &exit_kernel; // current->tss.lr is not up-to-date, so we use exit_kernel
+    child_task->tss.lr = (uint64_t) &exit_kernel; // current->tss.lr is not up-to-date, so we use exit_kernel
 
     /* Copy the content of kstack and ustack */
     for (int i = 0; i < KSTACK_SIZE; i++) {
@@ -77,11 +76,11 @@ int sys_fork(struct trapframe *trapframe)
 
     // sp should be placed according to the relative address (offset)
     char *sp_addr = (char *) trapframe; // the address of trapframe is the address of current sp (el1)
-    child_task->tss.sp = sp_addr + kstack_offset;
+    child_task->tss.sp = (uint64_t) (sp_addr + kstack_offset);
 
     char *sp_el0_addr = (char *) trapframe->sp; // get the current address of sp_el0 (current task)
     struct trapframe *child_trapframe = (struct trapframe *)(child_task->tss.sp);
-    child_trapframe->sp = sp_el0_addr + ustack_offset;
+    child_trapframe->sp = (uint64_t) (sp_el0_addr + ustack_offset);
     child_trapframe->x[0] = 0; // setup the return value of child task (fork())
 
     trapframe->x[0] = child_task_id; // return the child task id

@@ -2,8 +2,9 @@
 #include "sched.h"
 #include "exception.h"
 #include "exec.h"
-#include "time.h"
+#include "timer.h"
 #include "demo.h"
+#include "uart.h"
 
 struct task_struct task_pool[NR_TASKS];
 char kstack_pool[NR_TASKS][KSTACK_SIZE];
@@ -66,11 +67,13 @@ int privilege_task_create(void (*func)(), long priority)
             task_pool[i].counter = priority;
             task_pool[i].tss.lr = (uint64_t) func;
             task_pool[i].tss.sp = (uint64_t) &kstack_pool[i][KSTACK_TOP];
-            task_pool[i].tss.fp = (uint64_t) &kstack_pool[i][KSTACK_TOP];      
+            task_pool[i].tss.fp = (uint64_t) &kstack_pool[i][KSTACK_TOP];
+            printf("Setup task %d, priority %d, counter %d, sp 0x%x, lr 0x%x\n", i, task_pool[i].priority, task_pool[i].counter, task_pool[i].tss.sp, task_pool[i].tss.lr);    
     } else {
         uart_puts("task pool is full, can't create a new task.\n");
         while (1);
     }
+    return i;
 }
 
 /* Select the task with the highest counter to run. If all tasks' counter is 0, then update all tasks' counter with their priority. */
@@ -86,11 +89,11 @@ void schedule()
         }
         if (c)
             break;
-        for (i = 0; i < NR_TASKS; i++) // prevent return to task0
+        for (i = 0; i < NR_TASKS; i++) // Reset the counter by tasks' priority.
             if (task_pool[i].state == TASK_RUNNING)
                 task_pool[i].counter = (task_pool[i].counter >> 1) + task_pool[i].priority;
     }
-    printf("schedule to task %d\n", next);
+    // printf("schedule to task %d\n", next);
     context_switch(&task_pool[next]);
 }
 
@@ -110,26 +113,26 @@ void idle() {
 
 void sched_init()
 {
-    /* for requirement 1 */
+    /* for OSDI-2020 Lab 4 requirement 1 */
     // privilege_task_create(demo_task1, 10);
     // privilege_task_create(demo_task2, 10);
 
-    /* for requirement 2 */
-    // privilege_task_create(timer_task1, 5);
-    // privilege_task_create(timer_task2, 5);
+    /* for OSDI-2020 Lab 4 requirement 2 */
+    // privilege_task_create(timer_task1, 3);
+    // privilege_task_create(timer_task2, 3);
 
-    /* for requirement 3 */
+    /* for OSDI-2020 Lab 4 requirement 3 */
     // privilege_task_create(demo_do_exec1, 5);
     // privilege_task_create(demo_do_exec2, 5);
 
-    /* for requirement 4 */
-    privilege_task_create(user_test, 5);
-    core_timer_enable();
-    idle();
+    /* for OSDI-2020 Lab 4 requirement 4 */
+    // privilege_task_create(user_test, 5);
+    // core_timer_enable();
+    // idle();
 
-    // enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
+    enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
 
-    // core_timer_enable(); // enable core timer.
+    core_timer_enable(); // enable core timer.
 
-    // schedule();
+    schedule();
 }

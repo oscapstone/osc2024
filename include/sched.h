@@ -16,33 +16,6 @@
 
 #define USER_TASK_PRIORITY 10
 
-/* 
-// Codes below is used in linux 0.11. But useless in OSDI (hierarychy difference)
-#define INIT_TASK \
-{ \
-    .task_id = 0, \
-    .state = TASK_RUNNING, \
-    .priority = 1, \
-    .counter = 1, \
-    .tss = { \
-        .x19 = 0, \
-        .x20 = 0, \
-        .x21 = 0, \
-        .x22 = 0, \
-        .x23 = 0, \
-        .x24 = 0, \
-        .x25 = 0, \
-        .x26 = 0, \
-        .x27 = 0, \
-        .x28 = 0, \
-        .fp = 0, \
-        .lr = 0, \
-        .sp = 0, \
-        .pc = 0, \
-    }, \
-}
-*/
-
 /* Used in tsk->state*/
 #define TASK_RUNNING            0x00
 #define TASK_INTERRUPTIBLE      0x01

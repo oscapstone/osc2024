@@ -4,7 +4,6 @@
 #include "shell.h"
 #include "string.h"
 #include "timer.h"
-#include "time.h"
 #include "sched.h"
 #include "syscall.h"
 
@@ -75,12 +74,12 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
 
 /**
  * System call handler. Take system call number from trap frame (x8 register).
+ * Then use system call number to call the function in system call table.
 */
 void syscall_handler(struct trapframe *trapframe)
 {
     int syscall_num = trapframe->x[8];
 
-    // I wanna use a system call handler table
     if (syscall_num >= 0 && syscall_num < SYSCALL_NUM) {
         if (sys_call_table[syscall_num](trapframe)) {
             uart_puts("System call failed\n");
@@ -165,11 +164,19 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
     int irq_core0 = *CORE0_IRQ_SOURCE;
     int irq_pend1 = *IRQ_PEND1;
     if (irq_core0 & 0x2) {
-        // uart_puts("\nTimer interrupt: ");
         core_timer_handler();
     } else if (irq_pend1 & (1 << 29)) {
         uart_interrupt_handler();
     }
+}
+
+/* Substract the current task counter value */
+void do_timer()
+{
+    // printf("Current task: %d, counter %d\n", current->task_id, current->counter);
+    if (--current->counter > 0)
+        return;
+    schedule();
 }
 
 void core_timer_handler()
@@ -179,13 +186,24 @@ void core_timer_handler()
         "mrs x0, cntpct_el0     \n\t"
         "mrs x1, cntfrq_el0     \n\t"
         "udiv %0, x0, x1        \n\t": "=r" (seconds));
-    // uart_puts("seconds: ");
-    // uart_hex(seconds);
-    // uart_puts("\n# ");
-    timer_update();
+    // printf("\nseconds: %d\n", seconds);
+
+    /* Setup next timer interrupt*/
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
         "mov x1, #1             \n\t"
         "mul x0, x0, x1         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
+    
+    timer_update();
+    do_timer();
+}
+
+void print_current_el(void)
+{
+    unsigned long current_el;
+    asm volatile("mrs %0, CurrentEL" : "=r" (current_el));
+    uart_puts("CurrentEL: ");
+    uart_hex((current_el >> 2) & 0x3);
+    uart_puts("\n");
 }

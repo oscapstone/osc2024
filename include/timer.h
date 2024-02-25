@@ -28,6 +28,8 @@ void timer_init();
 void timer_update();
 int timer_set(unsigned long timeout, char *message);
 
+extern void core_timer_enable();
+
 
 
 

@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "exec.h"
 #include "syscall.h"
+#include "delays.h"
 
 void demo_task1()
 {
@@ -27,7 +28,7 @@ void timer_task1()
 {
     while (1) {
         uart_puts("kernel timer task1.\n");
-        wait_sec(1);
+        wait_sec(10);
     }
 }
 
@@ -35,7 +36,7 @@ void timer_task2()
 {
     while (1) {
         uart_puts("kernel timer task2.\n");
-        wait_sec(1);
+        wait_sec(10);
     }
 }
 
@@ -69,7 +70,7 @@ void demo_do_exec2()
 
 void delay()
 {
-    long count = 1000000000000000;
+    long count = 1000000; // 1000000000 can see the effect of multi-tasking, or I should increase the frequency of timer interrupt.
     while (count--);
 }
 
@@ -92,6 +93,7 @@ void test() {
             delay();
             ++cnt;
         }
+        printf("Child task %d done before exit\n", get_taskid());
         exit(0);
         printf("Should not be printed\n");
     } else {
