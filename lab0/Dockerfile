@@ -39,6 +39,9 @@ RUN groupadd -g 1000 alan
 RUN useradd --uid 1000 --gid 1000 --groups root,sudo,adm,users --create-home --password "`openssl passwd -6 -salt XX sense`" --shell /bin/bash alan
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
+# adding user to get the device permissions # modification for OSC
+RUN adduser alan dialout
+
 # run the service
 EXPOSE 22
 ENTRYPOINT ["/usr/bin/tini", "--"]
