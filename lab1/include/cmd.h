@@ -13,5 +13,6 @@ extern struct command commands[];
 void help();
 void hello();
 void reboot();
+void lshw();
 
 #endif // CMD_H

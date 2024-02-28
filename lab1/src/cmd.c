@@ -1,11 +1,13 @@
 #include "cmd.h"
 #include "string.h"
 #include "uart.h"
+#include "mbox.h"
 
 struct command commands[] = {
 	{ .name = "help", .help = "print this help menu", .func = help },
 	{ .name = "hello", .help = "print Hello World!", .func = hello },
 	{ .name = "reboot", .help = "reboot the device", .func = reboot },
+	{ .name = "lshw", .help = "list hardware information", .func = lshw },
 	{ .name = "NULL" } // Must put a NULL command at the end!
 };
 
@@ -38,4 +40,41 @@ void reboot()
 	// Reboot after 180 ticks
 	*PM_RSTC = PM_PASSWORD | 0x20; // Full reset
 	*PM_WDOG = PM_PASSWORD | 180;  // Number of watchdog ticks
+}
+
+void lshw()
+{
+#define GET_BOARD_REVISION 0x00010002
+	// Get board revision
+	mbox[0] = 7 * 4;
+	mbox[1] = REQUEST_CODE;
+	mbox[2] = GET_BOARD_REVISION;
+	mbox[3] = 4;
+	mbox[4] = TAG_REQUEST_CODE;
+	mbox[5] = 0;
+	mbox[6] = END_TAG;
+	if (mailbox_call(MAILBOX_CH_PROP)) {
+		uart_puts("board revision: ");
+		uart_hex(mbox[5]);
+		uart_putc('\n');
+	}
+
+#define GET_ARM_MEM_INFO 0x00010005
+	// Get ARM memory base address and size
+	mbox[0] = 8 * 4;
+	mbox[1] = REQUEST_CODE;
+	mbox[2] = GET_ARM_MEM_INFO;
+	mbox[3] = 8;
+	mbox[4] = 0;
+	mbox[5] = 0;
+	mbox[6] = 0;
+	mbox[7] = END_TAG;
+	if (mailbox_call(MAILBOX_CH_PROP)) {
+		uart_puts("device base memory address: ");
+		uart_hex(mbox[5]);
+		uart_putc('\n');
+		uart_puts("device memory size: ");
+		uart_hex(mbox[6]);
+		uart_putc('\n');
+	}
 }

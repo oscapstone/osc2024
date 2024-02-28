@@ -48,6 +48,17 @@ void uart_putc(char c)
 	*AUX_MU_IO = c; // Write to AUX_MU_IO_REG
 }
 
+void uart_hex(unsigned int h)
+{
+	unsigned int n;
+	int c;
+	for (c = 28; c >= 0; c -= 4) {
+		n = (h >> c) & 0xf;
+		n += n > 9 ? 0x37 : '0';
+		uart_putc(n);
+	}
+}
+
 void uart_puts(const char *s)
 {
 	while (*s) {
