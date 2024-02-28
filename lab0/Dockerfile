@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y tini locales \
 	(((uname -a | grep x86 >/dev/null) && apt-get install -y gcc-multilib g++-multilib) || /bin/true)
 #RUN apt-get install -y qemu-user-static gcc-mips64-linux-gnuabi64
 
-# install cross-compiler and qemu systems # modification for OSC
+# install nano, cross-compiler and qemu systems # modification for OSC
 RUN apt-get install -y nano build-essential git gcc-aarch64-linux-gnu qemu-system-arm screen
 
 # /var/run/sshd: required on debian/ubuntu
