@@ -29,15 +29,6 @@ void uart_init()
 	*AUX_MU_CNTL = 3;   // Enable Tx and Rx
 }
 
-void uart_send(char c)
-{
-	// Check the transmitter empty field on bit 5 of AUX_MU_LSR_REG
-	do {
-		asm volatile("nop");
-	} while (!(*AUX_MU_LSR & 0x20));
-	*AUX_MU_IO = c; // Write to AUX_MU_IO_REG
-}
-
 char uart_getc()
 {
 	// Check the data ready field on bit 0 of AUX_MU_LSR_REG
@@ -48,12 +39,21 @@ char uart_getc()
 	return c == '\r' ? '\n' : c;
 }
 
-void uart_puts(char *s)
+void uart_putc(char c)
+{
+	// Check the transmitter empty field on bit 5 of AUX_MU_LSR_REG
+	do {
+		asm volatile("nop");
+	} while (!(*AUX_MU_LSR & 0x20));
+	*AUX_MU_IO = c; // Write to AUX_MU_IO_REG
+}
+
+void uart_puts(const char *s)
 {
 	while (*s) {
 		// Convert '\n' to '\r\n'
 		if (*s == '\n')
-			uart_send('\r');
-		uart_send(*s++);
+			uart_putc('\r');
+		uart_putc(*s++);
 	}
 }

@@ -4,6 +4,7 @@
 int main()
 {
 	uart_init();
-	uart_puts("Hello World!\n");
+	uart_puts("Welcome!\n");
+	run_shell();
 	return 0;
 }
