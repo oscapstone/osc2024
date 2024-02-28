@@ -29,7 +29,7 @@ void uart_init()
 	*AUX_MU_CNTL = 3;   // Enable Tx and Rx
 }
 
-void uart_send(unsigned int c)
+void uart_send(char c)
 {
 	// Check the transmitter empty field on bit 5 of AUX_MU_LSR_REG
 	do {
