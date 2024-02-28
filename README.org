@@ -1,4 +1,4 @@
-#+TITLE: Operating Systems Capstone 2023
+#+TITLE: Operating Systems Capstone 2024
 #+OPTIONS: toc:nil
 
 This repository is used for homework submission.
@@ -37,7 +37,7 @@ If you cannot find your branch, ask TAs for help.
 
 #+BEGIN_SRC shell
   git clone <repo url>
-  cd osc2023
+  cd osc2024
   git checkout --track origin/<student id>
 #+END_SRC
 
