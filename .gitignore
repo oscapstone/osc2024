@@ -1,0 +1,4 @@
+.vscode
+kernel8.*
+*.o
+build
