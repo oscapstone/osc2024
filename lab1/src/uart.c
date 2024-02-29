@@ -32,9 +32,8 @@ void uart_init()
 char uart_getc()
 {
 	// Check the data ready field on bit 0 of AUX_MU_LSR_REG
-	do {
+	while (!(*AUX_MU_LSR & 0x01))
 		asm volatile("nop");
-	} while (!(*AUX_MU_LSR & 0x01));
 	char c = (char)(*AUX_MU_IO); // Read from AUX_MU_IO_REG
 	return c == '\r' ? '\n' : c;
 }
@@ -42,9 +41,8 @@ char uart_getc()
 void uart_putc(char c)
 {
 	// Check the transmitter empty field on bit 5 of AUX_MU_LSR_REG
-	do {
+	while (!(*AUX_MU_LSR & 0x20))
 		asm volatile("nop");
-	} while (!(*AUX_MU_LSR & 0x20));
 	*AUX_MU_IO = c; // Write to AUX_MU_IO_REG
 }
 
