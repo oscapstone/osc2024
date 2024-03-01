@@ -14,5 +14,7 @@ void help();
 void hello();
 void reboot();
 void lshw();
+void ls();
+void cat();
 
 #endif // CMD_H

@@ -3,8 +3,6 @@
 #include "string.h"
 #include "cmd.h"
 
-#define MAX_BUF_SIZE 256
-
 void run_shell()
 {
 	// Warning: buffer overflow not handled!

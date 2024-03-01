@@ -1,3 +1,5 @@
 .vscode
 build
+rootfs
 *.img
+*.cpio

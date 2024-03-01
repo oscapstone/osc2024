@@ -28,8 +28,8 @@ kernel8.img: linker.ld $(OBJ_FILES)
 	$(ARMGNU)-ld -T linker.ld -o $(BUILD_DIR)/kernel8.elf $(OBJ_FILES)
 	$(ARMGNU)-objcopy -O binary  $(BUILD_DIR)/kernel8.elf kernel8.img
 
-qemu: kernel8.img
-	qemu-system-aarch64 $(QEMUFLAGS) -kernel $<
+qemu: kernel8.img initramfs.cpio
+	qemu-system-aarch64 $(QEMUFLAGS) -kernel $< -initrd initramfs.cpio
 
 debug: kernel8.img
 	qemu-system-aarch64 $(QEMUFLAGS) -kernel $< -S -s

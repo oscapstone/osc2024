@@ -2,12 +2,16 @@
 #include "string.h"
 #include "uart.h"
 #include "mbox.h"
+#include "initrd.h"
+#include "shell.h"
 
 struct command commands[] = {
 	{ .name = "help", .help = "print this help menu", .func = help },
 	{ .name = "hello", .help = "print Hello World!", .func = hello },
 	{ .name = "reboot", .help = "reboot the device", .func = reboot },
 	{ .name = "lshw", .help = "list hardware information", .func = lshw },
+	{ .name = "ls", .help = "list ramdisk files", .func = ls },
+	{ .name = "cat", .help = "print ramdisk file", .func = cat },
 	{ .name = "NULL" } // Must put a NULL command at the end!
 };
 
@@ -77,4 +81,40 @@ void lshw()
 		uart_hex(mbox[6]);
 		uart_putc('\n');
 	}
+}
+
+void ls()
+{
+	initrd_list();
+}
+
+void cat()
+{
+	// Get filename from user input
+	uart_puts("Filename: ");
+
+	char buf[MAX_BUF_SIZE + 1];
+	int idx = 0;
+
+	while (1) {
+		char c = uart_getc();
+		uart_putc(c);
+
+		if (c == '\n') {
+			buf[idx] = '\0';
+			break;
+		} else if (c == 127) {
+			// Handle backspaces
+			if (idx > 0) {
+				buf[idx--] = 0;
+				uart_putc('\b');
+				uart_putc(' ');
+				uart_putc('\b');
+			}
+		} else {
+			buf[idx++] = c;
+		}
+	}
+
+	initrd_cat(buf);
 }
