@@ -1,7 +1,8 @@
 ARMGNU ?= aarch64-linux-gnu
 
-CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
+CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only -g
 ASMFLAGS = -Iinclude
+QEMUFLAGS = -M raspi3b -display none -serial null -serial stdio
 
 SRC_DIR = src
 BUILD_DIR = build
@@ -28,4 +29,7 @@ kernel8.img: linker.ld $(OBJ_FILES)
 	$(ARMGNU)-objcopy -O binary  $(BUILD_DIR)/kernel8.elf kernel8.img
 
 qemu: kernel8.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -display none -serial null -serial stdio
+	qemu-system-aarch64 $(QEMUFLAGS) -kernel $<
+
+debug: kernel8.img
+	qemu-system-aarch64 $(QEMUFLAGS) -kernel $< -S -s
