@@ -15,7 +15,7 @@ OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
 $(info SRCS: $(SRCS))
 $(info OBJS: $(OBJS))
 
-CFLAGS = -c -Wall -Iinclude  -nostdlib -nostartfiles -ffreestanding 
+CFLAGS = -c -Wall -O2 -Iinclude -nostdinc -nostdlib -nostartfiles -ffreestanding -fno-stack-protector
 
 .PHONY: all clean asm run debug dirs
 

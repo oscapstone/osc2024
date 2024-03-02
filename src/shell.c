@@ -1,3 +1,4 @@
+#include "mbox.h"
 #include "my_string.h"
 #include "uart.h"
 #include "utli.h"
@@ -35,7 +36,7 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
     uart_init();
     uart_flush();
-    uart_printf("\n\nHello From RPI3\n");
+    uart_printf("\n\nHello From RPI3\n\n");
 }
 
 void shell_input(char *cmd) {
@@ -107,19 +108,28 @@ void shell_controller(char *cmd) {
     if (!strcmp(cmd, "")) {
         return;
     } else if (!strcmp(cmd, "help")) {
-        uart_printf("help: print all available commands\n");
+        uart_printf("help: print this help menu\n");
         uart_printf("hello: print Hello World!\n");
-        uart_printf("timestamp: get current timestamp\n");
-        uart_printf("reboot: reboot pi\n");
+        // uart_printf("timestamp: get current timestamp\n");
+        uart_printf("reboot: reboot the device\n");
+        uart_printf("brn: get rpi3’s board revision number\n");
+        uart_printf("bsn: get rpi3’s board serial number\n");
+        uart_printf("arm_mem: get ARM memory base address and size\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_printf("Hello World!\n");
-    } else if (!strcmp(cmd, "timestamp")) {
-        uart_printf("%f\n", get_timestamp());
     } else if (!strcmp(cmd, "reboot")) {
         uart_printf("Rebooting...");
         reset();
         while (1)
             ; // hang until reboot
+    } else if (!strcmp(cmd, "brn")) {
+        get_board_revision();
+    } else if (!strcmp(cmd, "bsn")) {
+        get_board_serial();
+    } else if (!strcmp(cmd, "arm_mem")) {
+        get_arm_base_memory_sz();
+    } else if (!strcmp(cmd, "timestamp")) {
+        uart_printf("%f\n", get_timestamp());
     } else {
         uart_printf("shell: command not found: %s\n", cmd);
     }

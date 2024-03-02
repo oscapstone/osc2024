@@ -1,104 +1,115 @@
 #include "my_math.h"
 
-char *itoa(int value, char *s) {
-    int idx = 0;
-    if (value < 0) {
-        value *= -1;
-        s[idx++] = '-';
-    }
-
-    char tmp[10];
-    int tidx = 0;
-    do {
-        tmp[tidx++] = '0' + value % 10;
-        value /= 10;
-    } while (value != 0 && tidx < 11);
-
-    // reverse tmp
-    int i;
-    for (i = tidx - 1; i >= 0; i--) {
-        s[idx++] = tmp[i];
-    }
-    s[idx] = '\0';
-
-    return s;
-}
-
-char *ftoa(float value, char *s) {
-    int idx = 0;
-    if (value < 0) {
-        value = -value;
-        s[idx++] = '-';
-    }
-
-    int ipart = (int)value;
-    float fpart = value - (float)ipart;
-
-    // convert ipart
-    char istr[11];  // 10 digit
-    itoa(ipart, istr);
-
-    // convert fpart
-    char fstr[7];  // 6 digit
-    fpart *= (int)pow(10, 6);
-    itoa((int)fpart, fstr);
-
-    // copy int part
-    char *ptr = istr;
-    while (*ptr) s[idx++] = *ptr++;
-    s[idx++] = '.';
-    // copy float part
-    ptr = fstr;
-    while (*ptr) s[idx++] = *ptr++;
-    s[idx] = '\0';
-
-    return s;
-}
-
 unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args) {
-    char *dst_orig = dst;
+    long int arg;
+    int len, sign, i;
+    char *p, *orig = dst, tmpstr[19];
 
+    // failsafes
+    if (dst == (void *)0 || fmt == (void *)0) {
+        return 0;
+    }
+
+    // main loop
+    arg = 0;
     while (*fmt) {
+        // argument access
         if (*fmt == '%') {
             fmt++;
-            // escape %
+            // literal %
             if (*fmt == '%') {
                 goto put;
             }
-            // string
-            if (*fmt == 's') {
-                char *p = __builtin_va_arg(args, char *);
-                while (*p) {
-                    *dst++ = *p++;
-                }
+            len = 0;
+            // size modifier
+            while (*fmt >= '0' && *fmt <= '9') {
+                len *= 10;
+                len += *fmt - '0';
+                fmt++;
             }
-            // number
-            if (*fmt == 'd') {
-                int arg = __builtin_va_arg(args, int);
-                char buf[11];
-                char *p = itoa(arg, buf);
-                while (*p) {
-                    *dst++ = *p++;
-                }
+            // skip long modifier
+            if (*fmt == 'l') {
+                fmt++;
             }
-            // float
-            if (*fmt == 'f') {
-                float arg = (float) __builtin_va_arg(args, double);
-                char buf[19];  // sign + 10 int + dot + 6 float
-                char *p = ftoa(arg, buf);
-                while (*p) {
-                    *dst++ = *p++;
-                }
-            }
+            // character
+            if (*fmt == 'c') {
+                arg = __builtin_va_arg(args, int);
+                *dst++ = (char)arg;
+                fmt++;
+                continue;
+            } else
+                // decimal number
+                if (*fmt == 'd') {
+                    arg = __builtin_va_arg(args, int);
+                    // check input
+                    sign = 0;
+                    if ((int)arg < 0) {
+                        arg *= -1;
+                        sign++;
+                    }
+                    if (arg > 99999999999999999L) {
+                        arg = 99999999999999999L;
+                    }
+                    // convert to string
+                    i = 18;
+                    tmpstr[i] = 0;
+                    do {
+                        tmpstr[--i] = '0' + (arg % 10);
+                        arg /= 10;
+                    } while (arg != 0 && i > 0);
+                    if (sign) {
+                        tmpstr[--i] = '-';
+                    }
+                    // padding, only space
+                    if (len > 0 && len < 18) {
+                        while (i > 18 - len) {
+                            tmpstr[--i] = ' ';
+                        }
+                    }
+                    p = &tmpstr[i];
+                    goto copystring;
+                } else
+                    // hex number
+                    if (*fmt == 'x') {
+                        arg = __builtin_va_arg(args, long int);
+                        // convert to string
+                        i = 16;
+                        tmpstr[i] = 0;
+                        do {
+                            char n = arg & 0xf;
+                            // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+                            tmpstr[--i] = n + (n > 9 ? 0x37 : 0x30);
+                            arg >>= 4;
+                        } while (arg != 0 && i > 0);
+                        // padding, only leading zeros
+                        if (len > 0 && len <= 16) {
+                            while (i > 16 - len) {
+                                tmpstr[--i] = '0';
+                            }
+                        }
+                        p = &tmpstr[i];
+                        goto copystring;
+                    } else
+                        // string
+                        if (*fmt == 's') {
+                            p = __builtin_va_arg(args, char *);
+                        copystring:
+                            if (p == (void *)0) {
+                                p = "(null)";
+                            }
+                            while (*p) {
+                                *dst++ = *p++;
+                            }
+                        }
         } else {
         put:
             *dst++ = *fmt;
         }
         fmt++;
     }
-    *dst = '\0';
-
-    return dst - dst_orig;  // return written bytes
+    *dst = 0;
+    // number of bytes written
+    return dst - orig;
 }
 
 unsigned int sprintf(char *dst, char *fmt, ...) {

@@ -1,5 +1,5 @@
+#include "mbox.h"
 #include "shell.h"
-
 #define CMD_LEN 128
 
 enum shell_status {
@@ -9,7 +9,6 @@ enum shell_status {
 
 int main() {
     shell_init();
-
     enum shell_status status = Read;
     while (1) {
         char cmd[CMD_LEN];
