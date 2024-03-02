@@ -3,6 +3,10 @@
 .global _start
 
 _start:
+    /* Get dtb address from x0 */
+    ldr x1, =dtb_addr
+    str x0, [x1]
+
     /* get cpu id */
     mrs x1, mpidr_el1
     and x1, x1, #3
@@ -29,3 +33,8 @@ run_main:
 halt:
     wfe
     b halt
+
+.section .data
+.global dtb_addr
+dtb_addr:
+.dc 0x0

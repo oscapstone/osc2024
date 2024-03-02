@@ -1,6 +1,7 @@
 #include "initrd.h"
 #include "uart.h"
 #include "string.h"
+#include "utils.h"
 
 static void *ramfs_addr = (void *)0x8000000;
 
@@ -34,9 +35,8 @@ void initrd_list()
 
 		// Total size of (header + pathname) is a multiple of four bytes
 		// File data is also padded to a multiple of four bytes
-		int headsize = (sizeof(cpio_t) + namesize) +
-			       (4 - (sizeof(cpio_t) + namesize) % 4) % 4;
-		int datasize = filesize + (4 - filesize % 4) % 4;
+		int headsize = align4(sizeof(cpio_t) + namesize);
+		int datasize = align4(filesize);
 
 		// Print file pathname
 		char pathname[namesize];
@@ -82,4 +82,12 @@ void initrd_cat(const char *target)
 	}
 
 	uart_puts("File not found.\n");
+}
+
+void initrd_callback(void *addr)
+{
+	uart_puts("[INFO] Initrd is mounted at ");
+	uart_hex(addr);
+	uart_putc('\n');
+	ramfs_addr = (char *)addr;
 }

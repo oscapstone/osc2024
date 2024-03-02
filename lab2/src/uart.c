@@ -48,10 +48,10 @@ void uart_putc(char c)
 
 void uart_hex(unsigned int h)
 {
+	uart_puts("0x");
 	unsigned int n;
-	int c;
-	for (c = 28; c >= 0; c -= 4) {
-		n = (h >> c) & 0xf;
+	for (int c = 28; c >= 0; c -= 4) {
+		n = (h >> c) & 0xF;
 		n += n > 9 ? 0x37 : '0';
 		uart_putc(n);
 	}

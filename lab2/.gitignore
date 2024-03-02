@@ -2,4 +2,3 @@
 build
 rootfs
 *.img
-*.cpio

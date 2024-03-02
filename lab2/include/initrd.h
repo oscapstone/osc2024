@@ -21,5 +21,6 @@ typedef struct {
 
 void initrd_list();
 void initrd_cat(const char *target);
+void initrd_callback(void *addr);
 
 #endif // INITRD_H

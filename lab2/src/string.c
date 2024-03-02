@@ -26,3 +26,11 @@ char *strncpy(char *dest, const char *src, int n)
 		;
 	return dest;
 }
+
+int strlen(const char *str)
+{
+	int len = 0;
+	while (*str++ != '\0')
+		len++;
+	return len;
+}
