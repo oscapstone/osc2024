@@ -1,5 +1,5 @@
 
-void main()
+void kernel_start()
 {
     while(1);
 }

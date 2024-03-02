@@ -41,6 +41,9 @@ $(IMG): $(ELF)
 run: $(IMG)
 	qemu-system-aarch64 -M raspi3b -kernel $^ -display none -d in_asm
 
+debug_run: $(IMG)
+	qemu-system-aarch64 -M raspi3b -kernel $^ -display none -S -s
+
 clean:
 	rm -r $(BUILD_DIR)
 	rm $(IMG)
