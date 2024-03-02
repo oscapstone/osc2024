@@ -3,14 +3,15 @@
 .global _start
 
 _start:
-    /* Get dtb address from x0 */
-    ldr x1, =dtb_addr
-    str x0, [x1]
+    ldr x10, =0x80000
+    ldr x11, =__loader_start
+    ldr w3, =__loader_size
 
-    /* get cpu id */
-    mrs x1, mpidr_el1
-    and x1, x1, #3
-    cbnz x1, halt // halt if cpu id != 0
+relocate:
+    ldr x4, [x10], #8
+    str x4, [x11], #8
+    sub w3, w3, #1
+    cbnz w3, relocate
 
     /* set stack pointer */
     ldr x1, =_start
@@ -28,13 +29,5 @@ bss_reset:
 
 run_main:
     /* branch to main function */
-    bl main
-
-halt:
-    wfe
-    b halt
-
-.section .data
-.global dtb_addr
-dtb_addr:
-.dc 0x0
+    bl main-0x20000
+    b run_main
