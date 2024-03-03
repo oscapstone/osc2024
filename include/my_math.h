@@ -1,6 +1,6 @@
 #ifndef _MY_MATH_H
 #define _MY_MATH_H
 
-double pow(double x, double y);
+int pow(int x, int y);
 
 #endif
