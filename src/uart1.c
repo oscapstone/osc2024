@@ -26,13 +26,13 @@ void uart1_init() {
     set(GPPUD, 0);
 
     // Wait 150 cycles
-    wait_cycle(150);
+    wait_cycles(150);
 
     // Clock the control signal into the GPIO pads
     set(GPPUDCLK0, (1 << 14) | (1 << 15));
 
     // Wait 150 cycles
-    wait_cycle(150);
+    wait_cycles(150);
 
     // Remove the clock
     set(GPPUDCLK0, 0);

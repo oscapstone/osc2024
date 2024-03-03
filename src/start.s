@@ -7,9 +7,9 @@ _start:
     and     x1, x1, #3      // Keep the lowest two bits
     cbz     x1, 2f          // if cpu_id > 0, stop
 1:
-    wfe                     // if cpu_id == 0
+    wfe                     
     b       1b
-2:
+2:                          // if cpu_id == 0
     ldr     x1, =_start     // set stack pointer
     mov     sp, x1
     ldr     x1, =__bss_start    // clear bss
@@ -22,3 +22,12 @@ _start:
 4:  
     bl      main            // main function
     b       1b              // halt this core if return
+
+// mrs: Load value from a system register to one of the general purpose registers (x0–x30)
+// and: Perform the logical AND operation. We use this command to strip the last byte from the value we obtain from the mpidr_el1 register.
+// cbz: Compare the result of the previously executed operation to 0 and jump (or branch in ARM terminology) to the provided label if the comparison yields true.
+// b: Perform an unconditional branch to some label.
+// adr: Load a label's relative address into the target register. In this case, we want pointers to the start and end of the .bss region.
+// sub: Subtract values from two registers.
+// bl: "Branch with a link": perform an unconditional bra/nch and store the return address in x30 (the link register). When the subroutine is finished, use the ret instruction to jump back to the return address.
+// mov: Move a value between registers or from a constant to a register.

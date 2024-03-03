@@ -19,14 +19,14 @@ CFLAGS = -c -Wall -O2 -Iinclude -nostdinc -nostdlib -nostartfiles -ffreestanding
 
 .PHONY: all clean asm run debug dirs
 
-all: dirs kernel8.img
+all: dirs bootloader.img
 
 dirs: 
 	if [ ! -d "$(BUILD_DIR)" ]; then mkdir "$(BUILD_DIR)"; fi
 
-kernel8.img: $(OBJS) $(ENTRY_OBJS)
-	$(LD) $(ENTRY_OBJS) $(OBJS) -T $(LINKER_FILE) -o kernel8.elf
-	$(OBJCPY) -O binary kernel8.elf kernel8.img
+bootloader.img: $(OBJS) $(ENTRY_OBJS)
+	$(LD) $(ENTRY_OBJS) $(OBJS) -T $(LINKER_FILE) -o bootloader.elf
+	$(OBJCPY) -O binary bootloader.elf bootloader.img
 
 $(ENTRY_OBJS): $(ENTRY)
 	$(CC) $(CFLAGS) $< -o $@
@@ -35,16 +35,16 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
 asm: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -d in_asm
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial stdio
 
-display: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial stdio
+tty: all
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial pty
 
 debug: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s
 
 clean:
-	rm -f $(BUILD_DIR)/* kernel8.*
+	rm -f $(BUILD_DIR)/* bootloader.*

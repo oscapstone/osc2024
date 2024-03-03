@@ -1,3 +1,4 @@
+#include "fb.h"
 #include "mbox.h"
 #include "my_string.h"
 #include "uart0.h"
@@ -117,22 +118,29 @@ void shell_controller(char *cmd) {
         uart_printf("hello: print Hello World!\n");
         uart_printf("timestamp: get current timestamp\n");
         uart_printf("reboot: reboot the device\n");
+        uart_printf("poweroff: turn off the device\n");
         uart_printf("brn: get rpi3’s board revision number\n");
         uart_printf("bsn: get rpi3’s board serial number\n");
         uart_printf("arm_mem: get ARM memory base address and size\n");
+        uart_printf("showpic: Show a picture\n");
     } else if (!strcmp(cmd, "hello")) {
-        uart_printf("Hello World!\n");
+        uart_printf("Hello World!\r\n");
     } else if (!strcmp(cmd, "reboot")) {
-        uart_printf("Rebooting...");
+        uart_printf("Rebooting...\r\n");
         reset();
         while (1)
             ; // hang until reboot
+    } else if (!strcmp(cmd, "poweroff")) {
+        uart_printf("Shutdown the board...\r\n");
+        power_off();
     } else if (!strcmp(cmd, "brn")) {
         get_board_revision();
     } else if (!strcmp(cmd, "bsn")) {
         get_board_serial();
     } else if (!strcmp(cmd, "arm_mem")) {
         get_arm_base_memory_sz();
+    } else if (!strcmp(cmd, "showpic")) {
+        lfb_showpicture();
     } else if (!strcmp(cmd, "timestamp")) {
         uart_printf("%f\n", get_timestamp());
     } else {
