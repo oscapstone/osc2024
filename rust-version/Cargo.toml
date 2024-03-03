@@ -1,5 +1,5 @@
 [package]
-name = "hw0-rust"
+name = "rust-kernel"
 version = "0.1.0"
 edition = "2021"
 
