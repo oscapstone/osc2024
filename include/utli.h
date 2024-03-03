@@ -7,4 +7,5 @@ void set(volatile unsigned int *addr, unsigned int val);
 void reset();
 void cancel_reset();
 void wait_cycle(int r);
+void wait_usec(unsigned int n);
 #endif

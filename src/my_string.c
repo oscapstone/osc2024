@@ -2,26 +2,15 @@
 
 char *itox(int value, char *s) {
     int idx = 0;
-
-    char tmp[8 + 1];
-    int tidx = 0;
-    while (value) {
-        int r = value % 16;
-        if (r < 10) {
-            tmp[tidx++] = '0' + r;
-        } else {
-            tmp[tidx++] = 'a' + r - 10;
-        }
-        value /= 16;
-    }
-
-    // reverse tmp
-    int i;
-    for (i = tidx - 1; i >= 0; i--) {
-        s[idx++] = tmp[i];
+    unsigned int n;
+    for (int c = 28; c >= 0; c -= 4) {
+        // get highest tetrad
+        n = (value >> c) & 0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n += n > 9 ? 0x37 : 0x30;
+        s[idx++] = n;
     }
     s[idx] = '\0';
-
     return s;
 }
 

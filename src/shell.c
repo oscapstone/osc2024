@@ -1,6 +1,6 @@
 #include "mbox.h"
 #include "my_string.h"
-#include "uart.h"
+#include "uart0.h"
 #include "utli.h"
 
 enum ANSI_ESC {
@@ -36,7 +36,12 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
     uart_init();
     uart_flush();
-    uart_printf("\nHello From RPI3\n\n");
+    uart_printf("\n[%f] Init PL011 UART done", get_timestamp());
+    uart_printf("\n ____              _     _                    _           \n");
+    uart_printf("| __ )  ___   ___ | |_  | |    ___   __ _  __| | ___ _ __ \n");
+    uart_printf("|  _ \\ / _ \\ / _ \\| __| | |   / _ \\ / _` |/ _` |/ _ \\ '__|\n");
+    uart_printf("| |_) | (_) | (_) | |_  | |__| (_) | (_| | (_| |  __/ |   \n");
+    uart_printf("|____/ \\___/ \\___/ \\__| |_____\\___/ \\__,_|\\__,_|\\___|_|   \n\n");
 }
 
 void shell_input(char *cmd) {
@@ -110,7 +115,7 @@ void shell_controller(char *cmd) {
     } else if (!strcmp(cmd, "help")) {
         uart_printf("help: print this help menu\n");
         uart_printf("hello: print Hello World!\n");
-        // uart_printf("timestamp: get current timestamp\n");
+        uart_printf("timestamp: get current timestamp\n");
         uart_printf("reboot: reboot the device\n");
         uart_printf("brn: get rpi3’s board revision number\n");
         uart_printf("bsn: get rpi3’s board serial number\n");

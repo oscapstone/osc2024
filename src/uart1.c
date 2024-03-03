@@ -1,11 +1,9 @@
-#include "aux.h"
-#include "gpio.h"
 #include "my_string.h"
+#include "peripherals/aux.h"
+#include "peripherals/gpio.h"
 #include "utli.h"
 
-extern volatile unsigned char _end; // defined in linker
-
-void uart_init() {
+void uart1_init() {
     /* Initialize UART */
     set(AUX_ENABLES, *AUX_ENABLES | 1); // Enable mini UART
     set(AUX_MU_CNTL, 0);                // Disable TX, RX during configuration
@@ -43,7 +41,7 @@ void uart_init() {
     set(AUX_MU_CNTL, 3);
 }
 
-char uart_read() {
+char uart1_read() {
     // Check data ready field
     do {
         asm volatile("nop");
@@ -54,7 +52,7 @@ char uart_read() {
     return r == '\r' ? '\n' : r;
 }
 
-void uart_write(unsigned int c) {
+void uart1_write(unsigned int c) {
     // Check transmitter idle field
     do {
         asm volatile("nop");
@@ -63,33 +61,34 @@ void uart_write(unsigned int c) {
     set(AUX_MU_IO, c);
 }
 
-void uart_send_string(char *str) {
+void uart1_send_string(char *str) {
     for (int i = 0; str[i] != '\0'; i++) {
-        uart_write((char)str[i]);
+        uart1_write((char)str[i]);
     }
 }
 
-void uart_printf(char *fmt, ...) {
+void uart1_printf(char *fmt, ...) {
     __builtin_va_list args;
     __builtin_va_start(args, fmt);
+    extern volatile unsigned char _end; // defined in linker
 
     char *s = (char *)&_end; // put temporary string after code
     vsprintf(s, fmt, args);
 
     while (*s) {
         if (*s == '\n')
-            uart_write('\r');
-        uart_write(*s++);
+            uart1_write('\r');
+        uart1_write(*s++);
     }
 }
 
-void uart_flush() {
+void uart1_flush() {
     while (*AUX_MU_LSR & 0x01) {
         *AUX_MU_IO;
     }
 }
 
-void uart_hex(unsigned int d) {
+void uart1_hex(unsigned int d) {
     unsigned int n;
     int c;
     for (c = 28; c >= 0; c -= 4) {
@@ -97,6 +96,6 @@ void uart_hex(unsigned int d) {
         n = (d >> c) & 0xF;
         // 0-9 => '0'-'9', 10-15 => 'A'-'F'
         n += n > 9 ? 0x37 : 0x30;
-        uart_write(n);
+        uart1_write(n);
     }
 }

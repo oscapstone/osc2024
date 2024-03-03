@@ -28,7 +28,26 @@ void cancel_reset() {
 }
 
 void wait_cycle(int r) {
-    while (r--) {
-        asm volatile("nop"); // Execute the 'nop' instruction
+    if (r > 0) {
+        while (r--) {
+            asm volatile("nop"); // Execute the 'nop' instruction
+        }
     }
+}
+
+/**
+ * Wait N microsec (ARM CPU only)
+ */
+void wait_usec(unsigned int n) {
+    register unsigned long f, t, r;
+    // get the current counter frequency
+    asm volatile("mrs %0, cntfrq_el0" : "=r"(f));
+    // read the current counter
+    asm volatile("mrs %0, cntpct_el0" : "=r"(t));
+    // calculate required count increase
+    unsigned long i = ((f / 1000) * n) / 1000;
+    // loop while counter increase is less than i
+    do {
+        asm volatile("mrs %0, cntpct_el0" : "=r"(r));
+    } while (r - t < i);
 }

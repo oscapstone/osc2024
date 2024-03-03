@@ -1,7 +1,7 @@
 #ifndef _AUX_H
 #define _AUX_H
 
-#include "mmio.h"
+#include "peripherals/mmio.h"
 
 #define AUX_BASE (MMIO_BASE + 0x215000)
 

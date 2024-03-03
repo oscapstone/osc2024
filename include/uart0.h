@@ -1,5 +1,5 @@
-#ifndef _UART_H
-#define _UART_H
+#ifndef _UART0_H
+#define _UART0_H
 
 void uart_init();
 void uart_send_string(char *str);

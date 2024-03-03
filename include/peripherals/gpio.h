@@ -1,7 +1,7 @@
 #ifndef _GPIO_H
 #define _GPIO_H
 
-#include "mmio.h"
+#include "peripherals/mmio.h"
 
 // Base address for GPIO peripherals
 #define GPIO_BASE (MMIO_BASE + 0x200000)
