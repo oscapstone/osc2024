@@ -36,7 +36,7 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
     uart_init();
     uart_flush();
-    uart_printf("\n\nHello From RPI3\n\n");
+    uart_printf("\nHello From RPI3\n\n");
 }
 
 void shell_input(char *cmd) {
