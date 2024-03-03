@@ -27,13 +27,15 @@ volatile unsigned int __attribute__((aligned(16))) mbox[36];
 #define MBOX_FULL 0x80000000
 
 void get_arm_base_memory_sz() {
-    mbox[0] = 8 * 4;            // length of the message
-    mbox[1] = REQUEST_CODE;     // this is a request message
+    mbox[0] = 8 * 4;        // length of the message
+    mbox[1] = REQUEST_CODE; // this is a request message
+
     mbox[2] = MBOX_TAG_ARM_MEM; // get serial number command
     mbox[3] = 8;                // buffer size
-    mbox[4] = 8;
+    mbox[4] = TAG_REQUEST_CODE;
     mbox[5] = 0; // clear output buffer
     mbox[6] = 0;
+
     mbox[7] = MBOX_TAG_LAST;
 
     if (mbox_call(MBOX_CH_PROP)) {
@@ -46,17 +48,19 @@ void get_arm_base_memory_sz() {
 
 void get_board_serial() {
     // get the board's unique serial number with a mailbox call
-    mbox[0] = 8 * 4;              // length of the message
-    mbox[1] = REQUEST_CODE;       // this is a request message
+    mbox[0] = 8 * 4;        // length of the message
+    mbox[1] = REQUEST_CODE; // this is a request message
+
     mbox[2] = MBOX_TAG_GETSERIAL; // get serial number command
     mbox[3] = 8;                  // buffer size
-    mbox[4] = 8;
+    mbox[4] = TAG_REQUEST_CODE;
     mbox[5] = 0; // clear output buffer
     mbox[6] = 0;
+
     mbox[7] = MBOX_TAG_LAST;
 
     if (mbox_call(MBOX_CH_PROP)) {
-        uart_printf("My serial number is: 0x%08x%08x\n", mbox[6], mbox[5]);
+        uart_printf("Serial number: 0x%08x%08x\n", mbox[6], mbox[5]);
     } else {
         uart_printf("Unable to query serial number..\n");
     }
@@ -65,11 +69,12 @@ void get_board_serial() {
 void get_board_revision() {
     mbox[0] = 7 * 4; // buffer size in bytes
     mbox[1] = REQUEST_CODE;
-    // tags begin
+
     mbox[2] = MBOX_TAG_BOARD_REVISION; // tag identifier
     mbox[3] = 4;                       // maximum of request and response value buffer's length.
     mbox[4] = TAG_REQUEST_CODE;
-    mbox[5] = 0;             // value buffer
+    mbox[5] = 0; // value buffer
+
     mbox[6] = MBOX_TAG_LAST; // tags end
 
     if (mbox_call(MBOX_CH_PROP)) {
@@ -93,10 +98,16 @@ int mbox_call(unsigned char ch) {
     do {
         asm volatile("nop");
     } while (get(MBOX_STATUS) & MBOX_EMPTY);
-    /* is it a response to our message? */
-    if (r == get(MBOX_READ))
-        /* is it a valid successful response? */
-        return (mbox[1] == REQUEST_SUCCEED);
 
+    while (1) {
+        /* is there a response? */
+        do {
+            asm volatile("nop");
+        } while (get(MBOX_STATUS) & MBOX_EMPTY);
+        /* is it a response to our message? */
+        if (r == get(MBOX_READ))
+            /* is it a valid successful response? */
+            return (mbox[1] == REQUEST_SUCCEED);
+    }
     return 0;
 }
