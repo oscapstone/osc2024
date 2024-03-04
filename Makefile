@@ -3,7 +3,13 @@ LD 			= clang -fuse-ld=lld
 OBJCOPY		= llvm-objcopy
 
 TARGET 		= aarch64-unknown-none-elf
-CFLAGS 		= -Wall -Wextra -Wshadow -ffreestanding -mcpu=cortex-a53 --target=$(TARGET) -nostdinc -nostdlib -mgeneral-regs-only
+CFLAGS 		= -Wall -Wextra -Wshadow \
+			  -ffreestanding -mgeneral-regs-only \
+			  -mcpu=cortex-a53 --target=$(TARGET) \
+			  -nostdinc -nostdlib -Os
+
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
 
 .PHONY: all build clean run
 
@@ -14,8 +20,11 @@ build: kernel8.img
 start.o: start.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
-kernel8.elf: start.o
-	$(LD) -T linker.ld $(CFLAGS) $(LDFLAGS) $< -o $@
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+kernel8.elf: start.o $(OBJS)
+	$(LD) -T linker.ld $(CFLAGS) $^ -o $@
 
 kernel8.img: kernel8.elf
 	$(OBJCOPY) -O binary $< $@
