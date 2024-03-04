@@ -1,36 +1,53 @@
 CC 			= clang
 LD 			= clang -fuse-ld=lld
 OBJCOPY		= llvm-objcopy
+QEMU		= qemu-system-aarch64
 
 TARGET 		= aarch64-unknown-none-elf
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding -mgeneral-regs-only \
 			  -mcpu=cortex-a53 --target=$(TARGET) \
 			  -nostdinc -nostdlib -Os
+QEMU_FLAGS 	= -display none \
+			  -d in_asm,cpu \
+			  -smp cpus=4
 
-SRCS = $(wildcard *.c)
-OBJS = $(SRCS:.c=.o)
+BUILD_DIR 	= build
+SRC_DIR  	= src
+
+KERNEL_ELF 	= $(BUILD_DIR)/kernel8.elf
+KERNEL_BIN 	= kernel8.img
+
+SRCS = $(shell find $(SRC_DIR) -name '*.c')
+OBJS = $(BUILD_DIR)/start.o $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+DEPS = $(OBJ_FILES:%.o=%.d)
+-include $(DEP_FILES)
 
 .PHONY: all build clean run
 
 all: build run
 
-build: kernel8.img
+build: $(KERNEL_BIN)
 
-start.o: start.S
+$(BUILD_DIR)/start.o: $(SRC_DIR)/start.S
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-%.o: %.c
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-kernel8.elf: start.o $(OBJS)
-	$(LD) -T linker.ld $(CFLAGS) $^ -o $@
+$(KERNEL_ELF): $(OBJS)
+	$(LD) -T $(SRC_DIR)/linker.ld $(CFLAGS) $^ -o $@
 
-kernel8.img: kernel8.elf
+$(KERNEL_BIN): $(KERNEL_ELF)
 	$(OBJCOPY) -O binary $< $@
 
 clean:
-	$(RM) kernel8.img kernel8.elf *.o
+	$(RM) -r $(KERNEL_BIN) $(BUILD_DIR)
 
-run: build
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm,cpu -smp cpus=4
+run: $(KERNEL_BIN)
+	$(QEMU) -M raspi3b -kernel $(KERNEL_BIN) $(QEMU_FLAGS)
+
+run-debug: QEMU_FLAGS += -s -S
+run-debug: run

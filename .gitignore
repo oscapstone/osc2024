@@ -1,3 +1,2 @@
 *.img
-*.elf
-*.o
+build/
