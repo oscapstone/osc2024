@@ -12,8 +12,11 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get the size of the kernel image file and send it to Rpi3
-wc -c < $KERNEL_PATH | tr -d '\n' > $DEST_PATH
-sleep 1
+# wc -c: count bytes of a file
+# tr -d: delete characters
+# sleep: wait n seconds
+wc -c < $KERNEL_PATH | tr -d '\n' > $DEST_PATH | sleep 1
 
 # Send the kernel image
-cat $KERNEL_PATH | pv --quiet --rate-limit 100 > $DEST_PATH
+# pv: redirect file input to specified tty
+pv $KERNEL_PATH --rate-limit 100 > $DEST_PATH
