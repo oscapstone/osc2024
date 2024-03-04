@@ -1,0 +1,3 @@
+[build]
+target = "aarch64-unknown-none-softfloat"
+rustflags = ["-C", "link-arg=-nostdlib", "-C", "link-arg=-static"]

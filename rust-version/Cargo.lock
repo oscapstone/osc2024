@@ -3,5 +3,23 @@
 version = 3
 
 [[package]]
-name = "hw0-rust"
+name = "aarch64-cpu"
+version = "9.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac42a04a61c19fc8196dd728022a784baecc5d63d7e256c01ad1b3fbfab26287"
+dependencies = [
+ "tock-registers",
+]
+
+[[package]]
+name = "rust-kernel"
 version = "0.1.0"
+dependencies = [
+ "aarch64-cpu",
+]
+
+[[package]]
+name = "tock-registers"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"

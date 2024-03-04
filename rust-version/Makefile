@@ -21,9 +21,9 @@ RUSTFLAGS = $(RUSTC_MISC_ARGS)                   \
     -C link-arg=--script=$(KERNEL_LINKER_SCRIPT)
 
 # build my kernel
-KERNEL_ELF = target/$(TARGET)/release/kernel
+KERNEL_ELF = target/$(TARGET)/debug/kernel
 
-COMPILER_ARGS = --target=$(TARGET) --release
+COMPILER_ARGS = --target=$(TARGET)
 
 $(KERNEL_ELF): # src/main.rs src/boot.s Cargo.toml
 	@RUSTFLAGS="$(RUSTFLAGS)" cargo rustc $(COMPILER_ARGS)
