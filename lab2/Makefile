@@ -7,7 +7,7 @@ QEMUFLAGS = -M raspi3b -display none -serial null -serial stdio
 SRC_DIR = src
 BUILD_DIR = build
 
-all: kernel8.img
+all: clean kernel8.img
 
 clean:
 	rm -rf $(BUILD_DIR) *.img

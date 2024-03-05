@@ -40,6 +40,10 @@ char uart_getc()
 
 void uart_putc(char c)
 {
+	// Convert '\n' to '\r\n'
+	if (c == '\n')
+		uart_putc('\r');
+
 	// Check the transmitter empty field on bit 5 of AUX_MU_LSR_REG
 	while (!(*AUX_MU_LSR & 0x20))
 		asm volatile("nop");
@@ -48,9 +52,9 @@ void uart_putc(char c)
 
 void uart_hex(unsigned int h)
 {
+	uart_puts("0x");
 	unsigned int n;
-	int c;
-	for (c = 28; c >= 0; c -= 4) {
+	for (int c = 28; c >= 0; c -= 4) {
 		n = (h >> c) & 0xf;
 		n += n > 9 ? 0x37 : '0';
 		uart_putc(n);
@@ -60,9 +64,6 @@ void uart_hex(unsigned int h)
 void uart_puts(const char *s)
 {
 	while (*s) {
-		// Convert '\n' to '\r\n'
-		if (*s == '\n')
-			uart_putc('\r');
 		uart_putc(*s++);
 	}
 }
