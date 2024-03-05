@@ -1,7 +1,9 @@
 #include "mbox.h"
+#include "my_math.h"
 #include "peripherals/gpio.h"
 #include "peripherals/mbox.h"
 #include "peripherals/mmio.h"
+#include "uart0.h"
 
 #define PM_PASSWORD 0x5a000000
 #define PM_RSTC ((volatile unsigned int *)(MMIO_BASE + 0x0010001c))
@@ -9,6 +11,83 @@
 #define PM_WDOG ((volatile unsigned int *)(MMIO_BASE + 0x00100024))
 #define PM_WDOG_MAGIC 0x5a000000
 #define PM_RSTC_FULLRST 0x00000020
+
+char *itox(int value, char *s) {
+    int idx = 0;
+    unsigned int n;
+    for (int c = 28; c >= 0; c -= 4) {
+        // get highest tetrad
+        n = (value >> c) & 0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n += n > 9 ? 0x37 : 0x30;
+        s[idx++] = n;
+    }
+    s[idx] = '\0';
+    return s;
+}
+
+char *itoa(int value, char *s) {
+    int idx = 0;
+    if (value < 0) {
+        value *= -1;
+        s[idx++] = '-';
+    }
+
+    char tmp[10];
+    int tidx = 0;
+    do {
+        tmp[tidx++] = '0' + value % 10;
+        value /= 10;
+    } while (value != 0 && tidx < 11);
+
+    // reverse tmp
+    int i;
+    for (i = tidx - 1; i >= 0; i--) {
+        s[idx++] = tmp[i];
+    }
+    s[idx] = '\0';
+
+    return s;
+}
+
+char *ftoa(float value, char *s) {
+    int idx = 0;
+    if (value < 0) {
+        value = -value;
+        s[idx++] = '-';
+    }
+
+    int ipart = (int)value;
+    float fpart = value - (float)ipart;
+
+    // convert ipart
+    char istr[11]; // 10 digit
+    itoa(ipart, istr);
+
+    // convert fpart
+    char fstr[7]; // 6 digit
+    fpart *= pow(10, 6);
+    itoa((int)fpart, fstr);
+
+    // copy int part
+    char *ptr = istr;
+    while (*ptr)
+        s[idx++] = *ptr++;
+    s[idx++] = '.';
+    // copy float part
+    ptr = fstr;
+    while (*ptr)
+        s[idx++] = *ptr++;
+    s[idx] = '\0';
+
+    return s;
+}
+
+void align(void *size, unsigned int s) {
+    unsigned int *x = (unsigned int *)size;
+    unsigned int mask = s - 1;
+    *x = ((*x) + mask) & (~mask);
+}
 
 float get_timestamp() {
     register unsigned long long f, c;

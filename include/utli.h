@@ -1,6 +1,10 @@
 #ifndef _UTLI_H
 #define _UTLI_H
 
+char *itox(int value, char *s);
+char *itoa(int value, char *s);
+char *ftoa(float value, char *s);
+void align(void *size, unsigned int s);
 float get_timestamp();
 unsigned int get(volatile unsigned int *addr);
 void set(volatile unsigned int *addr, unsigned int val);

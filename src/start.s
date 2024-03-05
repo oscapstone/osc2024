@@ -10,7 +10,7 @@ proc_hang:
     wfe                     
     b       proc_hang
 setting:                      // if cpu_id == 0
-    ldr     x1, =_start     // set stack pointer
+    ldr     x1, =_start      // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     mov     sp, x1
     ldr     x1, =__bss_start    // clear bss
     ldr     x2, =__bss_size

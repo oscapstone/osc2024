@@ -1,5 +1,6 @@
 #include "fb.h"
 #include "shell.h"
+
 #define CMD_LEN 128
 
 enum shell_status {

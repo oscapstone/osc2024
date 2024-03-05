@@ -1,59 +1,59 @@
 #include "uart0.h"
 #include "utli.h"
 
-long long address_input() {
-    uart_printf("\rPlease input kernel load address (default: 0x80000): 0x");
+// long long address_input() {
+//     uart_printf("\rPlease input kernel load address (default: 0x80000): 0x");
 
-    int idx = 0, end = 0, i;
-    char cmd[128];
-    char c;
-    while ((c = uart_read()) != '\n') {
-        if (end == 8) {
-            continue;
-        }
-        // CTRL-C
-        if (c == 3) {
-            uart_printf("\n");
-            return -1;
-        }
-        // Backspace
-        else if (c == 8 || c == 127) {
-            if (idx > 0) {
-                idx--;
-                // left shift command
-                for (i = idx; i < end; i++) {
-                    cmd[i] = cmd[i + 1];
-                }
-                cmd[--end] = '\0';
-            }
-        } else {
-            // right shift command
-            if (idx < end) {
-                for (i = end; i > idx; i--) {
-                    cmd[i] = cmd[i - 1];
-                }
-            }
-            cmd[idx++] = c;
-            cmd[++end] = '\0';
-        }
-        uart_printf("\rPlease input kernel load address (default: 0x80000): 0x%s \r\e[%dC", cmd, idx + 55);
-    }
+//     int idx = 0, end = 0, i;
+//     char cmd[128];
+//     char c;
+//     while ((c = uart_read()) != '\n') {
+//         if (end == 8) {
+//             continue;
+//         }
+//         // CTRL-C
+//         if (c == 3) {
+//             uart_printf("\n");
+//             return -1;
+//         }
+//         // Backspace
+//         else if (c == 8 || c == 127) {
+//             if (idx > 0) {
+//                 idx--;
+//                 // left shift command
+//                 for (i = idx; i < end; i++) {
+//                     cmd[i] = cmd[i + 1];
+//                 }
+//                 cmd[--end] = '\0';
+//             }
+//         } else {
+//             // right shift command
+//             if (idx < end) {
+//                 for (i = end; i > idx; i--) {
+//                     cmd[i] = cmd[i - 1];
+//                 }
+//             }
+//             cmd[idx++] = c;
+//             cmd[++end] = '\0';
+//         }
+//         uart_printf("\rPlease input kernel load address (default: 0x80000): 0x%s \r\e[%dC", cmd, idx + 55);
+//     }
 
-    long long address = 0;
-    for (i = 0; i < end && cmd[i] != 0; i++) {
-        address *= 16;
-        address += cmd[i] - '0';
-    }
+//     long long address = 0;
+//     for (i = 0; i < end && cmd[i] != 0; i++) {
+//         address *= 16;
+//         address += cmd[i] - '0';
+//     }
 
-    if (address == 0) {
-        uart_printf("\rPlease input kernel load address (default: 0x80000): 0x80000");
-        address = 0x80000;
-    }
+//     if (address == 0) {
+//         uart_printf("\rPlease input kernel load address (default: 0x80000): 0x80000");
+//         address = 0x80000;
+//     }
 
-    uart_printf("\n");
+//     uart_printf("\n");
 
-    return address;
-}
+//     return address;
+// }
 
 void loadimg() {
     uart_init();
@@ -63,7 +63,13 @@ void loadimg() {
     //     uart_printf("invaild address!\n");
     //     return;
     // }
-    wait_usec(3000000);
+    uart_printf("\n[%f] Init PL011 UART done", get_timestamp());
+    uart_printf("\n ____              _     _                    _           \n");
+    uart_printf("| __ )  ___   ___ | |_  | |    ___   __ _  __| | ___ _ __ \n");
+    uart_printf("|  _ \\ / _ \\ / _ \\| __| | |   / _ \\ / _` |/ _` |/ _ \\ '__|\n");
+    uart_printf("| |_) | (_) | (_) | |_  | |__| (_) | (_| | (_| |  __/ |   \n");
+    uart_printf("|____/ \\___/ \\___/ \\__| |_____\\___/ \\__,_|\\__,_|\\___|_|   \n\n");
+    wait_usec(2000000);
     uart_printf("Send image via UART now!\n");
 
     // big endian

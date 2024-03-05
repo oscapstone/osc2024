@@ -1,95 +1,22 @@
 #include "my_math.h"
-
-char *itox(int value, char *s) {
-    int idx = 0;
-    unsigned int n;
-    for (int c = 28; c >= 0; c -= 4) {
-        // get highest tetrad
-        n = (value >> c) & 0xF;
-        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
-        n += n > 9 ? 0x37 : 0x30;
-        s[idx++] = n;
-    }
-    s[idx] = '\0';
-    return s;
-}
-
-char *itoa(int value, char *s) {
-    int idx = 0;
-    if (value < 0) {
-        value *= -1;
-        s[idx++] = '-';
-    }
-
-    char tmp[10];
-    int tidx = 0;
-    do {
-        tmp[tidx++] = '0' + value % 10;
-        value /= 10;
-    } while (value != 0 && tidx < 11);
-
-    // reverse tmp
-    int i;
-    for (i = tidx - 1; i >= 0; i--) {
-        s[idx++] = tmp[i];
-    }
-    s[idx] = '\0';
-
-    return s;
-}
-
-char *ftoa(float value, char *s) {
-    int idx = 0;
-    if (value < 0) {
-        value = -value;
-        s[idx++] = '-';
-    }
-
-    int ipart = (int)value;
-    float fpart = value - (float)ipart;
-
-    // convert ipart
-    char istr[11]; // 10 digit
-    itoa(ipart, istr);
-
-    // convert fpart
-    char fstr[7]; // 6 digit
-    fpart *= pow(10, 6);
-    itoa((int)fpart, fstr);
-
-    // copy int part
-    char *ptr = istr;
-    while (*ptr)
-        s[idx++] = *ptr++;
-    s[idx++] = '.';
-    // copy float part
-    ptr = fstr;
-    while (*ptr)
-        s[idx++] = *ptr++;
-    s[idx] = '\0';
-
-    return s;
-}
+#include "uart0.h"
+#include "utli.h"
 
 unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args) {
     char *dst_orig = dst;
-
     while (*fmt) {
         if (*fmt == '%') {
             fmt++;
-            // escape %
-            if (*fmt == '%') {
+            if (*fmt == '%') { // escape %
                 goto put;
             }
-            // string
-            if (*fmt == 's') {
+            if (*fmt == 's') { // string
                 char *p = __builtin_va_arg(args, char *);
                 while (*p) {
                     *dst++ = *p++;
                 }
             }
-            // number
-            if (*fmt == 'd') {
+            if (*fmt == 'd') { // number
                 int arg = __builtin_va_arg(args, int);
                 char buf[11];
                 char *p = itoa(arg, buf);
@@ -97,8 +24,7 @@ unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args) {
                     *dst++ = *p++;
                 }
             }
-            // hex
-            if (*fmt == 'x') {
+            if (*fmt == 'x') { // hex
                 int arg = __builtin_va_arg(args, int);
                 char buf[8 + 1];
                 char *p = itox(arg, buf);
@@ -106,8 +32,7 @@ unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args) {
                     *dst++ = *p++;
                 }
             }
-            // float
-            if (*fmt == 'f') {
+            if (*fmt == 'f') { // float
                 float arg = (float)__builtin_va_arg(args, double);
                 char buf[19]; // sign + 10 int + dot + 6 float
                 char *p = ftoa(arg, buf);
@@ -139,4 +64,21 @@ int strcmp(const char *X, const char *Y) {
         Y++;
     }
     return *(const unsigned char *)X - *(const unsigned char *)Y;
+}
+
+int strncmp(const char *X, const char *Y, unsigned int n) {
+    for (int i = 0; i < n; i++) {
+        if (!X || !Y) {
+            if (!X && !Y) {
+                return 0;
+            } else {
+                return -1;
+            }
+        } else {
+            if (*X != *Y) {
+                return *(const unsigned char *)X - *(const unsigned char *)Y;
+            }
+        }
+    }
+    return 0;
 }

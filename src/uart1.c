@@ -70,9 +70,10 @@ void uart1_send_string(char *str) {
 void uart1_printf(char *fmt, ...) {
     __builtin_va_list args;
     __builtin_va_start(args, fmt);
-    extern volatile unsigned char _end; // defined in linker
-
-    char *s = (char *)&_end; // put temporary string after code
+    // extern volatile unsigned char _end; // defined in linker
+    // char *s = (char *)&_end; // put temporary string after code
+    char print_str_buf[256];
+    char *s = print_str_buf;
     vsprintf(s, fmt, args);
 
     while (*s) {
