@@ -25,13 +25,16 @@ KERNEL_ELF = target/$(TARGET)/debug/kernel
 
 COMPILER_ARGS = --target=$(TARGET)
 
+all: $(KERNEL_BIN)
+
 $(KERNEL_ELF): # src/main.rs src/boot.s Cargo.toml
 	@RUSTFLAGS="$(RUSTFLAGS)" cargo rustc $(COMPILER_ARGS)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
 	rust-objcopy -O binary $(KERNEL_ELF) $(KERNEL_BIN)
 
-all: $(KERNEL_BIN)
+test: $(KERNEL_BIN)
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial stdio
 
 clean:
 	rm -rf target $(KERNEL_BIN)
