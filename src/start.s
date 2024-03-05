@@ -5,23 +5,23 @@
 _start:
     mrs     x1, MPIDR_EL1   // get cpu id and put to reg x1
     and     x1, x1, #3      // Keep the lowest two bits
-    cbz     x1, 2f          // if cpu_id > 0, stop
-1:
+    cbz     x1, setting          // if cpu_id > 0, stop
+proc_hang:
     wfe                     
-    b       1b
-2:                          // if cpu_id == 0
+    b       proc_hang
+setting:                      // if cpu_id == 0
     ldr     x1, =_start     // set stack pointer
     mov     sp, x1
     ldr     x1, =__bss_start    // clear bss
     ldr     x2, =__bss_size
-3:  
-    cbz     x2, 4f          // if val in reg x2 is zero, thn jump to label 4, indicating that the .bss section has been zeroed.
+clear_bss:  
+    cbz     x2, master      // if val in reg x2 is zero, thn jump to label 4, indicating that the .bss section has been zeroed.
     str     xzr, [x1], #8   // write a zero value (from the xzr register) to the memory address pointed to by x1, and then increment the value of x1, effectively zeroing the next 8 bytes.
     sub     x2, x2, #1
-    cbnz    x2, 3b
-4:  
+    cbnz    x2, clear_bss
+master:  
     bl      main            // main function
-    b       1b              // halt this core if return
+    b       proc_hang              // halt this core if return
 
 // mrs: Load value from a system register to one of the general purpose registers (x0–x30)
 // and: Perform the logical AND operation. We use this command to strip the last byte from the value we obtain from the mpidr_el1 register.
@@ -31,3 +31,5 @@ _start:
 // sub: Subtract values from two registers.
 // bl: "Branch with a link": perform an unconditional bra/nch and store the return address in x30 (the link register). When the subroutine is finished, use the ret instruction to jump back to the return address.
 // mov: Move a value between registers or from a constant to a register.
+// ldr: load data from memory into a register
+// str: store (write) a value from a register into memory at a specified address.

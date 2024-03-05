@@ -123,6 +123,7 @@ void shell_controller(char *cmd) {
         uart_printf("bsn: get rpi3’s board serial number\n");
         uart_printf("arm_mem: get ARM memory base address and size\n");
         uart_printf("showpic: Show a picture\n");
+        uart_printf("loadimg: reupload kernel img if the bootloader is used.\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_printf("Hello World!\r\n");
     } else if (!strcmp(cmd, "reboot")) {
@@ -143,6 +144,10 @@ void shell_controller(char *cmd) {
         lfb_showpicture();
     } else if (!strcmp(cmd, "timestamp")) {
         uart_printf("%f\n", get_timestamp());
+    } else if (!strcmp(cmd, "loadimg")) {
+        asm volatile(
+            "mov x30, 0x60000;"
+            "ret;");
     } else {
         uart_printf("shell: command not found: %s\n", cmd);
     }

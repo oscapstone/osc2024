@@ -1,4 +1,5 @@
 #include "uart0.h"
+#include "utli.h"
 
 long long address_input() {
     uart_printf("\rPlease input kernel load address (default: 0x80000): 0x");
@@ -57,11 +58,12 @@ long long address_input() {
 void loadimg() {
     uart_init();
     uart_flush();
-    long long address = address_input();
-    if (address == -1) {
-        uart_printf("invaild address!\n");
-        return;
-    }
+    // long long address = address_input();
+    // if (address == -1) {
+    //     uart_printf("invaild address!\n");
+    //     return;
+    // }
+    wait_usec(3000000);
     uart_printf("Send image via UART now!\n");
 
     // big endian
@@ -82,21 +84,27 @@ void loadimg() {
     uart_printf("Sucessfully get img_checksum!\n");
     uart_printf("img_checksum: %d\n", img_checksum);
 
-    char *kernel = (char *)address;
+    char *kernel = (char *)0x80000;
 
     for (i = 0; i < img_size; i++) {
         char b = uart_read_raw();
         *(kernel + i) = b;
         img_checksum -= (int)b;
-        if (i % 1000 == 0)
-            uart_printf("\rreceived byte#: %d", i);
+        // if (i % 1000 == 0)
+        //     uart_printf("\rreceived byte#: %d", i);
     }
 
+    uart_write('\n');
     if (img_checksum != 0) {
         uart_printf("checksum check failed!\n");
+        uart_printf("Please reupload..\n");
+        asm volatile(
+            "mov x30, 0x60000;"
+            "ret;");
     } else {
         uart_printf("checksum correct!\n");
-        // void (*start_os)(void) = (void *)kernel;
-        // start_os();
+        asm volatile(
+            "mov x30, 0x80000;"
+            "ret;");
     }
 }

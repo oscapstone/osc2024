@@ -49,7 +49,7 @@ def main():
         while not ser.writable():
             print("not writable")
             pass
-        time.sleep(0.0001)
+        # time.sleep(0.0001)
 
     # for i in tqdm(range(chunk_count), desc="transmission:"):
     #     ser.write(bytecodes[i * per_chunk : (i + 1) * per_chunk])
