@@ -31,3 +31,8 @@ make run
 ```
 make debug
 ```
+
+### Create a pseudo TTY device for QEMU to test the bootloader
+```
+make tty
+```
