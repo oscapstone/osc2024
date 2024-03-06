@@ -8,6 +8,8 @@ edition = "2021"
 [[bin]]
 name = "kernel"
 path = "src/main.rs"
+test = false
+bench = false
 
 
 [dependencies]
