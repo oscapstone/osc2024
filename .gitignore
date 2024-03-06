@@ -3,3 +3,5 @@
 *.img
 *.bin
 *.dat
+*.d
+build/
