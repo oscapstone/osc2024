@@ -46,6 +46,8 @@ void uart_send(unsigned int c) {
 
 void uart_puts(char* s) {
     while (*s) {
+        if(*s=='\n')
+            uart_send('\r');
         uart_send(*s++);
     }
 }
@@ -59,5 +61,5 @@ char uart_getc() {
     // read data from IO
     char c;
     c = (char) (*UART_AUX_MU_IO_REG);
-    return c;
+    return c == '\r' ? '\n' : c;
 }
