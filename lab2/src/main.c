@@ -6,9 +6,9 @@
 
 int main()
 {
-	fdt_traverse(initrd_callback);
-	alloc_init();
 	uart_init();
+	alloc_init();
+	fdt_traverse(initrd_callback);
 	uart_puts("Welcome!\n");
 	run_shell();
 	return 0;

@@ -35,6 +35,10 @@ void run_shell()
 		}
 
 		exec_command(buf);
+
+		// HACK: Stop the shell if rebooting
+		if (!strcmp(buf, "reboot"))
+			break;
 	}
 }
 

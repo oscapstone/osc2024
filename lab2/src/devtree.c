@@ -7,12 +7,12 @@
 extern void *dtb_addr;
 
 /**
- * @brief Convert a 4-byte little-endian sequence to big-endian.
+ * @brief Convert a 4-byte big-endian sequence to little-endian.
  * 
- * @param s: little-endian sequence
- * @return big-endian sequence
+ * @param s: big-endian sequence
+ * @return little-endian sequence
  */
-static uint32_t le2be(const void *s)
+static uint32_t be2le(const void *s)
 {
 	const uint8_t *bytes = (const uint8_t *)s;
 	return (uint32_t)bytes[0] << 24 | (uint32_t)bytes[1] << 16 |
@@ -29,17 +29,17 @@ void fdt_traverse(void (*callback)(void *))
 	struct fdt_header *header = (struct fdt_header *)dtb_ptr;
 
 	// Check the magic number
-	if (le2be(&(header->magic)) != 0xD00DFEED)
+	if (be2le(&(header->magic)) != 0xD00DFEED)
 		uart_puts("[ERROR] Dtb header magic does not match!\n");
 
-	uintptr_t structure = (uintptr_t)header + le2be(&header->off_dt_struct);
-	uintptr_t strings = (uintptr_t)header + le2be(&header->off_dt_strings);
-	uint32_t totalsize = le2be(&header->totalsize);
+	uintptr_t structure = (uintptr_t)header + be2le(&header->off_dt_struct);
+	uintptr_t strings = (uintptr_t)header + be2le(&header->off_dt_strings);
+	uint32_t totalsize = be2le(&header->totalsize);
 
 	// Parse the structure block
 	uintptr_t ptr = structure; // Point to the beginning of structure block
 	while (ptr < strings + totalsize) {
-		uint32_t token = le2be((char *)ptr);
+		uint32_t token = be2le((char *)ptr);
 		ptr += 4; // Token takes 4 bytes
 
 		switch (token) {
@@ -49,13 +49,13 @@ void fdt_traverse(void (*callback)(void *))
 		case FDT_END_NODE:
 			break;
 		case FDT_PROP:
-			uint32_t len = le2be((char *)ptr);
+			uint32_t len = be2le((char *)ptr);
 			ptr += 4;
-			uint32_t nameoff = le2be((char *)ptr);
+			uint32_t nameoff = be2le((char *)ptr);
 			ptr += 4;
 			if (!strcmp((char *)(strings + nameoff),
 				    "linux,initrd-start")) {
-				callback(le2be(ptr));
+				callback((void *)(uintptr_t)be2le((void *)ptr));
 			}
 			ptr += align4(len);
 			break;

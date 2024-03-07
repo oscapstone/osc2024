@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "initrd.h"
 #include "uart.h"
 #include "string.h"
@@ -25,8 +27,10 @@ void initrd_list()
 {
 	char *fptr = (char *)ramfs_addr;
 
+	// FIXME: memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10) returns 0
+
 	// Check if the file is encoded with New ASCII Format
-	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!", 9)) {
+	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
 		cpio_t *header = (cpio_t *)fptr;
 
 		// New ASCII Format uses 8-byte hexadecimal string for all numbers
@@ -53,7 +57,7 @@ void initrd_cat(const char *target)
 	char *fptr = (char *)ramfs_addr;
 
 	// Check if the file is encoded with New ASCII Format
-	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!", 9)) {
+	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
 		cpio_t *header = (cpio_t *)fptr;
 
 		// New ASCII Format uses 8-byte hexadecimal string for all numbers
@@ -62,9 +66,8 @@ void initrd_cat(const char *target)
 
 		// Total size of (header + pathname) is a multiple of four bytes
 		// File data is also padded to a multiple of four bytes
-		int headsize = (sizeof(cpio_t) + namesize) +
-			       (4 - (sizeof(cpio_t) + namesize) % 4) % 4;
-		int datasize = filesize + (4 - filesize % 4) % 4;
+		int headsize = align4(sizeof(cpio_t) + namesize);
+		int datasize = align4(filesize);
 
 		// Match target file
 		char pathname[namesize];
@@ -87,7 +90,7 @@ void initrd_cat(const char *target)
 void initrd_callback(void *addr)
 {
 	uart_puts("[INFO] Initrd is mounted at ");
-	uart_hex(addr);
+	uart_hex((uintptr_t)addr);
 	uart_putc('\n');
 	ramfs_addr = (char *)addr;
 }
