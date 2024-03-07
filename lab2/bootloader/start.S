@@ -3,13 +3,20 @@
 .global _start
 
 _start:
-    ldr x10, =0x80000
-    ldr x11, =__loader_start
+    /* save arguments in registers */
+    mov x10, x0
+    mov x11, x1
+    mov x12, x2
+    mov x12, x3
+
+    /* relocate bootloader */
+    ldr x1, =0x80000
+    ldr x2, =__loader_start // 0x60000
     ldr w3, =__loader_size
 
 relocate:
-    ldr x4, [x10], #8
-    str x4, [x11], #8
+    ldr x4, [x1], #8
+    str x4, [x2], #8
     sub w3, w3, #1
     cbnz w3, relocate
 
@@ -29,5 +36,5 @@ bss_reset:
 
 run_main:
     /* branch to main function */
-    bl main-0x20000
+    bl main-0x20000 // 0x60070-0x20000
     b run_main

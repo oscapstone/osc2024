@@ -15,7 +15,7 @@ fi
 # wc -c: count bytes of a file
 # tr -d: delete characters
 # sleep: wait n seconds
-wc -c < $KERNEL_PATH | tr -d '\n' > $DEST_PATH | sleep 1
+wc -c < $KERNEL_PATH | tr -d '' > $DEST_PATH | sleep 1
 
 # Send the kernel image
 # pv: redirect file input to specified tty
