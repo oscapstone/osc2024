@@ -161,7 +161,7 @@ void shell_controller(char *cmd) {
         uart_printf("%f\n", get_timestamp());
     } else if (!strcmp(cmd, "loadimg")) {
         asm volatile(
-            "mov x30, 0x60000;"
+            "ldr x30, =0x60200;"
             "ret;");
     } else {
         uart_printf("shell: command not found: %s\n", cmd);

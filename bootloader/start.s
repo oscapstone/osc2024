@@ -32,6 +32,7 @@ clear_bss:
 	str xzr,[x1],#8
 	sub w2, w2, #1
 	cbnz w2, clear_bss
+	
 bootloader_main: 
 	bl main
 	b  proc_hang
