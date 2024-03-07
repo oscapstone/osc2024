@@ -1,6 +1,9 @@
+ver = release
 CC = clang
 LD = ld.lld
 OC = llvm-objcopy
+EMU = qemu-system-aarch64
+DB = lldb
 
 BUILD_DIR = build
 SRC_DIR = src
@@ -12,8 +15,20 @@ CPPFLAGS := -I$(INC_DIR) -MMD
 ASMFLAGS := -I$(INC_DIR) -MMD
 LDFLAGS := -m aarch64elf -nostdlib
 OCFLAGS := --output-target=$(TARGET) -O binary
+EMUFLAGS := -M raspi3b -serial null -serial stdio -display none
 
-.DELETE_ON_ERROR:
+ifeq ($(ver), debug)
+CFLAGS += -g
+CPPFLAGS += -DDEBUG
+ASMFLAGS += -DDEBUG
+EMUFLAGS += -S -s
+
+debug:  kernel8.img
+	$(EMU) $(EMUFLAGS) -kernel $< &
+	$(DB) $(BUILD_DIR)/kernel8.elf
+endif
+
+.DELETE_ON_ERROR: all
 all: kernel8.img
 
 .PHONY: clean
@@ -36,6 +51,11 @@ DEP_FILES = $(OBJ_FILES:%.o=%.d)
 
 -include $(DEP_FILES)
 
+	
 kernel8.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 	$(LD) $(LDFLAGS) -T $< -o $(BUILD_DIR)/kernel8.elf $(OBJ_FILES)
 	$(OC) $(OCFLAGS) $(BUILD_DIR)/kernel8.elf $@
+
+.PHONY: emu
+emu: kernel8.img
+	$(EMU) $(EMUFLAGS) -kernel $<
