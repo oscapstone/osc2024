@@ -33,5 +33,5 @@ clear_bss:
 	sub w2, w2, #1
 	cbnz w2, clear_bss
 bootloader_main: 
-	bl main-0x20000
+	bl main
 	b  proc_hang
