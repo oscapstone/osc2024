@@ -1,0 +1,6 @@
+note.md
+
+*.o
+*.elf
+*.img
+!nycuos.img
