@@ -23,11 +23,11 @@ void read_command(char *cmd)
 
 void help(void) 
 {
-    uart_send_string("Shell for Raspberry Pi 3\r\n\0");
-    uart_send_string("Available commands:\r\n\0");
-    uart_send_string("  help - display this information\r\n\0");
-    uart_send_string("  hello - display hello world\r\n\0");
-    uart_send_string("  reboot - reboot the system\r\n\0");
+    uart_send_string("Shell for Raspberry Pi 3\r\n"                     
+                     "Available commands:\r\n"                     
+                     "  help - display this information\r\n"                     
+                     "  hello - display hello world\r\n"                     
+                     "  reboot - reboot the system\r\n\0");
 }
 
 void hello(void)
@@ -35,7 +35,7 @@ void hello(void)
     uart_send_string("Hello, world!\r\n\0");
 }
 
-void reset(int tick)
+void reset(unsigned int tick)
 {
     uart_send_string("rebooting...\r\n\0");
     put32( PM_RSTC, PM_PASSWORD | 0x20 ); // full reset
