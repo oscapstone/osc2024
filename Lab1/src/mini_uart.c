@@ -1,5 +1,6 @@
 #include "peripheral/gpio.h"
 #include "peripheral/mini_uart.h"
+#include "utils.h"
 
 void uart_init(void)
 {
@@ -39,7 +40,7 @@ char uart_recv(void)
     return (r == '\r')? '\n' : r;
 }
 
-void uart_send_string(const char *str)
+void uart_send_string(const char const *str)
 {
     while (*str)
         uart_send(*str++);

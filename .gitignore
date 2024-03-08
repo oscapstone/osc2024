@@ -6,3 +6,4 @@
 *.d
 build/
 tags
+.DS_Store
