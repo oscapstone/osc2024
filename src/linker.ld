@@ -1,20 +1,36 @@
 __rpi_phys_binary_load_addr = 0x80000;
 
-SECTIONS
-{
+ENTRY(__rpi_phys_binary_load_addr)
+
+SECTIONS {
     . = __rpi_phys_binary_load_addr;
-    __boot_core_stack_end = .;
-    .text :  {
+    PROVIDE(__boot_core_stack_end = .);
+
+    .text : {
         KEEP(*(.text._start))
-        *(.text)
+        *(.text .text.*)
     }
 
-    .rodata : { *(.rodata) }
-    .data : { *(.data) }
+    .rodata : {
+        *(.rodata .rodata.*)
+    }
+    .data : {
+        *(.data .data.*)
+    }
 
     .bss : {
         __bss_start = .;
-        *(.bss*)
+        *(.bss .bss.*)
         __bss_end = .;
+    }
+
+    .shstrtab : {
+        *(.shstrtab)
+    }
+
+    /DISCARD/ : {
+        *(.comment)
+        *(.symtab)
+        *(.strtab)
     }
 }
