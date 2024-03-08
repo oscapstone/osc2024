@@ -9,7 +9,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -mcpu=cortex-a53 --target=$(TARGET) \
 			  -nostdinc -nostdlib -Os
 QEMU_FLAGS 	= -display none \
-			  -d in_asm,cpu \
+			  -serial null -serial stdio \
 			  -smp cpus=4
 
 BUILD_DIR 	= build
@@ -19,7 +19,8 @@ KERNEL_ELF 	= $(BUILD_DIR)/kernel8.elf
 KERNEL_BIN 	= kernel8.img
 
 SRCS = $(shell find $(SRC_DIR) -name '*.c')
-OBJS = $(BUILD_DIR)/start.o $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+ASMS = $(shell find $(SRC_DIR) -name '*.S')
+OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
@@ -29,7 +30,7 @@ all: build run
 
 build: $(KERNEL_BIN)
 
-$(BUILD_DIR)/start.o: $(SRC_DIR)/start.S
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -37,8 +38,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(KERNEL_ELF): $(OBJS)
-	$(LD) -T $(SRC_DIR)/linker.ld $(CFLAGS) $^ -o $@
+$(KERNEL_ELF): $(SRC_DIR)/linker.ld $(OBJS)
+	$(LD) -T $(SRC_DIR)/linker.ld $(CFLAGS) $(OBJS) -o $@
 
 $(KERNEL_BIN): $(KERNEL_ELF)
 	$(OBJCOPY) -O binary $< $@
