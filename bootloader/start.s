@@ -11,7 +11,8 @@ proc_hang:
     b       proc_hang
 
 relocate_setting: 
-	mov 	x27, x0
+	ldr		x1, =_dtb_ptr	 // put _dtb_ptr into register1
+	str		x0, [x1]		// store dtb address from x0 to _dtb_ptr
 	ldr x1, =0x80000 
 	ldr x2, =__bootloader_start 
 	ldr w3, =__bootloader_size
@@ -33,8 +34,11 @@ clear_bss:
 	str xzr,[x1],#8
 	sub w2, w2, #1
 	cbnz w2, clear_bss
+	
 bootloader_main: 
-	bl main-0x20000
+	bl main
 	b  proc_hang
 
-
+.global _dtb_ptr	//define a global variable _dtb_ptr
+.section .data		//_dtb_ptr is in data section
+_dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value of 0x0

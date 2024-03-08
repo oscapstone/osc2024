@@ -3,13 +3,15 @@
 .global _start
 
 _start:
-    mrs     x1, MPIDR_EL1   // get cpu id and put to reg x1
+    mrs     x1,  MPIDR_EL1  // get cpu id and put to reg x1
     and     x1, x1, #3      // Keep the lowest two bits
     cbz     x1, setting          // if cpu_id > 0, stop
 proc_hang:
     wfe                     
     b       proc_hang
 setting:                      // if cpu_id == 0
+    ldr		x1, =_dtb_ptr	// put _dtb_ptr into register1
+	str		x27, [x1]		// store the dtb address to _dtb_ptr
     ldr     x1, =_start      // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     mov     sp, x1
     ldr     x1, =__bss_start    // clear bss
@@ -22,6 +24,12 @@ clear_bss:
 master:  
     bl      main            // main function
     b       proc_hang              // halt this core if return
+
+
+.global _dtb_ptr	//define a global variable _dtb_ptr
+.section .data		//_dtb_ptr is in data section
+_dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value of 0x0
+
 
 // mrs: Load value from a system register to one of the general purpose registers (x0–x30)
 // and: Perform the logical AND operation. We use this command to strip the last byte from the value we obtain from the mpidr_el1 register.

@@ -1,5 +1,3 @@
 #include "loadimg.h"
 
-void main() {
-    loadimg();
-}
+void main() { loadimg(); }

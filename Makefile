@@ -24,6 +24,9 @@ all: dirs kernel8.img
 dirs: 
 	if [ ! -d "$(BUILD_DIR)" ]; then mkdir "$(BUILD_DIR)"; fi
 
+cpio:
+	cd rootfs; find . | cpio -o -H newc > ../initramfs.cpio; cd ..
+	
 kernel8.img: $(OBJS) $(ENTRY_OBJS)
 	$(LD) $(ENTRY_OBJS) $(OBJS) -T $(LINKER_FILE) -o kernel8.elf
 	$(OBJCPY) -O binary kernel8.elf kernel8.img
@@ -35,16 +38,16 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
 asm: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm -initrd initramfs.cpio
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 display: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 debug: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 clean:
 	rm -f $(BUILD_DIR)/* kernel8.*

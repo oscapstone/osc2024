@@ -4,7 +4,8 @@
 char *itox(int value, char *s);
 char *itoa(int value, char *s);
 char *ftoa(float value, char *s);
-void align(void *size, unsigned int s);
+unsigned int align(unsigned int size, unsigned int s);
+void align_inplace(unsigned int *size, unsigned int s);
 float get_timestamp();
 unsigned int get(volatile unsigned int *addr);
 void set(volatile unsigned int *addr, unsigned int val);

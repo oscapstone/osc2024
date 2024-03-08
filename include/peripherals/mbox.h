@@ -2,6 +2,12 @@
 #define _PERIPHERALS_MBOX_H
 
 #include "peripherals/mmio.h"
+/*
+Mailbox is a communication mechanism between ARM and VideoCoreIV GPU
+
+The mailbox mechanism consists of three components mailbox registers, channels,
+and messages.
+*/
 
 #define MBOX_BASE (MMIO_BASE + 0xb880)
 /* Regs */
