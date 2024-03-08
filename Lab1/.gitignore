@@ -1,0 +1,40 @@
+# Ignore all binaries and executable files
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.o
+*.obj
+
+# Ignore object files and static libraries
+*.a
+*.lib
+
+# Ignore macOS specific files that are not source code
+.DS_Store
+__MACOSX/
+*.swp
+*.dmg
+*.app
+
+# Ignore editor backups and temporary files
+*~
+.*.swp
+.*.swo
+.*.tmp
+
+# Ignore all directories named build or dist
+/build/
+/dist/
+
+# Add specific file extensions you wish to ignore
+# For example, ignore all Word documents
+*.doc
+*.docx
+
+# Ignore specific files or directories by adding their paths
+# path/to/directory/
+# path/to/file.txt
+
+# Exclude other non-source files as needed based on your project
