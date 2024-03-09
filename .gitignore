@@ -1,6 +1,10 @@
 note.md
+.vscode
+.DS_Store
 
 *.o
 *.elf
 *.img
+*.txt
+obj
 !nycuos.img
