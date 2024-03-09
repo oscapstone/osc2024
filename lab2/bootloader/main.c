@@ -1,5 +1,4 @@
-#include "uart.h"
-#include "utils.h"
+#include "boot.h"
 
 int main()
 {
@@ -9,7 +8,7 @@ int main()
 	// Get kernel image size
 	char buf[16] = { 0 };
 	for (int i = 0; i < 16; i++) {
-		buf[i] = uart_getc();
+		buf[i] = uart_recv();
 		if (buf[i] == '\n') {
 			buf[i] = '\0';
 			break;
@@ -25,8 +24,9 @@ int main()
 	unsigned int size = atoi(buf);
 	char *kernel = (char *)0x80000;
 	while (size--)
-		*kernel++ = uart_getc();
-	asm volatile("nop;"
+		*kernel++ = uart_recv();
+
+	asm volatile(""
 		     "mov x0, x10;"
 		     "mov x1, x11;"
 		     "mov x2, x12;"

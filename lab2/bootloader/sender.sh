@@ -15,8 +15,9 @@ fi
 # wc -c: count bytes of a file
 # tr -d: delete characters
 # sleep: wait n seconds
-wc -c < $KERNEL_PATH | tr -d '' > $DEST_PATH | sleep 1
+wc -c < $KERNEL_PATH > $DEST_PATH | sleep 1
 
 # Send the kernel image
 # pv: redirect file input to specified tty
-pv $KERNEL_PATH --rate-limit 100 > $DEST_PATH
+#     add --rate-limit <n> option to limit the speed
+pv $KERNEL_PATH > $DEST_PATH

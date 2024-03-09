@@ -36,5 +36,5 @@ bss_reset:
 
 run_main:
     /* branch to main function */
-    bl main-0x20000 // 0x60070-0x20000
+    bl main-0x20000
     b run_main

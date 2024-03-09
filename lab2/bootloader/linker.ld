@@ -6,7 +6,6 @@ SECTIONS
 	.rodata : { *(.rodata) }
 	.data : { *(.data) }
 	.bss : {
-		. = ALIGN(16);
 		__bss_start = .;
 		*(.bss)
 		__bss_end = .;
