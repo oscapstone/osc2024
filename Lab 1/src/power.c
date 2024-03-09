@@ -1,4 +1,4 @@
-#include "gpio.h"
+#include "mmio.h"
 #include "delays.h"
 
 #define PM_RSTC         ((volatile unsigned int*)(MMIO_BASE+0x0010001c))
