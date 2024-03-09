@@ -1,5 +1,5 @@
 ARMGNU ?= aarch64-linux-gnu
-CFLAGS =  -I../include -Wall -nostdlib -nostartfiles -ffreestanding -mgeneral-regs-only
+CFLAGS =  -I../include -nostdlib -nostartfiles -ffreestanding -mgeneral-regs-only -Wall -g
 ASMFLAGS = -I../include
 QEMUFLAGS = -M raspi3b -display none -serial null -serial pty
 
@@ -18,4 +18,4 @@ bootloader.img:
 	$(ARMGNU)-objcopy -O binary build/bootloader.elf bootloader.img
 
 qemu: clean bootloader.img
-	qemu-system-aarch64 $(QEMUFLAGS) -kernel bootloader.img  -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 $(QEMUFLAGS) -kernel bootloader.img -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb

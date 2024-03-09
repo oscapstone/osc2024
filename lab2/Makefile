@@ -1,6 +1,6 @@
 ARMGNU ?= aarch64-linux-gnu
 
-CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only -g
+CFLAGS = -Iinclude -nostdlib -nostartfiles -ffreestanding -mgeneral-regs-only -Wall -g
 ASMFLAGS = -Iinclude
 QEMUFLAGS = -M raspi3b -display none -serial null -serial stdio
 
@@ -31,5 +31,5 @@ kernel8.img: linker.ld $(OBJ_FILES)
 qemu: all kernel8.img initramfs.cpio bcm2710-rpi-3-b-plus.dtb
 	qemu-system-aarch64 $(QEMUFLAGS) -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
-debug: all kernel8.img
-	qemu-system-aarch64 $(QEMUFLAGS) -kernel kernel8.img -S -s
+debug: all kernel8.img initramfs.cpio bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 $(QEMUFLAGS) -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -S -s
