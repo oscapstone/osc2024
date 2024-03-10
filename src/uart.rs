@@ -1,6 +1,7 @@
-use mmio::AuxReg::*;
-use mmio::GpioReg::*;
-use mmio::MmioReg::*;
+use mmio::regs::AuxReg::*;
+use mmio::regs::GpioReg::*;
+use mmio::regs::MmioReg::*;
+
 use mmio::MMIO;
 
 pub unsafe fn uart_init() {

@@ -2,6 +2,7 @@ pub const MMIO_BASE: u32 = 0x3F00_0000;
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum AuxReg {
     Enable = 0x0021_5000,
     MuIo = 0x0021_5040,
@@ -19,6 +20,7 @@ pub enum AuxReg {
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum GpioReg {
     Gpfsel0 = 0x0020_0000,
     Gpfsel1 = 0x0020_0004,
@@ -51,11 +53,10 @@ pub enum GpioReg {
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum PmReg {
-    Password = 0x0010_0000,
-    Wdog = 0x0010_1000,
-    Rstc = 0x0010_1004,
-    Rsts = 0x0010_1008,
+    Rstc = 0x0010_001C,
+    Wdog = 0x0010_0024,
 }
 
 #[derive(Copy, Clone)]
@@ -72,36 +73,5 @@ impl MmioReg {
             MmioReg::Gpio(reg) => MMIO_BASE + *reg as u32,
             MmioReg::Pm(reg) => MMIO_BASE + *reg as u32,
         }
-    }
-}
-
-pub struct MMIO;
-
-impl MMIO {
-    pub unsafe fn write_reg(reg: MmioReg, value: u32) {
-        let addr = reg.addr();
-        core::ptr::write_volatile(addr as *mut u32, value);
-    }
-
-    pub unsafe fn read_reg(reg: MmioReg) -> u32 {
-        let addr = reg.addr();
-        core::ptr::read_volatile(addr as *const u32)
-    }
-
-    pub fn delay(count: u32) {
-        for _ in 0..count {
-            unsafe {
-                core::arch::asm!("nop");
-            }
-        }
-    }
-
-    pub unsafe fn reboot() {
-        let mut rsts = MMIO::read_reg(MmioReg::Pm(PmReg::Rsts));
-        rsts &= !(0b111 << 20);
-        rsts |= 0x5A000;
-        MMIO::write_reg(MmioReg::Pm(PmReg::Rsts), rsts);
-        MMIO::delay(150);
-        MMIO::write_reg(MmioReg::Pm(PmReg::Wdog), 0x30_0000);
     }
 }
