@@ -13,7 +13,6 @@ fi
 
 # Get the size of the kernel image file and send it to Rpi3
 # wc -c: count bytes of a file
-# tr -d: delete characters
 # sleep: wait n seconds
 wc -c < $KERNEL_PATH > $DEST_PATH | sleep 1
 

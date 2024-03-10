@@ -5,7 +5,7 @@
 #include "string.h"
 #include "utils.h"
 
-static void *ramfs_addr = (void *)0x8000000;
+static void *ramfs_base = (void *)0x8000000;
 
 // Convert hexadecimal string to int
 // @param s: hexadecimal string
@@ -25,9 +25,7 @@ static int hextoi(char *s, int n)
 
 void initrd_list()
 {
-	char *fptr = (char *)ramfs_addr;
-
-	// FIXME: memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10) returns 0
+	char *fptr = (char *)ramfs_base;
 
 	// Check if the file is encoded with New ASCII Format
 	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
@@ -54,7 +52,7 @@ void initrd_list()
 
 void initrd_cat(const char *target)
 {
-	char *fptr = (char *)ramfs_addr;
+	char *fptr = (char *)ramfs_base;
 
 	// Check if the file is encoded with New ASCII Format
 	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
@@ -92,5 +90,5 @@ void initrd_callback(void *addr)
 	uart_puts("[INFO] Initrd is mounted at ");
 	uart_hex((uintptr_t)addr);
 	uart_putc('\n');
-	ramfs_addr = (char *)addr;
+	ramfs_base = (char *)addr;
 }

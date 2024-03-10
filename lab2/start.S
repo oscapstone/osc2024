@@ -4,7 +4,7 @@
 
 _start:
     /* Get dtb address from x0 */
-    ldr x1, =dtb_addr
+    ldr x1, =dtb_base
     str x0, [x1]
 
     /* get cpu id */
@@ -35,6 +35,6 @@ halt:
     b halt
 
 .section .data
-.global dtb_addr
-dtb_addr:
+.global dtb_base
+dtb_base:
 .dc 0x0
