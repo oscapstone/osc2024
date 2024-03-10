@@ -1,5 +1,6 @@
 SRC_DIR = src
 BUILD_DIR = build
+RPI3_DIR = rpi3
 
 CC = aarch64-linux-gnu-gcc
 CFLAGS = -Wall
@@ -20,12 +21,14 @@ dir_guard=@mkdir -p $(@D)
 .PHONY: all clean run debug
 
 all: $(TARGET)
+	cp $(TARGET) $(RPI3_DIR)/kernel8.img
 
 $(BUILD_DIR)/start.o: $(SRC_DIR)/start.s
 	$(dir_guard)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/main.o: $(SRC_DIR)/main.rs $(shell find $(SRC_DIR)/ -type f -name '*.rs')
+	@echo $^
 	$(dir_guard)
 	$(RC) $(RUSTFLAGS) $< -o $@
 
@@ -39,6 +42,7 @@ $(BUILD_DIR)/kernel8.img: $(BUILD_DIR)/kernel8.elf
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -rf $(RPI3_DIR)/kernel8.img
 
 run: $(TARGET)
 	$(QEMU) $(QEMU_FLAGS) -kernel $(TARGET)

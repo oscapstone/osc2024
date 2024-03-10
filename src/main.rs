@@ -5,6 +5,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+mod mmio;
 mod uart;
 
 #[no_mangle]
