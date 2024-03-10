@@ -5,7 +5,7 @@ OBJCOPY	= aarch64-linux-gnu-objcopy
 
 OBJ_DIR = bin-int
 
-OBJ_FILES = $(OBJ_DIR)/src/start.o $(OBJ_DIR)/src/main.o $(OBJ_DIR)/src/uart.o $(OBJ_DIR)/src/utils.o $(OBJ_DIR)/src/shell.o
+OBJ_FILES = $(OBJ_DIR)/src/start.o $(OBJ_DIR)/src/main.o $(OBJ_DIR)/src/uart.o $(OBJ_DIR)/src/utils.o $(OBJ_DIR)/src/shell.o $(OBJ_DIR)/src/reboot.o $(OBJ_DIR)/src/mailbox.o
 
 CFLAGS	= -Wall -Wextra -Wpedantic -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
 

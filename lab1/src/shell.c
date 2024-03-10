@@ -49,7 +49,7 @@ void shell() {
          } 
      } else if (string_compare(input_str,"reboot")) {
            uart_send_string("Rebooting....\n");
-           reset(1000);
+           reboot(1000);
      }    
 		
 	}
