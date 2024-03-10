@@ -1,11 +1,10 @@
 #include "headers/mini_uart.h"
 
-void delay( register unsigned int time)
+void delay( volatile unsigned int time)
 {
-    while ( time == 0)
+    while ( time--)
     {
         asm volatile("nop");
-        time -= 1;
     }// while
     return;
 }
@@ -14,23 +13,33 @@ void mini_uart_init()
 {
     // connecting to GPIO pins 14 & 15
     // only using 3 bits
-    register unsigned int reg = *GPFSEL0;
+    register unsigned int reg = *GPFSEL1;
     reg &= ~(( 0xF >> 1) << 12); // clean them
     reg &= ~(( 0xF >> 1) << 15);
     reg |= ( 0x2 << 12); // set them
     reg |= ( 0x2 << 15);
-    *GPFSEL0 = reg; // write back
+    *GPFSEL1 = reg; // write back
 
     // commit the signal
     // need to disable GPIO pull-up/down functions
     *GPPUD = 0;
-    delay( 150);
+    // delay( 150);
+    reg = 150;
+    while ( reg--)
+    {
+        asm volatile("nop");
+    }// while
     *GPPUDCLK0 = ( 1 << 14) | ( 1 << 15); // select the pins
-    delay( 150);
+    // delay( 150);
+    reg = 150;
+    while ( reg--)
+    {
+        asm volatile("nop");
+    }// while
     *GPPUDCLK0 = 0; // reset it
 
     // set uart enable
-    *AUX_ENABLES |= 1;
+    *AUX_ENABLES = 1;
 
     *AUX_MU_CNTL_REG = 0;
     *AUX_MU_IER_REG = 0;
