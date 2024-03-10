@@ -9,7 +9,7 @@ mod mmio;
 mod uart;
 mod utils;
 
-const MAX_COMMAND_LEN: usize = 1024;
+const MAX_COMMAND_LEN: usize = 0x400;
 
 #[no_mangle]
 pub extern "C" fn main() {
@@ -17,26 +17,27 @@ pub extern "C" fn main() {
         uart::uart_init();
         uart::uart_write(b"Hello, world!\n");
         let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
-        let mut len = 0usize;
         loop {
-            unsafe {
-                utils::memset(buf.as_mut_ptr(), 0, MAX_COMMAND_LEN);
-                uart::uart_write(b"> ");
-            }
-            loop {
-                let input = uart::uart_recv();
-                uart::uart_send(input);
-                if input == b'\n' {
-                    if len > 0 {
-                        uart::uart_puts(&buf);
-                        len = 0;
-                    }
-                    break;
-                } else if len < MAX_COMMAND_LEN {
-                    buf[len] = input;
-                    len += 1;
-                }
-            }
+            utils::memset(buf.as_mut_ptr(), 0, MAX_COMMAND_LEN);
+            uart::uart_write(b"# ");
+            uart::uart_gets(&mut buf);
+            execute_command(&buf);
+        }
+    }
+}
+
+fn execute_command(command: &[u8]) {
+    unsafe {
+        if utils::strncmp(command.as_ptr(), b"hello".as_ptr(), 5) == 0 {
+            uart::uart_write(b"Hello, world!\n");
+        } else if utils::strncmp(command.as_ptr(), b"help".as_ptr(), 4) == 0 {
+            uart::uart_write(b"hello\t: print this help menu\n");
+            uart::uart_write(b"help\t: print Hello World!\n");
+            uart::uart_write(b"reboot\t: reboot the Raspberry Pi\n");
+        } else if utils::strncmp(command.as_ptr(), b"reboot".as_ptr(), 6) == 0 {
+            mmio::MMIO::reboot();
+        } else {
+            uart::uart_write(b"Unknown command\n");
         }
     }
 }
