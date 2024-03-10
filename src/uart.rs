@@ -60,6 +60,7 @@ pub unsafe fn uart_recv() -> u8 {
     }
 }
 
+#[allow(dead_code)]
 pub unsafe fn uart_read(buf: &mut [u8]) {
     for i in buf.iter_mut() {
         *i = uart_recv();
@@ -70,4 +71,14 @@ pub unsafe fn uart_write(buf: &[u8]) {
     for &c in buf {
         uart_send(c);
     }
+}
+
+pub unsafe fn uart_puts(buf: &[u8]) {
+    for &c in buf {
+        if c == 0 {
+            break;
+        }
+        uart_send(c);
+    }
+    uart_send(b'\n');
 }

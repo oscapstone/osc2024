@@ -24,7 +24,7 @@ _start:
     sub     w2, w2, #1
     cbnz    w2, 3b
 
-    // jump to C code, should not return
+    // jump to main function and never return
 4:  bl      main
     // for failsafe, halt this core too
     b       1b

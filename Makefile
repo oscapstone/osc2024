@@ -3,12 +3,13 @@ BUILD_DIR = build
 RPI3_DIR = rpi3
 
 CC = aarch64-linux-gnu-gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -static
 
 RC = rustc
-RUSTFLAGS = --crate-type=staticlib --emit=obj --target=aarch64-unknown-linux-gnu -C panic=abort -C opt-level=s -C lto
+RUSTFLAGS = --crate-type=staticlib --emit=obj --target=aarch64-unknown-linux-gnu -C panic=abort -C opt-level=3
 
 LINKER = aarch64-linux-gnu-ld
+LINKER_FLAGS = -static
 OBJ_CPY = aarch64-linux-gnu-objcopy
 
 QEMU = qemu-system-aarch64
@@ -28,13 +29,12 @@ $(BUILD_DIR)/start.o: $(SRC_DIR)/start.s
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/main.o: $(SRC_DIR)/main.rs $(shell find $(SRC_DIR)/ -type f -name '*.rs')
-	@echo $^
 	$(dir_guard)
 	$(RC) $(RUSTFLAGS) $< -o $@
 
 $(BUILD_DIR)/kernel8.elf: $(BUILD_DIR)/start.o $(BUILD_DIR)/main.o $(SRC_DIR)/linker.ld
 	$(dir_guard)
-	$(LINKER) -T $(SRC_DIR)/linker.ld $(BUILD_DIR)/main.o $(BUILD_DIR)/start.o -o $@
+	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld $(BUILD_DIR)/main.o $(BUILD_DIR)/start.o -o $@
 
 $(BUILD_DIR)/kernel8.img: $(BUILD_DIR)/kernel8.elf
 	$(dir_guard)
