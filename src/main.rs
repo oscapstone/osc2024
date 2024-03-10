@@ -8,6 +8,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 mod mmio;
 mod uart;
 mod utils;
+use mmio::mailbox::get_board_revision;
 
 const MAX_COMMAND_LEN: usize = 0x400;
 
@@ -16,6 +17,7 @@ pub extern "C" fn main() {
     unsafe {
         uart::uart_init();
         uart::uart_write(b"Hello, world!\n");
+        get_board_revision();
         let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
         loop {
             utils::memset(buf.as_mut_ptr(), 0, MAX_COMMAND_LEN);

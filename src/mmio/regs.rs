@@ -59,11 +59,24 @@ pub enum PmReg {
     Wdog = 0x0010_0024,
 }
 
+#[repr(u32)]
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
+pub enum MailboxReg {
+    Read = 0x0000_B880,
+    Peek = 0x0000_B890,
+    Sender = 0x0000_B894,
+    Status = 0x0000_B898,
+    Config = 0x0000_B89C,
+    Write = 0x0000_B8A0,
+}
+
 #[derive(Copy, Clone)]
 pub enum MmioReg {
     Aux(AuxReg),
     Gpio(GpioReg),
     Pm(PmReg),
+    MailboxReg(MailboxReg),
 }
 
 impl MmioReg {
@@ -72,6 +85,7 @@ impl MmioReg {
             MmioReg::Aux(reg) => MMIO_BASE + *reg as u32,
             MmioReg::Gpio(reg) => MMIO_BASE + *reg as u32,
             MmioReg::Pm(reg) => MMIO_BASE + *reg as u32,
+            MmioReg::MailboxReg(reg) => MMIO_BASE + *reg as u32,
         }
     }
 }
