@@ -56,3 +56,30 @@ pub fn get_board_revision() {
         }
     }
 }
+
+pub fn get_arm_memory() {
+    let mut mailbox: [u32; 7] = [
+        7 * 4,      // buffer size in bytes
+        0x00000000, // REQUEST_CODE
+        0x00010005, // GET_ARM_MEMORY tag identifier
+        8,          // value buffer size
+        0x00000000, // TAG_REQUEST_CODE (request)
+        0,          // value buffer (response will be placed here)
+        0x00000000, // END_TAG
+    ];
+
+    if mailbox_call(&mut mailbox) {
+        unsafe {
+            uart::uart_write(b"ARM memory base: ");
+            uart::uart_write(&to_hex(mailbox[5]));
+            uart::uart_write(b"\n");
+            uart::uart_write(b"ARM memory size: ");
+            uart::uart_write(&to_hex(mailbox[6]));
+            uart::uart_write(b"\n");
+        }
+    } else {
+        unsafe {
+            uart::uart_write(b"Failed to get ARM memory\n");
+        }
+    }
+}
