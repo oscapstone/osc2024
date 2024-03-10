@@ -44,6 +44,9 @@ run: $(IMG)
 debug_run: $(IMG)
 	qemu-system-aarch64 -M raspi3b -kernel $^ -display none -S -s
 
+uart_run: $(IMG)
+	qemu-system-aarch64 -M raspi3b -kernel $^ -display none -serial null -serial stdio
+
 clean:
 	rm -r $(BUILD_DIR)
 	rm $(IMG)
