@@ -4,10 +4,12 @@
 #include "util.h"
 
 void mini_uart_setup() {
+  register unsigned int r = get32(GPFSEL1);
   // set gpio14
-  gpio_fsel_set(GPFSEL1, 12, GPIO_FSEL_ALT5);
+  r = (r & ~(7 << 12)) | (GPIO_FSEL_ALT5 << 12);
   // set gpio15
-  gpio_fsel_set(GPFSEL1, 15, GPIO_FSEL_ALT5);
+  r = (r & ~(7 << 15)) | (GPIO_FSEL_ALT5 << 15);
+  set32(GPFSEL1, r);
 
   // disable pull-up / down
   set32(GPPUD, 0b00);
