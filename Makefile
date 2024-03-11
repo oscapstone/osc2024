@@ -32,11 +32,11 @@ build: $(KERNEL_BIN)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -MMD $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -MMD $(CFLAGS) -c $< -o $@
 
 $(KERNEL_ELF): $(SRC_DIR)/linker.ld $(OBJS)
 	$(LD) -T $(SRC_DIR)/linker.ld $(CFLAGS) $(OBJS) -o $@
