@@ -1,8 +1,8 @@
-# OSC2023
+# OSC2024 Lab0/1
 
 | Github Account | Student ID | Name          |
 |----------------|------------|---------------|
-| psychicalcoder | 0816171    | Tsung-Han Liu |
+| NCTU-Jeffery   | 312513010  | 賴宥齊        |
 
 ## Requirements
 
@@ -12,11 +12,11 @@
 ## Build 
 
 ```
-make kernel.img
+make all
 ```
 
 ## Test With QEMU
 
 ```
-qemu-system-aarch64 -M raspi3b -kernel kernel.img -initrd initramfs.cpio -serial null -serial stdio -dtb bcm2710-rpi-3-b-plus.dtb
+make run
 ```
