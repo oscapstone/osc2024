@@ -42,7 +42,13 @@
 
 exception_handler:
     save_all // context saving
-    bl exception_entry // defined in exc.c
+    bl exception_entry // defined in traps.c
+    load_all
+    eret
+
+irq_handler:
+    save_all // context saving
+    bl irq_entry // defined in irq.c
     load_all
     eret
 
@@ -52,7 +58,7 @@ exception_handler:
 exception_vector_table:
     b exception_handler
 .align 7 // entry size is 0x80 (2^7)
-    b exception_handler
+    b irq_handler
 .align 7
     b exception_handler
 .align 7
@@ -61,7 +67,7 @@ exception_vector_table:
 
     b exception_handler
 .align 7
-    b exception_handler
+    b irq_handler
 .align 7
     b exception_handler
 .align 7
