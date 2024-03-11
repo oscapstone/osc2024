@@ -32,16 +32,20 @@ pub extern "C" fn main() {
 
 fn execute_command(command: &[u8]) {
     unsafe {
+        if utils::strlen(command.as_ptr()) == 0 {
+            return;
+        }
         if utils::strncmp(command.as_ptr(), b"hello".as_ptr(), 5) == 0 {
-            uart::uart_write(b"Hello, world!\n");
+            uart::uart_puts(b"Hello, world!");
         } else if utils::strncmp(command.as_ptr(), b"help".as_ptr(), 4) == 0 {
-            uart::uart_write(b"hello\t: print this help menu\n");
-            uart::uart_write(b"help\t: print Hello World!\n");
-            uart::uart_write(b"reboot\t: reboot the Raspberry Pi\n");
+            uart::uart_puts(b"hello\t: print this help menu");
+            uart::uart_puts(b"help\t: print Hello World!");
+            uart::uart_puts(b"reboot\t: reboot the Raspberry Pi");
         } else if utils::strncmp(command.as_ptr(), b"reboot".as_ptr(), 6) == 0 {
             mmio::MMIO::reboot();
         } else {
-            uart::uart_write(b"Unknown command\n");
+            uart::uart_write(b"Unknown command: ");
+            uart::uart_puts(command);
         }
     }
 }
