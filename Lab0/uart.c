@@ -25,9 +25,19 @@ void uart_init(){
     *AUX_MU_MCR = 0;        // Don't need auto flow control
     *AUX_MU_BAUD = 270;     // Set baud rate to 115200
     *AUX_MU_IIR = 6;        // No FIFO
+    
+    /* map UART1 to GPIO pins */
+    unsigned int r = *GPFSEL1;
+    r &= ~((7 << 12) | (7 << 15)); // gpio14, gpio15 innitial
+    r |= (2 << 12) | (2 << 15);    // alt5
+    *GPFSEL1 = r;
+    *GPPUD = 0;            // enable pins 14 and 15
+    r = 150; while(r--) { asm volatile("nop"); }
+    *GPPUDCLK0 = (1 << 14) | (1 << 15);
+    r = 150; while(r--) { asm volatile("nop"); }
+    *GPPUDCLK0 = 0;        // flush GPIO setup
 
     *AUX_MU_CNTL = 3;
-    
 }
 
 char uart_read(){
