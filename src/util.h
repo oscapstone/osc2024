@@ -9,3 +9,6 @@ typedef volatile long addr_t;
 void set32(addr_t address, uint32_t value);
 uint32_t get32(addr_t address);
 void wait_cycle(unsigned cycle);
+
+int strlen(const char* s);
+int strcmp(const char* s1, const char* s2);
