@@ -4,7 +4,7 @@ ENTRY(__rpi_phys_binary_load_addr)
 
 SECTIONS {
     . = __rpi_phys_binary_load_addr;
-    PROVIDE(__boot_core_stack_end = .);
+    __boot_core_stack_end = .;
 
     .text : {
         KEEP(*(.text._start))
@@ -12,15 +12,18 @@ SECTIONS {
     }
 
     .rodata : {
-        *(.rodata .rodata.*)
+        *(.rodata .rodata.* .gnu.linkonce.r*)
     }
     .data : {
-        *(.data .data.*)
+        *(.data .data.* .gnu.linkonce.d*)
     }
 
     .bss : {
+        . = ALIGN(8);
         __bss_start = .;
         *(.bss .bss.*)
+        *(COMMON)
+        . = ALIGN(8);
         __bss_end = .;
     }
 
@@ -30,7 +33,8 @@ SECTIONS {
 
     /DISCARD/ : {
         *(.comment)
-        *(.symtab)
-        *(.strtab)
+        *(.gnu*) *(.note*) *(.eh_frame*)
+        /* *(.symtab) */
+        /* *(.strtab) */
     }
 }
