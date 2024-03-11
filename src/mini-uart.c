@@ -67,17 +67,16 @@ int mini_uart_getline_echo(char* buffer, int length) {
   if (length <= 0)
     return -1;
   int r = 0;
-  for (char c; r + 1 < length; r++) {
+  for (char c; r < length;) {
     c = mini_uart_getc();
     if (c == '\n') {
       mini_uart_putc('\r');
       mini_uart_putc('\n');
       break;
     }
-    if (c == 0x08 || c == 0x7F) {
+    if (c == 0x08 || c == 0x7F || r + 1 == length)
       continue;
-    }
-    buffer[r] = c;
+    buffer[r++] = c;
     mini_uart_putc(c);
   }
   buffer[r] = '\0';
