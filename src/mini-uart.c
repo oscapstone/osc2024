@@ -74,6 +74,9 @@ int mini_uart_getline_echo(char* buffer, int length) {
       mini_uart_putc('\n');
       break;
     }
+    if (c == 0x08 || c == 0x7F) {
+      continue;
+    }
     buffer[r] = c;
     mini_uart_putc(c);
   }
