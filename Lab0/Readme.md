@@ -67,7 +67,6 @@ dd if=nycuos.img of=/dev/sdb
 ```
 ###  Deploy on Rpi3
 Connect UART cable and plug the USB to the host machine.
-![image](https://hackmd.io/_uploads/HkK5pxhap.png)
 Use screen to connect to the serial port.
 ```
 screen /dev/ttyUSB0 115200
