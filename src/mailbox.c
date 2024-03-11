@@ -16,16 +16,16 @@ volatile unsigned int __attribute__((aligned(16))) mailbox[36];
 
 int mailbox_call(unsigned char ch)
 {
-    unsigned int r = (((unsigned int)((unsigned long)&mailbox) & ~0xF) | (ch & 0xF));
+    unsigned int r = ((unsigned int)((unsigned long)&mailbox) | (ch & 0xF)); //Combine the message
 
-    while (*MAILBOX_STATUS & MAILBOX_FULL);
+    while (*MAILBOX_STATUS & MAILBOX_FULL); // Wait until Mailbox 0 status register's full flag is unset.
 
-    *MAILBOX_WRITE = r;
+    *MAILBOX_WRITE = r; // Write to Mailbox 0 Read/Write register.
 
     while (1)
     {
-        while (*MAILBOX_STATUS & MAILBOX_EMPTY);
-        if (r == *MAILBOX_READ)
+        while (*MAILBOX_STATUS & MAILBOX_EMPTY); // Wait until Mailbox 0 status register's empty flag is unset.
+        if (r == *MAILBOX_READ) // Read from Mailbox 0 Read/Write register and check if the value is same as before.
             return mailbox[1] == MAILBOX_RESPONSE;
     }
 
@@ -55,7 +55,7 @@ void get_board_revision()
     if (mailbox_call(8))
     {
         uart_puts("board version: 0x");
-        uart_hex(mailbox[5]); // it should be 0xa020d3 for rpi3 b+
+        uart_hex_lower_case(mailbox[5]); // it should be 0xa020d3 or 0xa020d4 for rpi3 b+
         uart_puts("\n");
     }
     else
@@ -78,10 +78,10 @@ void get_arm_memory()
     if (mailbox_call(8))
     {
         uart_puts("base address: 0x");
-        uart_hex(mailbox[5]);
+        uart_hex_upper_case(mailbox[5]);
         uart_puts("\n");
         uart_puts("size: 0x");
-        uart_hex(mailbox[6]);
+        uart_hex_upper_case(mailbox[6]);
         uart_puts("\n");
     }
     else

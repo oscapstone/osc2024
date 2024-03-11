@@ -34,11 +34,11 @@ void uart_init()
     // disable pull-up/down of gpio14, gpio15
     *GPPUD = 0;
     int cycle = 150;
-    while (cycle--)
+    while (cycle--) // set up time
         asm volatile("nop");
     *GPPUDCLK0 = ((1 << 15) || (1 << 14));
     cycle = 150;
-    while (cycle--)
+    while (cycle--) // hold time
         asm volatile("nop");
     *GPPUDCLK0 = 0;
     *AUX_MU_CNTL = 3;
@@ -77,16 +77,22 @@ void uart_puts(char *s)
     }
 }
 
-void uart_hex(unsigned int d)
+void uart_hex_upper_case (unsigned int d)
 {
-    unsigned int n;
-    int c;
-    for (c = 28; c >= 0; c -= 4)
+    for (int c = 28; c >= 0; c -= 4)
     {
-        // get highest tetrad
-        n = (d >> c) & 0xF;
-        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
-        n += n > 9 ? 0x37 : 0x30;
+        unsigned int n = (d >> c) & 0xF;
+        n += n > 9 ? 55 : 48; // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        uart_write(n);
+    }
+}
+
+void uart_hex_lower_case (unsigned int d)
+{
+    for (int c = 28; c >= 0; c -= 4)
+    {
+        unsigned int n = (d >> c) & 0xF;
+        n += n > 9 ? 87 : 48; // 0-9 => '0'-'9', 10-15 => 'a'-'f'
         uart_write(n);
     }
 }

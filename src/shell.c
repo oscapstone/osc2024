@@ -32,6 +32,7 @@ void shell_cmd(char *cmd)
     else if (my_strcmp(cmd, "reboot") == 0)
     {
         reset(500);
+        while(1);
     }
 }
 
@@ -44,7 +45,7 @@ void simple_shell()
     while (1)
     {
         char c = uart_read();
-        if (c == '\n')
+        if (c == '\n') // When enter new line, call the command in cmd array
         {
             shell_cmd(cmd);
             uart_puts("\n# ");
@@ -68,7 +69,7 @@ void simple_shell()
                 }
             }
         }
-        else if (c == 8 || c == 127)
+        else if (c == 8 || c == 127) // Backspace
         {
             if (idx > 0)
             {
@@ -96,7 +97,7 @@ void simple_shell()
         }
         else
         {
-            if (idx < buf_size)
+            if (idx < buf_size) // Print the new character
             {
                 for (int i = buf_size - 1; i > idx; i--)
                     cmd[i] = cmd[i - 1];
