@@ -25,7 +25,7 @@ void mini_uart_setup() {
   set32(GPPUDCLK0, 0);
 
   // enable mini uart
-  set32(AUX_ENABLES, 0);
+  set32(AUX_ENABLES, get32(AUX_ENABLES) | 1);
   // disable tx & rx
   set32(AUX_MU_CNTL_REG, 0);
   // disable interrupt
