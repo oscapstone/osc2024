@@ -24,7 +24,7 @@ OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
-.PHONY: all build clean run
+.PHONY: all build clean run run-debug upload
 
 all: build run
 
@@ -52,3 +52,6 @@ run: $(KERNEL_BIN)
 
 run-debug: QEMU_FLAGS += -s -S
 run-debug: run
+
+upload:
+	cp kernel8.img /Volumes/BOOT/kernel8.img
