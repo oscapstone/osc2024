@@ -5,15 +5,15 @@ void uart_init() {
 	
 	register unsigned int r;
 	
+	// according to BCM2835 ARM peripherals pg. 101 to setup the GPIO pull-up/down clock registers
 	// disable pull-up and pull-down
 	*GPPUD = 0;
-	
 	r = 150; while (r--) { asm volatile("nop"); }
-	
 	*GPPUDCLK0 = (1 << 14)|(1 << 15);
 	r = 150; while (r--) { asm volatile("nop"); }
 	*GPPUDCLK0 = 0;
 	
+	// 
 	r = 500; while (r--) { asm volatile("nop"); }	
 	
 	// 1. set AUXENB register to enable mini UART.
@@ -27,10 +27,13 @@ void uart_init() {
 	// 5. Set AUX_MU_MCR_REG to 0. Don’t need auto flow control.
 	*AUX_MU_MCR = 0;
 	// 6. Set AUX_MU_BAUD to 270. Set baud rate to 115200
+	// by calculation the BAUD reg should be 270.2673611111 = 270
 	*AUX_MU_BAUD = 270;
 	// 7. Set AUX_MU_IIR_REG to 6. No FIFO.
-	// 0xc6 11000110
-	*AUX_MU_IIR = 0xc6;
+	// 31:8 Reserved, 7:6 FIFO enables, 5:4 zero, 2:1 READ bits WRITE bits
+	//	    76543210
+	//  0x6 00000110
+	*AUX_MU_IIR = 0x6;
 	// 8. Set AUX_MU_CNTL_REG to 3. Enable the transmitter and receiver.
 	*AUX_MU_CNTL = 3;
 
@@ -90,7 +93,6 @@ void uart_send_string(char* s) {
 void uart_binary_to_hex(unsigned int d) {
     unsigned int n;
     int c;
-    uart_send_string("0x");
     for(c=28;c>=0;c-=4) {
         // get highest tetrad
         n=(d>>c)&0xF;

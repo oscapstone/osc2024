@@ -12,7 +12,7 @@ CFLAGS	= -Wall -Wextra -Wpedantic -O2 -ffreestanding -nostdinc -nostdlib -nostar
 all : kernel.img
 
 run : kernel.img
-	qemu-system-aarch64 -M raspi3b -serial stdio -kernel $< -S -s -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -serial null -serial pty -kernel $< -display none
 
 gdb-run :
 	gdb-multiarch

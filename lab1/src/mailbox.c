@@ -31,7 +31,19 @@ void get_board_revision(){
     mailbox[5] = 0; // value buffer
     // tags end
     mailbox[6] = MBOX_TAG_LAST;
-    mailbox_call(); // message passing procedure call, we should implement it following the 6 steps provided above.
+}
+
+void get_serial_number() {
+    mailbox[0] = 8 * 4; // buffer size in bytes
+    mailbox[1] = MBOX_REQUEST;    
+    // tags begin
+    mailbox[2] = MBOX_TAG_GETSERIAL; // tag identifier
+    mailbox[3] = 8;          // maximum of request and response value buffer's length.
+    mailbox[4] = 8;
+    mailbox[5] = 0;
+    mailbox[6] = 0;
+    // tags end
+    mailbox[7] = MBOX_TAG_LAST;
 }
 
 void get_arm_mem(){
@@ -45,5 +57,4 @@ void get_arm_mem(){
     mailbox[6] = 0; // value buffer
     // tags end
     mailbox[7] = MBOX_TAG_LAST;
-    mailbox_call(); // message passing procedure call, we should implement it following the 6 steps provided above.
 }

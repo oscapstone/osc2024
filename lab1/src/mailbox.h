@@ -27,6 +27,7 @@ extern volatile unsigned int mailbox[36];
 
 int mailbox_call();
 void get_board_revision();
+void get_serial_number();
 void get_arm_mem();
 
 #define VIDEOCORE_MBOX  (MMIO_BASE+0x0000B880)

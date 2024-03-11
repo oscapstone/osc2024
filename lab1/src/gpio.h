@@ -1,6 +1,11 @@
 //Page 90, Physical/bus addr diff
+// MMIO_BASE is the physical address
 #define MMIO_BASE       0x3F000000
 
+// The bus address is 0x7e000000
+// MMU map 0x3f000000 to 0x7e000000 (according to Lab Hardware UART MMIO section)
+// According to the BCM2835 ARM peripherals pg 91
+// Just convert by [IO] - 0x7e000000 + 0x3f000000 = MMIO_BASE + offset
 #define GPFSEL0         ((volatile unsigned int*)(MMIO_BASE+0x00200000))
 #define GPFSEL1         ((volatile unsigned int*)(MMIO_BASE+0x00200004))
 #define GPFSEL2         ((volatile unsigned int*)(MMIO_BASE+0x00200008))
