@@ -3,14 +3,21 @@
 .global _start
 
 _start:
-    /* Get dtb address from x0 */
-    ldr x1, =dtb_base
+    /* get dtb address from x0 */
+    ldr x1, =DTB_BASE // defined in devtree.c
     str x0, [x1]
 
     /* get cpu id */
     mrs x1, mpidr_el1
     and x1, x1, #3
     cbnz x1, halt // halt if cpu id != 0
+
+    /* set exception vector table */
+    adr x0, exception_vector_table // defined in excasm.S
+    msr vbar_el1, x0
+
+    /* switch from EL2 to EL1 */
+    bl from_el2_to_el1
 
     /* set stack pointer */
     ldr x1, =_start
@@ -34,7 +41,10 @@ halt:
     wfe
     b halt
 
-.section .data
-.global dtb_base
-dtb_base:
-.dc 0x0
+from_el2_to_el1:
+    mov x0, (1 << 31)
+    msr hcr_el2, x0 // EL1 uses aarch64
+    mov x0, 0x3c5
+    msr spsr_el2, x0 // EL1h (SPSel = 1) with interrupt disabled
+    msr elr_el2, lr
+    eret // return to EL1

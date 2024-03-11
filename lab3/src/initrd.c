@@ -4,8 +4,9 @@
 #include "uart.h"
 #include "string.h"
 #include "utils.h"
+#include "alloc.h"
 
-static void *ramfs_base = (void *)0x8000000;
+static void *RAMFS_BASE = (void *)0x8000000;
 
 // Convert hexadecimal string to int
 // @param s: hexadecimal string
@@ -23,9 +24,11 @@ static int hextoi(char *s, int n)
 	return r;
 }
 
+// TODO: Extract initrd_list() and pass in function pointers
+
 void initrd_list()
 {
-	char *fptr = (char *)ramfs_base;
+	char *fptr = (char *)RAMFS_BASE;
 
 	// Check if the file is encoded with New ASCII Format
 	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
@@ -52,7 +55,7 @@ void initrd_list()
 
 void initrd_cat(const char *target)
 {
-	char *fptr = (char *)ramfs_base;
+	char *fptr = (char *)RAMFS_BASE;
 
 	// Check if the file is encoded with New ASCII Format
 	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
@@ -85,10 +88,50 @@ void initrd_cat(const char *target)
 	uart_puts("File not found.\n");
 }
 
+void initrd_exec(const char *target)
+{
+	char *fptr = (char *)RAMFS_BASE;
+
+	// Check if the file is encoded with New ASCII Format
+	while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
+		cpio_t *header = (cpio_t *)fptr;
+
+		// New ASCII Format uses 8-byte hexadecimal string for all numbers
+		int namesize = hextoi(header->c_namesize, 8);
+		int filesize = hextoi(header->c_filesize, 8);
+
+		// Total size of (header + pathname) is a multiple of four bytes
+		// File data is also padded to a multiple of four bytes
+		int headsize = align4(sizeof(cpio_t) + namesize);
+		int datasize = align4(filesize);
+
+		// Match target file
+		char pathname[namesize];
+		strncpy(pathname, fptr + sizeof(cpio_t), namesize);
+		if (!strcmp(target, pathname)) {
+			// Load the user program
+			char *program = (char *)0x40000;
+			for (int i = 0; i < filesize; i++)
+				*program++ = (fptr + headsize)[i];
+
+			unsigned long sp = (unsigned long)simple_malloc(4096);
+			asm volatile("msr spsr_el1, %0" ::"r"(0x3c0));
+			asm volatile("msr elr_el1, %0" ::"r"(0x40000));
+			asm volatile("msr sp_el0, %0" ::"r"(sp));
+			asm volatile("eret;"); // Return to EL0 and execute
+			return;
+		}
+
+		fptr += headsize + datasize;
+	}
+
+	uart_puts("File not found.\n");
+}
+
 void initrd_callback(void *addr)
 {
 	uart_puts("[INFO] Initrd is mounted at ");
 	uart_hex((uintptr_t)addr);
 	uart_putc('\n');
-	ramfs_base = (char *)addr;
+	RAMFS_BASE = (char *)addr;
 }

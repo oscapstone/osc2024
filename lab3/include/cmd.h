@@ -16,5 +16,6 @@ void reboot();
 void lshw();
 void ls();
 void cat();
+void exec();
 
 #endif // CMD_H

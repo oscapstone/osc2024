@@ -2,7 +2,6 @@
 
 void uart_init()
 {
-	// Configure GPIO pins
 	register unsigned int r = *GPFSEL1;
 	r &= ~((7 << 12) | (7 << 15));
 	r |= (2 << 12) | (2 << 15);

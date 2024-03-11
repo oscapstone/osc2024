@@ -3,8 +3,8 @@
 #include "utils.h"
 #include "string.h"
 
-// dtb_base is defined in start.S
-extern void *dtb_base;
+// Assign a non-zero value to be stored in the .data section
+void *DTB_BASE = (void *)0xF;
 
 /**
  * @brief Convert a 4-byte big-endian sequence to little-endian.
@@ -22,10 +22,10 @@ static uint32_t be2le(const void *s)
 void fdt_traverse(void (*callback)(void *))
 {
 	uart_puts("[INFO] Dtb is loaded at ");
-	uart_hex((uintptr_t)dtb_base);
+	uart_hex((uintptr_t)DTB_BASE);
 	uart_putc('\n');
 
-	uintptr_t dtb_ptr = (uintptr_t)dtb_base;
+	uintptr_t dtb_ptr = (uintptr_t)DTB_BASE;
 	struct fdt_header *header = (struct fdt_header *)dtb_ptr;
 
 	// Check the magic number

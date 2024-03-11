@@ -12,6 +12,7 @@ struct command commands[] = {
 	{ .name = "lshw", .help = "list hardware information", .func = lshw },
 	{ .name = "ls", .help = "list ramdisk files", .func = ls },
 	{ .name = "cat", .help = "print ramdisk file", .func = cat },
+	{ .name = "exec", .help = "execute a program", .func = exec },
 	{ .name = "NULL" } // Must put a NULL command at the end!
 };
 
@@ -91,30 +92,19 @@ void ls()
 void cat()
 {
 	// Get filename from user input
+	char buffer[MAX_BUF_SIZE + 1];
 	uart_puts("Filename: ");
+	read_user_input(buffer);
 
-	char buf[MAX_BUF_SIZE + 1];
-	int idx = 0;
+	initrd_cat(buffer);
+}
 
-	while (1) {
-		char c = uart_getc();
-		uart_putc(c);
+void exec()
+{
+	// Get filename from user input
+	char buffer[MAX_BUF_SIZE + 1];
+	uart_puts("Filename: ");
+	read_user_input(buffer);
 
-		if (c == '\n') {
-			buf[idx] = '\0';
-			break;
-		} else if (c == 127) {
-			// Handle backspaces
-			if (idx > 0) {
-				buf[idx--] = 0;
-				uart_putc('\b');
-				uart_putc(' ');
-				uart_putc('\b');
-			}
-		} else {
-			buf[idx++] = c;
-		}
-	}
-
-	initrd_cat(buf);
+	initrd_exec(buffer);
 }
