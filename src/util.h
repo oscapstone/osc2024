@@ -1,6 +1,7 @@
 #pragma once
 
 #define MASK(bits) ((1 << bits) - 1)
+#define NOP        asm volatile("nop")
 
 typedef unsigned int uint32_t;
 typedef volatile long addr_t;

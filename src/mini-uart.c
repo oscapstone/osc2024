@@ -44,12 +44,21 @@ void mini_uart_setup() {
 
 char mini_uart_getc() {
   while ((get32(AUX_MU_LSR_REG) & 1) == 0)
-    ;
-  return get32(AUX_MU_IO_REG) & MASK(8);
+    NOP;
+  char c = get32(AUX_MU_IO_REG) & MASK(8);
+  return c == '\r' ? '\n' : c;
 }
 
 void mini_uart_putc(char c) {
   while ((get32(AUX_MU_LSR_REG) & (1 << 5)) == 0)
-    ;
+    NOP;
   set32(AUX_MU_IO_REG, c);
+}
+
+void mini_uart_puts(const char* s) {
+  for (char c; (c = *s); s++) {
+    if (c == '\n')
+      mini_uart_putc('\r');
+    mini_uart_putc(c);
+  }
 }
