@@ -1,3 +1,4 @@
+#include "cmd.h"
 #include "mini-uart.h"
 
 void memzero(void* start, void* end) {
@@ -11,9 +12,23 @@ void kernel_main() {
   const char str[] = "Hello World!\n";
   mini_uart_puts(str);
 
-  for (char c; (c = mini_uart_getc());) {
-    if (c == '\n')
-      mini_uart_putc('\r');
-    mini_uart_putc(c);
+  const int bufsize = 0x100;
+  char buf[bufsize];
+  for (;;) {
+    mini_uart_puts("$ ");
+    int len = mini_uart_getline_echo(buf, bufsize);
+    if (len <= 0)
+      continue;
+    const Cmd_t* cmd = cmds;
+    for (; cmd != cmds_end; cmd++)
+      if (!strcmp(buf, cmd->name))
+        break;
+    if (cmd != cmds_end) {
+      cmd->fp(cmd);
+    } else {
+      mini_uart_puts("command not found: ");
+      mini_uart_puts(buf);
+      mini_uart_puts("\n");
+    }
   }
 }
