@@ -4,14 +4,10 @@
 void kernel_main() {
   mini_uart_setup();
 
-  const char str[] = "Hello World!\n";
-  mini_uart_puts(str);
-
-  const int bufsize = 0x100;
-  char buf[bufsize];
+  char buf[0x100];
   for (;;) {
     mini_uart_puts("$ ");
-    int len = mini_uart_getline_echo(buf, bufsize);
+    int len = mini_uart_getline_echo(buf, sizeof(buf));
     if (len <= 0)
       continue;
     const Cmd_t* cmd = cmds;
@@ -21,9 +17,7 @@ void kernel_main() {
     if (cmd != cmds_end) {
       cmd->fp(cmd);
     } else {
-      mini_uart_puts("command not found: ");
-      mini_uart_puts(buf);
-      mini_uart_puts("\n");
+      mini_uart_printf("command not found: %s\n", buf);
     }
   }
 }

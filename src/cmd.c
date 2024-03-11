@@ -27,10 +27,7 @@ const Cmd_t cmds_end[0];
 
 void cmd_help(const Cmd_t* cmd) {
   for (const Cmd_t* cmd = cmds; cmd != cmds_end; cmd++) {
-    mini_uart_puts(cmd->name);
-    mini_uart_puts("\t");
-    mini_uart_puts(cmd->help);
-    mini_uart_puts("\n");
+    mini_uart_printf("%s\t%s\n", cmd->name, cmd->help);
   }
 }
 

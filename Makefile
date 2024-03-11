@@ -5,9 +5,9 @@ QEMU		= qemu-system-aarch64
 
 TARGET 		= aarch64-unknown-none-elf
 CFLAGS 		= -Wall -Wextra -Wshadow \
-			  -ffreestanding -mgeneral-regs-only \
+			  -ffreestanding \
 			  -mcpu=cortex-a53 --target=$(TARGET) \
-			  -nostdinc -nostdlib -Os
+			  -nostdlib -Os -Ilib -D__CLANG_INTTYPES_H
 QEMU_FLAGS 	= -display none \
 			  -serial null -serial stdio \
 			  -smp cpus=4

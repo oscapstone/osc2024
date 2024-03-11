@@ -3,6 +3,11 @@
 #include "gpio.h"
 #include "util.h"
 
+#define NANOPRINTF_IMPLEMENTATION
+#include "nanoprintf/nanoprintf.h"
+// TODO
+void __trunctfsf2() {}
+
 void mini_uart_setup() {
   register unsigned int r = get32(GPFSEL1);
   // set gpio14
@@ -81,4 +86,18 @@ int mini_uart_getline_echo(char* buffer, int length) {
   }
   buffer[r] = '\0';
   return r;
+}
+
+void mini_uart_npf_putc(int c, void* ctx) {
+  if (c == '\n')
+    mini_uart_putc('\r');
+  mini_uart_putc(c);
+}
+
+int mini_uart_printf(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  int size = npf_vpprintf(&mini_uart_npf_putc, NULL, format, args);
+  va_end(args);
+  return size;
 }

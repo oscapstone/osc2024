@@ -3,6 +3,14 @@
 #define MASK(bits) ((1 << bits) - 1)
 #define NOP        asm volatile("nop")
 
+// from v8/v8:src/base/compiler-specific.h#L21-L31
+#if defined(__GNUC__)
+#define PRINTF_FORMAT(format_param, dots_param) \
+  __attribute__((format(printf, format_param, dots_param)))
+#else
+#define PRINTF_FORMAT(format_param, dots_param)
+#endif
+
 typedef unsigned int uint32_t;
 typedef volatile long addr_t;
 
