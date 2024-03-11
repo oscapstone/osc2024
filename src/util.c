@@ -1,10 +1,8 @@
 #include "util.h"
 
-int strlen(const char* s) {
-  const char* e = s;
-  while (*e)
-    e++;
-  return e - s;
+void memzero(void* start, void* end) {
+  for (long* i = start; i != end; i++)
+    *i = 0;
 }
 
 int strcmp(const char* s1, const char* s2) {

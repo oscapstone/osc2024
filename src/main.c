@@ -1,11 +1,6 @@
 #include "cmd.h"
 #include "mini-uart.h"
 
-void memzero(void* start, void* end) {
-  for (long* i = start; i != end; i++)
-    *i = 0;
-}
-
 void kernel_main() {
   mini_uart_setup();
 
