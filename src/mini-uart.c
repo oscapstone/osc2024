@@ -62,3 +62,21 @@ void mini_uart_puts(const char* s) {
     mini_uart_putc(c);
   }
 }
+
+int mini_uart_getline_echo(char* buffer, int length) {
+  if (length <= 0)
+    return -1;
+  int r = 0;
+  for (char c; r + 1 < length; r++) {
+    c = mini_uart_getc();
+    if (c == '\n') {
+      mini_uart_putc('\r');
+      mini_uart_putc('\n');
+      break;
+    }
+    buffer[r] = c;
+    mini_uart_putc(c);
+  }
+  buffer[r] = '\0';
+  return r;
+}
