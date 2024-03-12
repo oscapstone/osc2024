@@ -7,7 +7,7 @@ TARGET 		= aarch64-unknown-none-elf
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
 			  -mcpu=cortex-a53 --target=$(TARGET) \
-			  -nostdlib -Os \
+			  -nostdlib -Os -g \
 			  -Iinclude
 QEMU_FLAGS 	= -display none \
 			  -serial null -serial stdio \
