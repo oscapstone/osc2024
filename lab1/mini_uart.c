@@ -23,19 +23,9 @@ void mini_uart_init()
     // commit the signal
     // need to disable GPIO pull-up/down functions
     *GPPUD = 0;
-    // delay( 150);
-    reg = 150;
-    while ( reg--)
-    {
-        asm volatile("nop");
-    }// while
+    delay( 150);
     *GPPUDCLK0 = ( 1 << 14) | ( 1 << 15); // select the pins
-    // delay( 150);
-    reg = 150;
-    while ( reg--)
-    {
-        asm volatile("nop");
-    }// while
+    delay( 150);
     *GPPUDCLK0 = 0; // reset it
 
     // set uart enable
