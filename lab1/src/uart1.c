@@ -47,8 +47,7 @@ char uart_recv()
 {
     char r;
     while (!(*AUX_MU_LSR_REG & 0x01))
-    {
-    };
+        ;
     r = (char)(*AUX_MU_IO_REG);
     return r;
 }
@@ -56,8 +55,6 @@ char uart_recv()
 void uart_send(unsigned int c)
 {
     while (!(*AUX_MU_LSR_REG & 0x20))
-    {
-    };
+        ;
     *AUX_MU_IO_REG = c;
 }
-

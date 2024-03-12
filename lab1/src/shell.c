@@ -1,7 +1,7 @@
 #include "shell.h"
 #include "mbox.h"
 #include "power.h"
-#include "stdin.h"
+#include "stdio.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "hello", .help = "print Hello World!"},
