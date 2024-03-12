@@ -35,13 +35,10 @@
 
 void main()
 {
-    fdt_init();
     shell_init();
 
     get_board_revision();
     get_memory_info();
-
-    fdt_traverse(initramfs_callback);
 
     while(1) {
         uart_puts("# ");
