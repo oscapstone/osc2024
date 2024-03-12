@@ -1,0 +1,3 @@
+[submodule "lib/nanoprintf"]
+	path = include/nanoprintf
+	url = https://github.com/charlesnicholson/nanoprintf
