@@ -55,14 +55,6 @@ void power_off()
     }
 
     // power off gpio pins (but not VCC pins)
-    // *GPFSEL0 = 0; *GPFSEL1 = 0; *GPFSEL2 = 0; *GPFSEL3 = 0; *GPFSEL4 = 0; *GPFSEL5 = 0;
-    // *GPPUD = 0;
-    // wait_cycles(150);
-    // *GPPUDCLK0 = 0xffffffff; *GPPUDCLK1 = 0xffffffff;
-    // wait_cycles(150);
-    // *GPPUDCLK0 = 0; *GPPUDCLK1 = 0;        // flush GPIO setup
-
-    // power off gpio pins (but not VCC pins)
     GPIO->GPFSEL[0] = 0; GPIO->GPFSEL[1] = 0; GPIO->GPFSEL[2] = 0; GPIO->GPFSEL[3] = 0; GPIO->GPFSEL[4] = 0; GPIO->GPFSEL[5] = 0;
     GPIO->GPPUD = 0;
     wait_cycles(150);

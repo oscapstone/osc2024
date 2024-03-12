@@ -22,13 +22,15 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-#ifndef GPIO_H
-#define GPIO_H
+#ifndef __GPIO_H__
+#define __GPIO_H__
 
 #define __IO            volatile
 
 #define MMIO_BASE       0x3F000000
-#define GPIO_BASE       (MMIO_BASE + 0x200000)
+#define GPIO_BASE       (MMIO_BASE + 0x00200000)
+#define AUX_BASE        (MMIO_BASE + 0x00215000)
+#define IRQ_BASE        (MMIO_BASE + 0x0000B000)
 
 typedef struct {
     __IO unsigned int GPFSEL[6];
@@ -60,4 +62,52 @@ typedef struct {
 
 #define GPIO                ((gpio_t *) (GPIO_BASE))
 
-#endif
+typedef struct {
+    __IO unsigned int AUX_IRQ;
+    __IO unsigned int AUX_ENABLES;
+    unsigned int reserved0[14];
+    __IO unsigned int AUX_MU_IO_REG;
+    __IO unsigned int AUX_MU_IER_REG;
+    __IO unsigned int AUX_MU_IIR_REG;
+    __IO unsigned int AUX_MU_LCR_REG;
+    __IO unsigned int AUX_MU_MCR_REG;
+    __IO unsigned int AUX_MU_LSR_REG;
+    __IO unsigned int AUX_MU_MSR_REG;
+    __IO unsigned int AUX_MU_SCRATCH;
+    __IO unsigned int AUX_MU_CNTL_REG;
+    __IO unsigned int AUX_MU_STAT_REG;
+    __IO unsigned int AUX_MU_BAUD_REG;
+    unsigned int reserved1[22];
+    __IO unsigned int AUX_SPI0_CNTL0_REG;
+    __IO unsigned int AUX_SPI0_CNTL1_REG;
+    __IO unsigned int AUX_SPI0_STAT_REG;
+    unsigned int reserved2;
+    __IO unsigned int AUX_SPI0_IO_REG;
+    __IO unsigned int AUX_SPI0_PEEK_REG;
+    unsigned int reserved3[15];
+    __IO unsigned int AUX_SPI1_CNTL0_REG;
+    __IO unsigned int AUX_SPI1_CNTL1_REG;
+    __IO unsigned int AUX_SPI1_STAT_REG;
+    unsigned int reserved4;
+    __IO unsigned int AUX_SPI1_IO_REG;
+    __IO unsigned int AUX_SPI1_PEEK_REG;
+} aux_t;
+
+#define AUX                 ((aux_t *) (AUX_BASE))
+
+typedef struct {
+    __IO unsigned int IRQ_BASIC_PENDING;
+    __IO unsigned int IRQ_PENDING1;
+    __IO unsigned int IRQ_PENDING2;
+    __IO unsigned int FIQ_CONTROL;
+    __IO unsigned int ENABLE_IRQS1;
+    __IO unsigned int ENABLE_IRQS2;
+    __IO unsigned int ENABLE_BASIC_IRQS;
+    __IO unsigned int DISABLE_IRQS1;
+    __IO unsigned int DISABLE_IRQS2;
+    __IO unsigned int DISABLE_BASIC_IRQS;
+} irq_t;
+
+#define IRQ                 ((irq_t *) (IRQ_BASE + 0x200))
+
+#endif // __GPIO_H__
