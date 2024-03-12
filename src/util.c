@@ -1,7 +1,7 @@
 #include "util.h"
 
 void memzero(void* start, void* end) {
-  for (long* i = start; i != end; i++)
+  for (char* i = start; i != end; i++)
     *i = 0;
 }
 

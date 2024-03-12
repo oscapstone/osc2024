@@ -19,22 +19,18 @@ SECTIONS {
     }
 
     .bss : {
-        . = ALIGN(8);
         __bss_start = .;
         *(.bss .bss.*)
         *(COMMON)
-        . = ALIGN(8);
         __bss_end = .;
     }
 
-    .shstrtab : {
-        *(.shstrtab)
-    }
+    .shstrtab : { *(.shstrtab) }
+    .symtab   : { *(.symtab) }
+    .strtab   : { *(.strtab) }
 
     /DISCARD/ : {
         *(.comment)
         *(.gnu*) *(.note*) *(.eh_frame*)
-        /* *(.symtab) */
-        /* *(.strtab) */
     }
 }
