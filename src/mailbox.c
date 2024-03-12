@@ -1,6 +1,6 @@
 #include "mailbox.h"
 
-void mailbox_call(volatile uint32_t mailbox[]) {
+void mailbox_call(message_t* mailbox) {
   uint32_t data = (((uint32_t)(unsigned long)mailbox) & ~0xf) | 8;
   while ((get32(MAILBOX_STATUS) & MAILBOX_FULL) != 0)
     NOP;
@@ -11,20 +11,27 @@ void mailbox_call(volatile uint32_t mailbox[]) {
     NOP;
 }
 
-uint32_t get_board_revision() {
-  __attribute__((aligned(0x10))) volatile uint32_t mailbox[7];
+uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx) {
+  int max_value_buffer_size = sizeof(uint32_t) * (value_length + 1);
+  int size = sizeof(message_t) + max_value_buffer_size;
+  __attribute__((aligned(0x10))) char buf[size];
+  message_t* mailbox = (message_t*)buf;
 
-  mailbox[0] = 7 * 4;  // buffer size in bytes
-  mailbox[1] = REQUEST_CODE;
-  // tags begin
-  mailbox[2] = GET_BOARD_REVISION;  // tag identifier
-  mailbox[3] = 4;  // maximum of request and response value buffer's length.
-  mailbox[4] = TAG_REQUEST_CODE;
-  mailbox[5] = 0;  // value buffer
-  // tags end
-  mailbox[6] = END_TAG;
+  mailbox->buf_size = size;
+  mailbox->buf_req_resp_code = REQUEST_CODE;
+  mailbox->tag_identifier = tag_identifier;
+  mailbox->max_value_buffer_size = max_value_buffer_size;
+  mailbox->tag_req_resp_code = TAG_REQUEST_CODE;
+  for (int i = 0; i < value_length; i++)
+    mailbox->value_buf[i] = 0;
+  mailbox->value_buf[value_length] = END_TAG;
 
   mailbox_call(mailbox);
 
-  return mailbox[5];  // it should be 0xa020d3 for rpi3 b+
+  return mailbox->value_buf[idx];
+}
+
+uint32_t get_board_revision() {
+  return mailbox_req_tag(1, GET_BOARD_REVISION, 0);
+}
 }

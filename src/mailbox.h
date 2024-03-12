@@ -14,5 +14,16 @@
 #define TAG_REQUEST_CODE   0x00000000
 #define END_TAG            0x00000000
 
-void mailbox_call(volatile uint32_t mailbox[]);
+typedef struct Message message_t;
+struct __attribute__((aligned(0x10))) __attribute__((packed)) Message {
+  volatile uint32_t buf_size;               // buffer size in bytes
+  volatile uint32_t buf_req_resp_code;      // ?
+  volatile uint32_t tag_identifier;         // tag identifier
+  volatile uint32_t max_value_buffer_size;  // maximum of value buffer's size
+  volatile uint32_t tag_req_resp_code;      // tag
+  volatile uint32_t value_buf[];            // value buffer
+};
+
+void mailbox_call(message_t* mailbox);
+uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx);
 uint32_t get_board_revision();
