@@ -1,12 +1,12 @@
 #pragma once
 
 typedef struct Cmd cmd_t;
-typedef void (*CmdFp)(const cmd_t*);
+typedef void (*cmd_fp)();
 
 struct Cmd {
   const char* name;
   const char* help;
-  CmdFp fp;
+  cmd_fp fp;
 };
 
 extern const cmd_t cmds[];
