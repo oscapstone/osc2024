@@ -8,6 +8,7 @@
 #define MAILBOX_FULL   0x80000000
 
 #define GET_BOARD_REVISION 0x00010002
+#define GET_ARM_MEMORY     0x00010005
 #define REQUEST_CODE       0x00000000
 #define REQUEST_SUCCEED    0x80000000
 #define REQUEST_FAILED     0x80000001
@@ -27,3 +28,4 @@ struct __attribute__((aligned(0x10))) __attribute__((packed)) Message {
 void mailbox_call(message_t* mailbox);
 uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx);
 uint32_t get_board_revision();
+uint32_t get_arm_memory(int idx);

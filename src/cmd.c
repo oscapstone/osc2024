@@ -43,7 +43,10 @@ void cmd_hello(const cmd_t* cmd) {
 }
 
 void cmd_hwinfo(const cmd_t* cmd) {
-  mini_uart_printf("Board revision:\t0x%x\n", get_board_revision());
+  // it should be 0xa020d3 for rpi3 b+
+  mini_uart_printf("Board revision :\t0x%08X\n", get_board_revision());
+  mini_uart_printf("ARM memory base:\t0x%08X\n", get_arm_memory(0));
+  mini_uart_printf("ARM memory size:\t0x%08X\n", get_arm_memory(1));
 }
 
 void cmd_reboot(const cmd_t* cmd) {

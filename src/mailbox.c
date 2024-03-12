@@ -34,4 +34,7 @@ uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx) {
 uint32_t get_board_revision() {
   return mailbox_req_tag(1, GET_BOARD_REVISION, 0);
 }
+
+uint32_t get_arm_memory(int idx) {
+  return mailbox_req_tag(2, GET_ARM_MEMORY, idx);
 }
