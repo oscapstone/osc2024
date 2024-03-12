@@ -2,6 +2,7 @@
 
 #include "mailbox.h"
 #include "mini-uart.h"
+#include "pm.h"
 
 void cmd_help(const cmd_t*);
 void cmd_hello(const cmd_t*);
@@ -50,5 +51,5 @@ void cmd_hwinfo(const cmd_t* cmd) {
 }
 
 void cmd_reboot(const cmd_t* cmd) {
-  // TODO
+  reset(0x10);
 }

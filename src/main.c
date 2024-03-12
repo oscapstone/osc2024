@@ -3,6 +3,7 @@
 
 void kernel_main() {
   mini_uart_setup();
+  mini_uart_puts("Hello World!\n");
 
   char buf[0x100];
   for (;;) {
