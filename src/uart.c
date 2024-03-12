@@ -17,14 +17,6 @@
 void uart_init()
 {
     unsigned int r;
-    *AUX_ENABLE |= 1;
-    *AUX_MU_CNTL = 0;
-    *AUX_MU_IER = 0;
-    *AUX_MU_LCR = 3;
-    *AUX_MU_MCR = 0;
-    *AUX_MU_BAUD = 270;
-    *AUX_MU_IIR = 6;
-
     // set gpio14, gpio15 to alt5
     r = *GPFSEL1;
     r &= ~((7 << 15) | (7 << 12));
@@ -41,6 +33,14 @@ void uart_init()
     while (cycle--) // hold time
         asm volatile("nop");
     *GPPUDCLK0 = 0;
+    
+    *AUX_ENABLE |= 1;
+    *AUX_MU_CNTL = 0;
+    *AUX_MU_IER = 0;
+    *AUX_MU_LCR = 3;
+    *AUX_MU_MCR = 0;
+    *AUX_MU_BAUD = 270;
+    *AUX_MU_IIR = 6;
     *AUX_MU_CNTL = 3;
 }
 
