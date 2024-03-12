@@ -60,15 +60,15 @@ void uart_init()
     mbox_call(MBOX_CH_PROP);
 
     /* map UART0 to GPIO pins */
-    r=*GPFSEL1;
-    r&=~((7<<12)|(7<<15)); // gpio14, gpio15
-    r|=(4<<12)|(4<<15);    // alt0
-    *GPFSEL1 = r;
-    *GPPUD = 0;            // enable pins 14 and 15
+    r = GPIO->GPFSEL[1];
+    r &= ~((7 << 12) | (7 << 15)); // gpio14, gpio15
+    r |= (4 << 12) | (4 << 15);    // alt0
+    GPIO->GPFSEL[1] = r;
+    GPIO->GPPUD = 0;            // enable pins 14 and 15
     wait_cycles(150);
-    *GPPUDCLK0 = (1<<14)|(1<<15);
+    GPIO->GPPUDCLK[0] = (1 << 14) | (1 << 15);
     wait_cycles(150);
-    *GPPUDCLK0 = 0;        // flush GPIO setup
+    GPIO->GPPUDCLK[0] = 0;        // flush GPIO setup
 
     *UART0_ICR = 0x7FF;    // clear interrupts
     *UART0_IBRD = 2;       // 115200 baud

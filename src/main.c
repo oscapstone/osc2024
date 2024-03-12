@@ -38,18 +38,8 @@ void main()
     fdt_init();
     shell_init();
 
-    // get_board_revision();
-    // get_memory_info();
-
-    uart_hex(return_available());
-    uart_send('\n');
-    char *string1 = (char *) simple_malloc(sizeof(char) * 8);
-    uart_hex(string1);
-    uart_send('\n');
-
-    char *string2 = (char *) simple_malloc(sizeof(char) * 20);
-    uart_hex(string2);
-    uart_send('\n');
+    get_board_revision();
+    get_memory_info();
 
     fdt_traverse(initramfs_callback);
 

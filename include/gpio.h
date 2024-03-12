@@ -25,25 +25,39 @@
 #ifndef GPIO_H
 #define GPIO_H
 
-#define MMIO_BASE       0x3F000000
+#define __IO            volatile
 
-#define GPFSEL0         ((volatile unsigned int*)(MMIO_BASE+0x00200000))
-#define GPFSEL1         ((volatile unsigned int*)(MMIO_BASE+0x00200004))
-#define GPFSEL2         ((volatile unsigned int*)(MMIO_BASE+0x00200008))
-#define GPFSEL3         ((volatile unsigned int*)(MMIO_BASE+0x0020000C))
-#define GPFSEL4         ((volatile unsigned int*)(MMIO_BASE+0x00200010))
-#define GPFSEL5         ((volatile unsigned int*)(MMIO_BASE+0x00200014))
-#define GPSET0          ((volatile unsigned int*)(MMIO_BASE+0x0020001C))
-#define GPSET1          ((volatile unsigned int*)(MMIO_BASE+0x00200020))
-#define GPCLR0          ((volatile unsigned int*)(MMIO_BASE+0x00200028))
-#define GPLEV0          ((volatile unsigned int*)(MMIO_BASE+0x00200034))
-#define GPLEV1          ((volatile unsigned int*)(MMIO_BASE+0x00200038))
-#define GPEDS0          ((volatile unsigned int*)(MMIO_BASE+0x00200040))
-#define GPEDS1          ((volatile unsigned int*)(MMIO_BASE+0x00200044))
-#define GPHEN0          ((volatile unsigned int*)(MMIO_BASE+0x00200064))
-#define GPHEN1          ((volatile unsigned int*)(MMIO_BASE+0x00200068))
-#define GPPUD           ((volatile unsigned int*)(MMIO_BASE+0x00200094))
-#define GPPUDCLK0       ((volatile unsigned int*)(MMIO_BASE+0x00200098))
-#define GPPUDCLK1       ((volatile unsigned int*)(MMIO_BASE+0x0020009C))
+#define MMIO_BASE       0x3F000000
+#define GPIO_BASE       (MMIO_BASE + 0x200000)
+
+typedef struct {
+    __IO unsigned int GPFSEL[6];
+    unsigned int reserved0;
+    __IO unsigned int GPSET[2];
+    unsigned int reserved1;
+    __IO unsigned int GPCLR[2];
+    unsigned int reserved2;
+    __IO unsigned int GPLEV[2];
+    unsigned int reserved3;
+    __IO unsigned int GPEDS[2];
+    unsigned int reserved4;
+    __IO unsigned int GPREN[2];
+    unsigned int reserved5;
+    __IO unsigned int GPFEN[2];
+    unsigned int reserved6;
+    __IO unsigned int GPHEN[2];
+    unsigned int reserved7;
+    __IO unsigned int GPLEN[2];
+    unsigned int reserved8;
+    __IO unsigned int GPAREN[2];
+    unsigned int reserved9;
+    __IO unsigned int GPAFEN[2];
+    unsigned int reserved10;
+    __IO unsigned int GPPUD;
+    __IO unsigned int GPPUDCLK[2];
+    unsigned int reserved11;
+} gpio_t;
+
+#define GPIO                ((gpio_t *) (GPIO_BASE))
 
 #endif
