@@ -22,17 +22,16 @@ pub fn main() {
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         utils::memset(buf.as_mut_ptr(), 0, MAX_COMMAND_LEN);
-        uart::uart_write(b"4# ");
+        uart::uart_write(b"# ");
         uart::uart_gets(&mut buf);
         execute_command(&buf);
     }
 }
 
 fn execute_command(command: &[u8]) {
-    if command.len() == 0 {
+    if command.starts_with(b"\x00") {
         return;
-    }
-    if command.starts_with(b"hello") {
+    } else if command.starts_with(b"hello") {
         uart::uart_puts(b"Hello, world!");
     } else if command.starts_with(b"help") {
         uart::uart_puts(b"hello\t: print this help menu");

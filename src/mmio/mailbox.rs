@@ -64,8 +64,10 @@ pub fn get_arm_memory() {
     if mailbox_call(&mut mailbox) {
         uart::uart_write(b"ARM memory base: ");
         uart::uart_puts(&to_hex(mailbox[5]));
+        // uart::uart_puts(&to_hex(mailbox[6]));
         uart::uart_write(b"ARM memory size: ");
         uart::uart_puts(&to_hex(mailbox[6]));
+        // mailbox[1].to
     } else {
         uart::uart_puts(b"Failed to get ARM memory");
     }
