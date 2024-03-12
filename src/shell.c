@@ -23,6 +23,13 @@ void shell_start()
                 uart_puts("Hello World!\n");
             } else if (strcmp(line, "reboot") == 0) {
                 uart_puts("Reboot!\n");
+
+                unsigned int r;
+                r = *PM_RSTS;
+                r &= ~0xFFFFFAAA;
+                *PM_RSTS = PM_WDOG_MAGIC | r;
+                *PM_WDOG = PM_WDOG_MAGIC | 10;
+                *PM_RSTC = PM_WDOG_MAGIC | PM_RSTC_FULLRST;
             } else if (strcmp(line, "board") == 0) {
                 get_board_revision();
             } else if (strcmp(line, "arm") == 0) {

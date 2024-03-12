@@ -24,6 +24,12 @@
 #define UART_GPPUDCLK0          UART_OFFSET(0x00200098)
 #define UART_GPPUDCLK1          UART_OFFSET(0x0020009C)
 
+#define PM_WDOG_MAGIC           0x5A000000
+#define PM_RSTC_FULLRST         0x00000020
+#define PM_RSTC                 (unsigned int *) 0x3F10001C
+#define PM_RSTS                 (unsigned int *) 0x3F100020
+#define PM_WDOG                 (unsigned int *) 0x3F100024
+
 void uart_init(void);   // initialization
 void uart_send(unsigned int);   // send character over seiral line
 void uart_puts(char*);   // write data
