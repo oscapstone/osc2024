@@ -8,11 +8,27 @@
 // start pointer, size in 8 bytes alignment
 extern void mem_zero( unsigned long start, unsigned long size);
 
+typedef struct
+{
+    char *name;
+    void ( *action)( void);
+    char *description;
+} s_command;
+
 static void read_command( char *buffer, int size);
 static void parse_command( char *buffer, int size);
-static void help();
-static void hello();
-static void reboot();
+static void help( void);
+static void hello( void);
+static void reboot( void);
+
+static const s_command valid_commands[] =
+{
+    (s_command){ "help", help, "print this help menu"},
+    (s_command){ "hello", hello, "print Hello World!"},
+    (s_command){ "reboot", reboot, "reboot the device"}
+};
+
+static const int valid_command_size = sizeof( valid_commands) / sizeof( valid_commands[ 0]);
 
 void simple_shell()
 {
@@ -22,14 +38,14 @@ void simple_shell()
     while ( 1)
     {
         read_command( buffer, sizeof(buffer));
-        parse_command( buffer, sizeof(buffer));
+        parse_command( buffer, strlen( buffer));
     }// while
     return;
 }
 
 static void read_command( char *buffer, int size)
 {
-    mini_uart_puts("# ");
+    mini_uart_puts("\r\n# ");
     mem_zero((unsigned long) buffer, size / 8);
     char temp;
     int full = 0;
@@ -37,13 +53,18 @@ static void read_command( char *buffer, int size)
     for ( int i = 0; i < size - 1; i += 1)
     {
         temp = mini_uart_getc();
-        mini_uart_putc( temp);
-        buffer[ i] = temp;
         if ( temp == '\n' || temp == '\r')
         {
             // finished line
+            // mini_uart_puts("\r\n");
+            buffer[ i] = '\0';
             break;
         }// if
+        else
+        {
+            mini_uart_putc( temp);
+            buffer[ i] = temp;
+        }// else
         
         if ( i == size - 2)
         {
@@ -53,35 +74,26 @@ static void read_command( char *buffer, int size)
 
     if ( full)
     {
-        mini_uart_puts("\n{Buffer full: aborting}\n");
+        mini_uart_puts("\r\n");
+        mini_uart_puts("{Buffer full: aborting}");
     }// if
     
     return;
 }
 
-typedef struct
-{
-    char *name;
-    void (*action)();
-    char *description;
-} s_command;
-
-static s_command valid_commands[] =
-{
-    (s_command){ "help", help, "print this help menu"},
-    (s_command){ "hello", hello, "print Hello World!"},
-    (s_command){ "reboot", reboot, "reboot the device"}
-};
-
-static int valid_command_size = sizeof( valid_commands) / sizeof( valid_commands[ 0]);
-
 static void parse_command( char *buffer, int size)
 {
+    if ( size == 0)
+    {
+        return;
+    }// if
+    
     for ( int i = 0; i < valid_command_size; i += 1)
     {
         if ( strcmp( buffer, valid_commands[ i].name) == 0)
         {
-            return valid_commands[ i].action();
+            valid_commands[ i].action();
+            break;
         }// if
     }// for i
     
@@ -92,10 +104,10 @@ static void help()
 {
     for ( int i = 0; i < valid_command_size; i += 1)
     {
+        mini_uart_puts("\r\n");
         mini_uart_puts( valid_commands[ i].name);
         mini_uart_puts("\t : ");
         mini_uart_puts( valid_commands[ i].description);
-        mini_uart_puts("\n");
     }// for i
 
     return;
@@ -103,12 +115,14 @@ static void help()
 
 static void hello()
 {
-    mini_uart_puts("Hello World!\n");
+    mini_uart_puts("\r\n");
+    mini_uart_puts("Hello World!");
     return;
 }
 
 static void reboot()
 {
-    mini_uart_puts("reboot not implemented\n");
+    mini_uart_puts("\r\n");
+    mini_uart_puts("reboot not implemented");
     return;
 }
