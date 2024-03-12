@@ -1,9 +1,9 @@
 #![feature(asm_const)]
 #![feature(format_args_nl)]
 #![feature(panic_info_message)]
+#![feature(trait_alias)]
 #![no_main]
 #![no_std]
-
 
 use aarch64_cpu::asm;
 use core::arch::global_asm;
@@ -11,6 +11,7 @@ use core::panic::PanicInfo;
 
 mod console;
 mod print;
+mod synchronization;
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
@@ -35,7 +36,11 @@ pub unsafe fn _start_rust() -> ! {
 ///
 /// - Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
-    println!("Hello from Rust!");
+    use console::console;
+    println!("[0] Hello from Rust!");
+    println!("[1] Chars written: {}", console().chars_written());
+    println!("[2] Stopping here.");
+    println!("[1] Chars written: {}", console().chars_written());
     panic!("only one core is supported");
 }
 
@@ -46,7 +51,6 @@ pub static BOOT_CORE_ID: u64 = 0;
 global_asm!(include_str!("boot.S"),
 CONST_CORE_ID_MASK = const 0b11
 );
-
 
 /// Stop immediately if called a second time.
 ///
