@@ -1,14 +1,8 @@
-#include "headers/mini_uart.h"
-
+#include "headers/simple_shell.h"
 
 void kernel_start()
 {
-    mini_uart_init();
+    simple_shell();
 
-    mini_uart_puts("Hello from RPI\r\n");
-    while(1)
-    {
-        mini_uart_putc( mini_uart_getc());
-    }// while
     return;
 }
