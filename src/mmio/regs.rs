@@ -4,7 +4,8 @@ pub const MMIO_BASE: u32 = 0x3F00_0000;
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub enum AuxReg {
-    Enable = 0x0021_5000,
+    Irq = 0x0021_5000,
+    Enable = 0x0021_5004,
     MuIo = 0x0021_5040,
     MuIer = 0x0021_5044,
     MuIir = 0x0021_5048,
@@ -56,6 +57,7 @@ pub enum GpioReg {
 #[allow(dead_code)]
 pub enum PmReg {
     Rstc = 0x0010_001C,
+    Rsts = 0x0010_0020,
     Wdog = 0x0010_0024,
 }
 

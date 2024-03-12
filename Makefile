@@ -23,6 +23,7 @@ dir_guard=@mkdir -p $(@D)
 
 all: $(TARGET)
 	cp $(TARGET) $(RPI3_DIR)/kernel8.img
+	sha1sum $(TARGET)
 
 $(BUILD_DIR)/start.o: $(SRC_DIR)/start.s
 	$(dir_guard)

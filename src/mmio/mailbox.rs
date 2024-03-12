@@ -15,20 +15,18 @@ fn mailbox_call(mailbox: &mut [u32]) -> bool {
     let message_with_channel = message_address | CHANNEL_GPU;
 
     // Wait for MAILBOX to be not full
-    while unsafe { MMIO::read_reg(MmioReg::MailboxReg(Status)) } & MAILBOX_FULL != 0 {}
+    while MMIO::read_reg(MmioReg::MailboxReg(Status)) & MAILBOX_FULL != 0 {}
 
     // Write the message address to MAILBOX_WRITE with channel
-    unsafe { MMIO::write_reg(MmioReg::MailboxReg(Write), message_with_channel) };
+    MMIO::write_reg(MmioReg::MailboxReg(Write), message_with_channel);
 
     loop {
         // Wait for MAILBOX to have something for us
-        while unsafe { MMIO::read_reg(MmioReg::MailboxReg(Status)) & MAILBOX_EMPTY != 0 } {}
+        while MMIO::read_reg(MmioReg::MailboxReg(Status)) & MAILBOX_EMPTY != 0 {}
 
-        unsafe {
-            let response = MMIO::read_reg(MmioReg::MailboxReg(Read));
-            if (response & 0xF) == CHANNEL_GPU && (response & !0xF) == message_address {
-                return mailbox[1] == 0;
-            }
+        let response = MMIO::read_reg(MmioReg::MailboxReg(Read));
+        if (response & 0xF) == CHANNEL_GPU && (response & !0xF) == message_address {
+            return mailbox[1] == 0;
         }
     }
 }
@@ -45,15 +43,10 @@ pub fn get_board_revision() {
     ];
 
     if mailbox_call(&mut mailbox) {
-        unsafe {
-            uart::uart_write(b"Board revision: ");
-            uart::uart_write(&to_hex(mailbox[5]));
-            uart::uart_write(b"\n");
-        }
+        uart::uart_write(b"Board revision: ");
+        uart::uart_puts(&to_hex(mailbox[5]));
     } else {
-        unsafe {
-            uart::uart_write(b"Failed to get board revision\n");
-        }
+        uart::uart_puts(b"Failed to get board revision");
     }
 }
 
@@ -69,17 +62,11 @@ pub fn get_arm_memory() {
     ];
 
     if mailbox_call(&mut mailbox) {
-        unsafe {
-            uart::uart_write(b"ARM memory base: ");
-            uart::uart_write(&to_hex(mailbox[5]));
-            uart::uart_write(b"\n");
-            uart::uart_write(b"ARM memory size: ");
-            uart::uart_write(&to_hex(mailbox[6]));
-            uart::uart_write(b"\n");
-        }
+        uart::uart_write(b"ARM memory base: ");
+        uart::uart_puts(&to_hex(mailbox[5]));
+        uart::uart_write(b"ARM memory size: ");
+        uart::uart_puts(&to_hex(mailbox[6]));
     } else {
-        unsafe {
-            uart::uart_write(b"Failed to get ARM memory\n");
-        }
+        uart::uart_puts(b"Failed to get ARM memory");
     }
 }

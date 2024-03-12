@@ -1,10 +1,9 @@
 use mmio::regs::AuxReg::*;
 use mmio::regs::GpioReg::*;
-use mmio::regs::MmioReg::*;
-
+use mmio::regs::MmioReg::{Aux, Gpio};
 use mmio::MMIO;
 
-pub unsafe fn uart_init() {
+pub fn uart_init() {
     // Enable mini UART
     MMIO::write_reg(Aux(Enable), 1);
 
@@ -12,10 +11,11 @@ pub unsafe fn uart_init() {
     MMIO::write_reg(Aux(MuCntl), 0);
 
     // Configure UART
+    MMIO::write_reg(Aux(MuIer), 0);
     MMIO::write_reg(Aux(MuLcr), 3); // Set the data size to 8 bit
     MMIO::write_reg(Aux(MuMcr), 0); // No auto flow control
     MMIO::write_reg(Aux(MuBaud), 270); // Set baud rate for 115200
-    MMIO::write_reg(Aux(MuIir), 6); // No FIFO
+    MMIO::write_reg(Aux(MuIir), 6); // No FIFOs (interrupt when receiver holds at least 1 byte
 
     // Map UART1 to GPIO pins
     let mut reg = MMIO::read_reg(Gpio(Gpfsel1));
@@ -32,88 +32,88 @@ pub unsafe fn uart_init() {
 
     // Enable the transmitter and receiver
     MMIO::write_reg(Aux(MuCntl), 3);
-    MMIO::write_reg(Aux(MuIer), 0);
 }
 
-pub unsafe fn uart_send(c: u8) {
+pub fn uart_send(c: u8) {
     // Wait until we can send
     while MMIO::read_reg(Aux(MuLsr)) & 0x20 == 0 {
-        core::arch::asm!("nop");
+        MMIO::delay(1);
     }
 
     // Write the character to the buffer
     MMIO::write_reg(Aux(MuIo), c as u32);
-
-    // If the character is newline, also send carriage return
-    if c == b'\n' {
-        uart_send(b'\r');
-    }
 }
 
-pub unsafe fn uart_recv() -> u8 {
+pub fn uart_recv() -> u8 {
     // Wait until we can receive
+
     while MMIO::read_reg(Aux(MuLsr)) & 0x01 == 0 {
-        core::arch::asm!("nop");
+        MMIO::delay(1);
     }
 
     // Read the character from the buffer
     let c: u8 = MMIO::read_reg(Aux(MuIo)) as u8;
     match c {
-        b'\r' => b'\n',
-        _ => c,
+        b'\r' | b'\n' => {
+            uart_write(b"\r\n");
+            b'\n'
+        }
+        b'\x7f' | b'\x08' => {
+            uart_write(b"\x08 \x08");
+            b'\x7f'
+        }
+        _ => {
+            uart_send(c);
+            c
+        }
     }
 }
 
 #[allow(dead_code)]
-pub unsafe fn uart_read(buf: &mut [u8]) {
+pub fn uart_read(buf: &mut [u8]) {
     for i in buf.iter_mut() {
         *i = uart_recv();
     }
 }
 
 #[allow(dead_code)]
-pub unsafe fn uart_write(buf: &[u8]) {
+pub fn uart_write(buf: &[u8]) {
     for &c in buf {
         uart_send(c);
     }
 }
 
 #[allow(dead_code)]
-pub unsafe fn uart_puts(buf: &[u8]) {
+pub fn uart_puts(buf: &[u8]) {
     for &c in buf {
         if c == 0 {
             break;
         }
         uart_send(c);
     }
-    uart_send(b'\n');
+    uart_write(b"\r\n".as_ref());
 }
 
 #[allow(dead_code)]
-pub unsafe fn uart_gets(buf: &mut [u8]) -> usize {
+pub fn uart_gets(buf: &mut [u8]) -> usize {
     let mut i = 0;
     loop {
         let input = uart_recv();
         match input {
             b'\n' => {
                 if i < buf.len() {
-                    uart_send(b'\n');
                     buf[i] = 0;
                     break;
                 }
             }
-            b'\x08' | b'\x7f' => {
+            b'\x7f' => {
                 if i < buf.len() && i > 0 {
-                    uart_send(b'\x08');
-                    uart_send(b' ');
-                    uart_send(b'\x08');
                     i -= 1;
                     buf[i] = 0;
                 }
             }
             _ => {
                 if i < buf.len() {
-                    uart_send(input);
                     buf[i] = input;
                     i += 1;
                 }
