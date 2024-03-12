@@ -6,7 +6,9 @@ void memzero(void* start, void* end) {
 }
 
 int strcmp(const char* s1, const char* s2) {
-  while (*s1 && *s2 && *s1 == *s2)
+  char c1, c2;
+  int d;
+  while ((c1 = *s1) && (c2 = *s2) && (d = c1 - c2) != 0)
     s1++, s2++;
-  return *s1 - *s2;
+  return d;
 }
