@@ -39,7 +39,7 @@ void mini_uart_init()
     *GPPUDCLK0 = 0; // reset it
 
     // set uart enable
-    *AUX_ENABLES = 1;
+    *AUX_ENABLES |= 1;
 
     *AUX_MU_CNTL_REG = 0;
     *AUX_MU_IER_REG = 0;
@@ -57,13 +57,13 @@ char mini_uart_getc()
     // check the status of uart
     while ( 1)
     {
-        if ( *AUX_MU_LSR_REG & 0x1)
+        if (( *AUX_MU_LSR_REG) & 0x01)
         {
             break;
         }// if
     }// while
 
-    char recv = (char)*AUX_MU_IO_REG;
+    char recv = (char)( *AUX_MU_IO_REG);
 
     // convert the carrige return
     return recv == '\r' ? '\n': recv;
@@ -74,7 +74,7 @@ void mini_uart_putc( char c)
     // check the status of uart
     while ( 1)
     {
-        if ( *AUX_MU_LSR_REG & ( 0x1 << 5))
+        if (( *AUX_MU_LSR_REG) & ( 0x01 << 5))
         {
             break;
         }// if

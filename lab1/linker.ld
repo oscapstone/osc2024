@@ -16,8 +16,8 @@ SECTIONS
 	}
 	.bss ALIGN(16) (NOLOAD):
 	{
-		bss_start = .;
+		__bss_start = .;
 		*(.bss)
-		bss_end = .;
+		__bss_end = .;
 	}
 }

@@ -12,17 +12,14 @@ _start:
     cbnz x1, proc_hang
 // jump to hang if not core #0
 
-// set sp to correct position (grow down)
-    ldr x3, = _start
-    mov sp, x3
+    ldr x0, = __bss_start
+    ldr x1, = __bss_end
+    sub x1, x1, x0
+    bl mem_zero
 
-    ldr x0, bss_start
-    ldr x1, bss_end
-mem_zero:
-// zero out memory x0(low) - x1(high)
-    str xzr, [x0], #8   // xzr is zero register
-    cmp x0, x1          // compare if equal
-    ble mem_zero
+// set sp to correct position (grow down)
+    ldr x1, = _start
+    mov sp, x1
 
     bl kernel_start
 // not supposed to be here
