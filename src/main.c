@@ -16,7 +16,7 @@ void kernel_main() {
       if (!strcmp(buf, cmd->name))
         break;
     if (cmd != cmds_end) {
-      cmd->fp(cmd);
+      cmd->fp();
     } else {
       mini_uart_printf("command not found: %s\n", buf);
     }
