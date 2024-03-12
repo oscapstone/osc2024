@@ -1,4 +1,4 @@
-#include "pm.h"
+#include "board/pm.h"
 
 #include "util.h"
 

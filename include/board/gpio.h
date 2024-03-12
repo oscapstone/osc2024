@@ -1,6 +1,4 @@
 #pragma once
-#include "mmio.h"
-#include "util.h"
 
 #define GPIO_FSEL_INPUT  0b000
 #define GPIO_FSEL_OUTPUT 0b001

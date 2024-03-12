@@ -1,8 +1,8 @@
 #include "cmd.h"
 
-#include "mailbox.h"
-#include "mini-uart.h"
-#include "pm.h"
+#include "board/mailbox.h"
+#include "board/mini-uart.h"
+#include "board/pm.h"
 
 void cmd_help(const cmd_t*);
 void cmd_hello(const cmd_t*);

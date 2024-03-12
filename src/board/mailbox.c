@@ -1,4 +1,4 @@
-#include "mailbox.h"
+#include "board/mailbox.h"
 
 void mailbox_call(message_t* mailbox) {
   uint32_t data = (((uint32_t)(unsigned long)mailbox) & ~0xf) | 8;

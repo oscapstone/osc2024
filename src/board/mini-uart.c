@@ -1,8 +1,9 @@
-#include "mini-uart.h"
+#include "board/mini-uart.h"
 
-#include "gpio.h"
+#include "board/gpio.h"
 #include "util.h"
 
+#define __CLANG_INTTYPES_H
 #define NANOPRINTF_IMPLEMENTATION
 #include "nanoprintf/nanoprintf.h"
 // TODO

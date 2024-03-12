@@ -1,5 +1,5 @@
+#include "board/mini-uart.h"
 #include "cmd.h"
-#include "mini-uart.h"
 
 void kernel_main() {
   mini_uart_setup();
