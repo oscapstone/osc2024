@@ -10,7 +10,7 @@ void kernel_main() {
     int len = mini_uart_getline_echo(buf, sizeof(buf));
     if (len <= 0)
       continue;
-    const Cmd_t* cmd = cmds;
+    const cmd_t* cmd = cmds;
     for (; cmd != cmds_end; cmd++)
       if (!strcmp(buf, cmd->name))
         break;

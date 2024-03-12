@@ -1,7 +1,7 @@
 #pragma once
 
-typedef struct Cmd Cmd_t;
-typedef void (*CmdFp)(const Cmd_t*);
+typedef struct Cmd cmd_t;
+typedef void (*CmdFp)(const cmd_t*);
 
 struct Cmd {
   const char* name;
@@ -9,6 +9,6 @@ struct Cmd {
   CmdFp fp;
 };
 
-extern const Cmd_t cmds[];
-extern const Cmd_t cmds_end[];
+extern const cmd_t cmds[];
+extern const cmd_t cmds_end[];
 extern const int n_cmds;
