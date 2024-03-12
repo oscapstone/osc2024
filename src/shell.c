@@ -1,3 +1,4 @@
+#include "mailbox.h"
 #include "shell.h"
 #include "string.h"
 #include "uart.h"
@@ -22,6 +23,10 @@ void shell_start()
                 uart_puts("Hello World!\n");
             } else if (strcmp(line, "reboot") == 0) {
                 uart_puts("Reboot!\n");
+            } else if (strcmp(line, "board") == 0) {
+                get_board_revision();
+            } else if (strcmp(line, "arm") == 0) {
+                get_arm_memory();
             } else {
                 uart_puts("command not found\n");
             }
