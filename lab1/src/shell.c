@@ -50,6 +50,20 @@ void cli_cmd_read(char* buffer)
             break;
         }
 
+        // if user key 'backspace'
+        if ( c == '\b' || c == 127 )
+        {
+            if ( idx > 0 )
+            {
+                uart_send('\b');
+                uart_send(' ');
+                uart_send('\b');
+                idx--;
+            }
+            continue;
+        }
+
+
         // some ascii blacklist
         if ( c > 16 && c < 32 ) continue;
         if ( c > 127 ) continue;
