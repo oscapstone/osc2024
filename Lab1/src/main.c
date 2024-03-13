@@ -5,7 +5,7 @@
 int main()
 {
     uart_init();
-
+    
     print_hd_info();
 
     shell_main();

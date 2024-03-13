@@ -20,10 +20,10 @@ $(OBJ_DIR)/%.o: src/%.s
 
 .PHONY: run debug clean
 run: 
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none
 
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s
 
 clean:
-	rm -r $(OBJ_DIR) *.img *.elf
+	rm -rf $(OBJ_DIR) *.img *.elf

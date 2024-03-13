@@ -32,6 +32,7 @@ int mbox_call(unsigned char ch)
 
 void print_hd_info()
 {
+    uart_puts("\n-------------------------------------------\n\n");
     uart_puts("Hardware information:\n\n");
 
     // print hw revision
@@ -46,7 +47,6 @@ void print_hd_info()
     if (mbox_call(MBOX_TAGS_ARM_TO_VC))
     {
         uart_puts("Hardware Revision\t: ");
-        uart_2hex(mbox[6]);
         uart_2hex(mbox[5]);
         uart_puts("\n");
     }
@@ -78,5 +78,5 @@ void print_hd_info()
         uart_puts("Fail: Memory info\n");
     }
 
-    uart_puts("\n\n");
+    uart_puts("\n-------------------------------------------\n\n");
 }

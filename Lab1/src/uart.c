@@ -59,6 +59,7 @@ void uart_puts(char* str)
 
 void uart_2hex(UI d)
 {
+    uart_puts("0x");
     unsigned int n;
     int c;
     for( c = 28; c >= 0; c -= 4) 

@@ -2,31 +2,38 @@
 #include "uart.h"
 #include "utils.h"
 
-int i = 0;
-char cmd[CMD_MAX_LEN];
+char command_buffer[CMD_MAX_LEN];
+char *cmd_ptr;
 
 void shell_main()
 {
-    uart_puts("Simply Shell\n");
+    cmd_ptr = command_buffer;
+    *cmd_ptr = '\0';
+
+    uart_puts("Simple Shell\n");
     while (1)
     {
-        uart_puts("#");
+        uart_puts("# ");
         read_cmd();
         
-        if (strcmp(cmd, "help"))
+        if (strcmp(command_buffer, "help"))
             cmd_help();
-        else if (strcmp(cmd, "hello"))
+        else if (strcmp(command_buffer, "hello"))
             cmd_hello();
-        else if (strcmp(cmd, "reboot"))
+        else if (strcmp(command_buffer, "reboot"))
             cmd_reboot();
-        // else if (strcmp(cmd, "exit"))
+        // else if (strcmp(command_buffer, "exit"))
         //     break;
         else
         {
             uart_puts("Unknown command: ");
-            uart_puts(cmd);
+            uart_puts(command_buffer);
             uart_puts("\n");
         }
+
+        // Reset CMD
+        cmd_ptr = command_buffer;
+        *cmd_ptr = '\0';
     }
 }
 
@@ -34,20 +41,23 @@ void read_cmd()
 {
     while (1)
     {
-        if (i >= CMD_MAX_LEN)
+        if (cmd_ptr - command_buffer >= CMD_MAX_LEN)
             break;
 
-        cmd[i] = uart_getc();
+        *cmd_ptr = uart_getc();
 
-        if (cmd[i] == '\n')
+        if (*cmd_ptr == '\n')
         {
             uart_puts("\n");
             break;
         }
 
-        uart_send(cmd[i++]);
+        if (*cmd_ptr < 20 || *cmd_ptr > 126) // skip unwanted character
+            continue;
+
+        uart_send(*cmd_ptr++);
     }
-    cmd[i] = '\0';
+    *cmd_ptr = '\0';
 }
 
 void cmd_help()
@@ -65,14 +75,9 @@ void cmd_hello()
 void cmd_reboot()
 {
     uart_puts("Rebooting...\n\n");
+    
     VUI *r = (UI *)PM_RSTC;
     *r = PM_PASSWORD | 0x20;
     VUI *w = (UI *)PM_WDOG;
-    *w = PM_PASSWORD | 5;
+    *w = PM_PASSWORD | 48;
 }
-
-// void cancel_reset()
-// {
-//     set(PM_RSTC, PM_PASSWORD | 0); // full reset
-//     set(PM_WDOG, PM_PASSWORD | 0); // number of watchdog tick
-// }
