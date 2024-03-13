@@ -16,3 +16,4 @@ use the command `screen /dev/ttyUSB0 115200` to connect it
 
 ref:
 * https://developer.arm.com/documentation/ddi0500/j/System-Control/AArch64-register-descriptions/Multiprocessor-Affinity-Register
+* https://jsandler18.github.io/extra/mailbox.html
