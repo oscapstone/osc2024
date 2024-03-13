@@ -3,6 +3,10 @@
 version = 3
 
 [[package]]
+name = "cpu"
+version = "0.1.0"
+
+[[package]]
 name = "kernel"
 version = "0.1.0"
 dependencies = [
@@ -12,3 +16,6 @@ dependencies = [
 [[package]]
 name = "panic-wait"
 version = "0.1.0"
+dependencies = [
+ "cpu",
+]

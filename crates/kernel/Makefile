@@ -5,6 +5,7 @@ TARGET_CPU    := cortex-a53
 
 KERNEL_ELF := $(TARGET_DIR)/$(TARGET_TRIPLE)/release/kernel
 KERNEL_IMG := $(TARGET_DIR)/$(TARGET_TRIPLE)/release/kernel8.img
+KERNEL_DEP_INFO := $(filter-out %: ,$(file < $(KERNEL_ELF).d)) 
 
 LD_SCRIPT_PATH := $(shell pwd)
 LD_SCRIPT_NAME := kernel.ld
@@ -31,7 +32,7 @@ $(KERNEL_IMG): $(KERNEL_ELF)
 	@echo "Name: $(KERNEL_IMG)"
 	@echo "Size: `du --block-size=1024 --apparent-size $(KERNEL_IMG) | cut -f1`"
 
-$(KERNEL_ELF):
+$(KERNEL_ELF): $(KERNEL_DEP_INFO) Cargo.toml
 	@echo "Compiling kernel ELF"
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo rustc $(RUSTC_ARGS)
 
@@ -43,3 +44,4 @@ qemu: $(KERNEL_IMG)
 .PHONY: clippy
 clippy:
 	@RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" cargo clippy $(RUSTC_ARGS)
+
