@@ -1,6 +1,6 @@
 # OSC2024 Lab0
 ### 1. Cross Compiler
-#### Windows (not recommanded)
+#### Windows
 gcc-arm-10.3-2021.07-mingw-w64-i686-aarch64-none-elf.tar.xz
 
 [Link](https://developer.arm.com/downloads/-/gnu-a)
@@ -28,7 +28,7 @@ aarch64-linux-gnu-objcopy -O binary kernel8.elf kernel8.img
 ### 2. QEMU
 The system **qemu-system-aarch64** Should be installed.
 
-#### Windows (not recommanded)
+#### Windows
 [Link for Windows](https://qemu.weilnetz.de/w64/)
 File: qemu-w64-setup-20231224.exe
 
