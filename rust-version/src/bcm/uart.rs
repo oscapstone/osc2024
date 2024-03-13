@@ -12,6 +12,7 @@
 use crate::bcm::common::MMIODerefWrapper;
 use crate::synchronization::{interface::Mutex, NullLock};
 use aarch64_cpu::asm;
+use core::char;
 
 use tock_registers::{
     interfaces::Writeable,
@@ -19,8 +20,8 @@ use tock_registers::{
     registers::{ReadOnly, ReadWrite},
 };
 
-use tock_registers::interfaces::Readable;
 use core::fmt;
+use tock_registers::interfaces::Readable;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -172,13 +173,29 @@ impl UartInner {
             .AUX_MU_BAUD
             .write(AUX_MU_BAUD::Baudrate.val(270));
     }
+
+    fn get_char(&self) -> char {
+        // wait until transmitter is empty
+        while self
+            .registers
+            .AUX_MU_LSR
+            .matches_all(AUX_MU_LSR::RX_READY::CLEAR)
+        {
+            asm::nop();
+        }
+
+        char::from_u32(self.registers.AUX_MU_IO.get()).unwrap()
+    }
 }
 
 impl core::fmt::Write for UartInner {
-
     fn write_char(&mut self, c: char) -> fmt::Result {
         // wait until transmitter is empty
-        while self.registers.AUX_MU_LSR.matches_all(AUX_MU_LSR::TX_IDLE::CLEAR) {
+        while self
+            .registers
+            .AUX_MU_LSR
+            .matches_all(AUX_MU_LSR::TX_IDLE::CLEAR)
+        {
             asm::nop();
         }
         self.registers.AUX_MU_IO.set(c as u32);
@@ -211,6 +228,10 @@ impl Uart {
     pub fn init(&self) {
         self.inner.lock(|inner| inner.init());
     }
+
+    pub fn get_char(&self) -> char {
+        self.inner.lock(|inner| inner.get_char())
+    }
 }
 
 use crate::console::interface;
@@ -220,5 +241,5 @@ impl interface::Write for Uart {
         // readability.
         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
-
 }
+
