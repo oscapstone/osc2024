@@ -14,6 +14,7 @@ bench = false
 
 [dependencies]
 aarch64-cpu = "9.4.0"
+tock-registers = "0.9.0"
 
 [lib]
 test = false

@@ -4,7 +4,11 @@
 
 //! Printing.
 
-use crate::console;
+// QEMU's hacky UART
+// use crate::console;
+use crate::bcm::UART;
+use crate::console::interface::Write;
+
 use core::fmt;
 
 //--------------------------------------------------------------------------------------------------
@@ -13,7 +17,7 @@ use core::fmt;
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    console::console().write_fmt(args).unwrap();
+    UART.write_fmt(args).unwrap();
 }
 
 /// Prints without a newline.
