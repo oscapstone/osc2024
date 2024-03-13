@@ -2,19 +2,19 @@
 
 char getchar()
 {
-	char c = uart_recv();
-	return c == '\r' ? '\n' : c;
+    char c = uart_recv();
+    return c == '\r' ? '\n' : c;
 }
 
 void putchar(char c)
 {
-	uart_send(c);
+    uart_send(c);
 }
 
 void puts(const char *s)
 {
-	while (*s)
-		putchar(*s++);
+    while (*s)
+        putchar(*s++);
 }
 
 // Function to print an integer to the UART
@@ -28,7 +28,7 @@ void put_int(int num)
     }
 
     // Temporary array to store the reversed digits as characters
-    char temp[12];  // Assuming int can have at most 10 digits
+    char temp[12]; // Assuming int can have at most 10 digits
     int idx = 0;
 
     // Handle negative numbers
@@ -52,16 +52,15 @@ void put_int(int num)
     }
 }
 
-
 void put_hex(unsigned int num)
 {
-	unsigned int hex;
-	int index = 28;
-	while (index >= 0)
-	{
-		hex = (num >> index) & 0xF;
-		hex += hex > 9 ? 0x37 : 0x30;
-		putchar(hex);
-		index -= 4;
-	}
+    unsigned int hex;
+    int index = 28;
+    while (index >= 0)
+    {
+        hex = (num >> index) & 0xF;
+        hex += hex > 9 ? 0x37 : 0x30;
+        putchar(hex);
+        index -= 4;
+    }
 }

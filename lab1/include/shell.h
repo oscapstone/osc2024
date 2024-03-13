@@ -13,10 +13,10 @@ typedef struct CLI_CMDS
 
 int start_shell();
 
-int  cli_cmd_strcmp(const char*, const char*);
-void cli_flush_buffer(char*, int);
-void cli_cmd_read(char*);
-void cli_cmd_exec(char*);
+int cli_cmd_strcmp(const char *, const char *);
+void cli_flush_buffer(char *, int);
+void cli_cmd_read(char *);
+void cli_cmd_exec(char *);
 void cli_print_banner();
 
 void do_cmd_help();

@@ -9,7 +9,8 @@ extern volatile unsigned int pt[64];
 
 // Mailbox Channels
 // https://github.com/raspberrypi/firmware/wiki/Mailboxes
-typedef enum {
+typedef enum
+{
     MBOX_POWER_MANAGEMENT = 0,
     MBOX_FRAMEBUFFER,
     MBOX_VIRTUAL_UART,
@@ -24,22 +25,25 @@ typedef enum {
 
 // Status Code from Broadcom Videocode Driver
 // brcm_usrlib/dag/vmcsx/vcinclude/bcm2708_chip/arm_control.h
-enum mbox_status_reg_bits {
-    BCM_ARM_VC_MS_FULL  = 0x80000000,
+enum mbox_status_reg_bits
+{
+    BCM_ARM_VC_MS_FULL = 0x80000000,
     BCM_ARM_VC_MS_EMPTY = 0x40000000,
     BCM_ARM_VC_MS_LEVEL = 0x400000FF,
 };
 
-enum mbox_buffer_status_code {
+enum mbox_buffer_status_code
+{
     MBOX_REQUEST_PROCESS = 0x00000000,
     MBOX_REQUEST_SUCCEED = 0x80000000,
-    MBOX_REQUEST_FAILED  = 0x80000001,
+    MBOX_REQUEST_FAILED = 0x80000001,
 };
 
 // Tag
 // https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
 // Included partition only
-typedef enum {
+typedef enum
+{
     /* Videocore */
     MBOX_TAG_GET_FIRMWARE_VERSION = 0x1,
 
@@ -54,9 +58,8 @@ typedef enum {
 
 } mbox_tag_type;
 
-
 #define MBOX_TAG_REQUEST_CODE 0x00000000
-#define MBOX_TAG_LAST_BYTE    0x00000000
+#define MBOX_TAG_LAST_BYTE 0x00000000
 
 int mbox_call(mbox_channel_type, unsigned int);
 
