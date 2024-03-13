@@ -33,7 +33,7 @@ void run_console(struct Console *console) {
       continue;
     }
     int i = 0;
-    for (int i = 0; i < console->num_commands; i++) {
+    for (i = 0; i < console->num_commands; i++) {
       if (strcmp(input, console->commands[i].name) == 0) {
         // creaete empty argc, argv
         int argc = 0;
@@ -42,8 +42,9 @@ void run_console(struct Console *console) {
         break;
       }
     }
+    print_h(i);
     if (i == console->num_commands) {
-      print_string("\nCommand not found\n");
+      print_string("\ncommand not found\n");
     }
   }
 }

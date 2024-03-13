@@ -1,5 +1,5 @@
 #include "io.h"
-#include "../bsp/uart.h"
+#include "bsp/uart.h"
 
 char read_c() { return uart_getc(); }
 

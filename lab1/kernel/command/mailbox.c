@@ -1,4 +1,4 @@
-#include "../../bsp/mailbox.h"
+#include "../bsp/mailbox.h"
 #include "../io.h"
 #include "all.h"
 

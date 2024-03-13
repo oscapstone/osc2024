@@ -1,4 +1,4 @@
-#include "bsp/uart.h"
+#include "kernel/bsp/uart.h"
 #include "kernel/command/all.h"
 #include "kernel/console.h"
 

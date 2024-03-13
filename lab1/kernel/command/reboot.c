@@ -1,4 +1,4 @@
-#include "../../bsp/reboot.h"
+#include "../bsp/reboot.h"
 #include "../io.h"
 #include "all.h"
 
