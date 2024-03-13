@@ -58,6 +58,7 @@ void uart_puts(char *str) {
 void uart_2hex(unsigned int d) {
     unsigned int n;
     int c;
+    uart_puts("0x");
     for(c=28;c>=0;c-=4) {
         n=(d>>c)&0xF;
         n+=n>9?0x37:0x30;

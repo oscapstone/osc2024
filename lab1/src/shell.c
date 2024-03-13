@@ -115,8 +115,8 @@ void do_cmd_info()
 
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
         uart_puts("Hardware Revision\t: ");
-        uart_2hex(pt[6]);
-        uart_2hex(pt[5]); // it should be 0xa020d3 for rpi3 b+
+        //uart_2hex(pt[6]);
+        uart_2hex(pt[5]); 
         uart_puts("\r\n");
     }
     // print arm memory
