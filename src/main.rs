@@ -11,7 +11,7 @@ mod stdio;
 mod uart;
 mod utils;
 
-use mailbox::{get_arm_memory, get_board_revision};
+// use mailbox;
 
 const MAX_COMMAND_LEN: usize = 0x400;
 
@@ -19,8 +19,15 @@ const MAX_COMMAND_LEN: usize = 0x400;
 pub fn main() {
     uart::uart_init();
     stdio::puts(b"Hello, world!");
-    get_board_revision();
-    get_arm_memory();
+    let revision = mailbox::get_board_revision();
+    stdio::write(b"Board revision: ");
+    stdio::puts(utils::to_hex(revision).as_ref());
+    let (lb, ub) = mailbox::get_arm_memory();
+    stdio::write(b"ARM memory: ");
+    stdio::write(utils::to_hex(ub).as_ref());
+    stdio::write(b" ");
+    stdio::puts(utils::to_hex(lb).as_ref());
+
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         utils::memset(buf.as_mut_ptr(), 0, MAX_COMMAND_LEN);
