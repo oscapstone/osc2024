@@ -1,0 +1,3 @@
+[submodule "supplements"]
+	path = supplements
+	url = https://github.com/bztsrc/raspi3-tutorial
