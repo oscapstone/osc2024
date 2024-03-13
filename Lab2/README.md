@@ -91,9 +91,24 @@
     > each other. The list of reserved blocks shall be terminated with an entry where both address and size are equal to 0. Note
     > that the address and size values are always 64-bit. On 32-bit CPUs the upper 32-bits of the value are ignored
     > Each uint64_t in the memory reservation block, and thus the memory reservation block as a whole, shall be located at an 8-byte aligned offset from the beginning of the devicetree blob
+    - Struct block
+    > The structure block is composed of a sequence of pieces, each beginning with a token, that is, a big-endian 32-bit integer. Some tokens are followed by extra data
+    - String block
 + Get dtb address from .S
     - Since dtb address will be loaded into ```x0``` reg, we need a global address in our assembly so that our c files can access that symbol containing address.
     - declare a variable with 64bits long and make it global, remember to put that variable at ```.data``` section. Use ```.quad``` to make it 64bits.
 + utils.c
     - The magic field in dtb header is big endian, so we have to find a way to make it little endian.
     - Add a new function ```unsigned int BE2LE(unsigned int BE)``` to convert to little endian.
+    - Add a new function ```int align_mem_offset(void* i, unsigned int align)``` for the alignment of memory address.
++ dtb.c
+    - Define a ```fdt_traverse``` function that take a callback function pointer as parameter, allowing the callback function to get device tree property. (The function can be modified to be more flexible, I'll leave it as future work) 
+        - The procedure are:
+        1. Check the magic value inside dtb header to see if it matches
+        2. use ```struct_ptr```, which equals to header + struct block offset field, to access data inside dtb.
+        3. Check token and following data(if there's one)
+    - Define a ```initramfs_callback``` as a callback function that can fetch initramfs.cpio address.
+    - Remember there's lots of(or all of them are) big-endian presentation in dtb, just convert them to little endian.
+    - Beware of 32bits alignment
++ config.txt
+    - Remember to specify address of cpio in config file, otherwise the address will not shown in the dtb.

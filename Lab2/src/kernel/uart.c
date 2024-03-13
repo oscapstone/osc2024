@@ -85,7 +85,7 @@ unsigned char uart_getc(){
     return r=='\r'?'\n':r;
 }
 
-void uart_puts(const char* str){
+unsigned int uart_puts(const char* str){
     // I thought this 'for' usage can't be in C
     //for(int i = 0; str[i] != '\0'; i++)
     int i;
@@ -94,6 +94,8 @@ void uart_puts(const char* str){
             uart_putc('\r');
         uart_putc((char)str[i]);
     }
+
+    return i;
 }
 
 void uart_puts_fixed(const char *str, int len){

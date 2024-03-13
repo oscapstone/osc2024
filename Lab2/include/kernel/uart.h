@@ -34,7 +34,7 @@
 void uart_init (void);
 void uart_putc(unsigned char c);
 unsigned char uart_getc();
-void uart_puts(const char* str);
+unsigned int uart_puts(const char* str);
 // output fixed length string, assuming length provided is correct
 void uart_puts_fixed(const char *str, int len);
 // binary to hex, only for mailbox

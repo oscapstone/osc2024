@@ -3,8 +3,9 @@
 #include "kernel/shell.h"
 #include "kernel/cpio.h"
 #include "kernel/allocator.h"
+#include "kernel/dtb.h"
 // this one need to be outside any function
-char *cpio_addr = (char*)RPI_CPIO;
+char *cpio_addr;
 extern void* _dtb_addr;
 
 void main(void)
@@ -27,6 +28,8 @@ void main(void)
     string[7] = '\0';
     uart_puts(string);
     uart_putc('\n');
+
+    fdt_traverse(initramfs_callback);
 
     my_shell();
 }

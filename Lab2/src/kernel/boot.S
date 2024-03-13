@@ -26,7 +26,7 @@ halt:
   // if it's cpu0
 1:  
   // store the address of _dtb_addr
-  // then load the dtb loading address(x0) into x1 
+  // then load the dtb loading address(x0) into x1(_dtb_addr)
   ldr x1, =_dtb_addr
   str x0, [x1]
   // Set stack pointer before code starts
