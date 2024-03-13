@@ -2,6 +2,7 @@
 #include "headers/mini_uart.h"
 #include "headers/string.h"
 #include "headers/mailbox.h"
+#include "headers/reboot.h"
 
 #define BUFFER_SIZE (256)
 
@@ -132,6 +133,7 @@ static void mailbox_get_info( void)
 static void reboot()
 {
     mini_uart_puts("\r\n");
-    mini_uart_puts("reboot not implemented");
+    mini_uart_puts("reboot in progress...");
+    reset( 50);
     return;
 }
