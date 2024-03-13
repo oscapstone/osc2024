@@ -3,13 +3,13 @@
 #include "shell.h"
 #include "devtree.h"
 #include "initrd.h"
-#include "irq.h"
+#include "timer.h"
 
 int main()
 {
 	uart_init();
 	alloc_init();
-	enable_core_timer();
+	timer_enable_interrupt();
 	fdt_traverse(initrd_callback);
 	uart_puts("Welcome!\n");
 	run_shell();

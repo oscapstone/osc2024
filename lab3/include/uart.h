@@ -22,4 +22,10 @@ void uart_putc(char c);
 void uart_hex(unsigned int h);
 void uart_puts(const char *s);
 
+void uart_enable_interrupt();
+void uart_disable_interrupt();
+
+void uart_async_read();
+void uart_async_write();
+
 #endif // UART_H

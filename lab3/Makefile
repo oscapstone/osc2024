@@ -16,13 +16,13 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
 	$(ARMGNU)-gcc $(CFLAGS)   -c $< -o $@
 
-$(BUILD_DIR)/%.o: %.S
+$(BUILD_DIR)/_%.o: %.S
 	$(ARMGNU)-gcc $(ASMFLAGS) -c $< -o $@
 
 SRC_FILES  = $(wildcard $(SRC_DIR)/*.c)
 ASM_FILES  = $(wildcard *.S)
 OBJ_FILES  = $(SRC_FILES:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
-OBJ_FILES += $(ASM_FILES:%.S=$(BUILD_DIR)/%.o)
+OBJ_FILES += $(ASM_FILES:%.S=$(BUILD_DIR)/_%.o)
 
 kernel8.img: linker.ld $(OBJ_FILES)
 	$(ARMGNU)-ld -T linker.ld -o $(BUILD_DIR)/kernel8.elf $(OBJ_FILES)

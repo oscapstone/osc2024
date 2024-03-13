@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "irq.h"
 
 void uart_init()
 {
@@ -66,4 +67,11 @@ void uart_puts(const char *s)
 	while (*s) {
 		uart_putc(*s++);
 	}
+}
+
+void uart_enable_interrupt()
+{
+	*AUX_MU_IER |= 1;
+	*AUX_MU_IER |= 2;
+	*ENABLE_IRQS_1 |= 1 << 29;
 }
