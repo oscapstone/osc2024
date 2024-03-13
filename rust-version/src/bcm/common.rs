@@ -19,7 +19,7 @@ pub struct MMIODerefWrapper<T> {
 #[rustfmt::skip]
 pub mod map {
 
-    // pub const GPIO_OFFSET:         usize = 0x0020_0000;
+    pub const GPIO_OFFSET:         usize = 0x0020_0000;
     pub const UART_OFFSET:         usize = 0x0021_5000;
 
     /// Physical devices.
@@ -27,7 +27,7 @@ pub mod map {
         use super::*;
 
         pub const START:            usize =         0x3F00_0000;
-        // pub const GPIO_START:       usize = START + GPIO_OFFSET;
+        pub const GPIO_START:       usize = START + GPIO_OFFSET;
         pub const UART_START:       usize = START + UART_OFFSET;
     }
 }
@@ -51,5 +51,11 @@ impl<T> ops::Deref for MMIODerefWrapper<T> {
 
     fn deref(&self) -> &Self::Target {
         unsafe { &*(self.start_addr as *const _) }
+    }
+}
+
+pub fn spin_for_cycles(cycles: usize) {
+    for _ in 0..cycles {
+        aarch64_cpu::asm::nop();
     }
 }
