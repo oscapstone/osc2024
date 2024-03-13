@@ -15,7 +15,7 @@ cpu0:
     ldr x0, =_start         // load the address of _start into x0
     mov sp, x0              // set the stack pointer to the address of _start
     ldr x0, =__bss_start    // load the address of __bss_start into x0
-    ldr w2, =__bss_end
+    ldr w2, =__bss_size
 
 clear_bss:
     cbz w2, kernel_main

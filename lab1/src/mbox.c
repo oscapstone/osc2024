@@ -38,7 +38,7 @@ void get_board_revision()
         mailbox); // message passing procedure call, you should implement it following the 6 steps provided above.
 
     uart_puts("Board revision: ");
-    uart_hex(mailbox[5]); // it should be 0xa020d3 for rpi3 b+
+    uart_hex(mailbox[5]);
 }
 
 void get_memory_info()
@@ -59,8 +59,8 @@ void get_memory_info()
         mailbox); // message passing procedure call, you should implement it following the 6 steps provided above.
 
     uart_puts("ARM memory base: ");
-    uart_hex(mailbox[5]); // it should be 0x3b for rpi3 b+
+    uart_hex(mailbox[5]);
 
     uart_puts("ARM memory size: ");
-    uart_hex(mailbox[6]); // it should be 0x40000000 for rpi3 b+
+    uart_hex(mailbox[6]);
 }

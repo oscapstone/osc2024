@@ -61,9 +61,9 @@ void shell()
         else if (strcmp(cmd, "clear")) {
             uart_puts("\033[2J\033[H");
         }
-        else if (!strcmp(cmd, "")) {
-            uart_puts("Unknown command\n");
-        }
+        // else if (!strcmp(cmd, "")) {
+        //     uart_puts("Unknown command\n");
+        // }
         uart_puts("# ");
     }
 }
