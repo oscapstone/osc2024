@@ -22,12 +22,81 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-
-#include <stdio.h>
-
+#define MAX_BUFFER 10
+#include "uart.h"
+#include "utils.h"
+#include "mbox.h"
 void main()
 {
-    printf("hello");
-    return;
-    //while(1);
+    // set up serial console
+    uart_init();
+
+    // get the board's unique serial number with a mailbox call
+    mbox[0] = 8*4;                  // length of the message
+    mbox[1] = MBOX_REQUEST;         // this is a request message
+    
+    mbox[2] = MBOX_TAG_REVISION;   // get serial number command
+    mbox[3] = 8;                    // buffer size
+    mbox[4] = 8;
+    mbox[5] = 0;                    // clear output buffer
+    mbox[6] = 0;
+
+    mbox[7] = MBOX_TAG_LAST;
+
+    // send the message to the GPU and receive answer
+    if (mbox_call(MBOX_CH_PROP)) {
+        uart_puts("Revision number is: ");
+        uart_hex(mbox[5]);
+        uart_puts("\n");
+    } else {
+        uart_puts("Unable to query serial!\n");
+    }
+
+    // get the board's unique serial number with a mailbox call
+    mbox[0] = 8*4;                  // length of the message
+    mbox[1] = MBOX_REQUEST;         // this is a request message
+    
+    mbox[2] = MBOX_TAG_MEMORY;   // get serial number command
+    mbox[3] = 8;                    // buffer size
+    mbox[4] = 8;
+    mbox[5] = 0;                    // clear output buffer
+    mbox[6] = 0;
+
+    mbox[7] = MBOX_TAG_LAST;
+
+    if (mbox_call(MBOX_CH_PROP)) {
+        uart_puts("Memory base address is: ");
+        uart_hex(mbox[5]);
+        uart_puts("\n");
+        uart_puts("Memory size is: ");
+        uart_hex(mbox[6]);
+        uart_puts("\n");
+    } else {
+        uart_puts("Unable to query serial!\n");
+    }
+
+    while(1){
+        char command[MAX_BUFFER];
+        char c = '\0';
+        int length=0;
+        for(int i=0; i<MAX_BUFFER; i++){
+            command[i] = '\0';
+        }
+        for(length=0; c != '\n' && length<MAX_BUFFER; length++){
+            c = uart_getc();
+            command[length] = c;
+            uart_send(c);
+        }
+        command[length==MAX_BUFFER?length-2:length-1] = '\0';
+        if(strcmp(command, "help") == 0){
+            uart_puts("help\t: print this help menu\n");
+            uart_puts("hello\t: print hello world!\n");
+        }
+        else if(strcmp(command, "hello") == 0){
+            uart_puts("Hello World!\n");
+        }
+        else if(strcmp(command, "reboot") == 0){
+            reset();
+        }
+    }
 }

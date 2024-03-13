@@ -23,33 +23,26 @@
  *
  */
 
-.section ".text.boot"
+/* a properly aligned buffer */
+extern volatile unsigned int mbox[36];
 
-.global _start
+#define MBOX_REQUEST    0
 
-_start:
-    // read cpu id, stop slave cores
-    mrs     x1, mpidr_el1
-    and     x1, x1, #3
-    cbz     x1, 2f
-    // cpu id > 0, stop
-1:  wfe
-    b       1b
-2:  // cpu id == 0
+/* channels */
+#define MBOX_CH_POWER   0
+#define MBOX_CH_FB      1
+#define MBOX_CH_VUART   2
+#define MBOX_CH_VCHIQ   3
+#define MBOX_CH_LEDS    4
+#define MBOX_CH_BTNS    5
+#define MBOX_CH_TOUCH   6
+#define MBOX_CH_COUNT   7
+#define MBOX_CH_PROP    8
 
-    // set top of stack just before our code (stack grows to a lower address per AAPCS64)
-    ldr     x1, =_start
-    mov     sp, x1
+/* tags */
+#define MBOX_TAG_GETSERIAL      0x10004
+#define MBOX_TAG_REVISION       0x00010002
+#define MBOX_TAG_MEMORY         0x00010005
+#define MBOX_TAG_LAST           0
 
-    // clear bss
-    ldr     x1, =__bss_start
-    ldr     w2, =__bss_size
-3:  cbz     w2, 4f
-    str     xzr, [x1], #8
-    sub     w2, w2, #1
-    cbnz    w2, 3b
-
-    // jump to C code, should not return
-4:  bl      main
-    // for failsafe, halt this core too
-    b       1b
+int mbox_call(unsigned char ch);

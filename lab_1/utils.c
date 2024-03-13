@@ -1,3 +1,5 @@
+#include "utils.h"
+
 int strcmp(char* a, char* b){
     int value = 0;
     while(*a != '\0' && *b != '\0'){
@@ -19,4 +21,14 @@ int strcmp(char* a, char* b){
         value--;
     }
     return value;
+}
+
+void set(long addr, unsigned int value) {
+    volatile unsigned int* point = (unsigned int*)addr;
+    *point = value;
+}
+
+void reset() {                 // reboot after watchdog timer expire
+    set(PM_RSTC, PM_PASSWORD | 0x20);  // full reset
+    // set(PM_WDOG, PM_PASSWORD | tick);  // number of watchdog tick
 }
