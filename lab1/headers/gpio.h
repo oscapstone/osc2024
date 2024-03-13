@@ -54,5 +54,4 @@
 #define GPPUDCLK0   (( volatile unsigned int *)(GPIO_OFFSET + 0x0098))//0098
 #define GPPUDCLK1   (( volatile unsigned int *)(GPIO_OFFSET + 0x009C))//009C
 
-
 #endif
