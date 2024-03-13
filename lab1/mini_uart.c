@@ -116,3 +116,20 @@ void mini_uart_puts( char *s)
     
     return;
 }
+
+void mini_uart_puthexint( unsigned int number)
+{
+    char next;
+    // change endianess
+    for ( int i = 28; i >= 0; i -= 4)
+    {
+        // get number in little endian
+        next = (( number >> i) & 0x0F);
+
+        next = next <= 0x9 ? next + '0': next + 'A' - 0xA;
+
+        mini_uart_putc( next);
+    }// for i
+    
+    return;
+}

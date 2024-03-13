@@ -1,6 +1,7 @@
 #include "headers/simple_shell.h"
 #include "headers/mini_uart.h"
 #include "headers/string.h"
+#include "headers/mailbox.h"
 
 #define BUFFER_SIZE (256)
 
@@ -20,11 +21,13 @@ static void parse_command( char *buffer, int size);
 static void help( void);
 static void hello( void);
 static void reboot( void);
+static void mailbox_get_info( void);
 
 static const s_command valid_commands[] =
 {
     (s_command){ "help", help, "print this help menu"},
     (s_command){ "hello", hello, "print Hello World!"},
+    (s_command){ "mailbox", mailbox_get_info, "print system information via mailbox"},
     (s_command){ "reboot", reboot, "reboot the device"}
 };
 
@@ -118,6 +121,12 @@ static void hello()
     mini_uart_puts("\r\n");
     mini_uart_puts("Hello World!");
     return;
+}
+
+static void mailbox_get_info( void)
+{
+    mailbox_get_board_revision();
+    mailbox_get_arm_base_size();
 }
 
 static void reboot()
