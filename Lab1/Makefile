@@ -1,14 +1,13 @@
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
 
 all: clean kernel8.img
 
 start.o: start.S
-	aarch64-none-elf-gcc $(CFLAGS) -c start.S -o start.o
+	aarch64-none-elf-gcc -c start.S -o start.o
 
 %.o: %.c
-	aarch64-none-elf-gcc $(CFLAGS) -c $< -o $@
+	aarch64-none-elf-gcc -c $< -o $@
 
 kernel8.img: start.o $(OBJS)
 	aarch64-none-elf-ld start.o $(OBJS) -T linker.ld -o kernel8.elf
