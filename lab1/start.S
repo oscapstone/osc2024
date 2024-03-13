@@ -7,7 +7,7 @@ _start:
 	// the last 8 bits indicate the core number in cortex-a53
 	mrs x1, mpidr_el1
 	and x1, x1, #3
-	cbz x1, 2f
+	cbz x1, 1f
 
 	// if core number > 0, let the core hangs
 halt:
