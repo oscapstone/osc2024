@@ -1,3 +1,4 @@
+use crate::stdio::write;
 use mmio::regs::AuxReg::*;
 use mmio::regs::GpioReg::*;
 use mmio::regs::MmioReg::{Aux, Gpio};
@@ -34,7 +35,7 @@ pub fn uart_init() {
     MMIO::write_reg(Aux(MuCntl), 3);
 }
 
-pub fn uart_send(c: u8) {
+pub fn send(c: u8) {
     // Wait until we can send
     while MMIO::read_reg(Aux(MuLsr)) & 0x20 == 0 {
         MMIO::delay(1);
@@ -44,9 +45,8 @@ pub fn uart_send(c: u8) {
     MMIO::write_reg(Aux(MuIo), c as u32);
 }
 
-pub fn uart_recv() -> u8 {
+pub fn recv() -> u8 {
     // Wait until we can receive
-
     while MMIO::read_reg(Aux(MuLsr)) & 0x01 == 0 {
         MMIO::delay(1);
     }
@@ -55,70 +55,16 @@ pub fn uart_recv() -> u8 {
     let c: u8 = MMIO::read_reg(Aux(MuIo)) as u8;
     match c {
         b'\r' | b'\n' => {
-            uart_write(b"\r\n");
+            write(b"\r\n");
             b'\n'
         }
         b'\x7f' | b'\x08' => {
-            uart_write(b"\x08 \x08");
+            write(b"\x08 \x08");
             b'\x7f'
         }
         _ => {
-            uart_send(c);
+            send(c);
             c
         }
     }
-}
-
-#[allow(dead_code)]
-pub fn uart_read(buf: &mut [u8]) {
-    for i in buf.iter_mut() {
-        *i = uart_recv();
-    }
-}
-
-#[allow(dead_code)]
-pub fn uart_write(buf: &[u8]) {
-    for &c in buf {
-        uart_send(c);
-    }
-}
-
-#[allow(dead_code)]
-pub fn uart_puts(buf: &[u8]) {
-    for &c in buf {
-        if c == 0 {
-            break;
-        }
-        uart_send(c);
-    }
-    uart_write(b"\r\n".as_ref());
-}
-
-#[allow(dead_code)]
-pub fn uart_gets(buf: &mut [u8]) -> usize {
-    let mut i = 0;
-    loop {
-        let input = uart_recv();
-        match input {
-            b'\n' => {
-                if i < buf.len() {
-                    buf[i] = 0;
-                    break;
-                }
-            }
-            b'\x7f' => {
-                if i < buf.len() && i > 0 {
-                    i -= 1;
-                    buf[i] = 0;
-                }
-            }
-            _ => {
-                if i < buf.len() {
-                    buf[i] = input;
-                    i += 1;
-                }
-            }
-        }
-    }
-    i
 }

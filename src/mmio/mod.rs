@@ -1,7 +1,6 @@
 use crate::mmio::regs::MmioReg;
 use crate::mmio::regs::PmReg;
 
-pub mod mailbox;
 pub mod regs;
 
 pub struct MMIO;
