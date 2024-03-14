@@ -47,13 +47,13 @@ void uart_init (void)
 	selector |= 2<<12;                      // set alt5 for gpio14
 	selector &= ~(7<<15);                   // clean gpio15
 	selector |= 2<<15;                      // set alt5 for gpio15
-	put32(GPFSEL1,selector);
+	put32(GPFSEL1,selector);                // 將 selector 的值放到 GPFSEL1
 
-	put32(GPPUD,0);
+	put32(GPPUD,0);                         // 寫入 GPPUD 來設置所需的控制信號（pull-up、pull-down或0）
 	delay(150);
-	put32(GPPUDCLK0,(1<<14)|(1<<15));
+	put32(GPPUDCLK0,(1<<14)|(1<<15));       // 寫入GPPUDCLK0 對 pin14 跟 pin15 做修改
 	delay(150);
-	put32(GPPUDCLK0,0);
+	put32(GPPUDCLK0,0);                     // Write GPPUD 以移除控制信號
 
 	put32(AUX_ENABLES,1);                   //Enable mini uart (this also enables access to its registers)
 	put32(AUX_MU_CNTL_REG,0);               //Disable auto flow control and disable receiver and transmitter (for now)
