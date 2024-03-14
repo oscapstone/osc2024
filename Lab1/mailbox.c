@@ -42,7 +42,7 @@ void get_board_revision(){
 
     mailbox_call(mailbox);              // message passing procedure call, you should implement it following the 6 steps provided above.
 
-    print_str("0x");
+    print_str("Revision: 0x");
     print_hex(mailbox[5]);              // it should be 0xa020d3 for rpi3 b+
     print_str("\r\n");
 }
@@ -62,8 +62,8 @@ void get_memory_info() {
     // tags end
     mailbox_call(mailbox);
     print_str("ARM memory base address : ");
-    print_h(mailbox[5]);
-    print_string("\r\n");
+    print_hex(mailbox[5]);
+    print_str("\r\n");
 
     print_str("ARM memory size : ");
     print_hex(mailbox[6]);

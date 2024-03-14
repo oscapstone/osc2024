@@ -1,5 +1,5 @@
 #include "mailbox.h"
-// #include "reboot.h"
+#include "reboot.h"
 #include "uart.h"
 #include "io.h"
 
@@ -28,15 +28,17 @@ void shell(){
     if (strcmp(cmd, "help")){
         print_str("\nhelp       : print this help menu");
         print_str("\nhello      : print Hello World!");
+        print_str("\nmailbox    : print mailbox info");
         print_str("\nreboot     : reboot the device");        
     }else if (strcmp(cmd, "hello")){
         print_str("\nHello World!");
     }else if (strcmp(cmd, "mailbox")){
         print_str("\nMailbox info :\n");
         get_board_revision();
-        
+        get_memory_info();
     }else if (strcmp(cmd, "reboot")){
         print_str("\nRebooting...");
+        reset(200);
     }else{
         print_str("\nCommand Not Found");
     }

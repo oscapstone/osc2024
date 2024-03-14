@@ -39,7 +39,9 @@ void readcmd(char* str){
 
     while((input_ch = uart_read()) != '\n'){
         str[str_ind++] = input_ch;
-        print_char(input_ch);
+
+        if (input_ch <= 126 && input_ch >= 32)
+            print_char(input_ch);
     }
 
     str[str_ind] = 0;
