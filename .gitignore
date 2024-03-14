@@ -1,0 +1,5 @@
+# Ignore Output Files
+**/build
+*.o
+*.elf
+*kernel8.img
