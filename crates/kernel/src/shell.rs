@@ -61,6 +61,7 @@ impl Shell {
                 "help" => self.help(),
                 "hello" => self.hello(),
                 "reboot" => self.reboot(),
+                "info" => self.hardware_info(),
                 "" => {}
                 _ => println!("{}: command not found", cmd),
             }
@@ -72,6 +73,7 @@ impl Shell {
         println!("help\t: print this help menu");
         println!("hello\t: print Hello World!");
         println!("reboot\t: reboot the device");
+        println!("info\t: get hardware informations");
     }
 
     fn hello(&self) {
@@ -80,5 +82,14 @@ impl Shell {
 
     fn reboot(&self) {
         driver::watchdog().reset(100);
+    }
+
+    fn hardware_info(&self) {
+        let revision = driver::mailbox().get_board_revision();
+        let memory = driver::mailbox().get_arm_memory();
+
+        println!("Board revision: {:#x}", revision);
+        println!("ARM Memory base address: {}", memory.base_address);
+        println!("ARM Memory size: {:#x}", memory.size);
     }
 }
