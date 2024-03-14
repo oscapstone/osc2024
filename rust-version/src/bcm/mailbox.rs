@@ -77,7 +77,7 @@ struct MailboxInner {
     registers: Registers,
 }
 
-#[repr(C)]
+#[repr(C, align(16))]
 struct MailboxMsg {
     buffer: [u32; 8],
 }
@@ -127,9 +127,6 @@ impl MailboxInner {
     pub fn get_msg(&mut self, tag: MailboxTag) -> (u32, u32) {
         println!("get_msg");
         let mut mailbox = MailboxMsg { buffer: [0; 8] };
-
-        let mut mailbox_ptr = mailbox.buffer.as_ptr();
-
         match tag {
             MailboxTag::GetBoardRevision => {
                 mailbox.buffer[0] = 7 * 4; // buffer size in bytes
