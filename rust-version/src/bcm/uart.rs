@@ -172,7 +172,7 @@ impl UartInner {
             .write(AUX_MU_CNTL::TX_RX_ENABLE::rxEnable + AUX_MU_CNTL::TX_RX_ENABLE::txEnable);
     }
 
-    fn get_char(&self) -> char {
+    fn get_char(&self) -> u8 {
         // wait until transmitter is empty
         while self
             .registers
@@ -182,7 +182,7 @@ impl UartInner {
             asm::nop();
         }
 
-        char::from_u32(self.registers.AUX_MU_IO.get()).unwrap()
+        self.registers.AUX_MU_IO.get() as u8
     }
 }
 
@@ -227,7 +227,7 @@ impl Uart {
         self.inner.lock(|inner| inner.init());
     }
 
-    pub fn get_char(&self) -> char {
+    pub fn get_char(&self) -> u8 {
         self.inner.lock(|inner| inner.get_char())
     }
 }

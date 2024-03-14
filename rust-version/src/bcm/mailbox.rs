@@ -1,4 +1,3 @@
-use crate::println;
 use crate::synchronization::interface::Mutex;
 use crate::{bcm::common::MMIODerefWrapper, synchronization::NullLock};
 use aarch64_cpu::asm::nop;
@@ -15,10 +14,10 @@ const END_TAG: u32 = 0x0000_0000;
 
 #[derive(Copy, Clone)]
 pub enum MailboxTag {
-    GetBoardRevision = 0x0001_0002,
-    GetBoardSerial = 0x0001_10004,
-    GetArmMemory = 0x0001_0005,
-    GetVcMemory = 0x0001_0006,
+    BoardRevision = 0x0001_0002,
+    BoardSerial = 0x0001_10004,
+    ArmMemory = 0x0001_0005,
+    VcMemory = 0x0001_0006,
 }
 
 register_bitfields! {
@@ -117,22 +116,22 @@ impl MailboxInner {
     pub fn get_msg(&mut self, tag: MailboxTag) -> (u32, u32) {
         let mut mailbox = MailboxMsg { buffer: [0; 8] };
         match tag {
-            MailboxTag::GetBoardRevision => {
+            MailboxTag::BoardRevision => {
                 mailbox.buffer[0] = 7 * 4; // buffer size in bytes
                 mailbox.buffer[3] = 4; // maximum of request and response value buffer's length.
                 mailbox.buffer[6] = END_TAG;
             }
-            MailboxTag::GetBoardSerial => {
+            MailboxTag::BoardSerial => {
                 mailbox.buffer[0] = 8 * 4; // buffer size in bytes
                 mailbox.buffer[3] = 8; // maximum of request and response value buffer's length.
                 mailbox.buffer[7] = END_TAG;
             }
-            MailboxTag::GetArmMemory => {
+            MailboxTag::ArmMemory => {
                 mailbox.buffer[0] = 8 * 4; // buffer size in bytes
                 mailbox.buffer[3] = 8; // maximum of request and response value buffer's length.
                 mailbox.buffer[7] = END_TAG;
             }
-            MailboxTag::GetVcMemory => {
+            MailboxTag::VcMemory => {
                 mailbox.buffer[0] = 8 * 4; // buffer size in bytes
                 mailbox.buffer[3] = 8; // maximum of request and response value buffer's length.
                 mailbox.buffer[7] = END_TAG;
@@ -148,10 +147,10 @@ impl MailboxInner {
         self.call(&mut mailbox.buffer);
 
         match tag {
-            MailboxTag::GetBoardRevision => (mailbox.buffer[5], 0),
-            MailboxTag::GetBoardSerial => (mailbox.buffer[5], mailbox.buffer[6]),
-            MailboxTag::GetArmMemory => (mailbox.buffer[5], mailbox.buffer[6]),
-            MailboxTag::GetVcMemory => (mailbox.buffer[5], mailbox.buffer[6]),
+            MailboxTag::BoardRevision => (mailbox.buffer[5], 0),
+            MailboxTag::BoardSerial => (mailbox.buffer[5], mailbox.buffer[6]),
+            MailboxTag::ArmMemory => (mailbox.buffer[5], mailbox.buffer[6]),
+            MailboxTag::VcMemory => (mailbox.buffer[5], mailbox.buffer[6]),
         }
     }
 }

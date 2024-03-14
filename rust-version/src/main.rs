@@ -12,6 +12,7 @@ mod console;
 mod panic;
 mod print;
 mod synchronization;
+mod shell;
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
@@ -41,7 +42,7 @@ unsafe fn kernel_init() -> ! {
     kernel_main()
 }
 
-const MAXCHAR: usize = 1000;
+const MAXCHAR: usize = 100;
 
 fn help() {
     println!("help    : print this help menu");
@@ -76,61 +77,10 @@ pub fn cancel_reset() {
     }
 }
 
-unsafe fn interactiave_shell() -> ! {
-    let mut array : [char; MAXCHAR] = ['\0'; MAXCHAR];
-    let mut cnt = 0;
-
-    loop {
-        let c = bcm::UART.get_char();
-        if c == '\r' {
-            println!();
-            match &array[0..6] {
-                ['h', 'e', 'l', 'p', _] => {
-                    help();
-                }
-                [ 'h', 'e', 'l', 'l', 'o', _] => {
-                    println!("Hello World!");
-                }
-                [ 'r', 'e', 'b', 'o', 'o', 't'] => {
-                    println!("Rebooting...");
-                    reboot();
-                }
-                ['b', 'o', 'a', 'r', 'd', _] => {
-                    let (board, _) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetBoardRevision);
-                    let (mem0, mem1) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetArmMemory);
-                    let (serial0, serial1) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetBoardSerial);
-                    let (vc0, vc1) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetVcMemory);
-                    println!("Board revision: {:x}", board);
-                    println!("Board serial: {:x} {:x}", serial0, serial1);
-                    println!("Arm memory(base, size): {:x}, {:x}", mem0, mem1);
-                    println!("Vc memory(base, size):  {:x}, {:x}", vc0, vc1);
-                }
-                _ => {
-                    if cnt > 0 {
-                        println!("Unknown command: {:?}", &array[0..cnt]);
-                        help();
-                    }
-                }
-            }
-
-            print!("\r# ");
-            cnt = 0;
-        } else {
-            print!("{}", c);
-            array[cnt] = c;
-            if cnt < MAXCHAR - 1 {
-                cnt += 1;
-            } else {
-                cnt = 0;
-            }
-        }
-    }
-}
-
 unsafe fn kernel_main() -> ! {
     println!("[0] Hello from Rust!");
     println!("[1] run the simple shell");
-    interactiave_shell()
+    shell::interactiave_shell()
 }
 
 #[no_mangle]
