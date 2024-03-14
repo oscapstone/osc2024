@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "mini_uart.h": "c",
-        "mailbox.h": "c"
-    }
-}
