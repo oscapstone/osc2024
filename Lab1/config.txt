@@ -1,0 +1,3 @@
+disable_commandline_tags=1
+dtoverlay=disable-bt
+core_freq=250

@@ -1,0 +1,33 @@
+# Personal Information
+
+Welcome to my GitHub project! Here's a little bit about me:
+
+- **GitHub Account Name:** joshhsieh1999
+- **Student ID:** A113574
+- **Name:** Josh Hsieh
+
+## About This Project
+
+[Provide a brief description of the project, its goals, and how it's intended to be used. This section can help visitors understand the context and significance of your work.]
+
+## How to Use
+
+This project is organized into several directories, each serving a different purpose. Here's an overview of the key directories:
+
+### Lab1
+
+The `Lab1` directory contains the source code and resources for the first lab assignment. To build the files in this directory, navigate to `Lab1` and type the `make` command:
+
+```bash
+cd Lab1
+make
+```
+
+A `build` directory will appear, containing a `kernel8.img` file. Copy this file along with all the files in `firmware` directory into the SD card.
+
+## Contact
+
+Feel free to reach out if you have any questions or want to contribute to this project!
+
+- **Email:** joshhsieh1999@gmail.com
+
