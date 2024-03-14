@@ -1,0 +1,72 @@
+#+TITLE: Appendix
+#+OPTIONS: toc: nil 
+
+** How to add a branch that is in the upstream repo but not in your forked repo?
+
+1. Add osc2023 as the upstream
+   #+BEGIN_SRC shell
+     git remote add -t <your student id> upstream https://github.com/oscapstone/osc2023.git
+     git fetch upstream
+   #+END_SRC
+
+2. Checkout your branch from the upstream
+  #+BEGIN_SRC shell
+    git checkout -b <local branch name> upstream/<your student id>
+  #+END_SRC
+
+3. Push the branch to your forked repo
+  #+BEGIN_SRC shell
+    git push -u origin <local branch name>
+  #+END_SRC
+
+** How to remove a file from the git history?
+
+*Warning:* If you not no fully understand what are you doing, please backup the
+repo. TAs are not responsible for any mistake in this section or any damage
+produced by your git operations. If you need to modify the history that has been
+merged into the upstream repo, please contact with TA.
+
+*** case 1: the file is added in the latest commit
+Just modify the latest commit
+#+BEGIN_SRC shell
+  git rm --cached <filename>
+  git commit --amend -C HEAD
+#+END_SRC
+What if you have pushed to Github? Force push again.
+#+BEGIN_SRC shell
+  git push -f origin <your student id>
+#+END_SRC
+
+*** case 2: the file is added in a old history.
+
+I suggest that you use =git rebase= to modify the history.
+First, use =git log= to find the commit you added the file.
+Suppose the commit id is =7a45f90=. Use the commit before =7a45f90= as the
+newbase.
+
+#+BEGIN_SRC shell
+  git rebase -i 7a45f90^
+#+END_SRC
+
+This command pops up the editor. Modify =pick 7a45f90= to =edit 7a45f90=, then
+save and close the editor.
+#+BEGIN_SRC shell
+  git rm --cached <filename>
+  git commit --amend
+#+END_SRC
+
+Repeatedly use the following command until the rebase procedure finished.
+
+#+BEGIN_SRC shell
+  git rebase --continue
+  # if there is conflict
+  git rm <filename>
+#+END_SRC
+
+You might need to force push to the github repo.
+
+*Warning:* force push is not revertable.
+
+#+BEGIN_SRC shell
+  git push -f origin
+#+END_SRC
