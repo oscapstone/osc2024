@@ -42,7 +42,7 @@ void run_console(struct Console *console) {
         break;
       }
     }
-    print_h(i);
+    // print_h(i);
     if (i == console->num_commands) {
       print_string("\ncommand not found\n");
     }
