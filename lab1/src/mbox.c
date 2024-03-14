@@ -1,5 +1,4 @@
 #include "mbox.h"
-#include "uart.h"
 
 volatile unsigned int __attribute__((aligned(16))) mailbox[36];
 
@@ -8,10 +7,6 @@ int mbox_call(unsigned char ch) {
   // bits)
   unsigned int r =
       (((unsigned int)((unsigned long)&mailbox) & ~0xF) | (ch & 0xF));
-
-  uart_print("mbox_call r: ");
-  uart_hex(r);
-  uart_print("\n");
 
   // wait until we can write to the mailbox
   do {
@@ -29,11 +24,8 @@ int mbox_call(unsigned char ch) {
     // check if it is a response to our message
     if (r == *MBOX_READ_PTR) {
       // check if it is a valid successful response
-      uart_print("mbox_call mailbox[1]: ");
-      uart_hex(mailbox[1]);
-      uart_print("\n");
-
-      return mailbox[1] == MBOX_RESPONSE;
+      // 0x80000000 means success, 0x80000001 otherwise
+      return mailbox[1] == MBOX_RESPONSE_SUCCESS;
     }
   }
 
@@ -41,34 +33,41 @@ int mbox_call(unsigned char ch) {
 }
 
 int get_board_revision(unsigned int *vision) {
+  // buffer size in bytes
   mailbox[0] = 7 * 4;
+
+  // buffer request/response code, it's 0 for all requests
   mailbox[1] = MBOX_REQUEST;
 
   // tags begin
+  // tags identifier
   mailbox[2] = MBOX_TAG_BOARD_REVISION;
 
-  // maximum of request and response value buffer's length
+  // maximum of request and response value buffer's length(in bytes)
   mailbox[3] = 4;
 
+  // tag request code, b31 clear means request
+  // b30-b0 are reserved
   mailbox[4] = TAG_REQUEST_CODE;
 
   // value buffer
   mailbox[5] = 0;
-  // tags end
 
+  // 0x0 for end of tag
   mailbox[6] = MBOX_TAG_END;
 
   if (mbox_call(MBOX_CH_PROP) == 0) {
     return -1;
   }
 
+  // because we value buffer is 5 above
   *vision = mailbox[5];
 
   return 0;
 }
 
 int get_arm_base_memory(unsigned int *base_addr, unsigned int *mem_size) {
-  mailbox[0] = 7 * 4;
+  mailbox[0] = 8 * 4;
   mailbox[1] = MBOX_REQUEST;
   mailbox[2] = MBOX_TAG_GET_MEM;
   mailbox[3] = 8;
@@ -76,14 +75,6 @@ int get_arm_base_memory(unsigned int *base_addr, unsigned int *mem_size) {
   mailbox[5] = 0;
   mailbox[6] = 0;
   mailbox[7] = MBOX_TAG_END;
-
-  for (int i = 0; i < 8; i++) {
-    uart_print("mailbox ");
-    uart_write(i + 0x30);
-    uart_print(": ");
-    uart_hex(mailbox[i]);
-    uart_print("\n");
-  }
 
   if (mbox_call(MBOX_CH_PROP) == 0) {
     return -1;

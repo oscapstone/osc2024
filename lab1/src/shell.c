@@ -12,6 +12,7 @@ void set(long addr, unsigned int value) {
   *point = value;
 }
 
+// TODO: Fix output format
 void reset(int tick) { // reboot after watchdog timer expire
   uart_print("reboot after ");
   uart_write(tick + 0x30);
