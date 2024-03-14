@@ -48,32 +48,23 @@ register_bitfields! {
             Disable = 0
         ]
     ],
-    // AUX_MU_IO [
-    //     DATA OFFSET(0) NUMBITS(8) [],
-    // ],
+    AUX_MU_IO [
+        DATA OFFSET(0) NUMBITS(8) [],
+    ],
     AUX_MU_IER [
-        RX_INT_ENABLE OFFSET(1) NUMBITS(1) [
-            Disable = 0,
-            Enable = 1
-        ],
-        TX_INT_ENABLE OFFSET(0) NUMBITS(1) [
-            Disable = 0,
-            Enable = 1
-        ]
+        ENABLE_TX OFFSET(1) NUMBITS(1) [ ],
+        ENABLE_RX OFFSET(0) NUMBITS(1) [ ],
     ],
     AUX_MU_IIR [
-        FIFO_ENABLE OFFSET(2) NUMBITS(2) [
-            Disabled = 0b00,
-            Enabled = 0b11
-        ],
-
-        INT_ID OFFSET(1) NUMBITS(2) [
+        // FIXME: not the same as tsclu
+        RW_INT_ID OFFSET(1) NUMBITS(2) [
             NoInterrupt = 0b00,
             TransmitterEmpty = 0b01,
             ReceiverDataAvailable = 0b10,
             DisableInterrupt = 0b11
         ],
     ],
+
     AUX_MU_LCR [
         DATA_SIZE OFFSET(0) NUMBITS(2) [
             SevenBit = 0b00,
@@ -111,7 +102,7 @@ register_structs! {
         (0x08 => _reserved2),
         (0x40 => AUX_MU_IO: ReadWrite<u32>),
         (0x44 => AUX_MU_IER: ReadWrite<u32, AUX_MU_IER::Register>),
-        (0x48 => AUX_MU_IIR: ReadOnly<u32, AUX_MU_IIR::Register>),
+        (0x48 => AUX_MU_IIR: ReadWrite<u32, AUX_MU_IIR::Register>),
         (0x4c => AUX_MU_LCR: ReadWrite<u32, AUX_MU_LCR::Register>),
         (0x50 => AUX_MU_MCR: ReadWrite<u32, AUX_MU_MCR::Register>),
         (0x54 => AUX_MU_LSR: ReadOnly<u32, AUX_MU_LSR::Register>),
@@ -153,11 +144,6 @@ impl UartInner {
             .AUX_MU_CNTL
             .write(AUX_MU_CNTL::TX_RX_ENABLE::rxTxDisable);
 
-        // disable interrupts
-        self.registers
-            .AUX_MU_IER
-            .write(AUX_MU_IER::RX_INT_ENABLE::Disable + AUX_MU_IER::TX_INT_ENABLE::Disable);
-
         // set data size to 8 bit
         self.registers
             .AUX_MU_LCR
@@ -168,10 +154,23 @@ impl UartInner {
             .AUX_MU_MCR
             .write(AUX_MU_MCR::AUTO_FLOW_RTS::Inactive);
 
+        // disable interrupts
+        self.registers
+            .AUX_MU_IER
+            .write(AUX_MU_IER::ENABLE_RX::CLEAR + AUX_MU_IER::ENABLE_RX::CLEAR);
+
+        self.registers
+            .AUX_MU_IIR
+            .write(AUX_MU_IIR::RW_INT_ID::DisableInterrupt);
+
         // set baudrate to 115200
         self.registers
             .AUX_MU_BAUD
             .write(AUX_MU_BAUD::Baudrate.val(270));
+
+        self.registers
+            .AUX_MU_CNTL
+            .write(AUX_MU_CNTL::TX_RX_ENABLE::rxEnable + AUX_MU_CNTL::TX_RX_ENABLE::txEnable);
     }
 
     fn get_char(&self) -> char {
@@ -242,4 +241,3 @@ impl interface::Write for Uart {
         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
 }
-

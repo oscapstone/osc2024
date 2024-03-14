@@ -140,7 +140,7 @@ impl GPIOInner {
 
     /// Disable pull-up/down on pins 14 and 15.
     fn disable_pud_14_15_bcm2837(&mut self) {
-        const DELAY: usize = 150;
+        const DELAY: usize = 2000;
 
         self.registers.GPPUD.write(GPPUD::PUD::Off);
         common::spin_for_cycles(DELAY);

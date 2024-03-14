@@ -20,6 +20,6 @@ pub static GPIO: GPIO = unsafe { GPIO::new(map::mmio::GPIO_START) };
 // -------------------------------------------------------------------------------------------------
 
 pub fn hardware_init() {
-    UART.init();
     GPIO.init();
+    UART.init();
 }

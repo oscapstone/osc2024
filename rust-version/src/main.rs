@@ -44,7 +44,7 @@ unsafe fn kernel_init() -> ! {
 const MAXCHAR: usize = 1000;
 
 fn help() {
-    println!("Help    : print this help menu");
+    println!("help    : print this help menu");
     println!("hello   : print Hello World!");
     println!("reboot  : reboot this device");
 }
@@ -59,33 +59,39 @@ unsafe fn interactiave_shell() -> ! {
     let mut array : [char; MAXCHAR] = ['\0'; MAXCHAR];
     let mut cnt = 0;
 
-    print!("# ");
     loop {
         let c = bcm::UART.get_char();
         if c == '\r' {
             println!();
-
             match &array[0..6] {
-                &['h', 'e', 'l', 'p', _] => {
+                ['h', 'e', 'l', 'p', _] => {
                     help();
                 }
-                &[ 'h', 'e', 'l', 'l', 'o', _] => {
+                [ 'h', 'e', 'l', 'l', 'o', _] => {
                     println!("Hello World!");
                 }
-                &[ 'r', 'e', 'b', 'o', 'o', 't'] => {
+                [ 'r', 'e', 'b', 'o', 'o', 't'] => {
                     println!("Rebooting...");
                     reboot();
                 }
                 _ => {
-                    help();
+                    if cnt > 0 {
+                        println!("Unknown command: {:?}", &array[0..cnt]);
+                        help();
+                    }
                 }
             }
-            print!("# ");
+
+            print!("\r# ");
             cnt = 0;
         } else {
             print!("{}", c);
             array[cnt] = c;
-            cnt += 1;
+            if cnt < MAXCHAR - 1 {
+                cnt += 1;
+            } else {
+                cnt = 0;
+            }
         }
     }
 }
