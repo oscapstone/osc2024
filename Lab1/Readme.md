@@ -1,5 +1,4 @@
-# OSC2024 Lab1
-
+# OSC2024 Lab 1
 * Nice Reference: https://github.com/bztsrc/raspi3-tutorial/tree/master
 ### Assembly List
 ```
@@ -13,9 +12,14 @@ bl //branch with link
 ### Basic Initialization
 files: ``linker.ld``, ``start.S``.
 #### start.S
-Initialize CPU settings, clear bss segment, set stack pointer before _start, and jump to main loop.
+* Initialize CPU settings 
+* Clear bss segment 
+* Set stack pointer before _start, and jump to main loop.
+
 #### Linker
 Links the object files into one executable(``kernel8.img`` in this case), relocates text, data in several object files.
+* Load kernel to 0x80000
+* Present data at correct memort address and set program counter
 ```
 .text //commands
 .rodata //read only data
@@ -53,22 +57,22 @@ __bss_size = (__bss_end - __bss_start)>>3; /* bss size for start.S */
 ```
 
 While booting, the device runs _start, which initializes the device and then jumps to main loop.
-### Mini UART
+### Mini UART (Universal Asynchronous Receiver/Transmitter)
 #### MMIO (Memory-Mapped IO)
 Map hardware on device into a memory address for IO.
 #### GPIO
 PIN on the board which can be configured with MMIO.
 ``gpio.h`` sets the memory of the pins and can be visited to get or set hardware info.
-#### Initialize UART (Universal Asynchronous Receiver/Transmitter)
+#### Initialize UART
 Set UART parameters:
 ```
 *AUX_ENABLE |=1;       // enable UART1, AUX mini uart
-*AUX_MU_CNTL = 0;
+*AUX_MU_CNTL = 0;      // first disable transmit and recieve
 *AUX_MU_LCR = 3;       // 8 bits
-*AUX_MU_MCR = 0;
-*AUX_MU_IER = 0;
+*AUX_MU_MCR = 0;       // don't need auto flow ctrl
+*AUX_MU_IER = 0;       // disable interrupts
 *AUX_MU_IIR = 0xc6;    // disable interrupts
-*AUX_MU_BAUD = 270;    // 115200 baud
+*AUX_MU_BAUD = 270;    // 115200 baud (250M/8x270 = 115200)
 ```
 Map UART to GPIO pins
 ```
@@ -76,9 +80,9 @@ r=*GPFSEL1;
 r&=~((7<<12)|(7<<15)); // clear gpio14, gpio15
 r|=(2<<12)|(2<<15);    // alt5 (set gpio14, gpio15)
 *GPFSEL1 = r;
-*GPPUD = 0;            // enable pins 14 and 15
+*GPPUD = 0;            // disable GPIO pull up/down
 r=150; while(r--) { asm volatile("nop"); } //wait for enable
-*GPPUDCLK0 = (1<<14)|(1<<15);
+*GPPUDCLK0 = (1<<14)|(1<<15); // apply to GPIO 14, 15
 r=150; while(r--) { asm volatile("nop"); }
 *GPPUDCLK0 = 0;        // flush GPIO setup
 *AUX_MU_CNTL = 3;      // enable Tx, Rx
@@ -138,7 +142,7 @@ mbox_call
 int mbox_call()
 {
     unsigned char ch = MBOX_CH_PROP;
-    //write address of mailbox and the channel index
+    //combine address of mailbox and the channel index
     unsigned int r = (((unsigned int)((unsigned long)&mailbox)&~0xF) | (ch&0xF));
     /* wait until we can write to the mailbox */
     do{asm volatile("nop");}while(*MBOX_STATUS & MBOX_FULL);
@@ -173,6 +177,13 @@ int get_board_revision(){
 }
 ```
 **note:** The setting value can be found in https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
+
+#### Output
+```
+Board Revision:                 0x00A02082 // Board Device Code
+ARM Memory Base Address:        0x00000000 // GPU start address
+ARM Memory size:                0x3C000000 // GPU total memory
+```
 
 ### Reboot
 * set: write value into address to execute operation/
