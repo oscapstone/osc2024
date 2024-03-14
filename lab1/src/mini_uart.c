@@ -22,9 +22,11 @@ char uart_recv (void)
 
 void uart_send_string(char* str)
 {
-	for (int i = 0; str[i] != '\0'; i ++) {
-		uart_send((char)str[i]);
-	}
+	while(*str) {
+        if(*str=='\n')
+            uart_send('\r');
+        uart_send(*str++);
+    }
 }
 
 void uart_2hex(unsigned int d)

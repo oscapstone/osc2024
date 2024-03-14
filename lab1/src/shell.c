@@ -54,8 +54,9 @@ void cli_exec_cmd(char* buf) {
         cmd_hwinfo();
     } else if (cli_strcmp(buf, "reboot") == 0) {
         cmd_reboot();
-    } else {
-        uart_send_string("sh: Command not found QQ\r\n");
+    } else if(*buf) {
+        uart_send_string(buf);
+        uart_send_string(": Command not found QQ, type help to get more information.\r\n");
     }
 }
 
