@@ -1,0 +1,1 @@
+int string_compare(char *a, char *b);
