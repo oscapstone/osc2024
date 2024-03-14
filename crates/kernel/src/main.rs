@@ -2,6 +2,7 @@
 #![no_main]
 
 use core::arch::global_asm;
+use fmt::println;
 use panic_wait as _;
 
 #[no_mangle]
@@ -12,5 +13,7 @@ global_asm!(include_str!("boot.s"));
 
 #[no_mangle]
 pub unsafe fn main() -> ! {
-    panic!();
+    println!("Hello from Rust!");
+
+    panic!("Stopping here.");
 }

@@ -6,4 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+fmt = { version = "0.1.0", path = "../fmt" }
 panic-wait = { version = "0.1.0", path = "../panic-wait" }
