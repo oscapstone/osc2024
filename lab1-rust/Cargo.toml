@@ -1,0 +1,18 @@
+[package]
+name = "lab1-simple"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "kernel"
+path = "src/main.rs"
+
+[dependencies]
+
+# Optional dependencies
+tock-registers = { version = "0.8.x", features = ["register_types"]}
+aarch64-cpu = { version = "9.x.x" }
+
+[features]
+bsp_rpi3 = []
+

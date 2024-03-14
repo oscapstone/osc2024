@@ -1,0 +1,10 @@
+/Users/yjack/GitHub/osc2024/lab1-simple/target/aarch64-unknown-none-softfloat/debug/deps/libtock_registers-5842011a93f77823.rmeta: /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/lib.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/fields.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/interfaces.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/macros.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/registers.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/local_register.rs
+
+/Users/yjack/GitHub/osc2024/lab1-simple/target/aarch64-unknown-none-softfloat/debug/deps/tock_registers-5842011a93f77823.d: /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/lib.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/fields.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/interfaces.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/macros.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/registers.rs /Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/local_register.rs
+
+/Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/lib.rs:
+/Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/fields.rs:
+/Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/interfaces.rs:
+/Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/macros.rs:
+/Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/registers.rs:
+/Users/yjack/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tock-registers-0.8.1/src/local_register.rs:

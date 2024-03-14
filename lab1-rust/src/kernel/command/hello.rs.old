@@ -1,0 +1,13 @@
+use crate::kernel::console::Command;
+
+pub fn hello_command() -> Command {
+    Command {
+        name: "hello",
+        description: "Prints 'Hello, world!'",
+        func: hello,
+    }
+}
+
+fn hello() {
+    crate::kernel::println("Hello, world!");
+}
