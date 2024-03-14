@@ -1,4 +1,5 @@
 
+#include "mbox.h"
 #include "shell.h"
 #include "uart.h"
 
@@ -7,7 +8,7 @@ void main() {
   uart_init();
 
   // say hello
-  uart_println("Hello World!");
+  uart_println("Hello World from boot");
 
   shell_loop();
 }
