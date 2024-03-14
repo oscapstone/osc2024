@@ -1,27 +1,45 @@
 //! System console.
 
+use crate::sync::Mutex;
+mod null_console;
+
 /// Console write functions.
 pub trait Write {
+    /// Write a single character.
+    fn write_char(&self, c: char);
+
+    /// Write a string.
+    fn write_str(&self, s: &str) {
+        for c in s.chars() {
+            self.write_char(c)
+        }
+    }
+
     /// Write a Rust format string.
     fn write_fmt(&self, args: core::fmt::Arguments) -> core::fmt::Result;
 }
 
-/// Console statistics.
-pub trait Statistics {
-    /// Return the number of characters written to the console.
-    fn chars_written(&self) -> usize {
-        0
+/// Console read functions.
+pub trait Read {
+    /// Read a single character.
+    fn read_char(&self) -> char {
+        ' '
     }
 }
 
 /// Trait alias for a full-fledged console.
-pub trait All: Write + Statistics {}
+pub trait All: Write + Read {}
 
-mod qemu_output;
+type Console = &'static (dyn All + Sync);
 
-/// Return a reference to the console.
-///
-/// This is the global console used by all printing macros.
-pub fn console() -> &'static dyn All {
-    qemu_output::console()
+static CURRENT_CONSOLE: Mutex<Console> = Mutex::new(&null_console::NULL_CONSOLE);
+
+pub fn register_console(new_console: Console) {
+    let mut current_console = CURRENT_CONSOLE.lock().unwrap();
+    *current_console = new_console;
+}
+
+pub fn console() -> Console {
+    let current_console = CURRENT_CONSOLE.lock().unwrap();
+    *current_console
 }

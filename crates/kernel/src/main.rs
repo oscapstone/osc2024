@@ -1,24 +1,39 @@
 #![no_std]
 #![no_main]
 
-use core::arch::global_asm;
 use panic_wait as _;
 use small_std::println;
 
-#[no_mangle]
-#[link_section = ".text._start_arguments"]
-pub static BOOT_CORE_ID: u64 = 0;
+mod boot;
+mod driver;
 
-global_asm!(include_str!("boot.s"));
+unsafe fn kernel_init() -> ! {
+    if let Err(e) = driver::register_drivers() {
+        panic!("Failed to initialize driver subsystem: {}", e);
+    }
 
-#[no_mangle]
-pub unsafe fn main() -> ! {
+    device::device_driver::driver_manager().init_drivers();
+
+    // Finnaly go from unsafe to safe 🎉
+    main()
+}
+
+fn main() -> ! {
     use small_std::fmt::print::console::console;
 
-    println!("[0] Hello from Rust!");
+    println!(
+        "[0] {} version {}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
 
-    println!("[1] Chars written: {}", console().chars_written());
+    println!("[1] Drivers loaded:");
+    device::device_driver::driver_manager().enumerate();
 
-    println!("[2] Stopping here.");
-    cpu::wait_forever();
+    println!("[2] Echoing input now");
+
+    loop {
+        let c = console().read_char();
+        console().write_char(c);
+    }
 }

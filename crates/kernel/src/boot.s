@@ -36,7 +36,7 @@ _start:
     mov     sp, x0
 
     // Jump to rust code
-    b main
+    b _start_rust
 
 .L_parking_loop:
     wfe

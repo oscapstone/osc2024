@@ -1,11 +1,11 @@
-use crate::sync::{Mutex, NullLock};
+use crate::sync::Mutex;
 
 struct QEMUOutputInner {
     chars_written: usize,
 }
 
 pub struct QEMUOutput {
-    inner: NullLock<QEMUOutputInner>,
+    inner: Mutex<QEMUOutputInner>,
 }
 
 static QEMU_OUTPUT: QEMUOutput = QEMUOutput::new();
@@ -52,7 +52,7 @@ impl core::fmt::Write for QEMUOutputInner {
 impl QEMUOutput {
     pub const fn new() -> Self {
         Self {
-            inner: NullLock::new(QEMUOutputInner::new()),
+            inner: Mutex::new(QEMUOutputInner::new()),
         }
     }
 }
@@ -64,14 +64,15 @@ pub fn console() -> &'static dyn super::All {
 
 impl super::Write for QEMUOutput {
     fn write_fmt(&self, args: core::fmt::Arguments) -> core::fmt::Result {
-        self.inner
-            .lock(|inner| core::fmt::Write::write_fmt(inner, args))
+        let mut inner = self.inner.lock().unwrap();
+        core::fmt::Write::write_fmt(&mut *inner, args)
     }
 }
 
 impl super::Statistics for QEMUOutput {
     fn chars_written(&self) -> usize {
-        self.inner.lock(|inner| inner.chars_written)
+        let inner = self.inner.lock().unwrap();
+        inner.chars_written
     }
 }
 
