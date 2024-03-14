@@ -1,0 +1,25 @@
+version: '2'
+
+services:
+  main:
+#    platform: linux/amd64
+    build: .
+    restart: unless-stopped
+    privileged: false
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "22223:22"
+    environment:
+      - EDITOR=vim
+    volumes:
+      - .data/home:/home
+    networks:
+        default:
+#   remove if rpi is not connected
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+
+networks:
+    default:
+
