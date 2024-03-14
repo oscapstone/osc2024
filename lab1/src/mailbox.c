@@ -40,7 +40,7 @@ void get_board_revision()
     // tags end
     mbox[6] = END_TAG;
     mbox_call(); // message passing procedure call, you should implement it following the 6 steps provided above.
-    // printf("0x%x\n", mailbox[5]); // it should be 0xa020d3 for rpi3 b+
+    uart_send_string("Board revision: ");
     uart_send_string("0x");
     uart_hex(mbox[5]);
     uart_send_string("\r\n");
