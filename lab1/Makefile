@@ -1,4 +1,5 @@
 CFLAGS = -Wall -ffreestanding -nostdinc -nostdlib -nostartfiles -fno-stack-protector -g
+C    = aarch64-linux-gnu
 SRCS = $(shell find . -name '*.c')
 OBJS = $(patsubst ./%.c,obj/%.o,$(SRCS))
 
@@ -6,15 +7,19 @@ all: clean kernel8.img
 
 $(OBJS): obj/%.o : %.c
 	mkdir -p $(dir $@)
-	aarch64-elf-gcc $(CFLAGS) -c $< -o $@
+	# aarch64-elf-gcc $(CFLAGS) -c $< -o $@
+	$(C)-gcc $(CFLAGS) -c $< -o $@
 
 obj/start.o: start.S
 	mkdir -p $(dir $@)
-	aarch64-elf-gcc $(CFLAGS) -c $< -o $@
+	# aarch64-elf-gcc $(CFLAGS) -c $< -o $@
+	$(C)-gcc $(CFLAGS) -c $< -o $@
 
 kernel8.img: obj/start.o $(OBJS)
-	aarch64-elf-ld -nostdlib $^ -T linker.ld -o kernel8.elf
-	aarch64-elf-objcopy -O binary kernel8.elf kernel8.img
+	# aarch64-elf-ld -nostdlib $^ -T linker.ld -o kernel8.elf
+	# aarch64-elf-objcopy -O binary kernel8.elf kernel8.img
+	$(C)-ld -nostdlib $^ -T linker.ld -o kernel8.elf
+	$(C)-objcopy -O binary kernel8.elf kernel8.img
 
 clean:
 	rm -rf obj kernel8.elf kernel8.img
