@@ -1,5 +1,7 @@
 use small_std::{fmt::print::console::console, print, println, string::String};
 
+use crate::driver;
+
 pub struct Shell {
     buf: String,
 }
@@ -77,6 +79,6 @@ impl Shell {
     }
 
     fn reboot(&self) {
-        println!("not implemented");
+        driver::watchdog().reset(100);
     }
 }
