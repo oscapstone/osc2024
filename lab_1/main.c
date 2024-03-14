@@ -91,11 +91,13 @@ void main()
         if(strcmp(command, "help") == 0){
             uart_puts("help\t: print this help menu\n");
             uart_puts("hello\t: print hello world!\n");
+            uart_puts("reboot\t: reboot the device\n");
         }
         else if(strcmp(command, "hello") == 0){
             uart_puts("Hello World!\n");
         }
         else if(strcmp(command, "reboot") == 0){
+            uart_puts("rebooting...\n");
             reset();
         }
     }
