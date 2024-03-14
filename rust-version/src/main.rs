@@ -5,7 +5,7 @@
 #![no_main]
 #![no_std]
 
-use core::arch::global_asm;
+use core::{arch::global_asm, ptr::write_volatile};
 
 mod bcm;
 mod console;
@@ -46,13 +46,34 @@ const MAXCHAR: usize = 1000;
 fn help() {
     println!("help    : print this help menu");
     println!("hello   : print Hello World!");
+    println!("board   : print board rev");
     println!("reboot  : reboot this device");
 }
 
 unsafe fn reboot() {
     println!("Rebooting...");
-    // use core::arch::asm;
-    // asm!("b 0x80000")
+    reset(100);
+}
+
+const PM_PASSWORD: u32 = 0x5a000000;
+const PM_RSTC: u32 = 0x3F10_001C;
+const PM_WDOG: u32 = 0x3F10_0024;
+
+pub fn reset(tick: u32) {
+    unsafe {
+        let mut r = PM_PASSWORD | 0x20;
+        write_volatile(PM_RSTC as *mut u32, r);
+        r = PM_PASSWORD | tick;
+        write_volatile(PM_WDOG as *mut u32, r);
+    }
+}
+
+pub fn cancel_reset() {
+    unsafe {
+        let mut r = PM_PASSWORD | 0;
+        write_volatile(PM_RSTC as *mut u32, r);
+        write_volatile(PM_WDOG as *mut u32, r);
+    }
 }
 
 unsafe fn interactiave_shell() -> ! {
@@ -73,6 +94,10 @@ unsafe fn interactiave_shell() -> ! {
                 [ 'r', 'e', 'b', 'o', 'o', 't'] => {
                     println!("Rebooting...");
                     reboot();
+                }
+                ['b', 'o', 'a', 'r', 'd', _] => {
+                    let (board, _) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetBoardRevision);
+                    println!("Board revision: {:x}", board);
                 }
                 _ => {
                     if cnt > 0 {
