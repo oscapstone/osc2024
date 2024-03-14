@@ -1,0 +1,13 @@
+#+TITLE: My OSC 2024
+#+OPTIONS: toc:nil
+
+** Author
+
+| Student ID | GitHub Account | Name  | Email                      |
+|------------|----------------|-------|----------------------------|
+| A121009    | pesoguin1030     | 陳彥凱 | alan891030@gapp.nthu.edu.tw |
+
+** About this Repository
+- This is the repository for the labs in NYCU CS OSC Spring 2024 class.
+- We are going to design some important part in the OS implementation.
+- The hardware we use is *Raspberry Pi 3 Model B+*.
