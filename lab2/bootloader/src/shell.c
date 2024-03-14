@@ -1,18 +1,19 @@
 #include "shell.h"
 #include "uart1.h"
-#include "mbox.h"
 #include "power.h"
 #include "u_string.h"
 
+#define SHIFT_ADDR 0x100000
+
+extern char* _dtb;
+extern char _start[];
+
 struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
 {
-    {.command="hello", .help="print Hello World!"},
+    {.command="loadimg", .help="load image via uart1"},
     {.command="help", .help="print all available commands"},
-    {.command="info", .help="get device information via mailbox"},
-    {.command="reboot", .help="reboot the device"},
-    {.command="c", .help="cancel reboot the device"}
+    {.command="reboot", .help="reboot the device"}
 };
-
 
 void cli_cmd_clear(char* buffer, int length)
 {
@@ -28,7 +29,7 @@ void cli_cmd_read(char* buffer)
     int idx = 0;
     while(1)
     {
-        if ( idx >= CMD_MAX_LEN ) break;
+       if ( idx >= CMD_MAX_LEN ) break;
 
         c = uart_recv();
 
@@ -82,16 +83,12 @@ void cli_cmd_read(char* buffer)
 
 void cli_cmd_exec(char* buffer)
 {
-    if (strcmp(buffer, "hello") == 0) {
-        do_cmd_hello();
+    if (strcmp(buffer, "loadimg") == 0) {
+        do_cmd_loadimg();
     } else if (strcmp(buffer, "help") == 0) {
         do_cmd_help();
-    } else if (strcmp(buffer, "info") == 0) {
-        do_cmd_info();
     } else if (strcmp(buffer, "reboot") == 0) {
         do_cmd_reboot();
-    } else if (strcmp(buffer, "c") == 0) {
-        do_cmd_cancel_reboot();
     } else if (*buffer){
         uart_puts(buffer);
         uart_puts(": command not found\r\n");
@@ -102,7 +99,7 @@ void cli_print_banner()
 {
     uart_puts("\r\n");
     uart_puts("=======================================\r\n");
-    uart_puts("  OSC 2024 Shell Lab1                  \r\n");
+    uart_puts("    OSC 2024 Shell Lab2 - Bootloader   \r\n");
     uart_puts("=======================================\r\n");
 }
 
@@ -117,47 +114,33 @@ void do_cmd_help()
     }
 }
 
-void do_cmd_hello()
+/* Overwrite image file into _start,
+   Please make sure this current code has been relocated. */
+void do_cmd_loadimg()
 {
-    uart_puts("Hello World!\r\n");
-}
+    char* bak_dtb = _dtb;
+    char c;
+    unsigned long long kernel_size = 0;
+    char* kernel_start = (char*) (&_start);
+    uart_puts("Please upload the image file.\r\n");
 
-void do_cmd_info()
-{
-    // print hw revision
-    pt[0] = 8 * 4;
-    pt[1] = MBOX_REQUEST_PROCESS;
-    pt[2] = MBOX_TAG_GET_BOARD_REVISION;
-    pt[3] = 4;
-    pt[4] = MBOX_TAG_REQUEST_CODE;
-    pt[5] = 0;
-    pt[6] = 0;
-    pt[7] = MBOX_TAG_LAST_BYTE;
-
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
-        uart_puts("Hardware Revision\t: ");
-        uart_2hex(pt[6]);
-        uart_2hex(pt[5]);
-        uart_puts("\r\n");
+    // to get the kernel size for each row data
+    for (int i=0; i<8; i++)
+    {
+        c = uart_getc();
+        kernel_size += c<<(i*8);
     }
-    // print arm memory
-    pt[0] = 8 * 4;
-    pt[1] = MBOX_REQUEST_PROCESS;
-    pt[2] = MBOX_TAG_GET_ARM_MEMORY;
-    pt[3] = 8;
-    pt[4] = MBOX_TAG_REQUEST_CODE;
-    pt[5] = 0;
-    pt[6] = 0;
-    pt[7] = MBOX_TAG_LAST_BYTE;
 
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
-        uart_puts("ARM Memory Base Address\t: ");
-        uart_2hex(pt[5]);
-        uart_puts("\r\n");
-        uart_puts("ARM Memory Size\t\t: ");
-        uart_2hex(pt[6]);
-        uart_puts("\r\n");
+    // get the kernel data
+    for (int i=0; i<kernel_size; i++)
+    {
+        c = uart_getc();
+        kernel_start[i] = c;
     }
+    uart_puts("Image file downloaded successfully.\r\n");
+    uart_puts("Point to new kernel ...\r\n");
+
+    ((void (*)(char*))kernel_start)(bak_dtb);
 }
 
 void do_cmd_reboot()
@@ -165,18 +148,7 @@ void do_cmd_reboot()
     uart_puts("Reboot in 5 seconds ...\r\n\r\n");
     volatile unsigned int* rst_addr = (unsigned int*)PM_RSTC;
     *rst_addr = PM_PASSWORD | 0x20;
-
-    unsigned long long expired_tick = 10 * 10000;
-
     volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
-    *wdg_addr = (unsigned long long)PM_PASSWORD | expired_tick;
+    *wdg_addr = PM_PASSWORD | 5;
 }
 
-void do_cmd_cancel_reboot()
-{
-    uart_puts("Cancel Reboot \r\n\r\n");
-    volatile unsigned int* rst_addr = (unsigned int*)PM_RSTC;
-    *rst_addr = PM_PASSWORD | 0x0;
-    volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
-    *wdg_addr = PM_PASSWORD | 0;
-}
