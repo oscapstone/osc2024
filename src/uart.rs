@@ -170,6 +170,27 @@ pub unsafe fn read_char() -> Option<u32> {
     }
 }
 
+// print u32 in hex
+#[no_mangle]
+pub unsafe fn print_hex(n: u32) {
+    let mut buf: [u8; 8] = [0; 8];
+    let mut ptr: usize = 0;
+    let mut num: u32 = n;
+    for _ in 0..8 {
+        let rem: u8 = (num % 16) as u8;
+        if rem < 10 {
+            buf[ptr] = (rem + b'0') as u8;
+        } else {
+            buf[ptr] = (rem - 10 + b'A') as u8;
+        }
+        ptr = ptr + 1;
+        num = num / 16;
+    }
+    for i in buf.iter().take(8).rev(){
+        write_char(*i);
+    }
+}
+
 // // Create a global instance of the UART
 // pub static mut UART: Uart = Uart {};
 
