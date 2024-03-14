@@ -7,15 +7,12 @@ name = "cpu"
 version = "0.1.0"
 
 [[package]]
-name = "fmt"
-version = "0.1.0"
-
-[[package]]
 name = "kernel"
 version = "0.1.0"
 dependencies = [
- "fmt",
+ "cpu",
  "panic-wait",
+ "small-std",
 ]
 
 [[package]]
@@ -23,5 +20,9 @@ name = "panic-wait"
 version = "0.1.0"
 dependencies = [
  "cpu",
- "fmt",
+ "small-std",
 ]
+
+[[package]]
+name = "small-std"
+version = "0.1.0"

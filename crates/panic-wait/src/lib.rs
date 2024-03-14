@@ -3,7 +3,7 @@
 #![no_std]
 
 use core::panic::PanicInfo;
-use fmt::println;
+use small_std::println;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {

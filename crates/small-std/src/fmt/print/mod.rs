@@ -1,13 +1,9 @@
-#![no_std]
-
 use core::fmt;
 
 pub mod console;
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    use console::Write;
-
     console::console().write_fmt(args).unwrap();
 }
 

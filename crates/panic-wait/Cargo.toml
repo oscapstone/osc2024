@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 cpu = { version = "0.1.0", path = "../cpu" }
-fmt = { version = "0.1.0", path = "../fmt" }
+small-std = { version = "0.1.0", path = "../small-std" }

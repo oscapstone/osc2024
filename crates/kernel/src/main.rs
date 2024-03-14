@@ -2,8 +2,8 @@
 #![no_main]
 
 use core::arch::global_asm;
-use fmt::println;
 use panic_wait as _;
+use small_std::println;
 
 #[no_mangle]
 #[link_section = ".text._start_arguments"]
@@ -13,7 +13,12 @@ global_asm!(include_str!("boot.s"));
 
 #[no_mangle]
 pub unsafe fn main() -> ! {
-    println!("Hello from Rust!");
+    use small_std::fmt::print::console::console;
 
-    panic!("Stopping here.");
+    println!("[0] Hello from Rust!");
+
+    println!("[1] Chars written: {}", console().chars_written());
+
+    println!("[2] Stopping here.");
+    cpu::wait_forever();
 }
