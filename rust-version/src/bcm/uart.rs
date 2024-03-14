@@ -119,6 +119,7 @@ type Registers = MMIODerefWrapper<RegisterBlock>;
 
 struct UartInner {
     registers: Registers,
+    chars_written: usize,
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -129,6 +130,7 @@ impl UartInner {
     const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
             registers: Registers::new(mmio_start_addr),
+            chars_written: 0,
         }
     }
 
@@ -184,6 +186,10 @@ impl UartInner {
 
         self.registers.AUX_MU_IO.get() as u8
     }
+
+    fn chars_written(&self) -> usize {
+        self.chars_written
+    }
 }
 
 impl core::fmt::Write for UartInner {
@@ -197,6 +203,7 @@ impl core::fmt::Write for UartInner {
             asm::nop();
         }
         self.registers.AUX_MU_IO.set(c as u32);
+        self.chars_written += 1;
         Ok(())
     }
 
@@ -240,3 +247,11 @@ impl interface::Write for Uart {
         self.inner.lock(|inner| fmt::Write::write_fmt(inner, args))
     }
 }
+
+impl interface::Statistics for Uart {
+    fn chars_written(&self) -> usize {
+        self.inner.lock(|inner| inner.chars_written())
+    }
+}
+
+impl interface::All for Uart { }

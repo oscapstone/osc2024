@@ -4,7 +4,15 @@
 
 //! Common device driver code.
 
-use core::{marker::PhantomData, ops};
+use core::{marker::PhantomData, ops, ptr::write_volatile};
+
+//--------------------------------------------------------------------------------------------------
+// Private Definitions
+// -------------------------------------------------------------------------------------------------
+
+const PM_PASSWORD: u32 = 0x5a000000;
+const PM_RSTC: u32 = 0x3F10_001C;
+const PM_WDOG: u32 = 0x3F10_0024;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -61,3 +69,21 @@ pub fn spin_for_cycles(cycles: usize) {
         aarch64_cpu::asm::nop();
     }
 }
+
+pub fn reset(tick: u32) {
+    unsafe {
+        let mut r = PM_PASSWORD | 0x20;
+        write_volatile(PM_RSTC as *mut u32, r);
+        r = PM_PASSWORD | tick;
+        write_volatile(PM_WDOG as *mut u32, r);
+    }
+}
+
+pub fn cancel_reset() {
+    unsafe {
+        let r = PM_PASSWORD;
+        write_volatile(PM_RSTC as *mut u32, r);
+        write_volatile(PM_WDOG as *mut u32, r);
+    }
+}
+

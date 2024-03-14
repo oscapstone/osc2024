@@ -3,6 +3,8 @@
 //--------------------------------------------------------------------------------------------------
 
 pub mod common;
+
+// drivers
 pub mod gpio;
 pub mod mailbox;
 pub mod uart;

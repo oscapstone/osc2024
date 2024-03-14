@@ -1,11 +1,10 @@
 #![feature(asm_const)]
-#![feature(format_args_nl)]
 #![feature(panic_info_message)]
 #![feature(trait_alias)]
 #![no_main]
 #![no_std]
 
-use core::{arch::global_asm, ptr::write_volatile};
+use core::arch::global_asm;
 
 mod bcm;
 mod console;
@@ -40,41 +39,6 @@ pub unsafe fn _start_rust() -> ! {
 /// - Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
     kernel_main()
-}
-
-const MAXCHAR: usize = 100;
-
-fn help() {
-    println!("help    : print this help menu");
-    println!("hello   : print Hello World!");
-    println!("board   : print board rev");
-    println!("reboot  : reboot this device");
-}
-
-unsafe fn reboot() {
-    println!("Rebooting...");
-    reset(100);
-}
-
-const PM_PASSWORD: u32 = 0x5a000000;
-const PM_RSTC: u32 = 0x3F10_001C;
-const PM_WDOG: u32 = 0x3F10_0024;
-
-pub fn reset(tick: u32) {
-    unsafe {
-        let mut r = PM_PASSWORD | 0x20;
-        write_volatile(PM_RSTC as *mut u32, r);
-        r = PM_PASSWORD | tick;
-        write_volatile(PM_WDOG as *mut u32, r);
-    }
-}
-
-pub fn cancel_reset() {
-    unsafe {
-        let r = PM_PASSWORD;
-        write_volatile(PM_RSTC as *mut u32, r);
-        write_volatile(PM_WDOG as *mut u32, r);
-    }
 }
 
 unsafe fn kernel_main() -> ! {
