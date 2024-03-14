@@ -1,0 +1,6 @@
+misc
+*.o
+*.elf
+*.img
+.vscode/
+test/
