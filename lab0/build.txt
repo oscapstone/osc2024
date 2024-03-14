@@ -1,0 +1,12 @@
+brew install qemu
+brew install llvm
+
+clang -mcpu=cortex-a53 --target=aarch64-rpi3-elf -c a.S
+ld.lld -m aarch64elf -T linker.ld -o kernel8.elf a.o
+llvm-objcopy --output-target=aarch64-rpi3-elf -O binary kernel8.elf kernel8.img
+qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
+
+screen /dev/tty.usbserial-0001 115200
+crtl-A-C
+screen -list
+screen -X -S 61178 quit
