@@ -189,6 +189,9 @@ impl MiniUartInner {
 impl core::fmt::Write for MiniUartInner {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         for c in s.chars() {
+            if c == '\n' {
+                self.write_byte(b'\r');
+            }
             self.write_byte(c as u8);
         }
         Ok(())
@@ -222,6 +225,9 @@ impl DeviceDriver for MiniUart {
 impl console::Write for MiniUart {
     fn write_char(&self, c: char) {
         let inner = self.inner.lock().unwrap();
+        if c == '\n' {
+            inner.write_byte(b'\r');
+        }
         inner.write_byte(c as u8);
     }
 
