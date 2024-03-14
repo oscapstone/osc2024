@@ -159,8 +159,8 @@ void mailbox_get_vc_info()
     mbox[7]  = MBOX_TAG_ALLOCATEFB;             // Allocate frame buffer command
     mbox[8]  = 8;
     mbox[9]  = MBOX_TAG_REQUEST;
-    mbox[10] = 4096;                            // frame buffer base address
-    mbox[11] = 0;                               // frame buffer size
+    mbox[10] = 4096;                            // alignment in bytes   ==> frame buffer base address
+    mbox[11] = 0;                               //                      ==> frame buffer size
     
     mbox[12] = MBOX_TAG_GETPHYSICALWH;          
     mbox[13] = 8;

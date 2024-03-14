@@ -28,6 +28,6 @@ void reset(int ticks)
 
 void cancel_reset() 
 {
-    *PM_RSTC = (PM_MAGIC | 0);                          // full reset
+    *PM_RSTC = (PM_MAGIC | 0);                          // cancel reset
     *PM_WDOG = (PM_MAGIC | 0);                          // number of watchdog ticks 
 }
