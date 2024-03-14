@@ -88,6 +88,7 @@ void main()
             uart_send(c);
         }
         command[length==MAX_BUFFER?length-2:length-1] = '\0';
+        uart_puts("\r");
         if(strcmp(command, "help") == 0){
             uart_puts("help\t: print this help menu\n");
             uart_puts("hello\t: print hello world!\n");
