@@ -1,6 +1,6 @@
 #![no_std]
 
-pub mod asm;
+use aarch64_cpu::asm;
 
 /// Pause the execution of the core.
 #[inline(always)]
