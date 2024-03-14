@@ -6,6 +6,7 @@ use small_std::println;
 
 mod boot;
 mod driver;
+mod shell;
 
 unsafe fn kernel_init() -> ! {
     if let Err(e) = driver::register_drivers() {
@@ -19,8 +20,6 @@ unsafe fn kernel_init() -> ! {
 }
 
 fn main() -> ! {
-    use small_std::fmt::print::console::console;
-
     println!(
         "[0] {} version {}",
         env!("CARGO_PKG_NAME"),
@@ -32,8 +31,6 @@ fn main() -> ! {
 
     println!("[2] Echoing input now");
 
-    loop {
-        let c = console().read_char();
-        console().write_char(c);
-    }
+    let mut shell = shell::Shell::new();
+    shell.run_loop();
 }
