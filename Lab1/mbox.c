@@ -29,6 +29,7 @@ volatile unsigned int  __attribute__((aligned(16))) mailbox[36];
 int mbox_call()
 {
     unsigned char ch = MBOX_CH_PROP;
+    //combine address of mailbox and the channel index
     unsigned int r = (((unsigned int)((unsigned long)&mailbox)&~0xF) | (ch&0xF));
     /* wait until we can write to the mailbox */
     do{asm volatile("nop");}while(*MBOX_STATUS & MBOX_FULL);
