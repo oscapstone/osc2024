@@ -70,7 +70,7 @@ pub fn reset(tick: u32) {
 
 pub fn cancel_reset() {
     unsafe {
-        let mut r = PM_PASSWORD | 0;
+        let r = PM_PASSWORD;
         write_volatile(PM_RSTC as *mut u32, r);
         write_volatile(PM_WDOG as *mut u32, r);
     }

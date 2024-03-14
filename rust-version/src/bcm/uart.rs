@@ -56,7 +56,6 @@ register_bitfields! {
         ENABLE_RX OFFSET(0) NUMBITS(1) [ ],
     ],
     AUX_MU_IIR [
-        // FIXME: not the same as tsclu
         RW_INT_ID OFFSET(1) NUMBITS(2) [
             NoInterrupt = 0b00,
             TransmitterEmpty = 0b01,
