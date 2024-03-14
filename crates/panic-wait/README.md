@@ -1,3 +1,3 @@
 # `panic-wait`
 
-A panic handler that indefinitely waits.
+A panic handler that infinitely waits.

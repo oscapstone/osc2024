@@ -1,4 +1,4 @@
-//! Set the pinicking behavior to wait infinitely.
+//! A panic handler that infinitely waits.
 
 #![no_std]
 
