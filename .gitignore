@@ -1,0 +1,4 @@
+supplements
+**/*.o
+.vscode
+**/kernel8.*
