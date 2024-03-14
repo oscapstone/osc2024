@@ -1,0 +1,117 @@
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+                0x0000000000080000                . = 0x80000
+
+.text           0x0000000000080000      0x8ec
+ *(.text.boot)
+ .text.boot     0x0000000000080000       0x40 build/boot_s.o
+                0x0000000000080000                _start
+ *(.text)
+ .text          0x0000000000080040       0x3c build/main_c.o
+                0x0000000000080040                main
+ .text          0x000000000008007c       0xa8 build/mbox_c.o
+                0x000000000008007c                mbox_call
+ .text          0x0000000000080124      0x544 build/shell_c.o
+                0x0000000000080124                cli_cmd_strcmp
+                0x00000000000801a8                cli_cmd_clear
+                0x00000000000801f8                cli_cmd_read
+                0x00000000000802ac                cli_cmd_exec
+                0x0000000000080368                cli_print_banner
+                0x00000000000803a0                do_cmd_help
+                0x000000000008043c                do_cmd_hello
+                0x000000000008045c                do_cmd_info
+                0x0000000000080610                do_cmd_reboot
+ .text          0x0000000000080668      0x284 build/uart1_c.o
+                0x0000000000080668                uart_init
+                0x0000000000080780                uart_recv
+                0x00000000000807d0                uart_send
+                0x0000000000080810                uart_puts
+                0x000000000008086c                uart_2hex
+ .text          0x00000000000808ec        0x0 build/boot_s.o
+
+.iplt           0x00000000000808ec        0x0
+ .iplt          0x00000000000808ec        0x0 build/main_c.o
+
+.rodata         0x00000000000808f0      0x12c
+ *(.rodata)
+ .rodata        0x00000000000808f0        0x3 build/main_c.o
+ *fill*         0x00000000000808f3        0x5 
+ .rodata        0x00000000000808f8      0x124 build/shell_c.o
+
+.eh_frame       0x0000000000080a20      0x1e4
+ .eh_frame      0x0000000000080a20       0x30 build/main_c.o
+ .eh_frame      0x0000000000080a50       0x18 build/mbox_c.o
+                                         0x30 (size before relaxing)
+ .eh_frame      0x0000000000080a68      0x110 build/shell_c.o
+                                        0x128 (size before relaxing)
+ .eh_frame      0x0000000000080b78       0x8c build/uart1_c.o
+                                         0xa0 (size before relaxing)
+
+.rela.dyn       0x0000000000080c08        0x0
+ .rela.iplt     0x0000000000080c08        0x0 build/main_c.o
+ .rela.got      0x0000000000080c08        0x0 build/main_c.o
+ .rela.text.boot
+                0x0000000000080c08        0x0 build/main_c.o
+
+.data           0x0000000000080c08      0x280
+ *(.data)
+ .data          0x0000000000080c08        0x0 build/main_c.o
+ .data          0x0000000000080c08        0x0 build/mbox_c.o
+ .data          0x0000000000080c08      0x280 build/shell_c.o
+                0x0000000000080c08                cmd_list
+ .data          0x0000000000080e88        0x0 build/uart1_c.o
+ .data          0x0000000000080e88        0x0 build/boot_s.o
+
+.igot.plt       0x0000000000080e88        0x0
+ .igot.plt      0x0000000000080e88        0x0 build/main_c.o
+
+.got            0x0000000000080e88       0x10
+ .got           0x0000000000080e88       0x10 build/main_c.o
+                0x0000000000080e88                _GLOBAL_OFFSET_TABLE_
+
+.got.plt        0x0000000000080e98       0x18
+ .got.plt       0x0000000000080e98       0x18 build/main_c.o
+
+.bss            0x0000000000080eb0      0x100
+                0x0000000000080eb0                . = ALIGN (0x10)
+                0x0000000000080eb0                __bss_start = .
+ *(.bss)
+ .bss           0x0000000000080eb0        0x0 build/main_c.o
+ .bss           0x0000000000080eb0      0x100 build/mbox_c.o
+                0x0000000000080eb0                pt
+ .bss           0x0000000000080fb0        0x0 build/shell_c.o
+ .bss           0x0000000000080fb0        0x0 build/uart1_c.o
+ .bss           0x0000000000080fb0        0x0 build/boot_s.o
+                0x0000000000080fb0                __bss_end = .
+                0x0000000000000020                __bss_size = ((__bss_end - __bss_start) >> 0x3)
+LOAD build/main_c.o
+LOAD build/mbox_c.o
+LOAD build/shell_c.o
+LOAD build/uart1_c.o
+LOAD build/boot_s.o
+OUTPUT(build/kernel8.elf elf64-littleaarch64)
+LOAD linker stubs
+
+.comment        0x0000000000000000       0x2b
+ .comment       0x0000000000000000       0x2b build/main_c.o
+                                         0x2c (size before relaxing)
+ .comment       0x000000000000002b       0x2c build/mbox_c.o
+ .comment       0x000000000000002b       0x2c build/shell_c.o
+ .comment       0x000000000000002b       0x2c build/uart1_c.o
+
+.note.GNU-stack
+                0x0000000000000000        0x0
+ .note.GNU-stack
+                0x0000000000000000        0x0 build/main_c.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 build/mbox_c.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 build/shell_c.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 build/uart1_c.o
