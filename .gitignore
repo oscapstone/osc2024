@@ -1,1 +1,9 @@
-/lab1/.vscode/
+*.o
+*.elf
+*.img
+*.bin
+*.dat
+*.d
+build/
+tags
+.DS_Store
