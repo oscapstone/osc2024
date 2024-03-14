@@ -1,2 +1,0 @@
-kernel=kernel8.img
-arm_64bit=1
