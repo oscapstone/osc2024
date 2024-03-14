@@ -1,0 +1,5 @@
+.vscode
+kernel8.*
+*.o
+build
+bootloader/bootloader.*
