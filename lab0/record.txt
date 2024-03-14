@@ -66,3 +66,11 @@ qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s
 aarch64-none-elf-gdb --version
 aarch64-none-elf-gdb kernel8.elf
 target remote localhost:1234
+
+break main
+info variables
+x/32xb &__bss_start
+info registers
+info registers sp
+info register pc
+C
