@@ -1,4 +1,4 @@
-CFLAGS = -Wall -ffreestanding -nostdinc -nostdlib -nostartfiles -fno-stack-protector -g
+CFLAGS = -Wall -ffreestanding -nostdinc -nostdlib -nostartfiles -fno-stack-protector -g -mgeneral-regs-only
 C    = aarch64-linux-gnu
 SRCS = $(shell find . -name '*.c')
 OBJS = $(patsubst ./%.c,obj/%.o,$(SRCS))
