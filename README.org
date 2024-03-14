@@ -1,0 +1,79 @@
+#+TITLE: Operating Systems Capstone 2023
+#+OPTIONS: toc:nil
+
+This repository is used for homework submission.
+
+*To protect your rights, please create a pull request (PR) before the demo and*
+*make sure the TA merges your PR after the demo.*
+
+* How To Submit Homework
+
+** Overview
+For those who are familiar with git.
+1. TA creates a branch named your student ID.
+2. You fork this repo.
+3. Base on the =<student id>= branch, you do your labs and put your code in the
+   forked repo.
+4. Create a PR to the =<student id>= branch in this repo to submit the homework.
+5. TA merges the PR as a proof that you have demo the lab.
+
+** Fork The Repo
+Fork the repository on Github.
+
+[[./images/fork_button.jpg]]
+
+Uncheck the "Copy the =main= branch only".
+
+[[./images/create_fork.jpg]]
+
+If you don't want to see a lot of redundant branches in the forked repo, keep
+the checkbox checked and follow the [[./git-usage.org][guide]] to fetch your own branch.
+
+** Clone To Your Computer
+Clone the forked repo and switch to the branch named your student id.
+If you cannot find your branch, ask TAs for help.
+
+[[./images/clone_url.jpg]]
+
+#+BEGIN_SRC shell
+  git clone <repo url>
+  cd osc2023
+  git checkout --track origin/<student id>
+#+END_SRC
+
+** Specify Personal Information
+Write down the following info in your =README.md= (or =README.org=, =README.rst=
+etc.)
++ Github account name
++ Student ID
++ Your name
++ Any other information you want
+
+Here is an example [[https://github.com/psychicalcoder/osc2023/blob/0816171/README.md][README.md]].
+
+** Implement Your Kernel
+Design and implement your kernel in the forked repository.
+#+BEGIN_QUOTE
+  Make good use of =.gitignore=. In the git history, we do not want to see
+  binaries, objective files, __MACOSX, python caches, super large test files,
+  or any files that can be compiled from your source code.
+#+END_QUOTE
+
+** Create a PR
+Create a Github pull request before your demo. Once the PR is created, you can
+always push additional commits to your forked repo before the PR is merged. The
+changes will automatically appear within the PR.
+
+1. Click the =New pull request= buttom in your repo.
+   [[./images/pr_button.jpg]]
+2. Choose the branch with your student ID as the base branch.
+   [[./images/pr_base_selection.jpg]]
+3. Type a title and some information about the PR.
+   [[./images/pr_desc.jpg]]
+
+Here is a [[https://github.com/oscapstone/osc2023/pull/1][PR example]].
+
+* Happy Coding ~
+As long as you meet the above requirements and the PR can be merged without
+conflicts, we do not care about what the forked repo look like. You can rename
+your branch, change the default branch, or do whatever you want.
