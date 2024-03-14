@@ -4,10 +4,11 @@
 #include "stdio.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
-    {.command = "hello", .help = "print Hello World!"},
-    {.command = "help", .help = "print all available commands"},
-    {.command = "info", .help = "get device information via mailbox"},
-    {.command = "reboot", .help = "reboot the device"}};
+    {.command = "hello", .help = "print Hello World!", .func = do_cmd_hello},
+    {.command = "help", .help = "print all available commands", .func = do_cmd_help},
+    {.command = "info", .help = "get device information via mailbox", .func = do_cmd_info},
+    {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
+    {.command = "reboot_cancel", .help = "cancel reboot", .func = do_cmd_cancel_reboot}};
 
 int start_shell()
 {
@@ -78,15 +79,15 @@ void cli_cmd_read(char *buffer)
 
 void cli_cmd_exec(char *buffer)
 {
-    if (cli_cmd_strcmp(buffer, "hello") == 0)
-        do_cmd_hello();
-    else if (cli_cmd_strcmp(buffer, "help") == 0)
-        do_cmd_help();
-    else if (cli_cmd_strcmp(buffer, "info") == 0)
-        do_cmd_info();
-    else if (cli_cmd_strcmp(buffer, "reboot") == 0)
-        do_cmd_reboot();
-    else if (*buffer)
+    for (int i = 0; i < CLI_MAX_CMD; i++)
+    {
+        if (cli_cmd_strcmp(buffer, cmd_list[i].command) == 0)
+        {
+            cmd_list[i].func();
+            return;            
+        }
+    }
+    if (*buffer)
     {
         puts(buffer);
         puts(": command not found\r\n");
@@ -106,23 +107,25 @@ void cli_print_banner()
     puts("                                                                   \r\n");
 }
 
-void do_cmd_help()
+int do_cmd_help()
 {
     for (int i = 0; i < CLI_MAX_CMD; i++)
     {
         puts(cmd_list[i].command);
-        puts("\t\t: ");
+        puts("\t\t\t: ");
         puts(cmd_list[i].help);
         puts("\r\n");
     }
+    return 0;
 }
 
-void do_cmd_hello()
+int do_cmd_hello()
 {
     puts("Hello World!\r\n");
+    return 0;
 }
 
-void do_cmd_info()
+int do_cmd_info()
 {
     // print hw revision
     pt[0] = 8 * 4;
@@ -137,7 +140,7 @@ void do_cmd_info()
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
     {
         puts("Hardware Revision\t: 0x");
-        put_hex(pt[6]);
+        // put_hex(pt[6]);
         put_hex(pt[5]);
         puts("\r\n");
     }
@@ -160,13 +163,24 @@ void do_cmd_info()
         put_hex(pt[6]);
         puts("\r\n");
     }
+    return 0;
 }
 
-void do_cmd_reboot()
+int do_cmd_reboot()
 {
-    puts("Reboot in 5 seconds ...\r\n\r\n");
+    puts("Reboot in 10 seconds ...\r\n\r\n");
     volatile unsigned int *rst_addr = (unsigned int *)PM_RSTC;
     *rst_addr = PM_PASSWORD | 0x20;
     volatile unsigned int *wdg_addr = (unsigned int *)PM_WDOG;
-    *wdg_addr = PM_PASSWORD | 5;
+    *wdg_addr = PM_PASSWORD | 0x160000;
+    return 0;
+}
+
+int do_cmd_cancel_reboot()
+{
+    volatile unsigned int *rst_addr = (unsigned int *)PM_RSTC;
+    *rst_addr = PM_PASSWORD | 0x0;
+    volatile unsigned int *wdg_addr = (unsigned int *)PM_WDOG;
+    *wdg_addr = PM_PASSWORD | 0x0;
+    return 0;
 }
