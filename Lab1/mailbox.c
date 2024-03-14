@@ -3,18 +3,18 @@
 #include "io.h"
 
 void mailbox_call(unsigned int* message) {
-    unsigned int  r = (((unsigned long)message) & ~0xF) | 8;
+    unsigned int  r = (((unsigned long)message) & ~0xF) | 8;    //8: chanel number
 
-    while (*MAILBOX_STATUS & MAILBOX_FULL)
+    while (*MAILBOX_STATUS & MAILBOX_FULL)    //Check if Mailbox 0 status register’s full flag is set
         asm volatile("nop");
 
-    *MAILBOX_WRITE = r;
+    *MAILBOX_WRITE = r;    //Write
 
     while (1) {
-        while (*MAILBOX_STATUS & MAILBOX_EMPTY)
+        while (*MAILBOX_STATUS & MAILBOX_EMPTY)    //Check if Mailbox 0 status register’s empty flag is set.
             asm volatile("nop");
 
-        if (r == *MAILBOX_READ)
+        if (r == *MAILBOX_READ)    //Check if the value is the same as you wrote in step 1.
             break;
     }
     return;
