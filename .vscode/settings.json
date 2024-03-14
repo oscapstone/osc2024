@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "shell.h": "c",
+        "uart.h": "c"
+    }
+}
