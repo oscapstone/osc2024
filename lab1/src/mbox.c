@@ -66,7 +66,7 @@ int get_board_revision(unsigned int *vision) {
   return 0;
 }
 
-int get_arm_base_memory(unsigned int *base_addr, unsigned int *mem_size) {
+int get_arm_mem_info(unsigned int *base_addr, unsigned int *mem_size) {
   mailbox[0] = 8 * 4;
   mailbox[1] = MBOX_REQUEST;
   mailbox[2] = MBOX_TAG_GET_MEM;

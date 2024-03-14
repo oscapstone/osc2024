@@ -7,6 +7,7 @@ void uart_write(unsigned int c);
 /* Receive a character */
 char uart_read();
 
+void uart_printf(char *fmt, ...);
 void uart_print(char *s);
 void uart_println(char *s);
 

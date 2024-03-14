@@ -1,5 +1,3 @@
-
-#include "mbox.h"
 #include "shell.h"
 #include "uart.h"
 

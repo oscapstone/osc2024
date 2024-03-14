@@ -12,11 +12,9 @@ void set(long addr, unsigned int value) {
   *point = value;
 }
 
-// TODO: Fix output format
-void reset(int tick) { // reboot after watchdog timer expire
-  uart_print("reboot after ");
-  uart_write(tick + 0x30);
-  uart_println(" ticks");
+// reboot after watchdog timer expire
+void reset(int tick) {
+  uart_println("rebooting...");
 
   set(PM_RSTC, PM_PASSWORD | 0x20); // full reset
   set(PM_WDOG, PM_PASSWORD | tick); // number of watchdog tick
@@ -31,6 +29,7 @@ void handle_line(char *line) {
   if (strncmp(line, "help", 4) == 0) {
     uart_println("help\t: print this help menu");
     uart_println("hello\t: print Hello World!");
+    uart_println("board\t: show board info");
     uart_println("reboot\t: reboot the device");
     return;
   }
@@ -56,7 +55,7 @@ void handle_line(char *line) {
     }
 
     unsigned int base_addr, mem_size;
-    if (get_arm_base_memory(&base_addr, &mem_size) == 0) {
+    if (get_arm_mem_info(&base_addr, &mem_size) == 0) {
       uart_print("Base addr: ");
       uart_hex(base_addr);
       uart_print("\n");
@@ -82,7 +81,7 @@ void shell_loop() {
 
     // echo user input
     char c = uart_read();
-    uart_write(c);
+    uart_print(&c);
 
     cmd[cmd_index++] = c;
 

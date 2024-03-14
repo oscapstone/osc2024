@@ -1,6 +1,7 @@
 #ifndef _MBOX_H
 #define _MBOX_H
 
+#include "gpio.h"
 #include "uart.h"
 
 #define MBOX_BASE (MMIO_BASE + 0xB880)
@@ -55,6 +56,6 @@
 
 int mbox_call(unsigned char ch);
 int get_board_revision(unsigned int *vision);
-int get_arm_base_memory(unsigned int *base_addr, unsigned int *mem_size);
+int get_arm_mem_info(unsigned int *base_addr, unsigned int *mem_size);
 
 #endif // _MBOX_H

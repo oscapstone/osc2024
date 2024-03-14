@@ -9,4 +9,9 @@
  */
 int strncmp(const char *str1, const char *str2, size_t size);
 
+/**
+ * convert an integer value into a string
+ */
+char *itoa(int value, char *s);
+
 #endif // _STRING_H

@@ -1,5 +1,6 @@
 #include "uart.h"
 #include "gpio.h"
+#include "io.h"
 
 /* Auxilary mini UART registers */
 #define AUX_ENABLE ((volatile unsigned int *)(MMIO_BASE + 0x00215004))
@@ -91,6 +92,19 @@ char uart_read() {
   return r == '\r' ? '\n' : r;
 }
 
+void uart_printf(char *fmt, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, fmt);
+
+  char str_buf[1024];
+  vsprintf(str_buf, fmt, args);
+
+  int index = 0;
+  while (str_buf[index] && index < 1024) {
+    uart_write(str_buf[index++]);
+  }
+}
+
 void uart_print(char *s) {
   while (*s) {
     if (*s == '\n') {
@@ -105,8 +119,7 @@ void uart_println(char *s) {
   uart_print(s);
 
   // newline in the end
-  uart_write('\r');
-  uart_write('\n');
+  uart_print("\n");
 }
 
 void uart_hex(unsigned int d) {
