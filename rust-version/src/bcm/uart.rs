@@ -202,7 +202,7 @@ impl core::fmt::Write for UartInner {
 
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.chars() {
-            self.write_char(c);
+            self.write_char(c).unwrap();
         }
 
         Ok(())

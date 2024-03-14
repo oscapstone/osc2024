@@ -97,7 +97,13 @@ unsafe fn interactiave_shell() -> ! {
                 }
                 ['b', 'o', 'a', 'r', 'd', _] => {
                     let (board, _) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetBoardRevision);
+                    let (mem0, mem1) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetArmMemory);
+                    let (serial0, serial1) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetBoardSerial);
+                    let (vc0, vc1) = bcm::MAILBOX.get(bcm::mailbox::MailboxTag::GetVcMemory);
                     println!("Board revision: {:x}", board);
+                    println!("Board serial: {:x} {:x}", serial0, serial1);
+                    println!("Arm memory(base, size): {:x}, {:x}", mem0, mem1);
+                    println!("Vc memory(base, size):  {:x}, {:x}", vc0, vc1);
                 }
                 _ => {
                     if cnt > 0 {

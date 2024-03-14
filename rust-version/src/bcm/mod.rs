@@ -7,10 +7,7 @@ pub mod gpio;
 pub mod mailbox;
 pub mod uart;
 
-use crate::{
-    bcm::{common::map, gpio::Gpio, mailbox::Mailbox as my_mailbox, uart::Uart},
-    println,
-};
+use crate::bcm::{common::map, gpio::Gpio, mailbox::Mailbox as my_mailbox, uart::Uart};
 
 //--------------------------------------------------------------------------------------------------
 // Global instances
@@ -27,6 +24,4 @@ pub static MAILBOX: my_mailbox = unsafe { my_mailbox::new(map::mmio::MAILBOX_STA
 pub fn hardware_init() {
     GPIO.init();
     UART.init();
-    let (val, _) = MAILBOX.get(mailbox::MailboxTag::GetBoardRevision);
-    println!("Board revision(loading): {:x}", val);
 }

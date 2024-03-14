@@ -9,26 +9,16 @@ use tock_registers::{
     registers::ReadWrite,
 };
 
-// const MAILBOX_BASE: u32 = 0x3F00_B880;
-// const MAILBOX_READ: u32 = MAILBOX_BASE + 0x00;
-// const MAILBOX_STATUS: u32 = MAILBOX_BASE + 0x18;
-// const MAILBOX_WRITE: u32 = MAILBOX_BASE + 0x20;
-
-// const MAILBOX_EMPTY: u32 = 0x4000_0000;
-// const MAILBOX_FULL: u32 = 0x8000_0000;
-//
-// const GET_BOARD_REVISION: u32 = 0x0001_0002;
-
 const REQUEST_CODE: u32 = 0x0000_0000;
-const REQUEST_SUCCEED: u32 = 0x8000_0000;
-const REQUEST_FAILED: u32 = 0x8000_0001;
 const TAG_REQUEST_CODE: u32 = 0x0000_0000;
 const END_TAG: u32 = 0x0000_0000;
 
 #[derive(Copy, Clone)]
 pub enum MailboxTag {
     GetBoardRevision = 0x0001_0002,
+    GetBoardSerial = 0x0001_10004,
     GetArmMemory = 0x0001_0005,
+    GetVcMemory = 0x0001_0006,
 }
 
 register_bitfields! {
@@ -125,28 +115,43 @@ impl MailboxInner {
     }
 
     pub fn get_msg(&mut self, tag: MailboxTag) -> (u32, u32) {
-        println!("get_msg");
         let mut mailbox = MailboxMsg { buffer: [0; 8] };
         match tag {
             MailboxTag::GetBoardRevision => {
                 mailbox.buffer[0] = 7 * 4; // buffer size in bytes
                 mailbox.buffer[3] = 4; // maximum of request and response value buffer's length.
+                mailbox.buffer[6] = END_TAG;
+            }
+            MailboxTag::GetBoardSerial => {
+                mailbox.buffer[0] = 8 * 4; // buffer size in bytes
+                mailbox.buffer[3] = 8; // maximum of request and response value buffer's length.
+                mailbox.buffer[7] = END_TAG;
             }
             MailboxTag::GetArmMemory => {
                 mailbox.buffer[0] = 8 * 4; // buffer size in bytes
                 mailbox.buffer[3] = 8; // maximum of request and response value buffer's length.
+                mailbox.buffer[7] = END_TAG;
+            }
+            MailboxTag::GetVcMemory => {
+                mailbox.buffer[0] = 8 * 4; // buffer size in bytes
+                mailbox.buffer[3] = 8; // maximum of request and response value buffer's length.
+                mailbox.buffer[7] = END_TAG;
             }
         }
+
         mailbox.buffer[1] = REQUEST_CODE;
         mailbox.buffer[2] = tag as u32; // tag identifier
         mailbox.buffer[4] = TAG_REQUEST_CODE;
         mailbox.buffer[5] = 0; // value buffer
-        mailbox.buffer[6] = END_TAG;
+        mailbox.buffer[6] = 0; // value buffer
 
         self.call(&mut mailbox.buffer);
+
         match tag {
             MailboxTag::GetBoardRevision => (mailbox.buffer[5], 0),
+            MailboxTag::GetBoardSerial => (mailbox.buffer[5], mailbox.buffer[6]),
             MailboxTag::GetArmMemory => (mailbox.buffer[5], mailbox.buffer[6]),
+            MailboxTag::GetVcMemory => (mailbox.buffer[5], mailbox.buffer[6]),
         }
     }
 }
