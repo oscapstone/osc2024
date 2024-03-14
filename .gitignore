@@ -1,0 +1,79 @@
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Binaries #
+###########
+*.bin
+*.cue
+*.iso
+*.dmg
+
+# Object files #
+################
+*.obj
+*.pdb
+
+# Linker output #
+#################
+*.lib
+*.a
+*.pa
+*.sa
+
+# Precompiled Headers #
+#######################
+*.gch
+*.pch
+
+# MacOSX #
+##########
+.DS_Store
+.AppleDouble
+.LSOverride
+__MACOSX
+
+# Python #
+#########
+*.py[cod]
+*.pyo
+*.pyd
+__pycache__
+*.pyc
+
+# Large files and test data #
+#############################
+*.big
+*.data
+# *.test - if you have specific test files you want to ignore
+
+# Various IDEs #
+###############
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# Dependency directories #
+##########################
+node_modules/
+jspm_packages/
+
+# Build directories #
+#####################
+build/
+dist/
+
+# Ignore all .env files #
+########################
+.env
