@@ -122,7 +122,7 @@ void do_cmd_info()
 	if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
 	{
 		uart_puts("Hardware Revision\t: ");
-		uart_2hex(pt[6]);
+		// uart_2hex(pt[6]);
 		uart_2hex(pt[5]);
 		uart_puts("\r\n");
 	}
@@ -140,8 +140,10 @@ void do_cmd_info()
 	if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
 	{
 		uart_puts("ARM Memory Base Address\t: ");
-		uart_2hex(pt[6]);
 		uart_2hex(pt[5]);
+		uart_puts("\r\n");
+		uart_puts("ARM Memory Size\t\t: ");
+		uart_2hex(pt[6]);
 		uart_puts("\r\n");
 	}
 }
