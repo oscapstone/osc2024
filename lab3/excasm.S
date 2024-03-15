@@ -41,53 +41,51 @@
 .endm
 
 exception_handler:
-    save_all // context saving
+    save_all
     bl exception_entry // defined in traps.c
     load_all
     eret
 
 irq_handler:
-    save_all // context saving
+    save_all
     bl irq_entry // defined in irq.c
     load_all
     eret
 
-/* exception vector table */
-.align 11 // vector table should be aligned to 0x800 (2^11)
+invalid_exc_handler:
+    save_all
+    bl invalid_entry // defined in traps.c
+    load_all
+    eret
+
+.macro ventry label
+    b \label
+.align 7
+.endm
+
+/* EL1 Exception Vector table
+ * vector table should be aligned to 0x800
+ * and each entry size is 0x80 */
+.align 11
 .global exception_vector_table
 exception_vector_table:
-    b exception_handler
-.align 7 // entry size is 0x80 (2^7)
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-
-    b exception_handler
-.align 7
-    b irq_handler
-.align 7
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
-    b exception_handler
-.align 7
+    // EL1 -> EL1 while using SP_EL0
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    // EL1 -> EL1 while using SP_EL1
+    ventry invalid_exc_handler
+    ventry irq_handler
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    // EL0 (AArch64) -> EL1
+    ventry exception_handler
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    // EL0 (AArch32) -> EL1
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
+    ventry invalid_exc_handler
