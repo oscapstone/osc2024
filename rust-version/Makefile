@@ -22,12 +22,13 @@ RUSTFLAGS = $(RUSTC_MISC_ARGS)                   \
 
 # build my kernel
 KERNEL_ELF = target/$(TARGET)/debug/kernel
+KERNEL_ELF_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF).d)) Cargo.toml
 
 COMPILER_ARGS = --target=$(TARGET)
 
 all: $(KERNEL_BIN)
 
-$(KERNEL_ELF): # src/main.rs src/boot.s Cargo.toml
+$(KERNEL_ELF): $(KERNEL_ELF_DEPS)
 	@RUSTFLAGS="$(RUSTFLAGS)" cargo rustc $(COMPILER_ARGS)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
@@ -38,3 +39,16 @@ test: $(KERNEL_BIN)
 
 clean:
 	rm -rf target $(KERNEL_BIN)
+
+# debugging
+readelf:
+	readelf --header $(KERNEL_ELF)
+
+objdump:
+	rust-objdump --disassemble --demangle \
+		--section .text --section .rodata \
+		$(KERNEL_ELF) | rustfilt | less
+
+nm:
+	nm --demangle --print-size $(KERNEL_ELF) | less
+

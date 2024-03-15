@@ -19,3 +19,6 @@ tock-registers = "0.9.0"
 [lib]
 test = false
 
+[dev-dependencies]
+rustfilt = "0.2.1"
+
