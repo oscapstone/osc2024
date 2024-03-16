@@ -88,8 +88,16 @@ impl Shell {
         let revision = driver::mailbox().get_board_revision();
         let memory = driver::mailbox().get_arm_memory();
 
-        println!("Board revision: {:#x}", revision);
-        println!("ARM Memory base address: {}", memory.base_address);
-        println!("ARM Memory size: {:#x}", memory.size);
+        match revision {
+            Ok(r) => println!("Board revision: {:#x}", r),
+            Err(e) => println!("Failed to get board revision: {}", e),
+        };
+        match memory {
+            Ok(m) => {
+                println!("ARM Memory base address: {:#x}", m.base_address);
+                println!("ARM Memory size: {:#x}", m.size);
+            }
+            Err(e) => println!("Failed to get memory info: {}", e),
+        };
     }
 }

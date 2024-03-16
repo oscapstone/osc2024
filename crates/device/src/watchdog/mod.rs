@@ -1,22 +1,12 @@
-use small_std::sync::Mutex;
-use tock_registers::{interfaces::Writeable, register_structs, registers::ReadWrite};
+mod registers;
 
-use crate::{common::MMIODerefWrapper, driver::DeviceDriver};
+use registers::Registers;
+use small_std::sync::Mutex;
+use tock_registers::interfaces::Writeable;
+
+use crate::driver::DeviceDriver;
 
 const PM_PASSWORD: u32 = 0x5a00_0000;
-
-register_structs! {
-    #[allow(non_snake_case)]
-    RegisterBlock {
-        (0x00 => _reserved1),
-        (0x1c => PM_RSTC: ReadWrite<u32>),
-        (0x20 => _reserved2),
-        (0x24 => PM_WDOG: ReadWrite<u32>),
-        (0x28 => @END),
-    }
-}
-
-type Registers = MMIODerefWrapper<RegisterBlock>;
 
 struct WatchdogInner {
     registers: Registers,
