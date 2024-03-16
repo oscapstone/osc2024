@@ -1,7 +1,7 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use device::{
-    device_driver::DeviceDriverDescriptor, gpio::GPIO, mailbox::Mailbox, mini_uart::MiniUart,
+    driver::DeviceDriverDescriptor, gpio::GPIO, mailbox::Mailbox, mini_uart::MiniUart,
     watchdog::Watchdog,
 };
 use small_std::fmt::print::console;
@@ -23,7 +23,7 @@ pub unsafe fn register_drivers() -> Result<(), &'static str> {
         return Err("Init already done");
     }
 
-    let driver_manager = device::device_driver::driver_manager();
+    let driver_manager = device::driver::driver_manager();
 
     let gpio = DeviceDriverDescriptor::new(&GPIO, Some(gpio_post_init));
     driver_manager.register_driver(gpio);

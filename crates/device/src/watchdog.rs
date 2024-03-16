@@ -1,7 +1,7 @@
 use small_std::sync::Mutex;
 use tock_registers::{interfaces::Writeable, register_structs, registers::ReadWrite};
 
-use crate::{common::MMIODerefWrapper, device_driver::DeviceDriver};
+use crate::{common::MMIODerefWrapper, driver::DeviceDriver};
 
 const PM_PASSWORD: u32 = 0x5a00_0000;
 

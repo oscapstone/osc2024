@@ -5,7 +5,7 @@ use tock_registers::{
     registers::{ReadOnly, WriteOnly},
 };
 
-use crate::{common::MMIODerefWrapper, device_driver::DeviceDriver};
+use crate::{common::MMIODerefWrapper, driver::DeviceDriver};
 
 register_bitfields! {
     u32,

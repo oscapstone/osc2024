@@ -13,7 +13,7 @@ unsafe fn kernel_init() -> ! {
         panic!("Failed to initialize driver subsystem: {}", e);
     }
 
-    device::device_driver::driver_manager().init_drivers();
+    device::driver::driver_manager().init_drivers();
 
     // Finnaly go from unsafe to safe 🎉
     main()
@@ -27,7 +27,7 @@ fn main() -> ! {
     );
 
     println!("[1] Drivers loaded:");
-    device::device_driver::driver_manager().enumerate();
+    device::driver::driver_manager().enumerate();
 
     println!("[2] Echoing input now");
 
