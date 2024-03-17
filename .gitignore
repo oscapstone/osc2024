@@ -1,4 +1,6 @@
 note.md
+Reference*
+
 .vscode
 .DS_Store
 
@@ -7,4 +9,5 @@ note.md
 *.img
 *.txt
 obj
+
 !nycuos.img
