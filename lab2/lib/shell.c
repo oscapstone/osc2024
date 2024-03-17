@@ -16,7 +16,7 @@ void welcome_msg() {
 void read_cmd() {
     char tmp;
     uart_write_string("# ");
-    for (uint32_t i = 0; tmp = uart_read();) {
+    for (uint32_t i = 0; uart_read(&tmp, 1);) {
         uart_write(tmp);
         switch (tmp) {
             case '\r':

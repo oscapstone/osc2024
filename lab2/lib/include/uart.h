@@ -7,7 +7,7 @@
 
 void uart_init();
 void uart_write(char c);
-char uart_read();
+void uart_read(char* buf, uint32_t size);
 void uart_flush();
 void uart_write_string(char* str);
 void uart_puth(uint32_t d);

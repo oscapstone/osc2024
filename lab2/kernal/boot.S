@@ -2,29 +2,26 @@
 
 .global _start
 
+// x0 register stores address to dtb
 _start:
-    // read cpu id, stop slave cores
-    mrs     x1, mpidr_el1
-    and     x1, x1, #3
-    cbz     x1, 2f
-    // cpu id > 0, stop
-1:  wfe
-    b       1b
-2:  // cpu id == 0
-
-    // set top of stack just before our code (stack grows to a lower address per AAPCS64)
-    ldr     x1, =_start
-    mov     sp, x1
-
     // clear bss
-    ldr     x1, =__bss_start
-    ldr     w2, =__bss_size
-3:  cbz     w2, 4f
-    str     xzr, [x1], #8
-    sub     w2, w2, #1
-    cbnz    w2, 3b
+    ldr     x20, =_bss_start
+    ldr     x21, =_bss_size
+    add     x21, x21, x20
+3:  
+    cmp     x20, x21
+    b.eq    4f
+    str     xzr, [x20]
+    add     x20, x20, #8
+    b       3b
+
+4:  
+    // initialize sp
+    ldr     x20, =_start
+    mov     sp, x20
 
     // jump to C code, should not return
-4:  bl      kernel_main
+    bl      kernel_main
+5:
     // for failsafe, halt this core too
-    b       1b
+    b       5b
