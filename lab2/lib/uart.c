@@ -7,17 +7,17 @@ void uart_init() {
     uint32_t t;
 
     /* Init GPIO */
-    // mini UART  -> set ALT5
+    // mini UART  -> set ALT5, PL011 UART -> set ALT0
     // Configure GPFSELn register to change alternate function
     t = mmio_read(GPFSEL1);
     t &= ~(7 << 12);  // clean gpio14
-    t |= (2 << 12);   // set alt5 ,decimal(2) = binary(101)
+    t |= (2 << 12);   // set alt5
     t &= ~(7 << 15);  // clean gpio15
-    t |= (2 << 15);   // set alt5 ,2 = 101
+    t |= (2 << 15);   // set alt5
     mmio_write(GPFSEL1, t);
 
     /* Configure pull up/down register to disable GPIO pull up/down */
-    /* P.101
+    /*
         The GPIO Pull-up/down Clock Registers control the actuation of internal pull-downs on
         the respective GPIO pins. These registers must be used in conjunction with the GPPUD
         register to effect GPIO Pull-up/down changes. The following sequence of events is
@@ -66,7 +66,7 @@ void uart_init() {
     mmio_write(AUX_MU_CNTL_REG, 3);
 
     // clear rx data
-    //uart_flush();
+    uart_flush();
 }
 
 void uart_write(char c) {
@@ -74,9 +74,11 @@ void uart_write(char c) {
     mmio_write(AUX_MU_IO_REG, c);
 }
 
-char uart_read() {
-    while (!(mmio_read(AUX_MU_LSR_REG) & 1)) delay(1);
-    return (mmio_read(AUX_MU_IO_REG) & 0xff);
+void uart_read(char* buf, uint32_t size) {
+    for (uint32_t i = 0; i < size; i++) {
+        while (!(mmio_read(AUX_MU_LSR_REG) & 1)) delay(1);
+        buf[i] = mmio_read(AUX_MU_IO_REG) & 0xff;
+    }
 }
 
 void uart_flush() {
@@ -98,5 +100,11 @@ void uart_puth(uint32_t d) {
         /* Translate to hex */
         c = (c > 9) ? (0x37 + c) : (0x30 + c);
         uart_write(c);
+    }
+}
+
+void uart_putc(char* buf, uint32_t size) {
+    for (uint32_t i = 0; i < size; i++) {
+        uart_write(buf[i]);
     }
 }

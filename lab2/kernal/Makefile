@@ -1,16 +1,10 @@
 BUILD_DIR = ./build
 # Lib
-LIB_SRC_DIR = ./lib
-
-# LIB_SRC = \
-# 	$(LIB_SRC_DIR)/mbox.c \
-# 	$(LIB_SRC_DIR)/mmio.c \
-# 	$(LIB_SRC_DIR)/shell.c \
-# 	$(LIB_SRC_DIR)/string.c \
-# 	$(LIB_SRC_DIR)/uart.c \
-# 	$(LIB_SRC_DIR)/utils.c \
+LIB_SRC_DIR = ../lib
 
 LIB_SRC = \
+	$(LIB_SRC_DIR)/cpio.c \
+	$(LIB_SRC_DIR)/malloc.c \
 	$(LIB_SRC_DIR)/mmio.c \
 	$(LIB_SRC_DIR)/mbox.c \
 	$(LIB_SRC_DIR)/shell.c \
@@ -44,7 +38,7 @@ VPATH += \
 	$(APP_SRC_DIR) \
 
 # ARM toolchain
-CROSS = aarch64-linux-gnu
+CROSS = aarch64-unknown-linux-gnu
 CC = $(CROSS)-gcc
 AS = $(CROSS)-as
 LD = $(CROSS)-ld
@@ -61,13 +55,13 @@ BUILD_DIRECTORIES = \
 	$(LIB_BUILD_DIR) \
 	$(APP_BUILD_DIR) \
 
-PROJ = kernel8
+PROJ = kernel
 OUT_ELF = ./$(PROJ).elf
 OUT_IMG = ./$(PROJ).img
 LINKER_FILE = linker.ld
 
-CCFLAGS = -Wall -O0 -fno-stack-protector
-LDFLAGS = -T$(LINKER_FILE) -nostdlib
+CCFLAGS = -Wall -O0
+LDFLAGS = -T$(LINKER_FILE) -nostdlib -nostartfiles
 
 .PHONY: clean directories out_elf run docker_cp
 all: directories $(OUT_OBJS) $(OUT_ELF) $(OUT_IMG)
@@ -129,13 +123,23 @@ $(BUILD_DIRECTORIES):
 run:
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty
 
+run_stdio:
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial stdio
+
+run_cpio:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio
+
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty -s -S
 
 docker_cp:
-	docker cp kernel8.elf my_kali:/
+	docker cp kernel.elf my_kali:/
+	docker cp bootloader/bootloader.elf my_kali:/
+
+cpio:
+	cd rootfs && find . | cpio -o -H newc > ../initramfs.cpio
 
 clean:
-	rm -rf kernel.img
+	rm -rf *.elf
+	rm -rf *.img
 	rm -rf $(BUILD_DIR)
-	make -C ./bootloader clean
