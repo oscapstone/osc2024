@@ -2,6 +2,8 @@ CC 			= clang
 LD 			= clang -fuse-ld=lld
 OBJCOPY		= llvm-objcopy
 QEMU		= qemu-system-aarch64
+MINICOM 	= minicom
+SERIAL 		= /dev/cu.usbserial-0001
 
 TARGET 		= aarch64-unknown-none-elf
 CFLAGS 		= -Wall -Wextra -Wshadow \
@@ -25,7 +27,7 @@ OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
-.PHONY: all build clean run run-debug upload
+.PHONY: all build clean run run-debug upload uart
 
 all: build run
 
@@ -56,3 +58,6 @@ run-debug: run
 
 upload:
 	cp kernel8.img /Volumes/BOOT/kernel8.img
+
+uart:
+	$(MINICOM) -D $(SERIAL)

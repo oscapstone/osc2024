@@ -25,10 +25,6 @@ SECTIONS {
         __bss_end = .;
     }
 
-    .shstrtab : { *(.shstrtab) }
-    .symtab   : { *(.symtab) }
-    .strtab   : { *(.strtab) }
-
     /DISCARD/ : {
         *(.comment)
         *(.gnu*) *(.note*) *(.eh_frame*)
