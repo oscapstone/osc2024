@@ -44,10 +44,14 @@ void mini_uart_setup() {
   set32(AUX_MU_CNTL_REG, 3);
 }
 
-char mini_uart_getc() {
+char mini_uart_getc_raw() {
   while ((get32(AUX_MU_LSR_REG) & 1) == 0)
     NOP;
-  char c = get32(AUX_MU_IO_REG) & MASK(8);
+  return get32(AUX_MU_IO_REG) & MASK(8);
+}
+
+char mini_uart_getc() {
+  char c = mini_uart_getc_raw();
   return c == '\r' ? '\n' : c;
 }
 

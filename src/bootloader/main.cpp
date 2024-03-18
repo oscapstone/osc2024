@@ -2,7 +2,8 @@
 #include "board/mini-uart.hpp"
 #include "board/pm.hpp"
 
-extern char __kernel;
+extern char __kernel[];
+char* kernel_addr = __kernel;
 
 const char usage[] =
     "\n"
@@ -18,10 +19,9 @@ void read_kernel() {
   for (int i = 0; i < 4; i++)
     buf[i] = mini_uart_getc();
   mini_uart_printf("Kernel Size: %u\n", size);
-  char* kernel = &__kernel;
   for (uint32_t i = 0; i < size; i++)
-    kernel[i] = mini_uart_getc();
-  mini_uart_printf("Kernel loaded at %p\n", kernel);
+    kernel_addr[i] = mini_uart_getc_raw();
+  mini_uart_printf("Kernel loaded @ %p\n", kernel_addr);
 }
 
 extern "C" void kernel_main() {
@@ -29,6 +29,7 @@ extern "C" void kernel_main() {
   mini_uart_puts("Hello Boot Loader!\n");
   mini_uart_printf("Board revision :\t0x%08X\n", get_board_revision());
   mini_uart_printf("Loaded address :\t%p\n", kernel_main);
+  mini_uart_printf("Kernel address :\t%p\n", kernel_addr);
 
   for (;;) {
     char c = mini_uart_getc();
@@ -39,10 +40,9 @@ extern "C" void kernel_main() {
         read_kernel();
         break;
       case 'j': {
-        void* addr = &__kernel;
-        mini_uart_printf("Jump to kernel @ %p\n", addr);
-        wait_cycle(0x10000);
-        asm volatile("br %0" : : "r"(addr));
+        mini_uart_printf("Jump to kernel @ %p\n", kernel_addr);
+        wait_cycle(0x1000);
+        asm volatile("br %0" : : "r"(kernel_addr));
         break;
       }
       default:

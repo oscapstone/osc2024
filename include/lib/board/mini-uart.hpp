@@ -2,6 +2,7 @@
 #include "util.hpp"
 
 void mini_uart_setup();
+char mini_uart_getc_raw();
 char mini_uart_getc();
 void mini_uart_putc(char c);
 void mini_uart_puts(const char* s);
