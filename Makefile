@@ -17,6 +17,7 @@ QEMU_FLAGS 	= -display none \
 
 BUILD_DIR 	= build
 SRC_DIR  	= src
+DISK_DIR 	= disk
 
 ifeq ($(TARGET),)
 	TARGET = kernel
@@ -35,7 +36,7 @@ TARGET_SRC_DIR  	= $(SRC_DIR)/$(TARGET)
 CFLAGS 				+= -Iinclude/$(TARGET)
 
 KERNEL_ELF 	= $(TARGET_BUILD_DIR)/$(TARGET).elf
-KERNEL_BIN 	= $(BUILD_DIR)/$(TARGET).img
+KERNEL_BIN 	= $(DISK_DIR)/$(TARGET).img
 LINKER 		= $(TARGET_SRC_DIR)/linker.ld
 
 SRCS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.cpp')
@@ -44,16 +45,15 @@ OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
-.PHONY: all build clean run run-debug upload uart
+.PHONY: all build clean run run-debug upload disk disk-format uart
 
-all: CMD = run
-all: kernel
+all: build run
 
 kernel:
-	$(MAKE) build TARGET=kernel $(CMD)
+	$(MAKE) build TARGET=kernel
 
 bootloader:
-	$(MAKE) build TARGET=bootloader $(CMD)
+	$(MAKE) build TARGET=bootloader
 
 build: $(KERNEL_BIN)
 
@@ -78,7 +78,10 @@ run: $(KERNEL_BIN)
 	$(QEMU) -M raspi3b -kernel $(KERNEL_BIN) $(QEMU_FLAGS)
 
 upload:
-	cp $(KERNEL_BIN) /Volumes/BOOT/$(TARGET).img
+	$(MAKE) -C $(DISK_DIR) upload # TODO
+
+disk:
+	$(MAKE) -C $(DISK_DIR) upload eject
 
 uart:
 	$(MINICOM) -D $(SERIAL)
