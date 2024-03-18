@@ -15,15 +15,15 @@ int strlen(const char* s) {
 int strcmp(const char* s1, const char* s2) {
   char c1, c2;
   int d;
-  while ((c1 = *s1) && (c2 = *s2) && (d = c1 - c2) != 0)
+  while ((d = (c1 = *s1) - (c2 = *s2)) == 0 && c1 && c2)
     s1++, s2++;
   return d;
 }
 
 int strncmp(const char* s1, const char* s2, int n) {
   char c1, c2;
-  int d;
-  for (int i = 0; i < n && (c1 = *s1) && (c2 = *s2) && (d = c1 - c2) != 0; i++)
+  int i = 0, d;
+  for (; i < n && (d = (c1 = *s1) - (c2 = *s2)) == 0 && c1 && c2; i++)
     s1++, s2++;
-  return d;
+  return i == n ? 0 : d;
 }
