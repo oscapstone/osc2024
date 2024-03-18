@@ -2,7 +2,7 @@
 #include "cmd.h"
 #include "string.h"
 
-void kernel_main() {
+extern "C" void kernel_main() {
   mini_uart_setup();
   mini_uart_puts("Hello World!\n");
 

@@ -16,9 +16,11 @@ typedef unsigned long uint64_t;
 typedef volatile uint64_t addr_t;
 
 // util-asm.S
+extern "C" {
 void set32(addr_t address, uint32_t value);
 uint32_t get32(addr_t address);
 void wait_cycle(unsigned cycle);
 
 // start.S
 void prog_hang();
+}

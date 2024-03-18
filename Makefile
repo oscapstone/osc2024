@@ -1,4 +1,4 @@
-CC 			= clang
+CXX 		= clang++
 LD 			= clang -fuse-ld=lld
 OBJCOPY		= llvm-objcopy
 QEMU		= qemu-system-aarch64
@@ -9,7 +9,8 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
 			  -mcpu=cortex-a53 \
 			  --target=aarch64-unknown-none-elf \
-			  -nostdlib -Os
+			  -D_LIBCPP_HAS_NO_THREADS \
+			  -nostdlib -Os -fPIE
 QEMU_FLAGS 	= -display none \
 			  -serial null -serial stdio \
 			  -smp cpus=4
@@ -29,12 +30,11 @@ endif
 TARGET_BUILD_DIR 	= $(BUILD_DIR)/$(TARGET)
 TARGET_SRC_DIR  	= $(SRC_DIR)/$(TARGET)
 CFLAGS 				+= -Iinclude/$(TARGET)
-# TODO: -fPIE
 
 KERNEL_ELF 	= $(TARGET_BUILD_DIR)/$(TARGET).elf
 KERNEL_BIN 	= $(BUILD_DIR)$(TARGET).img
 
-SRCS = $(shell find $(TARGET_SRC_DIR) -name '*.c')
+SRCS = $(shell find $(TARGET_SRC_DIR) -name '*.cpp')
 ASMS = $(shell find $(TARGET_SRC_DIR) -name '*.S')
 OBJS = $(SRCS:$(TARGET_SRC_DIR)/%.c=$(TARGET_BUILD_DIR)/%.o) $(ASMS:$(TARGET_SRC_DIR)/%.S=$(TARGET_BUILD_DIR)/%.o)
 DEPS = $(OBJ_FILES:%.o=%.d)
@@ -51,11 +51,11 @@ build: $(KERNEL_BIN)
 
 $(TARGET_BUILD_DIR)/%.o: $(TARGET_SRC_DIR)/%.S
 	@mkdir -p $(@D)
-	$(CC) -MMD $(CFLAGS) -c $< -o $@
+	$(CXX) -MMD $(CFLAGS) -c $< -o $@
 
-$(TARGET_BUILD_DIR)/%.o: $(TARGET_SRC_DIR)/%.c
+$(TARGET_BUILD_DIR)/%.o: $(TARGET_SRC_DIR)/%.cpp
 	@mkdir -p $(@D)
-	$(CC) -MMD $(CFLAGS) -c $< -o $@
+	$(CXX) -MMD $(CFLAGS) -c $< -o $@
 
 $(KERNEL_ELF): $(TARGET_SRC_DIR)/linker.ld $(OBJS)
 	$(LD) -T $(TARGET_SRC_DIR)/linker.ld $(CFLAGS) $(OBJS) -o $@

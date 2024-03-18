@@ -6,7 +6,7 @@
 #include "util.h"
 
 void mini_uart_setup() {
-  register unsigned int r = get32(GPFSEL1);
+  unsigned int r = get32(GPFSEL1);
   // set gpio14
   r = (r & ~(7 << 12)) | (GPIO_FSEL_ALT5 << 12);
   // set gpio15

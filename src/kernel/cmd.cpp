@@ -31,7 +31,7 @@ const cmd_t cmds[] = {
         .fp = cmd_reboot,
     },
 };
-const cmd_t cmds_end[0];
+const cmd_t* cmds_end = (cmd_t*)((char*)cmds + sizeof(cmds));
 
 void cmd_help() {
   for (const cmd_t* cmd = cmds; cmd != cmds_end; cmd++) {

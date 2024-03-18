@@ -10,5 +10,5 @@ struct Cmd {
 };
 
 extern const cmd_t cmds[];
-extern const cmd_t cmds_end[];
+extern const cmd_t* cmds_end;
 extern const int n_cmds;

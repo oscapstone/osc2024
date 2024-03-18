@@ -1,7 +1,7 @@
 #include "string.h"
 
 void memzero(void* start, void* end) {
-  for (char* i = start; i != end; i++)
+  for (char* i = (char*)start; i != (char*)end; i++)
     *i = 0;
 }
 

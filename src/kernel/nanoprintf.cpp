@@ -5,6 +5,6 @@
 
 // TODO
 #include "util.h"
-void __trunctfsf2() {
+extern "C" void __trunctfsf2() {
   prog_hang();
 }
