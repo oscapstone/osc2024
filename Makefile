@@ -86,7 +86,7 @@ run: $(KERNEL_BIN)
 	$(QEMU) -M raspi3b -kernel $(KERNEL_BIN) $(QEMU_FLAGS)
 
 upload:
-	$(MAKE) -C $(DISK_DIR) upload # TODO
+	./script/upload.py $(SERIAL)
 
 disk:
 	$(MAKE) -C $(DISK_DIR) upload eject
