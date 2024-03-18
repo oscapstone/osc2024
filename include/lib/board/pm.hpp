@@ -4,5 +4,6 @@
 #define PM_RSTC     0x3F10001c
 #define PM_WDOG     0x3F100024
 
+void reboot();
 void reset(int tick);
 void cancel_reset();

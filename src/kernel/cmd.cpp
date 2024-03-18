@@ -49,7 +49,7 @@ void cmd_hwinfo() {
 }
 
 void cmd_reboot() {
-  reset(0x10);
+  reboot();
 }
 
 void runcmd(const char* buf, int len) {
