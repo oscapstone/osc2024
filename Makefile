@@ -11,9 +11,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  --target=aarch64-unknown-none-elf \
 			  -D_LIBCPP_HAS_NO_THREADS \
 			  -nostdlib -Os -fPIE
-QEMU_FLAGS 	= -display none \
-			  -serial null -serial stdio \
-			  -smp cpus=4
+QEMU_FLAGS 	= -display none -smp cpus=4
 
 BUILD_DIR 	= build
 SRC_DIR  	= src
@@ -26,6 +24,16 @@ endif
 ifneq ($(DEBUG),)
 	CFLAGS 		+= -g
 	QEMU_FLAGS 	+= -s -S
+endif
+
+ifneq ($(QEMU_ASM),)
+	QEMU_FLAGS 	+= -d in_asm
+endif
+
+ifeq ($(QEMU_PTY_SERIAL),)
+	QEMU_FLAGS 	+= -serial null -serial stdio
+else
+	QEMU_FLAGS 	+= -serial null -serial pty
 endif
 
 LIB_SRC_DIR  	= $(SRC_DIR)/lib

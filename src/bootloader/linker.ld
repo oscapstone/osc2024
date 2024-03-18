@@ -1,9 +1,9 @@
 INCLUDE "src/common.ld"
 
-ENTRY(__kernel)
+ENTRY(__bootloader)
 
 SECTIONS {
-    . = __kernel;
+    . = __bootloader;
     __boot_core_stack_end = .;
 
     .text : {
