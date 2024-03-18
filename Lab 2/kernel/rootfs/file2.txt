@@ -1,0 +1,3 @@
+file2.txt
+It's file 2
+<end>
