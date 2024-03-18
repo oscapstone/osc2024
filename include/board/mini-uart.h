@@ -1,5 +1,4 @@
 #pragma once
-#include "mmio.h"
 #include "util.h"
 
 void mini_uart_setup();

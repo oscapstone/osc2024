@@ -6,6 +6,7 @@ _start:
     and     x0, x0, #0x3
     cbz     x0, primary_cpu
 
+.global prog_hang
 prog_hang:
     wfe
     b       prog_hang

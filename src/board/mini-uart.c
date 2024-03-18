@@ -1,13 +1,9 @@
 #include "board/mini-uart.h"
 
 #include "board/gpio.h"
+#include "board/mmio.h"
+#include "nanoprintf.h"
 #include "util.h"
-
-#define __CLANG_INTTYPES_H
-#define NANOPRINTF_IMPLEMENTATION
-#include "nanoprintf/nanoprintf.h"
-// TODO
-void __trunctfsf2() {}
 
 void mini_uart_setup() {
   register unsigned int r = get32(GPFSEL1);
