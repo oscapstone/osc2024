@@ -23,17 +23,18 @@ void bootloader_main()
             uart_send(in_char);
             if(in_char == '\n'){
                 buffer[idx] = '\0';
-                if(strcmp(buffer, "boot")){
+                if(strcmp(buffer, "boot")==0){
+                    uart_puts("\rUse send_loader.py to load kernel\n\r");
                     unsigned int size = 0;
                     unsigned char *size_buffer = (unsigned char *) &size;
                     for(int i=0; i<4; i++) 
                         size_buffer[i] = uart_getc();
-                    uart_puts("size-check correct\n");
+                    uart_puts("size-check correct\n\r");
 
                     char *kernel = (char *) 0x80000;
                     while(size--) *kernel++ = uart_getc();
 
-                    uart_puts("kernel-loaded\n");
+                    uart_puts("kernel-loaded\n\r");
                     void (*kernel_entry)(void) = (void (*)(void))0x80000;
                     kernel_entry();
                     return;
@@ -48,8 +49,5 @@ void bootloader_main()
         }
 
     }
-
-    //from others
-    
 }
 
