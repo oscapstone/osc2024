@@ -5,6 +5,7 @@ DISKPATH 	= /Volumes/$(DISKNAME)
 FIRMWARE 	= bootcode.bin fixup.dat start.elf
 CONFIG 		= config.txt
 IMGS 		= $(shell find . -name '*.img')
+INITFSCPIO 	= initramfs.cpio
 
 .PHONY: all upload eject format download
 
@@ -17,6 +18,9 @@ ifneq ($(wildcard $(CONFIG)),)
 endif
 ifneq ($(IMGS),)
 	cp $(IMGS) $(DISKPATH)
+endif
+ifneq ($(wildcard $(INITFSCPIO)),)
+	cp $(INITFSCPIO) $(DISKPATH)
 endif
 
 eject:

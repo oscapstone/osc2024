@@ -46,6 +46,7 @@ CFLAGS 				+= -Iinclude/$(TARGET)
 KERNEL_ELF 	= $(BUILD_DIR)/$(TARGET).elf
 KERNEL_BIN 	= $(DISK_DIR)/$(TARGET).img
 LINKER 		= $(TARGET_SRC_DIR)/linker.ld
+INITFSCPIO 	= $(DISK_DIR)/initramfs.cpio
 
 SRCS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.cpp')
 ASMS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.S')
@@ -53,7 +54,7 @@ OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
-.PHONY: all build clean run run-debug upload disk disk-format uart
+.PHONY: all build fs clean run run-debug upload disk disk-format uart
 
 all: build run
 
@@ -78,6 +79,11 @@ $(KERNEL_ELF): $(LINKER) $(OBJS)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
 	$(OBJCOPY) -O binary $< $@
+
+fs: $(INITFSCPIO)
+
+$(INITFSCPIO):
+	cd rootfs && find . | cpio -o -H newc > ../$@
 
 clean:
 	$(RM) -r $(BUILD_DIR)
