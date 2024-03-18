@@ -3,7 +3,7 @@
 
 extern "C" void kernel_main() {
   mini_uart_setup();
-  mini_uart_puts("Hello World!\n");
+  mini_uart_puts("Hello Kernel!\n");
 
   char buf[0x100];
   for (;;) {

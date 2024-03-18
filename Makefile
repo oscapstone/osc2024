@@ -38,8 +38,8 @@ KERNEL_ELF 	= $(TARGET_BUILD_DIR)/$(TARGET).elf
 KERNEL_BIN 	= $(BUILD_DIR)/$(TARGET).img
 LINKER 		= $(TARGET_SRC_DIR)/linker.ld
 
-SRCS = $(shell find $(TARGET_SRC_DIR) -name '*.cpp') $(shell find $(LIB_SRC_DIR) -name '*.cpp')
-ASMS = $(shell find $(TARGET_SRC_DIR) -name '*.S') 	 $(shell find $(LIB_SRC_DIR) -name '*.S')
+SRCS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.cpp')
+ASMS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.S')
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
