@@ -5,6 +5,7 @@
 #include "board/pm.hpp"
 #include "string.hpp"
 
+int help_idx = 0;
 const Cmd cmds[] = {
     {
         ._name = "help",

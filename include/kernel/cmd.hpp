@@ -20,12 +20,12 @@ struct Cmd {
 
 extern const Cmd cmds[];
 extern const int ncmd;
+extern int help_idx;
 
 // some hack to reloc address
 template <typename T>
 T REL(T addr) {
-  static int base_idx = 0;
-  return (T)((char*)addr - (char*)cmds[base_idx]._fp + (char*)&cmd_help);
+  return (T)((char*)addr - (char*)cmds[help_idx]._fp + (char*)&cmd_help);
 }
 
 inline const char* Cmd::name() const {
