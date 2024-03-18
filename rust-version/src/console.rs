@@ -23,7 +23,4 @@ pub mod interface {
             0
         }
     }
-
-    /// Trait alias for a full-fledged console.
-    pub trait All: Write + Statistics {}
 }

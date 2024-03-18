@@ -253,5 +253,3 @@ impl interface::Statistics for Uart {
         self.inner.lock(|inner| inner.chars_written())
     }
 }
-
-impl interface::All for Uart { }
