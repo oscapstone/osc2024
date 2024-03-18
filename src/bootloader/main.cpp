@@ -5,6 +5,7 @@
 extern char __kernel;
 
 const char usage[] =
+    "\n"
     "r\treboot\n"
     "s\tsend kernel\n"
     "j\tjump kernel\n";
@@ -27,9 +28,9 @@ extern "C" void kernel_main() {
   mini_uart_setup();
   mini_uart_puts("Hello Boot Loader!\n");
   mini_uart_printf("Board revision :\t0x%08X\n", get_board_revision());
+  mini_uart_printf("Loaded address :\t%p\n", kernel_main);
 
   for (;;) {
-    mini_uart_puts("$ ");
     char c = mini_uart_getc();
     switch (c) {
       case 'r':
@@ -40,6 +41,7 @@ extern "C" void kernel_main() {
       case 'j': {
         void* addr = &__kernel;
         mini_uart_printf("Jump to kernel @ %p\n", addr);
+        wait_cycle(0x10000);
         asm volatile("br %0" : : "r"(addr));
         break;
       }

@@ -31,8 +31,10 @@ else
 	diskutil eraseDisk FAT32 $(DISKNAME) MBR $(DISK)
 endif
 
-ifneq ($(TARGET),)
 download:
+ifeq ($(TARGET),)
+	@echo "No TARGET set :(" && false
+else
 	wget "$(BASEURL)/$(TARGET)" -O "$(TARGET)"
 endif
 
