@@ -3,6 +3,7 @@
 #include "board/mailbox.hpp"
 #include "board/mini-uart.hpp"
 #include "board/pm.hpp"
+#include "string.hpp"
 
 void cmd_help();
 void cmd_hello();
@@ -52,4 +53,16 @@ void cmd_hwinfo() {
 
 void cmd_reboot() {
   reset(0x10);
+}
+
+void runcmd(const char* buf, int len) {
+  const cmd_t* cmd = cmds;
+  for (; cmd != cmds_end; cmd++)
+    if (!strcmp(buf, cmd->name))
+      break;
+  if (cmd != cmds_end) {
+    cmd->fp();
+  } else {
+    mini_uart_printf("command not found: %s\n", buf);
+  }
 }

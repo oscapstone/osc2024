@@ -1,4 +1,3 @@
-#include "string.h"
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
 
@@ -12,14 +11,6 @@ extern "C" void kernel_main() {
     int len = mini_uart_getline_echo(buf, sizeof(buf));
     if (len <= 0)
       continue;
-    const cmd_t* cmd = cmds;
-    for (; cmd != cmds_end; cmd++)
-      if (!strcmp(buf, cmd->name))
-        break;
-    if (cmd != cmds_end) {
-      cmd->fp();
-    } else {
-      mini_uart_printf("command not found: %s\n", buf);
-    }
+    runcmd(buf, len);
   }
 }
