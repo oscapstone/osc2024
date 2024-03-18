@@ -5,38 +5,34 @@
 #include "board/pm.hpp"
 #include "string.hpp"
 
-void cmd_help();
-void cmd_hello();
-void cmd_hwinfo();
-void cmd_reboot();
-
-const cmd_t cmds[] = {
+const Cmd cmds[] = {
     {
-        .name = "help",
-        .help = "print this help menu",
-        .fp = cmd_help,
+        ._name = "help",
+        ._help = "print this help menu",
+        ._fp = cmd_help,
     },
     {
-        .name = "hello",
-        .help = "print Hello World!",
-        .fp = cmd_hello,
+        ._name = "hello",
+        ._help = "print Hello World!",
+        ._fp = cmd_hello,
     },
     {
-        .name = "hwinfo",
-        .help = "print hardware's infomation",
-        .fp = cmd_hwinfo,
+        ._name = "hwinfo",
+        ._help = "print hardware's infomation",
+        ._fp = cmd_hwinfo,
     },
     {
-        .name = "reboot",
-        .help = "reboot the device",
-        .fp = cmd_reboot,
+        ._name = "reboot",
+        ._help = "reboot the device",
+        ._fp = cmd_reboot,
     },
 };
-const cmd_t* cmds_end = (cmd_t*)((char*)cmds + sizeof(cmds));
+constexpr int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 
 void cmd_help() {
-  for (const cmd_t* cmd = cmds; cmd != cmds_end; cmd++) {
-    mini_uart_printf("%s\t%s\n", cmd->name, cmd->help);
+  for (int i = 0; i < ncmd; i++) {
+    auto cmd = &cmds[i];
+    mini_uart_printf("%s\t%s\n", cmd->name(), cmd->help());
   }
 }
 
@@ -56,12 +52,16 @@ void cmd_reboot() {
 }
 
 void runcmd(const char* buf, int len) {
-  const cmd_t* cmd = cmds;
-  for (; cmd != cmds_end; cmd++)
-    if (!strcmp(buf, cmd->name))
+  const Cmd* cmd = nullptr;
+  for (int i = 0; i < ncmd; i++) {
+    auto it = &cmds[i];
+    if (!strcmp(buf, it->name())) {
+      cmd = it;
       break;
-  if (cmd != cmds_end) {
-    cmd->fp();
+    }
+  }
+  if (cmd != nullptr) {
+    cmd->fp()();
   } else {
     mini_uart_printf("command not found: %s\n", buf);
   }
