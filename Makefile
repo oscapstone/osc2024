@@ -32,7 +32,7 @@ TARGET_SRC_DIR  	= $(SRC_DIR)/$(TARGET)
 CFLAGS 				+= -Iinclude/$(TARGET)
 
 KERNEL_ELF 	= $(TARGET_BUILD_DIR)/$(TARGET).elf
-KERNEL_BIN 	= $(BUILD_DIR)$(TARGET).img
+KERNEL_BIN 	= $(BUILD_DIR)/$(TARGET).img
 
 SRCS = $(shell find $(TARGET_SRC_DIR) -name '*.cpp')
 ASMS = $(shell find $(TARGET_SRC_DIR) -name '*.S')
@@ -42,10 +42,14 @@ DEPS = $(OBJ_FILES:%.o=%.d)
 
 .PHONY: all build clean run run-debug upload uart
 
+all: CMD = run
 all: kernel
 
 kernel:
-	$(MAKE) TARGET=kernel build run
+	$(MAKE) build TARGET=kernel $(CMD)
+
+bootloader:
+	$(MAKE) build TARGET=bootloader $(CMD)
 
 build: $(KERNEL_BIN)
 
@@ -70,7 +74,7 @@ run: $(KERNEL_BIN)
 	$(QEMU) -M raspi3b -kernel $(KERNEL_BIN) $(QEMU_FLAGS)
 
 upload:
-	cp $(KERNEL_BIN) /Volumes/BOOT/kernel8.img
+	cp $(KERNEL_BIN) /Volumes/BOOT/$(TARGET).img
 
 uart:
 	$(MINICOM) -D $(SERIAL)
