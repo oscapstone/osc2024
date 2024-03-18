@@ -1,7 +1,9 @@
 #ifndef __CPIO_H__
 #define __CPIO_H__
 
-#define INITRD_ADDR (0x8000000)  // QEMU: 0x8000000, Rpi3: 0x20000000
+//#define INITRD_ADDR (0x8000000)  // QEMU: 0x8000000, Rpi3: 0x20000000
+extern void* INITRD_ADDR;
+
 #include "malloc.h"
 #include "stdint.h"
 

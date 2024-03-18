@@ -38,4 +38,10 @@ uint32_t hex_ascii_to_uint32(const char *str, uint32_t size) {
     return ret;
 }
 
+uint32_t get_be_uint32(void *ptr) {
+    uint8_t *bytes = (uint8_t *)ptr;
+    return bytes[3] | bytes[2] << 8 | bytes[1] << 16 | bytes[0] << 24;
+}
+
+
 #endif

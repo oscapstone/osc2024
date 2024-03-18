@@ -9,6 +9,7 @@ LIB_SRC = \
 	$(LIB_SRC_DIR)/mbox.c \
 	$(LIB_SRC_DIR)/shell.c \
 	$(LIB_SRC_DIR)/uart.c \
+	$(LIB_SRC_DIR)/dtb.c \
 
 LIB_INCLUDES = \
 	-I $(LIB_SRC_DIR)/include \
@@ -61,7 +62,7 @@ OUT_IMG = ./$(PROJ).img
 LINKER_FILE = linker.ld
 
 CCFLAGS = -Wall -O0 -fno-stack-protector
-LDFLAGS = -T$(LINKER_FILE) -nostdlib
+LDFLAGS = -T$(LINKER_FILE) -nostdlib -nostartfiles
 
 .PHONY: clean directories out_elf run docker_cp
 all: directories $(OUT_OBJS) $(OUT_ELF) $(OUT_IMG)
@@ -121,13 +122,13 @@ $(BUILD_DIRECTORIES):
 	mkdir -p $@
 
 run:
-	qemu-system-aarch64 -M raspi3 -kernel bootloader.img -display none -serial null -serial pty
+	qemu-system-aarch64 -M raspi3 -kernel bootloader.img -display none -serial null -serial pty 
 
 run_stdio:
 	qemu-system-aarch64 -M raspi3 -kernel bootloader.img -display none -serial null -serial stdio
 
 run_cpio:
-	qemu-system-aarch64 -M raspi3 -kernel kernel.img -display none -serial null -serial stdio -initrd /root/osc2024/lab2/initramfs.cpio
+	qemu-system-aarch64 -M raspi3 -kernel kernel.img -display none -serial null -serial stdio -initrd /root/osc2024/lab2/initramfs.cpio -dtb /root/osc2024/lab2/bcm2710-rpi-3-b-plus.dtb
 
 debug:
 	qemu-system-aarch64 -M raspi3 -kernel bootloader.img -display none -serial null -serial pty -s -S

@@ -1,6 +1,7 @@
 #ifndef __SHELL_H__
 #define __SHELL_H__
 #include "cpio.h"
+#include "dtb.h"
 #include "mbox.h"
 #include "stdint.h"
 #include "reset.h"
@@ -24,6 +25,7 @@ void cmd_reboot(char* param);
 void cmd_sysinfo(char* param);
 void cmd_ls(char* param);
 void cmd_cat(char* param);
+void cmd_dtb(char* param);
 void cmd_unknown();
 
 struct func func_list[] = {
@@ -32,6 +34,7 @@ struct func func_list[] = {
     {.name = "reboot", .ptr = cmd_reboot, .desc = "reboot the device"},
     {.name = "sysinfo", .ptr = cmd_sysinfo, .desc = "get system info"},
     {.name = "ls", .ptr = cmd_ls, .desc = "list directory contents"},
-    {.name = "cat", .ptr = cmd_cat, .desc = "concatenate and print files"}};
+    {.name = "cat", .ptr = cmd_cat, .desc = "concatenate and print files"},
+    {.name = "dtb", .ptr = cmd_dtb, .desc = "show device tree"}};
 
 #endif

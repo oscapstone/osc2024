@@ -1,6 +1,7 @@
 #include "stdint.h"
 
 extern char _kernel_start[];  // 0x80000
+char* _dtb;
 
 void load_kernel() {
     uint32_t size;
@@ -21,8 +22,11 @@ void load_kernel() {
     uart_write_string("[+] Load kernel.img successfully!\r\n");
 }
 
-void bootloader_main() {
+
+void bootloader_main(char* x0) {
+    _dtb = x0;  // store x0
     uart_init();
     load_kernel();
     ((void (*)())_kernel_start)();
+    ((void (*)(char*))_kernel_start)(_dtb);
 }
