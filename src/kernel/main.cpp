@@ -1,6 +1,6 @@
-#include "board/mini-uart.h"
-#include "cmd.h"
 #include "string.h"
+#include "board/mini-uart.hpp"
+#include "cmd.hpp"
 
 extern "C" void kernel_main() {
   mini_uart_setup();

@@ -1,5 +1,5 @@
 #pragma once
-#include "util.h"
+#include "util.hpp"
 
 void mini_uart_setup();
 char mini_uart_getc();

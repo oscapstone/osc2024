@@ -1,10 +1,10 @@
-#include "nanoprintf.h"
+#include "nanoprintf.hpp"
 
 #define NANOPRINTF_IMPLEMENTATION
 #include "nanoprintf/nanoprintf.h"
 
 // TODO
-#include "util.h"
+#include "util.hpp"
 extern "C" void __trunctfsf2() {
   prog_hang();
 }

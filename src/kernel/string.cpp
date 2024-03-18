@@ -1,4 +1,4 @@
-#include "string.h"
+#include "string.hpp"
 
 void memzero(void* start, void* end) {
   for (char* i = (char*)start; i != (char*)end; i++)

@@ -1,5 +1,5 @@
 #pragma once
-#include "mmio.h"
+#include "mmio.hpp"
 
 #define MAILBOX_READ   ((addr_t)(MAILBOX_BASE))
 #define MAILBOX_STATUS ((addr_t)(MAILBOX_BASE + 0x18))

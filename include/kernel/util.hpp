@@ -11,9 +11,9 @@
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
 
-typedef unsigned int uint32_t;
-typedef unsigned long uint64_t;
-typedef volatile uint64_t addr_t;
+using uint32_t = unsigned int;
+using uint64_t = unsigned long;
+using addr_t = volatile uint64_t;
 
 // util-asm.S
 extern "C" {

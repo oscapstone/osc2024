@@ -1,9 +1,9 @@
-#include "board/mini-uart.h"
+#include "board/mini-uart.hpp"
 
-#include "board/gpio.h"
-#include "board/mmio.h"
-#include "nanoprintf.h"
-#include "util.h"
+#include "board/gpio.hpp"
+#include "board/mmio.hpp"
+#include "nanoprintf.hpp"
+#include "util.hpp"
 
 void mini_uart_setup() {
   unsigned int r = get32(GPFSEL1);

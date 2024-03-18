@@ -1,6 +1,6 @@
-#include "board/pm.h"
+#include "board/pm.hpp"
 
-#include "util.h"
+#include "util.hpp"
 
 void reset(int tick) {                 // reboot after watchdog timer expire
   set32(PM_RSTC, PM_PASSWORD | 0x20);  // full reset
