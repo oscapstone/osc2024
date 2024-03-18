@@ -27,16 +27,20 @@ ifneq ($(DEBUG),)
 	QEMU_FLAGS 	+= -s -S
 endif
 
+LIB_SRC_DIR  	= $(SRC_DIR)/lib
+CFLAGS 			+= -Iinclude/lib
+
 TARGET_BUILD_DIR 	= $(BUILD_DIR)/$(TARGET)
 TARGET_SRC_DIR  	= $(SRC_DIR)/$(TARGET)
 CFLAGS 				+= -Iinclude/$(TARGET)
 
 KERNEL_ELF 	= $(TARGET_BUILD_DIR)/$(TARGET).elf
 KERNEL_BIN 	= $(BUILD_DIR)/$(TARGET).img
+LINKER 		= $(TARGET_SRC_DIR)/linker.ld
 
-SRCS = $(shell find $(TARGET_SRC_DIR) -name '*.cpp')
-ASMS = $(shell find $(TARGET_SRC_DIR) -name '*.S')
-OBJS = $(SRCS:$(TARGET_SRC_DIR)/%.c=$(TARGET_BUILD_DIR)/%.o) $(ASMS:$(TARGET_SRC_DIR)/%.S=$(TARGET_BUILD_DIR)/%.o)
+SRCS = $(shell find $(TARGET_SRC_DIR) -name '*.cpp') $(shell find $(LIB_SRC_DIR) -name '*.cpp')
+ASMS = $(shell find $(TARGET_SRC_DIR) -name '*.S') 	 $(shell find $(LIB_SRC_DIR) -name '*.S')
+OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
@@ -53,16 +57,16 @@ bootloader:
 
 build: $(KERNEL_BIN)
 
-$(TARGET_BUILD_DIR)/%.o: $(TARGET_SRC_DIR)/%.S
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
 	$(CXX) -MMD $(CFLAGS) -c $< -o $@
 
-$(TARGET_BUILD_DIR)/%.o: $(TARGET_SRC_DIR)/%.cpp
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) -MMD $(CFLAGS) -c $< -o $@
 
-$(KERNEL_ELF): $(TARGET_SRC_DIR)/linker.ld $(OBJS)
-	$(LD) -T $(TARGET_SRC_DIR)/linker.ld $(CFLAGS) $(OBJS) -o $@
+$(KERNEL_ELF): $(LINKER) $(OBJS)
+	$(LD) -T $(LINKER) $(CFLAGS) $(OBJS) -o $@
 
 $(KERNEL_BIN): $(KERNEL_ELF)
 	$(OBJCOPY) -O binary $< $@
