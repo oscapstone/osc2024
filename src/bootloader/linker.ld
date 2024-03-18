@@ -18,6 +18,8 @@ SECTIONS {
         *(.data .data.* .gnu.linkonce.d*)
     }
 
+    __data_end = .;
+
     .bss : {
         __bss_start = .;
         *(.bss .bss.*)

@@ -5,6 +5,14 @@ void memzero(void* start, void* end) {
     *i = 0;
 }
 
+void* memcpy(void* dst, const void* src, int n) {
+  auto d = (char*)dst;
+  auto s = (const char*)src;
+  for (int i = 0; i < n; i++)
+    *d++ = *s++;
+  return dst;
+}
+
 int strlen(const char* s) {
   const char* e = s;
   while (*e)
