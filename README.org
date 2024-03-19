@@ -5,20 +5,20 @@
 | chauuyun       | A122073    | Chiao-Yun Hung |
 
 
-## Requirements
+## Requirements ##
 
 Using lab0/install_env.sh for the tools
 
 * aarch64-linux-gnu-gcc
 * qemu-system-aarch64
 
-## Course Website
+## Course Website ##
 
 IOC5226: Operating System Capstone
 
 https://oscapstone.github.io/
 
-## Labs list
+## Labs list ##
 
 Lab0: Environment Setup
 
@@ -38,9 +38,9 @@ Lab7: Virtual File System
 
 Lab8: Non-volatile Storage
 
-## How to upload lab in Github
+## How to upload lab in Github ##
 
- git add .
- git commit -m "some message"
- git push
+ git add .  
+ git commit -m "some message"  
+ git push  
 
