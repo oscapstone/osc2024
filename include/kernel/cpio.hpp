@@ -61,7 +61,7 @@ struct cpio_newc_header {
     return name_ptr() + namesize() + 2;
   }
   string_view name() {
-    return {name_ptr(), namesize()};
+    return {name_ptr(), namesize() - 1};
   }
   string_view file() {
     return {file_ptr(), filesize()};
@@ -90,6 +90,10 @@ class CPIO {
       return hedaer_;
     }
 
+    inline cpio_newc_header* operator->() const {
+      return hedaer_;
+    }
+
     bool operator==(const iterator& other) const {
       return other.hedaer_ == hedaer_;
     }
@@ -113,6 +117,7 @@ class CPIO {
   iterator end() {
     return nullptr;
   }
+  cpio_newc_header* find(const char* name);
 };
 
 extern CPIO cpio;

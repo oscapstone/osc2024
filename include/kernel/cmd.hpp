@@ -7,6 +7,7 @@ int cmd_hello(int, char*[]);
 int cmd_hwinfo(int, char*[]);
 int cmd_reboot(int, char*[]);
 int cmd_ls(int, char*[]);
+int cmd_cat(int, char*[]);
 
 using cmd_fp = int (*)(int, char*[]);
 

@@ -20,11 +20,21 @@ class string_view {
 
  public:
   using iterator = char*;
-  string_view(char* buf, int size) : buf_(buf), size_(size) {}
+  // TODO: const char* -> chat*
+  string_view(const char* buf, int size = -1)
+      : buf_((char*)buf), size_(size == -1 ? strlen(buf) : size) {}
   iterator begin() {
     return buf_;
   }
   iterator end() {
     return buf_ + size_;
   }
+  char* data() {
+    return buf_;
+  }
+  int size() const {
+    return size_;
+  }
 };
+
+bool operator==(string_view, string_view);

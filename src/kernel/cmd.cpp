@@ -30,6 +30,11 @@ const Cmd cmds[] = {
         ._help = "list directory contents",
         ._fp = cmd_ls,
     },
+    {
+        ._name = "cat",
+        ._help = "concatenate and print files",
+        ._fp = cmd_cat,
+    },
 };
 constexpr int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

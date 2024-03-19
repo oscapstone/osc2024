@@ -13,3 +13,11 @@ cpio_newc_header* cpio_newc_header::next() {
   }
   return nullptr;
 }
+
+cpio_newc_header* CPIO::find(const char* name) {
+  for (auto it = begin(); it != end(); it++) {
+    if (it->name() == name)
+      return *it;
+  }
+  return nullptr;
+}

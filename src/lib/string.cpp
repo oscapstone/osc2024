@@ -76,3 +76,9 @@ long strtol(const char* s, const char** endptr, int base, int n) {
     *endptr = s;
   return r * x;
 }
+
+bool operator==(string_view a, string_view b) {
+  if (a.size() != b.size())
+    return false;
+  return !memcmp(a.data(), b.data(), a.size());
+}
