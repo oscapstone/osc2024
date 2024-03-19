@@ -13,6 +13,15 @@ void* memcpy(void* dst, const void* src, int n) {
   return dst;
 }
 
+int memcmp(const void* s1, const void* s2, int n) {
+  auto s1_ = (const unsigned char*)s1, s2_ = (const unsigned char*)s2;
+  int d;
+  for (int i = 0; i < n; i++)
+    if ((d = *s1_++ - *s2_++) != 0)
+      return d;
+  return 0;
+}
+
 int strlen(const char* s) {
   const char* e = s;
   while (*e)
@@ -34,4 +43,34 @@ int strncmp(const char* s1, const char* s2, int n) {
   for (; i < n && (d = (c1 = *s1) - (c2 = *s2)) == 0 && c1 && c2; i++)
     s1++, s2++;
   return i == n ? 0 : d;
+}
+
+long strtol(const char* s, const char** endptr, int base, int n) {
+  int r = 0, x = 1;
+  char c;
+  unsigned int d;
+  if (*s == '-')
+    x = -1, s++;
+  else if (*s == '+')
+    s++;
+  if (base == 0) {
+    if (*s != '0')
+      base = 10;
+    else if (*(s + 1) != 'x')
+      base = 8;
+    else
+      base = 16;
+  }
+  for (int i = 0; (n == 0 or i < n) and (c = *s++); i++) {
+    if ('0' <= c and c <= '9')
+      d = c - '0';
+    else if ('a' <= c and c <= 'z')
+      d = c - 'a' + 10;
+    else if ('A' <= c and c <= 'Z')
+      d = c - 'A' + 10;
+    else
+      break;
+    r = r * base + d;
+  }
+  return r * x;
 }

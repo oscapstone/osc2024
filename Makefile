@@ -47,6 +47,7 @@ KERNEL_ELF 	= $(BUILD_DIR)/$(TARGET).elf
 KERNEL_BIN 	= $(DISK_DIR)/$(TARGET).img
 LINKER 		= $(TARGET_SRC_DIR)/linker.ld
 INITFSCPIO 	= $(DISK_DIR)/initramfs.cpio
+QEMU_FLAGS 	+= -initrd $(INITFSCPIO)
 
 SRCS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.cpp')
 ASMS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.S')
@@ -82,7 +83,7 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 
 fs: $(INITFSCPIO)
 
-$(INITFSCPIO):
+$(INITFSCPIO): rootfs/*
 	cd rootfs && find . | cpio -o -H newc > ../$@
 
 clean:
