@@ -13,7 +13,7 @@
 
 using uint32_t = unsigned int;
 using uint64_t = unsigned long;
-using addr_t = volatile uint64_t;
+using addr_t = volatile char*;
 
 // util-asm.S
 extern "C" {

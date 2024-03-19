@@ -10,7 +10,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -mcpu=cortex-a53 \
 			  --target=aarch64-unknown-none-elf \
 			  -D_LIBCPP_HAS_NO_THREADS \
-			  -std=c++17 \
+			  -std=c++20 \
 			  -nostdlib -Os -fPIE
 QEMU_FLAGS 	= -display none -smp cpus=4
 
