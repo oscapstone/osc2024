@@ -1,7 +1,5 @@
 #include "cpio.hpp"
 
-CPIO initramfs((char*)0x20000000);
-
 cpio_newc_header* cpio_newc_header::next() {
   char* nxt = isdir() ? name().end() : file().end();
 

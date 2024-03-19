@@ -75,30 +75,24 @@ class CPIO {
   class iterator {
    public:
     iterator(char* header) : hedaer_((cpio_newc_header*)header) {}
-
     inline iterator& operator++() {
       hedaer_ = hedaer_->next();
       return *this;
     }
-
     inline iterator operator++(int) {
       iterator copy = *this;
       ++*this;
       return copy;
     }
-
     inline cpio_newc_header* operator*() const {
       return hedaer_;
     }
-
     inline cpio_newc_header* operator->() const {
       return hedaer_;
     }
-
     bool operator==(const iterator& other) const {
       return other.hedaer_ == hedaer_;
     }
-
     bool operator!=(const iterator& other) const {
       return !(*this == other);
     }
@@ -108,10 +102,12 @@ class CPIO {
   };
 
  private:
-  char* const cpio_addr_;
+  char* cpio_addr_ = nullptr;
 
  public:
-  CPIO(char* cpio_addr) : cpio_addr_(cpio_addr) {}
+  void init(char* cpio_addr) {
+    cpio_addr_ = cpio_addr;
+  }
   iterator begin() {
     return cpio_addr_;
   }
@@ -120,5 +116,3 @@ class CPIO {
   }
   cpio_newc_header* find(const char* name);
 };
-
-extern CPIO initramfs;
