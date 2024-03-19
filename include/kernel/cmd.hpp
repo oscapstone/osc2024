@@ -1,14 +1,14 @@
 #pragma once
 
-void runcmd(const char*, int);
+int runcmd(const char*, int);
 
-void cmd_help();
-void cmd_hello();
-void cmd_hwinfo();
-void cmd_reboot();
-void cmd_ls();
+int cmd_help(int, char*[]);
+int cmd_hello(int, char*[]);
+int cmd_hwinfo(int, char*[]);
+int cmd_reboot(int, char*[]);
+int cmd_ls(int, char*[]);
 
-using cmd_fp = void (*)();
+using cmd_fp = int (*)(int, char*[]);
 
 struct Cmd {
   const char* _name;
