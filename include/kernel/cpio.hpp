@@ -2,6 +2,7 @@
 
 #include "string.hpp"
 
+// ref: https://man.freebsd.org/cgi/man.cgi?query=cpio&sektion=5
 struct cpio_newc_header {
   char c_magic[6];
   char c_ino[8];
@@ -120,4 +121,4 @@ class CPIO {
   cpio_newc_header* find(const char* name);
 };
 
-extern CPIO cpio;
+extern CPIO initramfs;

@@ -14,7 +14,7 @@ int cmd_cat(int argc, char* argv[]) {
   } else {
     for (int i = 1; i < argc; i++) {
       auto name = argv[i];
-      auto f = cpio.find(name);
+      auto f = initramfs.find(name);
       if (f == nullptr) {
         r = -1;
         mini_uart_printf("cat: %s: No such file or directory\n", name);
