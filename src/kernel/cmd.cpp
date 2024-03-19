@@ -3,45 +3,45 @@
 #include "board/mini-uart.hpp"
 #include "string.hpp"
 
-int help_idx = 0;
+// TODO: not relocatable
 const Cmd cmds[] = {
     {
-        ._name = "help",
-        ._help = "print this help menu",
-        ._fp = cmd_help,
+        .name = "help",
+        .help = "print this help menu",
+        .fp = cmd_help,
     },
     {
-        ._name = "hello",
-        ._help = "print Hello World!",
-        ._fp = cmd_hello,
+        .name = "hello",
+        .help = "print Hello World!",
+        .fp = cmd_hello,
     },
     {
-        ._name = "hwinfo",
-        ._help = "print hardware's infomation",
-        ._fp = cmd_hwinfo,
+        .name = "hwinfo",
+        .help = "print hardware's infomation",
+        .fp = cmd_hwinfo,
     },
     {
-        ._name = "reboot",
-        ._help = "reboot the device",
-        ._fp = cmd_reboot,
+        .name = "reboot",
+        .help = "reboot the device",
+        .fp = cmd_reboot,
     },
     {
-        ._name = "ls",
-        ._help = "list directory contents",
-        ._fp = cmd_ls,
+        .name = "ls",
+        .help = "list directory contents",
+        .fp = cmd_ls,
     },
     {
-        ._name = "cat",
-        ._help = "concatenate and print files",
-        ._fp = cmd_cat,
+        .name = "cat",
+        .help = "concatenate and print files",
+        .fp = cmd_cat,
     },
     {
-        ._name = "alloc",
-        ._help = "memory allocation",
-        ._fp = cmd_alloc,
+        .name = "alloc",
+        .help = "memory allocation",
+        .fp = cmd_alloc,
     },
 };
-constexpr int ncmd = sizeof(cmds) / sizeof(cmds[0]);
+const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 
 int runcmd(const char* buf, int len) {
   if (len <= 0)
@@ -65,14 +65,14 @@ int runcmd(const char* buf, int len) {
   const Cmd* cmd = nullptr;
   for (int i = 0; i < ncmd; i++) {
     auto it = &cmds[i];
-    if (!strcmp(argv[0], it->name())) {
+    if (!strcmp(argv[0], it->name)) {
       cmd = it;
       break;
     }
   }
 
   if (cmd != nullptr) {
-    return cmd->fp()(argc, argv);
+    return cmd->fp(argc, argv);
   } else {
     mini_uart_printf("command not found: %s\n", buf);
     return -1;
