@@ -25,6 +25,11 @@ const Cmd cmds[] = {
         ._help = "reboot the device",
         ._fp = cmd_reboot,
     },
+    {
+        ._name = "ls",
+        ._help = "list directory contents",
+        ._fp = cmd_ls,
+    },
 };
 constexpr int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

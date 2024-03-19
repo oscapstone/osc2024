@@ -114,3 +114,5 @@ class CPIO {
     return nullptr;
   }
 };
+
+extern CPIO cpio;
