@@ -72,5 +72,7 @@ long strtol(const char* s, const char** endptr, int base, int n) {
       break;
     r = r * base + d;
   }
+  if (endptr)
+    *endptr = s;
   return r * x;
 }

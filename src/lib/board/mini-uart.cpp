@@ -101,7 +101,7 @@ int mini_uart_getline_echo(char* buffer, int length) {
   return r;
 }
 
-void mini_uart_npf_putc(int c, void* ctx) {
+void mini_uart_npf_putc(int c, void* /* ctx */) {
   if (c == '\n')
     mini_uart_putc('\r');
   mini_uart_putc(c);
