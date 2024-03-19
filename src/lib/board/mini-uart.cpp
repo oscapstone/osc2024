@@ -55,18 +55,21 @@ char mini_uart_getc() {
   return c == '\r' ? '\n' : c;
 }
 
-void mini_uart_putc(char c) {
+void mini_uart_putc_raw(char c) {
   while ((get32(AUX_MU_LSR_REG) & (1 << 5)) == 0)
     NOP;
   set32(AUX_MU_IO_REG, c);
 }
 
+void mini_uart_putc(char c) {
+  if (c == '\n')
+    mini_uart_putc_raw('\r');
+  mini_uart_putc_raw(c);
+}
+
 void mini_uart_puts(const char* s) {
-  for (char c; (c = *s); s++) {
-    if (c == '\n')
-      mini_uart_putc('\r');
+  for (char c; (c = *s); s++)
     mini_uart_putc(c);
-  }
 }
 
 int mini_uart_getline_echo(char* buffer, int length) {
@@ -76,8 +79,8 @@ int mini_uart_getline_echo(char* buffer, int length) {
   for (char c; r < length;) {
     c = mini_uart_getc();
     if (c == '\n') {
-      mini_uart_putc('\r');
-      mini_uart_putc('\n');
+      mini_uart_putc_raw('\r');
+      mini_uart_putc_raw('\n');
       break;
     }
     if (r + 1 == length)
@@ -94,7 +97,7 @@ int mini_uart_getline_echo(char* buffer, int length) {
         break;
       default:
         buffer[r++] = c;
-        mini_uart_putc(c);
+        mini_uart_putc_raw(c);
     }
   }
   buffer[r] = '\0';
@@ -102,8 +105,6 @@ int mini_uart_getline_echo(char* buffer, int length) {
 }
 
 void mini_uart_npf_putc(int c, void* /* ctx */) {
-  if (c == '\n')
-    mini_uart_putc('\r');
   mini_uart_putc(c);
 }
 
