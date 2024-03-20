@@ -1,10 +1,10 @@
 #include <stdint.h>
 
-#include "initrd.h"
-#include "uart.h"
-#include "string.h"
-#include "utils.h"
 #include "alloc.h"
+#include "initrd.h"
+#include "string.h"
+#include "uart.h"
+#include "utils.h"
 
 static void *RAMFS_BASE = (void *)0x8000000;
 

@@ -1,7 +1,7 @@
 #include "devtree.h"
+#include "string.h"
 #include "uart.h"
 #include "utils.h"
-#include "string.h"
 
 // Assign a non-zero value to be stored in the .data section
 void *DTB_BASE = (void *)0xF;

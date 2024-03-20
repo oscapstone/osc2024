@@ -1,9 +1,9 @@
 #include "cmd.h"
+#include "initrd.h"
+#include "mbox.h"
+#include "shell.h"
 #include "string.h"
 #include "uart.h"
-#include "mbox.h"
-#include "initrd.h"
-#include "shell.h"
 
 struct command commands[] = {
     { .name = "help", .help = "print this help menu", .func = help },

@@ -1,7 +1,7 @@
 #include "shell.h"
-#include "uart.h"
-#include "string.h"
 #include "cmd.h"
+#include "string.h"
+#include "uart.h"
 
 void run_shell()
 {

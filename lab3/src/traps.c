@@ -24,9 +24,6 @@ void exception_entry()
     uart_puts(" esr_el1: ");
     uart_hex(esr_el1);
     uart_putc('\n');
-
-    while (1)
-        ;
 }
 
 void invalid_entry()
