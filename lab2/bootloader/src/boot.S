@@ -1,27 +1,3 @@
-/* ARMv8 Assembly Instruction */
-/**
-
-mov x0, x1
-    sets: x0 = x1
-ldr x0, <addr>
-    load 32bits from <addr> to x0
-ldr w0, <addr>
-    load 64bits from <addr> to w0
-cbz x0, <label>
-    if x0 == 0, jump to <label>
-cbnz x0, <label>
-    if x0 != 0, jump to <label>
-str x0 [x1] #8
-    store x0 in addr<x1> then x1=x1+8
-b   <label>
-    jump to <label>
-bl  <label>
-    jump to <label> and copies bl's next instruction into link register
-wfe
-    Wait for event, core in low-power state (power on, clk off)
-
-**/
-
 .section ".text.boot"
 
 .global _start
