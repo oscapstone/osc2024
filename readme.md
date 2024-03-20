@@ -14,9 +14,9 @@ Using lab0/install_env.sh for the tools
 
 ## Course Website
 
-IOC5226: Operating System Capstone  
+Operating System Capstone  
 
-https://oscapstone.github.io/
+https://nycu-caslab.github.io/OSC2024/
 
 ## Labs list
 
