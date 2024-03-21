@@ -6,7 +6,7 @@
 void run_shell()
 {
     while (1) {
-        char buffer[MAX_BUF_SIZE + 1];
+        char buffer[SHELL_BUF_SIZE];
 
         uart_puts("# ");
         read_user_input(buffer);

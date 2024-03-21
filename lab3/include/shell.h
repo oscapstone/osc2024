@@ -1,7 +1,7 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-#define MAX_BUF_SIZE 256
+#define SHELL_BUF_SIZE 256
 
 void run_shell();
 void read_user_input(char *buf);

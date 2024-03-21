@@ -93,7 +93,7 @@ void ls()
 void cat()
 {
     // Get filename from user input
-    char buffer[MAX_BUF_SIZE + 1];
+    char buffer[SHELL_BUF_SIZE];
     uart_puts("Filename: ");
     read_user_input(buffer);
 
@@ -103,7 +103,7 @@ void cat()
 void exec()
 {
     // Get filename from user input
-    char buffer[MAX_BUF_SIZE + 1];
+    char buffer[SHELL_BUF_SIZE];
     uart_puts("Filename: ");
     read_user_input(buffer);
 

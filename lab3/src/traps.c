@@ -1,32 +1,33 @@
+#include <stdint.h>
+
 #include "uart.h"
 
-void exception_entry()
+void print_registers(uint64_t elr, uint64_t esr, uint64_t spsr)
 {
-    uart_puts("Exception:\n");
-
     // Print spsr_el1
-    unsigned long long spsr_el1 = 0;
-    asm volatile("mrs %0, spsr_el1" : "=r"(spsr_el1));
     uart_puts("spsr_el1: ");
-    uart_hex(spsr_el1);
+    uart_hex(spsr);
     uart_putc('\n');
 
     // Print elr_el1
-    unsigned long long elr_el1 = 0;
-    asm volatile("mrs %0, elr_el1" : "=r"(elr_el1));
     uart_puts(" elr_el1: ");
-    uart_hex(elr_el1);
+    uart_hex(elr);
     uart_putc('\n');
 
     // Print esr_el1
-    unsigned long long esr_el1 = 0;
-    asm volatile("mrs %0, esr_el1" : "=r"(esr_el1));
     uart_puts(" esr_el1: ");
-    uart_hex(esr_el1);
-    uart_putc('\n');
+    uart_hex(esr);
+    uart_puts("\n\n");
 }
 
-void invalid_entry()
+void exception_entry(uint64_t elr, uint64_t esr, uint64_t spsr)
+{
+    uart_puts("Exception Handler\n");
+    print_registers(elr, esr, spsr);
+}
+
+void invalid_entry(uint64_t elr, uint64_t esr, uint64_t spsr)
 {
     uart_puts("Exception caught but its handler is not implemented.\n");
+    print_registers(elr, esr, spsr);
 }

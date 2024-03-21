@@ -22,11 +22,11 @@ void irq_entry()
     // temporarily disable interrupts
     disable_interrupt();
 
-    // if (*IRQ_PENDING_1 & (1 << 29)) {
-    //     uart_irq_handler();
-    // } else {
-    //     timer_irq_handler();
-    // }
+    if (*IRQ_PENDING_1 & (1 << 29)) {
+        uart_irq_handler();
+    } else {
+        timer_irq_handler();
+    }
 
     enable_interrupt();
 }

@@ -4,12 +4,12 @@
 void timer_enable_interrupt()
 {
     asm volatile("mov x0, 1;"
-                 "msr cntp_ctl_el0, x0;"
+                 "msr cntp_ctl_el0, x0;" // Enable
                  "mrs x0, cntfrq_el0;"
-                 "msr cntp_tval_el0, x0;"
+                 "msr cntp_tval_el0, x0;" // Set expired time
                  "mov x0, 2;"
                  "ldr x1, =0x40000040;"
-                 "str w0, [x1];");
+                 "str w0, [x1];"); // Unmask timer interrupt
 }
 
 void timer_disable_interrupt()
@@ -19,6 +19,7 @@ void timer_disable_interrupt()
 
 void timer_irq_handler()
 {
+    // TODO: Add comments!
     asm volatile("mrs x0, cntfrq_el0;"
                  "msr cntp_tval_el0, x0;");
 
@@ -32,6 +33,7 @@ void timer_irq_handler()
     uart_hex(seconds);
     uart_putc('\n');
 
+    // Set the next timeout to 2 seconds later
     unsigned long long wait = cntfrq_el0 * 2;
     asm volatile("msr cntp_tval_el0, %0" ::"r"(wait));
 }

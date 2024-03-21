@@ -44,7 +44,7 @@ halt:
 from_el2_to_el1:
     mov x0, (1 << 31)
     msr hcr_el2, x0 // EL1 uses aarch64
-    mov x0, 0x345
+    mov x0, 0x3C5
     msr spsr_el2, x0
     msr elr_el2, lr
     eret // return to EL1

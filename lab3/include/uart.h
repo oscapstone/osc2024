@@ -16,6 +16,8 @@
 #define AUX_MU_STAT    (volatile unsigned int *)(MMIO_BASE + 0x00215064)
 #define AUX_MU_BAUD    (volatile unsigned int *)(MMIO_BASE + 0x00215068)
 
+#define UART_BUF_SIZE 1024
+
 void uart_init();
 char uart_getc();
 void uart_putc(char c);
@@ -26,7 +28,7 @@ void uart_enable_interrupt();
 void uart_disable_interrupt();
 void uart_irq_handler();
 
-void uart_async_read();
-void uart_async_write();
+void uart_async_read(char *buf, int len);
+void uart_async_write(const char *s);
 
 #endif // UART_H

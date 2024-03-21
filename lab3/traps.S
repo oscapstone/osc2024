@@ -42,6 +42,9 @@
 
 exception_handler:
     save_all
+    mrs x0, elr_el1
+    mrs x1, esr_el1
+    mrs x2, spsr_el1
     bl exception_entry // defined in traps.c
     load_all
     eret
@@ -54,6 +57,9 @@ irq_handler:
 
 invalid_exc_handler:
     save_all
+    mrs x0, elr_el1
+    mrs x1, esr_el1
+    mrs x2, spsr_el1
     bl invalid_entry // defined in traps.c
     load_all
     eret
