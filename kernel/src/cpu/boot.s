@@ -1,10 +1,10 @@
 .section .text._start
 
 _stack_start    = 0x90000
-_bss_start      = 0x20000000
-_bss_end        = 0x20001000
 
-    .global _start
+.global _start
+.global _bss_start
+.global _bss_end
 
 _start:
     mrs x0, mpidr_el1
