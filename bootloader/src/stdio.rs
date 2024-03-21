@@ -50,7 +50,7 @@ pub fn print_hex(n: u32) {
     println("");
 }
 
-pub fn print_dec(n: u32) {
+pub fn print_dec(n: u32, newline: bool) {
     let mut n = n;
     let mut buf = [0u8; 10];
     let mut idx = 0;
@@ -70,5 +70,7 @@ pub fn print_dec(n: u32) {
             }
         }
     }
-    println("");
+    if newline {
+        println("");
+    }
 }

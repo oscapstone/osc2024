@@ -27,6 +27,9 @@ pub fn load_kernel() {
                     idle_time += 1;
                     if idle_time > 100000 {
                         println("");
+                        print("Received ");
+                        print_dec(count, false);
+                        println(" bytes.");
                         return;
                     }
                 }
