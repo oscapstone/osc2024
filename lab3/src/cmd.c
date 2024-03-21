@@ -49,6 +49,7 @@ void reboot()
 
 void lshw()
 {
+    // FIXME: Extract the functions to mbox.c
 #define GET_BOARD_REVISION 0x00010002
     // Get board revision
     mbox[0] = 7 * 4;

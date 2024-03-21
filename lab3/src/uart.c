@@ -71,9 +71,8 @@ void uart_puts(const char *s)
 
 void uart_enable_interrupt()
 {
-    *AUX_MU_IER |= 1;
-    *AUX_MU_IER |= 2;
-    *ENABLE_IRQS_1 |= 1 << 29;
+    *AUX_MU_IER |= 3;          // Enable transmit & receive interrupts
+    *ENABLE_IRQS_1 |= 1 << 29; // Enable AUX interrupts (Bit 29)
 }
 
 void uart_disable_interrupt()
@@ -82,5 +81,13 @@ void uart_disable_interrupt()
 }
 
 void uart_irq_handler()
+{
+}
+
+void uart_async_read()
+{
+}
+
+void uart_async_write()
 {
 }
