@@ -1,13 +1,15 @@
+project_name = kernel
+
 # Define the default target. When you make with no argument, 'build' will be the target.
 .PHONY: all
 all: build
 
-target/aarch64-unknown-none-softfloat/release/testing:
+target/aarch64-unknown-none-softfloat/release/:
 	cargo rustc --release
 
-kernel8.img: target/aarch64-unknown-none-softfloat/release/testing
-	# aarch64-linux-gnu-objcopy -O binary target/aarch64-unknown-none-softfloat/release/testing kernel8.img
-	aarch64-elf-objcopy -O binary target/aarch64-unknown-none-softfloat/release/testing kernel8.img
+kernel8.img: target/aarch64-unknown-none-softfloat/release/$(project_name)
+	# aarch64-linux-gnu-objcopy -O binary target/aarch64-unknown-none-softfloat/release/$(project_name) kernel8.img
+	aarch64-elf-objcopy -O binary target/aarch64-unknown-none-softfloat/release/$(project_name) kernel8.img
 
 
 # Build the project using Cargo and convert it to a binary format.
@@ -27,7 +29,7 @@ debug: build
 # Genetate object file
 .PHONY: obj
 obj: build
-	objdump target/aarch64-unknown-none-softfloat/release/testing -d > obj.txt
+	objdump target/aarch64-unknown-none-softfloat/release/$(project_name) -d > obj.txt
 
 .PHONY: clean
 clean:
