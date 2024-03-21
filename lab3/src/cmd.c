@@ -13,6 +13,7 @@ struct command commands[] = {
     { .name = "ls", .help = "list ramdisk files", .func = ls },
     { .name = "cat", .help = "print ramdisk file", .func = cat },
     { .name = "exec", .help = "execute a program", .func = exec },
+    { .name = "clear", .help = "clear the screen", .func = clear },
     { .name = "NULL" } // Must put a NULL command at the end!
 };
 
@@ -108,4 +109,9 @@ void exec()
     read_user_input(buffer);
 
     initrd_exec(buffer);
+}
+
+void clear()
+{
+    uart_puts("\033[2J\033[H");
 }

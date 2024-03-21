@@ -17,5 +17,6 @@ void lshw();
 void ls();
 void cat();
 void exec();
+void clear();
 
 #endif // CMD_H

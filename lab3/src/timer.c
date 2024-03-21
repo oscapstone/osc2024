@@ -20,9 +20,6 @@ void timer_disable_interrupt()
 void timer_irq_handler()
 {
     // TODO: Add comments!
-    asm volatile("mrs x0, cntfrq_el0;"
-                 "msr cntp_tval_el0, x0;");
-
     unsigned long long cntpct_el0 = 0;
     asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0));
     unsigned long long cntfrq_el0 = 0;
