@@ -4,7 +4,7 @@ project_name = kernel
 .PHONY: all
 all: build
 
-target/aarch64-unknown-none-softfloat/release/:
+target/aarch64-unknown-none-softfloat/release/$(project_name):
 	cargo rustc --release
 
 kernel8.img: target/aarch64-unknown-none-softfloat/release/$(project_name)
