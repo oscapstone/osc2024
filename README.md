@@ -9,6 +9,10 @@
 * a cross-compiler for aarch64
 * (optional) qemu-system-arm
 
+```
+rustup target add aarch64-unknown-none-softfloat
+```
+
 ## Build 
 
 ```

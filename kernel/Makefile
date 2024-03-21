@@ -3,10 +3,12 @@
 all: build
 
 target/aarch64-unknown-none-softfloat/release/testing:
-	cargo rustc --release --target aarch64-unknown-none-softfloat
+	cargo rustc --release
 
 kernel8.img: target/aarch64-unknown-none-softfloat/release/testing
-	aarch64-linux-gnu-objcopy -O binary target/aarch64-unknown-none-softfloat/release/testing kernel8.img
+	# aarch64-linux-gnu-objcopy -O binary target/aarch64-unknown-none-softfloat/release/testing kernel8.img
+	aarch64-elf-objcopy -O binary target/aarch64-unknown-none-softfloat/release/testing kernel8.img
+
 
 # Build the project using Cargo and convert it to a binary format.
 .PHONY: build
