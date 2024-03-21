@@ -46,11 +46,7 @@ pub fn get(tag: MailboxTag) -> (u32, u32) {
     let mut mailbox = [0u32; 8 + 4];
     let mut start_idx = mailbox.as_ptr() as usize;
 
-    print_hex(start_idx as u32);
-
     start_idx = (0x10 - (start_idx & 0xF)) / 4 % 4;
-
-    print_hex(start_idx as u32);
 
     match tag {
         MailboxTag::GetBoardRevision => {
