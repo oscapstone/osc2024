@@ -1,62 +1,109 @@
+#include "types.h"
+#include "cpio.h"
+#include "mini_uart.h"
+#include "memory.h"
+#include "string.h"
 
-
-// add memory compare, gcc has a built-in for that, clang needs implementation
-#ifdef __clang__
-int memcmp(void *s1, void *s2, int n)
-{
-    unsigned char *a=s1,*b=s2;
-    while(n-->0){ if(*a!=*b) { return *a-*b; } a++; b++; }
-    return 0;
-}
-#else
-#define memcmp __builtin_memcmp
-#endif
-
-
-/*
-    https://man.freebsd.org/cgi/man.cgi?query=cpio
-    https://man.freebsd.org/cgi/man.cgi?query=cpio&sektion=5
-
-    CPIO New ASCII Format
-        The  "new"  ASCII format uses 8-byte hexadecimal fields for all numbers
-        and separates device numbers into separate fields for major  and  minor
-        numbers.
-
-    magic   The string "070701".
-    check   This field is always set to zero  by  writers  and  ignored  by readers.
-*/
 
 typedef struct {
-    char    c_magic[6];         /* Magic header '070701'. */
-    char    c_ino[8];           /* "i-node" number. */
-    char    c_mode[8];          /* Permisions. */
-    char    c_uid[8];           /* User ID. */
-    char    c_gid[8];           /* Group ID. */
-    char    c_nlink[8];         /* Number of hard links. */
-    char    c_mtime[8];         /* Modification time. */
-    char    c_filesize[8];      /* File size. */
-    char    c_devmajor[8];      /* File size. */
-    char    c_devminor[8];
-    char    c_rdevmajor[8];
-    char    c_rdevminor[8];
-    char    c_namesize[8];
-    char    c_check[8];
-} cpio_newc_header;
+
+    byteptr_t name;
+    byteptr_t content;
+    uint32_t size;
+
+} finfo_t;
+
+typedef finfo_t* finfoptr_t;
 
 
-/**
- * Helper function to convert ASCII octal number into binary
- * s string
- * n number of digits
- */
-int oct2bin(char *s, int n)
+static byteptr_t
+_initrd_next(const byteptr_t cpio_addr, finfoptr_t info)
 {
-    int r=0;
-    while(n-->0) {
-        r<<=3;
-        r+=*s++-'0';
+    byteptr_t _addr = (byteptr_t) cpio_addr;
+
+    if (!memory_cmp(_addr, "070701", 6) && memory_cmp(_addr + sizeof(cpio_t), "TRAILER!!!", 10)) {
+
+        cpio_ptr_t header = (cpio_ptr_t) _addr;
+
+        uint64_t name_size = ascii_to_uint64(header->c_namesize, (int) sizeof(header->c_namesize));
+        uint64_t file_size = ascii_to_uint64(header->c_filesize, (int) sizeof(header->c_filesize));
+
+        uint64_t content_offset  = (uint64_t) memory_align((const byteptr_t) (sizeof(cpio_t) + name_size), 4);
+        uint64_t total_size      = (uint64_t) memory_align((const byteptr_t) (content_offset + file_size), 4);
+
+        info->name = _addr + sizeof(cpio_t);
+        info->size = file_size;
+        info->content = _addr + content_offset;
+
+        return _addr + total_size;
     }
-    return r;
+
+    return nullptr;
 }
 
+
+static byteptr_t
+_initrd_find(const byteptr_t cpio_addr, const byteptr_t name, finfoptr_t info_ptr)
+{
+    byteptr_t curr = (byteptr_t) cpio_addr;
+    byteptr_t next = _initrd_next(cpio_addr, info_ptr);
+
+    while (next) {
+        if (str_eql(info_ptr->name, name)) {
+            return curr;
+        }
+        curr = next;
+        next = _initrd_next(curr, info_ptr);
+    }
+    return nullptr;
+}
+
+
+static byteptr_t _cpio_ptr = nullptr; 
+
+byteptr_t
+initrd_get_ptr()
+{
+    return _cpio_ptr;
+}
+
+
+void
+initrd_set_ptr(byteptr_t ptr)
+{
+    _cpio_ptr = ptr;
+}
+
+
+void 
+initrd_list() 
+{
+    byteptr_t cpio_addr = initrd_get_ptr(); 
+    finfo_t info;
+    byteptr_t _addr = _initrd_next(cpio_addr, &info);
+
+    while (_addr) {
+        mini_uart_putln(info.name);
+        _addr = _initrd_next(_addr, &info);
+    }
+}
+
+
+void 
+initrd_cat(const byteptr_t name)
+{
+    byteptr_t cpio_addr = initrd_get_ptr(); 
+    finfo_t info;
+    byteptr_t file = _initrd_find(cpio_addr, name, &info);
+
+    if (file) {
+        if (info.size == 0) mini_uart_putln("It is a directory.");
+        else {
+            mini_uart_putln(info.content);
+        }
+    } 
+    else {
+        mini_uart_putln("No such file or directory.");
+    }
+}
 

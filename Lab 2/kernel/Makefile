@@ -2,7 +2,7 @@ TARGET = kernel8
 
 ARMGNU ?= aarch64-linux-gnu
 
-CFLAGS = -MMD -Wall -nostdlib -nostartfiles -ffreestanding -mgeneral-regs-only -Iinclude
+CFLAGS = -MMD -Wall -nostdlib -nostartfiles -ffreestanding -mgeneral-regs-only -Iinclude -Wno-pointer-to-int-cast
 ASMOPS = -MMD
 
 OUT_DIR = out
@@ -19,8 +19,8 @@ clean:
 
 remake: clean all
 
+
 $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
-	mkdir -p $(@D)
 	$(ARMGNU)-gcc $(CFLAGS) -c $< -o $@	
 
 $(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
@@ -34,24 +34,18 @@ OBJ_FILES += $(ASM_FILES:$(SRC_DIR)/%.S=$(BUILD_DIR)/%_s.o)
 DEP_FILES = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
+SD_DIR = ../sd
 
-FS_DIR = rootfs
-
-ramdisk: $(BUILD_DIR)/initramfs.cpio
-	$(ARMGNU)-ld -r -b binary -o $(BUILD_DIR)/rd.o $<
-
-$(BUILD_DIR)/initramfs.cpio:
-	mkdir -p $(@D)
-	find $(FS_DIR) | cpio -o -H newc > $@
+ramdisk:
+	mkdir -p $(BUILD_DIR)
+	$(ARMGNU)-ld -r -b binary -o $(BUILD_DIR)/rd.o $(SD_DIR)/initrd.cpio
 
 OBJ_FILES += $(BUILD_DIR)/rd.o
-
 
 $(TARGET).img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 	mkdir -p $(OUT_DIR)
 	$(ARMGNU)-ld -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/$(TARGET).elf $(OBJ_FILES) 
 	$(ARMGNU)-objcopy $(BUILD_DIR)/$(TARGET).elf -O binary $(OUT_DIR)/$(TARGET).img
 
-
 run: $(OUT_DIR)/$(TARGET).img
-	qemu-system-aarch64 -M raspi3b -kernel $(OUT_DIR)/$(TARGET).img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel $(OUT_DIR)/$(TARGET).img -display none -serial null -serial stdio -initrd $(SD_DIR)/initrd.cpio -dtb $(SD_DIR)/bcm2710-rpi-3-b-plus.dtb

@@ -1,33 +1,43 @@
-#include <stddef.h>
+#include "types.h"
 #include "mini_uart.h"
 #include "string.h"
 
 
 #define BUFFER_MAX_SIZE     64
 
-char *read_command(char *buffer);
-void parse_command(char *buffer);
 
-void print_help();
+static const byteptr_t kernel_addr = (byteptr_t) 0x80000;
 
-
-void shell() 
+static void 
+load_image(uint32_t len)
 {
-    while (1)
+    byteptr_t cur_ptr = (byteptr_t) kernel_addr;
+    while (len--)
     {
-        char buffer[BUFFER_MAX_SIZE];
-        read_command(buffer);
-        parse_command(buffer);
+        *cur_ptr++ = mini_uart_getc();
+        mini_uart_putc('#');
     }
+    mini_uart_putln("\ndone.");
 }
 
 
-char *read_command(char *buffer)
+void 
+print_help()
 {
-    size_t index = 0;
-    char r = 0;
-    mini_uart_putln("");
-    mini_uart_puts("$ ");
+    mini_uart_puts("help\t| ");
+    mini_uart_putln("print this help menu");
+    mini_uart_puts("load\t| ");
+    mini_uart_putln("wait and recieve the kernel image from uart");
+    mini_uart_puts("boot\t| ");
+    mini_uart_putln("jump to kernel");
+}
+
+
+byteptr_t
+read_command(byteptr_t buffer)
+{
+    uint32_t index = 0;
+    byte_t r = 0;
     do {
         r = mini_uart_getc();
         mini_uart_putc(r);
@@ -35,19 +45,29 @@ char *read_command(char *buffer)
     } while (index < (BUFFER_MAX_SIZE - 1) && r != '\n');
     if (r == '\n') index--;
     buffer[index] = '\0';
-    mini_uart_putln("");
     return buffer;
 }
 
+extern byteptr_t dtb_ptr;
 
-void parse_command(char *buffer)
+void 
+parse_command(byteptr_t buffer)
 {
     if (str_eql(buffer, "help")) {
         print_help();
     }
 
-    else if (str_eql(buffer, "hello")) {
-        mini_uart_putln("Hello world!");
+    else if (str_eql(buffer, "load")) {
+        mini_uart_puts("size = ");
+        read_command(buffer);
+        uint32_t len = ascii_dec_to_uint32(buffer, str_len(buffer));
+        mini_uart_puts("loading");
+        load_image(len);
+    }
+
+    else if (str_eql(buffer, "boot")) {
+        mini_uart_putln("booting...");
+        ((void (*)(uint64_t))kernel_addr)((uint64_t) dtb_ptr);
     }
 
     else {
@@ -57,11 +77,16 @@ void parse_command(char *buffer)
 }
 
 
-void print_help()
+void shell() 
 {
-    mini_uart_puts("help\t:");
-    mini_uart_putln("print this help menu");
-    mini_uart_puts("hello\t:");
-    mini_uart_putln("print Hello World!");
+    while (1)
+    {
+        char buffer[BUFFER_MAX_SIZE];
+        mini_uart_puts("$ ");
+        read_command(buffer);
+        parse_command(buffer);
+    }
 }
+
+
 

@@ -1,3 +1,4 @@
+#include "types.h"
 #include "gpio.h"
 #include "aux.h"
 #include "delay.h"
@@ -53,7 +54,8 @@ void mini_uart_init(void)
  * ref : BCM2837-ARM-Peripherals p5
  * AUX_MU_LSR_REG bit_0 == 1 -> readable
  */
-char mini_uart_getc() 
+byte_t
+mini_uart_getc()
 {
     char r;
     /* wait until something is in the buffer */
@@ -70,7 +72,8 @@ char mini_uart_getc()
  * ref : BCM2837-ARM-Peripherals p5
  * AUX_MU_LSR_REG bit_5 == 1 -> writable
  */
-void mini_uart_putc(unsigned int c) 
+void 
+mini_uart_putc(uint32_t c) 
 {
     /* wait until we can send */
     do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x20));
@@ -82,7 +85,8 @@ void mini_uart_putc(unsigned int c)
 /**
  * Display a string
  */
-void mini_uart_puts(char *s) 
+void 
+mini_uart_puts(char *s) 
 {
     while (*s) { mini_uart_putc(*s++); }
 }
@@ -90,9 +94,26 @@ void mini_uart_puts(char *s)
 /**
  * Display a string with the newline
  */
-void mini_uart_putln(char *s) 
+void 
+mini_uart_putln(byteptr_t s) 
 {
     mini_uart_puts(s);
     mini_uart_putc('\r');
     mini_uart_putc('\n');
+}
+
+/**
+ * Display a binary value in hexadecimal
+ */
+void 
+mini_uart_hex(uint32_t d)
+{
+    uint32_t n;
+    for (int32_t c = 28; c >= 0; c -= 4) {
+        // get highest tetrad
+        n = (d >> c) & 0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n += n > 9 ? 0x37 : 0x30;
+        mini_uart_putc(n);
+    }
 }

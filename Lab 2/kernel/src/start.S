@@ -1,22 +1,19 @@
     .section ".text.boot"
     .global _start
-
-_start:
-
 _start:
     // read cpu id, hang slave cores
-    mrs     x0, mpidr_el1
-    and     x0, x0, #0xFF       // Check processor id in last 8 bits
-    cbnz    x0, hang          
+    mrs     x10, mpidr_el1
+    and     x10, x10, #0xFF       // Check processor id in last 8 bits
+    cbnz    x10, hang          
 
 master:
 // set top of stack just before our code (stack grows to a lower address per AAPCS64)
-    ldr     x1, = _start
-    mov     sp, x1
+    ldr     x11, = _start
+    mov     sp, x11
 
 // clear bss
-    adr    x0, _bss_begin
-    adr    x1, _bss_size
+    ldr    x10, =_bss_begin
+    ldr    x11, =_bss_size
     bl     memzero
 
 // jump to c, should not return
@@ -28,7 +25,18 @@ hang:
     b       hang
 
 memzero:
-    str     xzr, [x0], #8
-    subs    x1, x1, #8
+    str     xzr, [x10], #8
+    subs    x11, x11, #8
     b.gt    memzero
     ret
+
+
+/* 
+     .global align
+align:
+    sub x1, x1, #1
+    add x0, x0, x1
+    mvn x1, x1
+    and x0, x0, x1
+    ret
+*/

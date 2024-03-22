@@ -1,3 +1,4 @@
+#include "types.h"
 #include "gpio.h"
 #include "aux.h"
 #include "delay.h"
@@ -12,7 +13,7 @@ void mini_uart_init(void)
         setup GPIO pins
     */
 
-    unsigned int selector;
+    uint32_t selector;
 
     selector            =   *GPFSEL1;
     selector            &=  ~((7<<12)|(7<<15)); // clean gpio14 and gpio15
@@ -53,13 +54,14 @@ void mini_uart_init(void)
  * ref : BCM2837-ARM-Peripherals p5
  * AUX_MU_LSR_REG bit_0 == 1 -> readable
  */
-char mini_uart_getc() 
+uint8_t 
+mini_uart_getc() 
 {
-    char r;
+    uint8_t r;
     /* wait until something is in the buffer */
     do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x01));
     /* read it and return */
-    r = (char)(*AUX_MU_IO);
+    r = (uint8_t)(*AUX_MU_IO);
     /* convert carriage return to newline */
     return r == '\r' ? '\n' : r;
 }
@@ -70,7 +72,8 @@ char mini_uart_getc()
  * ref : BCM2837-ARM-Peripherals p5
  * AUX_MU_LSR_REG bit_5 == 1 -> writable
  */
-void mini_uart_putc(unsigned int c) 
+void 
+mini_uart_putc(uint32_t c) 
 {
     /* wait until we can send */
     do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x20));
@@ -82,7 +85,8 @@ void mini_uart_putc(unsigned int c)
 /**
  * Display a string
  */
-void mini_uart_puts(char *s) 
+void 
+mini_uart_puts(byteptr_t s) 
 {
     while (*s) {
         mini_uart_putc(*s++);
@@ -92,7 +96,8 @@ void mini_uart_puts(char *s)
 /**
  * Display a string with the newline
  */
-void mini_uart_putln(char *s) 
+void 
+mini_uart_putln(byteptr_t s) 
 {
     mini_uart_puts(s);
     mini_uart_puts("\r\n");
@@ -100,17 +105,45 @@ void mini_uart_putln(char *s)
 
 
 /**
- * Display a binary value in hexadecimal
+ * Display a 32-bit binary value in hexadecimal
  */
-void mini_uart_hex(unsigned int d)
-{
-    unsigned int n;
-    int c;
-    for (c = 28; c >= 0; c -= 4) {
+void 
+mini_uart_hex(uint32_t d)
+{   
+    for (int32_t c = 28; c >= 0; c -= 4) {
         // get highest tetrad
-        n = (d >> c) & 0xF;
+        uint8_t n = (d >> c) & 0xF;
         // 0-9 => '0'-'9', 10-15 => 'A'-'F'
         n += n > 9 ? 0x37 : 0x30;
         mini_uart_putc(n);
     }
+}
+
+/**
+ * Display a 64-bit binary value in hexadecimal
+ */
+void 
+mini_uart_hexl(uint64_t d)
+{
+    for (int32_t c = 60; c >= 0; c -= 4) {
+        // get highest tetrad
+        uint8_t n = (d >> c) & 0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n += n > 9 ? 0x37 : 0x30;
+        mini_uart_putc(n);
+    }
+}
+
+
+void 
+mini_uart_endl()
+{
+    mini_uart_puts("\r\n");
+}
+
+
+void 
+mini_uart_space(uint32_t n)
+{
+    for (uint32_t i = 0; i < n; ++i) mini_uart_putc(' '); 
 }

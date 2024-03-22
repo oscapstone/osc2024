@@ -1,39 +1,34 @@
     .section ".text.boot"
     .global _start
-
 _start:
+    adr     x10, .                      // load address (0x80000)
+    ldr     x11, = _start               // link address (0x60000)
+    ldr     x12, =_bootloader_size
 
-// reloacate this code from load address to link address
-    adr     x1, .                   // load address (0x80000)
-    ldr     x2, =_start             // link address (0x60000)
-    ldr     w3, =_bootloader_size
+    // set stack pointer
+    mov     sp, x11
 
-memmove:
-    ldr     x4, [x1], #8            // x4 = [x1]; x1 += 8;
-    str     x4, [x2], #8            // [x2] = x4; x2 += 8;
-    sub     w3, w3, #1
-    cbnz    w3, memmove
+reloacate:
+    ldr     x13, [x10], #8              // x4 = [x1]; x1 += 8;
+    str     x13, [x11], #8              // [x2] = x4; x2 += 8;
+    sub     w12, w12, #1
+    cbnz    w12, reloacate
 
-master:                         // cpu id == 0
-// set top of stack just before our code (stack grows to a lower address per AAPCS64)
-    ldr     x1, = _start
-    mov     sp, x1
-
-// clear bss
-    adr    x0, _bss_begin
-    adr    x1, _bss_size
+    // clear bss
+    ldr    x10, =_bss_begin
+    ldr    x11, =_bss_size
     bl     memzero
 
-// jump to c, should not return
-    bl      main
+    // jump to c, should not return
+    bl      main - 0x20000
 
-// Hang for all non-primary CPU and this core when c code failed
 hang:
+    // Hang for all non-primary CPU and this core when c code failed
     wfe
     b       hang
 
 memzero:
-    str     xzr, [x0], #8
-    subs    x1, x1, #8
+    str     xzr, [x10], #8
+    subs    x11, x11, #8
     b.gt    memzero
     ret
