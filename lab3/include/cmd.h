@@ -18,5 +18,6 @@ void ls();
 void cat();
 void exec();
 void clear();
+void timeout();
 
 #endif // CMD_H

@@ -33,3 +33,19 @@ int strlen(const char *str)
         len++;
     return len;
 }
+
+char *strcat(char *dest, const char *src)
+{
+    char *d = dest;
+
+    // Move the pointer to the end of the dest string
+    while (*d != '\0')
+        d++;
+    // Copy the src string to the end of the dest string
+    while (*src != '\0')
+        *d++ = *src++;
+    // Add the null terminator
+    *d = '\0';
+
+    return dest;
+}

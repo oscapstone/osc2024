@@ -2,7 +2,7 @@
 
 # This script sends the kernel image to Rpi3 through UART
 
-DEST_PATH="/dev/pts/8"
+DEST_PATH="/dev/ttyUSB0"
 KERNEL_PATH="../kernel8.img"
 
 # Check the root permission

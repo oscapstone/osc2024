@@ -1,9 +1,12 @@
 #include "cmd.h"
+#include "alloc.h"
 #include "initrd.h"
 #include "mbox.h"
 #include "shell.h"
 #include "string.h"
+#include "timer.h"
 #include "uart.h"
+#include "utils.h"
 
 struct command commands[] = {
     { .name = "help", .help = "print this help menu", .func = help },
@@ -14,6 +17,7 @@ struct command commands[] = {
     { .name = "cat", .help = "print ramdisk file", .func = cat },
     { .name = "exec", .help = "execute a program", .func = exec },
     { .name = "clear", .help = "clear the screen", .func = clear },
+    { .name = "timeout", .help = "print mesg after duration", .func = timeout },
     { .name = "NULL" } // Must put a NULL command at the end!
 };
 
@@ -26,7 +30,7 @@ void help()
             break;
         }
         uart_puts(commands[i].name);
-        uart_puts("\t: ");
+        uart_puts("\t| ");
         uart_puts(commands[i].help);
         uart_putc('\n');
         i++;
@@ -114,4 +118,17 @@ void exec()
 void clear()
 {
     uart_puts("\033[2J\033[H");
+}
+
+void timeout()
+{
+    char *msg = simple_malloc(SHELL_BUF_SIZE);
+    uart_puts("Message: ");
+    read_user_input(msg);
+
+    char sec[SHELL_BUF_SIZE];
+    uart_puts("Seconds: ");
+    read_user_input(sec);
+
+    set_timeout(msg, atoi(sec));
 }

@@ -12,7 +12,7 @@ int main()
     alloc_init();
 
     enable_interrupt();
-    // timer_enable_interrupt();
+    timer_enable_interrupt();
 
     fdt_traverse(initrd_callback);
     uart_puts("Welcome!\n");
