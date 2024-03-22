@@ -1,7 +1,7 @@
 #include "heap.h"
 
 extern char _heap_top; // It is defined in linker script
-static char* htop_ptr = &_heap_top;
+static char* htop_ptr = &_heap_top; // use the keyword 'static' to make it private and prevent other file from accessing it using the keyword 'extern' 
 
 void* malloc(unsigned int size) {
     // -> htop_ptr
@@ -12,9 +12,12 @@ void* malloc(unsigned int size) {
 
     // 0x10 for heap_block header
     char* r = htop_ptr + 0x10;
+
     // size paddling to multiple of 0x10
     size = 0x10 + size - size % 0x10;
+    
     *(unsigned int*)(r - 0x8) = size;
     htop_ptr += size;
+    
     return r;
 }

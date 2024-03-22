@@ -40,8 +40,8 @@ int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **
     unsigned int pathname_length = parse_hex_str(this_header_pointer->c_namesize,8);
     unsigned int offset = pathname_length + sizeof(struct cpio_newc_header);
     // The file data is padded to a multiple of four bytes
-    offset = offset % 4 == 0 ? offset:(offset+4-offset%4);
-    *data = (char *)this_header_pointer+offset;
+    offset = offset % 4 == 0 ? offset : (offset + 4 - offset % 4);
+    *data = (char *)this_header_pointer + offset;
 
     //get next header pointer
     if(*filesize==0)
@@ -50,7 +50,7 @@ int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **
     }else
     {
         offset = *filesize;
-        *next_header_pointer = (struct cpio_newc_header*)(*data + (offset%4==0?offset:(offset+4-offset%4)));
+        *next_header_pointer = (struct cpio_newc_header*)(*data + (offset % 4 == 0 ? offset : (offset + 4 - offset % 4)));
     }
 
     // if filepath is TRAILER!!! means there is no more files.

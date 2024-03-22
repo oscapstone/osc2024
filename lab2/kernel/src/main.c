@@ -4,8 +4,12 @@
 #include "u_string.h"
 #include "dtb.h"
 
-extern char* dtb_ptr;
+extern char* dtb_ptr; // it's the address of dtb and it declared in dtb.c
 
+
+
+/* x0-x7 are argument registers.
+   x0 is now used for dtb */
 void main(char* arg){
     char input_buffer[CMD_MAX_LEN];
 

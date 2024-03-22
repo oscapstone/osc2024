@@ -6,7 +6,7 @@
 #define SHIFT_ADDR 0x100000
 
 extern char* _dtb;
-extern char _start[];
+extern char _start[]; // it is defined in the linker script
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
 {
@@ -122,7 +122,7 @@ void do_cmd_loadimg()
     char c;
     unsigned long long kernel_size = 0;
     char* kernel_start = (char*) (&_start);
-    uart_puts("Please upload the image file.\r\n");
+    uart_puts("kernel start: 0x%x\r\n", kernel_start);
 
     // to get the kernel size for each row data
     for (int i=0; i<8; i++)
@@ -130,6 +130,8 @@ void do_cmd_loadimg()
         c = uart_getc();
         kernel_size += c<<(i*8);
     }
+    uart_puts("Kernel size: %d\r\n", kernel_size);
+    uart_puts("Downloading image file ...\r\n");
 
     // get the kernel data
     for (int i=0; i<kernel_size; i++)
@@ -140,7 +142,7 @@ void do_cmd_loadimg()
     uart_puts("Image file downloaded successfully.\r\n");
     uart_puts("Point to new kernel ...\r\n");
 
-    ((void (*)(char*))kernel_start)(bak_dtb);
+     ((void (*)(char*))kernel_start)(bak_dtb);
 }
 
 void do_cmd_reboot()

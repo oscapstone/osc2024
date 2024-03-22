@@ -37,7 +37,7 @@ run_std:
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial stdio -display none -dtb bcm2710-rpi-3-b-plus.dtb
 
 run_pty:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial pty -display none -dtb bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial pty -dtb bcm2710-rpi-3-b-plus.dtb
 	# qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial /dev/pts/3 -initrd $(initramfs_path)/initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 debug:
