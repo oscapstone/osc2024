@@ -1,4 +1,4 @@
-#include "types.h"
+#include "type.h"
 
 /* Wait N CPU cycles (ARM CPU only) */
 

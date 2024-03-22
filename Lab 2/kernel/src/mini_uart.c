@@ -1,4 +1,4 @@
-#include "types.h"
+#include "type.h"
 #include "gpio.h"
 #include "aux.h"
 #include "delay.h"
@@ -7,7 +7,8 @@
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
  */
-void mini_uart_init(void)
+void 
+mini_uart_init(void)
 {
     /*
         setup GPIO pins
@@ -57,11 +58,10 @@ void mini_uart_init(void)
 uint8_t 
 mini_uart_getc() 
 {
-    uint8_t r;
     /* wait until something is in the buffer */
     do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x01));
     /* read it and return */
-    r = (uint8_t)(*AUX_MU_IO);
+    uint8_t r = (uint8_t)(*AUX_MU_IO);
     /* convert carriage return to newline */
     return r == '\r' ? '\n' : r;
 }

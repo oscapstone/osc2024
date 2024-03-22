@@ -1,4 +1,4 @@
-#include "types.h"
+#include "type.h"
 #include "cpio.h"
 #include "mini_uart.h"
 #include "memory.h"
@@ -81,7 +81,6 @@ initrd_list()
     byteptr_t cpio_addr = initrd_get_ptr(); 
     finfo_t info;
     byteptr_t _addr = _initrd_next(cpio_addr, &info);
-
     while (_addr) {
         mini_uart_putln(info.name);
         _addr = _initrd_next(_addr, &info);
@@ -97,10 +96,10 @@ initrd_cat(const byteptr_t name)
     byteptr_t file = _initrd_find(cpio_addr, name, &info);
 
     if (file) {
-        if (info.size == 0) mini_uart_putln("It is a directory.");
-        else {
+        if (info.size == 0) 
+            mini_uart_putln("It's a directory.");
+        else
             mini_uart_putln(info.content);
-        }
     } 
     else {
         mini_uart_putln("No such file or directory.");

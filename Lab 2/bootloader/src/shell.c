@@ -1,7 +1,6 @@
-#include "types.h"
+#include "type.h"
 #include "mini_uart.h"
 #include "string.h"
-
 
 #define BUFFER_MAX_SIZE     64
 

@@ -12,13 +12,14 @@ str_tok(byteptr_t s)
 {
     static byteptr_t old_s;
 
-    if (!s) { s = old_s; }
-    if (!s) { return 0x0; }
+    if (!s) s = old_s;
+    if (!s) return nullptr;
 
     // find begin
-    while(is_delim(*s)) { s++; }
+    while (is_delim(*s)) { s++; }
 
-    if (*s == '\0') { return 0x0; } // reached the end
+    // reached the end
+    if (*s == '\0') return nullptr;
 
     byteptr_t ret = s;
 
@@ -35,8 +36,7 @@ str_tok(byteptr_t s)
         }
         s++;
     }
-
-    return 0x0;
+    return nullptr;
 }
 
 int32_t

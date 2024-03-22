@@ -65,7 +65,7 @@ _dtb_get_uint32(const byteptr_t p)
     a sequence of 32-bit aligned {token, data}
 
     1. FDT_BEGIN_NODE  0x00000001
-        string of the unit name
+        (name) : string
 
     2. FDT_END_NODE    0x00000002
         (no data)
@@ -125,7 +125,6 @@ _struct_iteration(fdt_callback cb, const byteptr_t struct_ptr, const byteptr_t s
 }
 
 
-
 static byteptr_t _dtb_ptr = nullptr;
 
 byteptr_t
@@ -163,7 +162,7 @@ void
 fdt_find_initrd_addr(uint32_t token, const byteptr_t name_ptr, const byteptr_t data_ptr, uint32_t v)
 {
     if (token == FDT_PROP && str_eql(name_ptr, "linux,initrd-start")) {
-		byteptr_t _addr = (byteptr_t) (0l | _dtb_get_uint32(data_ptr));
+        byteptr_t _addr = (byteptr_t) (0l | _dtb_get_uint32(data_ptr));
         initrd_set_ptr(_addr);
     }
 }

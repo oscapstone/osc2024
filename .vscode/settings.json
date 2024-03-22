@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "type.h": "c",
+        "mini_uart.h": "c",
+        "string.h": "c"
+    }
+}

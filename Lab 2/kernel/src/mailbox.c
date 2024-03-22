@@ -1,4 +1,4 @@
-#include "types.h"
+#include "type.h"
 #include "mmio.h"
 #include "mailbox.h"
 

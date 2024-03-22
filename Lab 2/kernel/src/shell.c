@@ -1,10 +1,11 @@
-#include "types.h"
+#include "type.h"
 #include "mini_uart.h"
 #include "string.h"
 #include "initrd.h"
 #include "power.h"
 #include "info.h"
 #include "memory.h"
+#include "dtb.h"
 
 
 #define BUFFER_MAX_SIZE     64
@@ -70,7 +71,6 @@ parse_command(byteptr_t buffer)
         mini_uart_putln("rebooting...");
         power_reset(1000);
     }
-
 
     else if (str_eql(buffer, "ls")) {  
         initrd_list();

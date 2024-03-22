@@ -1,7 +1,7 @@
 #ifndef INITRD_H
 #define INITRD_H
 
-#include "types.h"
+#include "type.h"
 
 byteptr_t   initrd_get_ptr();
 void        initrd_set_ptr(byteptr_t ptr);

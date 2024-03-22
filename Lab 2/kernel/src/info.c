@@ -21,7 +21,7 @@ info_board_revision()
     mini_uart_puts("Board revision: \t");
     mini_uart_puts("0x");
     mini_uart_hex(mbox[5]);                         // it should be 0xa020d3 for rpi3 b+
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
 }
 
 
@@ -43,15 +43,15 @@ info_memory()
  
     mini_uart_putln("Arm memory info:");
 
-    mini_uart_puts("-> memory base: \t");
+    mini_uart_puts(" > memory base: \t");
     mini_uart_puts("0x");
     mini_uart_hex(mbox[5]);
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
 
-    mini_uart_puts("-> memory size: \t");
+    mini_uart_puts(" > memory size: \t");
     mini_uart_puts("0x");
     mini_uart_hex(mbox[6]);
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
 }
 
 
@@ -117,66 +117,66 @@ info_videocore()
  
     mini_uart_putln("VideoCore info:");
     
-    mini_uart_puts("-> memory base: \t");
+    mini_uart_puts(" > memory base: \t");
     mini_uart_puts("0x");
     mini_uart_hex(mbox[5]);
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
 
-    mini_uart_puts("-> memory size: \t");
+    mini_uart_puts(" > memory size: \t");
     mini_uart_puts("0x");
     mini_uart_hex(mbox[6]);
-    mini_uart_puts("\r\n"); 
+    mini_uart_endl();
      
-    mini_uart_puts("-> frame buffer base: \t");
+    mini_uart_puts(" > frame buffer base: \t");
     mini_uart_puts("0x");
     mini_uart_hex(mbox[10] & 0x3fffffff);
     mini_uart_puts("\r\n");
 
-    mini_uart_puts("-> frame buffer size: \t");
+    mini_uart_puts(" > frame buffer size: \t");
     mini_uart_puts("0x");
     mini_uart_hex(mbox[11]);
-    mini_uart_puts("\r\n"); 
+    mini_uart_endl();
 
     mini_uart_puts("-> physical width: \t");
     uint32_to_ascii(mbox[15], buffer);
     mini_uart_puts(buffer);
     mini_uart_puts("\r\n");
 
-    mini_uart_puts("-> physical height: \t");
+    mini_uart_puts(" > physical height: \t");
     uint32_to_ascii(mbox[16], buffer);
     mini_uart_puts(buffer);
-    mini_uart_puts("\r\n"); 
+    mini_uart_endl();
     
-    mini_uart_puts("-> virtual width: \t");
+    mini_uart_puts(" > virtual width: \t");
     uint32_to_ascii(mbox[20], buffer);
     mini_uart_puts(buffer);
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
 
-    mini_uart_puts("-> virtual height: \t");
+    mini_uart_puts(" > virtual height: \t");
     uint32_to_ascii(mbox[21], buffer);
     mini_uart_puts(buffer);
-    mini_uart_puts("\r\n"); 
+    mini_uart_endl();
     
-    mini_uart_puts("-> buffer offset X: \t");
+    mini_uart_puts(" > buffer offset X: \t");
     uint32_to_ascii(mbox[25], buffer);
     mini_uart_puts(buffer);
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
 
-    mini_uart_puts("-> buffer offset Y: \t");
+    mini_uart_puts(" > buffer offset Y: \t");
     uint32_to_ascii(mbox[26], buffer);
     mini_uart_puts(buffer);
-    mini_uart_puts("\r\n"); 
+    mini_uart_endl();
     
-    mini_uart_puts("-> depth: \t\t");
+    mini_uart_puts(" > depth: \t\t");
     uint32_to_ascii(mbox[30], buffer);
     mini_uart_puts(buffer);
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
     
-    mini_uart_puts("-> pixel order: \t");
+    mini_uart_puts(" > pixel order: \t");
     if (mbox[34] == 0x0) mini_uart_putln("BGR"); else mini_uart_putln("RGB");
 
-    mini_uart_puts("-> pitch: \t\t");
+    mini_uart_puts(" > pitch: \t\t");
     uint32_to_ascii(mbox[38], buffer);
     mini_uart_puts(buffer);
-    mini_uart_puts("\r\n");
+    mini_uart_endl();
 }

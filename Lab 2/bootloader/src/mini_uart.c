@@ -1,4 +1,4 @@
-#include "types.h"
+#include "type.h"
 #include "gpio.h"
 #include "aux.h"
 #include "delay.h"

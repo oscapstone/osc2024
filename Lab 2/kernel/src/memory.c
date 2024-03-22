@@ -8,10 +8,10 @@ memory_align(const byteptr_t p, uint32_t s) {
 
 
 int32_t
-memory_cmp(byteptr_t s1, byteptr_t s2, int n)
+memory_cmp(byteptr_t s1, byteptr_t s2, int32_t n)
 {
     byteptr_t a = s1, b = s2;
-    while (n-- > 0) { if(*a != *b) { return *a - *b; } a++; b++; }
+    while (n-- > 0) { if (*a != *b) { return *a - *b; } a++; b++; }
     return 0;
 }
 

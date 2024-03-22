@@ -7,19 +7,19 @@ _start:
     cbnz    x10, hang          
 
 master:
-// set top of stack just before our code (stack grows to a lower address per AAPCS64)
+    // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     ldr     x11, = _start
     mov     sp, x11
 
-// clear bss
+    // clear bss
     ldr    x10, =_bss_begin
     ldr    x11, =_bss_size
     bl     memzero
 
-// jump to c, should not return
+    // jump to c, should not return
     bl      main
 
-// Hang for all non-primary CPU and this core when c code failed
+    // Hang for all non-primary CPU and this core when c code failed
 hang:
     wfe
     b       hang

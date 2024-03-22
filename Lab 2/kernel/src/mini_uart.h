@@ -1,7 +1,7 @@
 #ifndef MINI_UART_H
 #define MINI_UART_H
 
-#include "types.h"
+#include "type.h"
 
 void mini_uart_init(void);
 uint8_t mini_uart_getc(void);

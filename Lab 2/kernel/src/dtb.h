@@ -1,15 +1,13 @@
 #ifndef DTB_H
 #define DTB_H
 
-#include "types.h"
-
+#include "type.h"
 
 #define FDT_BEGIN_NODE  0x00000001
 #define FDT_END_NODE    0x00000002
 #define FDT_PROP        0x00000003
 #define FDT_NOP         0x00000004
 #define FDT_END         0x00000009
-
 
 #define FDT_TRAVERSE_CORRECT        0
 #define FDT_TRAVERSE_HEADER_ERROR   1
