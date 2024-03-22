@@ -28,6 +28,12 @@
 .global _start
 
 _start:
+    mrs x0, mpidr_el1
+    and x0, x0, #0xff
+    cbz x0, master
+    b proc_hang
+
+master:
 setup_stack:
     ldr     x1, =_stack_top
     mov     sp, x1
@@ -43,6 +49,7 @@ init_bss:
     cbnz    w2, init_bss
 
 run_main:
+    # before going to main function, we need to pass the 'dtb address' from register x0 to memory location _dtb
     ldr     x1, =_dtb
     str     x0, [x1], #8
     bl      main
