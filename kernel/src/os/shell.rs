@@ -1,6 +1,6 @@
-use crate::stdio::{get_line, print, println};
+use super::stdio::{get_line, print, println};
 
-pub fn shell() {
+pub fn start() {
     let mut inp_buf = [0u8; 256];
 
     loop {

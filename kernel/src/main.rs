@@ -2,6 +2,4 @@
 #![no_std]
 
 mod cpu;
-mod panic_wait;
-mod shell;
-mod stdio;
+mod os;

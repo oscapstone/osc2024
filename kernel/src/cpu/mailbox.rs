@@ -1,5 +1,5 @@
 use core::{ptr::{read_volatile, write_volatile}, usize};
-use crate::stdio::*;
+use crate::os::stdio::*;
 
 const MAILBOX_BASE: u32 = 0x3F00_B880;
 const MAILBOX_READ: u32 = MAILBOX_BASE + 0x00;

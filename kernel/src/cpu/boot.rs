@@ -1,6 +1,6 @@
 use core::arch::{asm, global_asm};
-
-use crate::stdio::{print, print_hex};
+use crate::os::stdio::{print, print_hex};
+use crate::os::shell;
 
 global_asm!(include_str!("boot.s"));
 
@@ -18,6 +18,6 @@ pub unsafe fn _start_rust() {
     print_hex(a.0);
     print("Memory size: ");
     print_hex(a.1);
-    crate::shell::shell();
+    shell::start();
     loop {};
 }
