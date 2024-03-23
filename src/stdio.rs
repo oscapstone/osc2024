@@ -1,5 +1,26 @@
-use crate::uart::recv;
-use crate::uart::send;
+use crate::uart;
+
+fn send(c: u8) {
+    uart::send(c);
+}
+
+fn recv() -> u8 {
+    let c = uart::recv();
+    match c {
+        b'\r' | b'\n' => {
+            write(b"\r\n");
+            b'\n'
+        }
+        b'\x7f' | b'\x08' => {
+            write(b"\x08 \x08");
+            b'\x7f'
+        }
+        _ => {
+            send(c);
+            c
+        }
+    }
+}
 
 #[allow(dead_code)]
 pub fn read(buf: &mut [u8]) {

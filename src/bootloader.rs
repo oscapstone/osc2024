@@ -48,6 +48,17 @@ fn execute_command(command: &[u8]) {
         stdio::puts(b"reboot\t: reboot the Raspberry Pi");
     } else if command.starts_with(b"reboot") {
         mmio::MMIO::reboot();
+    } else if command.starts_with(b"load") {
+        stdio::write(b"Kernel image size: ");
+        let buf = &mut [0u8; 16];
+        stdio::gets(buf);
+        let size = utils::atoi(buf);
+        stdio::write(buf);
+        stdio::puts(b" bytes");
+        for _ in 0..size {
+            uart::recv();
+        }
+        // stdio::write(b"
     } else {
         stdio::write(b"Unknown command: ");
         stdio::puts(command);

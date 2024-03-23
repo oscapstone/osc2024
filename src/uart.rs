@@ -1,4 +1,3 @@
-use crate::stdio::write;
 use mmio::regs::AuxReg::*;
 use mmio::regs::GpioReg::*;
 use mmio::regs::MmioReg::{Aux, Gpio};
@@ -52,19 +51,5 @@ pub fn recv() -> u8 {
     }
 
     // Read the character from the buffer
-    let c: u8 = MMIO::read_reg(Aux(MuIo)) as u8;
-    match c {
-        b'\r' | b'\n' => {
-            write(b"\r\n");
-            b'\n'
-        }
-        b'\x7f' | b'\x08' => {
-            write(b"\x08 \x08");
-            b'\x7f'
-        }
-        _ => {
-            send(c);
-            c
-        }
-    }
+    return MMIO::read_reg(Aux(MuIo)) as u8;
 }

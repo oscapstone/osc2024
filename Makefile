@@ -13,29 +13,42 @@ LINKER_FLAGS = -static
 OBJ_CPY = aarch64-linux-gnu-objcopy
 
 QEMU = qemu-system-aarch64
-QEMU_FLAGS = -M raspi3b -serial null -serial stdio
+QEMU_FLAGS = -M raspi3b -serial null -serial pty
 
-TARGET = $(BUILD_DIR)/kernel8.img
+TARGET = $(BUILD_DIR)/kernel8.img $(BUILD_DIR)/bootloader.img
 
 dir_guard=@mkdir -p $(@D)
 
 .PHONY: all clean run debug
 
 all: $(TARGET)
-	cp $(TARGET) $(RPI3_DIR)/kernel8.img
+	cp $(TARGET) $(RPI3_DIR)
 	sha1sum $(TARGET)
 
 $(BUILD_DIR)/start.o: $(SRC_DIR)/start.s
 	$(dir_guard)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/main.o: $(SRC_DIR)/main.rs $(shell find $(SRC_DIR)/ -type f -name '*.rs')
+$(BUILD_DIR)/bootloader.o: $(SRC_DIR)/bootloader.rs $(shell find $(SRC_DIR)/ -type f -name '*.rs')
 	$(dir_guard)
 	$(RC) $(RUSTFLAGS) $< -o $@
 
-$(BUILD_DIR)/kernel8.elf: $(BUILD_DIR)/start.o $(BUILD_DIR)/main.o $(SRC_DIR)/linker.ld
+
+$(BUILD_DIR)/kernel.o: $(SRC_DIR)/kernel.rs $(shell find $(SRC_DIR)/ -type f -name '*.rs')
 	$(dir_guard)
-	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld $(BUILD_DIR)/main.o $(BUILD_DIR)/start.o -o $@
+	$(RC) $(RUSTFLAGS) $< -o $@
+
+$(BUILD_DIR)/bootloader.elf: $(BUILD_DIR)/start.o $(BUILD_DIR)/bootloader.o $(SRC_DIR)/linker.ld
+	$(dir_guard)
+	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld $(BUILD_DIR)/bootloader.o $(BUILD_DIR)/start.o -o $@
+
+$(BUILD_DIR)/kernel8.elf:$(BUILD_DIR)/kernel.o $(SRC_DIR)/klinker.ld
+	$(dir_guard)
+	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/klinker.ld $(BUILD_DIR)/kernel.o -o $@
+
+$(BUILD_DIR)/bootloader.img: $(BUILD_DIR)/bootloader.elf
+	$(dir_guard)
+	$(OBJ_CPY) -O binary $< $@
 
 $(BUILD_DIR)/kernel8.img: $(BUILD_DIR)/kernel8.elf
 	$(dir_guard)
@@ -46,7 +59,7 @@ clean:
 	rm -rf $(RPI3_DIR)/kernel8.img
 
 run: $(TARGET)
-	$(QEMU) $(QEMU_FLAGS) -kernel $(TARGET)
+	$(QEMU) $(QEMU_FLAGS) -kernel $(BUILD_DIR)/bootloader.img
 
 debug: $(TARGET)
-	$(QEMU) $(QEMU_FLAGS) -kernel $(TARGET) -S -s
+	$(QEMU) $(QEMU_FLAGS) -kernel $(BUILD_DIR)/bootloader.img -S -s
