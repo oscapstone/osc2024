@@ -1,10 +1,18 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
+#include "devicetree.hpp"
+#include "heap.hpp"
 #include "initramfs.hpp"
 
 extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   mini_uart_puts("Hello Kernel!\n");
+
+  heap_reset();
+  if (!dt.init(dtb_addr)) {
+    mini_uart_printf("devicetree initialize failed\n");
+    prog_hang();
+  }
 
   initramfs.init((char*)0x20000000);
 
