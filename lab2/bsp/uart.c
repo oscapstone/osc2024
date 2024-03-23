@@ -135,6 +135,7 @@ void uart_puts(char *s) {
 }
 
 void uart_hex(unsigned int d) {
+    uart_puts("0x");
     unsigned int n;
     int c;
     for (c = 28; c >= 0; c -= 4) {
