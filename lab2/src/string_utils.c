@@ -26,10 +26,3 @@ unsigned int hexstr2val(char *str, unsigned int size)
     }
     return result;
 }
-
-void mem_align(void *addr, unsigned int number)
-{
-    unsigned long *x = (unsigned long *)addr;
-    unsigned long mask = number - 1;
-    *x = (*(x) + mask) & (~mask);
-}

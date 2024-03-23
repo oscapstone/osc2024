@@ -2,6 +2,7 @@
 #include "../include/mini_uart.h"
 #include "../include/string_utils.h"
 #include "../include/shell.h"
+#include "../include/mem_utils.h"
 
 void cpio_ls()
 {

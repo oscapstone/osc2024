@@ -66,6 +66,8 @@ void help()
     uart_send_string("hello       print Hello World!\r\n");
     uart_send_string("info        print board revision and memory base address and size\r\n");
     uart_send_string("reboot      reboot the rpi3b+\r\n");
+    uart_send_string("ls          show all files in rootfs\r\n");
+    uart_send_string("cat         print out the content of specific file\r\n");
 }
 
 void hello()

@@ -4,6 +4,7 @@
         "mini_uart.h": "c",
         "string_utils.h": "c",
         "cpio.h": "c",
-        "shell.h": "c"
+        "shell.h": "c",
+        "mem_utils.h": "c"
     }
 }
