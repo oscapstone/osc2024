@@ -35,46 +35,46 @@ struct cpio_newc_header {
   static constexpr char MAGIC[] = "070701";
   // clang-format on
 
-  inline bool valid() {
+  inline bool valid() const {
     return !memcmp(c_magic, MAGIC, sizeof(MAGIC) - 1);
   }
-  inline bool isend() {
+  inline bool isend() const {
     return !strcmp(name_ptr(), ENDFILE);
   }
 
-  inline int mode() {
+  inline int mode() const {
     return strtol(c_mode, nullptr, 16, sizeof(c_mode));
   }
-  inline bool isdir() {
+  inline bool isdir() const {
     return (mode() & F_MASK) == F_DIR;
   }
 
-  inline int namesize() {
+  inline int namesize() const {
     return strtol(c_namesize, nullptr, 16, sizeof(c_namesize));
   }
-  inline int filesize() {
+  inline int filesize() const {
     return strtol(c_filesize, nullptr, 16, sizeof(c_filesize));
   }
-  inline char* name_ptr() {
+  inline const char* name_ptr() const {
     return _name_ptr;
   }
-  inline char* file_ptr() {
+  inline const char* file_ptr() const {
     return name_ptr() + namesize() + 2;
   }
-  string_view name() {
+  string_view name() const {
     return {name_ptr(), namesize() - 1};
   }
-  string_view file() {
+  string_view file() const {
     return {file_ptr(), filesize()};
   }
-  cpio_newc_header* next();
+  const cpio_newc_header* next() const;
 };
 
 class CPIO {
  public:
   class iterator {
    public:
-    iterator(char* header) : hedaer_((cpio_newc_header*)header) {}
+    iterator(const char* header) : hedaer_((const cpio_newc_header*)header) {}
     inline iterator& operator++() {
       hedaer_ = hedaer_->next();
       return *this;
@@ -84,10 +84,10 @@ class CPIO {
       ++*this;
       return copy;
     }
-    inline cpio_newc_header* operator*() const {
+    inline const cpio_newc_header* operator*() const {
       return hedaer_;
     }
-    inline cpio_newc_header* operator->() const {
+    inline const cpio_newc_header* operator->() const {
       return hedaer_;
     }
     bool operator==(const iterator& other) const {
@@ -98,7 +98,7 @@ class CPIO {
     }
 
    private:
-    cpio_newc_header* hedaer_;
+    const cpio_newc_header* hedaer_;
   };
 
  private:
@@ -108,11 +108,11 @@ class CPIO {
   void init(char* cpio_addr) {
     cpio_addr_ = cpio_addr;
   }
-  iterator begin() {
+  iterator begin() const {
     return cpio_addr_;
   }
-  iterator end() {
+  iterator end() const {
     return nullptr;
   }
-  cpio_newc_header* find(const char* name);
+  const cpio_newc_header* find(const char* name) const;
 };
