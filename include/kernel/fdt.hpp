@@ -130,6 +130,6 @@ class FDT {
   void init(void* addr, bool debug = false);
   void traverse(fp callback);
   pair<bool, string_view> find(const char* path, fp list_fp = nullptr,
-                               bool debug = false);
+                               int depth = 0, bool debug = false);
 };
 extern FDT fdt;

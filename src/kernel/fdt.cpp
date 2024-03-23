@@ -128,7 +128,7 @@ void FDT::traverse_impl(int& level, uint32_t& offset, const char* node_name,
 
 namespace fdt_find {
 static const char* path;
-static int cur_level, cur_idx, nxt_idx;
+static int cur_level, cur_idx, nxt_idx, depth;
 static bool last, found, debug;
 static string_view view;
 static FDT::fp list_fp;
@@ -136,11 +136,14 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
                       const char* prop_name, uint32_t len,
                       const char prop_value[]) {
   if (found) {
-    if (list_fp and
-        (level > cur_level or (level == cur_level and tag == FDT_END_NODE)))
-      return list_fp(tag, level - cur_level, node_name, prop_name, len,
-                     prop_value);
-    return true;
+    if (level < cur_level)
+      return true;
+    if (!list_fp)
+      return true;
+    if (depth and level > cur_level + depth)
+      return false;
+    return list_fp(tag, level - cur_level, node_name, prop_name, len,
+                   prop_value);
   }
   if (level != cur_level)
     return false;
@@ -195,16 +198,19 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
 }
 }  // namespace fdt_find
 
-pair<bool, string_view> FDT::find(const char* path, fp list_fp, bool debug) {
+pair<bool, string_view> FDT::find(const char* path, fp list_fp, int depth,
+                                  bool debug) {
   using namespace fdt_find;
   fdt_find::path = path;
   fdt_find::list_fp = list_fp;
+  fdt_find::depth = depth;
   fdt_find::debug = debug;
   cur_level = 0;
   cur_idx = -1;
   nxt_idx = 0;
   view = {nullptr, 0};
-  last = found = false;
+  last = path[1] == '\0';
+  found = false;
   if (path[0] == '/')
     traverse(find_path);
   return {found, view};

@@ -3,22 +3,24 @@
 #include "fdt.hpp"
 
 int cmd_devtree(int argc, char* argv[]) {
-  int r = 0;
   if (argc <= 1) {
-    fdt.print();
-  } else {
-    for (int i = 1; i < argc; i++) {
-      auto name = argv[i];
-      auto [found, view] = fdt.find(name, print_fdt);
-      if (!found) {
-        r = -1;
-        mini_uart_printf("devtree: %s: No such device\n", name);
-      } else if (view.data()) {
-        mini_uart_printf("%s: ", name);
-        mini_uart_print(view);
-        mini_uart_printf("\n");
-      }
-    }
+    mini_uart_puts("devtree: require path\n");
+    mini_uart_puts("usage: devtree <path> [depth]\n");
+    return -1;
+  }
+
+  auto path = argv[1];
+  int depth = argc >= 3 ? strtol(argv[2]) : 0;
+
+  int r = 0;
+  auto [found, view] = fdt.find(path, print_fdt, depth);
+  if (!found) {
+    r = -1;
+    mini_uart_printf("devtree: %s: No such device\n", path);
+  } else if (view.data()) {
+    mini_uart_printf("%s: ", path);
+    mini_uart_print(view);
+    mini_uart_printf("\n");
   }
   return r;
 }
