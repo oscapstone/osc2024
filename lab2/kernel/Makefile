@@ -3,7 +3,7 @@ C    = aarch64-linux-gnu
 
 LIB_PATH ?= ../lib
 BSP_PATH ?= ../bsp
-CFLAGS += -I$(LIB_PATH) -I$(BSP_PATH)
+CFLAGS += -I$(LIB_PATH) -I$(BSP_PATH) -I..
 
 LIB_SRCS = $(shell find $(LIB_PATH) -type f -name '*.c')
 BSP_SRCS = $(shell find $(BSP_PATH) -type f -name '*.c')
