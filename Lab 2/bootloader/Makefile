@@ -45,3 +45,6 @@ $(TARGET).img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 
 run: $(OUT_DIR)/$(TARGET).img
 	qemu-system-aarch64 -M raspi3b -kernel $(OUT_DIR)/$(TARGET).img -display none -serial null -serial stdio -initrd $(SD_DIR)/initrd.cpio -dtb $(SD_DIR)/bcm2710-rpi-3-b-plus.dtb
+
+pty: $(OUT_DIR)/$(TARGET).img
+	qemu-system-aarch64 -M raspi3b -kernel $(OUT_DIR)/$(TARGET).img -display none -serial null -serial pty -initrd $(SD_DIR)/initrd.cpio -dtb $(SD_DIR)/bcm2710-rpi-3-b-plus.dtb

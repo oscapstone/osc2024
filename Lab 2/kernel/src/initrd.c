@@ -87,6 +87,20 @@ initrd_list()
     }
 }
 
+static void 
+print_file(const byteptr_t content, uint32_t size)
+{
+    byteptr_t cur = (byteptr_t) content;
+    while (size--) {
+        if (*cur == '\n') {
+            mini_uart_putc('\r');
+        }
+        mini_uart_putc(*cur);
+        cur++;
+    }
+    mini_uart_endl();
+}
+
 
 void 
 initrd_cat(const byteptr_t name)
@@ -99,7 +113,7 @@ initrd_cat(const byteptr_t name)
         if (info.size == 0) 
             mini_uart_putln("It's a directory.");
         else
-            mini_uart_putln(info.content);
+            print_file(info.content, info.size);
     } 
     else {
         mini_uart_putln("No such file or directory.");

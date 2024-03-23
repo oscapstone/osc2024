@@ -24,7 +24,6 @@ power_reset(uint32_t ticks)
 
     *PM_RSTC = (PM_MAGIC | PM_RSTC_FULLRST);            // full reset
     *PM_WDOG = (PM_MAGIC | ticks);                      // number of watchdog ticks 
-
 }
 
 

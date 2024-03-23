@@ -28,4 +28,4 @@ clean: $(CLEANSUBDIR)
 
 # $(call make_subdir, clean)
 
-.PHONY: all clean $(SUBDIR) $(BUILDSUBDIR) $(CLEANSUBDIR)
+.PHONY: all clean $(SUBDIR) $(BUILDSUBDIR) $(CLEANSUBDIR) $(SD_DIR)/initrd.cpio

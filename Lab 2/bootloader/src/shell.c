@@ -1,4 +1,5 @@
 #include "type.h"
+#include "delay.h"
 #include "mini_uart.h"
 #include "string.h"
 
@@ -13,10 +14,9 @@ load_image(uint32_t len)
     byteptr_t cur_ptr = (byteptr_t) kernel_addr;
     while (len--)
     {
-        *cur_ptr++ = mini_uart_getc();
-        mini_uart_putc('#');
+        *cur_ptr++ = mini_uart_getb();
     }
-    mini_uart_putln("\ndone.");
+    mini_uart_putln("\n$done");
 }
 
 
@@ -39,6 +39,7 @@ read_command(byteptr_t buffer)
     byte_t r = 0;
     do {
         r = mini_uart_getc();
+        if (r == '\n') mini_uart_putc('\r');
         mini_uart_putc(r);
         buffer[index++] = r;
     } while (index < (BUFFER_MAX_SIZE - 1) && r != '\n');
@@ -57,15 +58,17 @@ parse_command(byteptr_t buffer)
     }
 
     else if (str_eql(buffer, "load")) {
-        mini_uart_puts("size = ");
+        mini_uart_putln("$size");
         read_command(buffer);
-        uint32_t len = ascii_dec_to_uint32(buffer, str_len(buffer));
-        mini_uart_puts("loading");
+        uint32_t len = ascii_dec_to_uint32(buffer);
+        mini_uart_putln("$loading");
         load_image(len);
     }
 
     else if (str_eql(buffer, "boot")) {
         mini_uart_putln("booting...");
+        mini_uart_putc('\r');
+        delay_cycles(100);
         ((void (*)(uint64_t))kernel_addr)((uint64_t) dtb_ptr);
     }
 

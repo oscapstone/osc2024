@@ -137,7 +137,7 @@ info_videocore()
     mini_uart_hex(mbox[11]);
     mini_uart_endl();
 
-    mini_uart_puts("-> physical width: \t");
+    mini_uart_puts(" > physical width: \t");
     uint32_to_ascii(mbox[15], buffer);
     mini_uart_puts(buffer);
     mini_uart_puts("\r\n");

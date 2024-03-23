@@ -61,9 +61,18 @@ mini_uart_getc()
     /* wait until something is in the buffer */
     do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x01));
     /* read it and return */
-    uint8_t r = (uint8_t)(*AUX_MU_IO);
+    uint8_t r = (uint8_t)(*AUX_MU_IO & 0xFF);
     /* convert carriage return to newline */
     return r == '\r' ? '\n' : r;
+}
+
+uint8_t 
+mini_uart_getb() 
+{
+    /* wait until something is in the buffer */
+    do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x01));
+    /* read it and return */
+    return (uint8_t)(*AUX_MU_IO | 0xFF);
 }
 
 

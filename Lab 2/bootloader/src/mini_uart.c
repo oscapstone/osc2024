@@ -54,16 +54,25 @@ void mini_uart_init(void)
  * ref : BCM2837-ARM-Peripherals p5
  * AUX_MU_LSR_REG bit_0 == 1 -> readable
  */
-byte_t
+uint8_t
 mini_uart_getc()
 {
-    char r;
     /* wait until something is in the buffer */
     do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x01));
     /* read it and return */
-    r = (char)(*AUX_MU_IO);
+    uint8_t r = (byte_t) (*AUX_MU_IO & 0xFF);
     /* convert carriage return to newline */
     return r == '\r' ? '\n' : r;
+}
+
+
+uint8_t
+mini_uart_getb()
+{
+    /* wait until something is in the buffer */
+    do { asm volatile("nop"); } while (!(*AUX_MU_LSR & 0x01));
+    /* read it and return */
+    return (uint8_t) (*AUX_MU_IO & 0xFF);
 }
 
 
@@ -91,6 +100,7 @@ mini_uart_puts(char *s)
     while (*s) { mini_uart_putc(*s++); }
 }
 
+
 /**
  * Display a string with the newline
  */
@@ -101,6 +111,7 @@ mini_uart_putln(byteptr_t s)
     mini_uart_putc('\r');
     mini_uart_putc('\n');
 }
+
 
 /**
  * Display a binary value in hexadecimal

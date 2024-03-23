@@ -6,6 +6,7 @@
 #include "info.h"
 #include "memory.h"
 #include "dtb.h"
+#include "delay.h"
 
 
 #define BUFFER_MAX_SIZE     64
@@ -51,6 +52,7 @@ read_command(byteptr_t buffer)
     byte_t r = 0;
     do {
         r = mini_uart_getc();
+        if (r == '\n') mini_uart_putc('\r');
         mini_uart_putc(r);
         buffer[index++] = r;
     } while (index < (BUFFER_MAX_SIZE - 1) && r != '\n');
@@ -60,7 +62,7 @@ read_command(byteptr_t buffer)
 }
 
 
-static void 
+static uint32_t 
 parse_command(byteptr_t buffer)
 {
     if (str_eql(buffer, "help")) {
@@ -70,6 +72,7 @@ parse_command(byteptr_t buffer)
     else if (str_eql(buffer, "reboot")) {
         mini_uart_putln("rebooting...");
         power_reset(1000);
+        return 1;
     }
 
     else if (str_eql(buffer, "ls")) {  
@@ -115,6 +118,8 @@ parse_command(byteptr_t buffer)
         mini_uart_puts("not a command: ");
         mini_uart_putln(buffer);
     }
+
+    return 0;
 }
 
 
@@ -127,7 +132,8 @@ shell()
         mini_uart_puts("> ");
         read_command(buffer);
         byteptr_t cmd = str_tok(buffer);
-        parse_command(cmd);
+        uint32_t end = parse_command(cmd);
+        if (end) return;
     }
 }
 

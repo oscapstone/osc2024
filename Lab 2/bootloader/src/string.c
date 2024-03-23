@@ -30,13 +30,12 @@ str_len(const byteptr_t str)
 
 
 uint32_t
-ascii_dec_to_uint32(const byteptr_t str, uint32_t len) {
+ascii_dec_to_uint32(const byteptr_t str) {
     byteptr_t s = (byteptr_t) str;
-    uint32_t num = 0;
-    for (uint32_t i = 0; i < len; ++i) {
-        num = num * 10;
-        num += (*s - '0');
-        s++;
+    uint32_t value = 0;
+    while (*s) {
+        value = value * 10 + (*s - '0');
+        ++s;
     }
-    return num;
+    return value;
 }

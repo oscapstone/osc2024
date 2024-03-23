@@ -1,7 +1,7 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "types.h"
+#include "type.h"
 
 int32_t   str_cmp(const byteptr_t s1, const byteptr_t s2);
 uint32_t  str_eql(const byteptr_t s1, const byteptr_t s2);

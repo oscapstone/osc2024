@@ -5,6 +5,7 @@
 
 void mini_uart_init(void);
 uint8_t mini_uart_getc(void);
+uint8_t mini_uart_getb(void);
 void mini_uart_putc(uint8_t c);
 void mini_uart_puts(byteptr_t s);
 void mini_uart_putln(byteptr_t s);

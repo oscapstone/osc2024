@@ -1,4 +1,4 @@
-#include "types.h"
+#include "type.h"
 #include "mini_uart.h"
 #include "shell.h"
 

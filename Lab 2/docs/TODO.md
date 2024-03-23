@@ -30,6 +30,25 @@ arm_64bit=1
 
 <br>
 
+**Demo**
+
+```
+cd uploader
+
+python uploader.py                # when usb connected
+python uploader.py /dev/ttys00*   # when using qemu
+```
+
+```
+screen /dev/tty.usbserial-0001 115200   # macos
+screen /dev/ttys00* 115200              # qemu
+```
+
+**exit screen**
+ctrl-a k
+
+<br>
+
 ---
 
 <br>
