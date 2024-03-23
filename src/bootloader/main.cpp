@@ -24,12 +24,13 @@ void read_kernel() {
   mini_uart_printf("Kernel loaded @ %p\n", kernel_addr);
 }
 
-extern "C" void kernel_main() {
+extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   mini_uart_puts("Hello Boot Loader!\n");
   mini_uart_printf("Board revision :\t0x%08X\n", get_board_revision());
   mini_uart_printf("Loaded address :\t%p\n", kernel_main);
   mini_uart_printf("Kernel address :\t%p\n", kernel_addr);
+  mini_uart_printf("DTB address    :\t%p\n", dtb_addr);
 
   for (;;) {
     char c = mini_uart_getc();
@@ -42,7 +43,7 @@ extern "C" void kernel_main() {
       case 'j': {
         mini_uart_printf("Jump to kernel @ %p\n", kernel_addr);
         wait_cycle(0x1000);
-        asm volatile("br %0" : : "r"(kernel_addr));
+        (decltype (&kernel_main)(kernel_addr))(dtb_addr);
         break;
       }
       default:

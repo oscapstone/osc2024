@@ -6,13 +6,14 @@ FIRMWARE 	= bootcode.bin fixup.dat start.elf
 CONFIG 		= config.txt
 IMGS 		= $(shell find . -name '*.img')
 INITFSCPIO 	= initramfs.cpio
+DEVICETREE 	= bcm2710-rpi-3-b-plus.dtb
 
-.PHONY: all upload eject format download
+.PHONY: all upload eject format download dtb
 
-all: $(FIRMWARE)
+all: $(FIRMWARE) $(DEVICETREE)
 
-upload: $(FIRMWARE)
-	cp $(FIRMWARE) $(DISKPATH)
+upload: $(FIRMWARE) $(DEVICETREE)
+	cp $(FIRMWARE) $(DEVICETREE) $(DISKPATH)
 ifneq ($(wildcard $(CONFIG)),)
 	cp $(CONFIG) $(DISKPATH)
 endif
@@ -49,4 +50,8 @@ fixup.dat:
 	$(MAKE) download "TARGET=$@"
 
 start.elf:
+	$(MAKE) download "TARGET=$@"
+
+dtb: $(DEVICETREE)
+$(DEVICETREE):
 	$(MAKE) download "TARGET=$@"

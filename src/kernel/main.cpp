@@ -2,7 +2,7 @@
 #include "cmd.hpp"
 #include "initramfs.hpp"
 
-extern "C" void kernel_main() {
+extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   mini_uart_puts("Hello Kernel!\n");
 

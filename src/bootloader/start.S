@@ -2,6 +2,9 @@
 
 .global _start
 _start:
+    // save dtb addr
+    mov     x19, x0
+
     mrs     x0, MPIDR_EL1
     and     x0, x0, #0x3
     cbz     x0, primary_cpu
@@ -23,7 +26,11 @@ primary_cpu:
     adr     x0, __bss_start
     adr     x1, __bss_end
     bl      memzero
+
+    // restore dtb addr
+    mov     x0, x19
     bl      kernel_main
+
     b       prog_hang
 
 relocate:
@@ -32,5 +39,10 @@ relocate:
     sub     x2, x2, x1
     ldr     x0, =__bootloader
     bl      memcpy
-    br      x0
+
+    mov     x1, x0
+    // restore dtb addr
+    mov     x0, x19
+    br      x1
+
     b       prog_hang

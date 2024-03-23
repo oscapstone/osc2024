@@ -67,3 +67,5 @@ make disk
 
 - [BCM2837 ARM Peripherals](https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf)
 - [Mailbox property interface](https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface)
+- [Devicetree Specification v0.4](https://www.devicetree.org/specifications/)
+- [Linux and the Devicetree](https://www.kernel.org/doc/html/latest/devicetree/usage-model.html)

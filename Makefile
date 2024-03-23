@@ -5,6 +5,10 @@ QEMU		= qemu-system-aarch64
 MINICOM 	= minicom
 SERIAL 		= /dev/cu.usbserial-0001
 
+BUILD_DIR 	= build
+SRC_DIR  	= src
+DISK_DIR 	= disk
+
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
 			  -mcpu=cortex-a53 \
@@ -13,11 +17,8 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -D_LIBCPP_DISABLE_AVAILABILITY \
 			  -std=c++20 \
 			  -nostdlib -Os -fPIE
-QEMU_FLAGS 	= -display none -smp cpus=4
-
-BUILD_DIR 	= build
-SRC_DIR  	= src
-DISK_DIR 	= disk
+QEMU_FLAGS 	= -display none -smp cpus=4 \
+			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb
 
 ifeq ($(TARGET),)
 	TARGET = kernel
@@ -92,6 +93,7 @@ clean:
 	$(RM) -r $(BUILD_DIR)
 
 run: $(KERNEL_BIN)
+	$(MAKE) -C $(DISK_DIR) dtb
 	$(QEMU) -M raspi3b -kernel $(KERNEL_BIN) $(QEMU_FLAGS)
 
 upload:
