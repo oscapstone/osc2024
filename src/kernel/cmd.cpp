@@ -40,6 +40,11 @@ const Cmd cmds[] = {
         .help = "memory allocation",
         .fp = cmd_alloc,
     },
+    {
+        .name = "devtree",
+        .help = "print device tree",
+        .fp = cmd_devtree,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

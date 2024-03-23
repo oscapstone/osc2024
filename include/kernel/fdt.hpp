@@ -125,6 +125,6 @@ class FDT {
   void print();
   void init(void* addr, bool debug = false);
   void traverse(fp callback);
-  string_view find(const char* path);
+  string_view find(const char* path, bool debug = false);
 };
 extern FDT fdt;

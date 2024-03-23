@@ -130,17 +130,23 @@ void FDT::traverse_impl(int& level, uint32_t& offset, const char* node_name,
 namespace fdt_find {
 static const char* path;
 static int cur_level, cur_idx, nxt_idx;
-static bool last;
+static bool last, found, debug;
 static string_view view;
 static bool find_path(uint32_t tag, int level, const char* node_name,
                       const char* prop_name, uint32_t len,
                       const char prop_value[]) {
   if (level != cur_level)
-    return last;
+    return found;
 
   switch (tag) {
     case FDT_BEGIN_NODE: {
-      if (strncmp(path + cur_idx, node_name, nxt_idx - cur_idx))
+      if (debug)
+        mini_uart_printf("+ %s\n", node_name);
+
+      int sz = nxt_idx - cur_idx;
+      if (strncmp(path + cur_idx, node_name, sz))
+        return false;
+      if (node_name[sz] != '\0')
         return false;
 
       cur_level++;
@@ -148,7 +154,6 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
       for (;;) {
         switch (path[nxt_idx]) {
           case 0:
-          case '@':
             last = true;
           case '/':
             return false;
@@ -161,11 +166,14 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
     }
     case FDT_PROP: {
       if (last) {
+        if (debug)
+          mini_uart_printf(": %s\n", prop_name);
+
         if (strncmp(path + cur_idx, prop_name, nxt_idx - cur_idx))
           return false;
         cur_level++;
         view = {prop_value, (int)len};
-        return true;
+        return found = true;
       }
     }
   }
@@ -173,14 +181,16 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
 }
 }  // namespace fdt_find
 
-string_view FDT::find(const char* path_) {
+string_view FDT::find(const char* path_, bool debug) {
   using namespace fdt_find;
   path = path_;
   cur_level = 0;
   cur_idx = -1;
   nxt_idx = 0;
   view = {nullptr, 0};
-  last = false;
-  traverse(find_path);
+  last = found = false;
+  fdt_find::debug = debug;
+  if (path[0] == '/')
+    traverse(find_path);
   return view;
 }
