@@ -33,7 +33,7 @@ void uart_init()
     while (cycle--) // hold time
         asm volatile("nop");
     *GPPUDCLK0 = 0;
-    
+
     *AUX_ENABLE |= 1;
     *AUX_MU_CNTL = 0;
     *AUX_MU_IER = 0;
@@ -42,6 +42,26 @@ void uart_init()
     *AUX_MU_BAUD = 270;
     *AUX_MU_IIR = 6;
     *AUX_MU_CNTL = 3;
+}
+
+unsigned char uart_rev()
+{
+    while (1)
+    {
+        if (*AUX_MU_LSR & 1)
+            break;
+    }
+    return (unsigned char)(*AUX_MU_IO);
+}
+
+void uart_send(unsigned int c)
+{
+    while (1)
+    {
+        if (*AUX_MU_LSR & (1 << 5))
+            break;
+    }
+    *AUX_MU_IO = c;
 }
 
 char uart_read()
@@ -74,25 +94,5 @@ void uart_puts(char *s)
         if (*s == '\n')
             uart_write('\r');
         uart_write(*s++);
-    }
-}
-
-void uart_hex_upper_case (unsigned int d)
-{
-    for (int c = 28; c >= 0; c -= 4)
-    {
-        unsigned int n = (d >> c) & 0xF;
-        n += n > 9 ? 55 : 48; // 0-9 => '0'-'9', 10-15 => 'A'-'F'
-        uart_write(n);
-    }
-}
-
-void uart_hex_lower_case (unsigned int d)
-{
-    for (int c = 28; c >= 0; c -= 4)
-    {
-        unsigned int n = (d >> c) & 0xF;
-        n += n > 9 ? 87 : 48; // 0-9 => '0'-'9', 10-15 => 'a'-'f'
-        uart_write(n);
     }
 }

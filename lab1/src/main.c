@@ -10,4 +10,6 @@ int main()
 	get_arm_memory();
 	uart_puts("\n");
 	simple_shell();
+
+	return 0;
 }
