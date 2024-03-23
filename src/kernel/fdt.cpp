@@ -1,7 +1,6 @@
 #include "fdt.hpp"
 
 #include "board/mini-uart.hpp"
-#include "heap.hpp"
 #include "string.hpp"
 
 FDT fdt;
@@ -22,16 +21,7 @@ static bool print_fdt(uint32_t tag, int level, const char* node_name,
     }
     case FDT_PROP: {
       mini_uart_printf("%s: ", prop_name);
-      bool printable = true;
-      for (uint32_t i = 0; i < len; i++) {
-        auto x = prop_value[i];
-        printable &= (0x20 <= x and x <= 0x7e) or (i + 1 == len and x == 0);
-      }
-      for (uint32_t j = 0; j < len; j++)
-        if (printable)
-          mini_uart_putc(prop_value[j]);
-        else
-          mini_uart_printf("%02x", prop_value[j]);
+      mini_uart_print({prop_value, (int)len});
       break;
     }
     default: {
@@ -42,10 +32,15 @@ static bool print_fdt(uint32_t tag, int level, const char* node_name,
   return false;
 }
 
-void FDT::init(void* addr) {
+void FDT::print() {
+  traverse(print_fdt);
+}
+
+void FDT::init(void* addr, bool debug) {
   base = (char*)addr;
 
-  mini_uart_printf("DTB ADDR: %p\n", base);
+  if (debug)
+    mini_uart_printf("DTB ADDR: %p\n", base);
 
   if (fdt_magic(base) != FDT_MAGIC) {
     mini_uart_printf("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base),
@@ -58,24 +53,30 @@ void FDT::init(void* addr) {
     prog_hang();
   }
 
-  mini_uart_printf("magic             %x\n", fdt_magic(base));
-  mini_uart_printf("totalsize         %x\n", fdt_totalsize(base));
-  mini_uart_printf("off_dt_struct     %x\n", fdt_off_dt_struct(base));
-  mini_uart_printf("off_dt_strings    %x\n", fdt_off_dt_strings(base));
-  mini_uart_printf("off_mem_rsvmap    %x\n", fdt_off_mem_rsvmap(base));
-  mini_uart_printf("version           %x\n", fdt_version(base));
-  mini_uart_printf("last_comp_version %x\n", fdt_last_comp_version(base));
-  mini_uart_printf("boot_cpuid_phys   %x\n", fdt_boot_cpuid_phys(base));
-  mini_uart_printf("size_dt_strings   %x\n", fdt_size_dt_strings(base));
-  mini_uart_printf("size_dt_struct    %x\n", fdt_size_dt_struct(base));
-
-  reserve_entry = (fdt_reserve_entry*)(base + fdt_off_mem_rsvmap(base));
-  for (auto it = reserve_entry; fdtrsv_address(it) and fdtrsv_size(it); it++) {
-    mini_uart_printf("rsvmap %ld: %lx %lx\n", it - reserve_entry,
-                     fdtrsv_address(it), fdtrsv_size(it));
+  if (debug) {
+    mini_uart_printf("magic             %x\n", fdt_magic(base));
+    mini_uart_printf("totalsize         %x\n", fdt_totalsize(base));
+    mini_uart_printf("off_dt_struct     %x\n", fdt_off_dt_struct(base));
+    mini_uart_printf("off_dt_strings    %x\n", fdt_off_dt_strings(base));
+    mini_uart_printf("off_mem_rsvmap    %x\n", fdt_off_mem_rsvmap(base));
+    mini_uart_printf("version           %x\n", fdt_version(base));
+    mini_uart_printf("last_comp_version %x\n", fdt_last_comp_version(base));
+    mini_uart_printf("boot_cpuid_phys   %x\n", fdt_boot_cpuid_phys(base));
+    mini_uart_printf("size_dt_strings   %x\n", fdt_size_dt_strings(base));
+    mini_uart_printf("size_dt_struct    %x\n", fdt_size_dt_struct(base));
   }
 
-  traverse(print_fdt);
+  reserve_entry = (fdt_reserve_entry*)(base + fdt_off_mem_rsvmap(base));
+  if (debug) {
+    for (auto it = reserve_entry; fdtrsv_address(it) and fdtrsv_size(it);
+         it++) {
+      mini_uart_printf("rsvmap %ld: %lx %lx\n", it - reserve_entry,
+                       fdtrsv_address(it), fdtrsv_size(it));
+    }
+  }
+
+  if (debug)
+    print();
 }
 
 void FDT::traverse(fp callback) {

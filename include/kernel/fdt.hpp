@@ -122,7 +122,8 @@ class FDT {
                      fp callback);
 
  public:
-  void init(void* addr);
+  void print();
+  void init(void* addr, bool debug = false);
   void traverse(fp callback);
   string_view find(const char* path);
 };

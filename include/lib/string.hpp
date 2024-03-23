@@ -33,6 +33,9 @@ class string_view {
   int size() const {
     return size_;
   }
+  char operator[](int i) const {
+    return buf_[i];
+  }
 };
 
 bool operator==(string_view, string_view);

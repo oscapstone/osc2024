@@ -115,3 +115,24 @@ int mini_uart_printf(const char* format, ...) {
   va_end(args);
   return size;
 }
+
+void mini_uart_print_hex(string_view view) {
+  for (auto c : view)
+    mini_uart_printf("%02x", c);
+}
+void mini_uart_print_str(string_view view) {
+  for (auto c : view)
+    mini_uart_putc(c);
+}
+
+void mini_uart_print(string_view view) {
+  bool printable = true;
+  for (int i = 0; i < view.size(); i++) {
+    auto c = view[i];
+    printable &= (0x20 <= c and c <= 0x7e) or (i + 1 == view.size() and c == 0);
+  }
+  if (printable)
+    mini_uart_print_str(view);
+  else
+    mini_uart_print_hex(view);
+}

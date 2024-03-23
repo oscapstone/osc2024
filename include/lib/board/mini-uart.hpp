@@ -1,4 +1,5 @@
 #pragma once
+#include "string.hpp"
 #include "util.hpp"
 
 void mini_uart_setup();
@@ -9,3 +10,6 @@ void mini_uart_putc(char c);
 void mini_uart_puts(const char* s);
 int mini_uart_getline_echo(char* buffer, int size);
 int PRINTF_FORMAT(1, 2) mini_uart_printf(const char* format, ...);
+void mini_uart_print_hex(string_view view);
+void mini_uart_print_str(string_view view);
+void mini_uart_print(string_view view);
