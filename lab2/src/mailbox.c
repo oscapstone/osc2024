@@ -1,5 +1,5 @@
-#include "mailbox.h"
-#include "mini_uart.h"
+#include "../include/mailbox.h"
+#include "../include/mini_uart.h"
 
 
 

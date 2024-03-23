@@ -1,6 +1,6 @@
-#include "mini_uart.h"
-#include "shell.h"
-#include "string_utils.h"
+#include "../include/mini_uart.h"
+#include "../include/shell.h"
+#include "../include/string_utils.h"
 
 void kernel_main(void)
 {

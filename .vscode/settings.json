@@ -2,6 +2,8 @@
     "files.associations": {
         "mailbox.h": "c",
         "mini_uart.h": "c",
-        "string_utils.h": "c"
+        "string_utils.h": "c",
+        "cpio.h": "c",
+        "shell.h": "c"
     }
 }

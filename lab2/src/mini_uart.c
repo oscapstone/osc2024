@@ -1,6 +1,6 @@
-#include "utils.h"
-#include "peripherals/mini_uart.h"
-#include "peripherals/gpio.h"
+#include "../include/utils.h"
+#include "../include/peripherals/mini_uart.h"
+#include "../include/peripherals/gpio.h"
 
 void uart_send ( char c )
 {

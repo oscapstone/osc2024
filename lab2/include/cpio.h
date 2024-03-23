@@ -4,7 +4,7 @@
 #define QEMU_CPIO_ADDR 0x8000000
 #define RPI3_CPIO_ADDR 0x20000000
 
-struct cpio_newc_header {
+struct cpio_header {
     char    c_magic[6];
     char    c_ino[8];
     char    c_mode[8];

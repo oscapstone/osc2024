@@ -9,7 +9,7 @@ SRC_DIR = src
 all : kernel8.img
 
 qe: kernel8.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial stdio -display none
+	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial stdio -display none -initrd initramfs.cpio
 
 clean :
 	rm -rf $(BUILD_DIR) *.img 

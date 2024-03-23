@@ -1,8 +1,9 @@
-#include "mini_uart.h"
-#include "shell.h"
-#include "string_utils.h"
-#include "mailbox.h"
-#include "reboot.h"
+#include "../include/mini_uart.h"
+#include "../include/shell.h"
+#include "../include/string_utils.h"
+#include "../include/mailbox.h"
+#include "../include/reboot.h"
+#include "../include/cpio.h"
 
 #define BUFFER_SIZE 100
 
@@ -42,14 +43,17 @@ void parse_command(char *buffer)
         help();
     } else if (my_strcmp(buffer, "hello") == 0) {
         hello();
-    } else if (my_strcmp(buffer, "info") == 0){
+    } else if (my_strcmp(buffer, "info") == 0) {
         get_board_revision();
         get_base_address();
     } else if (my_strcmp(buffer, "reboot") == 0) {
         uart_send_string("rebooting...\r\n");
         reset(1000);
-    }
-    else {
+    } else if (my_strcmp(buffer, "ls") == 0) {
+        cpio_ls();
+    } else if (my_strcmp(buffer, "cat") == 0) {
+        cpio_cat();
+    } else {
         uart_send_string("command ");
         uart_send_string(buffer);
         uart_send_string(" not found\r\n");
