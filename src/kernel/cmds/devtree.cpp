@@ -9,11 +9,11 @@ int cmd_devtree(int argc, char* argv[]) {
   } else {
     for (int i = 1; i < argc; i++) {
       auto name = argv[i];
-      auto view = fdt.find(name);
-      if (view.data() == nullptr) {
+      auto [found, view] = fdt.find(name, print_fdt);
+      if (!found) {
         r = -1;
         mini_uart_printf("devtree: %s: No such device\n", name);
-      } else {
+      } else if (view.data()) {
         mini_uart_printf("%s: ", name);
         mini_uart_print(view);
         mini_uart_printf("\n");

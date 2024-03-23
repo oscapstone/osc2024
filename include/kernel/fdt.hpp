@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "pair.hpp"
 #include "string.hpp"
 
 constexpr uint32_t FDT_MAGIC = 0xd00dfeed;
@@ -103,6 +104,9 @@ constexpr uint32_t FDT_PROP = 0x00000003;
 constexpr uint32_t FDT_NOP = 0x00000004;
 constexpr uint32_t FDT_END = 0x00000009;
 
+bool print_fdt(uint32_t tag, int level, const char* node_name,
+               const char* prop_name, uint32_t len, const char prop_value[]);
+
 class FDT {
  public:
   using fp = bool (*)(uint32_t tag, int level, const char* node_name,
@@ -125,6 +129,7 @@ class FDT {
   void print();
   void init(void* addr, bool debug = false);
   void traverse(fp callback);
-  string_view find(const char* path, bool debug = false);
+  pair<bool, string_view> find(const char* path, fp list_fp = nullptr,
+                               bool debug = false);
 };
 extern FDT fdt;

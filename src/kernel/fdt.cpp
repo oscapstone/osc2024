@@ -5,9 +5,8 @@
 
 FDT fdt;
 
-static bool print_fdt(uint32_t tag, int level, const char* node_name,
-                      const char* prop_name, uint32_t len,
-                      const char prop_value[]) {
+bool print_fdt(uint32_t tag, int level, const char* node_name,
+               const char* prop_name, uint32_t len, const char prop_value[]) {
   for (int i = 0; i < level; i++)
     mini_uart_putc('\t');
   switch (tag) {
@@ -132,11 +131,19 @@ static const char* path;
 static int cur_level, cur_idx, nxt_idx;
 static bool last, found, debug;
 static string_view view;
+static FDT::fp list_fp;
 static bool find_path(uint32_t tag, int level, const char* node_name,
                       const char* prop_name, uint32_t len,
                       const char prop_value[]) {
+  if (found) {
+    if (list_fp and
+        (level > cur_level or (level == cur_level and tag == FDT_END_NODE)))
+      return list_fp(tag, level - cur_level, node_name, prop_name, len,
+                     prop_value);
+    return true;
+  }
   if (level != cur_level)
-    return found;
+    return false;
 
   switch (tag) {
     case FDT_BEGIN_NODE: {
@@ -149,17 +156,24 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
       if (node_name[sz] != '\0')
         return false;
 
-      cur_level++;
-      cur_idx = ++nxt_idx;
-      for (;;) {
-        switch (path[nxt_idx]) {
-          case 0:
-            last = true;
-          case '/':
-            return false;
-            break;
-          default:
-            nxt_idx++;
+      if (last) {
+        found = true;
+        if (list_fp)
+          return list_fp(tag, 0, node_name, prop_name, len, prop_value);
+        return true;
+      } else {
+        cur_level++;
+        cur_idx = ++nxt_idx;
+        for (;;) {
+          switch (path[nxt_idx]) {
+            case 0:
+              last = true;
+            case '/':
+              return false;
+              break;
+            default:
+              nxt_idx++;
+          }
         }
       }
       break;
@@ -181,16 +195,17 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
 }
 }  // namespace fdt_find
 
-string_view FDT::find(const char* path_, bool debug) {
+pair<bool, string_view> FDT::find(const char* path, fp list_fp, bool debug) {
   using namespace fdt_find;
-  path = path_;
+  fdt_find::path = path;
+  fdt_find::list_fp = list_fp;
+  fdt_find::debug = debug;
   cur_level = 0;
   cur_idx = -1;
   nxt_idx = 0;
   view = {nullptr, 0};
   last = found = false;
-  fdt_find::debug = debug;
   if (path[0] == '/')
     traverse(find_path);
-  return view;
+  return {found, view};
 }
