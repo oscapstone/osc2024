@@ -1,2 +1,3 @@
 -Iinclude/kernel
 -Iinclude/lib
+-std=c++20

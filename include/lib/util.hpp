@@ -11,8 +11,7 @@
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
 
-using uint32_t = unsigned int;
-using uint64_t = unsigned long;
+#include <cstdint>
 using addr_t = volatile char*;
 
 // util-asm.S
