@@ -130,5 +130,6 @@ void timeout()
     uart_puts("Seconds: ");
     read_user_input(sec);
 
+    strcat(msg, "\n"); // Add newline at the end
     set_timeout(msg, atoi(sec));
 }

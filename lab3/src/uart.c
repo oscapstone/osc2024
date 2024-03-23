@@ -2,10 +2,10 @@
 #include "irq.h"
 #include "string.h"
 
-int uart_read_idx = 0;
-int uart_write_idx = 0;
-char uart_read_buffer[UART_BUF_SIZE];
-char uart_write_buffer[UART_BUF_SIZE];
+static int uart_read_idx = 0;
+static int uart_write_idx = 0;
+static char uart_read_buffer[UART_BUF_SIZE];
+static char uart_write_buffer[UART_BUF_SIZE];
 
 void uart_init()
 {
@@ -34,6 +34,9 @@ void uart_init()
     *AUX_MU_BAUD = 270; // Set baud rate to 115200
     *AUX_MU_IIR = 6;    // No FIFO
     *AUX_MU_CNTL = 3;   // Enable Tx and Rx
+
+    // Enable AUX interrupts
+    *ENABLE_IRQS_1 |= 1 << 29;
 }
 
 char uart_getc()
@@ -75,47 +78,53 @@ void uart_puts(const char *s)
     }
 }
 
-void uart_enable_interrupt()
+void uart_enable_tx_interrupt()
 {
-    // *AUX_MU_IER |= 3;       // Enable transmit & receive interrupts
-    *AUX_MU_IER |= 1;          // Enable receive interrupts
-    *ENABLE_IRQS_1 |= 1 << 29; // Enable AUX interrupts (Bit 29)
+    *AUX_MU_IER |= 0x02;
 }
 
-void uart_disable_interrupt()
+void uart_disable_tx_interrupt()
 {
-    // TODO: Implement uart_disable_interrupt function
+    *AUX_MU_IER &= 0x01;
 }
 
-void uart_irq_handler()
+void uart_enable_rx_interrupt()
 {
-    // Transmit interrupt
-    if ((*AUX_MU_IIR & 0x6) == 0x2) {
-        *AUX_MU_IER &= 0x01; // Disable transmit interrupt
-        if (uart_write_idx < UART_BUF_SIZE &&
-            uart_write_buffer[uart_write_idx] != 0) {
-            // Buffer is not empty -> send characters
-            *AUX_MU_IO = uart_write_buffer[uart_write_idx++];
-            *AUX_MU_IER |= 0x02; // Enable transmit interrupt
-        }
-    }
+    *AUX_MU_IER |= 0x01;
+}
 
-    // Receive interrupt
-    if ((*AUX_MU_IIR & 0x6) == 0x4) {
-        char c = (char)(*AUX_MU_IO);
-        uart_read_buffer[uart_read_idx++] = c == '\r' ? '\n' : c;
-        if (uart_read_idx >= UART_BUF_SIZE)
-            uart_read_idx = 0;
+void uart_disable_rx_interrupt()
+{
+    *AUX_MU_IER &= 0x2;
+}
+
+void uart_tx_irq_handler()
+{
+    uart_disable_tx_interrupt();
+    if (uart_write_idx < UART_BUF_SIZE &&
+        uart_write_buffer[uart_write_idx] != 0) {
+        // Buffer is not empty -> send characters
+        *AUX_MU_IO = uart_write_buffer[uart_write_idx++];
+        uart_enable_tx_interrupt();
     }
+}
+
+void uart_rx_irq_handler()
+{
+    char c = (char)(*AUX_MU_IO);
+    uart_read_buffer[uart_read_idx++] = c == '\r' ? '\n' : c;
+    if (uart_read_idx >= UART_BUF_SIZE)
+        uart_read_idx = 0;
+    uart_enable_rx_interrupt();
 }
 
 void uart_async_read(char *buf, int len)
 {
-    *AUX_MU_IER &= 0x2; // Disable receive interrupt
+    uart_disable_rx_interrupt();
     for (int i = 0; i < uart_read_idx && i < len; i++)
         buf[i] = uart_read_buffer[i];
     uart_read_idx = 0;
-    *AUX_MU_IER |= 0x01; // Enable receive interrupts
+    uart_enable_rx_interrupt();
 }
 
 void uart_async_write(const char *s)
@@ -130,5 +139,5 @@ void uart_async_write(const char *s)
         uart_write_buffer[i] = s[i];
     uart_write_buffer[len] = '\0';
     uart_write_idx = 0; // Reset the buffer index
-    *AUX_MU_IER |= 0x2; // Enable transmit interrupt
+    uart_enable_tx_interrupt();
 }

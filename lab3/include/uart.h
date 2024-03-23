@@ -24,9 +24,13 @@ void uart_putc(char c);
 void uart_hex(unsigned int h);
 void uart_puts(const char *s);
 
-void uart_enable_interrupt();
-void uart_disable_interrupt();
-void uart_irq_handler();
+void uart_enable_tx_interrupt();
+void uart_disable_tx_interrupt();
+void uart_enable_rx_interrupt();
+void uart_disable_rx_interrupt();
+
+void uart_tx_irq_handler();
+void uart_rx_irq_handler();
 
 void uart_async_read(char *buf, int len);
 void uart_async_write(const char *s);

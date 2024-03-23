@@ -10,7 +10,7 @@ typedef struct __timer_t {
     struct __timer_t *next;
 } timer_t;
 
-timer_t *head = 0;
+static timer_t *head = 0;
 
 void timer_enable_interrupt()
 {
@@ -34,13 +34,8 @@ void timer_irq_handler()
     asm volatile("mrs x0, cntfrq_el0;"
                  "msr cntp_tval_el0, x0;");
 
-    // Print the uptime
-    // uart_puts("Seconds: ");
-    // uart_hex(timer_get_uptime());
-    // uart_putc('\n');
-
     // Check the timer queue
-    if (head != 0 && timer_get_uptime() >= head->time) {
+    while (head != 0 && timer_get_uptime() >= head->time) {
         head->func(head->arg); // Execute the callback function
         head = head->next;     // Delete the node FIXME: free the node
     }
@@ -81,6 +76,5 @@ void timer_add(void (*callback)(void *), void *arg, int after)
 
 void set_timeout(const char *message, int after)
 {
-    strcat(message, "\n"); // Add newline at the end
     timer_add((void (*)(void *))uart_puts, (void *)message, after);
 }

@@ -28,6 +28,8 @@ void exception_entry(uint64_t elr, uint64_t esr, uint64_t spsr)
 
 void invalid_entry(uint64_t elr, uint64_t esr, uint64_t spsr)
 {
-    uart_puts("Exception caught but its handler is not implemented.\n");
+    uart_puts("[ERROR] The exception handler is not implemented\n");
     print_registers(elr, esr, spsr);
+    while (1)
+        ;
 }
