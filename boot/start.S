@@ -21,7 +21,7 @@ pre_relocate:
 relocate:
     ldr     x5, [x2], #8
     str     x5, [x3], #8
-    sub     x1, x1, #1
+    sub     x1, x1, #8
     cbnz    x1, relocate
 
 c_entry:

@@ -5,7 +5,7 @@ LD_SCRIPT=linker.ld
 OBJCOPY=aarch64-linux-gnu-objcopy
 
 INCLUDE_DIR=../include
-SRC_DIR=./
+SRC_DIR=../src
 
 SRC_FILES=$(wildcard $(SRC_DIR)/*.c)
 OBJ_FILES=$(SRC_FILES:.c=.o)
@@ -17,14 +17,17 @@ all: kernel8.img
 kernel8.img: kernel8.elf
 	$(OBJCOPY) -O binary kernel8.elf kernel8.img
 
-kernel8.elf: $(SRC_DIR)/start.o $(OBJ_FILES)
+kernel8.elf: start.o main.o $(OBJ_FILES)
 	$(LD) -T $(LD_SCRIPT) -o kernel8.elf \
-		$(SRC_DIR)/start.o $(OBJ_FILES)
+		start.o main.o $(OBJ_FILES)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(SRC_DIR)/start.o: $(SRC_DIR)/start.S
+main.o: main.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+start.o: start.S
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
