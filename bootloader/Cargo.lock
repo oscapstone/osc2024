@@ -12,26 +12,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "bootloader"
+name = "lab1"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
- "driver",
-]
-
-[[package]]
-name = "driver"
-version = "0.1.0"
-dependencies = [
- "aarch64-cpu",
-]
-
-[[package]]
-name = "kernel"
-version = "0.1.0"
-dependencies = [
- "aarch64-cpu",
- "driver",
 ]
 
 [[package]]

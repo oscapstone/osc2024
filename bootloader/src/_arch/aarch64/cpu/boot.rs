@@ -11,6 +11,5 @@ global_asm!(
 
 #[no_mangle]
 pub unsafe fn _start_rust(){
-    crate::kernel_init()
-
+    crate::bootloader()
 }

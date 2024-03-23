@@ -1,4 +1,4 @@
-.git
 target
+*/target
 kernel8.img
-
+.vscode
