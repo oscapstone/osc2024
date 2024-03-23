@@ -14,12 +14,12 @@
 #include <cstdint>
 using addr_t = volatile char*;
 
-// util-asm.S
 extern "C" {
+// util-asm.S
 void set32(addr_t address, uint32_t value);
 uint32_t get32(addr_t address);
 void wait_cycle(unsigned cycle);
 
 // start.S
-void prog_hang();
+[[noreturn]] void prog_hang();
 }
