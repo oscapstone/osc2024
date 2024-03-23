@@ -65,6 +65,10 @@ void bootloader_main(){
     // x30 is link register(lr), record return address(usuallt used when bl is called)
     // here we use it as our path to our shell kernel as 'ret' will return to return address
     asm volatile(
+        "mov x0, x10;"
+        "mov x1, x11;"
+        "mov x2, x12;"
+        "mov x3, x13;"
         "mov x30, 0x80000;"
         "ret;"
     );

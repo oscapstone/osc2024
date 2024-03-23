@@ -21,8 +21,7 @@
         > 2. No Need to Check CPU's ID: In a multi-core system, each CPU core typically has a unique identifier. Normally, code that needs to run only on a specific core would check the CPU's ID to determine if it's running on the correct core. However, due to the specific firmware change mentioned, there's no need to perform this check in this case. The assumption is that the code will always execute on the BSP core.
         > 3. Spin-Loop on Non-Relocated Address: The comment warns about the consequences of running a spin-loop on a non-relocated address. A spin-loop is a tight loop that continuously checks a condition until it becomes true. If such a loop were to execute on a non-relocated address, it could cause issues, possibly due to the lack of proper initialization or the presence of unexpected data at that address.
         - The rest are the same as Lab1
-
-        - Regarding saving registers before loading new kernel:
+        - Regarding saving registers before loading new kernel. The ```x0``` should be save to somewhere like ```x11``` to preserve its content during the bootloader as it might be corrupted during the new kernel loading even we didn't modify ```x0``` in assembly.(This is probably due to that ```x0``` is also used as result register)
     - linker.ld
         - Since 0x80000 is for new kernel, our .text start at 0x60000
         - Record the bootloader size so we can load them to 0x60000 in ```boot.S```
@@ -76,6 +75,7 @@
     > This means that you cannot access the value of a linker script defined symbol - it has no value - all you can do is use the address of a linker script defined symbol.
     - So we use ```&__end``` to get address of heap .
     - We record the offset of heap to get new unused heap memory.
+    - We need to return the head instead of tail of allocated space
 ---
 ## Advanced Exercises
 ### Advanced Exercise 1 - Bootloader Self Relocation

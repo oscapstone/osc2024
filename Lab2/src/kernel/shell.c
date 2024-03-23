@@ -37,6 +37,9 @@ void my_shell(){
             uart_puts("hello    :Print Hello World!\n");
             uart_puts("info     :Get revision and memory\n");
             uart_puts("reboot   :Reboot the device\n");
+            uart_puts("ls       :list all files in initramfs\n");
+            uart_puts("cat      :show the content of file\n");
+            uart_puts("aloc     :allocate a string\n");
         }
         else if(!string_comp(buf, "hello")){
             uart_puts("Hello World!\n");
@@ -90,6 +93,20 @@ void my_shell(){
             cpio_cat(buf);
 
             continue;
+        }
+        else if(!string_comp(buf, "aloc")){
+            char* string = simple_malloc(8);
+
+            string[0] = 'S';
+            string[1] = 't';
+            string[2] = 'r';
+            string[3] = 'i';
+            string[4] = 'n';
+            string[5] = 'g';
+            string[6] = '!';
+            string[7] = '\0';
+            uart_puts(string);
+            uart_putc('\n');
         }
         else{
             uart_puts("Unknown Command: ");

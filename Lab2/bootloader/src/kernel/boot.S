@@ -6,6 +6,10 @@
 .global _start
 
 _start:
+mov     x10, x0
+mov     x11, x1
+mov     x12, x2
+mov     x13, x3
 // because of a change in firmware, this code will only run on the
 // BSP core, therefore there's no need to check the cpu's id. A spin-loop on a
 // non-relocated address would be otherwise bad,

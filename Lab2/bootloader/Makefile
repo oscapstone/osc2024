@@ -36,4 +36,4 @@ clean:
 	rm *.elf *.img *.o
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial pty
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial pty
