@@ -1,9 +1,8 @@
-#ifndef _UART_H
-#define _UART_H
+#ifndef UART_H
+#define UART_H
 
 void uart_init();
-void uart_send(unsigned int c);
-char uart_getc();
+char uart_recv();
 void uart_puts(char *s);
 void uart_hex(unsigned int d);
 

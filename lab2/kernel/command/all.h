@@ -10,5 +10,8 @@ struct Command {
 extern struct Command hello_command;
 extern struct Command mailbox_command;
 extern struct Command reboot_command;
+extern struct Command ls_command;
+extern struct Command cat_command;
+extern struct Command test_malloc_command;
 
 #endif

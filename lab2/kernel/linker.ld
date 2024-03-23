@@ -4,7 +4,7 @@ SECTIONS
   . = 0x80000;
   .text : 
   {
-      KEEP(*(.text.boot)) 
+      KEEP(*(.text.boot))
       *(.text) 
   } 
   .rodata :{ *(.rodata) }
@@ -18,4 +18,4 @@ SECTIONS
   }
   _end = .;
 }
-__bss_size = (__bss_end - __bss_start)>>3;
+__bss_size = (__bss_end - __bss_start) >> 3;

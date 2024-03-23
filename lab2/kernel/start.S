@@ -1,8 +1,15 @@
+.section ".data"
+.globl dtb_base
+dtb_base: .word 0
+
 .section ".text.boot"
 
 .global _start
 
 _start:
+    // store dtb base address from x0 to dtb_base
+    ldr x1, =dtb_base
+    str x0, [x1]
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
     and     x1, x1, #3

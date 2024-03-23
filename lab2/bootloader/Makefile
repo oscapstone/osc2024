@@ -13,6 +13,8 @@ OBJS = $(patsubst ./%.c,obj/%.o,$(LOCAL_SRCS)) \
        $(patsubst $(LIB_PATH)/%.c,obj/lib/%.o,$(LIB_SRCS)) \
        $(patsubst $(BSP_PATH)/%.c,obj/bsp/%.o,$(BSP_SRCS))
 
+QEMU_OPTS =  
+
 all: clean kernel8.img
 
 obj/%.o: %.c
@@ -38,9 +40,9 @@ kernel8.img: obj/start.o $(OBJS)
 clean:
 	rm -rf obj kernel8.elf kernel8.img
 
-run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+run: all
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial pty $(QEMU_OPTS)
 
 debug: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -s -S
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial pty -s -S $(QEMU_OPTS)
 
