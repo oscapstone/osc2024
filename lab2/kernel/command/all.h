@@ -2,9 +2,9 @@
 #define _ALL_H
 
 struct Command {
-  char name[16];
-  char description[64];
-  void (*function)(int argc, char **argv);
+    char name[16];
+    char description[64];
+    void (*function)(int argc, char **argv);
 };
 
 extern struct Command hello_command;

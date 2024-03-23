@@ -1,0 +1,17 @@
+UseTab:          Never
+TabWidth:        4
+IndentWidth: 4
+AccessModifierOffset: -4
+
+BasedOnStyle: Google
+# Include directives sorting and grouping
+IncludeCategories:
+  # First, include system libraries
+  - Regex:           '^<(.*).h>$'
+    Priority:        1
+  # Then, include project-specific headers
+  - Regex:           '^"(.*)"'
+    Priority:        2
+IncludeBlocks:    Regroup
+SortIncludes:     true
+
