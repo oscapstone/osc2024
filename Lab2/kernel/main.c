@@ -21,12 +21,13 @@ void main()
     uart_init();
     
     // say hello
-    uart_puts("Booted, start testing simple_alloc\r\n");
+    uart_puts("Booted, start testing simple_alloc\n");
 
-    uart_puts("Command: char* string = simple_alloc(8);\r\n");
+    uart_puts("Command: char* string = simple_alloc(8);\n");
     char* string = simple_alloc(8);
     uart_hex((unsigned int) string);
-    uart_puts("\r\n");
+    uart_puts("\n");
+    uart_send('\r');
     string[0] = '1';
     string[1] = '2';
     string[2] = '3';
@@ -36,18 +37,21 @@ void main()
     string[6] = '7';
     string[7] = '\0';
     uart_puts(string);
-    uart_puts("\r\n");
+    uart_puts("\n");
+    uart_send('\r');
 
     char* string2 = simple_alloc(8);
     uart_hex((unsigned int) string2);
-    uart_puts("\r\n");
+    uart_puts("\n");
+    uart_send('\r');
 
     int idx = 0;
     char in_char;
     // echo everything back
     while(1) {
         char buffer[1024];
-        uart_puts("\r# ");
+        uart_send('\r');
+        uart_puts("# ");
         while(1){
             in_char = uart_getc();
             uart_send(in_char);

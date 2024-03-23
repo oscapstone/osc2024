@@ -41,6 +41,8 @@ int hex_to_int(char *p, int len) {
 }
 
 void cpio_ls(){
+    uart_send('\r');
+    uart_puts("");
     struct cpio_newc_header *fs = (struct cpio_newc_header *)0x8000000;
     char *current = (char *)0x8000000;
     while (1) {
@@ -52,7 +54,8 @@ void cpio_ls(){
             break;
 
         uart_puts(current);
-        uart_puts("\r\n");
+        uart_puts("\n");
+        uart_send('\r');
         current += name_size;
         if((current - (char *)fs) % 4 != 0)
             current += (4 - (current - (char *)fs) % 4);
@@ -64,7 +67,8 @@ void cpio_ls(){
 }
 
 void cpio_cat(){
-    uart_puts("\rFilename: ");
+    uart_send('\r');
+    uart_puts("Filename: ");
     char in_char;
     char filename[100];
     int idx = 0;
@@ -90,17 +94,18 @@ void cpio_cat(){
         int file_size = hex_to_int(fs->c_filesize, 8);
         current += 110; // size of cpio_newc_header
         if (strcmp(current, "TRAILER!!!") == 0){
+            uart_send('\r');
             uart_puts(filename);
-            uart_puts(": No such file.\r\n");
+            uart_puts(": No such file.\n");
             break;
         }
         if (strcmp(current, filename) == 0){
             current += name_size;
             if((current - (char *)fs) % 4 != 0)
                 current += (4 - (current - (char *)fs) % 4);
-            uart_puts("\r");
+            uart_send('\r');
             uart_puts(current);
-            uart_puts("\r\n");
+            uart_puts("\n");
             break;
         }
         current += name_size;
@@ -115,19 +120,17 @@ void cpio_cat(){
 
 void shell(char * cmd){
     if(strcmp(cmd, "help") == 0){
-        uart_puts("\rhelp\t: print all available commands\r\n");
-        uart_puts("ls\t: list all files\r\n");
-        uart_puts("cat\t: show content of file\r\n");
+        uart_send('\r');
+        uart_puts("help\t: print all available commands\n");
+        uart_send('\r');
+        uart_puts("ls\t: list all files\n");
+        uart_send('\r');
+        uart_puts("cat\t: show content of file\n");
     }
     else if(strcmp(cmd, "ls") == 0){
         cpio_ls();
-        uart_puts("\r");
     }
     else if(strcmp(cmd, "cat") == 0){
         cpio_cat();
-        uart_puts("\r");
-    }
-    else{
-        uart_puts("\r");
     }
 }

@@ -8,15 +8,6 @@ int strcmp(char *s1, char *s2) {
     return (*(unsigned char *)s1) - (*(unsigned char *)s2);
 }
 
-void uart_reset() {
-    *AUX_MU_CNTL = 0; // Disable transmitter and receiver during configuration
-    *AUX_MU_IER = 0;  // Disable interrupt
-    *AUX_MU_LCR = 3;  // Reset the line control register (8-bit mode, no parity)
-    *AUX_MU_MCR = 0;  // Modem Control Register (no auto flow control)
-    *AUX_MU_IIR = 0xc6; // Clear FIFOs and disable interrupts
-    *AUX_MU_CNTL = 3; // Re-enable transmitter and receiver
-}
-
 void bootloader_main()
 {
     // set up serial console
