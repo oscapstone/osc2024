@@ -10,7 +10,7 @@ SRC_DIR=../src
 SRC_FILES=$(wildcard $(SRC_DIR)/*.c)
 OBJ_FILES=$(SRC_FILES:.c=.o)
 
-.PHONY: clean run run-mini-uart
+.PHONY: clean run run-mini-uart run-pty
 
 all: kernel8.img
 
@@ -31,7 +31,7 @@ start.o: start.S
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm kernel8.* $(SRC_DIR)/start.o $(OBJ_FILES)
+	rm kernel8.* main.o start.o $(OBJ_FILES)
 
 run:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
