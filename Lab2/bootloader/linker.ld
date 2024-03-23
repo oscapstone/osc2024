@@ -24,3 +24,4 @@ SECTIONS
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
 __bss_size = (__bss_end - __bss_start)>>3; /* bss size for start.S */
+__bootloader_size = (_end - 0x60000)>>3;

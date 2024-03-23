@@ -32,15 +32,16 @@ if not os.path.exists(args.file_path):
 size = os.stat(args.file_path).st_size
 size_bytes = size.to_bytes(4, "little")
 s.write(size_bytes)
-
+print("wrote data")
 # Read and print the received size
-received_size = read_line(s)
-print(received_size)
+#received_size = read_line(s)
+#print(received_size)
+print("sending kernel")
 
 # Open and send the file
 with open(args.file_path, "rb") as f:
     s.write(f.read())
 
 # Read and print the received content
-received_content = read_line(s)
-print(received_content)
+#received_content = read_line(s)
+#print(received_content)
