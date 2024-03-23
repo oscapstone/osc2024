@@ -1,4 +1,4 @@
-#include "../kernel/bsp/mailbox.h"
+#include "kernel/bsp/mailbox.h"
 
 void mailbox_call(unsigned int *mailbox) {
     // Write the data (shifted into the upper 28 bits) combined with

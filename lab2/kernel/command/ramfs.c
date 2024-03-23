@@ -1,7 +1,7 @@
-#include "../bsp/ramfs.h"
+#include "kernel/bsp/ramfs.h"
 
-#include "../io.h"
 #include "all.h"
+#include "kernel/io.h"
 
 void _ls_command(int argc, char **argv) {
     FileList *file_list = ramfs_get_file_list();

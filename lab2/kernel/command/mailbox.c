@@ -1,7 +1,7 @@
-#include "../bsp/mailbox.h"
+#include "kernel/bsp/mailbox.h"
 
-#include "../io.h"
 #include "all.h"
+#include "kernel/io.h"
 
 void _mailbox_command(int argc, char **argv) {
     print_string("\nMailbox info :\n");

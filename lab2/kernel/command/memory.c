@@ -1,7 +1,7 @@
-#include "../memory.h"
+#include "kernel/memory.h"
 
-#include "../io.h"
 #include "all.h"
+#include "kernel/io.h"
 
 void _test_malloc_command(int argc, char **argv) {
     print_string("\nMalloc size: ");

@@ -1,9 +1,9 @@
 #include "device_tree.h"
 
-#include "../lib/string.h"
-#include "../lib/utils.h"
 #include "bsp/uart.h"
 #include "io.h"
+#include "lib/string.h"
+#include "lib/utils.h"
 
 // get this value from start.S
 extern uint64_t *dtb_base;

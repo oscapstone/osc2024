@@ -1,6 +1,6 @@
 #include "memory.h"
 
-#include "../lib/stdlib.h"
+#include "lib/stdlib.h"
 
 extern int __bss_end;
 #define HEAP_MAX (&__bss_end) + 0x100

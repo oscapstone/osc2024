@@ -1,9 +1,8 @@
 #include "console.h"
 
-#include <string.h>
-
 #include "command/all.h"
 #include "io.h"
+#include "lib/string.h"
 
 struct Console {
     struct Command commands[64];

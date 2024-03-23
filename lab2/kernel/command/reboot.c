@@ -1,7 +1,7 @@
-#include "../bsp/reboot.h"
+#include "kernel/bsp/reboot.h"
 
-#include "../io.h"
 #include "all.h"
+#include "kernel/io.h"
 
 void _reboot_command(int argc, char **argv) {
     print_string("\nRebooting ...\n");

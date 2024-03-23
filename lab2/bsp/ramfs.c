@@ -1,11 +1,9 @@
-#include "../kernel/bsp/ramfs.h"
+#include "kernel/bsp/ramfs.h"
 
-#include <string.h>
-#include <utils.h>
-
-#include "../kernel/bsp/uart.h"
-#include "../lib/stdlib.h"
-#include "../lib/string.h"
+#include "kernel/bsp/uart.h"
+#include "lib/stdlib.h"
+#include "lib/string.h"
+#include "lib/utils.h"
 
 #define CPIO_BASE_QEMU (0x8000000)
 #define CPIO_BASE_RPI (0x20000000)

@@ -1,8 +1,8 @@
 #ifndef _DEVTREE_H
 #define _DEVTREE_H
 
-#include "../lib/stdlib.h"
-#include "../lib/utils.h"
+#include "lib/stdlib.h"
+#include "lib/utils.h"
 
 struct fdt_header {
     uint32_t magic;

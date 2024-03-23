@@ -1,4 +1,4 @@
-#include "../kernel/bsp/uart.h"
+#include "kernel/bsp/uart.h"
 
 #include "gpio.h"
 
