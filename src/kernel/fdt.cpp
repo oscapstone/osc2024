@@ -42,7 +42,7 @@ static bool print_fdt(uint32_t tag, int level, const char* node_name,
   return false;
 }
 
-bool FDT::init(void* addr) {
+void FDT::init(void* addr) {
   base = (char*)addr;
 
   mini_uart_printf("DTB ADDR: %p\n", base);
@@ -50,12 +50,12 @@ bool FDT::init(void* addr) {
   if (fdt_magic(base) != FDT_MAGIC) {
     mini_uart_printf("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base),
                      FDT_MAGIC);
-    return false;
+    prog_hang();
   }
   if (fdt_last_comp_version(base) > LAST_COMP_VERSION) {
     mini_uart_printf("Unsupport dtb v%d > v%d\n", fdt_last_comp_version(base),
                      LAST_COMP_VERSION);
-    return false;
+    prog_hang();
   }
 
   mini_uart_printf("magic             %x\n", fdt_magic(base));
@@ -76,8 +76,6 @@ bool FDT::init(void* addr) {
   }
 
   traverse(print_fdt);
-
-  return true;
 }
 
 void FDT::traverse(fp callback) {
@@ -126,4 +124,62 @@ void FDT::traverse_impl(int& level, uint32_t& offset, const char* node_name,
         return;
     }
   }
+}
+
+namespace fdt_find {
+static const char* path;
+static int cur_level, cur_idx, nxt_idx;
+static bool last;
+static string_view view;
+static bool find_path(uint32_t tag, int level, const char* node_name,
+                      const char* prop_name, uint32_t len,
+                      const char prop_value[]) {
+  if (level != cur_level)
+    return last;
+
+  switch (tag) {
+    case FDT_BEGIN_NODE: {
+      if (strncmp(path + cur_idx, node_name, nxt_idx - cur_idx))
+        return false;
+
+      cur_level++;
+      cur_idx = ++nxt_idx;
+      for (;;) {
+        switch (path[nxt_idx]) {
+          case 0:
+          case '@':
+            last = true;
+          case '/':
+            return false;
+            break;
+          default:
+            nxt_idx++;
+        }
+      }
+      break;
+    }
+    case FDT_PROP: {
+      if (last) {
+        if (strncmp(path + cur_idx, prop_name, nxt_idx - cur_idx))
+          return false;
+        cur_level++;
+        view = {prop_value, (int)len};
+        return true;
+      }
+    }
+  }
+  return false;
+}
+}  // namespace fdt_find
+
+string_view FDT::find(const char* path_) {
+  using namespace fdt_find;
+  path = path_;
+  cur_level = 0;
+  cur_idx = -1;
+  nxt_idx = 0;
+  view = {nullptr, 0};
+  last = false;
+  traverse(find_path);
+  return view;
 }

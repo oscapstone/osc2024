@@ -9,12 +9,8 @@ extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_puts("Hello Kernel!\n");
 
   heap_reset();
-  if (!fdt.init(dtb_addr)) {
-    mini_uart_printf("devicetree initialize failed\n");
-    prog_hang();
-  }
-
-  initramfs.init((char*)0x20000000);
+  fdt.init(dtb_addr);
+  initramfs_init();
 
   char buf[0x100];
   for (;;) {

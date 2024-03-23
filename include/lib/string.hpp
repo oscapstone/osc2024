@@ -1,7 +1,5 @@
 #pragma once
 
-#include "pair.hpp"
-
 extern "C" {
 void memzero(void* start, void* end);
 void* memcpy(void* dst, const void* src, int n);
@@ -15,15 +13,14 @@ long strtol(const char* s, const char** endptr = nullptr, int base = 0,
             int n = 0);
 
 class string_view {
-  char* buf_;
+  const char* buf_;
   int size_;
 
  public:
   using iterator = const char*;
-  // TODO: const char* -> chat*
-  string_view(const char* buf = nullptr, int size = -1)
-      : buf_((char*)buf),
-        size_(size == -1 ? buf == nullptr ? 0 : strlen(buf) : size) {}
+  string_view() : buf_(nullptr), size_(0) {}
+  string_view(const char* buf) : buf_(buf), size_(strlen(buf)) {}
+  string_view(const char* buf, int size) : buf_(buf), size_(size) {}
   iterator begin() {
     return buf_;
   }
