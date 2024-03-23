@@ -1,9 +1,9 @@
 #include "cmd.hpp"
 
 #include "board/mini-uart.hpp"
+#include "reloc.hpp"
 #include "string.hpp"
 
-// TODO: not relocatable
 const Cmd cmds[] = {
     {
         .name = "help",
@@ -65,14 +65,14 @@ int runcmd(const char* buf, int len) {
   const Cmd* cmd = nullptr;
   for (int i = 0; i < ncmd; i++) {
     auto it = &cmds[i];
-    if (!strcmp(argv[0], it->name)) {
+    if (!strcmp(argv[0], reloc(it->name))) {
       cmd = it;
       break;
     }
   }
 
   if (cmd != nullptr) {
-    return cmd->fp(argc, argv);
+    return reloc(cmd->fp)(argc, argv);
   } else {
     mini_uart_printf("command not found: %s\n", buf);
     return -1;
