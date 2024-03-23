@@ -1,4 +1,6 @@
-#define cpio_address 0x20000000
+// qemu 0x8000000 
+// rpi3 0x20000000
+#define cpio_address 0x8000000
 
 #define MAX_FILE_SIZE 1024
 

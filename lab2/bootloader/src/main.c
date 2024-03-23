@@ -3,7 +3,7 @@
 int main()
 {
 	unsigned int size = 0;
-	unsigned char *kernel = (unsigned char *)0x80000;
+	volatile unsigned char *kernel = ((volatile unsigned char *)(0x80000));
 
 	uart_init();
 	uart_puts("loading kernel...\n");

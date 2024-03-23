@@ -7,7 +7,7 @@ SRC_DIR = src
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:%.c=%.o)
 
-CFLAGS = -Wall -I ./include -c
+CFLAGS = -Wall -O2 -ffreestanding -nostdinc -I ./include -c
 
 .PHONY: all clean asm run debug
 

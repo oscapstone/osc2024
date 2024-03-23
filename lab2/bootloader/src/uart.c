@@ -64,35 +64,8 @@ void uart_send(unsigned int c)
     *AUX_MU_IO = c;
 }
 
-char uart_read()
-{
-    char c;
-    while (1)
-    {
-        if (*AUX_MU_LSR & 1)
-            break;
-    }
-    c = (char)(*AUX_MU_IO);
-
-    return c == '\r' ? '\n' : c;
-}
-
-void uart_write(unsigned int c)
-{
-    while (1)
-    {
-        if (*AUX_MU_LSR & (1 << 5))
-            break;
-    }
-    *AUX_MU_IO = c;
-}
-
 void uart_puts(char *s)
 {
     while (*s != '\0')
-    {
-        if (*s == '\n')
-            uart_write('\r');
-        uart_write(*s++);
-    }
+        uart_send(*s++);
 }

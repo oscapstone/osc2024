@@ -2,6 +2,7 @@
 #include "mailbox.h"
 #include "shell.h"
 #include "cpio.h"
+#include "allocator.h"
 
 int main()
 {
