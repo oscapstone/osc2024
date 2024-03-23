@@ -6,9 +6,7 @@
 
 int main() {
     uart_init();
-    uart_puts("\nWelcome to YJack0000's shell\n");
-
-    // fdt_traverse(init_ramfs_callback);
+    fdt_traverse(init_ramfs_callback);
 
     struct Console *console = console_create();
     register_command(console, &hello_command);
@@ -18,6 +16,7 @@ int main() {
     register_command(console, &cat_command);
     register_command(console, &test_malloc_command);
 
+    uart_puts("\nWelcome to YJack0000's shell\n");
     while (1) {
         run_console(console);
     }
