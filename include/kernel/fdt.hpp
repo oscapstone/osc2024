@@ -97,6 +97,12 @@ constexpr uint32_t FDT_NOP = 0x00000004;
 constexpr uint32_t FDT_END = 0x00000009;
 
 class FDT {
+ public:
+  using fp = bool (*)(uint32_t tag, int level, const char* node_name,
+                      const char* prop_name, uint32_t len,
+                      const char prop_value[]);
+
+ private:
   char* base;
   fdt_reserve_entry* reserve_entry;
   uint32_t* struct_base(int i = 0) {
@@ -105,15 +111,11 @@ class FDT {
   char* str_base(int i = 0) {
     return (char*)(base + fdt_off_dt_strings(base) + i);
   }
-
- public:
-  using fp = void (*)(uint32_t tag, int level, const char* node_name,
-                      const char* prop_name, uint32_t len,
-                      const char prop_value[]);
-
-  bool init(void* addr);
-  void traverse(fp callback);
   void traverse_impl(int& level, uint32_t& offset, const char* node_name,
                      fp callback);
+
+ public:
+  bool init(void* addr);
+  void traverse(fp callback);
 };
 extern FDT fdt;

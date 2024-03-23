@@ -6,7 +6,7 @@
 
 FDT fdt;
 
-static void print_fdt(uint32_t tag, int level, const char* node_name,
+static bool print_fdt(uint32_t tag, int level, const char* node_name,
                       const char* prop_name, uint32_t len,
                       const char prop_value[]) {
   for (int i = 0; i < level; i++)
@@ -39,6 +39,7 @@ static void print_fdt(uint32_t tag, int level, const char* node_name,
     }
   }
   mini_uart_putc('\n');
+  return false;
 }
 
 bool FDT::init(void* addr) {
@@ -96,14 +97,16 @@ void FDT::traverse_impl(int& level, uint32_t& offset, const char* node_name,
         auto name = fdtn_name(hdr);
         auto len = strlen(name);
         offset += align<4>(len + 1);
-        callback(tag, level, name, nullptr, 0, nullptr);
+        if (callback(tag, level, name, nullptr, 0, nullptr))
+          return;
         level++;
         traverse_impl(level, offset, name, callback);
         break;
       }
       case FDT_END_NODE: {
         level--;
-        callback(tag, level, node_name, nullptr, 0, nullptr);
+        if (callback(tag, level, node_name, nullptr, 0, nullptr))
+          return;
         return;
       }
       case FDT_PROP: {
@@ -113,7 +116,8 @@ void FDT::traverse_impl(int& level, uint32_t& offset, const char* node_name,
         offset += align<4>(sizeof(fdt_prop) + len);
 
         auto prop_name = str_base(nameoff);
-        callback(tag, level, node_name, prop_name, len, prop);
+        if (callback(tag, level, node_name, prop_name, len, prop))
+          return;
         break;
       }
       case FDT_NOP:
