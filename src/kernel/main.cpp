@@ -1,6 +1,6 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
-#include "devicetree.hpp"
+#include "fdt.hpp"
 #include "heap.hpp"
 #include "initramfs.hpp"
 

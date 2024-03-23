@@ -1,4 +1,4 @@
-#include "devicetree.hpp"
+#include "fdt.hpp"
 
 #include "board/mini-uart.hpp"
 #include "heap.hpp"
