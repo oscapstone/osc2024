@@ -3,3 +3,4 @@ kernel8.*
 *.o
 build
 bootloader/bootloader.*
+bootloader_norlc/bootloader.*

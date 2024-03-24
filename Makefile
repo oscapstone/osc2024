@@ -38,10 +38,10 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
 asm: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm -initrd initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 display: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
