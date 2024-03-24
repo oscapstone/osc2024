@@ -32,7 +32,7 @@ memzero:
 
 
 /* 
-     .global align
+    .global align
 align:
     sub x1, x1, #1
     add x0, x0, x1

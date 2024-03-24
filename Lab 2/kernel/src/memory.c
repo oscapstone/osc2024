@@ -21,7 +21,7 @@ byteptr_t
 simple_malloc(uint32_t size)
 {
     size = (uint32_t) memory_align((byteptr_t) (0l | size), 4);
-    if ((uint32_t) (malloc_cur + size) > HEAP_END) return 0;
+    if ((uint32_t) (malloc_cur + size) > HEAP_END) return nullptr;
     byteptr_t ret_ptr = malloc_cur;
     malloc_cur += size;
     return ret_ptr;
