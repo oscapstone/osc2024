@@ -39,7 +39,6 @@ SECTIONS
                                              /*   | direction   */
         __boot_core_stack_end_exclusive = .; /*   |             */
     } :segment_boot_core_stack
-    . =  __rpi_phys_binary_load_addr;
 
     /***********************************************************************************************
     * Code + RO Data + Global Offset Table
