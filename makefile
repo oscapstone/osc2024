@@ -17,7 +17,9 @@ build:
 
 # Target to run the Docker container
 run: build
-	sudo docker run -it --name $(CONTAINER_NAME) -v $(CURRENT_DIR):/home/laxiflora/osc2024 $(IMAGE_NAME)
+	sudo docker run --security-opt seccomp=unconfined -it --name $(CONTAINER_NAME) -v $(CURRENT_DIR):/home/laxiflora/osc2024 $(IMAGE_NAME)
+
+
 
 rm:
 	docker rm $(CONTAINER_NAME)
