@@ -1,6 +1,5 @@
 #include "cpio.h"
 
-// #include "uart.h"
 
 cpio_newc_header* header;
 

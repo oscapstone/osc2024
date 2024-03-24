@@ -1,5 +1,7 @@
 .vscode
-gen.py
+*.py
 build/
-kernel8.img
-kernel8.elf
+*.img
+kernel.elf
+*.o
+!send_kernel.py

@@ -1,6 +1,7 @@
 .PHONY: clean directories out_elf run docker_cp
 
 all: 
+	make -C lib
 	make -C kernel
 	make -C bootloader
 
@@ -26,5 +27,6 @@ cpio:
 clean:
 	rm -rf *.elf
 	rm -rf $(BUILD_DIR)
+	make -C lib clean
 	make -C kernel clean
 	make -C bootloader clean
