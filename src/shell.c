@@ -105,9 +105,9 @@ void shell_controller(char *cmd) {
     uart_printf("brn: get rpi3’s board revision number\n");
     uart_printf("bsn: get rpi3’s board serial number\n");
     uart_printf("arm_mem: get ARM memory base address and size\n");
-    uart_printf("showpic: Show a picture\n");
     uart_printf(
         "loadimg: reupload the kernel image if the bootloader is used\n");
+    // uart_printf("showpic: Show a picture\n");
   } else if (!strcmp(cmd, "hello")) {
     uart_printf("Hello World!\r\n");
   } else if (!strcmp(cmd, "ls")) {
@@ -151,15 +151,17 @@ void shell_controller(char *cmd) {
     get_board_serial();
   } else if (!strcmp(cmd, "arm_mem")) {
     get_arm_base_memory_sz();
-  } else if (!strcmp(cmd, "showpic")) {
-    lfb_showpicture();
   } else if (!strcmp(cmd, "timestamp")) {
     uart_printf("%f\n", get_timestamp());
   } else if (!strcmp(cmd, "loadimg")) {
     asm volatile(
-        "ldr x30, =0x60210;"
+        "ldr x30, =0x601d0;"
         "ret;");
-  } else {
+  }
+  // else if (!strcmp(cmd, "showpic")) {
+  //   lfb_showpicture();
+  // }
+  else {
     uart_printf("shell: command not found: %s\n", cmd);
   }
 }
