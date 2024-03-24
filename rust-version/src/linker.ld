@@ -26,7 +26,9 @@ PHDRS
 
 SECTIONS
 {
-    . =  __rpi_phys_dram_start_addr;
+
+    /* Set the link address to 32 MiB */
+    . = 0x2000000;
 
     /***********************************************************************************************
     * Boot Core Stack(512k), it should not affect the test area, good!
@@ -43,6 +45,7 @@ SECTIONS
     /***********************************************************************************************
     * Code + RO Data + Global Offset Table
     ***********************************************************************************************/
+    __binary_nonzero_start = .;
     .text :
     {
         KEEP(*(.text._start))
@@ -57,6 +60,10 @@ SECTIONS
     * Data + BSS
     ***********************************************************************************************/
     .data : { *(.data*) } :segment_data
+
+    /* Fill up to 8 byte, b/c relocating the binary is done in u64 chunks */
+    . = ALIGN(8);
+    __binary_nonzero_end_exclusive = .;
 
     /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
     .bss (NOLOAD) : ALIGN(16)
