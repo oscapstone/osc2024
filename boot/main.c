@@ -1,12 +1,11 @@
 #include "uart.h"
+#include "loader.h"
 
 void main()
 {
     uart_init();
 
-    while (1) {
-    uart_puts("you entered=2: ");
-        uart_send(uart_getc());
-        uart_puts("\n");
-    }
+    uart_puts("=======UART Bootloader v0.1.0=======\n");
+
+    load_kernel();
 }
