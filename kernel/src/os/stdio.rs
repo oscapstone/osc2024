@@ -72,3 +72,33 @@ pub fn print_dec(n: u32) {
     }
     println("");
 }
+
+pub fn print_hex_u64(n: u64) {
+    for i in 0..16 {
+        let shift = (15 - i) * 4;
+        let digit = (n >> shift) & 0xF;
+        let ascii = if digit < 10 {
+            b'0' + digit as u8
+        } else {
+            b'A' + (digit - 10) as u8
+        };
+        unsafe {
+            send(ascii);
+        }
+    }
+    println("");
+}
+
+pub fn print_char(c: u8) {
+    unsafe {
+        send(c);
+    }
+}
+
+pub fn print_char_64(chars: u64) {
+    for i in (0..8).rev() {
+        let c = (chars >> (i * 8)) as u8;
+        print_char(c);
+    }
+    println("");
+}

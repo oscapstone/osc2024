@@ -1,1 +1,1 @@
-mod cpio;
+pub mod cpio;

@@ -19,12 +19,12 @@ build: kernel8.img
 # Run the project in QEMU.
 .PHONY: run
 run: build
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio
 
 # Run the project in QEMU with GDB.
 .PHONY: debug
 debug: build
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -S -s
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -S -s -initrd initramfs.cpio
 
 # Genetate object file
 .PHONY: obj

@@ -1,4 +1,6 @@
-enum CpioHeaderField {
+use crate::os::stdio::*;
+
+pub enum CpioHeaderField {
     Magic,
     Ino,
     Mode,
@@ -15,18 +17,161 @@ enum CpioHeaderField {
     Check,
 }
 
-struct CpioHeader {
-    header_ptr: *const CpioHeader,
+pub struct CpioArchive {
+    header_ptr: *const u8,
 }
 
-impl CpioHeader {
-    pub fn load(address: *const u8) -> CpioHeader {
-        CpioHeader {
-            header_ptr: address as *const CpioHeader,
+impl CpioArchive {
+    pub fn load(address: *const u8) -> CpioArchive {
+        CpioArchive {
+            header_ptr: address,
         }
     }
 
-    pub fn get(&self, field: CpioHeaderField) -> u64 {
+    pub fn print_file_list(&self) {
+        let mut current_ptr = self.header_ptr;
+        loop {
+            println(self.get_file_name(current_ptr));
+
+            match self.get_next_file_ptr(current_ptr) {
+                Some(ptr) => current_ptr = ptr,
+                None => break,
+            }
+        }
+    }
+
+    pub fn print_file_content(&self, filename: &str) {
+        let mut current_ptr = self.header_ptr;
+        loop {
+            let name = self.get_file_name(current_ptr).trim_end_matches('\0');
+            if name == filename {
+                let file_content = self.get_file_content(current_ptr);
+                println(core::str::from_utf8(file_content).unwrap());
+                return;
+            }
+
+            match self.get_next_file_ptr(current_ptr) {
+                Some(ptr) => current_ptr = ptr,
+                None => break,
+            }
+        }
+        println("File not found");
+    }
+
+    pub fn get_num_files(&self) -> u32 {
+        let mut num_files = 0;
+        let mut current_ptr = self.header_ptr;
+        loop {
+            num_files += 1;
+            match self.get_next_file_ptr(current_ptr) {
+                Some(ptr) => current_ptr = ptr,
+                None => break,
+            }
+        }
+        num_files
+    }
+
+    fn get_next_file_ptr(&self, ptr: *const u8) -> Option<*const u8> {
+        let namesize = self.get_namesize(ptr);
+        let filesize = self.get_filesize(ptr);
+
+        let mut offset = 110 + namesize;
+        if offset % 2 != 0 {
+            offset += 1;
+        }
+        if filesize > 0 {
+            if offset % 4 != 0 {
+                offset += 4 - (offset % 4);
+            }
+
+            offset += filesize;
+
+            if offset % 4 != 0 {
+                offset += 4 - (offset % 4);
+            }
+        }
+
+        unsafe {
+            let next_ptr = ptr.offset(offset as isize);
+
+            // Check if the ptr is pointed to the magic number
+            assert_eq!(*next_ptr, b'0');
+
+            if self.get_namesize(next_ptr) == 11 && self.get_file_name(next_ptr).starts_with("TRAILER!!!") {
+                return None;
+            }
+
+            Some(next_ptr)
+        }
+    }
+
+    fn get_file_content(&self, ptr: *const u8) -> &[u8] {
+        let namesize = self.get_namesize(ptr);
+        let filesize = self.get_filesize(ptr);
+
+        if filesize == 0 {
+            return &[];
+        }
+
+        let mut offset = 110 + namesize;
+        if offset % 2 != 0 {
+            offset += 1;
+        }
+
+        if offset % 4 != 0 {
+            offset += 4 - (offset % 4);
+        }
+
+        let file_ptr = unsafe {
+            ptr.offset(offset as isize)
+        };
+
+        unsafe {
+            core::slice::from_raw_parts(file_ptr, filesize as usize)
+        }
+    }
+
+    fn get_file_name(&self, ptr: *const u8) -> &str {
+        let namesize = self.get_namesize(ptr);
+        
+        let bytes_slice = unsafe {
+            core::slice::from_raw_parts(ptr.offset(110), namesize as usize)
+        };
+
+        core::str::from_utf8(bytes_slice).unwrap()
+    }
+
+    fn get_namesize(&self, ptr: *const u8) -> u32 {
+        let namesize = self.get_header_ascii(ptr, CpioHeaderField::Namesize);
+        CpioArchive::ascii_to_u32(namesize)
+    }
+
+    fn get_filesize(&self, ptr: *const u8) -> u32 {
+        let filesize = self.get_header_ascii(ptr, CpioHeaderField::Filesize);
+        CpioArchive::ascii_to_u32(filesize)
+    }
+
+    fn ascii_to_u32(hex: u64) -> u32 {
+        let mut value: u32 = 0;
+        for i in 0..8 {
+            let shift = i * 8;
+            let char_value = ((hex >> shift) & 0xFF) as u8;
+
+            let digit = if char_value >= b'0' && char_value <= b'9' {
+                char_value - b'0'
+            } else if char_value >= b'A' && char_value <= b'F' {
+                char_value - b'A' + 10
+            } else if char_value >= b'a' && char_value <= b'f' {
+                char_value - b'a' + 10
+            } else {
+                0
+            };
+            value += (digit as u32) << shift;
+        }
+        value
+    }
+
+    fn get_header_ascii(&self, ptr: *const u8, field: CpioHeaderField) -> u64 {
         let offset = match field {
             CpioHeaderField::Magic => 0,
             CpioHeaderField::Ino => 6,
@@ -49,14 +194,14 @@ impl CpioHeader {
             _ => 8,
         };
 
+        let mut value: u64 = 0;
         unsafe {
-            let ptr = self.header_ptr as *const u8;
-            let mut value: u64 = 0;
+            let ptr = ptr.offset(offset);
             for i in 0..len {
-                value |= (ptr.offset(offset as isize + i as isize) as u64) << (i * 8);
+                value |= (*(ptr.offset(i as isize)) as u64) << ((len - i - 1) * 8);
             }
-            value
         }
+        value
     }
 
     
