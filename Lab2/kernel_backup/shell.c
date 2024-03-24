@@ -1,4 +1,7 @@
 #include "uart.h"
+#include <stdint.h>
+
+static void *mem = 0x0;
 
 struct cpio_newc_header {
     char c_magic[6];
@@ -43,8 +46,8 @@ int hex_to_int(char *p, int len) {
 void cpio_ls(){
     uart_send('\r');
     uart_puts("");
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
-    char *current = (char *)0x20000000;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)mem;
+    char *current = (char *)mem;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
@@ -86,8 +89,8 @@ void cpio_cat(){
         }
     }
     
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
-    char *current = (char *)0x20000000;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)mem;
+    char *current = (char *)mem;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
@@ -133,4 +136,15 @@ void shell(char * cmd){
     else if(strcmp(cmd, "cat") == 0){
         cpio_cat();
     }
+}
+
+void callback_initramfs(void * addr){
+    uint32_t t = *((uint32_t*)addr);
+    uart_hex(t);
+    mem = (void*)(bswap_32(t));
+    return;
+}
+
+int get_initramfs(){
+    return mem;
 }

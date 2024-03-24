@@ -2,6 +2,7 @@ import serial
 import os
 import os.path
 import argparse
+import time
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Send a file over serial connection.')
@@ -33,6 +34,7 @@ size = os.stat(args.file_path).st_size
 size_bytes = size.to_bytes(4, "little")
 s.write(size_bytes)
 print("wrote data")
+time.sleep(3)
 # Read and print the received size
 #received_size = read_line(s)
 #print(received_size)
