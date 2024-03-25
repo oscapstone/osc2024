@@ -20,7 +20,8 @@ _start:
     # check if we are done
     cbnz x2, .L_copy_loop
 
-    b _boot
+    ldr x0, =_boot
+    br x0
 
 _boot:
     mrs x0, mpidr_el1

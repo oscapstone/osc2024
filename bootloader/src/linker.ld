@@ -24,8 +24,9 @@ SECTIONS
     * Code
     ***********************************************************************************************/
     .text : {
-        KEEP(*(.text._start))
-        _end = .;
+        _text_start = .;
+        KEEP(*(.text.*))
+        _text_end = .;
     } :segment_code
 
     .bss : {
@@ -35,4 +36,4 @@ SECTIONS
     }
 }
 
-_text_size = _end - _start;
+_text_size = _text_end - _text_start;
