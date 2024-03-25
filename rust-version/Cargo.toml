@@ -11,6 +11,12 @@ path = "src/main.rs"
 test = false
 bench = false
 
+[[bin]]
+name = "bootloader"
+path = "src/bootloader/bootloader.rs"
+test = false
+bench = false
+
 
 [dependencies]
 aarch64-cpu = "9.4.0"
