@@ -1,5 +1,6 @@
 _bootloader = 0x60000;
 _kernel = 0x80000;
+_cpio_file = 0x20000000;
 
 
 SECTIONS

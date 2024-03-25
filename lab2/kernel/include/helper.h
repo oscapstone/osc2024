@@ -4,4 +4,6 @@
 void hex_to_string(unsigned int, char*);
 int same(char*, char*);
 
+void substr(char*, char*, int, int);
+
 #endif

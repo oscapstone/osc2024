@@ -4,6 +4,7 @@
 #include "mail.h"
 #include "helper.h"
 #include "loader.h"
+#include "cpio.h"
 
 char buf[1024];
 
@@ -27,6 +28,15 @@ void shell_begin(void)
 		}
 		else if (same(buf, "help")) {
 			help();
+		}
+		else if (same(buf, "ls")) {
+			parse_cpio_ls();
+		}
+		else if (same(buf, "cat")) {
+			uart_send_string("Filename: ");
+			uart_recv_string(buf);
+			output("");
+			parse_cpio_cat(buf);
 		}
 		else if(same(buf, "revision")) {
 			unsigned int rev = get_board_revision();

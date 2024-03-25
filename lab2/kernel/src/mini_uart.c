@@ -30,7 +30,7 @@ void output(char* str) {
 	uart_send_string("\r\n");
 }
 
-void output_hex(unsigned int x) {
+void output_hex(uint64_t x) {
 	char buf[100];
 	hex_to_string(x, buf);
 	output(buf);
