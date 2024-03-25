@@ -1,9 +1,10 @@
 #pragma once
 
 #include "string.hpp"
+#include "util.hpp"
 
 // ref: https://man.freebsd.org/cgi/man.cgi?query=cpio&sektion=5
-struct cpio_newc_header {
+struct __attribute__((__packed__)) cpio_newc_header {
   char c_magic[6];
   char c_ino[8];
   char c_mode[8];
@@ -59,7 +60,7 @@ struct cpio_newc_header {
     return _name_ptr;
   }
   const char* file_ptr() const {
-    return name_ptr() + namesize() + 2;
+    return align<4>(name_ptr() + namesize());
   }
   string_view name() const {
     return {name_ptr(), namesize() - 1};
@@ -105,8 +106,11 @@ class CPIO {
   char* cpio_addr_ = nullptr;
 
  public:
-  void init(char* cpio_addr) {
+  bool init(char* cpio_addr) {
     cpio_addr_ = cpio_addr;
+    if (!begin()->valid())
+      return false;
+    return true;
   }
   iterator begin() const {
     return cpio_addr_;

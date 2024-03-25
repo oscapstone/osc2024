@@ -1,14 +1,10 @@
 #include "cpio.hpp"
 
 const cpio_newc_header* cpio_newc_header::next() const {
-  const char* nxt = isdir() ? name().end() : file().end();
-
-  for (int i = 0; i < (int)sizeof(cpio_newc_header); i++) {
-    auto hdr = (const cpio_newc_header*)(nxt + i);
-    if (hdr->valid()) {
-      return hdr->isend() ? nullptr : hdr;
-    }
-  }
+  const char* nxt = align<4>(file().end());
+  auto hdr = (const cpio_newc_header*)nxt;
+  if (hdr->valid() and not hdr->isend())
+    return hdr;
   return nullptr;
 }
 
