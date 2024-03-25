@@ -224,6 +224,10 @@ impl Uart {
     // TODO: add loader support
     // pub const COMPATIBLE: &'static str = "BCM Mini UART";
 
+    /// Create an instance.
+    /// # Safety
+    ///
+    /// The caller must ensure that the MMIO address is correct.
     pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
             inner: NullLock::new(UartInner::new(mmio_start_addr)),

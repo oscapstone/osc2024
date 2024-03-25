@@ -160,6 +160,11 @@ pub struct Mailbox {
 }
 
 impl Mailbox {
+    /// Create an instance.
+    ///
+    /// # Safety
+    ///
+    /// - The caller must ensure that the `base_addr` is valid.
     pub const unsafe fn new(base_addr: usize) -> Self {
         Self {
             inner: NullLock::new(MailboxInner::new(base_addr)),
