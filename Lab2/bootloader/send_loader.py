@@ -13,17 +13,6 @@ args = parser.parse_args()
 # Setup serial connection
 s = serial.Serial(args.serial_path, baudrate=115200)
 
-def read_line(s):
-    received_string = ""
-    while True:
-        c = s.read().decode()
-        if c == "\r":
-            continue
-        if c == "\n":
-            break
-        received_string += c
-    return received_string
-
 # Check if file exists
 if not os.path.exists(args.file_path):
     print(f"File {args.file_path} not found.")
@@ -31,19 +20,13 @@ if not os.path.exists(args.file_path):
 
 # Get file size and send it
 size = os.stat(args.file_path).st_size
-size_bytes = size.to_bytes(4, "little")
+# send file size for loading
+size_bytes = size.to_bytes(4, "little") #little endian to fit the environment
 s.write(size_bytes)
 print("wrote data")
-time.sleep(3)
-# Read and print the received size
-#received_size = read_line(s)
-#print(received_size)
+time.sleep(3) #sleep to wait for uart
 print("sending kernel")
 
-# Open and send the file
+# send file (raw binary)
 with open(args.file_path, "rb") as f:
     s.write(f.read())
-
-# Read and print the received content
-#received_content = read_line(s)
-#print(received_content)

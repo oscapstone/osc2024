@@ -6,7 +6,7 @@ _start:
 	// relocate bootloader
     mov     x28, x0
 	ldr x1, =0x80000 
-	ldr x2, =0x60000 //x11=0x60000
+	ldr x2, =0x60000
 	ldr w3, =__bootloader_size
 
 relocate:

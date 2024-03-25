@@ -29,7 +29,7 @@ void bootloader_main()
                     unsigned char *size_buffer = (unsigned char *) &size;
                     for(int i=0; i<4; i++) 
                         size_buffer[i] = uart_getc();
-                    uart_puts("size-check correct\r\n");
+                    uart_puts("got kernel size, start receiving kernel\r\n");
 
                     char *kernel = (char *) 0x80000;
                     while(size--) *kernel++ = uart_getc();
