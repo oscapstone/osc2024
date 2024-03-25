@@ -12,6 +12,7 @@ mod panic;
 mod print;
 mod synchronization;
 mod shell;
+mod memory;
 
 //--------------------------------------------------------------------------------------------------
 // Public Code

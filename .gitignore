@@ -3,3 +3,4 @@
 *.img
 target/
 kernel*.img
+*.cpio

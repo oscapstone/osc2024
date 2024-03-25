@@ -48,7 +48,7 @@ testboot: $(KERNEL_BIN) $(BOOT_BIN)
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty
 
 test: $(KERNEL_BIN) $(BOOT_BIN)
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio
 
 clean:
 	rm -rf target $(KERNEL_BIN)

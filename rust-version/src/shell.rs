@@ -2,6 +2,7 @@ use crate::{
     bcm::{self, UART, common, mailbox::MailboxTag},
     console::interface::Statistics,
     print, println,
+    memory
 };
 
 const MAXCHAR: usize = 100;
@@ -17,6 +18,8 @@ fn help() {
     println!("board   : print board rev");
     println!("status  : print UART status");
     println!("reboot  : reboot this device");
+    println!("ls      : list initramfs files");
+    println!("cat     : print file content");
     println!("cancel  : cancel reboot");
 }
 
@@ -31,7 +34,10 @@ pub fn interactiave_shell() -> ! {
         print!("{}", c);
         if c == '\r' {
             println!();
-            match core::str::from_utf8(&array[0..cnt]).unwrap() {
+            let cmd = core::str::from_utf8(&array[0..cnt]).unwrap();
+            let cmd_0 = cmd.split_whitespace().next().unwrap_or("");
+            let arg_1 = cmd.split_whitespace().nth(1).unwrap_or("");
+            match cmd_0 {
                 "help" => {
                     help();
                 }
@@ -58,6 +64,13 @@ pub fn interactiave_shell() -> ! {
                 "status" => {
                     println!("Chars written: {}", UART.chars_written());
                 }
+                "ls" => {
+                    memory::list_initramfs_files();
+                },
+                "cat" => {
+                    memory::get_initramfs_files(arg_1);
+                },
+
                 _ => {
                     if cnt > 0 {
                         println!(
