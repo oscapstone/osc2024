@@ -1,5 +1,4 @@
 CC = aarch64-linux-gnu
-CFLAGS_ = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude
 CFLAGS = -ggdb -Wno-implicit -ffreestanding -nostdlib -nostartfiles -Iinclude
 
 SRC_DIR = src
@@ -30,6 +29,7 @@ all: $(OBJECTS) $(BOOT_OBJECTS) $(KERNEL_OBJECTS) $(HEADERS)
 	$(CC)-objcopy -O binary $(BUILD_DIR)/$(BOOT_DIR)/$(BOOT_ELF_NAME) $(IMG_DIR)/$(BOOT_IMG_NAME)
 	$(CC)-ld -T $(SRC_DIR)/$(KERNEL_DIR)/linker.ld -o $(BUILD_DIR)/$(KERNEL_DIR)/$(ELF_NAME) $(KERNEL_OBJECTS) $(OBJECTS)
 	$(CC)-objcopy -O binary $(BUILD_DIR)/$(KERNEL_DIR)/$(ELF_NAME) $(IMG_DIR)/$(IMG_NAME)
+	cd rootfs && find . | cpio -o -H newc > ../$(CPIO_FILE)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/$(LIB_DIR)/%.c
 	@mkdir -p $(BUILD_DIR)
@@ -54,13 +54,13 @@ clean:
 	rm -rf $(BUILD_DIR) $(IMG_DIR)
 
 dump:
-	qemu-system-aarch64 -M raspi3b -kernel $(IMG_DIR)/$(IMG_NAME) -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel $(IMG_DIR)/$(IMG_NAME) -initrd $(CPIO_FILE) -display none -d in_asm
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel $(IMG_DIR)/$(IMG_NAME) -display none -serial null -serial stdio -s
+	qemu-system-aarch64 -M raspi3b -kernel $(IMG_DIR)/$(IMG_NAME) -initrd $(CPIO_FILE) -display none -serial null -serial stdio -s
 
 dump-boot:
-	qemu-system-aarch64 -M raspi3b -kernel $(IMG_DIR)/$(BOOT_IMG_NAME) -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel $(IMG_DIR)/$(BOOT_IMG_NAME) -initrd $(CPIO_FILE) -display none -d in_asm
 
 run-boot:
 	qemu-system-aarch64 -M raspi3b -kernel $(IMG_DIR)/$(BOOT_IMG_NAME) -initrd $(CPIO_FILE) -display none -serial null -serial stdio -s
@@ -70,3 +70,9 @@ tty:
 
 upload:
 	sudo python3 upload.py
+
+cpio:
+	cd rootfs && find . | cpio -o -H newc > ../$(CPIO_FILE)
+
+screen:
+	sudo screen /dev/ttyUSB0 115200

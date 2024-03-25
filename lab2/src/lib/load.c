@@ -24,8 +24,8 @@ void load()
     while (size--)
         kernel[kn_ptr++] = uart_getc();
 
-    uart_puts("\nKernel loaded.\n");
-    int r = 500;
+    uart_puts("\nKernel loaded...\n");
+    int r = 1000;
     while (r--) {
         asm volatile("nop");
     }

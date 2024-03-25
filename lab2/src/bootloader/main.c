@@ -31,7 +31,7 @@ void main(char *arg)
         relocate(arg);
     }
     uart_puts("\x1b[2J\x1b[H");
-    uart_puts("\nBootloader Start.\n");
+    uart_puts("Bootloader Start.\n");
 
     bootloader_shell();
 }
