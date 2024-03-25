@@ -9,8 +9,6 @@ pts = sys.argv[2]
 print(f"pts: {pts}")
 
 with open(pts, "wb") as tty:
-    tty.write(b"load\r")
+    # tty.write(b"load\r")
     tty.write(f"{kernel_size}\r".encode())
     tty.write(kernel)
-
-

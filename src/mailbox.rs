@@ -29,7 +29,7 @@ fn mailbox_write(channel: u32, data: u32) {
 fn mailbox_call(mailbox: &mut [u32]) -> bool {
     let mailbox_ptr = mailbox.as_ptr() as u32;
     if mailbox_ptr & 0xF != 0 {
-        stdio::puts(b"Mailbox pointer is not 16-byte aligned");
+        // stdio::puts(b"Mailbox pointer is not 16-byte aligned");
         return false;
     }
 

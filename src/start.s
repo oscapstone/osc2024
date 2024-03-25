@@ -3,6 +3,22 @@
 .global _start
 
 _start:
+    # Copy code to addres 0x60000
+    ldr x0, =0x80000
+    ldr x1, =0x60000
+    ldr x2, =__text_size
+
+.L_copy_loop:
+    ldr w3, [x0], #4
+    str w3, [x1], #4
+    sub x2, x2, #4
+    # check if we are done
+    cbnz x2, .L_copy_loop
+
+    ldr x0, =_boot
+    br x0
+
+_boot:
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
     and     x1, x1, #3

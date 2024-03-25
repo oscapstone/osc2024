@@ -46,10 +46,18 @@ pub fn send(c: u8) {
 
 pub fn recv() -> u8 {
     // Wait until we can receive
-    while MMIO::read_reg(Aux(MuLsr)) & 0x01 == 0 {
-        MMIO::delay(1);
+    let mut c = recv_nb();
+    while c.is_none() {
+        c = recv_nb();
     }
+    c.unwrap()
+}
 
+pub fn recv_nb() -> Option<u8> {
+    // Check if something to read
+    if MMIO::read_reg(Aux(MuLsr)) & 0x01 == 0 {
+        return None;
+    }
     // Read the character from the buffer
-    return MMIO::read_reg(Aux(MuIo)) as u8;
+    Some((MMIO::read_reg(Aux(MuIo)) & 0xFF) as u8)
 }

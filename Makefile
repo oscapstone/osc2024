@@ -21,8 +21,8 @@ dir_guard=@mkdir -p $(@D)
 
 .PHONY: all clean run debug
 
-all: $(TARGET)
-	cp $(TARGET) $(RPI3_DIR)
+all: $(TARGET) $(BUILD_DIR)/initramfs.cpio
+	cp $^ $(RPI3_DIR)
 	sha1sum $(TARGET)
 
 $(BUILD_DIR)/start.o: $(SRC_DIR)/start.s
@@ -38,13 +38,13 @@ $(BUILD_DIR)/kernel.o: $(SRC_DIR)/kernel.rs $(shell find $(SRC_DIR)/ -type f -na
 	$(dir_guard)
 	$(RC) $(RUSTFLAGS) $< -o $@
 
-$(BUILD_DIR)/bootloader.elf: $(BUILD_DIR)/start.o $(BUILD_DIR)/bootloader.o $(SRC_DIR)/linker.ld
+$(BUILD_DIR)/bootloader.elf: $(BUILD_DIR)/start.o $(BUILD_DIR)/bootloader.o $(SRC_DIR)/bootloader.ld
 	$(dir_guard)
-	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld $(BUILD_DIR)/bootloader.o $(BUILD_DIR)/start.o -o $@
+	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/bootloader.ld $(BUILD_DIR)/bootloader.o $(BUILD_DIR)/start.o -o $@
 
-$(BUILD_DIR)/kernel8.elf:$(BUILD_DIR)/kernel.o $(SRC_DIR)/klinker.ld
+$(BUILD_DIR)/kernel8.elf:$(BUILD_DIR)/kernel.o $(SRC_DIR)/kernel.ld
 	$(dir_guard)
-	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/klinker.ld $(BUILD_DIR)/kernel.o -o $@
+	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/kernel.ld $(BUILD_DIR)/kernel.o -o $@
 
 $(BUILD_DIR)/bootloader.img: $(BUILD_DIR)/bootloader.elf
 	$(dir_guard)
@@ -54,9 +54,11 @@ $(BUILD_DIR)/kernel8.img: $(BUILD_DIR)/kernel8.elf
 	$(dir_guard)
 	$(OBJ_CPY) -O binary $< $@
 
+$(BUILD_DIR)/initramfs.cpio: rootfs
+	cd rootfs && find . | cpio -o -H newc > ../$@
+
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -rf $(RPI3_DIR)/kernel8.img
 
 run: $(TARGET)
 	$(QEMU) $(QEMU_FLAGS) -kernel $(BUILD_DIR)/bootloader.img
