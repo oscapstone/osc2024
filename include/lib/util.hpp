@@ -3,7 +3,7 @@
 #define MASK(bits) ((1 << bits) - 1)
 #define NOP        asm volatile("nop")
 
-// from v8/v8:src/base/compiler-specific.h#L21-L31
+// ref: https://github.com/v8/v8/blob/12.5.71/src/base/compiler-specific.h#L26
 #if defined(__GNUC__)
 #define PRINTF_FORMAT(format_param, dots_param) \
   __attribute__((format(printf, format_param, dots_param)))
