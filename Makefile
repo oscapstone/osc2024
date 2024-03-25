@@ -87,7 +87,7 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 fs: $(INITFSCPIO)
 
 $(INITFSCPIO): rootfs/*
-	cd rootfs && find . | cpio -o -H newc > ../$@
+	cd rootfs && find . | grep -v '.DS_Store' | cpio -o -H newc > ../$@
 
 clean:
 	$(RM) -r $(BUILD_DIR)
