@@ -1,16 +1,12 @@
-#include "board/mini-uart.h"
+#include "board/mini-uart.hpp"
 
-#include "board/gpio.h"
-#include "util.h"
-
-#define __CLANG_INTTYPES_H
-#define NANOPRINTF_IMPLEMENTATION
-#include "nanoprintf/nanoprintf.h"
-// TODO
-void __trunctfsf2() {}
+#include "board/gpio.hpp"
+#include "board/mmio.hpp"
+#include "nanoprintf.hpp"
+#include "util.hpp"
 
 void mini_uart_setup() {
-  register unsigned int r = get32(GPFSEL1);
+  unsigned int r = get32(GPFSEL1);
   // set gpio14
   r = (r & ~(7 << 12)) | (GPIO_FSEL_ALT5 << 12);
   // set gpio15
@@ -48,25 +44,32 @@ void mini_uart_setup() {
   set32(AUX_MU_CNTL_REG, 3);
 }
 
-char mini_uart_getc() {
+char mini_uart_getc_raw() {
   while ((get32(AUX_MU_LSR_REG) & 1) == 0)
     NOP;
-  char c = get32(AUX_MU_IO_REG) & MASK(8);
+  return get32(AUX_MU_IO_REG) & MASK(8);
+}
+
+char mini_uart_getc() {
+  char c = mini_uart_getc_raw();
   return c == '\r' ? '\n' : c;
 }
 
-void mini_uart_putc(char c) {
+void mini_uart_putc_raw(char c) {
   while ((get32(AUX_MU_LSR_REG) & (1 << 5)) == 0)
     NOP;
   set32(AUX_MU_IO_REG, c);
 }
 
+void mini_uart_putc(char c) {
+  if (c == '\n')
+    mini_uart_putc_raw('\r');
+  mini_uart_putc_raw(c);
+}
+
 void mini_uart_puts(const char* s) {
-  for (char c; (c = *s); s++) {
-    if (c == '\n')
-      mini_uart_putc('\r');
+  for (char c; (c = *s); s++)
     mini_uart_putc(c);
-  }
 }
 
 int mini_uart_getline_echo(char* buffer, int length) {
@@ -76,22 +79,32 @@ int mini_uart_getline_echo(char* buffer, int length) {
   for (char c; r < length;) {
     c = mini_uart_getc();
     if (c == '\n') {
-      mini_uart_putc('\r');
-      mini_uart_putc('\n');
+      mini_uart_putc_raw('\r');
+      mini_uart_putc_raw('\n');
       break;
     }
-    if (c == 0x08 || c == 0x7F || r + 1 == length)
+    if (r + 1 == length)
       continue;
-    buffer[r++] = c;
-    mini_uart_putc(c);
+    switch (c) {
+      case 8:     // ^H
+      case 0x7f:  // backspace
+        if (r > 0) {
+          buffer[r--] = 0;
+          mini_uart_puts("\b \b");
+        }
+        break;
+      case '\t':  // skip \t
+        break;
+      default:
+        buffer[r++] = c;
+        mini_uart_putc_raw(c);
+    }
   }
   buffer[r] = '\0';
   return r;
 }
 
-void mini_uart_npf_putc(int c, void* ctx) {
-  if (c == '\n')
-    mini_uart_putc('\r');
+void mini_uart_npf_putc(int c, void* /* ctx */) {
   mini_uart_putc(c);
 }
 
@@ -101,4 +114,25 @@ int mini_uart_printf(const char* format, ...) {
   int size = npf_vpprintf(&mini_uart_npf_putc, NULL, format, args);
   va_end(args);
   return size;
+}
+
+void mini_uart_print_hex(string_view view) {
+  for (auto c : view)
+    mini_uart_printf("%02x", c);
+}
+void mini_uart_print_str(string_view view) {
+  for (auto c : view)
+    mini_uart_putc(c);
+}
+
+void mini_uart_print(string_view view) {
+  bool printable = true;
+  for (int i = 0; i < view.size(); i++) {
+    auto c = view[i];
+    printable &= (0x20 <= c and c <= 0x7e) or (i + 1 == view.size() and c == 0);
+  }
+  if (printable)
+    mini_uart_print_str(view);
+  else
+    mini_uart_print_hex(view);
 }

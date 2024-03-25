@@ -1,9 +1,12 @@
 #pragma once
-#include "util.h"
+#include "util.hpp"
 
 #define MMIO_BASE 0x3F000000
 
 #define MAILBOX_BASE ((addr_t)(MMIO_BASE + 0xb880))
+
+#define PM_RSTC ((addr_t)(MMIO_BASE + 0x10001c))
+#define PM_WDOG ((addr_t)(MMIO_BASE + 0x100024))
 
 #define GPFSEL0   ((addr_t)(MMIO_BASE + 0x00200000))
 #define GPFSEL1   ((addr_t)(MMIO_BASE + 0x00200004))

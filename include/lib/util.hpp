@@ -11,14 +11,15 @@
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
 
-typedef unsigned int uint32_t;
-typedef volatile long addr_t;
+#include <cstdint>
+using addr_t = volatile char*;
 
+extern "C" {
 // util-asm.S
 void set32(addr_t address, uint32_t value);
 uint32_t get32(addr_t address);
 void wait_cycle(unsigned cycle);
 
-// util.c
-void memzero(void* start, void* end);
-int strcmp(const char* s1, const char* s2);
+// start.S
+[[noreturn]] void prog_hang();
+}

@@ -1,0 +1,6 @@
+bootcode.bin
+fixup.dat
+start.elf
+*.img
+initramfs.cpio
+*.dtb

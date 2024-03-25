@@ -1,9 +1,9 @@
-__rpi_phys_binary_load_addr = 0x80000;
+INCLUDE "src/common.ld"
 
-ENTRY(__rpi_phys_binary_load_addr)
+ENTRY(__kernel)
 
 SECTIONS {
-    . = __rpi_phys_binary_load_addr;
+    . = __kernel;
     __boot_core_stack_end = .;
 
     .text : {
@@ -24,10 +24,6 @@ SECTIONS {
         *(COMMON)
         __bss_end = .;
     }
-
-    .shstrtab : { *(.shstrtab) }
-    .symtab   : { *(.symtab) }
-    .strtab   : { *(.strtab) }
 
     /DISCARD/ : {
         *(.comment)
