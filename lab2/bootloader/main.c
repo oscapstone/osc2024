@@ -4,11 +4,18 @@
 
 int main() {
     uart_init();
-    uart_puts("Mini UART Bootloader! Please send the kernel image...\n");
+    uart_puts("\nMini UART Bootloader! Please send the kernel image...\n");
+
+    
 
     // Get kernel image size
     char buf[10] = {0};
-    for (int i = 0; i < 16; i++) {
+    while(1) {
+        buf[0] = uart_recv();
+        if(buf[0]> '9' || buf[0] < '0') continue;
+        break;
+    }
+    for (int i = 1; i < 16; i++) {
         buf[i] = uart_recv();
         if (buf[i] == '\n') {
             buf[i] = '\0';
@@ -22,14 +29,17 @@ int main() {
 
     uart_puts("Loading the kernel image...\n");
     unsigned int size = atoi(buf);
+    uart_puts("Kernel image size: ");
+    uart_hex(size);
     char *kernel = (char *)0x80000;
-    uart_puts("Before from: ");
+    uart_puts("\nBefore from: ");
     uart_hex(*kernel);
     while (size--) {
         *kernel++ = uart_recv();
     }
-    uart_puts("After to: ");
+    uart_puts("\nAfter to: ");
     uart_hex(*kernel);
+    uart_puts("\n");
 
     asm volatile(
         ""
