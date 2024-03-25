@@ -15,13 +15,13 @@ prog_hang:
     b       prog_hang
 
 primary_cpu:
+    adr     x0, __boot_core_stack_end
+    mov     sp, x0
+
     adr     x0, __bootloader
     ldr     x1, =__bootloader
     cmp     x0, x1
     b.gt    relocate
-
-    adr     x0, __boot_core_stack_end
-    mov     sp, x0
 
     adr     x0, __bss_start
     adr     x1, __bss_end
