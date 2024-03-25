@@ -5,15 +5,15 @@
 _start:
 	// relocate bootloader
     mov     x28, x0
-	ldr x1, =0x80000 
-	ldr x2, =0x60000
-	ldr w3, =__bootloader_size
+	ldr x1, =0x80000 //64 bits for address, 0x1 = 1 byte
+	ldr x2, =0x60000 //ldr: put address to register
+	ldr w3, =__bootloader_size //size, 32 bit is enough
 
-relocate:
-	ldr x4,[x1],#8 //store value from x1 to x4 than mov x1
-	str x4,[x2],#8 //store value from x2 to x4 than mov x2
-	sub w3,w3,#1
-	cbnz w3,relocate
+relocate: //since its 64-bit architecture, move 8 bytes every time
+	ldr x4,[x1],#8 //store value from x1 to x4, then mov x1 ([] means read value in the address)
+	str x4,[x2],#8 //store value from x4 to x2, then mov x2 ([] means write value in the address)
+	sub w3,w3,#1 //size is >>3, so 1 means 8 bytes
+	cbnz w3,relocate //keep relocate if size is not 0
 
 init_cpu:
     // read cpu id, stop slave cores
@@ -35,7 +35,7 @@ init_cpu:
     ldr     x1, =__bss_start
     ldr     w2, =__bss_size
     
-3:  cbz     w2, 4f //see if bss is cleared
+3:  cbz     w2, 4f //see if bss is cleared, if cleared go to 4
     str     xzr, [x1], #8 //xzr means zero, clear to zzero from start
     sub     w2, w2, #1 //1 count means 8bit
     cbnz    w2, 3b //if not zero go back
