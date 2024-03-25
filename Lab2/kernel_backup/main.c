@@ -22,6 +22,9 @@ void main(void *dtb)
 {
     // set up serial console
     uart_init();
+    // press any key to start
+    uart_puts("Press any key to start!\n");
+    uart_getc();
     //dtb_list(dtb);
     // say hello
     uart_puts("Booted, start testing simple_alloc\n");

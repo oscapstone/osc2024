@@ -165,6 +165,7 @@ int find_dtb(void *dtb, const char* name, int name_len, void (*func)(void*)){
     if (bswap_32(header->magic)==0xd00dfeed)
     {
         char* str = buf + bswap_32(header->off_dt_strings);
+        uart_hex((unsigned int) str);
         uart_puts("\n");
         buf += bswap_32(header->off_dt_struct);
         int pad = 0;
