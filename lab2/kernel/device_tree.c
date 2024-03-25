@@ -6,7 +6,7 @@
 #include "lib/utils.h"
 
 // get this value from start.S
-extern uint64_t *dtb_base;
+extern void *dtb_base;
 
 void fdt_traverse(void (*callback)(void *)) {
     struct fdt_header *header = (struct fdt_header *)(dtb_base);
@@ -47,6 +47,10 @@ void fdt_traverse(void (*callback)(void *)) {
                 ptr += 4;
                 uint32_t nameoff = be2le((char *)ptr);
                 ptr += 4;
+#if DEBUG
+                print_string("\n");
+                print_string((char *)strings + nameoff);
+#endif
                 if (strcmp((char *)(strings + nameoff), "linux,initrd-start") ==
                     0) {
                     callback((void *)(uint32_t *)be2le((void *)ptr));
