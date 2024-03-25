@@ -14,12 +14,12 @@ constexpr uint32_t LAST_COMP_VERSION = 17;
  * Copyright (C) 2006 David Gibson, IBM Corporation.
  */
 
-static inline uint32_t fdt_ld32(const uint32_t* p) {
+inline uint32_t fdt_ld32(const void* p) {
   const uint8_t* bp = (const uint8_t*)p;
   return ((uint32_t)bp[0] << 24) | ((uint32_t)bp[1] << 16) |
          ((uint32_t)bp[2] << 8) | bp[3];
 }
-static inline uint64_t fdt_ld64(const uint64_t* p) {
+inline uint64_t fdt_ld64(const void* p) {
   const uint8_t* bp = (const uint8_t*)p;
   return ((uint64_t)bp[0] << 56) | ((uint64_t)bp[1] << 48) |
          ((uint64_t)bp[2] << 40) | ((uint64_t)bp[3] << 32) |
@@ -27,19 +27,14 @@ static inline uint64_t fdt_ld64(const uint64_t* p) {
          ((uint64_t)bp[6] << 8) | bp[7];
 }
 
-static inline const char* fdt_ld(const char p[]) {
+inline const char* fdt_ld(const char p[]) {
   return p;
 }
-static inline uint32_t fdt_ld(const uint32_t& p) {
+inline uint32_t fdt_ld(const uint32_t& p) {
   return fdt_ld32(&p);
 }
-static inline uint64_t fdt_ld(const uint64_t& p) {
+inline uint64_t fdt_ld(const uint64_t& p) {
   return fdt_ld64(&p);
-}
-
-template <uint64_t sz, typename T>
-static inline T align(T p) {
-  return (T)(((uint64_t)p + sz - 1) & ~(sz - 1));
 }
 
 #define fdt_get_header(fdt, field) \

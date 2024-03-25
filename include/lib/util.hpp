@@ -14,6 +14,11 @@
 #include <cstdint>
 using addr_t = volatile char*;
 
+template <uint64_t sz, typename T>
+inline T align(T p) {
+  return (T)(((uint64_t)p + sz - 1) & ~(sz - 1));
+}
+
 extern "C" {
 // util-asm.S
 void set32(addr_t address, uint32_t value);

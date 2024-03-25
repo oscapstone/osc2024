@@ -35,30 +35,30 @@ struct cpio_newc_header {
   static constexpr char MAGIC[] = "070701";
   // clang-format on
 
-  inline bool valid() const {
+  bool valid() const {
     return !memcmp(c_magic, MAGIC, sizeof(MAGIC) - 1);
   }
-  inline bool isend() const {
+  bool isend() const {
     return !strcmp(name_ptr(), ENDFILE);
   }
 
-  inline int mode() const {
+  int mode() const {
     return strtol(c_mode, nullptr, 16, sizeof(c_mode));
   }
-  inline bool isdir() const {
+  bool isdir() const {
     return (mode() & F_MASK) == F_DIR;
   }
 
-  inline int namesize() const {
+  int namesize() const {
     return strtol(c_namesize, nullptr, 16, sizeof(c_namesize));
   }
-  inline int filesize() const {
+  int filesize() const {
     return strtol(c_filesize, nullptr, 16, sizeof(c_filesize));
   }
-  inline const char* name_ptr() const {
+  const char* name_ptr() const {
     return _name_ptr;
   }
-  inline const char* file_ptr() const {
+  const char* file_ptr() const {
     return name_ptr() + namesize() + 2;
   }
   string_view name() const {
@@ -75,19 +75,19 @@ class CPIO {
   class iterator {
    public:
     iterator(const char* header) : hedaer_((const cpio_newc_header*)header) {}
-    inline iterator& operator++() {
+    iterator& operator++() {
       hedaer_ = hedaer_->next();
       return *this;
     }
-    inline iterator operator++(int) {
+    iterator operator++(int) {
       iterator copy = *this;
       ++*this;
       return copy;
     }
-    inline const cpio_newc_header* operator*() const {
+    const cpio_newc_header* operator*() const {
       return hedaer_;
     }
-    inline const cpio_newc_header* operator->() const {
+    const cpio_newc_header* operator->() const {
       return hedaer_;
     }
     bool operator==(const iterator& other) const {

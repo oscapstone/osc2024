@@ -12,7 +12,7 @@ void initramfs_init() {
     mini_uart_printf("initramfs init failed, %s not found\n", initrd_path);
     prog_hang();
   }
-  auto addr = (char*)(uint64_t)fdt_ld32((uint32_t*)view.data());
+  auto addr = (char*)(uint64_t)fdt_ld32(view.data());
   mini_uart_printf("initramfs: %p\n", addr);
   initramfs.init(addr);
 }
