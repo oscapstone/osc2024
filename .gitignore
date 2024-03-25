@@ -1,4 +1,5 @@
 target
 */target
-kernel8.img
+*.img
 .vscode
+rootfs

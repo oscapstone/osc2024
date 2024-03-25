@@ -13,18 +13,17 @@ use core::{
 };
 
 use driver::uart;
-use driver::mailbox;
 
 const KERNEL_LOAD_ADDR: u64 = 0x80000;
 
 
 // load the kernel from uart
 #[no_mangle]
-unsafe fn bootloader() -> ! {
+unsafe fn bootloader(){
     // initialize uart
     uart::init_uart();
     uart::_print("Bootloader started\r\n");
-
+    
     // read kernel size
     let mut kernel_size: u32 = 0;
     

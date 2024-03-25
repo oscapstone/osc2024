@@ -13,9 +13,6 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
-	b _bootloader
-
-_bootloader:
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	and	x0, x0, {CONST_CORE_ID_MASK}
@@ -39,13 +36,14 @@ _bootloader:
 	// Prepare the jump to Rust code.
 .L_prepare_rust:
 	// Set the stack pointer.
-  	mov sp, 0x80000
+  	mov sp, 0x60000
 
 	// Jump to Rust code.
 	bl	_start_rust
-	
-	// After loaded the kernel jump to _start aka 0x80000
-	b _start
+
+	// jump to 0x80000
+	ldr x0, =0x80000	
+	br x0
 
 	// Infinitely wait for events (aka "park the core").
 .L_parking_loop:

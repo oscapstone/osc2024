@@ -42,7 +42,7 @@ COMPILER_ARGS = --target=$(TARGET) \
 				$(FEATURES)        \
 				--release
 
-RUSTC_CMD    = cargo rustc $(COMPILER_ARGS) --bin kernel
+RUSTC_CMD    = cargo rustc $(COMPILER_ARGS) --bin bootloader
 CLIPPY_CMD   = cargo clippy $(COMPILER_ARGS)
 
 
