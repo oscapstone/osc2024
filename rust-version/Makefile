@@ -7,18 +7,22 @@
 
 # this would build according to the rust target triple
 # https://clang.llvm.org/docs/CrossCompilation.html#target-triple
-TARGET            = aarch64-unknown-none-softfloat
-KERNEL_BIN        = kernel8.img
-QEMU_BINARY       = qemu-system-aarch64
-QEMU_MACHINE_TYPE = raspi3
-QEMU_RELEASE_ARGS = -d in_asm -display none
-RUSTC_MISC_ARGS   = -C target-cpu=cortex-a53
-LD_SCRIPT_PATH    = src/
-LD_SCRIPT_NAME    = linker.ld
-KERNEL_LINKER_SCRIPT = $(LD_SCRIPT_PATH)$(LD_SCRIPT_NAME)
-RUSTFLAGS = $(RUSTC_MISC_ARGS)                   \
+TARGET                    = aarch64-unknown-none-softfloat
+KERNEL_BIN                = kernel8.img
+BOOT_BIN                  = bootloader.img
+QEMU_BINARY               = qemu-system-aarch64
+QEMU_MACHINE_TYPE         = raspi3
+QEMU_RELEASE_ARGS         = -d in_asm -display none
+RUSTC_MISC_ARGS           = -C target-cpu=cortex-a53
+KERNEL_LINKER_SCRIPT      = src/linker.ld
+BOOTLOADER_LINKER_SCRIPT  = src/bootloader/linker.ld
+KERNEL_RUSTFLAGS          = $(RUSTC_MISC_ARGS)   \
     -C link-arg=--library-path=$(LD_SCRIPT_PATH) \
     -C link-arg=--script=$(KERNEL_LINKER_SCRIPT)
+BOOTLOADER_RUSTFLAGS      = $(RUSTC_MISC_ARGS)   \
+		-C link-arg=--library-path=$(BOOTLOADER_LD_SCRIPT_PATH) \
+		-C link-arg=--script=$(BOOTLOADER_LINKER_SCRIPT)
+
 
 # build my kernel
 KERNEL_ELF = target/$(TARGET)/debug/kernel
@@ -29,12 +33,21 @@ COMPILER_ARGS = --target=$(TARGET)
 all: $(KERNEL_BIN)
 
 $(KERNEL_ELF): $(KERNEL_ELF_DEPS)
-	@RUSTFLAGS="$(RUSTFLAGS)" cargo rustc $(COMPILER_ARGS)
+	@RUSTFLAGS="$(KERNEL_RUSTFLAGS)" cargo rustc $(COMPILER_ARGS)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
 	rust-objcopy -O binary $(KERNEL_ELF) $(KERNEL_BIN)
 
-test: $(KERNEL_BIN)
+$(BOOT_ELF): $(BOOT_ELF_DEPS)
+	@RUSTFLAGS="$(BOOTLOADER_RUSTFLAGS)" cargo rustc $(COMPILER_ARGS) --bin bootloader
+
+$(BOOT_BIN): $(BOOT_ELF)
+	rust-objcopy -O binary $(BOOT_ELF) $(BOOT_BIN)
+
+testboot: $(KERNEL_BIN) $(BOOT_BIN)
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty
+
+test: $(KERNEL_BIN) $(BOOT_BIN)
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
 
 clean:
