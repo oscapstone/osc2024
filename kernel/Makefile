@@ -27,6 +27,7 @@ kernel8.img: start.o $(OBJ_FILES)
 clean:
 	-@rm -v kernel8.*
 	-@rm -rv obj
+	-@rm -v start.o
 
 run: kernel8.img
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio

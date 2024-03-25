@@ -29,7 +29,8 @@ void uart_init() {
   /* map UART1 to GPIO pins */
   selector = *GPFSEL1;
 
-  // gpio14, gpio15
+  // clean gpio14, gpio15
+  // SEL0 -> 1-10, SEL1 -> 11-20
   selector &= ~((7 << 12) | (7 << 15));
 
   // alt5

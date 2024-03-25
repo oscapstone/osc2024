@@ -6,9 +6,6 @@
 test
 test.*
 
-# Build files
-kernel*
-
 ### C ###
 # Prerequisites
 *.d

@@ -1,5 +1,6 @@
 #include "mbox.h"
 
+// align 16 cuz we only have 28 bits for message address
 volatile unsigned int __attribute__((aligned(16))) mailbox[36];
 
 int mbox_call(unsigned char ch) {
