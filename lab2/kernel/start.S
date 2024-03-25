@@ -1,5 +1,5 @@
 .section ".data"
-.globl dtb_base
+.global dtb_base
 dtb_base: .word 0
 
 .section ".text.boot"
