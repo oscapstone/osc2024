@@ -3,9 +3,11 @@
 #include "command/all.h"
 #include "console.h"
 #include "device_tree.h"
+#include "memory.h"
 
 int main() {
     uart_init();
+    init_memory();
     fdt_traverse(init_ramfs_callback);
 
     struct Console *console = console_create();
