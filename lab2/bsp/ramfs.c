@@ -5,10 +5,9 @@
 #include "lib/string.h"
 #include "lib/utils.h"
 
-#define CPIO_BASE_QEMU (0x8000000)
+// #define CPIO_BASE_QEMU (0x8000000)
 #define CPIO_BASE_RPI (0x20000000)
-
-static void *ramfs_base = (void *)CPIO_BASE_RPI;  // DEFAULT for qemu
+static void *ramfs_base = (void *)CPIO_BASE_RPI;  // DEFAULT for RPI
 
 static int hextoi(char *s, int n);
 
