@@ -15,6 +15,10 @@ void _test_malloc_command(int argc, char **argv) {
         print_char(c);
     }
     void *ptr = simple_malloc(size);
+    if(ptr == 0) {
+        print_string("\nMalloc failed! ");
+    }
+
     print_string("\nMalloc address: ");
     print_h((unsigned int)ptr);
     print_string("\n");
