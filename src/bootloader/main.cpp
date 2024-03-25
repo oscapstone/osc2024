@@ -17,7 +17,7 @@ void read_kernel() {
     char buf[4];
   };
   for (int i = 0; i < 4; i++)
-    buf[i] = mini_uart_getc();
+    buf[i] = mini_uart_getc_raw();
   mini_uart_printf("Kernel Size: %u\n", size);
   for (uint32_t i = 0; i < size; i++)
     kernel_addr[i] = mini_uart_getc_raw();
