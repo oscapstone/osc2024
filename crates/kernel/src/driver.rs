@@ -37,6 +37,7 @@ pub unsafe fn register_drivers() -> Result<(), &'static str> {
     let mailbox = DeviceDriverDescriptor::new(&MAILBOX, None);
     driver_manager.register_driver(mailbox);
 
+    INIT_DONE.store(true, Ordering::Relaxed);
     Ok(())
 }
 
