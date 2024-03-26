@@ -114,6 +114,8 @@ void parse_command(char* cmd)
         fdt_traverse(print_dtb);
     else if (!str_cmp(cmd_name, "logo"))
         send_logo();
+    else if (!str_cmp(cmd_name, "asia_godtone"))
+        send_asiagodtone();
     else {
         uart_send_string("Command '");
         uart_send_string(cmd);

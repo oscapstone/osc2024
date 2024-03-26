@@ -107,7 +107,9 @@ void parse_command(char* cmd)
             uart_send_string("Kernel not loaded\n");
             break;
         }
-    } else {
+    } else if (!str_cmp(cmd, "asia_godtone"))
+        send_asiagodtone();
+    else {
         uart_send_string("Command '");
         uart_send_string(cmd);
         uart_send_string("' not found\n");

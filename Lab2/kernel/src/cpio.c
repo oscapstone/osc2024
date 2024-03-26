@@ -39,9 +39,11 @@ static inline void cpio_print_filename(char* name_addr, unsigned int name_size)
 
 static inline void cpio_print_content(char* file_addr, unsigned int file_size)
 {
-    for (unsigned int i = 0; i < file_size; i++)
+    for (unsigned int i = 0; i < file_size; i++) {
+        if (file_addr[i] == '\n')
+            uart_send('\r');
         uart_send(file_addr[i]);
-    uart_send('\r');
+    }
 }
 
 
