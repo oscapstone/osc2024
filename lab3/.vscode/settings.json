@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "mini_uart.h": "c",
+        "shell.h": "c",
+        "devicetree.h": "c",
+        "utils.h": "c",
+        "exception.h": "c"
+    }
+}
