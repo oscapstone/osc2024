@@ -9,27 +9,28 @@
 #include "peripheral/pm.h"
 #include "string.h"
 #include "utils.h"
+#include "reboot.h"
 
 #define BUFFER_SIZE 128
 
 static char cmd[BUFFER_SIZE];
-static int EXIT = 0;
 
-void read_command(char* cmd)
+int read_command(char* cmd)
 {
     int i = 0;
     char c;
 
-    while (1) {
+    while (i < BUFFER_SIZE) {
         c = uart_recv();
         uart_send(c);
         if (c == '\n') {
             uart_send('\r');
             cmd[i] = '\0';
-            return;
+            return 0;
         }
         cmd[i++] = c;
     }
+    return 1;
 }
 
 void help(void)
@@ -51,22 +52,6 @@ void help(void)
 void hello(void)
 {
     uart_send_string("Hello, world!\n");
-}
-
-void reset(unsigned int tick)
-{
-    uart_send_string("rebooting...\n");
-    EXIT = 1;
-    put32(PM_RSTC, PM_PASSWORD | 0x20);  // full reset
-    put32(PM_WDOG, PM_PASSWORD | tick);  // number of watchdog tick
-}
-
-void cancel_reset(void)
-{
-    uart_send_string("reboot canceled\n");
-    EXIT = 0;
-    put32(PM_RSTC, PM_PASSWORD | 0);  // cancel reset
-    put32(PM_WDOG, PM_PASSWORD | 0);  // number of watchdog tick
 }
 
 void info(void)
@@ -129,7 +114,10 @@ void shell(void)
     uart_send_string("type 'help' to see available commands\n");
     while (!EXIT) {
         uart_send_string("$ ");
-        read_command(cmd);
-        parse_command(cmd);
+        int read_status = read_command(cmd);
+        if (!read_status)
+            parse_command(cmd);
+        else
+            uart_send_string("\nread command failed\n");
     }
 }
