@@ -2,7 +2,7 @@ import os
 import serial
 
 def main():
-    ser = serial.Serial("/dev/pts/8")
+    ser = serial.Serial("/dev/pts/3")
 
     size = os.stat("./kernel8.img").st_size
     print(size)

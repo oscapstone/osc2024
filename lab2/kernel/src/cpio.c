@@ -4,6 +4,7 @@
 
 FILE file_arr[MAX_FILE_SIZE];
 int file_num = 0;
+unsigned long long cpio_address;
 
 void build_file_arr()
 {

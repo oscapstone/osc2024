@@ -1,7 +1,3 @@
-// qemu 0x8000000 
-// rpi3 0x20000000
-#define cpio_address 0x8000000
-
 #define MAX_FILE_SIZE 1024
 
 typedef struct cpio_newc_header
@@ -31,7 +27,7 @@ typedef struct file
 
 extern FILE file_arr[MAX_FILE_SIZE];
 extern int file_num;
-
+extern unsigned long long cpio_address;
 void build_file_arr();
 void traverse_file();
 void look_file_content(char *pathname);

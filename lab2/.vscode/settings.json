@@ -2,6 +2,9 @@
     "files.associations": {
         "cpio.h": "c",
         "uart.h": "c",
-        "utils.h": "c"
+        "utils.h": "c",
+        "shell.h": "c",
+        "allocator.h": "c",
+        "dtb_parser.h": "c"
     }
 }

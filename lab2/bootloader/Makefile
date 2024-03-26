@@ -24,7 +24,7 @@ bootloader.img: $(OBJS) $(SRC_DIR)/start.o
 	$(OBJCPY) -O binary bootloader.elf bootloader.img
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -initrd initramfs.cpio -display none -serial null -serial pty
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -display none -serial null -serial pty
 
 debug: all
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s

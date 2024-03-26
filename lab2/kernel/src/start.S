@@ -1,5 +1,7 @@
 .section ".text.boot"
 
+.global dtb_ptr
+
 .global _start
 
 _start:
@@ -28,6 +30,9 @@ clear_bss:
 	cbnz x2, clear_bss
 
 jump_to_main:
+	// put address of dtb into dtb_ptr
+	ldr x1, =dtb_ptr
+	str x0, [x1]
+
 	bl main
 	b halt
-

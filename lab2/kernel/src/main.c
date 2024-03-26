@@ -3,10 +3,12 @@
 #include "shell.h"
 #include "cpio.h"
 #include "allocator.h"
+#include "dtb_parser.h"
 
 int main()
 {
 	uart_init();
+	fdt_traverse(initramfs_callback);
 	build_file_arr();
 	uart_puts("\n");
 	get_board_revision();

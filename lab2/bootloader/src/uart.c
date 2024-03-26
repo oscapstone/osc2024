@@ -67,5 +67,19 @@ void uart_send(unsigned int c)
 void uart_puts(char *s)
 {
     while (*s != '\0')
+    {
+        if(*s == '\n')
+            uart_send('\r');
         uart_send(*s++);
+    }
+}
+
+void uart_hex_lower_case (unsigned int d)
+{
+    for (int c = 28; c >= 0; c -= 4)
+    {
+        unsigned int n = (d >> c) & 0xF;
+        n += n > 9 ? 87 : 48; // 0-9 => '0'-'9', 10-15 => 'a'-'f'
+        uart_send(n);
+    }
 }

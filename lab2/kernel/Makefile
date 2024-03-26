@@ -27,7 +27,7 @@ asm:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd ../bootloader/initramfs.cpio -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd ../bootloader/initramfs.cpio -dtb ../bootloader/bcm2710-rpi-3-b-plus.dtb -display none -serial null -serial stdio
 
 debug: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s
