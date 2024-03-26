@@ -25,8 +25,7 @@ static unsigned int atoi(const char *s, int char_size) {
 
 void cpio_ls() {
   char *addr = cpio_addr;
-  while (strcmp((char *)(addr + sizeof(struct cpio_newc_header)),
-                "TRAILER!!!") != 0) {
+  while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     cpio_header *header = (cpio_header *)addr;
     unsigned int filename_size =
         atoi(header->c_namesize, (int)sizeof(header->c_namesize));
@@ -42,8 +41,7 @@ void cpio_ls() {
 
 char *findFile(const char *name) {
   char *addr = cpio_addr;
-  while (strcmp((char *)(addr + sizeof(struct cpio_newc_header)),
-                "TRAILER!!!") != 0) {
+  while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     if (!strcmp((char *)(addr + sizeof(cpio_header)), name)) {
       return addr;
     }
@@ -57,7 +55,7 @@ char *findFile(const char *name) {
     align_inplace(&file_size, 4);
     addr += (headerPathname_size + file_size);
   }
-  return 0;
+  return (char *)0;
 }
 
 void cpio_cat(const char *filename) {

@@ -28,8 +28,8 @@ master:
 
 .global _dtb_ptr	//define a global variable _dtb_ptr
 .section .data		//_dtb_ptr is in data section
-_dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value of 0x0
-
+_dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value of 0x0 (null pointer)
+// .dc.a: Define Constant - Absolute Address 
 
 // mrs: Load value from a system register to one of the general purpose registers (x0–x30)
 // and: Perform the logical AND operation. We use this command to strip the last byte from the value we obtain from the mpidr_el1 register.
@@ -41,5 +41,4 @@ _dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value o
 // mov: Move a value between registers or from a constant to a register.
 // ldr: load data from memory into a register
 // str: store (write) a value from a register into memory at a specified address.
-
 
