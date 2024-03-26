@@ -8,6 +8,7 @@
 #include "utils.h"
 #define BUFFER_SIZE 64
 
+static char cmd[BUFFER_SIZE];
 static int EXIT = 0;
 static int load_status = 1;
 extern unsigned long dtb_ptr;
@@ -120,7 +121,6 @@ void shell(void)
 {
     uart_send_string("type 'help' to see available commands\n");
     while (!EXIT) {
-        char cmd[BUFFER_SIZE];
         uart_send_string("$ ");
         read_command(cmd);
         parse_command(cmd);

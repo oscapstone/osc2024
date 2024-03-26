@@ -12,6 +12,7 @@
 
 #define BUFFER_SIZE 128
 
+static char cmd[BUFFER_SIZE];
 static int EXIT = 0;
 
 void read_command(char* cmd)
@@ -127,7 +128,6 @@ void shell(void)
 {
     uart_send_string("type 'help' to see available commands\n");
     while (!EXIT) {
-        char cmd[BUFFER_SIZE];
         uart_send_string("$ ");
         read_command(cmd);
         parse_command(cmd);
