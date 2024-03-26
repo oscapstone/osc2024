@@ -3,7 +3,6 @@
 
 #define NULL ((void*)0)
 
-#define EXIT_SUCCESS 0
-#define EXIT_FAILURE 1
+#define UNUSED(x) UNUSED_##x __attribute__((__unused__))
 
 #endif /* DEF_H */

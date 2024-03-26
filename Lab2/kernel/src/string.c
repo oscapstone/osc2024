@@ -1,7 +1,6 @@
 #include "string.h"
-#include "def.h"
 
-unsigned int strlen(const char* str)
+unsigned int str_len(const char* str)
 {
     unsigned int len = 0;
     while (str[len])
@@ -9,7 +8,7 @@ unsigned int strlen(const char* str)
     return len;
 }
 
-int strcmp(const char* a, const char* b)
+int str_cmp(const char* a, const char* b)
 {
     while (*a && *b && *a == *b) {
         a++;
@@ -18,7 +17,7 @@ int strcmp(const char* a, const char* b)
     return *a - *b;
 }
 
-int strncmp(const char* a, const char* b, unsigned int n)
+int str_n_cmp(const char* a, const char* b, unsigned int n)
 {
     for (unsigned int i = 0; i < n; i++) {
         if (!a[i] || a[i] != b[i])
@@ -44,7 +43,7 @@ unsigned int hexstr2int(char* hex_str)
 
 static char* last_str;
 
-char* strtok(char* str, const char* delim)
+char* str_tok(char* str, const char* delim)
 {
     if (!delim || (!str && !last_str))
         return NULL;
@@ -91,11 +90,24 @@ char* strtok(char* str, const char* delim)
     return head;
 }
 
-char* strcpy(char* dest, const char* src)
+char* str_cpy(char* dest, const char* src)
 {
     char* d = dest;
     const char* s = src;
     while ((*d++ = *s++))
         ;
     return dest;
+}
+
+static inline unsigned int decchar2int(unsigned char in)
+{
+    return in - '0';
+}
+
+unsigned int decstr2int(char* dec_str)
+{
+    unsigned int result = 0;
+    while (*dec_str)
+        result = result * 10 + decchar2int(*dec_str++);
+    return result;
 }

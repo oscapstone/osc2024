@@ -3,7 +3,7 @@
 
 static char* heap_ptr = (char*)HEAP;
 
-void* malloc(unsigned long size)
+void* mem_alloc(unsigned long size)
 {
     if (!size)
         return NULL;

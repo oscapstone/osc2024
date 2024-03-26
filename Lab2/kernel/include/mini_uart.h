@@ -7,5 +7,6 @@ void uart_send(char c);
 void uart_send_string(const char* str);
 void uart_send_hex(unsigned int data);
 void uart_send_dec(unsigned int data);
+void uart_send_space_level(unsigned int level);
 
 #endif /* MINI_UART_H */
