@@ -14,6 +14,7 @@ mod driver;
 mod panic_wait;
 mod print;
 mod synchronization;
+mod mbox;
 
 mod arrsting;
 
@@ -81,6 +82,7 @@ unsafe fn kernel_main() -> ! {
         console().write_char(c);
 
         if c == '\n' {
+            print!("\r");
             if buf == arr_help {
                 println!("{}", msg_help);
             } else if buf == arr_hello {
@@ -89,11 +91,12 @@ unsafe fn kernel_main() -> ! {
                 println!("{}", msg_reboot);
                 reboot();
             } else if buf == arr_info {
-                println!("BoardVersion: {:x}", bsp::driver::MBOX.get_board_revision());
+                println!("BoardVersion: {:x}", mbox::mbox().get_board_revision());
+                // println!("BoardVersion: {:x}", bsp::driver::MBOX.get_board_revision());
                 println!(
                     "RAM: {} {}",
-                    bsp::driver::MBOX.get_arm_memory().0,
-                    bsp::driver::MBOX.get_arm_memory().1
+                    mbox::mbox().get_arm_memory().0,
+                    mbox::mbox().get_arm_memory().1
                 );
             } else {
                 println!("{}", msg_not_found);
@@ -106,7 +109,7 @@ unsafe fn kernel_main() -> ! {
             // arrsting::arrstrcmp(buf, help);
         } else if buf.get_len() == 1024 {
             buf.clean_buf();
-            println!("{}\r\n#", msg_buf_exceed);
+            println!("{}", msg_buf_exceed);
             print!("#");
             continue;
         } else {
