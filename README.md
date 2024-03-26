@@ -15,15 +15,14 @@
 make ver=release
 ```
 
-## Debug (emulation + debug)
+## Debug
 
 ```
 make ver=debug
 ```
 
-## Test With QEMU
+## Test with QEMU
 
 ```
 make emu
-(qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none)
 ```
