@@ -4,6 +4,13 @@ Mini operating system written in Rust.
 
 This is the course project/assignments for "Operating System Capstone," 2024 Spring, at NYCU.
 
+## Table of Contents
+
+- [Student Information](#student-information)
+- [Environment Setup](#environment-setup)
+- [Lab Descriptions](#lab-descriptions)
+- [Reference](#reference)
+
 ## Student Information
 
 | GitHub Account | Student ID | Name       |
@@ -62,7 +69,7 @@ Tasks:
 - [ ] **Initial Ramdisk**: Parse "New ASCII Format Cpio" archive file and implement `ls` and `cat`.
 - [ ] **Simple Allocator**: Implement a simple allocator that can be used in the early booting stage.
 - [ ] **Bootloader Self Relocation**: Add self-relocation feature to the bootloader so it does not need to specify the kernel starting address.
-- [ ] **DeivceTree**:
+- [ ] **DeivceTree**: Integrate DeviceTree support for hardware configuration.
 
 ## Reference
 
