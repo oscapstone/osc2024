@@ -220,14 +220,6 @@ impl MBOX {
             inner: NullLock::new(MBOXInner::new(mmio_start_addr)),
         }
     }
-
-    pub fn get_board_revision(&self) -> u32 {
-        self.inner.lock(|inner| inner.get_board_revision())
-    }
-
-    pub fn get_arm_memory(&self) -> (u32, u32) {
-        self.inner.lock(|inner| inner.get_arm_memory())
-    }
 }
 
 //------------------------------------------------------------------------------
