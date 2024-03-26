@@ -42,6 +42,13 @@ char uart_recv(void)
     return (r == '\r') ? '\n' : r;
 }
 
+char uart_recv_raw(void)
+{
+    while (!(get32(AUX_MU_LSR_REG) & 0x01))
+        ;
+    return get32(AUX_MU_IO_REG) & 0xFF;
+}
+
 void uart_send_string(const char* str)
 {
     while (*str) {

@@ -3,6 +3,7 @@
 
 void uart_init(void);
 char uart_recv(void);
+char uart_recv_raw(void);
 void uart_send(char c);
 void uart_send_string(const char* str);
 void uart_send_hex(unsigned int data);

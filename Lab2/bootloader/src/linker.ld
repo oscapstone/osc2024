@@ -1,6 +1,6 @@
 SECTIONS
 {
-    . =  0x80000 - 0x20000;
+    . = 0x80000 - 0x20000;
     PROVIDE(_code = .);
     .text.boot : { *(.text.boot) }
     .text : { *(.text) }
