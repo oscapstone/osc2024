@@ -6,7 +6,7 @@ _start:
     # Copy code to addres 0x60000
     ldr x0, =0x80000
     ldr x1, =0x60000
-    ldr x2, =__text_size
+    ldr x2, =__cpy_size
 
 .L_copy_loop:
     ldr w3, [x0], #4

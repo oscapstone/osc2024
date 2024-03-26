@@ -17,13 +17,9 @@ use core::arch::asm;
 #[no_mangle]
 pub fn main() {
     uart::uart_init();
-    mmio::MMIO::delay(100000000);
+    // mmio::MMIO::delay(10000000);
     stdio::puts(b"Hello, world!");
-    stdio::write(b"Please ");
-    stdio::write(b"send ");
-    stdio::write(b"a ");
-    stdio::write(b"kernel ");
-    stdio::puts(b"image....");
+    stdio::puts(b"Please send a kernel image..");
 
     // receive kernel until delay 1 second
     let mut pos = 0x80000;
@@ -52,8 +48,4 @@ pub fn main() {
     let kernel: fn() = unsafe { core::mem::transmute(kernel) };
     kernel();
     stdio::puts(b"Jumping to kernel");
-    // unsafe {
-    //     asm!("b 0x80000");
-    //     asm!("br x0");
-    // }
 }

@@ -1,11 +1,12 @@
 SECTIONS
 {
     . = 0x60000;
+    __cpy_start = .;
     .text : { 
-        __text_start = .;
-        KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) 
-        __text_end = .;
-    } 
+        KEEP(*(.text.boot)) *(.text .text.*) 
+    }
+    .rodata : { *(.rodata..*) }
+    __cpy_end = .;
     .bss (NOLOAD) : {
         . = ALIGN(16);
         __bss_start = .;
@@ -17,4 +18,4 @@ SECTIONS
 }
 
 __bss_size = (__bss_end - __bss_start)>>3;
-__text_size = (__text_end - __text_start);
+__cpy_size = (__cpy_end - __cpy_start);

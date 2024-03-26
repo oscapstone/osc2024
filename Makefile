@@ -22,7 +22,7 @@ dir_guard=@mkdir -p $(@D)
 .PHONY: all clean run debug
 
 all: $(TARGET) $(BUILD_DIR)/initramfs.cpio
-	cp $^ $(RPI3_DIR)
+	cp $(BUILD_DIR)/bootloader.img $(RPI3_DIR)/kernel8.img
 	sha1sum $(TARGET)
 
 $(BUILD_DIR)/start.o: $(SRC_DIR)/start.s
