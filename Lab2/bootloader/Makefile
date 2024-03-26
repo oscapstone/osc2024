@@ -21,10 +21,6 @@ CFLAGS += -g
 CPPFLAGS += -DDEBUG
 ASMFLAGS += -DDEBUG
 EMUFLAGS += -S -s
-
-debug: bootloader.img
-	$(EMU) $(EMUFLAGS) -kernel $< &
-	$(DB) $(BUILD_DIR)/bootloader.elf
 endif
 
 .DELETE_ON_ERROR: all

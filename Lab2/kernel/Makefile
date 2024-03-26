@@ -21,10 +21,6 @@ CFLAGS += -g
 CPPFLAGS += -DDEBUG
 ASMFLAGS += -DDEBUG
 EMUFLAGS += -S -s
-
-debug: kernel8.img
-	$(EMU) $(EMUFLAGS) -kernel $< &
-	$(DB) $(BUILD_DIR)/kernel8.elf
 endif
 
 .DELETE_ON_ERROR: all
