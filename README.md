@@ -8,6 +8,7 @@ This is the course project/assignments for "Operating System Capstone," 2024 Spr
 
 - [Student Information](#student-information)
 - [Environment Setup](#environment-setup)
+- [Dev Notes](#dev-notes)
 - [Lab Descriptions](#lab-descriptions)
 - [Reference](#reference)
 
@@ -39,15 +40,22 @@ This is the course project/assignments for "Operating System Capstone," 2024 Spr
    cargo install cargo-binutils
    ```
 
+## Dev Notes
+
+This repository contains two entrypoints that might be great to start from:
+
+- [bootloader](crates/bootloader)
+- [kernel](crates/kernel)
+
 ## Lab Descriptions
 
-### Lab 0: Environment Setup
+### Lab 0: Environment Setup ([website](https://nycu-caslab.github.io/OSC2024/labs/lab0.html))
 
 Prepare the environment for developing the mini operating system.
 
 > See [Environment Setup](#environment-setup)
 
-### Lab 1: Hello World
+### Lab 1: Hello World ([website](https://nycu-caslab.github.io/OSC2024/labs/lab1.html))
 
 Getting into the world of embedded programming, and try to play with pheripherals.
 
@@ -59,7 +67,7 @@ Tasks:
 - [x] **Mailbox**: Set up the Mailbox service and get the hardware information from it.
 - [x] **Reboot**: Add a `reboot` command to the shell to reset the Raspberry PI.
 
-### Lab 2: Booting
+### Lab 2: Booting ([website](https://nycu-caslab.github.io/OSC2024/labs/lab2.html))
 
 Booting the mini operating system, take care of system initialization and preparation
 
