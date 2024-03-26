@@ -40,6 +40,11 @@ pub mod map {
         pub const UART_START:       usize = START + UART_OFFSET;
         pub const MAILBOX_START:    usize = START + MAILBOX_OFFSET;
     }
+
+    pub mod layout {
+        pub const HEAP_START: usize = 0x80_0000;
+        pub const HEAP_SIZE: usize = 0x10_0000;
+    }
 }
 
 //--------------------------------------------------------------------------------------------------

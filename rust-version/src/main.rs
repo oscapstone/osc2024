@@ -1,10 +1,14 @@
 #![feature(asm_const)]
 #![feature(panic_info_message)]
+// #![feature(alloc_error_handler)]
+// #![feature(restricted_std)]
 #![feature(trait_alias)]
 #![no_main]
 #![no_std]
 
 use core::arch::global_asm;
+use crate::bcm::common::map::layout;
+extern crate alloc;
 
 mod bcm;
 mod console;
@@ -44,9 +48,12 @@ unsafe fn kernel_init() -> ! {
 
 unsafe fn kernel_main() -> ! {
     println!("[0] Hello from Rust!");
-    println!("[1] run the simple shell");
+    println!("[1] Initialize memory allocator");
+    memory::ALLOCATOR.init(layout::HEAP_START, layout::HEAP_SIZE);
+    println!("[2] run the simple shell");
     shell::interactiave_shell()
 }
+
 
 #[no_mangle]
 #[link_section = ".text._start_arguments"]

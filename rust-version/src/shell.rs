@@ -1,11 +1,18 @@
 use crate::{
-    bcm::{self, UART, common, mailbox::MailboxTag},
+    bcm::{self, common, mailbox::MailboxTag, UART},
     console::interface::Statistics,
-    print, println,
-    memory
+    memory, print, println,
 };
 
 const MAXCHAR: usize = 100;
+
+fn check_mem_alloc() {
+    let mut v = alloc::vec![0u8; 10];
+    for i in 0..10 {
+        v.push(i);
+    }
+    println!("v = {:?}", v);
+}
 
 fn reboot() {
     println!("Rebooting...");
@@ -20,6 +27,7 @@ fn help() {
     println!("reboot  : reboot this device");
     println!("ls      : list initramfs files");
     println!("cat     : print file content");
+    println!("mem     : check memory allocation");
     println!("cancel  : cancel reboot");
 }
 
@@ -65,12 +73,16 @@ pub fn interactiave_shell() -> ! {
                     println!("Chars written: {}", UART.chars_written());
                 }
                 "ls" => {
-                    memory::list_initramfs_files();
-                },
+                    // memory::list_initramfs_files();
+                    memory::initramfs::list_initramfs_files();
+                }
                 "cat" => {
-                    memory::get_initramfs_files(arg_1);
-                },
-
+                    // memory::get_initramfs_files(arg_1);
+                    memory::initramfs::get_initramfs_files(arg_1);
+                }
+                "mem" => {
+                    check_mem_alloc();
+                }
                 _ => {
                     if cnt > 0 {
                         println!(
