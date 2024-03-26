@@ -48,9 +48,7 @@ typedef fdt_header_t* fdt_header_ptr_t;
 
 
 /*
-
     convert from 32-bit big-endian to little-endian 
-
 */
 static uint32_t
 _dtb_get_uint32(const byteptr_t p)

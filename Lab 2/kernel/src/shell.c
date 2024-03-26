@@ -14,14 +14,18 @@
 static void
 simple_malloc_demo(uint32_t size)
 {
-    size = (size > 9) ? 9 : size;
+    size = (size > 8) ? 8 : size;
     byteptr_t str = simple_malloc(size);
-
     for (uint32_t i = 0; i < size; ++i) {
-        str[i] = i + '0';
+        str[i] = i + '1';
     }
     str[size - 1] = '\0';
-    mini_uart_putln(str);
+    mini_uart_puts("location = 0x");
+    mini_uart_hex((uint32_t) str); 
+    mini_uart_endl();
+    mini_uart_puts("content  = \""); 
+    mini_uart_puts(str); 
+    mini_uart_putln("\"");
 }
 
 
@@ -31,13 +35,13 @@ print_help()
     mini_uart_puts("help\t| ");
     mini_uart_putln("print this help menu");
     mini_uart_puts("info\t| ");
-    mini_uart_putln("print this hardware info");
+    mini_uart_putln("print VideoCore info");
     mini_uart_puts("dtb\t| ");
     mini_uart_putln("print the device tree");
     mini_uart_puts("ls\t| ");
     mini_uart_putln("list directory contents");
     mini_uart_puts("cat\t| ");
-    mini_uart_putln("print the file contents");
+    mini_uart_putln("print the file content");
     mini_uart_puts("malloc\t| ");
     mini_uart_putln("simple memory allocation demo");
     mini_uart_puts("reboot\t| ");
@@ -53,8 +57,14 @@ read_command(byteptr_t buffer)
     do {
         r = mini_uart_getc();
         if (r == '\n') mini_uart_putc('\r');
-        mini_uart_putc(r);
-        buffer[index++] = r;
+        if (r == 0x7f) {
+            index = (index > 0) ? index - 1 : 0;
+            mini_uart_putc(0x8);
+            mini_uart_putc(r);
+        } else {
+            buffer[index++] = r;
+            mini_uart_putc(r);
+        } 
     } while (index < (BUFFER_MAX_SIZE - 1) && r != '\n');
     if (r == '\n') index--;
     buffer[index] = '\0';

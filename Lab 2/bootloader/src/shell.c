@@ -7,6 +7,7 @@
 
 
 static const byteptr_t kernel_addr = (byteptr_t) 0x80000;
+static uint32_t kernel_loaded = 0;
 
 static void 
 load_image(uint32_t len)
@@ -17,6 +18,7 @@ load_image(uint32_t len)
         *cur_ptr++ = mini_uart_getb();
     }
     mini_uart_putln("\n$done");
+    kernel_loaded = 1;
 }
 
 
@@ -40,8 +42,14 @@ read_command(byteptr_t buffer)
     do {
         r = mini_uart_getc();
         if (r == '\n') mini_uart_putc('\r');
-        mini_uart_putc(r);
-        buffer[index++] = r;
+        if (r == 0x7f) {
+            index = (index > 0) ? index - 1 : 0;
+            mini_uart_putc(0x8);
+            mini_uart_putc(r);
+        } else {
+            buffer[index++] = r;
+            mini_uart_putc(r);
+        } 
     } while (index < (BUFFER_MAX_SIZE - 1) && r != '\n');
     if (r == '\n') index--;
     buffer[index] = '\0';
@@ -66,10 +74,13 @@ parse_command(byteptr_t buffer)
     }
 
     else if (str_eql(buffer, "boot")) {
-        mini_uart_putln("booting...");
-        mini_uart_putc('\r');
-        delay_cycles(100);
-        ((void (*)(uint64_t))kernel_addr)((uint64_t) dtb_ptr);
+        if (kernel_loaded) {
+            mini_uart_putln("booting...");
+            mini_uart_putc('\r');
+            delay_cycles(100);
+            ((void (*)(uint64_t))kernel_addr)((uint64_t) dtb_ptr);
+        }
+        mini_uart_putln("kernel is not loaded.");
     }
 
     else {

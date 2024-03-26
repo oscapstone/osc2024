@@ -108,14 +108,12 @@ initrd_cat(const byteptr_t name)
     byteptr_t cpio_addr = initrd_get_ptr(); 
     finfo_t info;
     byteptr_t file = _initrd_find(cpio_addr, name, &info);
-
     if (file) {
         if (info.size == 0) 
             mini_uart_putln("It's a directory.");
         else
             print_file(info.content, info.size);
-    } 
-    else {
+    } else {
         mini_uart_putln("No such file or directory.");
     }
 }

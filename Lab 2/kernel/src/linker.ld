@@ -11,12 +11,9 @@ SECTIONS
     . = ALIGN(0x8);
     
     _bss_begin = .;
-    
     .bss :          { *(.bss*) } 
-    
     _bss_end = .;  
     
-
     /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.en_frame*) }
 }
 

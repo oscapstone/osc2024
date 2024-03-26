@@ -10,13 +10,16 @@ from time import sleep
 def send_image(ser):
     kernel = '../kernel/out/kernel8.img'
     kernel_size = os.stat(kernel).st_size
-    print(f"sending size: {kernel_size}")
+    print(f"sending kernel size: {kernel_size} ... ", end='')
     ser.write((str(kernel_size) + "\n").encode())
     sleep(0.5)
-    print(ser.read_until(b"$loading").decode())
+    ser.read_until(b"$loading")
+    print('ok.')
+    print('sending kernel ... ', end='')
     with open(kernel, "rb") as f:
         ser.write(f.read())
-    print(ser.read_until(b"$done").decode())
+    ser.read_until(b"$done") 
+    print('done.')
 
 
 def serial_shell(ser):
@@ -28,12 +31,13 @@ def serial_shell(ser):
                 print(feedback)
             if "$size" in feedback:
                 send_image(ser)
-                ser.close()
-                print('\nbye!')
-                sys.exit()
             else:
-                key_in = (input("$ ").lower() + "\n").encode()
-                ser.write(key_in)
+                key_in = (input("#> ").lower() + "\n")
+                if 'exit' in key_in:
+                    ser.close()
+                    print('\nbye!')
+                    sys.exit()
+                ser.write(key_in.encode())
                 sleep(0.1)
 
     except KeyboardInterrupt:
