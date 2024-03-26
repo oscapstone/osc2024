@@ -58,13 +58,13 @@ unsafe fn kernel_main() -> ! {
 
     let msg_buf_exceed = "[system] Buf size limit exceed, reset buf";
 
-    let msg_help = "help\t: print this help menu\r\nhello\t: print Hello World!\r\nreboot\t: reboot the device";
+    let msg_help = "help\t: print this help menu\r\nhello\t: print Hello World!\r\nreboot\t: reboot the device\r\ninfo\t: show the device info";
     let msg_hello_world = "HelloWorld!";
     let msg_not_found = "Command not found";
     let msg_reboot = "Rebooting...";
 
     let arr_help = ArrString::new("help");
-    let arr_hello: ArrString = ArrString::new("hello");
+    let arr_hello = ArrString::new("hello");
     let arr_reboot = ArrString::new("reboot");
     let arr_info = ArrString::new("info");
 

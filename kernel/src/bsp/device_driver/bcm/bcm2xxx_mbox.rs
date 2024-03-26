@@ -181,10 +181,11 @@ impl MBOXInner {
         mailbox.buffer[0] =  8 * 4;
         mailbox.buffer[1] =  0;
         mailbox.buffer[2] =  0x0001_0005;
-        mailbox.buffer[3] =  0;
+        mailbox.buffer[3] =  8;
         mailbox.buffer[4] =  0;
         mailbox.buffer[5] =  0;
-        mailbox.buffer[6] =  0x0000_0000;
+        mailbox.buffer[6] =  0;
+        mailbox.buffer[7] =  0x0000_0000;
         // let mut mbox = [
         //     8 * 4,       // Buffer size in bytes
         //     0,           // Request/response code
@@ -199,7 +200,7 @@ impl MBOXInner {
             println!("get mem failed");
             return (0, 0);
         }
-        (mailbox.buffer[6], mailbox.buffer[7])
+        (mailbox.buffer[5], mailbox.buffer[6])
     }
 }
 
