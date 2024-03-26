@@ -68,7 +68,13 @@ struct __attribute__((__packed__)) cpio_newc_header {
   string_view file() const {
     return {file_ptr(), filesize()};
   }
-  const cpio_newc_header* next() const;
+  const cpio_newc_header* next() const {
+    const char* nxt = align<4>(file().end());
+    auto hdr = (const cpio_newc_header*)nxt;
+    if (hdr->valid() and not hdr->isend())
+      return hdr;
+    return nullptr;
+  }
 };
 
 class CPIO {
@@ -118,5 +124,11 @@ class CPIO {
   iterator end() const {
     return nullptr;
   }
-  const cpio_newc_header* find(const char* name) const;
+  const cpio_newc_header* find(const char* name) const {
+    for (auto it = begin(); it != end(); it++) {
+      if (it->name() == name)
+        return *it;
+    }
+    return nullptr;
+  }
 };
