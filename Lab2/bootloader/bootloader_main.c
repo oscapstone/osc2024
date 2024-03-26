@@ -8,7 +8,7 @@ int strcmp(char *s1, char *s2) {
     return (*(unsigned char *)s1) - (*(unsigned char *)s2);
 }
 
-void bootloader_main()
+void bootloader_main(void *dtb)
 {
     // set up serial console
     uart_init();
@@ -35,11 +35,11 @@ void bootloader_main()
                     while(size--) *kernel++ = uart_getc();
 
                     uart_puts("kernel-loaded\r\n");
-                    //void (*kernel_entry)(void) = (void (*)(void))0x80000;
-                    //kernel_entry();
-                    asm volatile (
-                        "mov x30, #0x80000; mov x0, x28; ret"
-                    );
+                    void (*kernel_entry)(void *) = (void (*)(void))0x80000;
+                    kernel_entry(dtb);
+                    // asm volatile (
+                    //     "mov x30, #0x80000; mov x0, x28; ret"
+                    // );
                     return;
                 }
                 idx = 0;
