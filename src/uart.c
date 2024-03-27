@@ -75,3 +75,20 @@ void uart_hex(unsigned int d) {
         uart_send(n);
     }
 }
+
+void uart_putints(int d)
+{
+    char buffer[100];
+    int idx = 0;
+    if (d == 0) {
+        buffer[idx++] = '0';
+    } else {
+        while (d) {
+            buffer[idx++] = '0' + (d % 10);
+            d /= 10;
+        }
+    }
+    while (idx > 0) {
+        uart_send(buffer[--idx]);
+    }
+}

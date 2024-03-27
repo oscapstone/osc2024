@@ -35,6 +35,7 @@ void uart_send(unsigned int);   // send character over seiral line
 void uart_puts(char*);   // write data
 char uart_getc(void);   // read data
 void uart_hex(unsigned int);
+void uart_putints(int);
 
 
 #endif
