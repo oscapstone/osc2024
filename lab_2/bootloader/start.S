@@ -4,21 +4,14 @@
 
 _start:
     // save arguments in registers (we will need them later for the new kernel)
-    // I choosed x10-x13 because instructions generated from C by gcc does not
-    // touch them. You can check that with "aarch64-elf-objdump -d kernel8.elf"
     mov     x10, x0
     mov     x11, x1
     mov     x12, x2
     mov     x13, x3
 
-    // IMPORTANT: because of a change in firmware, this code will only run on the
-    // BSP core, therefore there's no need to check the cpu's id. A spin-loop on a
-    // non-relocated address would be otherwise bad, thanks for the heads up @mrvn
-    // See https://github.com/raspberrypi/tools/blob/master/armstubs/armstub8.S
-
     // relocate our code from load address to link address
-    ldr     x1, =0x80000
-    ldr     x2, =_start
+    ldr     x1, =0x80000;  // src address 
+    ldr     x2, =_head         // target address
     ldr     w3, =__loader_size
 1:  ldr     x4, [x1], #8
     str     x4, [x2], #8
@@ -38,6 +31,6 @@ _start:
     cbnz    w2, 3b
 
     // jump to relocated C code, should not return
-4:  bl      main-4096
+4:  bl      main-0x20000
     // for failsafe, halt this core too
     b       1b

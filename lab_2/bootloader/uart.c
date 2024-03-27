@@ -23,7 +23,7 @@
  *
  */
 
-#include "gpio.h"
+#include "include/gpio.h"
 
 /** Auxilary mini UART registers
  * Address & Description refer: https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf Page.8

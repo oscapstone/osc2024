@@ -23,7 +23,7 @@
  *
  */
 
-#include "gpio.h"
+#include "include/gpio.h"
 
 /* mailbox message buffer
 * The buffer itself is 16-byte aligned as only the upper 28 bits of the address can be passed via the mailbox.

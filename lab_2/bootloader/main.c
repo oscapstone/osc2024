@@ -23,9 +23,9 @@
  *
  */
 #define MAX_BUFFER 10
-#include "uart.h"
-#include "utils.h"
-#include "mbox.h"
+#include "include/uart.h"
+#include "include/utils.h"
+#include "include/mbox.h"
 
 // Function to convert an integer to a character array
 void int_to_char_array(int num, char* buffer) {

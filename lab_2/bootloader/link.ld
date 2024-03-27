@@ -25,8 +25,8 @@
 
 SECTIONS
 {
-    . = 0x80000 - 4096;
-    PROVIDE(_code = .);
+    . = 0x60000;
+    PROVIDE(_head = .);
     .text : { KEEP(*(.text.boot)) *(.text .text.*) }
     .rodata : { *(.rodata .rodata.*) }
     PROVIDE(_data = .);
@@ -41,4 +41,4 @@ SECTIONS
     _end = .;
 }
 __bss_size = (__bss_end - __bss_start)>>3;
-__loader_size = (_end - _code)>>3;
+__loader_size = (_end - _head)>>3;
