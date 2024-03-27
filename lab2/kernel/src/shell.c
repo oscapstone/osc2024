@@ -8,7 +8,7 @@
 #include "dtb.h"
 #include "heap.h"
 
-#define CLI_MAX_CMD 6
+#define CLI_MAX_CMD 7
 
 extern char* dtb_ptr;
 void* CPIO_DEFAULT_PLACE;
@@ -20,6 +20,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
     {.command="info", .help="get device information via mailbox"},
     {.command="cat", .help="concatenate files and print on the standard output"},
     {.command="ls", .help="list directory contents"},
+    {.command="malloc", .help="simple allocator in heap session"},
     {.command="reboot", .help="reboot the device"}
 };
 
@@ -207,6 +208,21 @@ void do_cmd_ls(char* workdir)
     }
 }
 
+void do_cmd_malloc()
+{
+    //test malloc
+    char* test1 = malloc(0x18);
+    memcpy(test1,"test malloc1",sizeof("test malloc1"));
+    uart_puts("%s\n",test1);
+
+    char* test2 = malloc(0x20);
+    memcpy(test2,"test malloc2",sizeof("test malloc2"));
+    uart_puts("%s\n",test2);
+
+    char* test3 = malloc(0x28);
+    memcpy(test3,"test malloc3",sizeof("test malloc3"));
+    uart_puts("%s\n",test3);
+}
 
 void do_cmd_reboot()
 {

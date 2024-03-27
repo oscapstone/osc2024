@@ -20,6 +20,7 @@ void do_cmd_cat(char*);
 void do_cmd_help();
 void do_cmd_hello();
 void do_cmd_info();
+void do_cmd_malloc();
 void do_cmd_ls(char*);
 void do_cmd_reboot();
 
