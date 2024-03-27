@@ -4,18 +4,6 @@
 
 // boot loader start section, start from addr: 0x60000 (config in linker.ld)
 _start:
-	
-	// read cpu id, stop slave cores
-	mrs     x1, mpidr_el1
-	and		x1, x1, #3
-	cbz		x1, init		// branch to init if x1 == 0
-	
-	// cpu id > 0, stop
-halt:
-	wfe
-	b		halt
-
-init:
 
 	ldr		x1, =0x80000				// where to copy
 	ldr		x2, =__bootloader_start		// where to paste
@@ -44,6 +32,10 @@ bootloader_main:
 	//ldr		x1, 0x60000
 	//ldr		pc, x1
 	bl		main - 0x20000
+	b		halt
+
+halt:
+	wfe
 	b		halt
 
 bootloader_addr: .long 0x60000

@@ -51,5 +51,7 @@ if __name__ == '__main__':
     with open(kernel_filePath,"rb") as f:
         s.write(f.read())
 
+    print('data send')
+    print('receiving result...')
     received_content = read_line(s)
     print(received_content)
