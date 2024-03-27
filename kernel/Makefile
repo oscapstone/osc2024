@@ -17,7 +17,7 @@ KERNEL_OBJ_FILES=$(KERNEL_FILES:.c=.o)
 
 .PHONY: clean run run-mini-uart
 
-all: kernel8.img
+all: kernel8.img initramfs.cpio
 
 kernel8.img: kernel8.elf
 	$(OBJCOPY) -O binary \
@@ -45,12 +45,16 @@ $(KERNEL_DIR)/%.o: $(KERNEL_DIR)/%.c
 start.o: start.S
 	$(CC) $(CFLAGS) $(INCLUDE_DIR) -o $@ -c $<
 
+initramfs.cpio:
+	find ../rootfs | cpio -o -H newc > $(DIST_DIR)/initramfs.cpio
+
 clean:
 	rm start.o $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)
 	rm -rf $(DIST_DIR)
+	rm $(DIST_DIR)/initramfs.cpio
 
 run:
 	qemu-system-aarch64 -M raspi3b -kernel $(DIST_DIR)/kernel8.img -display none -d in_asm
 
 run-mini-uart:
-	qemu-system-aarch64 -M raspi3b -kernel $(DIST_DIR)/kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -initrd $(DIST_DIR)/initramfs.cpio -kernel $(DIST_DIR)/kernel8.img -display none -serial null -serial stdio
