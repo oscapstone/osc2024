@@ -21,8 +21,6 @@ dir_guard=@mkdir -p $(@D)
 .PHONY: all clean run test debug
 
 all: $(TARGET) $(BUILD_DIR)/initramfs.cpio
-	cp $(BUILD_DIR)/bootloader.img $(RPI3_DIR)/kernel8.img
-	sha1sum $(TARGET)
 
 $(BUILD_DIR)/start.o: $(SRC_DIR)/start.s
 	$(dir_guard)
@@ -53,7 +51,7 @@ $(BUILD_DIR)/kernel8.img: $(BUILD_DIR)/kernel8.elf
 	$(dir_guard)
 	$(OBJ_CPY) -O binary $< $@
 
-$(BUILD_DIR)/initramfs.cpio: rootfs
+$(BUILD_DIR)/initramfs.cpio: $(wildcard rootfs/*)
 	cd rootfs && find . | cpio -o -H newc > ../$@
 
 clean:

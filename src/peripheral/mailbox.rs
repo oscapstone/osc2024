@@ -8,6 +8,7 @@ const MAILBOX_FULL: u32 = 0x8000_0000;
 
 const CHANNEL_GPU: u32 = 8;
 
+#[allow(dead_code)]
 fn mailbox_read(channel: u32) -> u32 {
     loop {
         while MMIO::read_reg(MailboxReg(Status)) & MAILBOX_EMPTY != 0 {}
@@ -18,6 +19,7 @@ fn mailbox_read(channel: u32) -> u32 {
     }
 }
 
+#[allow(dead_code)]
 fn mailbox_write(channel: u32, data: u32) {
     loop {
         while MMIO::read_reg(MailboxReg(Status)) & MAILBOX_FULL != 0 {}
@@ -26,6 +28,7 @@ fn mailbox_write(channel: u32, data: u32) {
     }
 }
 
+#[allow(dead_code)]
 fn mailbox_call(mailbox: &mut [u32]) -> bool {
     let mailbox_ptr = mailbox.as_ptr() as u32;
     if mailbox_ptr & 0xF != 0 {
@@ -43,6 +46,7 @@ fn mailbox_call(mailbox: &mut [u32]) -> bool {
     true
 }
 
+#[allow(dead_code)]
 pub fn get_board_revision() -> u32 {
     let mut mailbox = [
         7 * 4,       // Buffer size in bytes
@@ -59,6 +63,7 @@ pub fn get_board_revision() -> u32 {
     mailbox[5]
 }
 
+#[allow(dead_code)]
 pub fn get_arm_memory() -> (u32, u32) {
     let mut mailbox = [
         8 * 4,       // Buffer size in bytes

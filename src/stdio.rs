@@ -1,4 +1,5 @@
 use crate::uart;
+use crate::utils;
 
 fn send(c: u8) {
     uart::send(c);
@@ -77,24 +78,23 @@ pub fn gets(buf: &mut [u8]) -> usize {
 }
 
 #[allow(dead_code)]
-pub fn getu32() -> u32 {
-    let mut buf = [0u8; 11];
-    let len = gets(&mut buf);
-    let s = core::str::from_utf8(&buf[..len]).unwrap();
-    s.trim().parse().unwrap()
+pub fn print(buf: &str) {
+    write(buf.as_bytes());
 }
 
 #[allow(dead_code)]
-pub fn putu32(mut n: u32) {
-    let mut buf = [0u8; 11];
-    let mut i = 10;
-    loop {
-        buf[i] = b'0' + (n % 10) as u8;
-        n /= 10;
-        if n == 0 {
-            break;
-        }
-        i -= 1;
-    }
-    write(&buf[i..]);
+pub fn println(buf: &str) {
+    puts(buf.as_bytes());
+}
+
+#[allow(dead_code)]
+pub fn print_u32(val: u32) {
+    let hex = utils::u32_to_hex(val);
+    write(&hex);
+}
+
+#[allow(dead_code)]
+pub fn print_u64(val: u64) {
+    let hex = utils::u64_to_hex(val);
+    write(&hex);
 }

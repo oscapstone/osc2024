@@ -6,14 +6,13 @@ pub extern "Rust" fn panic(_info: &core::panic::PanicInfo) -> ! {
 }
 
 mod mmio;
+mod peripheral;
 mod stdio;
-mod uart;
 mod utils;
 
-use core::arch::asm;
+use peripheral::uart;
 
 const KERNEL_ADDR: u32 = 0x80000;
-const MAX_COMMAND_LEN: usize = 0x400;
 
 #[no_mangle]
 pub fn main() {
