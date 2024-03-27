@@ -17,10 +17,10 @@ kernel.img : $(OBJ_FILES)
 	$(LD) $^ -T linker.ld -o kernel.elf
 	$(OBJCOPY) -O binary kernel.elf $@
 
-uploadQEMU:
+uploadQEMU: kernel.img
 	python uploader_qemu.py
 
-upload:
+upload: kernel.img
 	python uploader.py
 
 clean:

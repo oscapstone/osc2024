@@ -2,6 +2,7 @@
     "files.associations": {
         "reboot.h": "c",
         "utils.h": "c",
-        "uart.h": "c"
+        "uart.h": "c",
+        "trash_malloc.h": "c"
     }
 }
