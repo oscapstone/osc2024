@@ -22,20 +22,18 @@ $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
 $(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
 	$(ARMGNU)-gcc $(ASMFLAGS) -MMD -c $< -o $@
 
-bootloader.img: $(SRC_DIR)/link.ld $(OBJ_FILES)
-	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/bootloader.elf  $(OBJ_FILES)
-	$(ARMGNU)-objcopy $(BUILD_DIR)/bootloader.elf -O binary bootloader.img
+kernel8.img: $(SRC_DIR)/link.ld $(OBJ_FILES)
+	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
+	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
 
-all: bootloader.img
+all: kernel8.img
 
 clean:
 	rm -rf $(BUILD_DIR) *.img
 
-run_std:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial stdio -initrd initramfs.cpio
-
-run_pty:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial pty -initrd initramfs.cpio
+run:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio
+
