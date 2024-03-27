@@ -76,7 +76,7 @@ void shell(void) {
     // Acts as a pointer to the cmd buffer.
     int pos = 0;
 
-    uart_send_string("Welcome to Josh's mini OS!\r\n");
+    uart_send_string("\r\nWelcome to Josh's mini OS!\r\n");
 
     // Wait for user input.
     while (1) {
