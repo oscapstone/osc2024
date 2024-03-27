@@ -74,24 +74,27 @@ read_command(byteptr_t buffer)
 }
 
 
-static uint32_t 
+static void 
 parse_command(byteptr_t buffer)
 {
-    if (str_eql(buffer, "help")) {
+    byteptr_t cmd = str_tok(buffer);
+
+    if (str_eql(cmd, "help")) {
         print_help();
     }
 
-    else if (str_eql(buffer, "reboot")) {
+    else if (str_eql(cmd, "reboot")) {
         uart_line("rebooting...");
-        power_reset(1000);
-        return 1;
+        power_reset(100);
+        uart_get();
+        delay_cycles(500);
     }
 
-    else if (str_eql(buffer, "ls")) {  
+    else if (str_eql(cmd, "ls")) {  
         initrd_list();
     }
 
-    else if (str_eql(buffer, "cat")) {
+    else if (str_eql(cmd, "cat")) {
         byteptr_t tok = str_tok(0);
         if (tok == nullptr) {
             uart_str("file: ");
@@ -103,17 +106,17 @@ parse_command(byteptr_t buffer)
         initrd_cat(tok);
     }
 
-    else if (str_eql(buffer, "info")) {  
+    else if (str_eql(cmd, "info")) {  
         info_board_revision();
         info_memory();
         info_videocore();
     }
 
-    else if (str_eql(buffer, "dtb")) {
+    else if (str_eql(cmd, "dtb")) {
         fdt_traverse(fdt_print_node);
     }
 
-    else if (str_eql(buffer, "malloc")) {
+    else if (str_eql(cmd, "malloc")) {
         byteptr_t tok = str_tok(0);
         if (tok == nullptr) {
             uart_str("size: ");
@@ -130,8 +133,6 @@ parse_command(byteptr_t buffer)
         uart_str("not a command: ");
         uart_line(buffer);
     }
-
-    return 0;
 }
 
 
@@ -143,9 +144,7 @@ shell()
         byte_t buffer[BUFFER_MAX_SIZE];
         uart_str("> ");
         read_command(buffer);
-        byteptr_t cmd = str_tok(buffer);
-        uint32_t end = parse_command(cmd);
-        if (end) return;
+        parse_command(buffer);
     }
 }
 

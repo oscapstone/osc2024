@@ -78,9 +78,8 @@ parse_command(byteptr_t buffer)
 
     else if (str_eql(buffer, "boot")) {
         if (g_kernel_loaded) {
-            uart_line("booting...");
             uart_put('\r');
-            delay_cycles(100);
+            delay_cycles(200);
             ((void (*)(uint64_t))kernel_addr)((uint64_t) g_dtb_ptr);
         }
         uart_line("kernel is not loaded.");
