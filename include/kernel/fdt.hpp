@@ -117,7 +117,7 @@ class FDT {
   char* str_base(int i = 0) {
     return (char*)(base + fdt_off_dt_strings(base) + i);
   }
-  void traverse_impl(int& level, uint32_t& offset, const char* node_name,
+  bool traverse_impl(int& level, uint32_t& offset, const char* node_name,
                      fp callback);
 
  public:

@@ -14,7 +14,7 @@ int cmd_devtree(int argc, char* argv[]) {
 
   int r = 0;
   auto [found, view] = fdt.find(path, print_fdt, depth);
-  if (!found) {
+  if (not found) {
     r = -1;
     mini_uart_printf("devtree: %s: No such device\n", path);
   } else if (view.data()) {
