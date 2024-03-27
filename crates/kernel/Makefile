@@ -28,9 +28,9 @@ all: $(KERNEL_IMG)
 
 $(KERNEL_IMG): $(KERNEL_ELF)
 	@echo "Generating stripped binary"
-	@rust-objcopy --strip-all -O binary $(KERNEL_ELF) $(KERNEL_IMG)
-	@echo "Name: $(KERNEL_IMG)"
-	@echo "Size: `du --block-size=1024 --apparent-size $(KERNEL_IMG) | cut -f1`"
+	@rust-objcopy --strip-all -O binary $< $@
+	@echo "Name: $@"
+	@echo "Size: `du --block-size=1024 --apparent-size $@ | cut -f1`"
 
 $(KERNEL_ELF): $(KERNEL_DEP_INFO) Cargo.toml
 	@echo "Compiling kernel ELF"
@@ -39,7 +39,7 @@ $(KERNEL_ELF): $(KERNEL_DEP_INFO) Cargo.toml
 .PHONY: qemu
 qemu: $(KERNEL_IMG)
 	@echo "Launching QEMU"
-	@$(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_IMG)
+	@$(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE) $(QEMU_RELEASE_ARGS) -kernel $<
 
 .PHONY: clippy
 clippy:
