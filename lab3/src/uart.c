@@ -123,8 +123,8 @@ void uart_async_read(char *buf, int len)
     uart_disable_rx_interrupt();
     for (int i = 0; i < uart_read_idx && i < len; i++)
         buf[i] = uart_read_buffer[i];
+    buf[uart_read_idx] = 0;
     uart_read_idx = 0;
-    uart_enable_rx_interrupt();
 }
 
 void uart_async_write(const char *s)

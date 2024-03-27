@@ -19,5 +19,6 @@ void cat();
 void exec();
 void clear();
 void timeout();
+void demo();
 
 #endif // CMD_H

@@ -18,6 +18,7 @@ struct command commands[] = {
     { .name = "exec", .help = "execute a program", .func = exec },
     { .name = "clear", .help = "clear the screen", .func = clear },
     { .name = "timeout", .help = "print mesg after duration", .func = timeout },
+    { .name = "demo", .help = "demo other features", .func = demo },
     { .name = "NULL" } // Must put a NULL command at the end!
 };
 
@@ -132,4 +133,33 @@ void timeout()
 
     strcat(msg, "\n"); // Add newline at the end
     set_timeout(msg, atoi(sec));
+}
+
+void demo()
+{
+    char select[SHELL_BUF_SIZE];
+    uart_puts("(1) UART async write\n");
+    uart_puts("(2) UART async read\n");
+    uart_puts("Select: ");
+    read_user_input(select);
+    switch (atoi(select)) {
+    case 1:
+        // FIXME: This somehow doesn't work on QEMU but works fine on the rpi3
+        uart_async_write("[INFO] Test the UART async write function\n");
+        break;
+    case 2:
+        uart_puts("Enter text:\n");
+        uart_enable_rx_interrupt();
+        // Note: Set a longer delay for testing in QEMU
+        for (int i = 0; i < 10000000; i++)
+            ;
+        char buffer[256];
+        uart_async_read(buffer, 256);
+        uart_puts(buffer);
+        uart_putc('\n');
+        break;
+    default:
+        uart_puts("Option not found.\n");
+        break;
+    }
 }
