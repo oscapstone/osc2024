@@ -7,9 +7,11 @@
 有寫一個等我press a key的部分，沒顯示出來可以多開幾次。
 
 demo: 
-1. 直接插卡bootloader，送kernel8.img就完成dtb以外全部的task。
-2. 在wsl上qemu跑bootloader，送can_send_perfect.img，拿90分。
+1. 直接插卡bootloader，送kernel8.img就完成dtb以外全部的task。(虛擬機)
+2. 在wsl上qemu跑bootloader，送can_send_perfect.img，拿90分。 (wsl)
 3. 如果dtb不用bootloader可以拿滿，移到板子上。(先測試)
+先講bootloader，後面再講relocate。
+
 
 Demo完問: 
 1. 為啥dtb本地直接Load可以，用bootloader要在加上遍歷pointer才可以，是bootloader有地方沒注意到嗎?

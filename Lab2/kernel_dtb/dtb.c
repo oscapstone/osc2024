@@ -1,6 +1,5 @@
 #include "dtb.h"
 #include "uart.h"
-#include "helper.h"
 #include "shell.h"
 
 
@@ -17,7 +16,7 @@ struct fdt_header {
     unsigned int size_dt_struct;
 };
 
-
+// 16進制轉成2進制，兩個bit變8個binary，就會試value的一個int
 unsigned int big_to_little_endian(unsigned int value) {
     return ((value & 0xFF000000) >> 24) | \
            ((value & 0x00FF0000) >> 8) | \
@@ -26,37 +25,49 @@ unsigned int big_to_little_endian(unsigned int value) {
 }
 
 
+unsigned int big_to_little_endian_add(const char *address) {
+    unsigned int value = ((unsigned int)address[0] << 24) |
+                         ((unsigned int)address[1] << 16) |
+                         ((unsigned int)address[2] << 8) |
+                         (unsigned int)address[3];
+    return value;
+}
+
+
 void parse_new_node(char *address, char *string_address, char *target, void (*callback)(char *))
 {
     while (*(address) == DT_BEGIN_NODE_TOKEN)
     {
-        // skip: node name
-
+        // skip name of the node
         while (*(address++) != NULL)
             ;
         while (*(address++) == NULL)
             ;
         address--;
 
-        // properties
+        // properties (attributes)
         while (*address == DT_PROP_TOKEN)
         {
             address++;
 
-            int len = get_int(address);
+            // get the length of attribute
+            int len = big_to_little_endian_add(address);
             address += 4;
 
-            // key
-            int temp = get_int(address);
+            // get the length to find the target attribute
+            int temp = big_to_little_endian_add(address);
             address += 4;
 
-            if (string_compare(string_address + temp, target))
+            // if the attribute is correct, get the attribute address
+            if (strcmp(string_address + temp, target) == 0)
             {
-                callback((char *)get_int(address));
+                callback((char *)big_to_little_endian_add(address));
+                uart_puts("found initrd!");
+                uart_puts("\n");
+                uart_send('\r');
             }
 
-            // skip: value
-
+            // jump the value of the attribute
             address += len;
             while (*(address++) == NULL)
                 ;
@@ -67,17 +78,19 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
         parse_new_node(address, string_address, target, callback);
     }
 
+    // go to end
     while (*(address++) != DT_END_NODE_TOKEN)
         ;
 
     while (*(address++) == NULL)
         ;
     address--;
+
 }
 
 char dt_check_magic_number(char *address)
 {
-    unsigned int magic_number = get_int(address);
+    unsigned int magic_number = big_to_little_endian_add(address);
 
     return DT_MAGIC_NUMBER == magic_number;
 }
@@ -104,16 +117,17 @@ void dt_tranverse(char *address, char *target_property, void (*callback)(char *)
         newAddress++;
     }
 
-    // nodes
+    // parse nodes
     while (*(newAddress) != DT_END_TOKEN)
     {
         parse_new_node(newAddress, address + offset_strings, target_property, callback);
 
+        //parse next node
         while (*newAddress != DT_END_NODE_TOKEN) {
             newAddress++;
         }
         newAddress++;
-
+        
         while (*newAddress == NULL) {
             newAddress++;
         }

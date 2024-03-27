@@ -4,7 +4,7 @@
 
 _start:
 	// relocate bootloader
-    mov     x28, x0
+    mov     x28, x0 //keep x0 (not required in this code)
 	ldr x1, =0x80000 //64 bits for address, 0x1 = 1 byte
 	ldr x2, =0x60000 //ldr: put address to register
 	ldr w3, =__bootloader_size //size, 32 bit is enough

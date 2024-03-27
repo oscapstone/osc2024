@@ -35,11 +35,8 @@ void bootloader_main(void *dtb)
                     while(size--) *kernel++ = uart_getc();
 
                     uart_puts("kernel-loaded\r\n");
-                    void (*kernel_entry)(void *) = (void (*)(void))0x80000;
+                    void (*kernel_entry)(void *) = (void (*)(void *))0x80000;
                     kernel_entry(dtb);
-                    // asm volatile (
-                    //     "mov x30, #0x80000; mov x0, x28; ret"
-                    // );
                     return;
                 }
                 idx = 0;
