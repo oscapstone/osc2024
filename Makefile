@@ -6,20 +6,19 @@ CC = aarch64-linux-gnu-gcc
 CFLAGS = -Wall -static
 
 RC = rustc
-RUSTFLAGS = --crate-type=staticlib --emit=obj --target=aarch64-unknown-linux-gnu -C panic=abort -C opt-level=3
+RUSTFLAGS = --crate-type=staticlib --emit=obj --target=aarch64-unknown-linux-gnu -C panic=abort -C opt-level=3 -C lto
 
 LINKER = aarch64-linux-gnu-ld
 LINKER_FLAGS = -static
 OBJ_CPY = aarch64-linux-gnu-objcopy
 
 QEMU = qemu-system-aarch64
-QEMU_FLAGS = -M raspi3b -serial null -serial pty
 
 TARGET = $(BUILD_DIR)/kernel8.img $(BUILD_DIR)/bootloader.img
 
 dir_guard=@mkdir -p $(@D)
 
-.PHONY: all clean run debug
+.PHONY: all clean run test debug
 
 all: $(TARGET) $(BUILD_DIR)/initramfs.cpio
 	cp $(BUILD_DIR)/bootloader.img $(RPI3_DIR)/kernel8.img
@@ -61,7 +60,11 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 run: $(TARGET)
-	$(QEMU) $(QEMU_FLAGS) -kernel $(BUILD_DIR)/bootloader.img
+	$(QEMU) -M raspi3b -serial null -serial pty --initrd $(BUILD_DIR)/initramfs.cpio -kernel $(BUILD_DIR)/bootloader.img --daemonize
+
+
+test: $(TARGET)
+	$(QEMU) -M raspi3b -serial null -serial stdio -kernel $(BUILD_DIR)/kernel8.img  -S -s
 
 debug: $(TARGET)
-	$(QEMU) $(QEMU_FLAGS) -kernel $(BUILD_DIR)/bootloader.img -S -s
+	$(QEMU) -M raspi3b -serial null -serial pty --initrd $(BUILD_DIR)/initramfs.cpio -kernel $(BUILD_DIR)/bootloader.img -S -s

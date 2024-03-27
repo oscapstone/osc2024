@@ -6,6 +6,7 @@ SECTIONS
         KEEP(*(.text.boot)) *(.text .text.*) 
     }
     .rodata : { *(.rodata..*) }
+    . = ALIGN(16);
     __cpy_end = .;
     .bss (NOLOAD) : {
         . = ALIGN(16);

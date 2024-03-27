@@ -11,9 +11,8 @@ _start:
 .L_copy_loop:
     ldr w3, [x0], #4
     str w3, [x1], #4
-    sub x2, x2, #4
-    # check if we are done
-    cbnz x2, .L_copy_loop
+    subs x2, x2, #4
+    bne .L_copy_loop
 
     ldr x0, =_boot
     br x0
@@ -44,3 +43,6 @@ _boot:
 4:  bl      main
     // for failsafe, halt this core too
     b       1b
+
+.size _start, . - _start
+.type _start, %function

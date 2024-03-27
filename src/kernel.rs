@@ -5,20 +5,25 @@ pub extern "Rust" fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+// mod filesystem;
 mod mailbox;
 mod mmio;
+mod salloc;
 mod stdio;
 mod uart;
 mod utils;
 
 // use mailbox;
+// use vector
+extern crate alloc;
+use alloc::vec::Vec;
 
 const MAX_COMMAND_LEN: usize = 0x400;
 
 #[no_mangle]
 #[link_section = ".text.main"]
 pub extern "C" fn main() {
-    uart::uart_init();
+    uart::init();
     stdio::puts(b"Hello, world!");
     let revision = mailbox::get_board_revision();
     stdio::write(b"Board revision: ");
@@ -29,6 +34,8 @@ pub extern "C" fn main() {
     stdio::write(b" ");
     stdio::puts(utils::to_hex(lb).as_ref());
 
+    stdio::puts(b"Reading initramfs...");
+    // let initramfs = filesystem::initramfs::init();
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         utils::memset(buf.as_mut_ptr(), 0, MAX_COMMAND_LEN);
@@ -36,6 +43,7 @@ pub extern "C" fn main() {
         stdio::gets(&mut buf);
         execute_command(&buf);
     }
+    // let _a: Vec<u32> = Vec::new();
 }
 
 fn execute_command(command: &[u8]) {

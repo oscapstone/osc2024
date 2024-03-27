@@ -3,7 +3,7 @@ use mmio::regs::GpioReg::*;
 use mmio::regs::MmioReg::{Aux, Gpio};
 use mmio::MMIO;
 
-pub fn uart_init() {
+pub fn init() {
     // Enable mini UART
     MMIO::write_reg(Aux(Enable), 1);
 
