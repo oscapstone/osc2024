@@ -4,7 +4,7 @@ TARGET_TRIPLE := aarch64-unknown-none-softfloat
 TARGET_CPU    := cortex-a53
 
 KERNEL_ELF := $(TARGET_DIR)/$(TARGET_TRIPLE)/release/kernel
-KERNEL_IMG := $(TARGET_DIR)/$(TARGET_TRIPLE)/release/kernel8.img
+KERNEL_IMG := $(TARGET_DIR)/$(TARGET_TRIPLE)/release/rpi3-kernel.img
 KERNEL_DEP_INFO := $(filter-out %: ,$(file < $(KERNEL_ELF).d)) 
 
 LD_SCRIPT_PATH := $(shell pwd)
