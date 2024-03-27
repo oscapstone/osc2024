@@ -5,8 +5,6 @@
 #![no_main]
 #![no_std]
 
-use core::ptr::write_volatile;
-
 mod bsp;
 mod console;
 mod cpu;
@@ -15,6 +13,7 @@ mod panic_wait;
 mod print;
 mod synchronization;
 mod mbox;
+mod power;
 
 mod arrsting;
 
@@ -41,7 +40,7 @@ unsafe fn kernel_init() -> ! {
 }
 
 /// The main function running after the early init.
-unsafe fn kernel_main() -> ! {
+fn kernel_main() -> ! {
     use console::console;
 
     println!(
@@ -89,7 +88,7 @@ unsafe fn kernel_main() -> ! {
                 println!("{}", msg_hello_world);
             } else if buf == arr_reboot {
                 println!("{}", msg_reboot);
-                reboot();
+                power::reboot();
             } else if buf == arr_info {
                 println!("BoardVersion: {:x}", mbox::mbox().get_board_revision());
                 // println!("BoardVersion: {:x}", bsp::driver::MBOX.get_board_revision());
@@ -115,30 +114,5 @@ unsafe fn kernel_main() -> ! {
         } else {
             buf.push_char(c);
         }
-    }
-}
-
-unsafe fn reboot() {
-    reset(100);
-}
-
-const PM_PASSWORD: u32 = 0x5a000000;
-const PM_RSTC: u32 = 0x3F10_001C;
-const PM_WDOG: u32 = 0x3F10_0024;
-
-pub fn reset(tick: u32) {
-    unsafe {
-        let mut r = PM_PASSWORD | 0x20;
-        write_volatile(PM_RSTC as *mut u32, r);
-        r = PM_PASSWORD | tick;
-        write_volatile(PM_WDOG as *mut u32, r);
-    }
-}
-
-pub fn cancel_reset() {
-    unsafe {
-        let r = PM_PASSWORD | 0;
-        write_volatile(PM_RSTC as *mut u32, r);
-        write_volatile(PM_WDOG as *mut u32, r);
     }
 }
