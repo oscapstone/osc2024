@@ -32,12 +32,18 @@ endline = "\n"
 tty.write(str(file_stats.st_size).encode("utf-8"))
 tty.write(endline.encode("utf-8"))
 
-time.sleep(0.0001)
+time.sleep(0.001)
 
+size = file_stats.st_size
+print(size)
 # send file content byte by byte
 with open(args.file, "rb") as fp:
     byte = fp.read(1)
     while byte:
         tty.write(byte)
+        size -= 1
         byte = fp.read(1)
         time.sleep(0.0005)  # delay to avoid buffer overflow
+
+print("File sent successfully")
+print(size)

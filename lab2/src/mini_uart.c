@@ -17,8 +17,7 @@ char uart_recv ( void )
 		if(get32(AUX_MU_LSR_REG)&0x01) 
 			break;
 	}
-	char c = get32(AUX_MU_IO_REG)&0xFF;
-	return c == '\r' ? '\n' : c;
+	return(get32(AUX_MU_IO_REG)&0xFF);
 }
 
 void uart_send_string(char* str)

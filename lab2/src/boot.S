@@ -23,3 +23,8 @@ master:
     mov sp, x1
 	bl	main
 	b 	proc_hang		// should never come here
+
+.section .data
+.global dtb_base
+dtb_base:
+.dc 0x0

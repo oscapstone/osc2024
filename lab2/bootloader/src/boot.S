@@ -21,13 +21,13 @@ master:
 
 	ldr x1, =0x80000
 	ldr x2, =__bootloader_start
-	ldr w3, =__bootloader_size
+	ldr x3, =__bootloader_size
 
 relocate:
 	ldr x4, [x1], #8
 	str x4, [x2], #8
-	sub w3, w3, #1
-	cbnz w3, relocate
+	sub x3, x3, #1
+	cbnz x3, relocate
 
 	ldr x1, =_start
 	mov sp, x1

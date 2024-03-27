@@ -12,9 +12,9 @@ clean :
 	rm -rf $(BUILD_DIR) *.img 
 
 run: 
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
-send: kernel8.img
+send:
 	sudo python bootloader/sender.py -f kernel8.img
 
 $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
