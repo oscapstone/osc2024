@@ -40,13 +40,13 @@ start.o: start.S
 
 kernel8.img: start.o $(OBJS)
 	$(LD) -nostdlib -nostartfiles start.o $(OBJS) -T link.ld -o kernel8.elf
-	$(OBJCPY) -O binary kernel8.elf kernel8.img
+	$(OBJCPY) -O binary kernel8.elf shell_kernel.img
 
 clean:
 	rm kernel8.elf *.o >/dev/null 2>/dev/null || true
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial pty -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none
 
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -s -S

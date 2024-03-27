@@ -22,40 +22,23 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-#define MAX_BUFFER 10
-#include "include/uart.h"
-#include "include/utils.h"
-#include "include/mbox.h"
 
-void load_img(){
-    unsigned int size = 0;
-    unsigned char *size_buffer = (unsigned char *) &size;
-    uart_puts("enter kernel size now:");
-    for(int i=0; i<4; i++) 
-	    size_buffer[i] = uart_getc();
-    uart_puts("size-check correct\n");
-
-    char *kernel = (char *) 0x80000;
-    while(size--) *kernel++ = uart_getc();
-
-    uart_puts("kernel-loaded\n");
-    
-    asm volatile(
-       "mov x30, 0x80000;"
-       "ret;"
-    );
-
+SECTIONS
+{
+    . = 0x80000;
+    PROVIDE(_head = .);
+    .text : { KEEP(*(.text.boot)) *(.text .text.*) }
+    .rodata : { *(.rodata .rodata.*) }
+    PROVIDE(_data = .);
+    .data : { *(.data .data.*) }
+    .bss : {
+        . = ALIGN(16);
+        __bss_start = .;
+        *(.bss .bss.*)
+        *(COMMON)
+        __bss_end = .;
+    }
+    _end = .;
 }
-
-void main(int argc, char* argv[]){
-    asm volatile(
-       "mov x10, x0"
-    );
-    uart_init();
-    load_img();
-    asm volatile(
-       "mov x30, 0x80000;"
-       "mov x0, x10;"
-       "ret;"
-    );
-}
+__bss_size = (__bss_end - __bss_start)>>3;
+__loader_size = (_end - _head)>>3;

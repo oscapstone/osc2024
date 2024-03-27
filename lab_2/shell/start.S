@@ -3,16 +3,6 @@
 .global _start
 
 _start:
-
-    // relocate our code from load address to link address
-    ldr     x1, =0x80000;  // src address 
-    ldr     x2, =_head         // target address
-    ldr     w3, =__loader_size
-1:  ldr     x4, [x1], #8
-    str     x4, [x2], #8
-    sub     w3, w3, #1
-    cbnz    w3, 1b
-
     // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     ldr     x1, =_start
     mov     sp, x1
@@ -26,6 +16,6 @@ _start:
     cbnz    w2, 3b
 
     // jump to relocated C code, should not return
-4:  bl      main-0x20000
+4:  bl      main
     // for failsafe, halt this core too
     b       =0x80000

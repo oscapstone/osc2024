@@ -22,40 +22,27 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-#define MAX_BUFFER 10
-#include "include/uart.h"
-#include "include/utils.h"
-#include "include/mbox.h"
 
-void load_img(){
-    unsigned int size = 0;
-    unsigned char *size_buffer = (unsigned char *) &size;
-    uart_puts("enter kernel size now:");
-    for(int i=0; i<4; i++) 
-	    size_buffer[i] = uart_getc();
-    uart_puts("size-check correct\n");
+/* a properly aligned buffer */
+extern volatile unsigned int mbox[36];
 
-    char *kernel = (char *) 0x80000;
-    while(size--) *kernel++ = uart_getc();
+#define MBOX_REQUEST    0
 
-    uart_puts("kernel-loaded\n");
-    
-    asm volatile(
-       "mov x30, 0x80000;"
-       "ret;"
-    );
+/* channels */
+#define MBOX_CH_POWER   0
+#define MBOX_CH_FB      1
+#define MBOX_CH_VUART   2
+#define MBOX_CH_VCHIQ   3
+#define MBOX_CH_LEDS    4
+#define MBOX_CH_BTNS    5
+#define MBOX_CH_TOUCH   6
+#define MBOX_CH_COUNT   7
+#define MBOX_CH_PROP    8
 
-}
+/* tags */
+#define MBOX_TAG_GETSERIAL      0x10004
+#define MBOX_TAG_REVISION       0x00010002
+#define MBOX_TAG_MEMORY         0x00010005
+#define MBOX_TAG_LAST           0
 
-void main(int argc, char* argv[]){
-    asm volatile(
-       "mov x10, x0"
-    );
-    uart_init();
-    load_img();
-    asm volatile(
-       "mov x30, 0x80000;"
-       "mov x0, x10;"
-       "ret;"
-    );
-}
+int mbox_call(unsigned char ch);
