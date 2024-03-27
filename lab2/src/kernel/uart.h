@@ -1,13 +1,11 @@
 #include "gpio.h"
-#include "base.h"
 
 void uart_init();
 void uart_send_char(unsigned int c);
 char uart_get_char();
 void uart_send_string(char* s);
-void uart_send_string_len(const char* s, unsigned int len);
+void uart_send_string_len(char* s, unsigned int len);
 void uart_binary_to_hex(unsigned int d);
-void uart_hex(U32 d);
 
 #define AUX_IRQ			((volatile unsigned int*)(MMIO_BASE+0x00215000))
 #define AUX_ENABLE      ((volatile unsigned int*)(MMIO_BASE+0x00215004))

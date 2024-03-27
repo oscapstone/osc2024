@@ -33,7 +33,7 @@ void main() {
     uart_send_string("kernel loaded\n");
     
     asm volatile(
-       "ldr     lr, 0x80000;"
+       "mov x30, 0x80000;"
        "ret;"
     );
 

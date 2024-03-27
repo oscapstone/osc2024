@@ -2,20 +2,14 @@
 #include "uart.h"
 #include "utils.h"
 
-extern UPTR cpio_addr;
-
-char* cpio_findFile(const char* name, unsigned int len) {
-    UPTR addr = cpio_addr;
+char* cpio_findFile(char* addr, const char* name) {
 
     // at the end of the cpio files has the special name TRAILER!!!
-    while (!string_compare((char*)(addr + sizeof(struct cpio_newc_header)), "TRAILER!!!")) {
-        struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
-        if (!utils_strncmp(header->c_magic, "070701", 6)) {
-            return 0;
-        }
-        if (utils_strncmp((char*)(addr + sizeof(struct cpio_newc_header)), name, len)) {
+    while (string_compare((char*)(addr + sizeof(struct cpio_newc_header)), "TRAILER!!!") == 0) {
+        if (string_compare((char*)(addr + sizeof(struct cpio_newc_header)), name) != 0) {
             return addr;
         }
+        struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
         unsigned long pathname_size = atoi(header->c_namesize,(int)sizeof(header->c_namesize));;
         unsigned long file_size =  atoi(header->c_filesize,(int)sizeof(header->c_filesize));
         unsigned long headerPathname_size = sizeof(struct cpio_newc_header) + pathname_size;
@@ -29,14 +23,13 @@ char* cpio_findFile(const char* name, unsigned int len) {
     return 0;
 }
 
-void cpio_ls() {
-    UPTR addr = cpio_addr;
+void cpio_ls(char* addr){
 
 	while(!string_compare((char *)(addr+sizeof(struct cpio_newc_header)),"TRAILER!!!")) {
 		
 
 		struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
-        if (!utils_strncmp(header->c_magic, "070701", 6)) {
+        if (string_compare(header->c_magic, "070701")) {
             uart_send_string("Error CPIO type!!\r\n");
             uart_send_string_len(header->c_magic, 6);
             return;
@@ -49,20 +42,17 @@ void cpio_ls() {
 		align(&file_size,4);
 		
 		uart_send_string_len(addr+sizeof(struct cpio_newc_header), filename_size);
-		uart_send_string("\r\n");
+		uart_send_string("\n");
 		
 		addr += (headerPathname_size + file_size);
 	}
 }
 
 
-void cpio_cat(const char *filename, unsigned int len)
+void cpio_cat(char* addr, char *filename)
 {
-    UPTR addr = cpio_addr;
-
-    addr = cpio_findFile(filename, len);
+    addr = cpio_findFile(addr, filename);
     if (!addr) {
-        uart_send_string_len(filename, len);
         uart_send_string("File not found\r\n");
         return;
     }
