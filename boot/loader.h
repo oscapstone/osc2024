@@ -3,5 +3,6 @@
 
 void load_kernel(void);
 int get_kernel_size(const char*);
+#define KERNEL_BASE ((volatile char *)(0x80000))
 
 #endif

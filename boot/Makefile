@@ -4,9 +4,10 @@ LD=aarch64-linux-gnu-ld
 LD_SCRIPT=linker.ld
 OBJCOPY=aarch64-linux-gnu-objcopy
 
-INCLUDE_FLAGS=-I ../include -I ./
+INCLUDE_FLAGS=-I $(BOOT_DIR) -I $(SRC_DIR)
 SRC_DIR=../src
-BOOT_DIR=./
+BOOT_DIR=.
+DIST_DIR=dist
 
 SRC_FILES=$(wildcard $(SRC_DIR)/*.c)
 SRC_OBJ_FILES=$(SRC_FILES:.c=.o)
@@ -19,10 +20,13 @@ BOOT_OBJ_FILES=$(BOOT_FILES:.c=.o)
 all: kernel8.img
 
 kernel8.img: kernel8.elf
-	$(OBJCOPY) -O binary kernel8.elf kernel8.img
+	$(OBJCOPY) -O binary \
+		$(DIST_DIR)/kernel8.elf \
+		$(DIST_DIR)/kernel8.img
 
 kernel8.elf: start.o $(SRC_OBJ_FILES) $(BOOT_OBJ_FILES)
-	$(LD) -T $(LD_SCRIPT) -o kernel8.elf \
+	mkdir -p $(DIST_DIR)
+	$(LD) -T $(LD_SCRIPT) -o $(DIST_DIR)/kernel8.elf \
 		start.o $(SRC_OBJ_FILES) $(BOOT_OBJ_FILES)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
@@ -35,13 +39,14 @@ start.o: start.S
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm kernel8.* main.o start.o $(OBJ_FILES)
+	rm start.o $(SRC_OBJ_FILES) $(BOOT_OBJ_FILES)
+	rm -rf $(DIST_DIR)
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel $(DIST_DIR)/kernel8.img -display none -d in_asm
 
 run-mini-uart:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel $(DIST_DIR)/kernel8.img -display none -serial null -serial stdio
 
 run-pty:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial pty
+	qemu-system-aarch64 -M raspi3b -kernel $(DIST_DIR)/kernel8.img -display none -serial null -serial pty

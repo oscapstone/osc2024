@@ -19,12 +19,31 @@ void load_kernel()
     } while (c != '\n');
     start_hdr[index+1] = '\0';
 
+    uart_puts("Received start_hdr...\n");
+
     // 2. check if header valid and kernel size
     int kernel_size = 0;
     kernel_size = get_kernel_size(start_hdr);
     if (!kernel_size) {
         return;
     }
+
+    // // 
+    // uart_puts("valid!\n");
+    // 2. receive kernel, write to 0x80000
+    char *kernel = (char *) 0x80000;
+    for (int i = 0; i < kernel_size; i++) {
+        kernel[i] = uart_getc();
+    }
+
+    uart_puts("Kernel is loaded!\n");
+
+    // 4. jmp to 0x80000
+    asm volatile(
+		"mov x0,x27;"
+		"mov x30,#0x80000;"
+		"ret"	
+	);
 }
 
 int get_kernel_size(const char *start_hdr)

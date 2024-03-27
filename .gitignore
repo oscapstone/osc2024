@@ -4,3 +4,7 @@ misc
 *.img
 .vscode/
 test/
+lib/
+rootfs/
+*.log
+*.cpio
