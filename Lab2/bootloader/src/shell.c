@@ -21,12 +21,19 @@ static int read_command(char* cmd)
     while (i < BUFFER_SIZE) {
         c = uart_recv();
         uart_send(c);
-        if (c == '\n') {
+        switch (c) {
+        case '\n':
             uart_send('\r');
             cmd[i] = '\0';
             return 0;
-        }
-        cmd[i++] = c;
+        case '\b':
+            if (i > 0)
+                cmd[--i] = '\0';
+            break;
+        default:
+            cmd[i++] = c;
+            break;
+        }    
     }
     return 1;
 }

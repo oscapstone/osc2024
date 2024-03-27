@@ -7,9 +7,9 @@
 #include "memory.h"
 #include "mini_uart.h"
 #include "peripheral/pm.h"
+#include "reboot.h"
 #include "string.h"
 #include "utils.h"
-#include "reboot.h"
 
 #define BUFFER_SIZE 128
 
@@ -23,12 +23,19 @@ int read_command(char* cmd)
     while (i < BUFFER_SIZE) {
         c = uart_recv();
         uart_send(c);
-        if (c == '\n') {
+        switch (c) {
+        case '\n':
             uart_send('\r');
             cmd[i] = '\0';
             return 0;
+        case '\b':
+            if (i > 0)
+                cmd[--i] = '\0';
+            break;
+        default:
+            cmd[i++] = c;
+            break;
         }
-        cmd[i++] = c;
     }
     return 1;
 }
