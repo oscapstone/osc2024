@@ -86,11 +86,10 @@ static uint32_t dtb_uint32_be2le(const void* addr)
 static int fdt_struct_parse(fdt_callback cb,
                             char* struct_ptr,
                             char* string_ptr,
-                            uint32_t total_size)
+                            uint32_t struct_size)
 {
     char* cur_ptr = struct_ptr;
-    char* end_ptr = cur_ptr + total_size;
-    struct_ptr += 4;
+    char* end_ptr = cur_ptr + struct_size;
 
     while (cur_ptr < end_ptr) {
         uint32_t token = dtb_uint32_be2le(cur_ptr);
@@ -151,9 +150,9 @@ uint32_t fdt_traverse(fdt_callback cb)
 
     char* struct_ptr = dtb_ptr + dtb_uint32_be2le(&(header->off_dt_struct));
     char* string_ptr = dtb_ptr + dtb_uint32_be2le(&(header->off_dt_strings));
-    uint32_t total_size = dtb_uint32_be2le(&(header->totalsize));
+    uint32_t struct_size = dtb_uint32_be2le(&(header->size_dt_struct));
 
-    return fdt_struct_parse(cb, struct_ptr, string_ptr, total_size);
+    return fdt_struct_parse(cb, struct_ptr, string_ptr, struct_size);
 }
 
 
