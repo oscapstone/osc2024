@@ -4,6 +4,9 @@
 
 
 _start:
+	// read the dtb data address from teacher's bootloader store in x0
+	ldr		x1, =_dtb_ptr
+	str		x0, [x1]
 	
 	// read cpu id, stop slave cores
 	mrs     x1, mpidr_el1
@@ -33,3 +36,7 @@ clear_bss:
 kernel_main:
 	bl		main					// branch label: will link in linking state
 	b		halt
+
+.global _dtb_ptr
+.section .data
+_dtb_ptr: .long 0x0

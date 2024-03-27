@@ -128,7 +128,7 @@ void uart_send_string(char* s) {
     }
 }
 
-void uart_send_string_len(char* s, unsigned int len) {
+void uart_send_string_len(const char* s, unsigned int len) {
     for(unsigned int i = 0; i < len; i++) {
         uart_send_char(s[i]);
     }
@@ -148,3 +148,18 @@ void uart_binary_to_hex(unsigned int d) {
         uart_send_char(n);
     }
 }
+
+void uart_hex(U32 d) {
+    unsigned int n;
+    int c;
+    uart_send_string("0x");
+    for(c=28;c>=0;c-=4) {
+        // get highest tetrad
+        n=(d>>c)&0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n+=n>9?0x57:0x30;
+        uart_send_char(n);
+    }
+}
+
+
