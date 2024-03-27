@@ -1,4 +1,4 @@
-#include "mini_uart.h"
+#include "uart.h"
 #include "mailbox.h"
 #include "string.h"
 
@@ -16,12 +16,12 @@ info_board_revision()
 
     mbox[6] = MBOX_TAG_END;
     
-    mailbox_call(MBOX_CH_PROP);    // message passing procedure call, you should implement it following the 6 steps provided above.
+    mailbox_call(MBOX_CH_PROP);                     // message passing procedure call
  
-    mini_uart_puts("Board revision: \t");
-    mini_uart_puts("0x");
-    mini_uart_hex(mbox[5]);                         // it should be 0xa020d3 for rpi3 b+
-    mini_uart_endl();
+    uart_str("Board revision: \t");
+    uart_str("0x");
+    uart_hex(mbox[5]);                              // it should be 0xa020d3 for rpi3 b+
+    uart_endl();
 }
 
 
@@ -41,17 +41,17 @@ info_memory()
     
     mailbox_call(MBOX_CH_PROP);
  
-    mini_uart_putln("Arm memory info:");
+    uart_line("Arm memory info:");
 
-    mini_uart_puts(" > memory base: \t");
-    mini_uart_puts("0x");
-    mini_uart_hex(mbox[5]);
-    mini_uart_endl();
+    uart_str(" > memory base: \t");
+    uart_str("0x");
+    uart_hex(mbox[5]);
+    uart_endl();
 
-    mini_uart_puts(" > memory size: \t");
-    mini_uart_puts("0x");
-    mini_uart_hex(mbox[6]);
-    mini_uart_endl();
+    uart_str(" > memory size: \t");
+    uart_str("0x");
+    uart_hex(mbox[6]);
+    uart_endl();
 }
 
 
@@ -115,68 +115,68 @@ info_videocore()
     
     mailbox_call(MBOX_CH_PROP); // message passing procedure call, you should implement it following the 6 steps provided above.
  
-    mini_uart_putln("VideoCore info:");
+    uart_line("VideoCore info:");
     
-    mini_uart_puts(" > memory base: \t");
-    mini_uart_puts("0x");
-    mini_uart_hex(mbox[5]);
-    mini_uart_endl();
+    uart_str(" > memory base: \t");
+    uart_str("0x");
+    uart_hex(mbox[5]);
+    uart_endl();
 
-    mini_uart_puts(" > memory size: \t");
-    mini_uart_puts("0x");
-    mini_uart_hex(mbox[6]);
-    mini_uart_endl();
+    uart_str(" > memory size: \t");
+    uart_str("0x");
+    uart_hex(mbox[6]);
+    uart_endl();
      
-    mini_uart_puts(" > frame buffer base: \t");
-    mini_uart_puts("0x");
-    mini_uart_hex(mbox[10] & 0x3fffffff);
-    mini_uart_puts("\r\n");
+    uart_str(" > frame buffer base: \t");
+    uart_str("0x");
+    uart_hex(mbox[10] & 0x3fffffff);
+    uart_str("\r\n");
 
-    mini_uart_puts(" > frame buffer size: \t");
-    mini_uart_puts("0x");
-    mini_uart_hex(mbox[11]);
-    mini_uart_endl();
+    uart_str(" > frame buffer size: \t");
+    uart_str("0x");
+    uart_hex(mbox[11]);
+    uart_endl();
 
-    mini_uart_puts(" > physical width: \t");
+    uart_str(" > physical width: \t");
     uint32_to_ascii(mbox[15], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_puts("\r\n");
+    uart_str(buffer);
+    uart_str("\r\n");
 
-    mini_uart_puts(" > physical height: \t");
+    uart_str(" > physical height: \t");
     uint32_to_ascii(mbox[16], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_endl();
+    uart_str(buffer);
+    uart_endl();
     
-    mini_uart_puts(" > virtual width: \t");
+    uart_str(" > virtual width: \t");
     uint32_to_ascii(mbox[20], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_endl();
+    uart_str(buffer);
+    uart_endl();
 
-    mini_uart_puts(" > virtual height: \t");
+    uart_str(" > virtual height: \t");
     uint32_to_ascii(mbox[21], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_endl();
+    uart_str(buffer);
+    uart_endl();
     
-    mini_uart_puts(" > buffer offset X: \t");
+    uart_str(" > buffer offset X: \t");
     uint32_to_ascii(mbox[25], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_endl();
+    uart_str(buffer);
+    uart_endl();
 
-    mini_uart_puts(" > buffer offset Y: \t");
+    uart_str(" > buffer offset Y: \t");
     uint32_to_ascii(mbox[26], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_endl();
+    uart_str(buffer);
+    uart_endl();
     
-    mini_uart_puts(" > depth: \t\t");
+    uart_str(" > depth: \t\t");
     uint32_to_ascii(mbox[30], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_endl();
+    uart_str(buffer);
+    uart_endl();
     
-    mini_uart_puts(" > pixel order: \t");
-    if (mbox[34] == 0x0) mini_uart_putln("BGR"); else mini_uart_putln("RGB");
+    uart_str(" > pixel order: \t");
+    if (mbox[34] == 0x0) uart_line("BGR"); else uart_line("RGB");
 
-    mini_uart_puts(" > pitch: \t\t");
+    uart_str(" > pitch: \t\t");
     uint32_to_ascii(mbox[38], buffer);
-    mini_uart_puts(buffer);
-    mini_uart_endl();
+    uart_str(buffer);
+    uart_endl();
 }

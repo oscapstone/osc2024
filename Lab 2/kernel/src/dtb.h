@@ -1,5 +1,5 @@
-#ifndef DTB_H
-#define DTB_H
+#ifndef __DTB_H__
+#define __DTB_H__
 
 #include "type.h"
 

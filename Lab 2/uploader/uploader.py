@@ -13,12 +13,12 @@ def send_image(ser):
     print(f"sending kernel size: {kernel_size} ... ", end='')
     ser.write((str(kernel_size) + "\n").encode())
     sleep(0.5)
-    ser.read_until(b"$loading")
+    ser.read_until(b"$loading$")
     print('ok.')
     print('sending kernel ... ', end='')
     with open(kernel, "rb") as f:
         ser.write(f.read())
-    ser.read_until(b"$done") 
+    ser.read_until(b"$done$") 
     print('done.')
 
 
@@ -29,7 +29,7 @@ def serial_shell(ser):
             while ser.in_waiting:
                 feedback = ser.read(ser.in_waiting).decode()
                 print(feedback)
-            if "$size" in feedback:
+            if "$size$" in feedback:
                 send_image(ser)
             else:
                 key_in = (input("#> ").lower() + "\n")

@@ -1,7 +1,7 @@
 #include "dtb.h"
 #include "memory.h"
 #include "string.h"
-#include "mini_uart.h"
+#include "uart.h"
 #include "initrd.h"
 
 
@@ -166,6 +166,12 @@ fdt_find_initrd_addr(uint32_t token, const byteptr_t name_ptr, const byteptr_t d
 }
 
 
+static void 
+_print_space(uint32_t n)
+{
+    for (uint32_t i = 0; i < n; ++i) uart_put(' '); 
+}
+
 void 
 fdt_print_node(uint32_t token, const byteptr_t name_ptr, const byteptr_t, uint32_t)
 {
@@ -173,30 +179,28 @@ fdt_print_node(uint32_t token, const byteptr_t name_ptr, const byteptr_t, uint32
 
     switch (token) {
         case FDT_BEGIN_NODE:
-            mini_uart_space(_level);
-            mini_uart_puts("FDT_BEGIN_NODE");
-            mini_uart_puts(" ");
-            mini_uart_putln(name_ptr);
+            _print_space(_level);
+            uart_str("FDT_BEGIN_NODE ");
+            uart_line(name_ptr);
             _level += 2;
             break;
         case FDT_PROP:
-            mini_uart_space(_level);
-            mini_uart_puts("FDT_PROP");
-            mini_uart_puts(" ");
-            mini_uart_putln(name_ptr);
+            _print_space(_level);
+            uart_str("FDT_PROP ");
+            uart_line(name_ptr);
             break;
         case FDT_END_NODE:
             _level -= 2;
-            mini_uart_space(_level);
-            mini_uart_putln("FDT_END_NODE");
+            _print_space(_level);
+            uart_line("FDT_END_NODE");
             break;        
         case FDT_NOP:
-            mini_uart_space(_level);
-            mini_uart_putln("FDT_NOP");
+            _print_space(_level);
+            uart_line("FDT_NOP");
             break;
         case FDT_END:
-            mini_uart_space(_level);
-            mini_uart_putln("FDT_END");
+            _print_space(_level);
+            uart_line("FDT_END");
             _level = 0;
             break;
         default:

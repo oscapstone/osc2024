@@ -1,5 +1,5 @@
-#ifndef CPIO_H
-#define CPIO_H
+#ifndef __CPIO_H__
+#define __CPIO_H__
 
 /*
     https://man.freebsd.org/cgi/man.cgi?query=cpio

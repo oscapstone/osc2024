@@ -1,5 +1,5 @@
-#ifndef DELAY_H
-#define DELAY_H
+#ifndef __DELAY_H__
+#define __DELAY_H__
 
 #include "type.h"
 

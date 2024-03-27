@@ -10,18 +10,9 @@
 #define PM_RSTC_FULLRST 0x00000020
 
 
-/**
- * Reboot
- */
 void 
 power_reset(uint32_t ticks)
 {
-    // unsigned int r;
-    // // trigger a restart by instructing the GPU to boot from partition 0
-    // r = *PM_RSTS; 
-    // r &= ~0xfffffaaa;
-    // set(PM_RSTS, PM_WDOG_MAGIC | r);                 // boot from partition 0
-
     *PM_RSTC = (PM_MAGIC | PM_RSTC_FULLRST);            // full reset
     *PM_WDOG = (PM_MAGIC | ticks);                      // number of watchdog ticks 
 }

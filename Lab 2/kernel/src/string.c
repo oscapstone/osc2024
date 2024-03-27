@@ -1,8 +1,8 @@
 #include "string.h"
 
 
-uint32_t 
-is_delim(uint8_t c)
+static uint32_t 
+_is_delim(uint8_t c)
 {
     return (c == ' ' || c == '\t' || c == '\n') ? 1 : 0;
 }
@@ -11,25 +11,20 @@ byteptr_t
 str_tok(byteptr_t s)
 {
     static byteptr_t old_s;
-
     if (!s) s = old_s;
     if (!s) return nullptr;
-
     // find begin
-    while (is_delim(*s)) { s++; }
-
+    while (_is_delim(*s)) { s++; }
     // reached the end
     if (*s == '\0') return nullptr;
-
     byteptr_t ret = s;
-
     // find end
     while (1) {
         if (*s == '\0') {
             old_s = s;
             return ret;
         }
-        if (is_delim(*s)) {
+        if (_is_delim(*s)) {
             *s = '\0';
             old_s = s + 1;
             return ret;
@@ -38,6 +33,7 @@ str_tok(byteptr_t s)
     }
     return nullptr;
 }
+
 
 int32_t
 str_cmp(const byteptr_t s1, const byteptr_t s2)
@@ -56,8 +52,18 @@ str_eql(const byteptr_t s1, const byteptr_t s2)
 }
 
 
+uint32_t
+str_len(const byteptr_t str)
+{
+    uint32_t len = 0;
+    byteptr_t p = (byteptr_t) str;
+    while (*p++ != '\0') ++len;
+    return len;
+}
+
+
 static void 
-reverse(byteptr_t str, uint32_t length)
+_reverse(byteptr_t str, uint32_t length)
 {
     uint32_t start = 0;
     uint32_t end = length - 1;
@@ -68,15 +74,6 @@ reverse(byteptr_t str, uint32_t length)
         end--;
         start++;
     }
-}
-
-uint32_t
-str_len(const byteptr_t str)
-{
-    uint32_t len = 0;
-    byteptr_t p = (byteptr_t) str;
-    while (*p++ != '\0') ++len;
-    return len;
 }
 
 
@@ -91,7 +88,7 @@ uint32_to_hex(uint32_t n, byteptr_t buffer)
     }
     if (length == 0) buffer[length++] = '0';
     buffer[length] = '\0';
-    reverse(buffer, length);
+    _reverse(buffer, length);
 }
 
 
@@ -106,7 +103,7 @@ uint32_to_ascii(uint32_t n, byteptr_t buffer)
     }
     if (length == 0) buffer[length++] = '0';
     buffer[length] = '\0';
-    reverse(buffer, length);
+    _reverse(buffer, length);
 }
 
 
@@ -145,4 +142,16 @@ ascii_to_uint64(const byteptr_t str, uint32_t len) {
         s++;
     }
     return num;
+}
+
+
+uint32_t
+ascii_dec_to_uint32(const byteptr_t str) {
+    byteptr_t s = (byteptr_t) str;
+    uint32_t value = 0;
+    while (*s) {
+        value = value * 10 + (*s - '0');
+        ++s;
+    }
+    return value;
 }

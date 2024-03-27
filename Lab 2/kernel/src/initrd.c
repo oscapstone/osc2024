@@ -1,6 +1,6 @@
 #include "type.h"
 #include "cpio.h"
-#include "mini_uart.h"
+#include "uart.h"
 #include "memory.h"
 #include "string.h"
 
@@ -25,8 +25,8 @@ _initrd_next(const byteptr_t cpio_addr, finfoptr_t info)
 
         cpio_ptr_t header = (cpio_ptr_t) _addr;
 
-        uint64_t name_size = ascii_to_uint64(header->c_namesize, (int) sizeof(header->c_namesize));
-        uint64_t file_size = ascii_to_uint64(header->c_filesize, (int) sizeof(header->c_filesize));
+        uint64_t name_size = ascii_to_uint64(header->c_namesize, (uint32_t) sizeof(header->c_namesize));
+        uint64_t file_size = ascii_to_uint64(header->c_filesize, (uint32_t) sizeof(header->c_filesize));
 
         uint64_t content_offset  = (uint64_t) memory_align((const byteptr_t) (sizeof(cpio_t) + name_size), 4);
         uint64_t total_size      = (uint64_t) memory_align((const byteptr_t) (content_offset + file_size), 4);
@@ -80,10 +80,10 @@ initrd_list()
 {
     byteptr_t cpio_addr = initrd_get_ptr(); 
     finfo_t info;
-    byteptr_t _addr = _initrd_next(cpio_addr, &info);
-    while (_addr) {
+    byteptr_t next_addr = _initrd_next(cpio_addr, &info);
+    while (next_addr) {
         mini_uart_putln(info.name);
-        _addr = _initrd_next(_addr, &info);
+        next_addr = _initrd_next(next_addr, &info);
     }
 }
 
@@ -93,12 +93,12 @@ print_file(const byteptr_t content, uint32_t size)
     byteptr_t cur = (byteptr_t) content;
     while (size--) {
         if (*cur == '\n') {
-            mini_uart_putc('\r');
+            uart_put('\r');
         }
-        mini_uart_putc(*cur);
+        uart_put(*cur);
         cur++;
     }
-    mini_uart_endl();
+    uart_endl();
 }
 
 
@@ -110,11 +110,11 @@ initrd_cat(const byteptr_t name)
     byteptr_t file = _initrd_find(cpio_addr, name, &info);
     if (file) {
         if (info.size == 0) 
-            mini_uart_putln("It's a directory.");
+            uart_line("It's a directory.");
         else
             print_file(info.content, info.size);
     } else {
-        mini_uart_putln("No such file or directory.");
+        uart_line("No such file or directory.");
     }
 }
 

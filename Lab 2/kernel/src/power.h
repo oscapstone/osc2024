@@ -1,5 +1,5 @@
-#ifndef POWER_H
-#define POWER_H
+#ifndef __POWER_H__
+#define __POWER_H__
 
 #include "type.h"
 

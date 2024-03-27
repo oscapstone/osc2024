@@ -20,8 +20,8 @@
 ***/
 
 
-#ifndef MAILBOX_H
-#define MAILBOX_H
+#ifndef __MAILBOX_H__
+#define __MAILBOX_H__
 
 #define MBOX_RESPONSE               0x80000000
 

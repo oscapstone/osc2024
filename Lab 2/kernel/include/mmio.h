@@ -1,5 +1,5 @@
-#ifndef MMIO_H
-#define MMIO_H
+#ifndef __MMIO_H__
+#define __MMIO_H__
 
 #define MMIO_BASE       0x3F000000
 

@@ -149,10 +149,3 @@ mini_uart_endl()
 {
     mini_uart_puts("\r\n");
 }
-
-
-void 
-mini_uart_space(uint32_t n)
-{
-    for (uint32_t i = 0; i < n; ++i) mini_uart_putc(' '); 
-}

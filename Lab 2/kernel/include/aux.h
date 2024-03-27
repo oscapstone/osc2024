@@ -1,5 +1,5 @@
-#ifndef AUX_H
-#define AUX_H
+#ifndef __AUX_H__
+#define __AUX_H__
 
 #include "mmio.h"
 
