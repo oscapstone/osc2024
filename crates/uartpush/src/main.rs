@@ -10,14 +10,16 @@ use color_eyre::eyre::{eyre, Context, Result};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use serial2::SerialPort;
 
+/// uartpush is a utility designed to push the kernel through a UART-connected serial device for loading by uartload.
 #[derive(Debug, Parser)]
+#[command(version, author, about, long_about = None)]
 struct Args {
     /// Path to the kernel image to push
-    #[clap(short, long, default_value = "kernel8.img")]
+    #[clap(short, long)]
     image: PathBuf,
 
     /// Path to the UART serial device
-    #[clap(short, long, default_value = "/dev/ttyUSB0")]
+    #[clap(short, long)]
     device: PathBuf,
 
     /// Baud rate to use for the serial device
@@ -39,7 +41,7 @@ fn main() -> Result<()> {
                 args.image.display(),
                 e
             );
-            return Err(e.into());
+            return Result::Err(e).wrap_err("Failed to open kernel image");
         }
     };
     let image_size = image.metadata()?.len();
@@ -49,10 +51,7 @@ fn main() -> Result<()> {
             "Kernel image '{}' is too large to be pushed",
             args.image.display()
         );
-        return Err(eyre!(
-            "Kernel image '{}' is too large to be pushed",
-            args.image.display()
-        ));
+        return Err(eyre!("Kernel image size is too large"));
     };
 
     tracing::info!(
@@ -69,7 +68,7 @@ fn main() -> Result<()> {
                 args.device.display(),
                 e
             );
-            return Err(e.into());
+            return Result::Err(e).wrap_err("Failed to open serial device");
         }
     };
     device.set_read_timeout(Duration::from_secs(1))?;
@@ -77,7 +76,7 @@ fn main() -> Result<()> {
 
     if let Err(e) = push_kernel(image_size, image, device) {
         tracing::error!("Failed to push kernel: {}", e);
-        return Err(e);
+        return Result::Err(e).wrap_err("Failed to push kernel");
     };
 
     Ok(())
@@ -85,10 +84,14 @@ fn main() -> Result<()> {
 
 fn push_kernel(image_size: u32, mut image: impl Read, mut device: impl Read + Write) -> Result<()> {
     tracing::info!("Writing kernel size to device");
-    device.write_all(&image_size.to_le_bytes())?;
+    device
+        .write_all(&image_size.to_le_bytes())
+        .wrap_err("Failed to write image size")?;
 
     let mut buffer = [0u8; 1024];
-    let read = device.read(&mut buffer).wrap_err("Read failed")?;
+    let read = device
+        .read(&mut buffer)
+        .wrap_err("Failed to read confirmation from device")?;
     let [b'O', b'K'] = &buffer[..read] else {
         tracing::error!("Kernel push failed, did not receive 'OK' from device");
         return Err(eyre!(
@@ -107,11 +110,15 @@ fn push_kernel(image_size: u32, mut image: impl Read, mut device: impl Read + Wr
 
     loop {
         let mut buffer = [0u8; 1024];
-        let read = image.read(&mut buffer).wrap_err("Read failed")?;
+        let read = image
+            .read(&mut buffer)
+            .wrap_err("Failed to read the kernel image")?;
         if read == 0 {
             break;
         }
-        device.write_all(&buffer[..read]).wrap_err("Write failed")?;
+        device
+            .write_all(&buffer[..read])
+            .wrap_err("Failed to write the kernel image to device")?;
         pb.inc(read as u64);
     }
 
