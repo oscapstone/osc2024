@@ -1,7 +1,7 @@
 #include "alloc.h"
 
 // `__bss_end` is defined in linker script
-extern int __bss_end;
+extern char *__bss_end;
 
 static char *heap_top;
 
@@ -9,7 +9,6 @@ static char *heap_top;
 void alloc_init()
 {
     heap_top = (char *)&__bss_end;
-    heap_top++;
 }
 
 void *simple_malloc(int size)
