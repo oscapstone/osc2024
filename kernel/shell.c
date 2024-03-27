@@ -28,26 +28,60 @@ void shell_start()
     }
 }
 
+// Define Shell Commands
+static cmt_t command_funcs[] = {
+    cmd_help,
+    cmd_hello,
+    cmd_reboot,
+    get_board_revision,
+    get_arm_memory,
+    cmd_default
+};
+static char* commands[] = {
+    "help",
+    "hello",
+    "reboot",
+    "board",
+    "arm",
+    ""
+};
+
 void do_cmd(const char* line)
 {
-    if (strcmp(line, "help") == 0) {
-        uart_puts("help\t: print this help menu\nhello\t: print Hello World!\nreboot\t: reboot the device\n");
-    } else if (strcmp(line, "hello") == 0) {
-        uart_puts("Hello World!\n");
-    } else if (strcmp(line, "reboot") == 0) {
-        uart_puts("Reboot!\n");
-
-        unsigned int r;
-        r = *PM_RSTS;
-        r &= ~0xFFFFFAAA;
-        *PM_RSTS = PM_WDOG_MAGIC | r;
-        *PM_WDOG = PM_WDOG_MAGIC | 10;
-        *PM_RSTC = PM_WDOG_MAGIC | PM_RSTC_FULLRST;
-    } else if (strcmp(line, "board") == 0) {
-        get_board_revision();
-    } else if (strcmp(line, "arm") == 0) {
-        get_arm_memory();
-    } else {
-        uart_puts("command not found\n");
+    int size = sizeof(command_funcs) / sizeof(command_funcs[0]);
+    for (int i = 0; i < size-1; i++) {
+        if (strcmp(line, commands[i]) == 0) {
+            command_funcs[i]();
+            return;
+        }
     }
+    command_funcs[size-1]();
+    return;
+}
+
+void cmd_help()
+{
+    uart_puts("help\t: print this help menu\nhello\t: print Hello World!\nreboot\t: reboot the device\n");
+}
+
+void cmd_hello()
+{
+    uart_puts("Hello World!\n");
+}
+
+void cmd_reboot()
+{
+    uart_puts("Reboot!\n");
+
+    unsigned int r;
+    r = *PM_RSTS;
+    r &= ~0xFFFFFAAA;
+    *PM_RSTS = PM_WDOG_MAGIC | r;
+    *PM_WDOG = PM_WDOG_MAGIC | 10;
+    *PM_RSTC = PM_WDOG_MAGIC | PM_RSTC_FULLRST;
+}
+
+void cmd_default()
+{
+    uart_puts("command not found\n");
 }
