@@ -11,7 +11,7 @@ test.*
 *.d
 
 # Build
-kernel8.*
+*.img
 
 # Object files
 *.o

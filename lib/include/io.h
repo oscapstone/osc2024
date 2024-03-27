@@ -3,6 +3,6 @@
 
 #include "int.h"
 
-size_t vsprintf(char *dst, char *fmt, __builtin_va_list args);
+size_t vsprintk(char *dst, char *fmt, __builtin_va_list args);
 
 #endif // _IO_H

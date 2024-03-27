@@ -1,8 +1,7 @@
 #include "io.h"
 #include "string.h"
-#include "uart.h"
 
-size_t vsprintf(char *dst, char *fmt, __builtin_va_list args) {
+size_t vsprintk(char *dst, char *fmt, __builtin_va_list args) {
   char *dst_orig = dst;
 
   while (*fmt) {
@@ -27,7 +26,6 @@ size_t vsprintf(char *dst, char *fmt, __builtin_va_list args) {
         int arg = __builtin_va_arg(args, int);
         char buf[11];
         char *p = itoa(arg, buf);
-        uart_print(p);
         while (*p) {
           *dst++ = *p++;
         }
@@ -44,9 +42,9 @@ size_t vsprintf(char *dst, char *fmt, __builtin_va_list args) {
   return dst - dst_orig;
 }
 
-size_t sprintf(char *dst, char *fmt, ...) {
+size_t sprintk(char *dst, char *fmt, ...) {
   __builtin_va_list args;
   __builtin_va_start(args, fmt);
 
-  return vsprintf(dst, fmt, args);
+  return vsprintk(dst, fmt, args);
 }
