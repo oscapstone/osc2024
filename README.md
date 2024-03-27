@@ -44,7 +44,7 @@ This is the course project/assignments for "Operating System Capstone," 2024 Spr
 
 This repository contains two entrypoints that might be great to start from:
 
-- [bootloader](crates/bootloader)
+- [uartload](crates/uartload)
 - [kernel](crates/kernel)
 
 ## Lab Descriptions
