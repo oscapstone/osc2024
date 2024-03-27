@@ -3,6 +3,29 @@
 #include "helper.h"
 #include "shell.h"
 
+
+struct fdt_header {
+    unsigned int magic;
+    unsigned int totalsize;
+    unsigned int off_dt_struct;
+    unsigned int off_dt_strings;
+    unsigned int off_mem_rsvmap;
+    unsigned int version;
+    unsigned int last_comp_version;
+    unsigned int boot_cpuid_phys;
+    unsigned int size_dt_strings;
+    unsigned int size_dt_struct;
+};
+
+
+unsigned int big_to_little_endian(unsigned int value) {
+    return ((value & 0xFF000000) >> 24) | \
+           ((value & 0x00FF0000) >> 8) | \
+           ((value & 0x0000FF00) << 8) | \
+           ((value & 0x000000FF) << 24);
+}
+
+
 void parse_new_node(char *address, char *string_address, char *target, void (*callback)(char *))
 {
     while (*(address) == DT_BEGIN_NODE_TOKEN)
@@ -61,6 +84,7 @@ char dt_check_magic_number(char *address)
 
 void dt_tranverse(char *address, char *target_property, void (*callback)(char *))
 {
+    struct fdt_header * header = (struct fdt_header *) address;
     unsigned int temp;
     unsigned int offset_struct, offset_strings;
 
@@ -70,35 +94,28 @@ void dt_tranverse(char *address, char *target_property, void (*callback)(char *)
         return;
     }
 
-    // skip: total size
+    offset_struct = big_to_little_endian(header -> off_dt_struct); //value in dtb is big endian
+    offset_strings = big_to_little_endian(header -> off_dt_strings);
 
-    offset_struct = get_int(address + 8);
-    offset_strings = get_int(address + 12);
-
-    // skip: off_dt_strings
-    // skip: off_mem_rsvmap
-    // skip: version
-    // skip: last_comp_version
-    // skip: boot_cpuid_phys
-    // skip: size_dt_strings
-    // skip: size_dt_struct
-
-    char *newAddress = address + offset_struct + 1;
-
-    while (*(newAddress++) == NULL)
-        ;
-    newAddress--;
+    char *newAddress = address + offset_struct;
+    
+    // point to the dtb structure
+    while (*newAddress == NULL) {
+        newAddress++;
+    }
 
     // nodes
     while (*(newAddress) != DT_END_TOKEN)
     {
         parse_new_node(newAddress, address + offset_strings, target_property, callback);
 
-        while (*(newAddress++) != DT_END_NODE_TOKEN)
-            ;
+        while (*newAddress != DT_END_NODE_TOKEN) {
+            newAddress++;
+        }
+        newAddress++;
 
-        while (*(newAddress++) == NULL)
-            ;
-        newAddress--;
+        while (*newAddress == NULL) {
+            newAddress++;
+        }
     }
 }

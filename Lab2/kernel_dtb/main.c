@@ -22,7 +22,7 @@ void main(void *dtb)
     // set up serial console
     uart_init();
     uart_hex(dtb);
-    dt_tranverse(dtb, INITRD_START, init_cpio);
+    dt_tranverse(dtb, "linux,initrd-start", init_cpio);
     // say hello
     uart_puts("Booted, start testing simple_alloc\n");
 
