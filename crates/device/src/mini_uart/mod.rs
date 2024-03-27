@@ -81,6 +81,11 @@ impl MiniUartInner {
         while !self.is_writable() {}
         self.registers.AUX_MU_IO.set(byte as u32)
     }
+
+    fn flush(&self) {
+        // Spin until the transmitter is empty
+        while !self.is_writable() {}
+    }
 }
 
 impl core::fmt::Write for MiniUartInner {
@@ -132,12 +137,24 @@ impl console::Write for MiniUart {
         let mut inner = self.inner.lock().unwrap();
         inner.write_fmt(args)
     }
+
+    fn flush(&self) {
+        let inner = self.inner.lock().unwrap();
+        inner.flush();
+    }
 }
 
 impl console::Read for MiniUart {
     fn read_char(&self) -> char {
         let inner = self.inner.lock().unwrap();
         inner.read_byte() as char
+    }
+
+    fn clear_rx(&self) {
+        let inner = self.inner.lock().unwrap();
+        while inner.is_readable() {
+            inner.read_byte();
+        }
     }
 }
 
