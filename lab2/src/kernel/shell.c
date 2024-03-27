@@ -74,9 +74,9 @@ void shell() {
 			uart_send_string("Rebooting....\n");
 			reset(1000);
 		}
-		// else if (string_compare(input_str, "ls")) {
-		//	cpio_ls(cpio_addr);
-		//}
+		 else if (string_compare(input_str, "ls")) {
+			cpio_ls(cpio_addr);
+		}
 		 else {
 			uart_send_string("Unknown command\n");
 		}

@@ -1,9 +1,9 @@
 #ifndef CPIO_H
 #define CPIO_H
 
-char* cpio_findFile(const char* start_addr, const char* name);
-void cpio_ls(const char* start_addr);
-void cpio_cat(const char* start_addr, char* filename);
+char* cpio_findFile(char* start_addr, const char* name);
+void cpio_ls(char* start_addr);
+void cpio_cat(char* start_addr, char* filename);
 
 
 struct cpio_newc_header {

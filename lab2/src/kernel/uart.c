@@ -132,8 +132,6 @@ void uart_send_string_len(char* s, unsigned int len) {
     for(unsigned int i = 0; i < len; i++) {
         uart_send_char(s[i]);
     }
-    uart_send_char('\r');
-    uart_send_char('\n');
 }
 
 /**
