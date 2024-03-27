@@ -86,10 +86,10 @@ _dtb_get_uint32(const byteptr_t p)
 
 
 static uint32_t
-_struct_iteration(fdt_callback cb, const byteptr_t struct_ptr, const byteptr_t string_ptr, uint32_t totalsize)
+_struct_iteration(fdt_callback cb, const byteptr_t struct_ptr, const byteptr_t string_ptr, uint32_t struct_size)
 {
     byteptr_t cur_ptr = struct_ptr;
-    byteptr_t end_ptr = cur_ptr + totalsize;
+    byteptr_t end_ptr = cur_ptr + struct_size;
 
     while (cur_ptr < end_ptr) {
         uint32_t token = _dtb_get_uint32(cur_ptr);
@@ -148,11 +148,11 @@ fdt_traverse(fdt_callback cb)
         return FDT_TRAVERSE_HEADER_ERROR;
     } 
 
-    uint32_t total_size = _dtb_get_uint32((byteptr_t) &(header->totalsize));
-    byteptr_t struct_ptr = dtb_ptr + _dtb_get_uint32((byteptr_t) &(header->off_dt_struct));
-    byteptr_t string_ptr = dtb_ptr + _dtb_get_uint32((byteptr_t) &(header->off_dt_strings));
+    uint32_t  struct_size = _dtb_get_uint32((byteptr_t) &(header->size_dt_struct));
+    byteptr_t struct_ptr  = dtb_ptr + _dtb_get_uint32((byteptr_t) &(header->off_dt_struct));
+    byteptr_t string_ptr  = dtb_ptr + _dtb_get_uint32((byteptr_t) &(header->off_dt_strings));
 
-    return _struct_iteration(cb, struct_ptr, string_ptr, total_size);
+    return _struct_iteration(cb, struct_ptr, string_ptr, struct_size);
 }
 
 
