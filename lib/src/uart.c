@@ -98,7 +98,7 @@ void uart_printf(char *fmt, ...) {
   __builtin_va_start(args, fmt);
 
   char str_buf[1024];
-  vsprintf(str_buf, fmt, args);
+  vsprintk(str_buf, fmt, args);
 
   int index = 0;
   while (str_buf[index] && index < 1024) {
