@@ -26,29 +26,14 @@
 #include "include/uart.h"
 #include "include/utils.h"
 #include "include/mbox.h"
+#include "include/cpio.h"
 
 
 void main(int argc, char* argv[]){
    uart_init();
-   uart_puts("hello new kernel!");
-   uart_puts("hello new kernel!");
-   uart_puts("hello new kernel!");
-   uart_puts("hello new kernel!");
-    asm volatile(
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x8, 0x80000;"
-       "mov x0, x10;"
-       "ret;"
-    );
+   //cpio_ls();
+   cpio_cat("hello2.txt");
+   //cpio_ls();
+   cpio_cat("hello.txt");
    return;
 }

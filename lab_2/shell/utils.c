@@ -2,6 +2,26 @@
 #define PM_RSTC 0x3F10001c
 #define PM_WDOG 0x3F100024
 
+
+unsigned long utils_atoi(const char *s, int char_size) {
+    unsigned long num = 0;
+    for (int i = 0; i < char_size; i++) {
+        num = num * 16;
+        if (*s >= '0' && *s <= '9') {
+            num += (*s - '0');
+        } else if (*s >= 'A' && *s <= 'F') {
+            num += (*s - 'A' + 10);
+        } else if (*s >= 'a' && *s <= 'f') {
+            num += (*s - 'a' + 10);
+        }
+        s++;
+    }
+    return num;
+}
+
+
+
+
 /**
  * compare two string, given s1 and s2
  * return 0 if the both string are equal;
@@ -39,6 +59,12 @@ void set(long addr, unsigned int value) {
     *point = value;
 }
 
+
+void utils_align(void *size, unsigned int s) {
+	unsigned long* x = (unsigned long*) size;
+	unsigned long mask = s-1;
+	*x = ((*x) + mask) & (~mask);
+}
 
 /**
  * reboot respberry pi
