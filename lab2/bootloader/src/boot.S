@@ -28,9 +28,9 @@
 .global _start
 
 _start:
-    mrs x0, mpidr_el1
-    and x0, x0, #0xff
-    cbz x0, master
+    mrs x1, mpidr_el1
+    and x1, x1, #0xff
+    cbz x1, master
     b proc_hang
 
 master:

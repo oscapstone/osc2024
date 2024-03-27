@@ -7,24 +7,35 @@
 #include "u_string.h"
 #include "dtb.h"
 #include "heap.h"
+#include "timer.h"
 
-#define CLI_MAX_CMD 9
+// #define CLI_MAX_CMD 12
+#define USTACK_SIZE 0x10000   // the size of user stack
 
-extern char* dtb_ptr; // it's the address of dtb and it declared in dtb.c
-void* CPIO_DEFAULT_PLACE; // it's the address of cpio
-
-struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
+extern char* dtb_ptr;
+void* CPIO_DEFAULT_PLACE;
+int cmd_list_size = 0;
+// struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
+struct CLI_CMDS cmd_list[] =
 {
-    {.command="cat",    .func=do_cmd_cat,           .help="concatenate files and print on the standard output"},
-    {.command="dtb",    .func=do_cmd_dtb,           .help="show device tree"},
-    {.command="help",   .func=do_cmd_help,          .help="print all available commands"},
-    {.command="info",   .func=do_cmd_info,          .help="get device information via mailbox"},
-    {.command="malloc", .func=do_cmd_malloc,        .help="simple allocator in heap session"},
-    {.command="ls",     .func=do_cmd_ls,            .help="list directory contents"},
-    {.command="hello",  .func=do_cmd_hello,         .help="print Hello World!"},
-    {.command="reboot", .func=do_cmd_reboot,        .help="reboot the device"},
-    {.command="c",      .func=do_cmd_cancel_reboot, .help="cancel reboot the device"}
+    {.command="help",       .func=do_cmd_help,          .help="print all available commands"},
+    {.command="exec",       .func=do_cmd_exec,          .help="execute a command, replacing current image with a new image"},
+    {.command="setTimeout", .func=do_cmd_setTimeout,    .help="setTimeout [MESSAGE] [SECONDS]"},
+    {.command="set2sAlert", .func=do_cmd_set2sAlert,    .help="set core timer interrupt every 2 second"},
+    {.command="cat",        .func=do_cmd_cat,           .help="concatenate files and print on the standard output"},
+    {.command="dtb",        .func=do_cmd_dtb,           .help="show device tree"},
+    {.command="info",       .func=do_cmd_info,          .help="get device information via mailbox"},
+    {.command="kmalloc",    .func=do_cmd_kmalloc,       .help="simple allocator in heap session"},
+    {.command="ls",         .func=do_cmd_ls,            .help="list directory contents"},
+    {.command="hello",      .func=do_cmd_hello,         .help="print Hello World!"},
+    {.command="reboot",     .func=do_cmd_reboot,        .help="reboot the device"},
+    {.command="c",          .func=do_cmd_cancel_reboot, .help="cancel reboot the device"}
 };
+
+void cli_cmd_init()
+{
+    cmd_list_size = sizeof(cmd_list) / sizeof(struct CLI_CMDS);
+}
 
 void cli_cmd_clear(char* buffer, int length)
 {
@@ -36,18 +47,19 @@ void cli_cmd_clear(char* buffer, int length)
 
 void cli_cmd_read(char* buffer)
 {
-    char c='\0';
+    char c = '\0';
     int idx = 0;
     while(1)
     {
-       if ( idx >= CMD_MAX_LEN ) break;
+        if ( idx >= CMD_MAX_LEN ) break;
 
-        c = uart_recv();
+        c = uart_async_getc();
 
         // if user key 'enter'
         if ( c == '\n')
         {
             uart_puts("\r\n");
+            buffer[idx] = '\0';
             break;
         }
 
@@ -66,7 +78,7 @@ void cli_cmd_read(char* buffer)
         // use tab to auto complete
         if ( c == '\t' )
         {
-            for(int tab_index = 0; tab_index < CLI_MAX_CMD; tab_index++)
+            for(int tab_index = 0; tab_index < cmd_list_size; tab_index++)
             {
                 if (strncmp(buffer, cmd_list[tab_index].command, strlen(buffer)) == 0)
                 {
@@ -77,6 +89,7 @@ void cli_cmd_read(char* buffer)
                     uart_puts(cmd_list[tab_index].command);
                     cli_cmd_clear(buffer, strlen(buffer) + 3);
                     strcpy(buffer, cmd_list[tab_index].command);
+                    idx = strlen(buffer);
                     break;
                 }
             }
@@ -88,7 +101,8 @@ void cli_cmd_read(char* buffer)
         if ( c > 127 ) continue;
 
         buffer[idx++] = c;
-        uart_send(c);
+        // uart_send(c); // we don't need this anymore
+
     }
 }
 
@@ -96,29 +110,19 @@ void cli_cmd_exec(char* buffer)
 {
     if (!buffer) return;
 
-    char* cmd = buffer;
-    char* argvs[1] = {NULL};
+    char *words[3] = {NULL, NULL, NULL};
+    int argc = str_SepbySpace(buffer, words) - 1;
 
-    while(1){
-        if(*buffer == '\0')
-        {
-            argvs[0] = buffer;
-            break;
-        }
-        if(*buffer == ' ')
-        {
-            *buffer = '\0';
-            argvs[0] = buffer + 1;
-            break;
-        }
-        buffer++;
-    }
-    for (int i = 0; i < CLI_MAX_CMD; i++)
+    char* cmd       = words[0];
+    char* argvs[2]  = {words[1], words[2]};
+    // argvs[0] = words[1];
+    // argvs[1] = words[2];
+
+    for (int i = 0; i < cmd_list_size; i++)
     {
         if (strcmp(cmd, cmd_list[i].command) == 0)
         {
-            // cmd_list[i].func(argvs, 1);
-            cmd_list[i].func(1, argvs);
+            cmd_list[i].func(argvs, argc);
             return;            
         }
     }
@@ -133,7 +137,7 @@ void cli_print_banner()
 {
     uart_puts("\r\n");
     uart_puts("=======================================\r\n");
-    uart_puts("  OSC 2024 Shell Lab2 - Kernel        \r\n");
+    uart_puts("  OSC 2024 Lab3 Shell                  \r\n");
     uart_puts("=======================================\r\n");
 }
 
@@ -164,6 +168,7 @@ DO_CMD_FUNC(do_cmd_cat)
         //if this is TRAILER!!! (last of file)
         if(header_ptr==0) uart_puts("cat: %s: No such file or directory\n", filepath);
     }
+
     return 0;
 }
 
@@ -175,12 +180,51 @@ DO_CMD_FUNC(do_cmd_dtb)
 
 DO_CMD_FUNC(do_cmd_help)
 {
-    for(int i = 0; i < CLI_MAX_CMD; i++)
+    for(int i = 0; i < cmd_list_size; i++)
     {
         uart_puts(cmd_list[i].command);
-        uart_puts("\t\t: ");
+        uart_puts("\t\t\t\t: ");
         uart_puts(cmd_list[i].help);
         uart_puts("\r\n");
+    }
+
+    return 0;
+}
+
+DO_CMD_FUNC(do_cmd_exec)
+{
+    char* filepath = argv[0];
+    char* c_filepath;
+    char* c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+
+    while(header_ptr!=0)
+    {
+        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        //if parse header error
+        if(error)
+        {
+            uart_puts("cpio parse error");
+            break;
+        }
+
+        if(strcmp(c_filepath, filepath)==0)
+        {
+            //exec c_filedata
+            char* ustack = kmalloc(USTACK_SIZE);
+            asm("msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
+                "msr spsr_el1, xzr\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
+                "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
+                "eret\n\t"              // Perform exception return. EL1 -> EL0
+                :: "r" (c_filedata),
+                   "r" (ustack + USTACK_SIZE));
+            free(ustack);
+            break;
+        }
+
+        //if this is TRAILER!!! (last of file)
+        if(header_ptr==0) uart_puts("cat: %s: No such file or directory\n", filepath);
     }
     return 0;
 }
@@ -204,7 +248,10 @@ DO_CMD_FUNC(do_cmd_info)
     pt[7] = MBOX_TAG_LAST_BYTE;
 
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
-        uart_puts("Hardware Revision\t: 0x%x\r\n", pt[5]);
+        uart_puts("Hardware Revision\t: ");
+        uart_2hex(pt[6]);
+        uart_2hex(pt[5]);
+        uart_puts("\r\n");
     }
     // print arm memory
     pt[0] = 8 * 4;
@@ -217,32 +264,36 @@ DO_CMD_FUNC(do_cmd_info)
     pt[7] = MBOX_TAG_LAST_BYTE;
 
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
-        uart_puts("ARM Memory Base Address\t: 0x%x\r\n", pt[5]);
-        uart_puts("ARM Memory Size\t\t: %d bytes\r\n", pt[6]);
+        uart_puts("ARM Memory Base Address\t: ");
+        uart_2hex(pt[5]);
+        uart_puts("\r\n");
+        uart_puts("ARM Memory Size\t\t: ");
+        uart_2hex(pt[6]);
+        uart_puts("\r\n");
     }
+
     return 0;
 }
 
-DO_CMD_FUNC(do_cmd_malloc)
+DO_CMD_FUNC(do_cmd_kmalloc)
 {
     //test malloc
-    char* test1 = malloc(0x18);
+    char* test1 = kmalloc(0x18);
     memcpy(test1,"test malloc1",sizeof("test malloc1"));
-    uart_puts("%s: address: 0x%x, size: %ld bytes\n",test1, test1, *(test1-0x8));
+    uart_puts("%s\n",test1);
 
-    char* test2 = malloc(0x20);
+    char* test2 = kmalloc(0x20);
     memcpy(test2,"test malloc2",sizeof("test malloc2"));
-    uart_puts("%s: address: 0x%x, size: %ld bytes\n",test2, test2, *(test2-0x8));
+    uart_puts("%s\n",test2);
 
-    char* test3 = malloc(0x28);
+    char* test3 = kmalloc(0x28);
     memcpy(test3,"test malloc3",sizeof("test malloc3"));
-    uart_puts("%s: address: 0x%x, size: %ld bytes\n",test3, test3, *(test3-0x8));
+    uart_puts("%s\n",test3);
     return 0;
 }
 
 DO_CMD_FUNC(do_cmd_ls)
 {
-    // char* workdir = argv;
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
@@ -259,10 +310,29 @@ DO_CMD_FUNC(do_cmd_ls)
         }
 
         //if this is not TRAILER!!! (last of file)
-        if(header_ptr!=0) {
-            uart_puts("%s\n", c_filepath);
-        }
+        if(header_ptr!=0) uart_puts("%s\n", c_filepath);
     }
+
+    return 0;
+}
+
+DO_CMD_FUNC(do_cmd_setTimeout)
+{
+    char* msg = argv[0];
+    char* sec = argv[1];
+
+    if (msg == NULL || sec == NULL)
+    {
+        uart_puts("Usage: setTimeout [MESSAGE] [SECONDS]\r\n");
+        return 0;
+    }
+    add_timer(uart_sendline,atoi(sec),msg);
+    return 0;
+}
+
+DO_CMD_FUNC(do_cmd_set2sAlert)
+{
+    add_timer(timer_set2sAlert,2,"2sAlert");
     return 0;
 }
 

@@ -5,8 +5,6 @@ ASMFLAGS = -Iinclude
 
 BUILD_DIR = build
 SRC_DIR = src
-initramfs_path = ..
-
 #---------------------------------------------------------------------------------------
 
 C_FILES = $(wildcard $(SRC_DIR)/*.c)
@@ -34,12 +32,11 @@ clean:
 	rm -rf $(BUILD_DIR) *.img
 
 run_std:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial stdio -display none -dtb bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 run_pty:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial pty -dtb bcm2710-rpi-3-b-plus.dtb
-	# qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial /dev/pts/3 -initrd $(initramfs_path)/initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial pty -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -dtb bcm2710-rpi-3-b-plus.dtb -S -s
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s
 

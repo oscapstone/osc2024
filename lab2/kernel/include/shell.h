@@ -3,11 +3,13 @@
 
 #define CMD_MAX_LEN 32
 #define MSG_MAX_LEN 128
+#define DO_CMD_FUNC(name) int name(int argc, char *argv[])
+
 
 typedef struct CLI_CMDS
 {
     char command[CMD_MAX_LEN];
-    int (*func)(char* argv, int argc);
+    DO_CMD_FUNC((*func));
     char help[MSG_MAX_LEN];
 } CLI_CMDS;
 
@@ -17,14 +19,14 @@ void cli_cmd_read(char*);
 void cli_cmd_exec(char*);
 void cli_print_banner();
 
-int do_cmd_cat     (char *argv, int argc);
-int do_cmd_dtb     (char *argv, int argc);
-int do_cmd_help    (char *argv, int argc);
-int do_cmd_hello   (char *argv, int argc);
-int do_cmd_info    (char *argv, int argc);
-int do_cmd_malloc  (char *argv, int argc);
-int do_cmd_ls      (char *argv, int argc);
-int do_cmd_reboot  (char *argv, int argc);
-int do_cmd_cancel_reboot(char *argv, int argc);
+DO_CMD_FUNC(do_cmd_cat   );
+DO_CMD_FUNC(do_cmd_dtb   );
+DO_CMD_FUNC(do_cmd_help  );
+DO_CMD_FUNC(do_cmd_hello );
+DO_CMD_FUNC(do_cmd_info  );
+DO_CMD_FUNC(do_cmd_malloc);
+DO_CMD_FUNC(do_cmd_ls    );
+DO_CMD_FUNC(do_cmd_reboot);
+DO_CMD_FUNC(do_cmd_cancel_reboot);
 
 #endif /* _SHELL_H_ */

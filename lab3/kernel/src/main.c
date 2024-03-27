@@ -3,27 +3,26 @@
 #include "heap.h"
 #include "u_string.h"
 #include "dtb.h"
+#include "exception.h"
+#include "timer.h"
 
-extern char* dtb_ptr; // it's the address of dtb and it declared in main.c
+char* dtb_ptr;
 
-
-
-/* x0-x7 are argument registers.
-   x0 is now used for dtb */
 void main(char* arg){
     char input_buffer[CMD_MAX_LEN];
 
     dtb_ptr = arg;
-    /*
-        traverse_device_tree() is on osdi/osc2023/lab2/kernel/src/dtb.c
-        dth_callback_initramfs() is on osdi/osc2023/lab2/kernel/src/dth.c
-    */
     traverse_device_tree(dtb_ptr, dtb_callback_initramfs);
 
     uart_init();
-    uart_puts("loading dtb from: 0x%x\n", dtb_ptr);
-    cli_print_banner();
+    irqtask_list_init();
+    timer_list_init();
 
+    uart_interrupt_enable();
+    el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
+    core_timer_enable();
+
+    cli_print_banner();
     while(1){
         cli_cmd_clear(input_buffer, CMD_MAX_LEN);
         uart_puts("# ");
