@@ -1,5 +1,5 @@
 [project]
-name = "bootloader"
+name = "tools"
 version = "0.1.0"
 description = "Default template for PDM package"
 authors = [
