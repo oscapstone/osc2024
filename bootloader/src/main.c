@@ -4,10 +4,10 @@ void load_img() {
   unsigned int size = 0;
   unsigned char *size_buffer = (unsigned char *)&size;
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 8; i++) {
     size_buffer[i] = uart_read();
   }
-  uart_printf("Image size: %x\n", size);
+  uart_printf("Image size: %d\n", size);
 
   char *kernel = (char *)0x80000;
   while (size--) {

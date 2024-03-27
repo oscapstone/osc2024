@@ -6,7 +6,8 @@ SECTIONS {
     PROVIDE(_data = .);
     .data : { *(.data .data.* .gnu.linkonce.d*) }
     .bss (NOLOAD) : {
-        . = ALIGN(16);
+        /* align 8 because str only accept 8-byte-aligned address */
+        . = ALIGN(8);
         __bss_start = .;
         *(.bss .bss.*)
         *(COMMON)

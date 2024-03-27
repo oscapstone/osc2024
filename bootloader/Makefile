@@ -48,10 +48,9 @@ $(OBJDIR):
 	mkdir $@
 
 
-
 .PHONY: run
 run: bootloader.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial pty -serial stdio
 
 
 .PHONY: debug
