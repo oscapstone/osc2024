@@ -18,7 +18,7 @@ RUSTC_ARGS := --target=$(TARGET_TRIPLE) --release
 
 QEMU_BINARY := qemu-system-aarch64
 QEMU_MACHINE_TYPE := raspi3b
-QEMU_RELEASE_ARGS := -serial null -serial stdio -display none
+QEMU_RELEASE_ARGS := -serial null -serial pty -display none
 
 # export for build.rs
 export LD_SCRIPT_PATH
