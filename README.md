@@ -42,10 +42,11 @@ This is the course project/assignments for "Operating System Capstone," 2024 Spr
 
 ## Dev Notes
 
-This repository contains two entrypoints that might be great to start from:
+This repository contains three entrypoints that might be great to start from:
 
-- [uartload](crates/uartload)
-- [kernel](crates/kernel)
+- [`uartload`](crates/uartload)
+- [`uartpush`](crates/uartpush)
+- [`kernel`](crates/kernel)
 
 ## Lab Descriptions
 
