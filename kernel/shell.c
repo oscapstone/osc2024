@@ -1,3 +1,4 @@
+#include "initramfs.h"
 #include "mailbox.h"
 #include "shell.h"
 #include "string.h"
@@ -35,7 +36,7 @@ static cmt_t command_funcs[] = {
     cmd_reboot,
     get_board_revision,
     get_arm_memory,
-    cmd_default
+    list_initramfs
 };
 static char* commands[] = {
     "help",
@@ -43,25 +44,39 @@ static char* commands[] = {
     "reboot",
     "board",
     "arm",
-    ""
+    "ls"
+};
+static char* command_descriptions[] = {
+    "print this help menu",
+    "print Hello World!",
+    "reboot the device",
+    "print board info",
+    "print arm memory info",
+    "list initramfs"
 };
 
 void do_cmd(const char* line)
 {
     int size = sizeof(command_funcs) / sizeof(command_funcs[0]);
-    for (int i = 0; i < size-1; i++) {
+    for (int i = 0; i < size; i++) {
         if (strcmp(line, commands[i]) == 0) {
             command_funcs[i]();
             return;
         }
     }
-    command_funcs[size-1]();
+    cmd_default();
     return;
 }
 
 void cmd_help()
 {
-    uart_puts("help\t: print this help menu\nhello\t: print Hello World!\nreboot\t: reboot the device\n");
+    int size = sizeof(command_descriptions) / sizeof(command_descriptions[0]);
+    for (int i = 0; i < size; i++) {
+        uart_puts(commands[i]);
+        uart_puts("\t: ");
+        uart_puts(command_descriptions[i]);
+        uart_puts("\n");
+    }
 }
 
 void cmd_hello()

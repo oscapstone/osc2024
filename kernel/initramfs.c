@@ -16,6 +16,7 @@ void parse_initramfs()
 void list_initramfs()
 {
     // read objects
+    uart_puts("list initramfs\n");
 }
 
 void cat_initramfs()

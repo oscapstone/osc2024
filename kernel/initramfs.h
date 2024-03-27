@@ -14,5 +14,7 @@ typedef struct
 
 
 void parse_initramfs(void);
+void list_initramfs(void);
+void cat_initramfs(void);
 
 #endif
