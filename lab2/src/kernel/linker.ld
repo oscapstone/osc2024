@@ -1,7 +1,8 @@
 SECTIONS
 {
-	. = 0x80000;
-	.text : { KEEP(*(.text.boot)) *(.text .text.*) }
+    /* kernel loaded address */
+    . = 0x80000;
+	.text : { KEEP(*(.text.boot)) *(.text .text.*) } /* code section */
 	.rodata : { *(.rodata .rodata.*) }
 	PROVIDE(_data = .);
 	.data : { *(.data .data.*) }
@@ -12,8 +13,8 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
     }
-    _end = .;
+    __bootloader_end = .;
 
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
-__bss_size = (__bss_end - __bss_start)>>3;      /* 8 bytes (64 bits) each */
+__bss_size = (__bss_end - __bss_start)>>3;      /* 8 bytes each */

@@ -4,12 +4,15 @@
 #include "reboot.h"
 #include "uart.h"
 #include "utils.h"
+//#include "cpio.h"
 
 void shell() {
 	
 	char array_space[256];
 	char* input_str = array_space;
 	
+	char* cpio_addr = (char*)0x8000000;
+
 	while (1) {
 		char c;
 		
@@ -70,7 +73,11 @@ void shell() {
 		} else if (string_compare(input_str,"reboot")) {
 			uart_send_string("Rebooting....\n");
 			reset(1000);
-		} else {
+		}
+		// else if (string_compare(input_str, "ls")) {
+		//	cpio_ls(cpio_addr);
+		//}
+		 else {
 			uart_send_string("Unknown command\n");
 		}
 	}
