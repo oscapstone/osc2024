@@ -35,6 +35,7 @@ void shell() {
 			uart_send_string("hello  : print Hello World!\n");
 			uart_send_string("info   : show board info\n");
 			uart_send_string("reboot : reboot the device\n");
+			uart_send_string("ls     : List all CPIO files");
 		} else if (string_compare(input_str, "hello")) {
 			uart_send_string("Hello World!\n");
 		} else if (string_compare(input_str,"info")) {

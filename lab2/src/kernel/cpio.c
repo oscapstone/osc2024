@@ -49,6 +49,30 @@ void cpio_ls(char* addr){
 }
 
 
-void cpio_cat(char* start_addr, char *filename)
+void cpio_cat(char* addr, char *filename)
 {
+    addr = cpio_findFile(addr, filename);
+    if (!addr) {
+        uart_send_string("File not found\r\n");
+        return;
+    }
+    struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
+    unsigned long filename_size = atoi(header->c_namesize,(int)sizeof(header->c_namesize));
+    unsigned long headerPathname_size = sizeof(struct cpio_newc_header) + filename_size;
+    unsigned long file_size = atoi(header->c_filesize,(int)sizeof(header->c_filesize));
+    
+    align(&headerPathname_size,4);
+    align(&file_size,4);
+    
+    char *file_content = addr + headerPathname_size;
+    uart_send_string("Filename: ");
+    uart_send_string_len(addr+sizeof(struct cpio_newc_header), filename_size);
+    uart_send_string("\n");
+    for (unsigned int i = 0; i < file_size; i++)
+    {
+        uart_send_char(file_content[i]);
+    }
+    uart_send_string("\n");
+
+
 }
