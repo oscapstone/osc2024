@@ -1,4 +1,4 @@
-use crate::uart;
+use crate::peripheral::uart;
 use crate::utils;
 
 fn send(c: u8) {

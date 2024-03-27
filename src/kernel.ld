@@ -4,4 +4,3 @@ SECTIONS {
         KEEP(*(.text.main))
     } 
 }
-

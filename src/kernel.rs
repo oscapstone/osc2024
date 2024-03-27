@@ -13,22 +13,21 @@ mod peripheral;
 mod stdio;
 mod utils;
 
-use peripheral::{mailbox, uart};
-
 extern crate alloc;
 use alloc::vec::Vec;
 
 const MAX_COMMAND_LEN: usize = 0x400;
+const INITRAMFS_ADDR: u32 = 0x200_0000;
 
 #[no_mangle]
 #[link_section = ".text.main"]
 pub extern "C" fn main() {
-    uart::init();
+    peripheral::uart::init();
     stdio::puts(b"Hello, world!");
-    let revision = mailbox::get_board_revision();
+    let revision = peripheral::mailbox::get_board_revision();
     stdio::write(b"Board revision: ");
     stdio::puts(utils::u32_to_hex(revision).as_ref());
-    let (lb, ub) = mailbox::get_arm_memory();
+    let (lb, ub) = peripheral::mailbox::get_arm_memory();
     stdio::write(b"ARM memory: ");
     stdio::write(utils::u32_to_hex(ub).as_ref());
     stdio::write(b" ");
@@ -55,12 +54,12 @@ fn execute_command(command: &[u8]) {
         stdio::puts(b"help\t: print Hello World!");
         stdio::puts(b"reboot\t: reboot the Raspberry Pi");
     } else if command.starts_with(b"reboot") {
-        peripheral::reboot::reboot();
+        peripheral::watchdog::reset(100);
     } else if command.starts_with(b"ls") {
-        let rootfs = filesystem::cpio::CpioArchive::load(0x8000000 as *const u8);
+        let rootfs = filesystem::cpio::CpioArchive::load(INITRAMFS_ADDR as *const u8);
         rootfs.print_file_list();
     } else if command.starts_with(b"cat") {
-        let rootfs = filesystem::cpio::CpioArchive::load(0x8000000 as *const u8);
+        let rootfs = filesystem::cpio::CpioArchive::load(INITRAMFS_ADDR as *const u8);
         let filename = &command[4..];
         if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
             stdio::write(data);

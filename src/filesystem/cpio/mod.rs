@@ -55,15 +55,17 @@ impl CpioArchive {
                 break;
             }
 
-            // print name
             stdio::puts(name.as_bytes());
 
-            current = unsafe { current.add(110 + namesize as usize + filesize as usize) };
+            current = unsafe { current.add(110 + namesize as usize) };
             if current as usize % 4 != 0 {
                 current = unsafe { current.add(4 - (current as usize % 4)) };
             }
-            if namesize == 0 {
-                break;
+
+            current = unsafe { current.add(filesize as usize) };
+
+            if current as usize % 4 != 0 {
+                current = unsafe { current.add(4 - (current as usize % 4)) };
             }
         }
     }
@@ -96,6 +98,11 @@ impl CpioArchive {
                 break;
             }
 
+            current = unsafe { current.add(110 + namesize as usize) };
+            if current as usize % 4 != 0 {
+                current = unsafe { current.add(4 - (current as usize % 4)) };
+            }
+
             let mut found = true;
             for i in 0..namesize as usize {
                 if name.as_bytes()[i] == 0 {
@@ -108,15 +115,10 @@ impl CpioArchive {
             }
 
             if found {
-                return Some(unsafe {
-                    core::slice::from_raw_parts(
-                        current.add(110 + namesize as usize),
-                        filesize as usize,
-                    )
-                });
+                return Some(unsafe { core::slice::from_raw_parts(current, filesize as usize) });
             }
 
-            current = unsafe { current.add(110 + namesize as usize + filesize as usize) };
+            current = unsafe { current.add(filesize as usize) };
             if current as usize % 4 != 0 {
                 current = unsafe { current.add(4 - (current as usize % 4)) };
             }

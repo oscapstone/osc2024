@@ -1,11 +1,11 @@
-SECTIONS
-{
+SECTIONS {
     . = 0x60000;
     __cpy_start = .;
-    .text : { 
+    .text : ALIGN(16) {
         KEEP(*(.text.boot)) *(.text .text.*) 
     }
-    .rodata : { *(.rodata..*) }
+    .rodata : ALIGN(16) { *(.rodata..*) }
+    .data : { *(.data) }
     . = ALIGN(16);
     __cpy_end = .;
     .bss (NOLOAD) : {

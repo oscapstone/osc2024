@@ -1,8 +1,10 @@
 #![no_std]
 
 #[panic_handler]
-pub extern "Rust" fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {
+        stdio::puts(b"Panic!");
+    }
 }
 
 mod mmio;
@@ -19,14 +21,9 @@ pub fn main() {
     uart::init();
     // mmio::MMIO::delay(10000000);
     stdio::puts(b"Hello, world!");
-    // stdio::puts(b"Please send a kernel image.");
+    stdio::puts(b"Please send a kernel image.");
 
-    // loop {
-    //     let buf = uart::recv();
-    //     let c = utils::to_hex(buf as u32);
-    //     stdio::puts(&c);
-    // }
-    // receive kernel until delay 1 second
+    // receive kernel until delay
     let mut pos = KERNEL_ADDR;
     let mut delay = 0;
     loop {
@@ -35,7 +32,7 @@ pub fn main() {
                 core::ptr::write_volatile(pos as *mut u8, c);
             }
             delay = 0;
-            if pos % 1000 == 0 {
+            if pos % 0x400 == 0 {
                 stdio::write(b".");
             }
             pos += 1;
@@ -44,23 +41,21 @@ pub fn main() {
                 continue;
             }
             delay += 1;
-            if delay >= 10000 {
-                if pos < KERNEL_ADDR + 1000 {
-                    stdio::puts(b"Failed to get kernel image");
-                    pos = KERNEL_ADDR;
-                    delay = 0;
-                    continue;
-                }
-                stdio::puts(b"Got kernel!");
+            if delay >= 1000000 {
+                stdio::println("");
+                stdio::println("Kernel image received!");
+                stdio::print("Kernel size: ");
+                stdio::print_u32(pos - KERNEL_ADDR);
+                stdio::println(" bytes");
                 break;
             }
         }
-        mmio::MMIO::delay(1000);
     }
 
+    mmio::MMIO::delay(1000000);
+    stdio::puts(b"Jumping to kernel");
     // jump to KERNEL_ADDR
     let kernel = KERNEL_ADDR as *const ();
     let kernel: fn() = unsafe { core::mem::transmute(kernel) };
     kernel();
-    stdio::puts(b"Jumping to kernel");
 }

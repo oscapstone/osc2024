@@ -1,3 +1,3 @@
 pub mod mailbox;
-pub mod reboot;
 pub mod uart;
+pub mod watchdog;
