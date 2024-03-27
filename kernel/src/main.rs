@@ -3,3 +3,4 @@
 
 mod cpu;
 mod os;
+extern crate alloc;
