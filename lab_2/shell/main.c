@@ -31,9 +31,12 @@
 
 void main(int argc, char* argv[]){
    uart_init();
-   //cpio_ls();
+   cpio_ls();
    cpio_cat("hello2.txt");
-   //cpio_ls();
+   cpio_ls();
    cpio_cat("hello.txt");
+   int* data = (int *)simple_malloc((unsigned long) sizeof(int)*8);
+   int* b = (int *)simple_malloc((unsigned long) sizeof(int)*8);
+   uart_puts("exit normally");
    return;
 }

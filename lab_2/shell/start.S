@@ -3,6 +3,15 @@
 .global _start
 
 _start:
+    // read cpu id, stop slave cores
+    mrs     x1, mpidr_el1
+    and     x1, x1, #3
+    cbz     x1, 2f
+    // cpu id > 0, stop
+1:  wfe
+    b       1b
+2:  // cpu id == 0
+
     // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     ldr     x1, =_start
     mov     sp, x1
@@ -15,7 +24,7 @@ _start:
     sub     w2, w2, #1
     cbnz    w2, 3b
 
-    // jump to relocated C code, should not return
+    // jump to C code, should not return
 4:  bl      main
     // for failsafe, halt this core too
-    b       =0x80000
+    b       1b

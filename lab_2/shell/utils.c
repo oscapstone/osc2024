@@ -1,7 +1,7 @@
 #define PM_PASSWORD 0x5a000000
 #define PM_RSTC 0x3F10001c
 #define PM_WDOG 0x3F100024
-
+#define SIMPLE_MALLOC_BUFFER_SIZE 8192
 
 unsigned long utils_atoi(const char *s, int char_size) {
     unsigned long num = 0;
@@ -84,4 +84,22 @@ void reset(int tick) {                 // reboot after watchdog timer expire
 void cancel_reset() {
     set(PM_RSTC, PM_PASSWORD | 0);  // full reset
     set(PM_WDOG, PM_PASSWORD | 0);  // number of watchdog tick
+}
+
+
+static unsigned char simple_malloc_buffer[SIMPLE_MALLOC_BUFFER_SIZE];
+static unsigned long simple_malloc_offset = 0;
+
+void* simple_malloc(unsigned long size){
+	//align to 8 bytes
+	utils_align(&size,8);
+
+	if(simple_malloc_offset + size > SIMPLE_MALLOC_BUFFER_SIZE) {
+		//Not enough space left
+		return (void*) 0;
+	}
+	void* allocated = (void *)&simple_malloc_buffer[simple_malloc_offset];
+	simple_malloc_offset += size;
+	
+	return allocated;
 }

@@ -47,6 +47,8 @@ clean:
 
 run:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial pty -display none -d in_asm
+run2:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -d in_asm
 
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -s -S

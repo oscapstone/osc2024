@@ -49,4 +49,4 @@ run:
 	qemu-system-aarch64 -M raspi3b -kernel shell_kernel.img -initrd initramfs.cpio -serial null -serial stdio -display none
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -s -S
+	qemu-system-aarch64 -M raspi3b -kernel shell_kernel.img -initrd initramfs.cpio -serial null -serial stdio -display none -s -S
