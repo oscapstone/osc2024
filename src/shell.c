@@ -34,7 +34,7 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
   uart_init();
   uart_flush();
-  uart_printf("\n[%f] Init PL011 UART done\n", get_timestamp());
+  uart_printf("\n[%f] Init UART done\n", get_timestamp());
 }
 
 void shell_input(char *cmd) {
@@ -155,7 +155,7 @@ void shell_controller(char *cmd) {
     uart_printf("%f\n", get_timestamp());
   } else if (!strcmp(cmd, "loadimg")) {
     asm volatile(
-        "ldr x30, =0x60120;"
+        "ldr x30, =0x60000;"
         "ret;");
   }
   // else if (!strcmp(cmd, "showpic")) {
