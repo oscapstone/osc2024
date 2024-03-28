@@ -3,7 +3,7 @@ GCC		= aarch64-linux-gnu-gcc
 LD		= aarch64-linux-gnu-ld
 OBJCOPY	= aarch64-linux-gnu-objcopy
 
-CFLAGS	= -Wall -Wextra -Wpedantic -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
+CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding -nostdinc -nostdlib -nostartfiles
 
 SRC_FILES = $(wildcard *.c)
 

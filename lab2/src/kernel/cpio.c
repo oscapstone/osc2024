@@ -2,14 +2,25 @@
 #include "uart.h"
 #include "utils.h"
 
-char* cpio_findFile(char* addr, const char* name) {
+extern char* cpio_addr;
 
+char* cpio_findFile(const char* name, unsigned int len) {
+    char* addr = cpio_addr;
     // at the end of the cpio files has the special name TRAILER!!!
-    while (string_compare((char*)(addr + sizeof(struct cpio_newc_header)), "TRAILER!!!") == 0) {
-        if (string_compare((char*)(addr + sizeof(struct cpio_newc_header)), name) != 0) {
+    while (utils_strncmp((char*)(addr + sizeof(struct cpio_newc_header)), "TRAILER!!!", 10) != 0) {
+        struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
+        if (utils_strncmp(header->c_magic, "070701", 6)) {
+            uart_send_string("Error CPIO type!!\n");
+            uart_send_string_len(header->c_magic, 6);
+            uart_send_string("\n");
+            return 0;
+        }
+        // uart_send_string("Finding: ");
+        // uart_send_string((char*)(addr + sizeof(struct cpio_newc_header)));
+        // uart_send_string("\n");
+        if (utils_strncmp((char*)(addr + sizeof(struct cpio_newc_header)), name, len) == 0) {
             return addr;
         }
-        struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
         unsigned long pathname_size = atoi(header->c_namesize,(int)sizeof(header->c_namesize));;
         unsigned long file_size =  atoi(header->c_filesize,(int)sizeof(header->c_filesize));
         unsigned long headerPathname_size = sizeof(struct cpio_newc_header) + pathname_size;
@@ -23,13 +34,15 @@ char* cpio_findFile(char* addr, const char* name) {
     return 0;
 }
 
-void cpio_ls(char* addr){
+void cpio_ls() {
 
-	while(!string_compare((char *)(addr+sizeof(struct cpio_newc_header)),"TRAILER!!!")) {
+    char* addr = cpio_addr;
+
+	while(utils_strncmp((char *)(addr+sizeof(struct cpio_newc_header)),"TRAILER!!!", 10) != 0) {
 		
 
 		struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
-        if (string_compare(header->c_magic, "070701")) {
+        if (utils_strncmp(header->c_magic, "070701", 6)) {
             uart_send_string("Error CPIO type!!\r\n");
             uart_send_string_len(header->c_magic, 6);
             return;
@@ -49,11 +62,13 @@ void cpio_ls(char* addr){
 }
 
 
-void cpio_cat(char* addr, char *filename)
-{
-    addr = cpio_findFile(addr, filename);
+void cpio_cat(char *filename, unsigned int len)
+{ 
+    char* addr = cpio_findFile(filename, len);
     if (!addr) {
-        uart_send_string("File not found\r\n");
+        uart_send_string("Filename: ");
+        uart_send_string_len(filename, len);
+        uart_send_string("\nFile not found\n");
         return;
     }
     struct cpio_newc_header* header = (struct cpio_newc_header*) addr;

@@ -1,10 +1,14 @@
 .section ".text.boot"
 
+// functions
 .global _start
 
+// variables
+.global _dtb_ptr
 
 _start:
 	
+
 	// read cpu id, stop slave cores
 	mrs     x1, mpidr_el1
 	and		x1, x1, #3
@@ -16,6 +20,12 @@ halt:
 	b		halt
 
 init:
+	
+	// load the dtb addr
+	ldr		x1, =0x0
+	ldr		x2, [x1]
+	ldr		x3, =_dtb_ptr
+	str		x2, [x3]
 	
 	// init stack pointer, because the code start from _start so lower address space can be stack
 	ldr		x1, =_start
@@ -33,3 +43,6 @@ clear_bss:
 kernel_main:
 	bl		main					// branch label: will link in linking state
 	b		halt
+
+.section ".data"
+_dtb_ptr: .quad 0x0

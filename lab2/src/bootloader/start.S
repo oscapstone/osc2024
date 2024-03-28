@@ -2,8 +2,18 @@
 
 .global _start
 
-// boot loader start section, start from addr: 0x60000 (config in linker.ld)
+// boot loader start section, start from addr: 0x60000 but load in 0x80000 (config in linker.ld)
 _start:
+
+	// read cpu id, stop slave cores
+	mrs     x1, mpidr_el1
+	and		x1, x1, #3
+	cbz		x1, init		// branch to init if x1 == 0
+
+init:
+	// storing dtb memory address from teacher's bootloader at the very begining
+	ldr		x1, =0x0
+	str		x0, [x1]
 
 	ldr		x1, =0x80000				// where to copy
 	ldr		x2, =__bootloader_start		// where to paste

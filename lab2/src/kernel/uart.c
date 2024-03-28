@@ -3,70 +3,8 @@
 
 void uart_init() {
 	
-    register unsigned int r;
-    // P.104 Since I need UART 1 Transmit/Receive Data -> TXD1/RXD1
-    // p.102 I find These two in GPIO 14/15 Fun5
-    // Since each GPFSEL controls 10 pin, GPFSEL1 controls 10-19
-    // That's why I need GPFSEL1  
-    r=*GPFSEL1;
-    r&=~((7<<12)|(7<<15)); // gpio14, gpio15 clear to 0
-    r|=(2<<12)|(2<<15);    // set gpio14 and 15 to 010/010 which is alt5
-    *GPFSEL1 = r;          // from here activate Trasmitter&Receiver
-
-    //Since We've set alt5, we want to disable basic input/output
-    //To achieve this, we need diable pull-up and pull-dwon
-    *GPPUD = 0;   //  P101 top. 00- = off - disable pull-up/down 
-    //Wait 150 cycles
-    //this provides the required set-up time for the control signal 
-    r=150; while(r--) { asm volatile("nop"); }
-    // GPIO control 54 pins
-    // GPPUDCLK0 controls 0-31 pins
-    // GPPUDCLK1 controls 32-53 pins
-    // set 14,15 bits = 1 which means we will modify these two bits
-    // trigger: set pins to 1 and wait for one clock
-    *GPPUDCLK0 = (1<<14)|(1<<15);
-    r=150; while(r--) { asm volatile("nop"); }
-    *GPPUDCLK0 = 0;        // flush GPIO setup
-
-
-    r=1000; while(r--) { asm volatile("nop"); }
-
-    /* initialize UART */
-    *AUX_ENABLE |=1;       
-    //P.9: If set the mini UART is enabled. The UART will
-    //immediately start receiving data, especially if the
-    //UART1_RX line is low.
-    //If clear the mini UART is disabled. That also disables
-    //any mini UART register access 
-    *AUX_MU_CNTL = 0;
-   //P.17 If this bit is set the mini UART receiver is enabled.
-   //If this bit is clear the mini UART receiver is disabled
-   //Prevent data exchange in initialization process
-    *AUX_MU_IER = 0;
-   //Set AUX_MU_IER_REG to 0. 
-   //Disable interrupt because currently you don’t need interrupt.
-    *AUX_MU_LCR = 3;       
-   //P.14: 00 : the UART works in 7-bit mode
-   //11(3) : the UART works in 8-bit mode
-   //Cause 8 bits can use in ASCII, Unicode, Char
-    *AUX_MU_MCR = 0;
-   //Don’t need auto flow control.
-   //AUX_MU_MCR is for basic serial communication. Don't be too smart
-    *AUX_MU_BAUD = 270;
-   //set BAUD rate to 115200(transmit speed)
-   //so we need set AUX_MU_BAUD to 270 to meet the goal
-   // 7. Set AUX_MU_IIR_REG to 6. No FIFO.
-	// 31:8 Reserved, 7:6 FIFO enables, 5:4 zero, 2:1 READ bits WRITE bits
-	//	    76543210
-	// 0xc6 11000110
-    *AUX_MU_IIR = 0xc6;
-   // bit 6 bit 7 No FIFO. Sacrifice reliability(buffer) to get low latency    // 0xc6 = 11000110
-   // Writing with bit 1 set will clear the receive FIFO
-   // Writing with bit 2 set will clear the transmit FIFO
-   // Both bits always read as 1 as the FIFOs are always enabled  
-    /* map UART1 to GPIO pins */
-    *AUX_MU_CNTL = 3; // enable Transmitter,Receiver
-    
+	register unsigned int r;
+	
 	r = *GPFSEL1;
 	r &= ~((7<<12)|(7<<15)); // gpio14, gpio15 clear to 0
 	r |= (2<<12)|(2<<15);    // set gpio14 and 15 to 010/010 which is alt5
@@ -81,7 +19,31 @@ void uart_init() {
 	*GPPUDCLK0 = 0;
 	
 	// 
-	r = 500; while (r--) { asm volatile("nop"); }	
+	r = 1000; while (r--) { asm volatile("nop"); }	
+	
+	// 1. set AUXENB register to enable mini UART.
+	*AUX_ENABLE |= 1;
+	// 2. Set AUX_MU_CNTL_REG to 0. Disable transmitter and receiver during configuration.
+	*AUX_MU_CNTL = 0;
+	// 3. Set AUX_MU_IER_REG to 0. Disable interrupt because currently you don’t need interrupt.
+	*AUX_MU_IER = 0;
+	// 4. Set AUX_MU_LCR_REG to 3. Set the data size to 8 bit.
+	*AUX_MU_LCR = 3;
+	// 5. Set AUX_MU_MCR_REG to 0. Don’t need auto flow control.
+	*AUX_MU_MCR = 0;
+	// 6. Set AUX_MU_BAUD to 270. Set baud rate to 115200
+	// by calculation the BAUD reg should be 270.2673611111 = 270
+	*AUX_MU_BAUD = 270;
+	// 7. Set AUX_MU_IIR_REG to 6. No FIFO.
+	// 31:8 Reserved, 7:6 FIFO enables, 5:4 zero, 2:1 READ bits WRITE bits
+	//	    76543210
+	//  0x6 00000110
+	*AUX_MU_IIR = 0xc6;
+	// 8. Set AUX_MU_CNTL_REG to 3. Enable the transmitter and receiver.
+	*AUX_MU_CNTL = 3;
+	// 
+	r = 1000; while (r--) { asm volatile("nop"); }	
+
 }
 
 /**
@@ -148,3 +110,15 @@ void uart_binary_to_hex(unsigned int d) {
         uart_send_char(n);
     }
 }
+
+void uart_hex64(U64 value) {
+    unsigned int n;
+    for(int c = 60; c >= 0;c -= 4) {
+        // get highest tetrad
+        n=(value >> c)&0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n += n > 9 ? 0x37 : 0x30;
+        uart_send_char(n);
+    }
+}
+

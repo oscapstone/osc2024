@@ -1,5 +1,5 @@
 
-
+#include "utils.h"
 
 int string_compare(const char* str1,const char* str2) {
 	for(;*str1 !='\n'||*str2 !='\0';str1++,str2++){
@@ -30,4 +30,32 @@ void align(void *size, unsigned int s) {
 	unsigned long* x = (unsigned long*) size;
 	unsigned long mask = s-1;
 	*x = ((*x) + mask) & (~mask);
+}
+
+int utils_strncmp(const char* s1, const char* s2, unsigned int n) {
+	if (n == 0)
+		return (0);
+	do {
+		if (*s1 != *s2++)
+			return (*(unsigned char *)s1 - *(unsigned char *)--s2);
+		if (*s1++ == 0)
+			break;
+	} while (--n != 0);
+	return (0);
+}
+
+U32 utils_transferEndian(U32 value) {
+    const U8 *bytes = (const U8 *) &value;
+	U32 ret = (U32)bytes[0] << 24 | (U32)bytes[1] << 16 | (U32)bytes[2] << 8 | (U32)bytes[3];
+	return ret;
+}
+
+U32 utils_align_up(U32 size, int alignment) {
+  return (size + alignment - 1) & ~(alignment-1);
+}
+
+U64 utils_strlen(const char *s) {
+    U64 i = 0;
+	while (s[i]) i++;
+	return i+1;
 }

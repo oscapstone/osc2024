@@ -1,6 +1,8 @@
 
 #include "uart.h"
 
+extern void* _dtb_ptr;
+
 void main() {
     
     uart_init();
@@ -33,7 +35,7 @@ void main() {
     uart_send_string("kernel loaded\n");
     
     asm volatile(
-       "mov x30, 0x80000;"
+       "mov lr, 0x80000;"
        "ret;"
     );
 
