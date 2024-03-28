@@ -5,7 +5,7 @@
 #define PM_RSTC     (volatile unsigned int*)0x3F10001c
 #define PM_WDOG     (volatile unsigned int*)0x3F100024
 
-#define MAX_COMM_NUM 7
+#define MAX_COMM_NUM 6
 
 typedef struct{
   const char *name;
@@ -19,7 +19,6 @@ int reboot();
 int lshw();
 int ls();
 int cat();
-int test();
 
 extern Command commands[];
 

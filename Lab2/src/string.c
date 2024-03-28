@@ -1,4 +1,6 @@
 #include "string.h"
+#include <stddef.h>
+
 
 int strlen(const char* str){
   int i = 0;
@@ -29,6 +31,16 @@ int memcmp(const void *s1, const void *s2, int n){
     else if(a[i] > b[i])
       return 1;
   }
+  return 0;
+}
+
+int strcpy(char* str1, const char* str2){
+  while(*str2 != '\0'){
+    if(str1 == NULL)
+      return -1;
+    else *str1++ = *str2++;
+  }
+  *str1 = '\0';
   return 0;
 }
 

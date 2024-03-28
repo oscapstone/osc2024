@@ -2,8 +2,6 @@
 #include "mini_uart.h"
 #include "mailbox.h"
 #include "initrd.h"
-#include "string.h"
-#include "heap.h"
 
 Command commands[] = {
     {"help", "print all available commands.", help},
@@ -11,8 +9,7 @@ Command commands[] = {
     {"lshw", "show some hardware information.", lshw},
     {"reboot", "reboot the device.", reboot},
     {"ls", "list directory contents", ls},
-    {"cat", "print on the standard output", cat},
-    {"test", "simple malloc", test}
+    {"cat", "print on the standard output", cat}
 };
 
 // enum Type inputToType(const char* command){
@@ -80,15 +77,4 @@ int cat(){
   
   initrd_cat(filename);
   return 0;
-}
-
-int test(){
-      uart_sends("simple malloc test:\n");
-    char *str = (char*)simple_malloc(7);
-    char cpy[] = "Hello";
-    strcpy(str, cpy);
-    uart_sends("The malloc str: ");
-    uart_sends(str);
-    uart_sends("\n");
-    return 0;
 }

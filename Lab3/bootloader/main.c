@@ -3,32 +3,23 @@
 
 
 void main(){
-
+  
   uart_init();
-
+  
   // uint8_t size_bytes[4];
   uint32_t kernel_size = 0;
 
-  // uart_sends("\nWait for loading...");
+  uart_sends("\nWait for loading...\n");
 
 
   // while(1)
   //   uart_send('1');
   for(int i = 0; i < 4; i++){
     // size_bytes[i] = uart_recv();
-    // char c = uart_recv();
-    // if(c == 0xFF){
-    //   i--;
-    //   continue;
-    // }
-
     kernel_size = (kernel_size << 8) | (uart_recv() & 0xff);
-    // kernel_size = (kernel_size) | ((uart_recv()) << (8*i));
     // char c = uart_recv();
     // uart_send(c);
   }
-  // char c = uart_recv();
-  // uart_sendc(c);
   // kernel_size = (size_bytes[0]<<24)|(size_bytes[1]<<16)|(size_bytes[2]<<8)|size_bytes[3];
   uart_sends("The kernel size: ");
   uart_sendh(kernel_size);

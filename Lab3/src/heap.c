@@ -6,7 +6,7 @@ void* simple_malloc(int n){
   static char *heap_ptr = NULL;
   
   if(heap_ptr == NULL)
-    heap_ptr = (char*)&bss_end;
+    heap_ptr = bss_end;
 
   void *allocated_memory = (void *)heap_ptr;
   heap_ptr += n;
