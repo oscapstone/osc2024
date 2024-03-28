@@ -27,16 +27,20 @@ void bootloader_main(void* dtb)
                     uart_puts("\rUse send_loader.py to load kernel\r\n");
                     unsigned int size = 0;
                     unsigned char *size_buffer = (unsigned char *) &size;
-                    for(int i=0; i<4; i++) 
+                    for(int i=0; i<4; i++) //recieve for bytes of data -> size of kernel
                         size_buffer[i] = uart_getc();
                     uart_puts("got kernel size, start receiving kernel\r\n");
 
-                    char *kernel = (char *) 0x80000;
-                    while(size--) *kernel++ = uart_getc();
+                    char *kernel = (char *) 0x80000; // load kernel in 0x80000
+                    while(size--) *kernel++ = uart_getc(); // reed bytes with the size of kernel
 
                     uart_puts("kernel-loaded\r\n");
-                    void (*kernel_entry)(void *) = (void (*)(void *))0x80000;
-                    kernel_entry(dtb);
+                    
+                    /*
+                    kernel_entry: a function pointer point to 0x80000, which recieves a void * as input
+                    */
+                    void (*kernel_entry)(void *) = (void (*)(void *))0x80000; //jump into loaded kernel
+                    kernel_entry(dtb); // (dtb is saved in x0 for kernel loaded)
 
                     return;
                 }

@@ -4,6 +4,7 @@
 
 
 struct fdt_header {
+    // big endian default
     unsigned int magic;             // Magic word, signifies the start of the FDT blob
     unsigned int totalsize;         // Total size of the FDT blob in bytes
     unsigned int off_dt_struct;     // Offset to the structure block from the beginning of the FDT
@@ -16,7 +17,8 @@ struct fdt_header {
     unsigned int size_dt_struct;    // Size of the structure block in bytes
 };
 
-// 16進制轉成2進制，兩個bit變8個binary，就會試value的一個int
+// when hex to binary, two digit become 8 binary, which is a byte of int
+// little endian to fit the environment
 unsigned int big_to_little_endian(unsigned int value) {
     return ((value & 0xFF000000) >> 24) | \
            ((value & 0x00FF0000) >> 8) | \
@@ -36,20 +38,29 @@ unsigned int big_to_little_endian_add(const char *address) {
 
 void parse_new_node(char *address, char *string_address, char *target, void (*callback)(char *))
 {
+    /*
+    Tranverse into every node, get struct which contains len of prop and name address when meet prop. String + name -> property name, len -> property size.
+    */
     while (*(address) == FDT_BEGIN_NODE_TOKEN)
     {
         // skip name of the node
         while (*(address) != NULL){
             address++;
         }
-
+        //NULL terminating and align
         while (*(address) == NULL){
             address++;
         }
 
-        // properties (attributes)
+        // properties of the node
         while (*address == FDT_PROP_TOKEN)
         {
+            /*
+            struct {
+                uint32_t len;
+                uint32_t nameoff;
+            }
+            */
             address++;
 
             // get the length of attribute
@@ -63,6 +74,8 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
             // if the attribute is correct, get the attribute address
             if (strcmp(string_address + temp, target) == 0)
             {
+                /* The /chosen node does not represent a real device in the system but describes parameters chosen or specified by 
+                the system firmware at run time. It shall be a child of the root node. */
                 callback((char *)big_to_little_endian_add(address));
                 uart_puts("found initrd!");
                 uart_puts("\n");
@@ -96,19 +109,21 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
 
 void fdt_tranverse(char *address, char *target_property, void (*callback)(char *))
 {
+    
     struct fdt_header * header = (struct fdt_header *) address;
     unsigned int temp;
     unsigned int offset_struct, offset_strings, magic;
     magic = big_to_little_endian(header -> magic);
 
-    if (magic != FDT_MAGIC_NUMBER)
+    if (magic != FDT_MAGIC_NUMBER) //0xD00DFEED
     {
         uart_puts("Invalid device tree\n");
         return;
     }
 
-    offset_struct = big_to_little_endian(header -> off_dt_struct); //value in dtb is big endian
-    offset_strings = big_to_little_endian(header -> off_dt_strings);
+    //value in dtb is big endian
+    offset_struct = big_to_little_endian(header -> off_dt_struct); //the offset to get the structure block
+    offset_strings = big_to_little_endian(header -> off_dt_strings); //the offset to get the property name
 
     char *newAddress = address + offset_struct;
     

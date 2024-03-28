@@ -22,11 +22,26 @@ python3 send_loader.py -s [serial path] -f [kernel file]
 #### Bootloader main
 1. use uart_getc() to get byte and save in char array. (4byte -> int)
 2. load kernel with the size.
-3. jump into 0x80000 (x30: linker)
+3. jump into 0x80000
+
+```
+/*
+kernel_entry: a function pointer point to 0x80000, which recieves a void * as input
+*/
+void (*kernel_entry)(void *) = (void (*)(void *))0x80000; //jump into loaded kernel
+kernel_entry(dtb); // (dtb is saved in x0 for kernel loaded)
+```
+
+#### Config
+Load bootloader with 64bit to fit ARMv8 (64bit ARM) architecture, since the bootloader is compiled with aarch64 compiler
+```
+kernel=bootloader.img
+arm_64bit=1
+```
 
 ### Relocation
 Rpi 3b+ will automatically load kernel into 0x80000, so the bootloader should relocate itself to 0x60000 to preserve the memory for the kernel, and since the linker linked it to 0x60000, we should load the bootloader to 0x60000 for normal performance
-把自己移到 0x60000 後開始執行。
+
 ```
 .section ".text.boot"
 
@@ -34,7 +49,7 @@ Rpi 3b+ will automatically load kernel into 0x80000, so the bootloader should re
 
 _start:
 	// relocate bootloader
-    mov     x28, x0
+    //mov     x28, x0
 	ldr x1, =0x80000 //64 bits for address, 0x1 = 1 byte
 	ldr x2, =0x60000 //ldr: put address to register
 	ldr w3, =__bootloader_size //size, 32 bit is enough
@@ -72,36 +87,18 @@ init_cpu:
 
     // jump to C code, should not return
 
-4:  bl      bootloader_main-0x20000
+4:  bl      bootloader_main-0x20000 //the kernel is moved back 0x20000, so the address to jump should be moved back too
     // for failsafe, halt this core too
     b       1b
 ```
 
-#### 關於地址如何被設定(為何bss等不用改，但bootloader_main要)
-為甚麼bootloader main會有地址差異，但其他bss等等的東西卻是基於0x60000的?
 
-当您的bootloader执行自我重定位时，这个过程主要涉及将整个程序代码（.text段或更多）从一个地方（比如0x80000）复制到另一个地方（比如0x60000）。这种操作通常是因为程序最初被加载到了一个非预期的内存地址，需要移动到一个特定的地址以满足运行时需求或硬件约束。
-
-关于bootloader_main地址差异
-编译和链接时的地址安排：在编译和链接过程中，所有符号（包括函数和变量）的地址都是基于链接器脚本中指定的起始地址（在这个例子中是0x60000）来分配的。这意味着bootloader_main和全局变量（比如.data和.bss段中的变量）的地址都是按照这个基址来计算的。
-执行重定位：当bootloader在运行时将自己从0x80000复制到0x60000时，这个操作实际上改变了程序代码在物理内存中的位置，但并不自动更新那些编译时计算出的地址。因此，尽管bootloader_main的代码被移动了，但CPU执行到bl bootloader_main-0x20000这条指令时，需要考虑到这个地址偏差，以确保能正确跳转到新位置的bootloader_main。
-关于.bss和其他段的处理
-.bss和其他数据段：对于.bss（未初始化数据段）和.data（已初始化数据段）这样的数据段，它们的地址在编译和链接时也是基于0x60000这个基址来安排的。当bootloader执行重定位操作时，通常需要确保这些数据段也被适当地处理，以反映它们在内存中的新位置。这可能涉及到更新指向这些段的指针，或者在重定位过程中复制这些数据到新的地址。
-地址修正：对于通过绝对地址访问的符号（如通过直接引用bootloader_main的地址），如果存在基地址的偏移（如从0x80000到0x60000的移动），则需要在代码中显式地考虑这种偏移。然而，对于大多数程序数据（如全局变量），一旦它们被加载或复制到正确的位置，程序内的相对引用（如指针）应该仍然有效，因为这些引用是基于编译时确定的地址偏移。
-总之，bootloader_main地址差异的处理特别是因为它是通过一条需要计算绝对地址的指令（如bl）直接访问的，而.bss和其他段的数据通常是通过相对地址或指针访问，这些在程序正确重定位后自然会指向正确的位置。正确管理这些地址和重定位的关键在于确保程序的所有部分都被考虑到，并且在必要时进行地址的适当调整。
-
-bootloader_main的地址到底是基於它加載的位置還是linker提供的?
-
-bootloader_main的地址是基于它加载的位置，而不是链接器提供的位置。
-
-在链接器的工作中，它会决定将bootloader_main函数放置在可执行文件的某个位置，这个位置是相对于链接地址（linker-provided address）的。但是，当程序被加载到内存中执行时，操作系统或者加载程序会将可执行文件加载到内存的某个位置，这个位置是程序的实际加载地址（load address）。因此，bootloader_main的地址是基于它加载到内存中的位置来计算的。
-
-在启动代码中，你可能需要手动减去某个偏移量来调用bootloader_main，以确保程序能够正确执行。这个偏移量通常是由程序加载到内存时的地址与链接地址之间的差异来确定的。
 
 ### Initial Ramdisk
+A temporary root filesystem loaded after initialzing kernel. (SD card is not loaded, can still load file in archive file) (for init)
 ```
 struct cpio_newc_header {
-    char c_magic[6];         // Magic number identifying the CPIO format
+    char c_magic[6];         // Magic number identifying the CPIO format 070701
     char c_ino[8];           // Inode number
     char c_mode[8];          // File mode and type
     char c_uid[8];           // User ID of file owner
@@ -117,15 +114,26 @@ struct cpio_newc_header {
     char c_check[8];         // Checksum
 };
 ```
-先把指針移動超過header後，會指到檔名的地方，可以把它印出來以後，再加上name的size，然後對齊四的倍數就會到檔案內容的地方，可以把它印出來以後，再對齊四的倍數就會是下一個檔案的header。
-#### 創建initramfs.cpio
+
+First point to the fs pointer, get the name_size and file_size from header, then skip the header address (110). After that, you can check the filename (Terminal if see TRAILER!!!).
+
+Since newc is aligned with 4 byte, move pointer with name size and align. Then the pointer is at the address of file content. After that, move the pointer with filesize and align to the next file header. 
+
+#### initramfs.cpio
+（copy in, copy out）header -> filename -> file content
 ```
 cd rootfs
 find . | cpio -o -H newc > ../initramfs.cpio //-H header newc format
 cd ..
 ```
+#### why using newc?
+* newc use 8-byte hex for saving the data and 4-byte align , which is compatible for many device.
+* newc is widely used as default(standard) ramdisk format in many Linux or UNIX cpio archive format 
+* Easier structure
+
 
 ### Simple Allocator
+The pool will be located in bss since it is uninitialized data
 ```
 static char memory_pool[MEMORY_POOL_SIZE]; //create a memory pool
 static char *next_free = memory_pool; //the current address which is not allocated
@@ -144,7 +152,114 @@ void *simple_alloc(int size) {
 ### DeviceTree
 **Reference**
 * DTS code: https://github.com/raspberrypi/linux/blob/rpi-5.10.y/arch/arm/boot/dts/bcm2710-rpi-3-b-plus.dts
+* Specification: https://www.devicetree.org/specifications/
 
 ```
 qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 ```
+Name: NULL terminating
+(Name -> NULL -> prop_token -> struct -> prop -> END)
+
+#### fdt_tranverse
+Tranverse into every node, get struct which contains len of prop and name address when meet prop. String + name -> property name, len -> property size.
+```
+while (*address == FDT_PROP_TOKEN)
+        {
+            /*
+            struct {
+                uint32_t len;
+                uint32_t nameoff;
+            }
+            */
+            address++;
+
+            // get the length of attribute
+            int len = big_to_little_endian_add(address);
+            address += 4;
+
+            // get the length to find the target attribute
+            int temp = big_to_little_endian_add(address);
+            address += 4;
+
+            // if the attribute is correct, get the attribute address
+            if (strcmp(string_address + temp, target) == 0)
+            {
+                /* The /chosen node does not represent a real device in the system but describes parameters chosen or specified by 
+                the system firmware at run time. It shall be a child of the root node. */
+                callback((char *)big_to_little_endian_add(address));
+                uart_puts("found initrd!");
+                uart_puts("\n");
+                uart_send('\r');
+            }
+
+            // jump the value of the attribute
+            address += len;
+            while (*(address) == NULL){
+                address++;
+            }
+        }
+```
+
+Example:
+```
+serial@40002000 {
+    compatible = "arm,pl011", "arm,primecell";
+    reg = <0x40002000 0x1000>;
+    interrupts = <26>;
+};
+```
+Contains three Nodes
+
+#### Target: linux,initrd-start
+The /chosen node does not represent a real device in the system but describes parameters chosen or specified by the system firmware at run time. It shall be a child of the root node.
+```
+/ {
+	chosen {
+		linux,initrd-start = <0x82000000>;
+		linux,initrd-end = <0x82800000>;
+	};
+};
+```
+
+#### Multilayer Node
+```
+&spi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins &spi0_cs_pins>;
+	cs-gpios = <&gpio 8 1>, <&gpio 7 1>;
+
+	spidev0: spidev@0{
+		compatible = "spidev";
+		reg = <0>;	/* CE0 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-max-frequency = <125000000>;
+	};
+
+	spidev1: spidev@1{
+		compatible = "spidev";
+		reg = <1>;	/* CE1 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-max-frequency = <125000000>;
+	};
+};
+```
+PROP -> PROP -> PROP -> NODE_BEGIN -> PROP -> ... -> NODE_END
+
+
+#### Alignment
+{name} + NULL (if %4 != 0 -> add NULLs) 
+
+
+#### Note: Endian
+Big Endian
+largest digit will be keep in lowest address (easy for human to watch)
+0x12345678，12 34 56 78
+
+Little Endian
+lowest digit will be keep in lowest address
+0x12345678，78 56 34 12
+
+#### Note: callback function
+can be called when a specific event is triggered

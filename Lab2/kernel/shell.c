@@ -51,7 +51,7 @@ void cpio_ls(){
         int name_size = hex_to_int(fs->c_namesize, 8);
         int file_size = hex_to_int(fs->c_filesize, 8);
         current += 110; // size of cpio_newc_header
-        if (strcmp(current, "TRAILER!!!") == 0)
+        if (strcmp(current, "TRAILER!!!") == 0) //end of archive
             break;
 
         uart_puts(current);
