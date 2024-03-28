@@ -34,6 +34,7 @@ typedef struct cpio_obj {
     cpio_meta_t *meta;
     cpio_ops_t  *ops;
     struct cpio_obj *next;
+    // FIXME: use doubly linked list maybe?
 } cpio_obj_t;
 
 
