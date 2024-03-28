@@ -17,7 +17,8 @@ mod utils;
 extern crate alloc;
 
 const MAX_COMMAND_LEN: usize = 0x400;
-const INITRAMFS_ADDR: u32 = 0x800_0000;
+
+static mut INITRAMFS_ADDR: u32 = 0;
 
 #[no_mangle]
 #[link_section = ".text.main"]
@@ -33,9 +34,11 @@ pub extern "C" fn main() {
     stdio::write(b" ");
     stdio::puts(utils::u32_to_hex(lb).as_ref());
 
-    // stdio::puts(b"Reading initramfs...");
+    unsafe {
+        INITRAMFS_ADDR = dtb::get_initrd_start().unwrap();
+    }
+
     stdio::println("Dealing with dtb...");
-    dtb::load_dtb();
 
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
@@ -44,7 +47,6 @@ pub extern "C" fn main() {
         stdio::gets(&mut buf);
         execute_command(&buf);
     }
-    // let _a: Vec<u32> = Vec::new();
 }
 
 fn execute_command(command: &[u8]) {
@@ -59,10 +61,10 @@ fn execute_command(command: &[u8]) {
     } else if command.starts_with(b"reboot") {
         peripheral::watchdog::reset(100);
     } else if command.starts_with(b"ls") {
-        let rootfs = filesystem::cpio::CpioArchive::load(INITRAMFS_ADDR as *const u8);
+        let rootfs = filesystem::cpio::CpioArchive::load(unsafe { INITRAMFS_ADDR } as *const u8);
         rootfs.print_file_list();
     } else if command.starts_with(b"cat") {
-        let rootfs = filesystem::cpio::CpioArchive::load(INITRAMFS_ADDR as *const u8);
+        let rootfs = filesystem::cpio::CpioArchive::load(unsafe { INITRAMFS_ADDR } as *const u8);
         let filename = &command[4..];
         if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
             stdio::write(data);

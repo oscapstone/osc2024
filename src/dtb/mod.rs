@@ -3,10 +3,8 @@ mod fdt;
 mod mem_rsvmap;
 mod strings;
 
-use stdio;
-
-pub fn load_dtb() {
-    stdio::println("Loading DTB...");
+fn load_dtb() -> dt::Dt {
+    // stdio::println("Loading DTB...");
     let dtb_addr = 0x50000 as *const u8;
     let dtb_addr = unsafe { core::ptr::read_volatile(dtb_addr as *const u32) };
     let header = fdt::FdtHeader::load(dtb_addr);
@@ -16,12 +14,17 @@ pub fn load_dtb() {
     let strings = strings::StringMap::load(strings_addr);
     let dt_struct_addr = dtb_addr + header.off_dt_struct;
     let dt = dt::Dt::load(dt_struct_addr, &strings);
+    dt
+}
 
-    let model = dt.get("linux,initrd-start");
-    stdio::print("initrd_start: ");
-    if let Some(model) = model {
-        model.print();
-    } else {
-        stdio::print("N/A");
+pub fn get_initrd_start() -> Option<u32> {
+    let dt = load_dtb();
+    let node = dt.get("linux,initrd-start");
+    match node {
+        Some(node) => match node.value {
+            dt::PropValue::Integer(value) => Some(value),
+            _ => None,
+        },
+        None => None,
     }
 }

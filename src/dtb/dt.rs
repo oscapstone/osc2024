@@ -114,7 +114,7 @@ fn read_string(addr: u32) -> String {
     string
 }
 
-enum PropValue {
+pub enum PropValue {
     Integer(u32),
     String(String),
 }
@@ -136,8 +136,8 @@ impl PropertyHeader {
 
 pub struct Property {
     length: u32,
-    name: String,
-    value: PropValue,
+    pub name: String,
+    pub value: PropValue,
 }
 
 impl Property {
@@ -178,20 +178,7 @@ impl Dt {
             for _ in 0..indent {
                 print("  ");
             }
-            print("  ");
-            print(prop.name.as_str());
-            print(": ");
-            match &prop.value {
-                PropValue::Integer(value) => {
-                    print("0x");
-                    print_u32(*value);
-                    println("");
-                }
-                PropValue::String(value) => {
-                    print(value.as_str());
-                    println("");
-                }
-            }
+            prop.print();
         }
         for child in self.children.iter() {
             child.print_with_indent(indent + 1);
@@ -205,7 +192,6 @@ impl Property {
         print(": ");
         match &self.value {
             PropValue::Integer(value) => {
-                print("0x");
                 print_u32(*value);
                 println("");
             }
