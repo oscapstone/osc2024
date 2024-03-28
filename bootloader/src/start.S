@@ -25,7 +25,6 @@
 .section ".text.relocate"
 
 .global _relocate
-
 _relocate:
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
@@ -62,7 +61,6 @@ _relocate:
 .section ".text.boot"
 
 .global _start
-
 _start:
     bl      main
 1:

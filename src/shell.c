@@ -30,8 +30,8 @@ void shell_controller(char *cmd)
     else if (!strcmp(cmd, "help")) {
         uart_puts("help      : print this help menu\n");
         uart_puts("hello     : print Hello World!\n");
-        // uart_puts("ls        : list file in initramfs.cpio\n");
-        // uart_puts("cat       : show the file content\n");
+        uart_puts("ls        : list file in initramfs.cpio\n");
+        uart_puts("cat       : show the file content\n");
         uart_puts("reboot    : reboot the device\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_puts("Hello World!\n");
@@ -39,15 +39,13 @@ void shell_controller(char *cmd)
         reset();
     } else if (!strcmp(cmd, "shutdown")) {
         power_off();
-    } 
-    // else if (!strcmp(cmd, "ls")) {
-    //     initrd_ls();
-    // } else if (!strcmp(cmd, "ls -l")) {
-    //     initrd_list();
-    // } else if (!strcmp(cmd, "cat")) {
-    //     initrd_cat();
-    // } 
-    else {
+    } else if (!strcmp(cmd, "ls")) {
+        initrd_ls();
+    } else if (!strcmp(cmd, "ls -l")) {
+        initrd_list();
+    } else if (!strcmp(cmd, "cat")) {
+        initrd_cat();
+    } else {
         uart_puts("shell: command not found\n");
     }
 }

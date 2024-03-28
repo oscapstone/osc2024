@@ -35,10 +35,27 @@
 
 void main()
 {
+    fdt_init();
     shell_init();
 
-    get_board_revision();
-    get_memory_info();
+    // get_board_revision();
+    // get_memory_info();
+
+    fdt_traverse(initramfs_callback);
+
+    // uart_hex(return_available());
+    // uart_send('\n');
+    char *string1 = simple_malloc(1);
+    uart_hex((unsigned int) string1);
+    uart_send('\n');
+
+    char *string2 = simple_malloc(sizeof(char) * 20);
+    uart_hex((unsigned int) string2);
+    uart_send('\n');
+
+    char *string3 = (char *) simple_malloc(sizeof(char) * 20);
+    uart_hex((unsigned int) string3);
+    uart_send('\n');
 
     while(1) {
         uart_puts("# ");

@@ -3,10 +3,10 @@
 
 
 
-typedef unsigned int size_t;
+typedef unsigned long size_t;
 
-#define BASE ((volatile unsigned int*)(0x60000))
-#define LIMIT ((volatile unsigned int*)(0x7FFFF))
+#define BASE  ((volatile void *)(0x60000))
+#define LIMIT ((volatile void *)(0x7FFFF))
 
 extern volatile unsigned long available;
 

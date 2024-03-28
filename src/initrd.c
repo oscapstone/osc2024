@@ -131,7 +131,7 @@ void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
         uint32_t load_addr = *((uint32_t *)(prop + 1));
         cpio_base = bswap_32(load_addr);
         uart_puts("cpio_base: ");
-        uart_hex(cpio_base);
+        uart_hex((unsigned int)cpio_base);
         uart_send('\n');
     }
 }
