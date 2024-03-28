@@ -76,14 +76,13 @@ impl CpioArchive {
         let filesize = self.get_filesize(ptr);
 
         let mut offset = 110 + namesize;
-        if offset % 2 != 0 {
-            offset += 1;
+        // if offset % 2 != 0 {
+        //     offset += 1;
+        // }
+        if offset % 4 != 0 {
+            offset += 4 - (offset % 4);
         }
         if filesize > 0 {
-            if offset % 4 != 0 {
-                offset += 4 - (offset % 4);
-            }
-
             offset += filesize;
 
             if offset % 4 != 0 {
