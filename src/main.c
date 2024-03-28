@@ -8,7 +8,7 @@ enum shell_status { Read, Parse };
 
 int main() {
   shell_init();
-  lfb_init();
+  // lfb_init();
   fdt_traverse(get_cpio_addr);
 
   enum shell_status status = Read;

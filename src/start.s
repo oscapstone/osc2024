@@ -28,18 +28,17 @@ master:
 
 .global _dtb_ptr	//define a global variable _dtb_ptr
 .section .data		//_dtb_ptr is in data section
-_dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value of 0x0
-
+_dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value of 0x0 (null pointer)
+// .dc.a: Define Constant - Absolute Address 
 
 // mrs: Load value from a system register to one of the general purpose registers (x0–x30)
 // and: Perform the logical AND operation. We use this command to strip the last byte from the value we obtain from the mpidr_el1 register.
 // cbz: Compare the result of the previously executed operation to 0 and jump (or branch in ARM terminology) to the provided label if the comparison yields true.
 // b: Perform an unconditional branch to some label.
-// adr: Load a label's relative address into the target register. In this case, we want pointers to the start and end of the .bss region.
+// adr: Load a label's relative address into the target register.
 // sub: Subtract values from two registers.
 // bl: "Branch with a link": perform an unconditional bra/nch and store the return address in x30 (the link register). When the subroutine is finished, use the ret instruction to jump back to the return address.
 // mov: Move a value between registers or from a constant to a register.
 // ldr: load data from memory into a register
 // str: store (write) a value from a register into memory at a specified address.
-
 

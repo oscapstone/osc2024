@@ -45,7 +45,6 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
         Node name (variable length, NULL-terminated): Specifies the name of the
         node being opened.
         */
-        // uart_printf("In FDT_BEGIN_NODE\n");
         cb(token, (char *)cur_ptr, (void *)0, 0);
         cur_ptr += align(strlen((char *)cur_ptr), 4);
         break;
@@ -53,7 +52,6 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
         /*
         Token type (4 bytes): Indicates that it's an FDT_END_NODE token.
         */
-        // uart_printf("In FDT_END_NODE;\n");
         cb(token, (char *)0, (void *)0, 0);
         break;
       case FDT_PROP: {
@@ -64,7 +62,6 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
         the strings block (nameoff). Property data (variable length): Contains
         the property data itself, the size of which is determined by len.
         */
-        // uart_printf("In FDT_PROP \n");
         unsigned int len = fdt_u32_le2be(cur_ptr);
         cur_ptr += 4;
         unsigned int nameoff = fdt_u32_le2be(cur_ptr);
@@ -75,11 +72,9 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
         break;
       }
       case FDT_NOP:
-        // uart_printf("In FDT_NOP\n");
         cb(token, (char *)0, (void *)0, 0);
         break;
       case FDT_END:
-        // uart_printf("In FDT_END\n");
         cb(token, (char *)0, (void *)0, 0);
         return 0;
       default:;
@@ -99,7 +94,7 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
    +-----------------+
    | strings block   | <- dtb_ptr + header->off_dt_strings (strings_ptr)
    +-----------------+
-    */
+*/
 
 int fdt_traverse(fdt_callback cb) {
   uart_printf("dtb_ptr address is at: 0x%x\n", (unsigned long int)_dtb_ptr);
