@@ -98,7 +98,6 @@ void main()
             uart_puts("Hello World!\n");
         }
         else if(strcmp(command, "reboot") == 0){
-            uart_puts("rebooting...\n");
             reset();
         }
     }
