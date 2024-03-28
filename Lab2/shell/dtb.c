@@ -49,6 +49,7 @@ int parse_struct(fdt_callback cb, uintptr_t cur_ptr, uintptr_t strings_ptr, uint
 			// uart_send_string("In FDT_BEGIN_NODE\n");
 			cb(token, (char *)cur_ptr, NULL, 0);
 			// go to next token
+			//padding node name
 			cur_ptr += utils_align_up(utils_strlen((char *)cur_ptr), 4);
 			break;
 		case FDT_END_NODE:
@@ -104,6 +105,7 @@ int fdt_traverse(fdt_callback cb, void *_dtb)
 
 	struct fdt_header *header = (struct fdt_header *)dtb_ptr;
 
+	// Big to little endian
 	uint32_t magic = fdt_u32_le2be(&(header->magic)); // header應為big endian
 
 	if (magic != 0xd00dfeed)

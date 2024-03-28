@@ -42,6 +42,7 @@ void cpio_ls(){
 		unsigned long file_size = utils_atoi(header->c_filesize,(int)sizeof(header->c_filesize));
 	    
         //align to 4-byte
+        //The  pathname is followed by NUL bytes so that the total size of the fixed header plus pathname is a multiple of four.
 		utils_align(&headerPathname_size,4);
 		utils_align(&file_size,4);
 		

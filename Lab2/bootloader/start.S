@@ -10,14 +10,14 @@
 _start:
 	mov x10, x0 //store dtb address
 	// relocate bootloader
-	ldr x1, =0x80000 /*x1 store data of 0x80000 */
+	ldr x1, =0x60000 /*x1 store data of 0x80000 */
 	ldr x2, =__bootloader_start /*x2 store data of 0x60000 */
 	ldr w3, =__bootloader_size	/*get bootloader size */
 
 // relocate bootloader
 relocate:
-	ldr x4,[x1],#8  /* get the data from x1(0x80000) to x4 and +8 */
-	str x4,[x2],#8	/* put the data in x2(0x60000) from x4 and +8 */
+	ldr x4,[x2],#8  /* get the data from x2(0x80000) to x4 and +8 */
+	str x4,[x1],#8	/* put the data in x1(0x60000) from x4 and +8 */
 	sub w3,w3,#1	/* bootloader size -1 */
 	cbnz w3,relocate	/* bootloader size !=0, go relocate */
 

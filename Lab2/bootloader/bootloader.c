@@ -45,6 +45,6 @@ void load_img(){
         // we must force an absolute address to branch to
         //x30:Link Register https://developer.arm.com/documentation/dui0801/l/Overview-of-AArch64-state/Link-registers?lang=en
        "mov x30, 0x80000;"
-       "ret;"
+       "ret;"   //return
     );
 }
