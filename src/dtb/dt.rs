@@ -5,7 +5,7 @@ use stdio::{print, print_u32, println};
 
 pub struct Dt {
     name: String,
-    properties: Vec<Properties>,
+    properties: Vec<Property>,
     children: Vec<Dt>,
     length: u32,
 }
@@ -47,7 +47,7 @@ impl Dt {
                 }
                 Lexical::Prop => {
                     addr += 4;
-                    let properties = Properties::load(addr, strings);
+                    let properties = Property::load(addr, strings);
                     addr += properties.length + 8;
                     dt.properties.push(properties);
                     addr = (addr + 3) & !3;
@@ -64,8 +64,17 @@ impl Dt {
         dt.length = addr - dt_addr;
         dt
     }
-    pub fn get(&self, name: &str) -> Option<&Properties> {
-        self.properties.iter().find(|prop| prop.name == name)
+    pub fn get(&self, name: &str) -> Option<&Property> {
+        if let Some(prop) = self.properties.iter().find(|prop| prop.name == name) {
+            return Some(prop);
+        } else {
+            for child in self.children.iter() {
+                if let Some(prop) = child.get(name) {
+                    return Some(prop);
+                }
+            }
+        }
+        None
     }
 }
 
@@ -125,29 +134,28 @@ impl PropertyHeader {
     }
 }
 
-pub struct Properties {
+pub struct Property {
     length: u32,
     name: String,
     value: PropValue,
 }
 
-impl Properties {
-    fn load(properties_addr: u32, strings: &StringMap) -> Properties {
-        let header = PropertyHeader::load(properties_addr);
+impl Property {
+    fn load(property_addr: u32, strings: &StringMap) -> Property {
+        let header = PropertyHeader::load(property_addr);
         let name = strings.get(header.nameoff);
         let value = match header.length {
             4 | 8 => {
-                let value =
-                    unsafe { core::ptr::read_volatile((properties_addr + 8) as *const u32) }
-                        .swap_bytes();
+                let value = unsafe { core::ptr::read_volatile((property_addr + 8) as *const u32) }
+                    .swap_bytes();
                 PropValue::Integer(value)
             }
             _ => {
-                let value = read_string(properties_addr + 8);
+                let value = read_string(property_addr + 8);
                 PropValue::String(value)
             }
         };
-        Properties {
+        Property {
             length: header.length,
             name,
             value,
@@ -155,6 +163,7 @@ impl Properties {
     }
 }
 
+#[allow(dead_code)]
 impl Dt {
     pub fn print(&self) {
         self.print_with_indent(0);
@@ -186,6 +195,24 @@ impl Dt {
         }
         for child in self.children.iter() {
             child.print_with_indent(indent + 1);
+        }
+    }
+}
+
+impl Property {
+    pub fn print(&self) {
+        print(self.name.as_str());
+        print(": ");
+        match &self.value {
+            PropValue::Integer(value) => {
+                print("0x");
+                print_u32(*value);
+                println("");
+            }
+            PropValue::String(value) => {
+                print(value.as_str());
+                println("");
+            }
         }
     }
 }

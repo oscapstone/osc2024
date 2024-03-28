@@ -30,6 +30,8 @@ impl FdtHeader {
             size_dt_struct: header.size_dt_struct.swap_bytes(),
         }
     }
+
+    #[allow(dead_code)]
     pub fn print(&self) {
         stdio::print("Magic: ");
         stdio::print_u32(self.magic);

@@ -20,6 +20,8 @@ impl MemRsvMap {
         }
         MemRsvMap { mem_rsv_map }
     }
+
+    #[allow(dead_code)]
     pub fn print(&self) {
         for mem_rsv in self.mem_rsv_map.iter() {
             mem_rsv.print();
@@ -42,6 +44,8 @@ impl MemRsv {
             size: mem_rsv.size.swap_bytes() as u64,
         }
     }
+
+    #[allow(dead_code)]
     pub fn print(&self) {
         stdio::print("Addr: ");
         stdio::print_u64(self.addr);
