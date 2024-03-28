@@ -25,8 +25,8 @@ def receiveMsg():
         # Read data from buffer
         data = ser.read(ser.inWaiting())
         print(data.decode(errors='ignore'))
-    else:
-        print('====No data available====')
+    # else:
+    #     print('====No data available====')
 
 def sendMsg():
     cmd = input("$ ")

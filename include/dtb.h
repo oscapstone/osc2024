@@ -28,20 +28,19 @@ typedef struct _fdt_header {
 
 typedef struct _fdt_node_header {
     uint32_t tag;
-    char name[0];
+    char name[0]; // char *
 } fdt_node_header;
 
 typedef struct _fdt_prop {
-    uint32_t len;
-    uint32_t nameoff;
+    uint32_t len; // gives the length of the property’s value in bytes
+    uint32_t nameoff; //  gives an offset into the strings block (see Section 5.5) at which the property’s name is stored as a null-terminated string.
 } fdt_prop;
 
 extern fdt_header *dtb_address;
 
 void fdt_init();
-
 void fdt_traverse(void (*callback)(fdt_prop *, char *, char *));
-// void fdt_traverse();
+
 
 
 #endif

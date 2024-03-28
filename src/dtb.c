@@ -26,8 +26,8 @@ void fdt_traverse(void (*callback)(fdt_prop *, char *, char *))
     if (bswap_32(dtb_address->magic) != FDT_MAGIC)
         return;
 
-    uint32_t *struct_sp = (uint32_t *) ((char *)dtb_address + bswap_32(dtb_address->off_dt_struct));
-    char *string_sp = (char *) ((uint32_t) dtb_address + bswap_32(dtb_address->off_dt_strings));
+    uint32_t *struct_sp = (uint32_t *) ((char *)dtb_address + bswap_32(dtb_address->off_dt_struct)); // offset to structure
+    char *string_sp = (char *) ((uint32_t) dtb_address + bswap_32(dtb_address->off_dt_strings)); // offset to string
     
     char *node_name = NULL;
     bool END = false;
@@ -42,7 +42,7 @@ void fdt_traverse(void (*callback)(fdt_prop *, char *, char *))
             struct_sp += ALIGN(strlen(node->name), 4) / 4;
             break;
         case FDT_PROP:;
-            fdt_prop *prop = (fdt_prop*)(struct_sp + 1);
+            fdt_prop *prop = (fdt_prop*)(struct_sp + 1); // skip the token (flag)
             struct_sp += (sizeof(fdt_prop) + ALIGN(bswap_32(prop->len), 4)) / 4;
             char *property_name = string_sp + bswap_32(prop->nameoff);
             callback(prop, node_name, property_name);
