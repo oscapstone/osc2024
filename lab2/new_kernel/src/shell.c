@@ -238,15 +238,18 @@ void shell_malloc()
     char* test1 = malloc(0x22);
     strcpy(test1,"test malloc1");
     uart_puts(test1);
+    uart_hex(test1);
     uart_puts("\n");
 
     char* test2 = malloc(0x10);
     strcpy(test2,"test malloc2");
     uart_puts(test2);
+    uart_hex(test2);
     uart_puts("\n");
 
     char* test3 = malloc(0x10);
     strcpy(test3,"test malloc3");
     uart_puts(test3);
+    uart_hex(test3);
     uart_puts("\n");
 }
