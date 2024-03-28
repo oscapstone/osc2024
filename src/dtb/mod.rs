@@ -41,5 +41,8 @@ pub fn load_dtb() {
     stdio::println("");
     let dt = dt::Dt::load(dt_struct_addr, &strings);
 
+    stdio::println("Printing DT...");
+    dt.print();
+
     stdio::println("Done loading DTB!");
 }
