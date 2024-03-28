@@ -1,0 +1,23 @@
+demo: 
+1. 直接插卡bootloader，送kernel8.img就完成dtb以外全部的task。(虛擬機)
+2. 在wsl上qemu跑bootloader，送can_send_perfect.img，拿90分。 (wsl)
+
+先講bootloader，後面再講relocate。
+
+
+Demo完問: 
+1. 為啥dtb本地直接Load可以，用bootloader要在加上遍歷pointer才可以，是bootloader有地方沒注意到嗎?
+   ，還有時候用bootloader以後，char的testing會變testQVg (有去跑別人的kernel也會，有一些其他字也會)
+2. bootloader現在可以正常跑但不確定有沒有甚麼沒注意到的部分(怕未來出問題) (有沒有甚麼好的方法確認bootloader的運作到底對不對)
+3. 以後如果有功能還沒寫完整可以先de部分後面再補de嗎 (寫好的部分不想要被打折) (比如9折只能QEMU的能不能未來補De)
+(可以展示strcmp問題)
+
+
+整理一下:
+如果flag 沒有 02，用bootloader 時 testing 會變 testQVng，dtb magic會錯。
+如果flag 有02，字元是對的但用bootloader load的時候，strcmp會有問題，需要先遍歷pointer一遍才可以。
+
+Next to-dos:
+1. 看教學用教學的Makefile重編bootloader、kernel那些的(確認strcmp的部分沒問題)。
+2. 有需要的話可以把前面bootloader整個重寫之類的。
+3. 用別人的bootloader測試看看是否是我的bootloader有問題。 
