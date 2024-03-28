@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "cpio.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "utility": "c",
+        "reboot.h": "c",
+        "utils.h": "c",
+        "mailbox.h": "c"
+    }
+}
