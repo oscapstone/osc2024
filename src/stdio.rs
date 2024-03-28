@@ -1,5 +1,27 @@
-use crate::uart::recv;
-use crate::uart::send;
+use crate::peripheral::uart;
+use crate::utils;
+
+fn send(c: u8) {
+    uart::send(c);
+}
+
+fn recv() -> u8 {
+    let c = uart::recv();
+    match c {
+        b'\r' | b'\n' => {
+            write(b"\r\n");
+            b'\n'
+        }
+        b'\x7f' | b'\x08' => {
+            write(b"\x08 \x08");
+            b'\x7f'
+        }
+        _ => {
+            send(c);
+            c
+        }
+    }
+}
 
 #[allow(dead_code)]
 pub fn read(buf: &mut [u8]) {
@@ -53,4 +75,26 @@ pub fn gets(buf: &mut [u8]) -> usize {
         }
     }
     i
+}
+
+#[allow(dead_code)]
+pub fn print(buf: &str) {
+    write(buf.as_bytes());
+}
+
+#[allow(dead_code)]
+pub fn println(buf: &str) {
+    puts(buf.as_bytes());
+}
+
+#[allow(dead_code)]
+pub fn print_u32(val: u32) {
+    let hex = utils::u32_to_hex(val);
+    write(&hex);
+}
+
+#[allow(dead_code)]
+pub fn print_u64(val: u64) {
+    let hex = utils::u64_to_hex(val);
+    write(&hex);
 }
