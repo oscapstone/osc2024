@@ -2,7 +2,7 @@
 
 | Github Account | Student ID | Name          |
 |----------------|------------|---------------|
-| chenjiaj109550158 | 109550158    | Jain-Jia Chen |
+| chenjiaj109550158 | 109550158    | Jian-Jia Chen |
 
 ## Requirements
 
