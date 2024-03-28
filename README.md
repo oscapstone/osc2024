@@ -76,7 +76,7 @@ Tasks:
 
 - [x] **UART Bootloader**: Implement a bootloader that loads kernel through mini UART for fast development.
 - [x] **Initial Ramdisk**: Parse "New ASCII Format Cpio" archive file and implement `ls` and `cat`.
-- [ ] **Simple Allocator**: Implement a simple allocator that can be used in the early booting stage.
+- [x] **Simple Allocator**: Implement a simple allocator that can be used in the early booting stage.
 - [x] **Bootloader Self Relocation**: Add self-relocation feature to the bootloader so it does not need to specify the kernel starting address.
 - [ ] **DeivceTree**: Integrate DeviceTree support for hardware configuration.
 

@@ -1,3 +1,5 @@
+PAGE_SIZE = 4096;
+
 __rpi_phys_dram_start_addr = 0;
 
 /* The physical address at which the kernel binary will be loaded by the Raspberry's firmware */
@@ -10,6 +12,7 @@ PHDRS
     segment_boot_core_stack PT_LOAD FLAGS(/* RW */ 6);
     segment_code            PT_LOAD FLAGS(/* RX */ 5);
     segment_data            PT_LOAD FLAGS(/* RW */ 6);
+    segment_heap            PT_LOAD FLAGS(/* RW */ 6);
 }
 
 SECTIONS
@@ -50,6 +53,13 @@ SECTIONS
         . = ALIGN(16);
         __bss_end_exclusive = .;
     } :segment_data
+
+    .heap (NOLOAD) : ALIGN(PAGE_SIZE)
+    {
+        _heap_start = .;
+        . += 16 * 1024 * 1024; /* 16 MB */
+        _heap_end_exclusive = .;
+    } :segment_heap
 
     .got :
     {

@@ -1,12 +1,15 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 use cpio::CpioArchive;
 use panic_wait as _;
 use small_std::println;
 
 use crate::shell::ShellCommand;
 
+mod allocator;
 mod boot;
 mod driver;
 mod shell;
