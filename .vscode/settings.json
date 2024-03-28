@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "io.h": "c",
+        "type.h": "c",
+        "util.h": "c",
+        "allocator.h": "c"
+    }
+}
