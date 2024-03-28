@@ -177,6 +177,16 @@ pub unsafe fn print_hex(n: u32) {
     }
 }
 
+pub unsafe fn strncmp(s1: &str, s2: &str, n: usize) -> bool {
+    let mut i = 0;
+    while i < n {
+        if s1.as_bytes()[i] != s2.as_bytes()[i] {
+            return false;
+        }
+        i = i + 1;
+    }
+    true
+}
 
 // println
 #[no_mangle]

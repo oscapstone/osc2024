@@ -79,18 +79,28 @@ unsafe fn kernel_init() -> ! {
                 handler.next_file();
             }
             handler.rewind();
-        } else if inp == "cat"{
+        } else if uart::strncmp(inp, "cat", 3){
+            let target = &inp[4..];
             loop {
                 let name = handler.get_current_file_name();
                 if name == "TRAILER!!!\0" {
                     break;
                 }
-                uart::_print("File: ");
-                uart::_print(name);
-                uart::_print("\r\n");
-                let contant =handler.read_current_file();
-                uart::_print(core::str::from_utf8(contant).unwrap());
-                uart::_print("\r\n");
+                let l = name.len();
+                // if last char is \0, remove it
+                let name = if name.as_bytes()[l-1] == 0 {
+                    &name[..l-1]
+                } else {
+                    name
+                };
+                if name == target {
+                    uart::_print("File: ");
+                    uart::_print(name);
+                    uart::_print("\r\n");
+                    let contant =handler.read_current_file();
+                    uart::_print(core::str::from_utf8(contant).unwrap());
+                    uart::_print("\r\n");
+                }
                 handler.next_file();
             }
             handler.rewind();

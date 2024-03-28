@@ -63,7 +63,7 @@ kernel_gdb: $(KERNEL_BIN)
 	$(call color_header, "Launching QEMU in background")
 	$(EXEC_QEMU) $(QEMU_DEBUG_ARGS) -kernel $(KERNEL_BIN)
 
-kernel_initramfs_qemu: $(KERNEL_BIN)
+kernel_initramfs_qemu: $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU")
 	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -initrd initramfs.cpio                                                                                                                                                                                                                  
 
@@ -79,6 +79,9 @@ bootloader_gdb: $(BOOTLOADER_BIN)
 
 # -device loader,file=$(BOOTLOADER_BIN),addr=0x60000,cpu-num=0 
 
+cpio:
+	$(call color_header, "Creating initramfs")
+	@cd initramfs && find . | cpio -H newc -o > ../initramfs.cpio
 
 clean:
 	make -C $(KERNEL_PATH) clean
