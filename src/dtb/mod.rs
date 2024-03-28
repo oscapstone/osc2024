@@ -43,6 +43,7 @@ pub fn load_dtb() {
 
     stdio::println("Printing DT...");
     dt.print();
+    dt.get("model");
 
     stdio::println("Done loading DTB!");
 }

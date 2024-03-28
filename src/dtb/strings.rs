@@ -24,6 +24,7 @@ impl StringMap {
         string
     }
 
+    #[allow(dead_code)]
     pub fn print(&self) {
         let mut offset = 0;
         loop {

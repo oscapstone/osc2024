@@ -1,6 +1,6 @@
 use core::alloc::{GlobalAlloc, Layout};
 
-use stdio;
+// use stdio;
 
 struct MyAllocator;
 

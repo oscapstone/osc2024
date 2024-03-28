@@ -29,7 +29,7 @@ impl MemRsvMap {
 
 #[repr(C, packed)]
 #[derive(Copy, Clone)]
-struct MemRsv {
+pub struct MemRsv {
     pub addr: u64,
     pub size: u64,
 }
