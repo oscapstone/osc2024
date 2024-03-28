@@ -11,16 +11,13 @@ def read_line(s):
     while True:
         c = s.read().decode()
         if c=="\r":
-            break
+            continue
         if c=="\n":
             break
         received_string += c
     return received_string
 
-print("S")
-size = os.stat("../shell/shell_kernel.img").st_size
-received_size = read_line(s)
-print(received_size)
+size = os.stat("../shell/shell_kernel.img").st_size 
 size_bytes = size.to_bytes(4,"little")
 s.write(size_bytes)
 
