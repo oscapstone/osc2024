@@ -4,6 +4,7 @@
 #include "../include/mailbox.h"
 #include "../include/reboot.h"
 #include "../include/cpio.h"
+#include "../include/mem_utils.h"
 
 #define BUFFER_SIZE 100
 
@@ -53,7 +54,26 @@ void parse_command(char *buffer)
         cpio_ls();
     } else if (my_strcmp(buffer, "cat") == 0) {
         cpio_cat();
-    } else {
+    } else if (my_strcmp(buffer, "malloc") == 0) {
+        /* test malloc */
+        char *tmp = malloc(4);
+        if (!tmp) {
+        	uart_send_string("HEAP overflow!!!\r\n");
+        	return;
+        }
+        tmp[0] = '1';
+        tmp[1] = '2';
+        tmp[2] = '3';
+        tmp[3] = '\0';
+        uart_send_string(tmp);
+        uart_send_string("\r\n");
+        
+        /* test strlen */
+        uart_send_string("The length of tmp is: ");
+        uart_hex(my_strlen(tmp));
+        uart_send_string("\r\n");
+    } 
+    else {
         uart_send_string("command ");
         uart_send_string(buffer);
         uart_send_string(" not found\r\n");
@@ -68,6 +88,7 @@ void help()
     uart_send_string("reboot      reboot the rpi3b+\r\n");
     uart_send_string("ls          show all files in rootfs\r\n");
     uart_send_string("cat         print out the content of specific file\r\n");
+    uart_send_string("malloc      try to print the content of malloc\r\n");
 }
 
 void hello()
