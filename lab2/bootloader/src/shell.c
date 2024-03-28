@@ -4,7 +4,7 @@
 #include "stdio.h"
 
 extern unsigned long long _start;
-char* dtb;
+char *dtb;
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "hello", .help = "print Hello World!", .func = do_cmd_hello},
@@ -14,7 +14,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
     {.command = "reboot_cancel", .help = "cancel reboot", .func = do_cmd_cancel_reboot}};
 
-int start_shell(char* _dtb)
+int start_shell(char *_dtb)
 {
     dtb = _dtb;
     char input_buffer[CMD_MAX_LEN];
@@ -38,22 +38,6 @@ void shell_init()
     cmd_list[3].func = do_cmd_loadimg;
     cmd_list[4].func = do_cmd_reboot;
     cmd_list[5].func = do_cmd_cancel_reboot;
-}
-
-int cli_cmd_strcmp(const char *p1, const char *p2)
-{
-    const unsigned char *s1 = (const unsigned char *)p1;
-    const unsigned char *s2 = (const unsigned char *)p2;
-    unsigned char c1, c2;
-
-    do
-    {
-        c1 = (unsigned char)*s1++;
-        c2 = (unsigned char)*s2++;
-        if (c1 == '\0')
-            return c1 - c2;
-    } while (c1 == c2);
-    return c1 - c2;
 }
 
 void cli_flush_buffer(char *buffer, int length)
@@ -97,7 +81,7 @@ void cli_cmd_exec(char *buffer)
 {
     for (int i = 0; i < CLI_MAX_CMD; i++)
     {
-        if (cli_cmd_strcmp(buffer, cmd_list[i].command) == 0)
+        if (strcmp(buffer, cmd_list[i].command) == 0)
         {
             cmd_list[i].func();
             return;
@@ -213,10 +197,6 @@ int do_cmd_loadimg()
     unsigned long long kernel_size = 0;
     char *kernel_start = (char *)(&_start);
     puts("Please upload the image file.\r\n");
-    put_int(&c);
-    puts("\r\n");
-    put_int(&kernel_size);
-    puts("\r\n");
     for (int i = 0; i < 8; i++)
     {
         c = getbin();

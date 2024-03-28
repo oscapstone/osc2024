@@ -16,7 +16,6 @@ typedef struct CLI_CMDS
 int start_shell();
 
 void shell_init();
-int cli_cmd_strcmp(const char *, const char *);
 void cli_flush_buffer(char *, int);
 void cli_cmd_read(char *);
 void cli_cmd_exec(char *);

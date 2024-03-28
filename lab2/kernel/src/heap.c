@@ -5,10 +5,11 @@ static char* htop_ptr = &_heap_top;
 
 void* malloc(unsigned int size) {
     // -> htop_ptr
-    // htop_ptr + 0x02:  heap_block size
-    // htop_ptr + 0x10 ~ htop_ptr + 0x10 * k:
-    //            { heap_block }
-    // -> htop_ptr
+    //               header 0x10 bytes                   block    
+    // |--------------------------------------------------------------|
+    // |  fill zero 0x8 bytes | size 0x8 bytes | size padding to 0x16 |
+    // |--------------------------------------------------------------|
+    
 
     // 0x10 for heap_block header
     char* r = htop_ptr + 0x10;
