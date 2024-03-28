@@ -3,6 +3,10 @@
 .global _start
 
 _start:
+    # Copy x0 dtb address to 0x60000
+    mov x1, 0x50000
+    str x0, [x1]
+
     # Copy code to addres 0x60000
     ldr x0, =0x80000
     ldr x1, =0x60000

@@ -34,6 +34,6 @@ unsafe impl GlobalAlloc for MyAllocator {
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
         // Implement deallocation logic here
-        stdio::puts(b"You are freeing memory! :(");
+        // stdio::puts(b"You are freeing memory! :(");
     }
 }

@@ -7,6 +7,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 }
 
 mod allocator;
+mod dtb;
 mod filesystem;
 mod mmio;
 mod peripheral;
@@ -14,7 +15,6 @@ mod stdio;
 mod utils;
 
 extern crate alloc;
-use alloc::vec::Vec;
 
 const MAX_COMMAND_LEN: usize = 0x400;
 const INITRAMFS_ADDR: u32 = 0x800_0000;
@@ -33,7 +33,10 @@ pub extern "C" fn main() {
     stdio::write(b" ");
     stdio::puts(utils::u32_to_hex(lb).as_ref());
 
-    stdio::puts(b"Reading initramfs...");
+    // stdio::puts(b"Reading initramfs...");
+    stdio::println("Dealing with dtb...");
+    dtb::load_dtb();
+
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         utils::memset(buf.as_mut_ptr(), 0, MAX_COMMAND_LEN);

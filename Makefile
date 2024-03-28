@@ -67,7 +67,7 @@ run: all
 	$(QEMU) -M raspi3b -serial null -serial pty \
 	--initrd $(RPI3_DIR)/initramfs.cpio \
 	-kernel $(RPI3_DIR)/bootloader.img \
-	-dtb $(RPI3_DIR)/$(DTB)
+	-dtb $(RPI3_DIR)/$(DTB) --daemonize
 
 debug: all
 	aarch64-linux-gnu-objdump -h -D $(BUILD_DIR)/kernel8.elf > $(BUILD_DIR)/kernel8.dump
