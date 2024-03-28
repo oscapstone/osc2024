@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "definitions.h": "c",
+        "shell_func.h": "c"
+    }
+}
