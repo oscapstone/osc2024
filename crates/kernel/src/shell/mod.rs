@@ -5,7 +5,7 @@ use small_std::{fmt::print::console::console, print, println, string::String};
 pub trait ShellCommand {
     fn name(&self) -> &str;
     fn help(&self) -> &str;
-    fn execute(&self);
+    fn execute(&self, args: &str);
 }
 
 pub struct Shell<'a> {
@@ -64,19 +64,20 @@ impl<'a> Shell<'a> {
     }
 
     fn handle_input(&mut self) {
-        let input = self.buf.as_str();
-        let mut args = input.trim().split(" ");
-        match args.next() {
+        let input = self.buf.as_str().trim();
+        let whitespace_idx = input.find(' ').unwrap_or(input.len());
+        match input.split_at(whitespace_idx) {
             // Help is a special case, we can handle it here
-            Some("help") => self.help(),
-            Some("") => {}
-            Some(cmd) => {
+            ("help", _) => self.help(),
+            ("", _) => {}
+            (cmd, args) => {
                 let command = self.commands.iter().filter(|c| c.name() == cmd).next();
-                command.map_or_else(|| println!("{}: command not found", cmd), |c| c.execute());
+                command.map_or_else(
+                    || println!("{}: command not found", cmd),
+                    |c| c.execute(args),
+                );
             }
-            _ => {}
         }
-        if let Some(cmd) = args.next() {}
         self.buf.clear()
     }
 
