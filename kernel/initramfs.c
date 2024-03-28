@@ -14,7 +14,6 @@ void parse_initramfs()
     cpio_obj_t *prev = NULL;    // for remove TRAILER
     head = cpio;
 
-    // New
     while ((eaten = parse(cpio, initramfs)) != 0) {
         if (!strcmp(cpio->meta->filename, "TRAILER!!!")) {
             prev->next = NULL;
