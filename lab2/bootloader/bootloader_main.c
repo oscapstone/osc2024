@@ -22,11 +22,6 @@ void get_actual_img()
     }
 
     unsigned size = atoi_dec(size_str, strlen(size_str));
-    char temp[20];
-    bin2hex(size, temp);
-    display("Img size: "); display(temp); display("\n");
-    display("Img size: "); display(size_str); display("\n");
-    
 
     ind = 0;
     while(size--)
@@ -37,6 +32,7 @@ void get_actual_img()
     display("Finish\n");
 
     asm volatile(
+       "mov x0, x10;"
        "mov x30, 0x80000;"
        "ret;"
     );

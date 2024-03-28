@@ -3,6 +3,8 @@
 .global _start
 
 _start:
+    mov x10, x0
+
     ldr x0, =0x80000
     ldr x1, =__pseudo_start
     ldr x2, =__pseudo_size
