@@ -46,7 +46,7 @@ start.o: start.S
 	$(CC) $(CFLAGS) $(INCLUDE_DIR) -o $@ -c $<
 
 initramfs.cpio:
-	find ../rootfs | cpio -o -H newc > $(DIST_DIR)/initramfs.cpio
+	cd ../rootfs && find . | cpio -o -H newc > ../kernel/$(DIST_DIR)/initramfs.cpio
 
 clean:
 	rm -f start.o $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)

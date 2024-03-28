@@ -36,7 +36,8 @@ static cmt_t command_funcs[] = {
     cmd_reboot,
     get_board_revision,
     get_arm_memory,
-    list_initramfs
+    list_initramfs,
+    cat_initramfs
 };
 static char* commands[] = {
     "help",
@@ -44,7 +45,8 @@ static char* commands[] = {
     "reboot",
     "board",
     "arm",
-    "ls"
+    "ls",
+    "cat"
 };
 static char* command_descriptions[] = {
     "print this help menu",
@@ -52,7 +54,8 @@ static char* command_descriptions[] = {
     "reboot the device",
     "print board info",
     "print arm memory info",
-    "list initramfs"
+    "list initramfs",
+    "cat a file"
 };
 
 void do_cmd(const char* line)

@@ -30,3 +30,32 @@ int strcmp(const char* s1, const char* s2)
     }
     return 0;
 }
+
+/**
+ * Convert char array to int.
+ * Only works with number >= 0
+ * 
+ * Arguments:
+ *      - s: char array
+ *      - len: length of s
+*/
+int hex_atoi(const char *s, int len)
+{
+    char c;
+    int num = 0;
+    int n = 0;
+
+    for (int i = 0; i < len; i++) {
+        c = s[i];
+        if (c >= '0' && c <= '9') {
+            n = c - '0';
+        } else if (c >= 'A' && c <= 'F') {
+            n = c - 'A' + 10;
+        } else if (c >= 'a' && c <= 'f') {
+            n = c - 'a' + 10;
+        }
+        num = 16 * num + n;
+    }
+
+    return num;
+}
