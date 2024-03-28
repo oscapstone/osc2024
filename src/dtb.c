@@ -94,7 +94,7 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
    +-----------------+
    | strings block   | <- dtb_ptr + header->off_dt_strings (strings_ptr)
    +-----------------+
-    */
+*/
 
 int fdt_traverse(fdt_callback cb) {
   uart_printf("dtb_ptr address is at: 0x%x\n", (unsigned long int)_dtb_ptr);

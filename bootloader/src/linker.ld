@@ -14,7 +14,7 @@ SECTIONS
         __bss_end = .;
     }
     __bootloader_end = .;
-     _end = .;
+    _end = .;
 
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

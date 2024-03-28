@@ -12,7 +12,7 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
     }
-     _end = .;
+    _end = .;
 
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
