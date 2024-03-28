@@ -3,7 +3,6 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use stdio::{print, print_u32, println};
 
-#[derive(Clone)]
 pub struct Dt {
     name: String,
     properties: Vec<Properties>,
@@ -46,8 +45,6 @@ impl Dt {
     }
 }
 
-#[repr(u32)]
-#[derive(Clone)]
 enum Lexical {
     BeginNode = 0x1,
     EndNode = 0x2,
@@ -109,12 +106,11 @@ impl Dt {
             let lexical = unsafe { core::ptr::read_volatile(addr as *const u32) };
             let lexical = lexical.swap_bytes();
             let lexical = Lexical::from_u32(lexical);
-
             match lexical {
                 Lexical::BeginNode => {
                     let child = Dt::load(addr, strings);
-                    dt.children.push(child.clone());
                     addr += child.length;
+                    dt.children.push(child);
                 }
                 Lexical::EndNode => {
                     addr += 4;
@@ -123,10 +119,9 @@ impl Dt {
                 Lexical::Prop => {
                     addr += 4;
                     let properties = Properties::load(addr, strings);
-                    dt.properties.push(properties.clone());
                     addr += properties.length + 8;
+                    dt.properties.push(properties);
                     addr = (addr + 3) & !3;
-                    properties.print();
                 }
                 Lexical::Nop => {
                     addr += 4;
@@ -142,33 +137,15 @@ impl Dt {
     }
 }
 
-#[derive(Clone)]
 enum PropValue {
     integer(u32),
     string(String),
 }
 
-#[derive(Clone)]
 pub struct Properties {
     length: u32,
     name: String,
     value: PropValue,
-}
-
-impl Properties {
-    pub fn print(&self) {
-        match &self.value {
-            PropValue::integer(value) => {
-                print("0x");
-                print_u32(*value);
-                println("");
-            }
-            PropValue::string(value) => {
-                print(value.as_str());
-                println("");
-            }
-        }
-    }
 }
 
 struct PropertyHeader {
