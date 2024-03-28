@@ -15,15 +15,20 @@ init:
 	ldr		x1, =0x0
 	str		x0, [x1]
 
-	ldr		x1, =0x80000				// where to copy
-	ldr		x2, =__bootloader_start		// where to paste
-	ldr		x3, =__bootloader_size
-
+	//ldr		x1, =0x80000				// where to copy
+	//ldr		x2, =__bootloader_start		// where to paste
+	//ldr		x3, =__bootloader_size
+	adr		x1, main				// where to copy
+	mov		x2, 0x60000				// where to paste
+	adr		x3, __bootloader_end	// the end of the bootloader
+	sub		x3, x3, x1				// x3 = __bootloader_end - main
+	mov		x3, x3, lsr #3			// x3 /= 8 (each move 8 bytes)
+	
 relocate:
-	ldr		x4, [x1], #8	// x4 = MEM[x1]
-	str		x4, [x2], #8	// MEM[x2] = x4
-	sub		x3, x3, #1
-	cbnz	x3, relocate
+	ldr		x4, [x1], #8	// x4 = MEM[x1], x1 += 8
+	str		x4, [x2], #8	// MEM[x2] = x4, x2 += 8
+	sub		x3, x3, #1		// x3--;
+	cbnz	x3, relocate	// if (x3 != 0) goto relocate;
 
 	// init stack pointer, because the code start from _start so lower address space can be stack
 	ldr		x1, =_start
@@ -41,7 +46,9 @@ clear_bss:
 bootloader_main:
 	//ldr		x1, 0x60000
 	//ldr		pc, x1
-	bl		main - 0x20000
+	//bl		main - 0x20000
+	mov		x1, 0x60000
+	br		x1
 	b		halt
 
 halt:

@@ -7,23 +7,10 @@ void main() {
     
     uart_init();
 
-    // for stability
-    int s=500;
-	while(s--){
-		asm volatile("nop");
-	}
-    uart_send_string("test");
-
     unsigned int size = 0;
     unsigned char *size_buffer = (unsigned char *) &size;
     for(int i=0; i < 4; i++) 
 	    size_buffer[i] = uart_get_char();
-
-    // for stability
-    s = 500;
-	while(s--){
-		asm volatile("nop");
-	}
 
     // send back for checking
     for (int i = 0; i < 4; i++)

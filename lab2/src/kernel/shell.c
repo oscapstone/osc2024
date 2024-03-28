@@ -48,7 +48,7 @@ void shell() {
 		while (1) {
 			c = uart_get_char();
 			*input_str++ = c;
-			if (c == '\n') {
+			if (c == '\n' || c == '\r') {
 				uart_send_string("\r\n");
 				*input_str = '\0';
 				break;

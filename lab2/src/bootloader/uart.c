@@ -74,8 +74,7 @@ char uart_get_char() {
     do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));
     /* read it and return */
     r=(char)(*AUX_MU_IO);
-    /* convert carriage return to newline */
-    return r=='\r'?'\n':r;
+    return r;
 }
 
 /**

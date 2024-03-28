@@ -42,7 +42,7 @@ void uart_init() {
 	// 8. Set AUX_MU_CNTL_REG to 3. Enable the transmitter and receiver.
 	*AUX_MU_CNTL = 3;
 	// 
-	r = 1000; while (r--) { asm volatile("nop"); }	
+	r = 500; while (r--) { asm volatile("nop"); }	
 
 }
 
@@ -71,11 +71,12 @@ char uart_get_char() {
     char r;
     /* wait until something is in the buffer */
     //bit 0 is set if the receive FIFO holds at least 1 symbol.
-    do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));
+    do {
+        asm volatile("nop");
+    } while(!(*AUX_MU_LSR&0x01));
     /* read it and return */
-    r=(char)(*AUX_MU_IO);
-    /* convert carriage return to newline */
-    return r=='\r'?'\n':r;
+    r = (char)(*AUX_MU_IO);
+    return r;
 }
 
 /**
