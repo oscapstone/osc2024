@@ -22,7 +22,7 @@ set_stack:
 bss_loop:  
     // clear bss loop
     cbz     w2, run_main
-    str     xzr, [x1], #8 // set 8 bytes to 0
+    str     xzr, [x1], #8 // set 8 bits to 0
     sub     w2, w2, #1
     cbnz    w2, bss_loop // loop
 run_main:  

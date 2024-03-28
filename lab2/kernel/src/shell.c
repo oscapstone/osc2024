@@ -4,40 +4,17 @@
 #include "cpio.h"
 #include "dtb.h"
 #include "memory.h"
+#include "string.h"
 
-char* strcpy(char* dest, const char* src)
-{
-    char* ret = dest;
-    while(*src){
-        *dest = *src;
-        dest++;
-        src++;
-    }
-    *dest = '\0';
-    return ret;
-}
-
-int strcmp(const char* str1, const char* str2) {
-    while (*str1 != '\n' || *str2 != '\0') {
-        if (*str1 != *str2) {
-            return 0;
-        }
-        str1++;
-        str2++;
-    }
-    if (*str1 == '\n' && *str2 =='\0') {
-        return 1;
-    } else {
-        return 0;
-    }
-}
+extern char* _dtb_ptr;
+extern char* cpio_addr;
 
 void get_command(char *command_string){
     char element;
     char *input_ptr = command_string; 
     while(1) {
         element = uart_getc();
-                if(element == '\n') {
+        if(element == '\n') {
             *input_ptr = '\0';
             uart_puts("\n");
             break;
@@ -46,10 +23,6 @@ void get_command(char *command_string){
         uart_send(element);
     }
 }
-
-extern char* _dtb_ptr;
-extern char* cpio_addr;
-
 
 void shell(){
     char command_string[256];
@@ -65,10 +38,10 @@ void shell(){
         uart_puts("dtb	: print device tree\n");
         uart_puts("reboot	: print file content\n");
     } else if (strcmp(command_string,"ls")) {
-        traverse_device_tree(_dtb_ptr, dtb_callback_initramfs);
+        fdt_traverse(_dtb_ptr, initramfs_callback);
         cpio_list(cpio_addr);
     } else if (strcmp(command_string,"cat")) {
-        traverse_device_tree(_dtb_ptr, dtb_callback_initramfs);
+        fdt_traverse(_dtb_ptr, initramfs_callback);
         char filename[256];
         uart_puts("Enter filename: ");
         get_command(filename);
@@ -90,7 +63,7 @@ void shell(){
         uart_puts("\n");
 
     } else if (strcmp(command_string,"dtb")) {
-        traverse_device_tree(_dtb_ptr, dtb_callback_show_tree);
+        fdt_traverse(_dtb_ptr, show_tree_callback);
     } else if (strcmp(command_string,"reboot")) {
         uart_puts("Rebooting....\n");
         reset(1000);

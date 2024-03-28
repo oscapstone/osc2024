@@ -8,14 +8,14 @@ _start:
 
 	// relocate bootloader
 	ldr x1, =0x80000 
-	ldr x2, =__bootloader_start //x11=0x60000
+	ldr x2, =__bootloader_start // 0x60000
 	ldr w3, =__bootloader_size
 
 relocate:
-	ldr x4,[x1],#8 //store value from x1 to x4 than mov x1
-	str x4,[x2],#8 //store value from x2 to x4 than mov x2
-	sub w3,w3,#1
-	cbnz w3,relocate
+	ldr x4, [x1], #8 //store value from x1 to x4 than mov x1
+	str x4, [x2], #8 //store value from x2 to x4 than mov x2
+	sub w3, w3, #1
+	cbnz w3, relocate
 
 set_stack: 
 	ldr x1, =_start
