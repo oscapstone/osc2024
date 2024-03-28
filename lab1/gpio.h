@@ -26,7 +26,7 @@
 #ifndef GPIO_H
 #define GPIO_H
 
-#define MMIO_BASE 0x3F000000
+#define MMIO_BASE 0x3F000000 // 0x7E000000
 
 #define GPFSEL0 ((volatile unsigned int *)(MMIO_BASE + 0x00200000))
 #define GPFSEL1 ((volatile unsigned int *)(MMIO_BASE + 0x00200004))
