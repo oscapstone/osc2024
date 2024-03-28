@@ -7,7 +7,7 @@ SRC_DIR = src
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:%.c=%.o)
 
-CFLAGS = -Wall -I ./include -c
+CFLAGS = -Wall -O2 -ffreestanding -nostdinc -I ./include -c
 
 .PHONY: all clean asm run debug
 
@@ -27,7 +27,7 @@ asm:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd ../bootloader/initramfs.cpio -dtb ../bootloader/bcm2710-rpi-3-b-plus.dtb -display none -serial null -serial stdio
 
 debug: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s
