@@ -2,7 +2,7 @@
 
 static char *cpio_base;
 
-void init_cpio(char *address)
+void initramfs_callback(char *address)
 {
     cpio_base = address;
 }

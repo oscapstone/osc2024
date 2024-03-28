@@ -4,7 +4,7 @@
 
 _start:
 	// relocate bootloader
-    mov     x28, x0 //keep x0 (not required in this code)
+    //mov     x28, x0 //keep x0
 	ldr x1, =0x80000 //64 bits for address, 0x1 = 1 byte
 	ldr x2, =0x60000 //ldr: put address to register
 	ldr w3, =__bootloader_size //size, 32 bit is enough
@@ -42,8 +42,7 @@ init_cpu:
 
     // jump to C code, should not return
 
-4:  
-    mov     x0, x28
+4:  //mov     x0, x28
     bl      bootloader_main-0x20000
     // for failsafe, halt this core too
     b       1b

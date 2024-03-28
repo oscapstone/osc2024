@@ -1,10 +1,9 @@
-#define DT_MAGIC_NUMBER 0xD00DFEED
+#define FDT_MAGIC_NUMBER 0xD00DFEED
 #define NULL 0x00000000
-#define DT_BEGIN_NODE_TOKEN 0x00000001
-#define DT_END_NODE_TOKEN 0x00000002
-#define DT_PROP_TOKEN 0x00000003
-#define DT_NOP_TOKEN 0x00000004
-#define DT_END_TOKEN 0x00000009
+#define FDT_BEGIN_NODE_TOKEN 0x00000001
+#define FDT_END_NODE_TOKEN 0x00000002
+#define FDT_PROP_TOKEN 0x00000003
+#define FDT_END_TOKEN 0x00000009
 
 /*
 FDT_BEGIN_NODE (0x00000001)
@@ -46,4 +45,4 @@ header
 */
 
 unsigned int big_to_little_endian(unsigned int value);
-void dt_tranverse(char *address, char *target_property, void (*callback)(char *));
+void fdt_tranverse(char *address, char *target_property, void (*callback)(char *));

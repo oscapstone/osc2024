@@ -20,7 +20,7 @@ struct cpio_newc_header {
 
 static char *cpio_base;
 
-void init_cpio(char *address);
+void initramfs_callback(char *address);
 
 int string_length(char *s);
 int strcmp(char *s1, char *s2);

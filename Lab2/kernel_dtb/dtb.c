@@ -4,16 +4,16 @@
 
 
 struct fdt_header {
-    unsigned int magic;
-    unsigned int totalsize;
-    unsigned int off_dt_struct;
-    unsigned int off_dt_strings;
-    unsigned int off_mem_rsvmap;
-    unsigned int version;
-    unsigned int last_comp_version;
-    unsigned int boot_cpuid_phys;
-    unsigned int size_dt_strings;
-    unsigned int size_dt_struct;
+    unsigned int magic;             // Magic word, signifies the start of the FDT blob
+    unsigned int totalsize;         // Total size of the FDT blob in bytes
+    unsigned int off_dt_struct;     // Offset to the structure block from the beginning of the FDT
+    unsigned int off_dt_strings;    // Offset to the strings block from the beginning of the FDT
+    unsigned int off_mem_rsvmap;    // Offset to the memory reservation block
+    unsigned int version;           // Version of the device tree specification
+    unsigned int last_comp_version; // Last compatible version number (lowest version supported)
+    unsigned int boot_cpuid_phys;   // Physical CPU ID of the boot processor
+    unsigned int size_dt_strings;   // Size of the strings block in bytes
+    unsigned int size_dt_struct;    // Size of the structure block in bytes
 };
 
 // 16進制轉成2進制，兩個bit變8個binary，就會試value的一個int
@@ -36,7 +36,7 @@ unsigned int big_to_little_endian_add(const char *address) {
 
 void parse_new_node(char *address, char *string_address, char *target, void (*callback)(char *))
 {
-    while (*(address) == DT_BEGIN_NODE_TOKEN)
+    while (*(address) == FDT_BEGIN_NODE_TOKEN)
     {
         // skip name of the node
         while (*(address) != NULL){
@@ -48,7 +48,7 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
         }
 
         // properties (attributes)
-        while (*address == DT_PROP_TOKEN)
+        while (*address == FDT_PROP_TOKEN)
         {
             address++;
 
@@ -81,7 +81,7 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
     }
 
     // go to end
-    while (*(address) != DT_END_NODE_TOKEN){
+    while (*(address) != FDT_END_NODE_TOKEN){
         address++;
     }
     
@@ -93,20 +93,15 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
 
 }
 
-char dt_check_magic_number(char *address)
-{
-    unsigned int magic_number = big_to_little_endian_add(address);
 
-    return DT_MAGIC_NUMBER == magic_number;
-}
-
-void dt_tranverse(char *address, char *target_property, void (*callback)(char *))
+void fdt_tranverse(char *address, char *target_property, void (*callback)(char *))
 {
     struct fdt_header * header = (struct fdt_header *) address;
     unsigned int temp;
-    unsigned int offset_struct, offset_strings;
+    unsigned int offset_struct, offset_strings, magic;
+    magic = big_to_little_endian(header -> magic);
 
-    if (!dt_check_magic_number(address))
+    if (magic != FDT_MAGIC_NUMBER)
     {
         uart_puts("Invalid device tree\n");
         return;
@@ -123,12 +118,12 @@ void dt_tranverse(char *address, char *target_property, void (*callback)(char *)
     }
 
     // parse nodes
-    while (*(newAddress) != DT_END_TOKEN)
+    while (*(newAddress) != FDT_END_TOKEN)
     {
         parse_new_node(newAddress, address + offset_strings, target_property, callback);
 
         //parse next node
-        while (*newAddress != DT_END_NODE_TOKEN) {
+        while (*newAddress != FDT_END_NODE_TOKEN) {
             newAddress++;
         }
         newAddress++;
