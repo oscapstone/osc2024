@@ -2,10 +2,10 @@
 
 #include "cpio_.h"
 #include "my_string.h"
-#include "uart0.h"
+#include "uart1.h"
 #include "utli.h"
 
-extern void *_dtb_ptr;   // should be 0x2EFF7A00
+void *_dtb_ptr;          // should be 0x2EFF7A00
 extern char *cpio_addr;  // should be 0x20000000
 
 #define FDT_BEGIN_NODE \
@@ -97,12 +97,19 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
 */
 
 int fdt_traverse(fdt_callback cb) {
-  uart_printf("dtb_ptr address is at: 0x%x\n", (unsigned long int)_dtb_ptr);
+  uart_send_string("dtb_ptr address is at: 0x");
+  uart_hex((unsigned long int)_dtb_ptr);
+  uart_send_string("\r\n");
+
   fdt_header *header = (fdt_header *)_dtb_ptr;
+
   unsigned int magic = fdt_u32_le2be(&(header->magic));
-  uart_printf("magic number: 0x%x\n", magic);
+  uart_send_string("magic number: 0x");
+  uart_hex(magic);
+  uart_send_string("\r\n");
+
   if (magic != 0xd00dfeed) {
-    uart_printf("The header magic is wrong\n");
+    uart_puts("The header magic is wrong");
     return -1;
   }
 
@@ -118,7 +125,9 @@ void get_cpio_addr(int token, const char *name, const void *data,
   UNUSED(size);
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-start")) {
     cpio_addr = (char *)(unsigned long int)fdt_u32_le2be(data);
-    uart_printf("cpio address is at: 0x%x\n", (unsigned long int)cpio_addr);
+    uart_send_string("cpio address is at: 0x");
+    uart_hex((unsigned long int)cpio_addr);
+    uart_send_string("\r\n");
   }
   return;
 }

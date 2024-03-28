@@ -1,20 +1,16 @@
 SECTIONS
 {
-    . = 0x80000;
-    .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
-    .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
-    PROVIDE(_data = .);
-    .data : { . = ALIGN(16); *(.data .data.* .gnu.linkonce.d*) }
-    .bss (NOLOAD) : {
-        . = ALIGN(16);
-        __bss_start = .;
-        *(.bss .bss.*)
-        *(COMMON)
-        __bss_end = .;
-    }
-    /*_end = .;*/
-
-   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }  /*these discarded sections contain debugging info or metadata */
+	. = 0x80000;
+	.text.boot : { KEEP(*(.text.boot)) }
+	.text : { *(.text) }
+	.data : { *(.data) }
+	. = ALIGN(16);
+	.bss (NOLOAD) : 
+	{ 
+		__bss_start = .;
+		*(.bss)
+		__bss_end = .;
+	}
 }
 __bss_size = (__bss_end - __bss_start)>>3;
 

@@ -3,7 +3,7 @@
 #include "peripherals/gpio.h"
 #include "peripherals/mbox.h"
 #include "peripherals/mmio.h"
-#include "uart0.h"
+#include "uart1.h"
 
 #define PM_PASSWORD 0x5a000000
 #define PM_RSTC ((volatile unsigned int *)(MMIO_BASE + 0x0010001c))
@@ -92,12 +92,12 @@ void align_inplace(unsigned int *size, unsigned int s) {
   *size = ((*size) + (s - 1)) & (~(s - 1));
 }
 
-float get_timestamp() {
+unsigned long int get_timestamp() {
   register unsigned long long f, c;
   asm volatile("mrs %0, cntfrq_el0"
                : "=r"(f));  // get current counter frequency
   asm volatile("mrs %0, cntpct_el0" : "=r"(c));  // read current counter
-  return (float)c / f;
+  return c / f;
 }
 
 unsigned int get(volatile unsigned int *addr) { return *addr; }
@@ -181,4 +181,33 @@ void wait_usec(unsigned int n) {
   do {
     asm volatile("mrs %0, cntpct_el0" : "=r"(r));
   } while (r - t < i);
+}
+
+void print_cur_el() {
+  unsigned long el;
+  asm volatile(
+      "mrs %0,CurrentEL"
+      : "=r"(el));  // CurrentEL reg; bits[3:2]: current EL; bits[1:0]: reserved
+  uart_send_string("current EL is : ");
+  uart_int((el >> 2) & 3);
+  uart_send_string("\r\n");
+}
+
+void print_el1_sys_reg() {
+  unsigned long spsr_el1, elr_el1, esr_el1;
+
+  // Access the registers using inline assembly
+  asm volatile("mrs %0, SPSR_EL1" : "=r"(spsr_el1));
+  asm volatile("mrs %0, ELR_EL1" : "=r"(elr_el1));
+  asm volatile("mrs %0, ESR_EL1" : "=r"(esr_el1));
+
+  uart_send_string("SPSR_EL1 : ");
+  uart_hex(spsr_el1);
+  uart_send_string("\r\n");
+  uart_send_string("ELR_EL1 : ");
+  uart_hex(elr_el1);
+  uart_send_string("\r\n");
+  uart_send_string("ESR_EL1 : ");
+  uart_hex(esr_el1);
+  uart_send_string("\r\n");
 }

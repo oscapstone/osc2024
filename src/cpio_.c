@@ -1,7 +1,7 @@
 #include "cpio_.h"
 
 #include "my_string.h"
-#include "uart0.h"
+#include "uart1.h"
 #include "utli.h"
 
 // char *cpio_addr = (char *)0x20000000;
@@ -34,7 +34,8 @@ void cpio_ls() {
         atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
-    uart_printf("%s\n", addr + sizeof(cpio_header));
+    uart_send_string(addr + sizeof(cpio_header));
+    uart_send_string("\r\n");
     addr += (headerPathname_size + file_size);
   }
 }
@@ -73,7 +74,9 @@ void cpio_cat(const char *filename) {
     for (unsigned int i = 0; i < file_size; i++) {
       uart_write(file_content[i]);
     }
+    uart_send_string("\r\n");
   } else {
-    uart_printf("File \"%s\" not found\n", filename);
+    uart_send_string(filename);
+    uart_puts(" not found");
   }
 }

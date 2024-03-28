@@ -38,10 +38,10 @@ asm: all
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -d in_asm
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial stdio
 
 tty: all
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial pty
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty
 
 debug: all
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s

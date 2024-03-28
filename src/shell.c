@@ -1,9 +1,8 @@
 #include "alloc.h"
 #include "cpio_.h"
-#include "fb.h"
 #include "mbox.h"
 #include "my_string.h"
-#include "uart0.h"
+#include "uart1.h"
 #include "utli.h"
 
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
@@ -34,11 +33,11 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
   uart_init();
   uart_flush();
-  uart_printf("\n[%f] Init UART done\n", get_timestamp());
+  uart_send_string("\nInit UART done\r\n");
 }
 
 void shell_input(char *cmd) {
-  uart_printf("\r# ");
+  uart_send_string("\r# ");
   int idx = 0, end = 0, i;
   cmd[0] = '\0';
   char c;
@@ -82,34 +81,33 @@ void shell_input(char *cmd) {
       cmd[idx++] = c;
       cmd[++end] = '\0';
     }
-    uart_printf("\r# %s \r\e[%dC", cmd, idx + 2);
+    // uart_printf("\r# %s \r\e[%dC", cmd, idx + 2);
+    uart_send_string("\r# ");
+    uart_send_string(cmd);
   }
-
-  uart_printf("\n");
+  uart_send_string("\r\n");
 }
 
 void shell_controller(char *cmd) {
   if (!strcmp(cmd, "")) {
     return;
   } else if (!strcmp(cmd, "help")) {
-    uart_printf("help: print this help menu\n");
-    uart_printf("hello: print Hello World!\n");
-    uart_printf("ls: list the filenames in cpio archive\n");
-    uart_printf(
+    uart_puts("help: print this help menu");
+    uart_puts("hello: print Hello World!");
+    uart_puts("ls: list the filenames in cpio archive");
+    uart_puts(
         "cat: display the content of the speficied file included in cpio "
-        "archive\n");
-    uart_printf("malloc: get a continuous memory space\n");
-    uart_printf("timestamp: get current timestamp\n");
-    uart_printf("reboot: reboot the device\n");
-    uart_printf("poweroff: turn off the device\n");
-    uart_printf("brn: get rpi3’s board revision number\n");
-    uart_printf("bsn: get rpi3’s board serial number\n");
-    uart_printf("arm_mem: get ARM memory base address and size\n");
-    uart_printf(
-        "loadimg: reupload the kernel image if the bootloader is used\n");
-    // uart_printf("showpic: Show a picture\n");
+        "archive");
+    uart_puts("malloc: get a continuous memory space");
+    uart_puts("timestamp: get current timestamp");
+    uart_puts("reboot: reboot the device");
+    uart_puts("poweroff: turn off the device");
+    uart_puts("brn: get rpi3’s board revision number");
+    uart_puts("bsn: get rpi3’s board serial number");
+    uart_puts("arm_mem: get ARM memory base address and size");
+    uart_puts("loadimg: reupload the kernel image if the bootloader is used");
   } else if (!strcmp(cmd, "hello")) {
-    uart_printf("Hello World!\r\n");
+    uart_puts("Hello World!");
   } else if (!strcmp(cmd, "ls")) {
     cpio_ls();
   } else if (!strncmp(cmd, "cat", 3)) {
@@ -117,33 +115,29 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "malloc")) {
     char *m1 = (char *)simple_malloc(8);
     if (!m1) {
-      uart_printf("memory allocation fail!\n");
+      uart_puts("memory allocation fail!");
       return;
     }
-    sprintf(m1, "12345678");
-    uart_printf("%s\n", m1);
 
     char *m2 = (char *)simple_malloc(8);
     if (!m2) {
-      uart_printf("memory allocation fail!\n");
+      uart_puts("memory allocation fail!");
       return;
     }
-    sprintf(m2, "98765432");
-    uart_printf("%s\n", m2);
 
-    char *m3 = (char *)simple_malloc(8192);
+    char *m3 = (char *)simple_malloc(1111);
     if (!m3) {
-      uart_printf("memory allocation fail!\n");
+      uart_puts("memory allocation fail!");
       return;
     }
 
   } else if (!strcmp(cmd, "reboot")) {
-    uart_printf("Rebooting...\r\n");
+    uart_puts("Rebooting...");
     reset(1000);
     while (1)
       ;  // hang until reboot
   } else if (!strcmp(cmd, "poweroff")) {
-    uart_printf("Shutdown the board...\r\n");
+    uart_puts("Shutdown the board...");
     power_off();
   } else if (!strcmp(cmd, "brn")) {
     get_board_revision();
@@ -152,16 +146,13 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "arm_mem")) {
     get_arm_base_memory_sz();
   } else if (!strcmp(cmd, "timestamp")) {
-    uart_printf("%f\n", get_timestamp());
+    uart_int(get_timestamp());
+    uart_send_string("\r\n");
   } else if (!strcmp(cmd, "loadimg")) {
     asm volatile(
-        "ldr x30, =0x60000;"
+        "ldr x30, =0x60160;"
         "ret;");
-  }
-  // else if (!strcmp(cmd, "showpic")) {
-  //   lfb_showpicture();
-  // }
-  else {
-    uart_printf("shell: command not found: %s\n", cmd);
+  } else {
+    uart_puts("shell: unvaild command");
   }
 }

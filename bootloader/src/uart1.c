@@ -1,4 +1,3 @@
-#include "my_string.h"
 #include "peripherals/aux.h"
 #include "peripherals/gpio.h"
 #include "utli.h"
@@ -52,6 +51,17 @@ char uart_read() {
   return r == '\r' ? '\n' : r;
 }
 
+char uart_read_raw() {
+  // Check data ready field
+  do {
+    asm volatile("nop");
+  } while (!(get(AUX_MU_LSR) & 0x01));
+  // Read
+  char r = (char)get(AUX_MU_IO);
+  // Convert carrige return to newline
+  return r;
+}
+
 void uart_write(unsigned int c) {
   // Check transmitter idle field
   do {
@@ -65,12 +75,6 @@ void uart_send_string(const char *str) {
   for (int i = 0; str[i] != '\0'; i++) {
     uart_write((char)str[i]);
   }
-}
-
-void uart_puts(const char *str) {
-  uart_send_string(str);
-  uart_write('\r');
-  uart_write('\n');
 }
 
 void uart_flush() {
