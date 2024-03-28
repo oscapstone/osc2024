@@ -197,6 +197,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "cpio"
+version = "0.1.0"
+dependencies = [
+ "small-std",
+]
+
+[[package]]
 name = "cpu"
 version = "0.1.0"
 dependencies = [
@@ -273,6 +280,7 @@ dependencies = [
 name = "kernel"
 version = "0.1.0"
 dependencies = [
+ "cpio",
  "cpu",
  "device",
  "panic-wait",
