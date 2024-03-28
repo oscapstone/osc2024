@@ -1,0 +1,15 @@
+sudo apt update
+sudo apt install gcc-aarch64-linux-gnu
+sudo apt install qemu-system-aarch64
+git clone -b 310552061 https://github.com/oscapstone/osc2023.git
+sudo chmod 777 create_cpio.sh
+./create_cpio.sh
+sudo chmod 777 send_image_to_bootloader.py
+
+sudo apt install screen
+
+sudo screen /dev/ttyUSB0 115200
+sudo lsof /dev/ttyUSB0
+sudo kill [pid]
+sudo pip3 install pwntools
+sudo ./send_image_to_bootloader.py
