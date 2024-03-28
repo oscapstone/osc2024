@@ -83,6 +83,13 @@ impl CpioArchive {
             offset += 4 - (offset % 4);
         }
         if filesize > 0 {
+            print("namesize: ");
+            print_dec(self.get_namesize(ptr) as u32);
+            print("filesize: ");
+            print_dec(self.get_filesize(ptr) as u32);
+            print("filename: ");
+            println(self.get_file_name(ptr));
+
             offset += filesize;
 
             if offset % 4 != 0 {
@@ -91,7 +98,7 @@ impl CpioArchive {
         }
 
         unsafe {
-            let next_ptr = ptr.offset(offset as isize);
+            let next_ptr = ptr.add(offset as usize);
 
             // Check if the ptr is pointed to the magic number
             assert_eq!(*next_ptr, b'0');
@@ -151,10 +158,12 @@ impl CpioArchive {
     }
 
     fn ascii_to_u32(hex: u64) -> u32 {
+        // println("ascii_to_u32");
         let mut value: u32 = 0;
         for i in 0..8 {
-            let shift = i * 8;
-            let char_value = ((hex >> shift) & 0xFF) as u8;
+            let shift = i;
+            let char_value = ((hex >> (shift * 8)) & 0xFF) as u8;
+            // print_hex(char_value as u32);
 
             let digit = if char_value >= b'0' && char_value <= b'9' {
                 char_value - b'0'
@@ -165,7 +174,8 @@ impl CpioArchive {
             } else {
                 0
             };
-            value += (digit as u32) << shift;
+            value += (digit as u32) << (shift * 4);
+            // print_hex(value as u32);
         }
         value
     }
@@ -200,6 +210,7 @@ impl CpioArchive {
                 value |= (*(ptr.offset(i as isize)) as u64) << ((len - i - 1) * 8);
             }
         }
+        // print_hex_u64(value);
         value
     }
 
