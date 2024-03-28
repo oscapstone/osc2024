@@ -18,4 +18,4 @@ clean:
 	rm kernel8.img kernel8.elf src/*.o >/dev/null 2>/dev/null || true
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd ../initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb

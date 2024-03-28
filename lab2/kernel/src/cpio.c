@@ -60,7 +60,7 @@ void cpio_list(char *buf)
         if ((sizeof(cpio_t) + ns) % 4 != 0)
             buf += (sizeof(cpio_t) + ns + (4 - (sizeof(cpio_t) + ns) % 4) + fs);
         else
-            buf += (sizeof(cpio_t) + ns + ((sizeof(cpio_t) + ns) % 4) + fs);
+            buf += (sizeof(cpio_t) + ns + fs);
     }
 }
 
@@ -83,7 +83,7 @@ void cpio_cat(char *buf, char *filename)
         if ((sizeof(cpio_t) + ns) % 4 != 0)
             buf += (sizeof(cpio_t) + ns + (4 - (sizeof(cpio_t) + ns) % 4) + fs);
         else
-            buf += (sizeof(cpio_t) + ns + ((sizeof(cpio_t) + ns) % 4) + fs);
+            buf += (sizeof(cpio_t) + ns + fs);
     }
     uart_puts("No such file\n");
 }

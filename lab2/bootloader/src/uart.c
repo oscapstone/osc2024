@@ -69,6 +69,19 @@ char uart_getc() {
     return r=='\r'?'\n':r;
 }
 
+char uart_getb() {
+    char r;
+    // check Line Status Register (LSR) Rx Buffer Data Ready 0
+    while (!(*AUX_MU_LSR_REG & 0x01)) {
+        asm volatile("nop");
+    }
+    /* read it and return */
+    r=(char)(*AUX_MU_IO_REG);
+    /* convert carriage return to newline */
+    // return r=='\r'?'\n':r;
+    return r;
+}
+
 /**
  * Display a string
  */

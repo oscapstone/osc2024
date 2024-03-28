@@ -1,8 +1,10 @@
 SECTIONS
 {
+    /* text section start from 0x60000 */
     . = 0x60000;
     __bootloader_start = .;
     .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
+    /* next section set rodata */
     .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
     PROVIDE(_data = .);
     .data : { *(.data .data.* .gnu.linkonce.d*) }
@@ -14,8 +16,6 @@ SECTIONS
         __bss_end = .;
     }
     __bootloader_end = .;
-    
-
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
 __bss_size = (__bss_end - __bss_start) >> 3;

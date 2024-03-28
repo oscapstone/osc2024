@@ -4,7 +4,7 @@
 void main()
 {
     uart_init();
-    uart_puts("Start Bootloading\n");
+    uart_puts("Start Bootloader\n");
     while(1) {
         shell();
     }

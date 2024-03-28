@@ -3,6 +3,8 @@
 .global _start
 
 _start:
+    ldr		x21, =_dtb_ptr	//put _dtb_ptr into register1
+	str		x0, [x21]		//store dtb address from x0 to _dtb_ptr
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1 // get cpu id
     and     x1, x1, #3 // mask off cpu id bits (cpu id is in bits 0-1)
@@ -30,3 +32,7 @@ run_main:
     bl      main
     // for failsafe, halt this core too
     b       halt
+
+.global _dtb_ptr	//define a global variable _dtb_ptr
+.section .data		//_dtb_ptr is in data section
+_dtb_ptr: .dc.a 0x0	//it defines _dtb_ptr to be a 8-byte constant with a value of 0x0

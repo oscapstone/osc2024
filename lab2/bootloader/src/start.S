@@ -3,12 +3,8 @@
 .global _start
 
 _start:
-
-	// save arguments in registers
-    mov x10, x0
-    mov x11, x1
-    mov x12, x2
-    mov x12, x3
+	// store the address of the dtb
+	mov x24, x0
 
 	// relocate bootloader
 	ldr x1, =0x80000 
@@ -21,17 +17,17 @@ relocate:
 	sub w3,w3,#1
 	cbnz w3,relocate
 
-setting: 
+set_stack: 
 	ldr x1, =_start
  	mov sp, x1
 	ldr x1, =__bss_start
 	ldr w2, =__bss_size
 
-clear_bss: 
+bss_loop: 
 	cbz w2, bootloader_main
 	str xzr,[x1],#8
 	sub w2, w2, #1
-	cbnz w2, clear_bss
+	cbnz w2, bss_loop
 
 bootloader_main: 
 	bl main-0x20000
