@@ -32,7 +32,8 @@ SRC_OBJS += $(SRC_ASM:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
 
 CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude -c
 
-TOOLCHAIN = aarch64-none-linux-gnu
+TOOLCHAIN = aarch64-none-elf
+# TOOLCHAIN = aarch64-none-linux-gnu
 # TOOLCHAIN = /Users/robert/Downloads/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu
 
 .PHONY: all clean

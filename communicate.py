@@ -21,9 +21,9 @@ except:
 
 def receiveMsg():
     if ser.inWaiting() > 0:
-        # 读取接收缓冲区中的所有数据
+        # Read all data in buffer
         data = ser.read(ser.inWaiting())
-        print(data.decode())
+        print(data.decode(errors='ignore'))
     else:
         print('====No data available====')
 
