@@ -11,18 +11,33 @@
 
 ## Build 
 
-```
-make ver=release
+```bash
+$ make all ver=release
 ```
 
 ## Debug
 
+```bash
+$ make all ver=debug
 ```
-make ver=debug
+
+## Build CPIO Archive
+
+```bash
+$ mkdir -p rootfs
+$ touch rootfs/file.txt
+...
+$ make rootfs
 ```
 
 ## Test with QEMU
 
+```bash
+$ make emu
 ```
-make emu
+
+# Interact with Shell and Send Kernel Image
+
+```bash
+$ make send --port={port} --image={image}
 ```
