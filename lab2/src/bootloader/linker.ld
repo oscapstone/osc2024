@@ -2,13 +2,13 @@ SECTIONS
 {
     . = 0x80000;
     __start = .;
-    .text : { KEEP(*(.text.boot)) *(.text) }
+    .text : { *(.text) }
     .bss : { 
+        . = ALIGN(0x8);
         __bss_start = .;
         *(.bss) 
-        *(COMMON)
         __bss_end = .;
-     }
+    }
     __heap_start = .;
     __end = .;
 }

@@ -1,6 +1,6 @@
 #ifndef _LOAD_H_
 #define _LOAD_H_
 
-void load();
+void load(char *dtb_base);
 
 #endif

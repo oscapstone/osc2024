@@ -1,6 +1,5 @@
 #include "shell.h"
 #include "cpio.h"
-#include "load.h"
 #include "mbox.h"
 #include "reboot.h"
 #include "string.h"
@@ -65,40 +64,6 @@ void shell()
             get_board_revision();
             get_memory_info();
         }
-        else if (!strcmp(arg[0], "reboot") && i == 1) {
-            uart_puts("\033[2J\033[H");
-            uart_puts("Rebooting...");
-            reset(200);
-        }
-    }
-}
-
-void bootloader_shell()
-{
-    while (1) {
-        char cmd[256], arg[4][64], *token;
-
-        uart_puts("# ");
-        read(cmd, 255);
-        uart_puts("\n");
-
-        // parse command
-        int i = 0;
-        token = strtok(cmd, " ");
-        while (token != 0) {
-            strcpy(arg[i++], token);
-            token = strtok(0, " ");
-        }
-
-        if (!strcmp(arg[0], "help") && i == 1)
-            uart_puts("help\t: print this help menu\nhello\t: print Hello World!\nload\t: load kernel image through "
-                      "uart\nclear\t: clear the screen\nreboot\t: reboot the device\n");
-        else if (!strcmp(arg[0], "hello") && i == 1)
-            uart_puts("Hello World!\n");
-        else if (!strcmp(arg[0], "clear") && i == 1)
-            uart_puts("\033[2J\033[H");
-        else if (!strcmp(arg[0], "load") && i == 1)
-            load();
         else if (!strcmp(arg[0], "reboot") && i == 1) {
             uart_puts("\033[2J\033[H");
             uart_puts("Rebooting...");
