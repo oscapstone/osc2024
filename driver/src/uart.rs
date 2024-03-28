@@ -1,4 +1,6 @@
 
+
+
 use core::arch::asm;
 use core::{
     ptr::{read_volatile, write_volatile},
@@ -85,42 +87,30 @@ pub unsafe fn _print(s: &str) {
 }
 
 #[no_mangle]
-pub unsafe fn strcmp(s1: &[u8; 128], l1: usize, s2: &[u8; 128], l2: usize) -> bool {
-    if l1 != l2 {
-        return false;
-    }
-    let mut idx: usize = 0;
-    while idx < l1 {
-        if s1[idx] != s2[idx] {
-            return false;
-        }
-        idx = idx + 1;
-    }
-    true
-}
-
-#[no_mangle]
-pub unsafe fn get_line(s: &mut [u8; 128], is_echo: bool) -> usize {
+pub fn getline(s: &mut [u8; 128], is_echo: bool) ->  &str {
     let mut ptr: usize = 0;
-    loop {
-        let c = read_u8();
-        match c {
-            Some(i) => {
-                if is_echo {
-                    write_u8(i as u8);
+    unsafe{
+        loop {
+            let c = read_u8();
+            match c {
+                Some(i) => {
+                    if is_echo {
+                        write_u8(i as u8);
+                    }
+                    if i == 13 {
+                        write_u8(10);
+                        break;
+                    }
+                    s[ptr] = i as u8;
+                    ptr = ptr + 1;
                 }
-                if i == 13 {
-                    write_u8(10);
-                    break;
-                }
-                s[ptr] = i as u8;
-                ptr = ptr + 1;
+                None => {}
             }
-            None => {}
+            asm!("nop");
         }
-        asm!("nop");
+
     }
-    ptr
+    core::str::from_utf8(&s[0..ptr]).unwrap()
 }
 
 #[no_mangle]
@@ -150,6 +140,7 @@ pub unsafe fn read_u8() -> Option<u8> {
         None
     }
 }
+
 
 pub unsafe fn read(s: *mut u8, len: usize) {
     let mut ptr: usize = 0;

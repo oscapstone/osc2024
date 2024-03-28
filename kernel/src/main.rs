@@ -1,22 +1,35 @@
 #![feature(asm_const)]
 #![no_main]
 #![no_std]
+#![feature(default_alloc_error_handler)]
 
 mod bsp;
 mod cpu;
 mod panic_wait;
+mod allocator;
+
+extern crate alloc; 
 
 use core::ptr::write_volatile;
-
-use driver::uart;
+use driver::cpio::CpioHandler;
 use driver::mailbox;
+use driver::uart;
+use allocator::MyAllocator;
+
+const QEMU_INITRD_START: u64 = 0x8000000;
+
+#[global_allocator]
+static mut ALLOCATOR: MyAllocator = MyAllocator::new();
 
 #[no_mangle]
 unsafe fn kernel_init() -> ! {
+    
     uart::init_uart();
     uart::_print("Revision: ");
     // get board revision
     let revision = mailbox::get_board_revisioin();
+    let h = alloc::string::String::from("Hello");
+
 
     // print hex of revision
     uart::print_hex(revision);
@@ -24,12 +37,11 @@ unsafe fn kernel_init() -> ! {
 
     // get ARM memory base address and size
     let (base, size) = mailbox::get_arm_memory();
-    
+
     // print ARM memory base address and size
     uart::_print("ARM memory base address: ");
     uart::print_hex(base);
     uart::_print("\r\n");
-    
 
     uart::_print("ARM memory size: ");
     uart::print_hex(size);
@@ -37,29 +49,17 @@ unsafe fn kernel_init() -> ! {
 
     let mut out_buf: [u8; 128] = [0; 128];
     let mut in_buf: [u8; 128] = [0; 128];
-    out_buf[0] = 62;
-    out_buf[1] = 62;
 
-    let mut hello_str: [u8; 128] = [0; 128];
-    hello_str[..5].copy_from_slice(b"hello");
-    let hello_len = 5;
 
-    let mut reboot_str: [u8; 128] = [0; 128];
-    reboot_str[..6].copy_from_slice(b"reboot");
-
-    let mut help_str: [u8; 128] = [0; 128];
-    help_str[..4].copy_from_slice(b"help");
-    let help_len = 4;
-
+    let mut handler: CpioHandler = CpioHandler::new(QEMU_INITRD_START as *mut u8);
     loop {
         uart::_print(">> ");
-        let in_buf_len = uart::get_line(&mut in_buf, true);
-        if uart::strcmp(&in_buf, in_buf_len, &hello_str, hello_len) {
+        let inp = uart::getline(&mut in_buf, true);
+        if inp == "Hello" {
             uart::_print("Hello World!\r\n");
-        } else if uart::strcmp(&in_buf, in_buf_len, &help_str, help_len) {
+        } else if inp == "help" {
             uart::_print("help    : print this help menu\r\nhello   : print Hello World!\r\nreboot  : reboot the device\r\n");
-        } else if uart::strcmp(&in_buf, in_buf_len, &reboot_str, 6) {
-
+        } else if inp == "reboot" {
             const PM_PASSWORD: u32 = 0x5a000000;
             const PM_RSTC: u32 = 0x3F10001c;
             const PM_WDOG: u32 = 0x3F100024;
@@ -67,7 +67,39 @@ unsafe fn kernel_init() -> ! {
             write_volatile(PM_WDOG as *mut u32, PM_PASSWORD | 100);
             write_volatile(PM_RSTC as *mut u32, PM_PASSWORD | PM_RSTC_WRCFG_FULL_RESET);
             break;
+        } else if inp == "ls" {
+            loop {
+                let name = handler.get_current_file_name();
+                if name == "TRAILER!!!\0" {
+                    break;
+                }
+                uart::_print(name);
+                uart::_print("\r\n");
+    
+                handler.next_file();
+            }
+            handler.rewind();
+        } else if inp == "cat"{
+            loop {
+                let name = handler.get_current_file_name();
+                if name == "TRAILER!!!\0" {
+                    break;
+                }
+                uart::_print("File: ");
+                uart::_print(name);
+                uart::_print("\r\n");
+                let contant =handler.read_current_file();
+                uart::_print(core::str::from_utf8(contant).unwrap());
+                uart::_print("\r\n");
+                handler.next_file();
+            }
+            handler.rewind();
+        } 
+        
+        else {
+            uart::_print("Command not found\r\n");
         }
+
         uart::uart_nops();
     }
     panic!()

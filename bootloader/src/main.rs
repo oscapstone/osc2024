@@ -24,6 +24,14 @@ unsafe fn bootloader(){
     uart::init_uart();
     uart::_print("Bootloader started\r\n");
     
+    // print current pc value
+    let mut pc: u64;
+    core::arch::asm!("adr {}, .", out(reg) pc);
+    uart::_print("Current PC: ");
+    uart::print_hex(pc as u32);
+    uart::_print("\r\n");
+
+    
     // read kernel size
     let mut kernel_size: u32 = 0;
     

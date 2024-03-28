@@ -63,13 +63,22 @@ kernel_gdb: $(KERNEL_BIN)
 	$(call color_header, "Launching QEMU in background")
 	$(EXEC_QEMU) $(QEMU_DEBUG_ARGS) -kernel $(KERNEL_BIN)
 
+kernel_initramfs_qemu: $(KERNEL_BIN)
+	$(call color_header, "Launching QEMU")
+	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -initrd initramfs.cpio                                                                                                                                                                                                                  
+
 bootloader_qemu: $(BOOTLOADER_BIN)
 	$(call color_header, "Launching QEMU")
-	$(EXEC_QEMU) $(QEMU_TTY_ARGS) -device loader,file=$(BOOTLOADER_BIN),addr=0x60000,cpu-num=0
+	$(EXEC_QEMU) $(QEMU_TTY_ARGS) -kernel $(BOOTLOADER_BIN)
+	
+# -device loader,file=$(BOOTLOADER_BIN),addr=0x60000,cpu-num=0
 
 bootloader_gdb: $(BOOTLOADER_BIN)
 	$(call color_header, "Launching QEMU in background")
-	$(EXEC_QEMU) $(QEMU_TTY_DEBUG_ARGS) -device loader,file=$(BOOTLOADER_BIN),addr=0x60000,cpu-num=0 
+	$(EXEC_QEMU) $(QEMU_TTY_DEBUG_ARGS) -kernel $(BOOTLOADER_BIN)
+
+# -device loader,file=$(BOOTLOADER_BIN),addr=0x60000,cpu-num=0 
+
 
 clean:
 	make -C $(KERNEL_PATH) clean

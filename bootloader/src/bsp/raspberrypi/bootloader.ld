@@ -10,6 +10,7 @@ ENTRY(__rpi_phys_binary_load_addr)
 SECTIONS
 {
     . = __rpi_phys_binary_load_addr;
+    __relo_start = .;
     .text :
     {
         KEEP(*(.text._start))
@@ -17,10 +18,11 @@ SECTIONS
         *(.text._start_rust)      /* The Rust entry point */
         *(.text*)                 /* Everything else */
     } :segment_code
-
-    .rodata : ALIGN(8) { *(.rodata*) } :segment_code
-
-    .data : { *(.data*) }
+    
+    .rodata : ALIGN(16) { *(.rodata*) } :segment_code
+    .data : ALIGN(16) { *(.data*) }
+    . = ALIGN(16);
+    __relo_end = .;
 
     /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
 
