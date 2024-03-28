@@ -6,7 +6,7 @@ void *start_addr = (void *)0x80000;
 void main(void)
 {
 	uart_init();
-	uart_send_string("Fuck you!!!\r\n");
+	uart_send_string("test!!!\r\n");
 
 	/* load size */
 	unsigned int size = 0;
