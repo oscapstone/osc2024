@@ -4,6 +4,8 @@
 use panic_wait as _;
 use small_std::println;
 
+use crate::shell::ShellCommand;
+
 mod boot;
 mod driver;
 mod shell;
@@ -31,6 +33,11 @@ fn main() -> ! {
 
     println!("[2] Echoing input now");
 
-    let mut shell = shell::Shell::new();
+    let commands: &[&dyn ShellCommand] = &[
+        &shell::commands::HelloCommand,
+        &shell::commands::RebootCommand,
+        &shell::commands::InfoCommand,
+    ];
+    let mut shell = shell::Shell::new(commands);
     shell.run_loop();
 }
