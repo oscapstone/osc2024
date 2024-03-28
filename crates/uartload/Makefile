@@ -16,9 +16,11 @@ RUSTFLAGS := -C target-cpu=$(TARGET_CPU) \
 RUSTFLAGS_PEDANTIC := $(RUSTFLAGS) -D warnings
 RUSTC_ARGS := --target=$(TARGET_TRIPLE) --release
 
+CPIO_ARCHIVE := initramfs.cpio
+
 QEMU_BINARY := qemu-system-aarch64
 QEMU_MACHINE_TYPE := raspi3b
-QEMU_RELEASE_ARGS := -serial null -serial pty -display none
+QEMU_RELEASE_ARGS := -serial null -serial pty -display none -initrd $(CPIO_ARCHIVE)
 
 # export for build.rs
 export LD_SCRIPT_PATH
