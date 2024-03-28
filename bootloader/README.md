@@ -35,5 +35,5 @@ make
 ## Test With QEMU
 
 ```
-make kernel_qemu
+make qemu
 ```

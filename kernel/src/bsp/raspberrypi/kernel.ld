@@ -3,13 +3,11 @@ __rpi_phys_dram_start_addr = 0;
 
 __rpi_phys_binary_load_addr = 0x80000;
 
-
 ENTRY(__rpi_phys_binary_load_addr)
 
 
 SECTIONS
 {
-
     . = __rpi_phys_binary_load_addr;
     .text :
     {
@@ -23,7 +21,6 @@ SECTIONS
 
     .data : { *(.data*) }
 
-    /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
 
     .bss (NOLOAD): ALIGN(16)
     {

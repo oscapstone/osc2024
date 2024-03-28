@@ -1,8 +1,12 @@
+
+
+
 use core::arch::asm;
 use core::{
     ptr::{read_volatile, write_volatile},
     usize,
 };
+
 
 const AUXENB: u32 = 0x3F215004;
 const AUX_MU_CNTL_REG: u32 = 0x3F215060;
@@ -38,7 +42,7 @@ pub fn init_uart() {
         write_volatile(GPPUD as *mut u32, pud);
 
         // wait 150 cycles
-        nops();
+        uart_nops();
 
         // configure pull up/down clock register to disable GPIO pull up/down
         let pudclk0 = !(0b11 << 14);
@@ -46,7 +50,7 @@ pub fn init_uart() {
         let pudclk1 = 0;
         write_volatile(GPPUDCLK1 as *mut u32, pudclk1);
         // wait 150 cycles
-        nops();
+        uart_nops();
 
         // Write to GPPUD to remove the control signal
         write_volatile(GPPUD as *mut u32, 0);
@@ -76,70 +80,41 @@ pub fn init_uart() {
 
 #[no_mangle]
 #[inline(never)]
-pub fn print_hello() {
-    unsafe {
-        let hello: [u8; 5] = [72, 101, 108, 108, 111];
-        write_volatile(AUX_MU_IO_REG as *mut u32, 72);
-        write_volatile(AUX_MU_IO_REG as *mut u32, 101);
-        write_volatile(AUX_MU_IO_REG as *mut u32, 108);
-        write_volatile(AUX_MU_IO_REG as *mut u32, 108);
-        write_volatile(AUX_MU_IO_REG as *mut u32, 111);
+pub unsafe fn _print(s: &str) {
+    for i in s.bytes() {
+        write_u8(i);
     }
 }
 
 #[no_mangle]
-#[inline(never)]
-pub unsafe fn print_str(buf: &[u8; 128], buf_len: usize) {
+pub fn getline(s: &mut [u8; 128], is_echo: bool) ->  &str {
     let mut ptr: usize = 0;
-    while ptr < buf_len {
-        write_char(buf[ptr]);
-        ptr = ptr + 1;
-    }
-}
-
-#[no_mangle]
-#[inline(never)]
-pub unsafe fn strcmp(s1: &[u8; 128], l1: usize, s2: &[u8; 128], l2: usize) -> bool {
-    if l1 != l2 {
-        return false;
-    }
-    let mut idx: usize = 0;
-    while idx < l1 {
-        if s1[idx] != s2[idx] {
-            return false;
-        }
-        idx = idx + 1;
-    }
-    true
-}
-
-#[no_mangle]
-#[inline(never)]
-pub unsafe fn get_line(s: &mut [u8; 128], is_echo: bool) -> usize {
-    let mut ptr: usize = 0;
-    loop {
-        let c: Option<u32> = read_char();
-        match c {
-            Some(i) => {
-                if is_echo {
-                    write_char(i as u8);
+    unsafe{
+        loop {
+            let c = read_u8();
+            match c {
+                Some(i) => {
+                    if is_echo {
+                        write_u8(i as u8);
+                    }
+                    if i == 13 {
+                        write_u8(10);
+                        break;
+                    }
+                    s[ptr] = i as u8;
+                    ptr = ptr + 1;
                 }
-                if i == 13 {
-                    write_char(10);
-                    break;
-                }
-                s[ptr] = i as u8;
-                ptr = ptr + 1;
+                None => {}
             }
-            None => {}
+            asm!("nop");
         }
-        asm!("nop");
+
     }
-    ptr
+    core::str::from_utf8(&s[0..ptr]).unwrap()
 }
 
 #[no_mangle]
-pub unsafe fn nops() {
+pub unsafe fn uart_nops() {
     for _ in 0..150 {
         asm!("nop");
     }
@@ -147,10 +122,7 @@ pub unsafe fn nops() {
 
 // Function to print something using the UART
 #[no_mangle]
-pub unsafe fn write_char(s: u8) {
-    // Add your UART printing code here
-    // Example: write to UART buffer or transmit data
-    // check if the UART is ready to transmit
+pub unsafe fn write_u8(s: u8) {
     loop {
         if (read_volatile(AUX_MU_LSR_REG as *mut u32) & 0b100000) != 0 {
             break;
@@ -160,13 +132,27 @@ pub unsafe fn write_char(s: u8) {
 }
 
 #[no_mangle]
-#[inline(never)]
-pub unsafe fn read_char() -> Option<u32> {
+pub unsafe fn read_u8() -> Option<u8> {
     let lsr: u32 = read_volatile(AUX_MU_LSR_REG as *mut u32) & 0b1;
     if lsr != 0 {
-        Some(read_volatile(AUX_MU_IO_REG as *mut u32))
+        Some(read_volatile(AUX_MU_IO_REG as *mut u8))
     } else {
         None
+    }
+}
+
+
+pub unsafe fn read(s: *mut u8, len: usize) {
+    let mut ptr: usize = 0;
+    while ptr < len {
+        let c = read_u8();
+        match c {
+            Some(i) => {
+                write_volatile(s.add(ptr), i as u8);
+                ptr = ptr + 1;
+            }
+            None => {}
+        }
     }
 }
 
@@ -186,21 +172,25 @@ pub unsafe fn print_hex(n: u32) {
         ptr = ptr + 1;
         num = num / 16;
     }
-    for i in buf.iter().take(8).rev(){
-        write_char(*i);
+    for i in buf.iter().take(8).rev() {
+        write_u8(*i);
     }
 }
 
-// // Create a global instance of the UART
-// pub static mut UART: Uart = Uart {};
+pub unsafe fn strncmp(s1: &str, s2: &str, n: usize) -> bool {
+    let mut i = 0;
+    while i < n {
+        if s1.as_bytes()[i] != s2.as_bytes()[i] {
+            return false;
+        }
+        i = i + 1;
+    }
+    true
+}
 
-// // UART struct
-// pub struct Uart {}
-
-// // Example usage
-// fn main() {
-//     unsafe {
-//         init_uart();
-//         writeln!(UART, "Hello, world!").unwrap();
-//     }
-// }
+// println
+#[no_mangle]
+pub unsafe fn println(s: &str) {
+    _print(s);
+    _print("\n\r");
+}
