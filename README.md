@@ -1,4 +1,4 @@
-# OSC2023
+# OSC2024
 
 | Github Account  | Student ID | Name          |
 |-----------------|------------|---------------|
@@ -11,7 +11,7 @@
 
 ## Build 
 
-- Lab 1
+- Lab
 ```
 make all
 ```
