@@ -1,0 +1,11 @@
+{this is lab 2 file1}
+.
+.F
+.I
+.L
+.E
+.
+.1
+.
+
+
