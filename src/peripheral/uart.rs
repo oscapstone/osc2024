@@ -1,10 +1,9 @@
-use crate::stdio::write;
 use mmio::regs::AuxReg::*;
 use mmio::regs::GpioReg::*;
 use mmio::regs::MmioReg::{Aux, Gpio};
 use mmio::MMIO;
 
-pub fn uart_init() {
+pub fn init() {
     // Enable mini UART
     MMIO::write_reg(Aux(Enable), 1);
 
@@ -47,24 +46,18 @@ pub fn send(c: u8) {
 
 pub fn recv() -> u8 {
     // Wait until we can receive
-    while MMIO::read_reg(Aux(MuLsr)) & 0x01 == 0 {
-        MMIO::delay(1);
+    let mut c = recv_nb();
+    while c.is_none() {
+        c = recv_nb();
     }
+    c.unwrap()
+}
 
-    // Read the character from the buffer
-    let c: u8 = MMIO::read_reg(Aux(MuIo)) as u8;
-    match c {
-        b'\r' | b'\n' => {
-            write(b"\r\n");
-            b'\n'
-        }
-        b'\x7f' | b'\x08' => {
-            write(b"\x08 \x08");
-            b'\x7f'
-        }
-        _ => {
-            send(c);
-            c
-        }
+pub fn recv_nb() -> Option<u8> {
+    // Check if something to read
+    if MMIO::read_reg(Aux(MuLsr)) & 0x01 == 0 {
+        return None;
     }
+    // Read the character from the buffer
+    Some((MMIO::read_reg(Aux(MuIo)) & 0xFF) as u8)
 }

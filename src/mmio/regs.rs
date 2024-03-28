@@ -73,7 +73,9 @@ pub enum MailboxReg {
     Write = 0x0000_B8A0,
 }
 
+#[repr(u32)]
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum MmioReg {
     Aux(AuxReg),
     Gpio(GpioReg),
