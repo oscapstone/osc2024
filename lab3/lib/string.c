@@ -1,9 +1,4 @@
-#ifndef __STRING_H__
-#define __STRING_H__
-
-#include "stdint.h"
-
-#define ENDL "\r\n"
+#include "string.h"
 
 int strcmp(const char *a, const char *b) {
     uint32_t i = 0;
@@ -42,6 +37,3 @@ uint32_t get_be_uint32(void *ptr) {
     uint8_t *bytes = (uint8_t *)ptr;
     return bytes[3] | bytes[2] << 8 | bytes[1] << 16 | bytes[0] << 24;
 }
-
-
-#endif

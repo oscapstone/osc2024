@@ -108,3 +108,8 @@ void uart_putc(char* buf, uint32_t size) {
         uart_write(buf[i]);
     }
 }
+
+void delay(uint32_t t) {
+    for (uint32_t i = 0; i < t; i++)
+        asm volatile("nop");
+}
