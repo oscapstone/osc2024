@@ -155,7 +155,7 @@ void shell_controller(char *cmd) {
     uart_printf("%f\n", get_timestamp());
   } else if (!strcmp(cmd, "loadimg")) {
     asm volatile(
-        "ldr x30, =0x60190;"
+        "ldr x30, =0x60120;"
         "ret;");
   }
   // else if (!strcmp(cmd, "showpic")) {
