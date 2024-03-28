@@ -1,0 +1,61 @@
+# Personal Information
+
+Welcome to my GitHub project! Here's a little bit about me:
+
+- **GitHub Account Name:** joshhsieh1999
+- **Student ID:** A113574
+- **Name:** Josh Hsieh
+
+## About This Project
+
+[Provide a brief description of the project, its goals, and how it's intended to be used. This section can help visitors understand the context and significance of your work.]
+
+## How to Use
+
+This project is organized into several directories, each serving a different purpose. Here's an overview of the key directories:
+
+### Lab2
+
+The `Lab2` directory contains the source code and resources for the second lab assignment. To build the files in this directory, navigate to `Lab2` and type the `make` command:
+
+```bash
+cd Lab2
+make
+```
+
+A `build` directory will appear, containing three subdirectories, `bootloader`, `kernel`, and `peripherals`. Copy the `bootloader.img` in `bootloader` directory along with all the files in `firmware` directory into the SD card.
+
+```bash
+cd rootfs
+find . | cpio -o -H newc > ../initramfs.cpio
+```
+
+This creates a cpio file for rootfs.
+
+Examine contents within the cpio:
+
+```bash
+cpio -itv < initramfs.cpio
+```
+
+**IMPORTANT**
+On mac running ubuntu on vm, use the following command:
+
+```bash
+find . -not -name '.DS_Store' | cpio -o -H newc > ../initramfs.cpio
+```
+
+Otherwise, the .DS_Store files created automatically by mac will be included within the
+cpio archive, causing errors when parsing.
+
+**ALSO VERY IMPORTANT**
+If you directly create a cpio archive on native mac, the cpio format won't be the same as
+the format on Ubuntu VM. This provided version is for Ubuntu, so native mac cpio will not
+be parsed correctly.
+
+## Contact
+
+Feel free to reach out if you have any questions or want to contribute to this project!
+
+- **Email:** joshhsieh1999@gmail.com
+
