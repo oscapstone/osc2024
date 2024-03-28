@@ -1,6 +1,7 @@
 *.o
 *.elf
 *.img
+*.tmp
 .gdb_history
 .vscode/
 build/
