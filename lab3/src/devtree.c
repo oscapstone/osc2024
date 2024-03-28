@@ -34,17 +34,17 @@ void fdt_traverse(void (*callback)(void *))
 
     uintptr_t structure = (uintptr_t)header + be2le(&header->off_dt_struct);
     uintptr_t strings = (uintptr_t)header + be2le(&header->off_dt_strings);
-    uint32_t totalsize = be2le(&header->totalsize);
+    uint32_t structure_size = be2le(&header->size_dt_struct);
 
     // Parse the structure block
     uintptr_t ptr = structure; // Point to the beginning of structure block
-    while (ptr < strings + totalsize) {
+    while (ptr < structure + structure_size) {
         uint32_t token = be2le((char *)ptr);
         ptr += 4; // Token takes 4 bytes
 
         switch (token) {
         case FDT_BEGIN_NODE:
-            ptr += align4(strlen((char *)ptr));
+            ptr += align4(strlen((char *)ptr) + 1);
             break;
         case FDT_END_NODE:
             break;
@@ -53,9 +53,8 @@ void fdt_traverse(void (*callback)(void *))
             ptr += 4;
             uint32_t nameoff = be2le((char *)ptr);
             ptr += 4;
-            if (!strcmp((char *)(strings + nameoff), "linux,initrd-start")) {
+            if (!strcmp((char *)(strings + nameoff), "linux,initrd-start"))
                 callback((void *)(uintptr_t)be2le((void *)ptr));
-            }
             ptr += align4(len);
             break;
         case FDT_NOP:

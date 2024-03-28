@@ -129,14 +129,17 @@ void uart_async_read(char *buf, int len)
 
 void uart_async_write(const char *s)
 {
-    int len = strlen(s);
-    if (len >= UART_BUF_SIZE) {
-        uart_puts("[ERROR] Exceed the UART buffer size.\n");
-        return;
-    }
     // Copy string to the write buffer
-    for (int i = 0; i < len; i++)
-        uart_write_buffer[i] = s[i];
+    int len = 0;
+    while (*s != '\0') {
+        if (len >= UART_BUF_SIZE) {
+            uart_puts("[ERROR] Exceed the UART buffer size\n");
+            return;
+        }
+        if (*s == '\n') // Convert \n to \r\n
+            uart_write_buffer[len++] = '\r';
+        uart_write_buffer[len++] = *s++;
+    }
     uart_write_buffer[len] = '\0';
     uart_write_idx = 0; // Reset the buffer index
     uart_enable_tx_interrupt();
