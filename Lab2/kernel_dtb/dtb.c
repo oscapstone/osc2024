@@ -39,11 +39,13 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
     while (*(address) == DT_BEGIN_NODE_TOKEN)
     {
         // skip name of the node
-        while (*(address++) != NULL)
-            ;
-        while (*(address++) == NULL)
-            ;
-        address--;
+        while (*(address) != NULL){
+            address++;
+        }
+
+        while (*(address) == NULL){
+            address++;
+        }
 
         // properties (attributes)
         while (*address == DT_PROP_TOKEN)
@@ -69,9 +71,9 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
 
             // jump the value of the attribute
             address += len;
-            while (*(address++) == NULL)
-                ;
-            address--;
+            while (*(address) == NULL){
+                address++;
+            }
         }
 
         // children
@@ -79,12 +81,15 @@ void parse_new_node(char *address, char *string_address, char *target, void (*ca
     }
 
     // go to end
-    while (*(address++) != DT_END_NODE_TOKEN)
-        ;
+    while (*(address) != DT_END_NODE_TOKEN){
+        address++;
+    }
+    
+    address++;
 
-    while (*(address++) == NULL)
-        ;
-    address--;
+    while (*(address) == NULL){
+        address++;
+    }
 
 }
 
