@@ -5,6 +5,7 @@
         "string_utils.h": "c",
         "cpio.h": "c",
         "shell.h": "c",
-        "mem_utils.h": "c"
+        "mem_utils.h": "c",
+        "dtb.h": "c"
     }
 }

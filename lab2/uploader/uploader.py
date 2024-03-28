@@ -14,7 +14,7 @@ def read_kernel(s):
     print(s.read_until(b"Kernel loaded!!!\r\n").decode())
 
 if __name__ == "__main__":
-    port = sys.argv[1] if len(sys.argv) > 1 else '/dev/pts/2'
+    port = sys.argv[1] if len(sys.argv) > 1 else '/dev/ttyUSB0'
     s = serial.Serial(port, baudrate=115200, timeout=5)
     read_kernel(s)
     s.close()

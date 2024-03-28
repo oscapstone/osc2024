@@ -5,11 +5,11 @@
 static char HEAP_USE[HEAP_SIZE] = {0};
 static unsigned int HEAP_OFFSET = 0;
 
-void mem_align(void *addr, unsigned int number)
+char *mem_align(char *addr, unsigned int number)
 {
-    unsigned long *x = (unsigned long *)addr;
-    unsigned long mask = number - 1;
-    *x = (*(x) + mask) & (~mask);
+    uint64_t x = (uint64_t) addr;
+    uint64_t mask = number - 1;
+    return (char *)((x + (mask)) & (~mask));
 }
 
 void *malloc(unsigned int size)

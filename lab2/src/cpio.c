@@ -4,10 +4,12 @@
 #include "../include/shell.h"
 #include "../include/mem_utils.h"
 
+extern char *cpio_addr;
+
 void cpio_ls()
 {
     /* 1. Get the address of cpio_address. */
-    char *addr = (char *)QEMU_CPIO_ADDR;
+    char *addr = (char *)cpio_addr;
 
     /* 2. Use while loop to check the pathname of the file is "TRAILER!!!" or not. */
     while (my_strcmp((addr + sizeof(struct cpio_header)), "TRAILER!!!") != 0) {
@@ -24,7 +26,7 @@ void cpio_ls()
 
         /* 5. align the address to the start of the file. */
         addr += namesize;
-        mem_align(&addr, 4);
+        addr = mem_align(addr, 4);
 
         /* 6. calculate the filesize. */
         unsigned int filesize = hexstr2val((char *)header->c_filesize, 8);
@@ -36,7 +38,7 @@ void cpio_ls()
 
         /* 7. align the address to the start of another file header. */
         addr += filesize;
-        mem_align(&addr, 4);
+        addr = mem_align(addr, 4);
     }
 
 }
@@ -44,7 +46,7 @@ void cpio_ls()
 void cpio_cat()
 {
     /* 1. Get the address of cpio_address and set up the flag. */
-    char *addr = (char *)QEMU_CPIO_ADDR;
+    char *addr = (char *)cpio_addr;
     int flag = 0;
 
     /* 2. Wait user enter the file name. */
@@ -72,7 +74,7 @@ void cpio_cat()
 
         /* 7. Align the address to the start of the file. */
         addr += namesize;
-        mem_align(&addr, 4);
+        addr = mem_align(addr, 4);
 
         /* 8. Calculate the filesize. */
         unsigned int filesize = hexstr2val((char *)header->c_filesize, 8);
@@ -87,7 +89,7 @@ void cpio_cat()
 
         /* 10. align the address to the start of another file header. */
         addr += filesize;
-        mem_align(&addr, 4);
+        addr = mem_align(addr, 4);
     }
 
     /* If flag == 0, print out message. */

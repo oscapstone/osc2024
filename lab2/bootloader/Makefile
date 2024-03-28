@@ -9,7 +9,7 @@ SRC_DIR = src
 all : bootloader.img
 
 qe: bootloader.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial pty -display none -initrd ../initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial pty -display none -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
 
 clean :
 	rm -rf $(BUILD_DIR) *.img 

@@ -26,3 +26,13 @@ unsigned int hexstr2val(char *str, unsigned int size)
     }
     return result;
 }
+
+unsigned int my_strlen(char *str)
+{
+    unsigned int count = 0;
+    while (*str != '\0') {
+        count++;
+        str++;
+    }
+    return count;
+}
