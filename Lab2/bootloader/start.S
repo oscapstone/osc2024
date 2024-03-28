@@ -15,6 +15,7 @@ _start:
 	ldr w3, =__bootloader_size	/*get bootloader size */
 
 // relocate bootloader
+//https://developer.arm.com/documentation/dui0801/l/Overview-of-AArch64-state/Registers-in-AArch64-state?lang=en
 relocate:
 	ldr x4,[x2],#8  /* get the data from x2(0x80000) to x4 and +8 */
 	str x4,[x1],#8	/* put the data in x1(0x60000) from x4 and +8 */

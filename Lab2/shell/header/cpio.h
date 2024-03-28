@@ -12,7 +12,7 @@ struct cpio_header {
     //the  endianness of 16 bit integers must be determined by observing the magic number at the start of the header
     //8-byte hexadecimal => [8]
     // uses 8-byte hexadecimal fields for all numbers
-    char c_magic[6];    //determine whether this archive is written with little-endian or big-endian integers.
+    char c_magic[6];    //should be "070701" present it's new ASCII
     char c_ino[8];      //determine when two entries refer to the same file., The inode numbers from the disk
     char c_mode[8];     //specifies	both the regular permissions and the file type.
     char c_uid[8];      // numeric user id

@@ -33,6 +33,8 @@ int parse_struct(fdt_callback cb, uintptr_t cur_ptr, uintptr_t strings_ptr, uint
 	{
 		// uart_send_string("\ncur_ptr: \n");
 		// uart_hex((unsigned int *)(cur_ptr));
+		//The Device Tree Blob (DTB) is represented in big-endian byte order. 
+		//However, many systems (including the ARM architecture used in many embedded systems) use little-endian order.
 		uint32_t token = fdt_u32_le2be((char *)cur_ptr); // be => le
 		// uart_send_string("\ntoken: \n");
 		// uart_hex(token);

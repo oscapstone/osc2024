@@ -63,7 +63,7 @@ void shell(){
      } else if (utils_string_compare(input_string,"ls")) {
 	       cpio_ls();
      } else if (utils_string_compare(input_string,"cat")){
-		   uart_send_string("Filename: ");
+		   uart_send_string("\rFilename: ");
 		   char filename[BUFFER_MAX_SIZE];
 		   read_command(filename);
 		   cpio_cat(filename);

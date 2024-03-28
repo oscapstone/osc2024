@@ -42,6 +42,7 @@ void cpio_ls(){
 		unsigned long file_size = utils_atoi(header->c_filesize,(int)sizeof(header->c_filesize));
 	    
         //align to 4-byte
+        //https://man.freebsd.org/cgi/man.cgi?query=cpio&sektion=5
         //The  pathname is followed by NUL bytes so that the total size of the fixed header plus pathname is a multiple of four.
 		utils_align(&headerPathname_size,4);
 		utils_align(&file_size,4);
@@ -68,11 +69,17 @@ void cpio_cat(char *filename)
         utils_align(&file_size,4);           
 
         char *file_content = target + headerPathname_size;
+        uart_send_char('\r');
 		for (unsigned int i = 0; i < file_size; i++)
         {
-            uart_send_char(file_content[i]);
+            if(file_content[i] == '\0'){
+                uart_send_char('\n');
+            }
+            else{
+                uart_send_char(file_content[i]);
+            }
         }
-        uart_send_string("\n");
+        uart_send_char('\r');
     }
     else
     {
