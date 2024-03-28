@@ -1,4 +1,4 @@
-# OSC2024 Lab0/1
+# OSC2024 Lab2
 
 | Github Account | Student ID | Name          |
 |----------------|------------|---------------|
