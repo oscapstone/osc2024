@@ -43,8 +43,6 @@ init_bss:  // 初始化 BSS 段，將其清零
     cbnz    w2, init_bss  // 如果 w2 不為零，則跳回 init_bss 繼續初始化
 
 run_main:  // 運行主程序
-    ldr     x1, =_dtb  // 加載設備樹的地址到 x1
-    str     x0, [x1], #8  // 將 x0（傳入的 DTB 地址）存儲到 x1 指向的地址（_dtb），然後 x1 加 8
     bl      main  // 跳轉到 main 函數，並保存返回地址
 
 proc_hang:  // 進程掛起，等待事件
