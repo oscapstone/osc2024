@@ -17,7 +17,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 const MAX_COMMAND_LEN: usize = 0x400;
-const INITRAMFS_ADDR: u32 = 0x200_0000;
+const INITRAMFS_ADDR: u32 = 0x800_0000;
 
 #[no_mangle]
 #[link_section = ".text.main"]
