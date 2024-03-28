@@ -24,6 +24,8 @@ init_bss:
     cbnz    w2, init_bss
 
 run_main:
+    ldr     x1, =_dtb
+    str     x0, [x1], #8
     bl      main
 
 proc_hang:

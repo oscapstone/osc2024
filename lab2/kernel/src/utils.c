@@ -118,6 +118,13 @@ unsigned int sprintf(char *dst, char* fmt, ...)
     return r;
 }
 
+unsigned long long strlen(const char *str)
+{
+    size_t count = 0;
+    while((unsigned char)*str++)count++;
+    return count;
+}
+
 int strcmp(const char* p1, const char* p2)
 {
     const unsigned char *s1 = (const unsigned char*) p1;

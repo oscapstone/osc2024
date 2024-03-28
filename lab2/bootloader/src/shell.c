@@ -86,6 +86,7 @@ void do_cmd_help()
    Please make sure this current code has been relocated. */
 void do_cmd_loadimg()
 {
+    char* bak_dtb = _dtb;
     char c;
     unsigned long long kernel_size = 0;
     char* kernel_start = (char*) (&_start);
@@ -103,6 +104,7 @@ void do_cmd_loadimg()
     uart_puts("Image file downloaded successfully.\r\n");
     uart_puts("Point to new kernel ...\r\n");
 
+    ((void (*)(char*))kernel_start)(bak_dtb);
 }
 
 void do_cmd_reboot()
