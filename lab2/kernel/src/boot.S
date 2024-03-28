@@ -1,9 +1,11 @@
-#include "mm.h"
+// #include "mm.h"
 
 .section ".text.boot"
 
 .globl _start
 _start:
+    mov x19, x0
+
 	mrs	x0, mpidr_el1		
 	and	x0, x0,#0xFF	// Check processor id
 	cbz	x0, master		// Hang for all non-primary CPU
@@ -18,6 +20,10 @@ master:
 	sub	x1, x1, x0
 	bl 	memzero
 
-	mov	sp, #LOW_MEMORY 
+	
+	ldr x1, =0x90000	
+	mov sp, x1
+    
+    mov x0, x19         // get fdt back
 	bl  kernel_begin
 	b 	proc_hang		// should never come here

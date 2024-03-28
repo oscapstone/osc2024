@@ -1,11 +1,11 @@
 _bootloader = 0x60000;
 _kernel = 0x80000;
-_cpio_file = 0x20000000;
+_memory = 0x90000;
 
 
 SECTIONS
 {
-	. = _bootloader;
+	. = _kernel;
 	.text.boot : { *(.text.boot) }
 	.text : { *(.text) }
 	.rodata : { *(.rodata) }

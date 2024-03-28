@@ -3,7 +3,7 @@
 #include "mini_uart.h"
 #include "helper.h"
 
-extern char _cpio_file[];
+extern char* _cpio_file;
 char buff[1024];
 
 uint8_t hex_char_to_bin(char c) {

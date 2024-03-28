@@ -5,19 +5,26 @@
 #include "helper.h"
 #include "loader.h"
 #include "cpio.h"
+#include "alloc.h"
+#include "fdt.h"
 
 char buf[1024];
 
 void help() {
-	output("help      : print this help menu");
-	output("hello     : print Hello World!");
-	output("reboot    : reboot the device");
-	output("revision  : get the revision number");
-	output("memory    : get the ARM memory info");
-	uart_printf("this is test %d, %s, %d\n", 123, "fuck", 456);
+	output("help         : print this help menu");
+	output("hello        : print Hello World!");
+	output("reboot       : reboot the device");
+	output("revision     : get the revision number");
+	output("memory       : get the ARM memory info");
+	output("ls           : ls the initial ramdisk");
+	output("cat          : cat the initial ramdisk");
+	output("test alloc   : test the allocator");
+	output("get initramd : use devicetree to get initial ramdisk");
+	output("dtb          : output the device tree");
+	
 }
 
-void shell_begin(void)
+void shell_begin(char* fdt)
 {
 	while (1) {
 		uart_send_string("# ");
@@ -29,6 +36,9 @@ void shell_begin(void)
 		else if (same(buf, "help")) {
 			help();
 		}
+		else if(same(buf, "get initramd")) {
+			fdt_traverse(get_initramfs_addr, fdt);
+		}
 		else if (same(buf, "ls")) {
 			parse_cpio_ls();
 		}
@@ -37,6 +47,9 @@ void shell_begin(void)
 			uart_recv_string(buf);
 			output("");
 			parse_cpio_cat(buf);
+		}
+		else if (same(buf, "dtb")) {
+			fdt_traverse(print_dtb, fdt);
 		}
 		else if(same(buf, "revision")) {
 			unsigned int rev = get_board_revision();
@@ -60,16 +73,21 @@ void shell_begin(void)
 				output("You failed getting ARM memory info");
 			}
 		}
-		else if (same(buf, "load kernel")) {
-			load_kernel();
-			uart_printf("End of the loaded kernel\n");
-		}
 		else if (same(buf, "reboot")) {
 			output("Rebooting");
 			reset(100);
 		}
 		else if (same(buf, "exit")) {
 			break;
+		}
+		else if (same(buf, "test alloc")) {
+			char* str = simple_malloc(8);
+			char* str2 = simple_malloc(8);
+			for(int i = 0; i < 8; i ++) {
+				str[i] = 'a';
+				str2[i] = 'b';
+			}
+			uart_printf("%x, %x\n", str, str2);
 		}
 		else {
 			output("Command not found");

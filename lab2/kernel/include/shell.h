@@ -1,3 +1,3 @@
 
 
-void shell_begin(void);
+void shell_begin(char*);

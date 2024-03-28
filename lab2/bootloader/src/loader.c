@@ -3,9 +3,9 @@
 
 extern char _kernel[];
 
-typedef void (*kernel_funcp)();
+typedef void (*kernel_funcp)(char*);
 
-void load_kernel(void)
+void load_kernel(char* fdt)
 {
     // Loading kernel Protocol:
     //  4 bytes: The kernel image length n
@@ -24,6 +24,6 @@ void load_kernel(void)
         *p++ = uart_recv();
     }
 
-    // Execute kernel
-    ((kernel_funcp)_kernel)();
+	// Execute kernel
+    ((kernel_funcp)_kernel)(fdt);
 }

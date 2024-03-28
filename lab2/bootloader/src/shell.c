@@ -8,14 +8,16 @@
 char buf[1024];
 
 void help() {
-	output("help      : print this help menu");
-	output("hello     : print Hello World!");
-	output("reboot    : reboot the device");
-	output("revision  : get the revision number");
-	output("memory    : get the ARM memory info");
+	output("help        : print this help menu");
+	output("hello       : print Hello World!");
+	output("reboot      : reboot the device");
+	output("revision    : get the revision number");
+	output("memory      : get the ARM memory info");
+	output("load kernel : listen for kernel file");
+	output("exit        : exit");
 }
 
-void shell_begin(void)
+void shell_begin(char* fdt)
 {
 	while (1) {
 		uart_send_string("# ");
@@ -50,8 +52,7 @@ void shell_begin(void)
 			}
 		}
 		else if (same(buf, "load kernel")) {
-			load_kernel();
-			// never comes here :(
+			load_kernel(fdt);
 		}
 		else if (same(buf, "reboot")) {
 			output("Rebooting");

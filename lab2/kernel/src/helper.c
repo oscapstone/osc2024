@@ -23,3 +23,11 @@ void substr(char* to, char* from, int l, int r) {
 	}
 	to[r - l + 1] = '\0';
 }
+
+int strlen(char* str) {
+	int t = 0;
+	while(str[t] != '\0') {
+		t ++;
+	}
+	return t;
+}
