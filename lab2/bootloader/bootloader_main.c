@@ -11,8 +11,6 @@ void get_actual_img()
     while(1)
     {
         c = receive();
-        send(c);
-        send('\n');
         if(!((c>='0') && (c<='9')))
         {
             size_str[ind] = '\0';
