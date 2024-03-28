@@ -5,13 +5,14 @@ volatile unsigned long available = 0;
 
 void *simple_malloc(size_t size)
 {
-    if (BASE + available > LIMIT)
+    if (BASE + available + size > LIMIT)
         return NULL;
-    void * returned_pointer = (void *) (BASE + available);
+    void *returned_pointer = (void *) (BASE + available);
     available += size;
-    return returned_pointer;
+    return (void *) returned_pointer;
 }
 
+/* return available address */
 int return_available()
 {
     return (int) BASE + available;
