@@ -28,29 +28,29 @@
 //------------------------------------------------------------------------------
 _start:
 	// Only proceed on the boot core. Park it otherwise.
-	mrs	x0, MPIDR_EL1
-	and	x0, x0, #3
-	mov	x1, #0
-	cmp	x0, x1
+	mrs	x1, MPIDR_EL1
+	and	x1, x1, #3
+	mov	x2, #0
+	cmp	x1, x2
 	b.ne	.L_parking_loop
 
 	// If execution reaches here, it is the boot core.
 
 	// Initialize DRAM.
-	ADR_REL	x0, __bss_begin
-	ADR_REL x1, __bss_end
+	ADR_REL	x1, __bss_begin
+	ADR_REL x2, __bss_end
 
 .L_bss_init_loop:
-	cmp	x0, x1
+	cmp	x1, x2
 	b.eq	.L_prepare_rust
-	stp	xzr, xzr, [x0], #16
+	stp	xzr, xzr, [x1], #16
 	b	.L_bss_init_loop
 
 	// Prepare the jump to Rust code.
 .L_prepare_rust:
 	// Set the stack pointer.
-	ADR_REL	x0, __phys_binary_load_addr
-	mov	sp, x0
+	ADR_REL	x1, __phys_binary_load_addr
+	mov	sp, x1
 
 	// Jump to Rust code.
 	b _start_rust

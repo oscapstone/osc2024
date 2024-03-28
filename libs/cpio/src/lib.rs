@@ -91,10 +91,15 @@ impl CPIOArchive {
         if file_name == "TRAILER!!!\0" {
             return None;
         }
-        let content_start_addr = unsafe { name_start_addr.add(namesize as usize) };
+        // the address should align 32 bits
+        let content_start_addr_without_align = unsafe { name_start_addr.add(namesize as usize) };
+        let content_start_addr = unsafe {
+            content_start_addr_without_align
+                .add(content_start_addr_without_align.align_offset(align_of::<u32>()))
+        };
         let filesize = cpio_header.filesize();
         let file_content =
-            unsafe { slice::from_raw_parts(name_start_addr as *const u8, filesize as usize) };
+            unsafe { slice::from_raw_parts(content_start_addr as *const u8, filesize as usize) };
         let mtime = Time::new(cpio_header.mtime() as i64, 0);
         // the address should align 32 bits
         let new_current_without_align = unsafe { content_start_addr.add(filesize as usize) };

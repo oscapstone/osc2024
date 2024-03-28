@@ -10,5 +10,6 @@ bsp = { path = "../../libs/bsp" }
 cpio = { path = "../../libs/cpio" }
 cpu = { path = "../../libs/cpu" }
 device = { path = "../../libs/device" }
+devicetree = { path = "../../libs/devicetree" }
 library = { path = "../../libs/library" }
 vfs = { path = "../../libs/vfs" }

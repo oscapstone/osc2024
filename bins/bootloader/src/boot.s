@@ -40,10 +40,10 @@
 //------------------------------------------------------------------------------
 _start:
 	// Only proceed on the boot core. Park it otherwise.
-	mrs	x0, MPIDR_EL1
-	and	x0, x0, #3
-	mov	x1, #0
-	cmp	x0, x1
+	mrs	x1, MPIDR_EL1
+	and	x1, x1, #3
+	mov	x2, #0
+	cmp	x1, x2
 	b.ne	.L_parking_loop
 
 	// If execution reaches here, it is the boot core.
@@ -51,31 +51,31 @@ _start:
 	// Initialize DRAM.
   // We need to initialize the bss which is relocated,
   // so we have to load absolute address
-	ADR_ABS	x0, __bss_begin
-	ADR_ABS x1, __bss_end
+	ADR_ABS	x1, __bss_begin
+	ADR_ABS x2, __bss_end
 
 .L_bss_init_loop:
-	cmp	x0, x1
+	cmp	x1, x2
 	b.eq	.L_relocate_self
-	stp	xzr, xzr, [x0], #16
+	stp	xzr, xzr, [x1], #16
 	b	.L_bss_init_loop
 
 .L_relocate_self:
-  ADR_REL x0, __binary_nonzero_start // load the current running binary start address
-  ADR_ABS x1, __binary_nonzero_start // load the actually start address that the bootloader will be relocated to
-  ADR_ABS x2, __binary_nonzero_end
+  ADR_REL x1, __binary_nonzero_start // load the current running binary start address
+  ADR_ABS x2, __binary_nonzero_start // load the actually start address that the bootloader will be relocated to
+  ADR_ABS x3, __binary_nonzero_end
 
 .L_copy_loop:
-  ldr x3, [x0], #8
-  str x3, [x1], #8
-  cmp x1, x2
+  ldr x4, [x1], #8
+  str x4, [x2], #8
+  cmp x2, x3
   b.lo .L_copy_loop
 
 	// Prepare the jump to Rust code.
 .L_prepare_rust:
 	// Set the stack pointer.
-	ADR_ABS	x0, __binary_nonzero_start
-	mov	sp, x0
+	ADR_ABS	x1, __binary_nonzero_start
+	mov	sp, x1
 
   ADR_ABS x1, _start_rust
 	// Jump to Rust code.

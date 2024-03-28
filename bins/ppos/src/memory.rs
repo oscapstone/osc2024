@@ -22,4 +22,6 @@ extern "C" {
     pub static __heap_end: usize;
 }
 
+pub static mut DEVICETREE_START_ADDR: usize = 0;
+
 pub mod heap_allocator;

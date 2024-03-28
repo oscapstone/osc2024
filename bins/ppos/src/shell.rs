@@ -1,9 +1,11 @@
 use alloc::boxed::Box;
-use bsp::memory::INIT_RAMFS_BASE;
 use cpio::CPIOArchive;
 use library::{console, format, print, println, string::String};
 
-use crate::driver::{self, mailbox};
+use crate::{
+    driver::{self, mailbox},
+    memory,
+};
 
 pub struct Shell {
     input: String,
@@ -108,10 +110,23 @@ impl Shell {
     }
 
     fn ls(&self) {
-        let mut cpio_archive = unsafe { CPIOArchive::from_memory(INIT_RAMFS_BASE) };
-        while let Some(file) = cpio_archive.read_next() {
-            println!("{}", file.name);
-        }
+        let mut devicetree =
+            unsafe { devicetree::FlattenedDevicetree::from_memory(memory::DEVICETREE_START_ADDR) };
+        devicetree
+            .traverse(&|device_name, property_name, property_value| {
+                if property_name == "linux,initrd-start" {
+                    let mut cpio_archive = unsafe {
+                        CPIOArchive::from_memory(u32::from_be_bytes(
+                            property_value.try_into().unwrap(),
+                        ) as usize)
+                    };
+                    while let Some(file) = cpio_archive.read_next() {
+                        println!("{}", file.name);
+                    }
+                }
+                Ok(())
+            })
+            .unwrap();
     }
 
     fn cat(&self, args: Box<[&str]>) {
@@ -122,15 +137,29 @@ impl Shell {
 
         let t = format!("{}\0", args[0]);
         let filename = t.as_str();
-        let mut cpio_archive = unsafe { CPIOArchive::from_memory(INIT_RAMFS_BASE) };
-        while let Some(file) = cpio_archive.read_next() {
-            if file.name == filename {
-                for byte in file.content {
-                    print!("{}", *byte as char);
+        let mut devicetree =
+            unsafe { devicetree::FlattenedDevicetree::from_memory(memory::DEVICETREE_START_ADDR) };
+        devicetree
+            .traverse(&move |device_name, property_name, property_value| {
+                if property_name == "linux,initrd-start" {
+                    let mut cpio_archive = unsafe {
+                        CPIOArchive::from_memory(u32::from_be_bytes(
+                            property_value.try_into().unwrap(),
+                        ) as usize)
+                    };
+                    while let Some(file) = cpio_archive.read_next() {
+                        if file.name == filename {
+                            for byte in file.content {
+                                print!("{}", *byte as char);
+                            }
+                            return Ok(());
+                        }
+                    }
+                    println!("cat: {}: No such file or directory", filename);
+                    return Ok(());
                 }
-                return;
-            }
-        }
-        println!("cat: {}: No such file or directory", filename);
+                Ok(())
+            })
+            .unwrap();
     }
 }

@@ -52,6 +52,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "devicetree"
+version = "0.1.0"
+
+[[package]]
 name = "kernel-transfer"
 version = "0.1.0"
 
@@ -67,6 +71,7 @@ dependencies = [
  "cpio",
  "cpu",
  "device",
+ "devicetree",
  "library",
  "vfs",
 ]

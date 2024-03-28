@@ -4,6 +4,7 @@ members = [
   "libs/cpio",
   "libs/cpu",
   "libs/device",
+  "libs/devicetree",
   "libs/library",
   "libs/vfs",
   "bins/bootloader",
