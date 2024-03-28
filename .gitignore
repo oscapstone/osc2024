@@ -4,6 +4,7 @@ build
 *.o
 *.img
 *.elf
+.vscode
 
 # MacOS #
 # General

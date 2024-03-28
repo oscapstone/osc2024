@@ -4,6 +4,8 @@
 
 void uart_send ( char c )
 {
+	if (c == '\n')
+		uart_send('\r');
 	while(1) {
 		if(get32(AUX_MU_LSR_REG)&0x20) 
 			break;
@@ -17,16 +19,13 @@ char uart_recv ( void )
 		if(get32(AUX_MU_LSR_REG)&0x01) 
 			break;
 	}
-	return(get32(AUX_MU_IO_REG)&0xFF);
+	return(get32(AUX_MU_IO_REG));
 }
 
-void uart_send_string(char* str)
+void uart_send_string(const char* str)
 {
-	for (int i = 0; str[i] != '\0'; i ++) {
-		if(str[i] == '\n'){
-			uart_send('\r');
-		}
-		uart_send((char)str[i]);
+	while (*str) {
+		uart_send(*str++);
 	}
 }
 
@@ -65,6 +64,5 @@ void uart_init ( void )
 	put32(AUX_MU_LCR_REG,3);                //Enable 8 bit mode
 	put32(AUX_MU_MCR_REG,0);                //Set RTS line to be always high
 	put32(AUX_MU_BAUD_REG,270);             //Set baud rate to 115200
-
 	put32(AUX_MU_CNTL_REG,3);               //Finally, enable transmitter and receiver
 }

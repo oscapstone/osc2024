@@ -28,6 +28,6 @@ typedef struct {
 int cpio_newc_parse_header(cpio_t *this_header_pointer, char **pathname, unsigned int *filesize, char **data, cpio_t **next_header_pointer);
 void initrd_list();
 void initrd_cat(const char *target);
-void initrd_callback(void *addr);
+void initrd_callback(unsigned int node_type, char *name, void *value, unsigned int name_size);
 
 #endif // INITRD_H

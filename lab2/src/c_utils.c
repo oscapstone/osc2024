@@ -54,3 +54,7 @@ int atoi(const char *s){
 
     return sign * result;
 }
+
+unsigned int endian_big2little(unsigned int x) {
+    return ((x & 0xFF) << 24) | ((x & 0xFF00) << 8) | ((x & 0xFF0000) >> 8) | ((x & 0xFF000000) >> 24);
+}

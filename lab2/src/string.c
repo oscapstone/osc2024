@@ -7,11 +7,12 @@ unsigned int is_visible(unsigned int c){
     return 0;
 }
 
-int strcmp(const char *str1, const char *str2)
-{
-	while (*str1 && *str1 == *str2)
-		str1++, str2++;
-	return *(unsigned char *)str1 - *(unsigned char *)str2;
+int strcmp(const char *s1, const char *s2) {
+    while (*s1 && *s2 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *s1 - *s2;
 }
 
 

@@ -88,7 +88,7 @@ void load_img(){
 	unsigned int size = atoi(buf);
 	char *kernel_addr = (char *)0x80000;
 	while (size --) {
-		*kernel_addr++ = uart_recv();
+		*kernel_addr++ = uart_raw_recv();
 	}
 
 	asm volatile(

@@ -5,10 +5,7 @@
 #include "string.h"
 #include "c_utils.h"
 
-static void *ramfs_base = (void *)CPIO_BASE_RPI;
-
-char *cpio_start = (char *)CPIO_BASE_RPI;
-// char *cpio_end;
+char *ramfs_base;
 
 // Convert hexadecimal string to int
 // @param s: hexadecimal string
@@ -94,7 +91,6 @@ void initrd_list()
         // if parse header error
         if (error)
         {
-            // uart_printf("error\n");
             uart_send_string("Error parsing cpio header\n");
             break;
         }
@@ -152,10 +148,11 @@ void initrd_cat(const char *target)
     return;
 }
 
-void initrd_callback(void *addr)
-{
-	uart_send_string("[INFO] Initrd is mounted at ");
-	uart_hex((uintptr_t)addr);
-	uart_send_string("\n");
-	ramfs_base = (char *)addr;
+void initrd_callback(unsigned int node_type, char *name, void *value, unsigned int name_size){
+    if(!strcmp(name, "linux,initrd-start")){
+        ramfs_base = (char *)(unsigned long long)endian_big2little(*(unsigned int *)value);
+        uart_send_string("ramfs_base: ");
+        uart_hex((unsigned long)ramfs_base);
+        uart_send_string("\n");
+    }
 }
