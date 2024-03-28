@@ -39,7 +39,7 @@ start.o: start.S
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm start.o $(SRC_OBJ_FILES) $(BOOT_OBJ_FILES)
+	rm -f start.o $(SRC_OBJ_FILES) $(BOOT_OBJ_FILES)
 	rm -rf $(DIST_DIR)
 
 run:
