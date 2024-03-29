@@ -113,8 +113,7 @@ void user_test()
 void demo_async_uart()
 {
     uart_async_init();
-    enable_interrupt();
-    uart_async_puts("Welcome to OS lab 3: Asynchronous UART\n");
+    uart_async_puts("Demo lab 3: Asynchronous UART\n");
     wait_cycles(100);
     while (1) {
         char c = uart_async_getc();
