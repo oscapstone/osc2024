@@ -25,17 +25,17 @@ void main()
     shell_init();
     fdt_init();
     fdt_traverse(initramfs_callback);
+    timer_init(); // initialize timer pool
 
     // uart_async_init();
 
-    // timer_init();
     // core_timer_enable(); // User have to use `timer_on` to enable timer before `set_timeout`.
 
     print_current_el(); // read the current level from system register.
 
     // task_init();
 
-    // disable_interrupt();
+    disable_interrupt(); // disable interrupt before switch to user mode (shell)
 
     // sched_init(); // start schedule
 

@@ -190,17 +190,17 @@ void core_timer_handler()
         "mrs x0, cntpct_el0     \n\t"
         "mrs x1, cntfrq_el0     \n\t"
         "udiv %0, x0, x1        \n\t": "=r" (seconds));
-    // printf("\nseconds: %d\n", seconds);
+    printf("\nseconds: %d\n", seconds);
 
     /* Setup next timer interrupt*/
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
-        "mov x1, #1             \n\t"
+        "mov x1, #2             \n\t"
         "mul x0, x0, x1         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
     
-    timer_update();
-    do_timer();
+    // timer_update();
+    // do_timer();
 }
 
 void print_current_el(void)
