@@ -15,5 +15,7 @@ void demo_do_exec2();
 
 void user_test();
 
+void demo_async_uart(); // for lab 3 basic 3
+
 
 #endif

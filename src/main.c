@@ -9,6 +9,8 @@
 #include "exception.h"
 #include "sched.h"
 #include "timer.h"
+#include "delays.h"
+#include "demo.h"
 
 #define CMD_LEN 128
 
@@ -27,24 +29,28 @@ void main()
     fdt_traverse(initramfs_callback);
     timer_init(); // initialize timer pool
 
-    // uart_async_init();
-
     // core_timer_enable(); // User have to use `timer_on` to enable timer before `set_timeout`.
 
     print_current_el(); // read the current level from system register.
 
+
+    enable_interrupt(); // this is necessary in lab 3 basic 3: asynchronous uart
+
+    demo_async_uart(); // for lab 3 basic 3, not sure should I put it here or in shell_controller
+
+
     // task_init();
 
-    disable_interrupt(); // disable interrupt before switch to user mode (shell)
+    // disable_interrupt(); // disable interrupt before switch to user mode (shell)
 
     // sched_init(); // start schedule
 
     /* Switch to el0 before running shell. Unnessasary in lab 4*/
     move_to_user_mode();
     while(1) {
-        uart_puts("# ");
-        char cmd[CMD_LEN];
-        shell_input(cmd);
-        shell_controller(cmd);
+        // uart_puts("# ");
+        // char cmd[CMD_LEN];
+        // shell_input(cmd);
+        // shell_controller(cmd);
     }
 }

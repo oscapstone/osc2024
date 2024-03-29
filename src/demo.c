@@ -3,6 +3,8 @@
 #include "exec.h"
 #include "syscall.h"
 #include "delays.h"
+#include "exception.h"
+
 
 void demo_task1()
 {
@@ -105,4 +107,19 @@ void test() {
 void user_test()
 {
     do_exec(test);
+}
+
+/* Lab 3 Basic Exercise 3: Asynchronous UART */
+void demo_async_uart()
+{
+    uart_async_init();
+    enable_interrupt();
+    uart_async_puts("Welcome to OS lab 3: Asynchronous UART\n");
+    wait_cycles(100);
+    while (1) {
+        char c = uart_async_getc();
+        wait_cycles(10000000);
+        uart_async_send(c);
+        wait_cycles(10000000);
+    };
 }

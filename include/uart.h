@@ -27,10 +27,7 @@
 
 #include "gpio.h"
 
-#define IRQS1 (volatile unsigned int *)0x3f00b210
-
 void uart_init();
-void uart_async_init();
 void uart_send(unsigned int c);
 char uart_getc();
 void uart_puts(char *s);
@@ -39,4 +36,9 @@ void uart_hex(unsigned int d);
 void printf(char *fmt, ...);
 void uart_dump(void *ptr);
 
+/* For lab 3: Asynchronous read and write. */
+void uart_async_init();
+char uart_async_getc(void);
+void uart_async_puts(char *s);
+void uart_async_send(unsigned int c);
 #endif

@@ -1,4 +1,4 @@
-#define CORE0_TIMER_IRQ_CTRL 0x40000040
+#define CORE0_TIMER_IRQ_CTRL 0x40000040 // https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf
 
 .global core_timer_enable
 core_timer_enable:

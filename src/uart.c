@@ -28,6 +28,7 @@
 #include "delays.h"
 #include "uart.h"
 #include "sprintf.h"
+#include "queue.h" // for async uart
 
 extern unsigned char _end;
 
@@ -62,12 +63,6 @@ void uart_init()
 
     GPIO->GPPUDCLK[0] = 0;    // flush GPIO setup
     AUX->AUX_MU_CNTL_REG = 3; // enable Tx, Rx
-}
-
-void uart_async_init()
-{
-    AUX->AUX_MU_IER_REG = 0x1; // enable receive interrupt. Send interrupt when receive FIFO is not empty
-    IRQ->ENABLE_IRQS1 = (1 << 29); // set IRQ_ENABLE to enable mini UART receive interrupt (at pending bit 29)
 }
 
 /**
@@ -175,4 +170,38 @@ void uart_dump(void *ptr)
         uart_send('\r');
         uart_send('\n');
     }
+}
+
+/**
+ * Enable both receive and transmit interrupt
+ * Enable mini UART receive interrupt (at pending bit 29)
+ * AUX->AUX_MU_IER_REG: Set bit 0 to enable receive interrupt. Set bit 1 to enable transmit interrupt.
+ * receive interrupt occurs when the receive FIFO has valid data.
+ * transmit interrupt occurs when the transmit FIFO is empty.
+*/
+void uart_async_init()
+{
+    AUX->AUX_MU_IER_REG = 0x1; // enable receive interrupt. transmit interrupt will be enabled when we write data to write_buffer.
+    IRQ->ENABLE_IRQS1 = (1 << 29); // set IRQ_ENABLE to enable mini UART interrupt (AUX interrupt) which is at pending bit 29.
+}
+
+char uart_async_getc(void)
+{
+    if (is_empty(&read_buffer))
+        return 0;
+    return dequeue(&read_buffer);
+}
+
+void uart_async_send(unsigned int c)
+{
+    enqueue(&write_buffer, c);
+    AUX->AUX_MU_IER_REG |= (1 << 1); // enable transmit interrupt
+}
+
+void uart_async_puts(char *s)
+{
+    while(*s) {
+        enqueue(&write_buffer, *s++);
+    }
+    AUX->AUX_MU_IER_REG |= (1 << 1); // enable transmit interrupt
 }
