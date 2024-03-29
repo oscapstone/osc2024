@@ -4,3 +4,4 @@ target
 .vscode
 rootfs
 .gdbinit
+initramfs.cpio
