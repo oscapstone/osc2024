@@ -83,13 +83,6 @@ impl CpioArchive {
             offset += 4 - (offset % 4);
         }
         if filesize > 0 {
-            print("namesize: ");
-            print_dec(self.get_namesize(ptr) as u32);
-            print("filesize: ");
-            print_dec(self.get_filesize(ptr) as u32);
-            print("filename: ");
-            println(self.get_file_name(ptr));
-
             offset += filesize;
 
             if offset % 4 != 0 {
@@ -210,7 +203,6 @@ impl CpioArchive {
                 value |= (*(ptr.offset(i as isize)) as u64) << ((len - i - 1) * 8);
             }
         }
-        // print_hex_u64(value);
         value
     }
 
