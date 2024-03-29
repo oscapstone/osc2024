@@ -127,15 +127,10 @@ void initrd_cat()
 
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
 {
-    // uart_puts("node_name: ");
-    // uart_puts(node_name);
-    // uart_puts(", property_name: ");
-    // uart_puts(property_name);
-    // uart_send('\n');
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
         cpio_base = bswap_32(load_addr);
-        uart_puts("cpio_base: ");
+        uart_puts("==== cpio_base: ");
         uart_hex((unsigned int)cpio_base);
         uart_send('\n');
     }

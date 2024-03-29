@@ -77,7 +77,7 @@ void get_board_revision()
     mbox[6] = 0; // MBOX_TAG_LAST
     mbox_call(8);
 
-    uart_puts("board revision: 0x");
+    uart_puts("==== board revision: 0x");
     uart_hex(mbox[5]);
     uart_send('\n');
 }
@@ -94,10 +94,10 @@ void get_memory_info()
     mbox[7] = 0; // MBOX_TAG_LAST
     mbox_call(8);
 
-    uart_puts("arm memory base address : 0x");
+    uart_puts("==== arm memory base address : 0x");
     uart_hex(mbox[5]);
     uart_send('\n');
-    uart_puts("arm memory base size : ");
+    uart_puts("==== arm memory base size :      ");
     uart_hex(mbox[6]);
     uart_send('\n');
 }
