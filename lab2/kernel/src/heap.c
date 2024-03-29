@@ -5,7 +5,7 @@ static char* htop_ptr = &_heap_top;
 
 void* malloc(unsigned int size) {
     // -> htop_ptr
-    // htop_ptr + 0x02:  heap_block size
+    // htop_ptr + 0x08:  heap_block size
     // htop_ptr + 0x10 ~ htop_ptr + 0x10 * k:
     //            { heap_block }
     // -> htop_ptr
