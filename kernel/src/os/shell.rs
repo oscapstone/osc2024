@@ -1,7 +1,7 @@
 use super::stdio::{get_line, print, println};
 use super::file_system::cpio;
 
-pub fn start() {
+pub fn start(initrd_start: u32) {
     let mut inp_buf = [0u8; 256];
 
     loop {
@@ -23,14 +23,14 @@ pub fn start() {
             break;
 
         } else if inp_buf.starts_with(b"ls") {
-            let init_ram_file = cpio::CpioArchive::load(0x800_0000 as *const u8);
+            let init_ram_file = cpio::CpioArchive::load(initrd_start as *const u8);
             init_ram_file.print_file_list();
 
         } else if inp_buf.starts_with(b"cat") {
             print("Filename: ");
             let _len = get_line(&mut inp_buf, 256);
             let filename = core::str::from_utf8(&inp_buf[.._len - 1]).unwrap();
-            let init_ram_file = cpio::CpioArchive::load(0x800_0000 as *const u8);
+            let init_ram_file = cpio::CpioArchive::load(initrd_start as *const u8);
             init_ram_file.print_file_content(filename);
         
         } else {

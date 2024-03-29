@@ -1,12 +1,17 @@
 .section .text._start
 
-_stack_start    = 0x90000
+_stack_start    = 0x100000
 
 .global _start
 .global _bss_start
 .global _bss_end
 
 _start:
+    # Store the address of the device tree
+    # Should be removed when building for a real hardware
+    # ldr x1, =0x8F000
+    # str x0, [x1]
+
     mrs x0, mpidr_el1
     cbz x0, .L_parking_loop
 

@@ -1,7 +1,5 @@
 /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
 __rpi_phys_binary_load_addr = 0x80000;
-_bss_start      = 0x20000000;
-_bss_end      = 0x20001000;
 
 
 ENTRY(__rpi_phys_binary_load_addr)
@@ -14,6 +12,7 @@ ENTRY(__rpi_phys_binary_load_addr)
 PHDRS
 {
     segment_code PT_LOAD FLAGS(5);
+    segment_data PT_LOAD FLAGS(6);
 }
 
 SECTIONS
@@ -25,11 +24,17 @@ SECTIONS
     ***********************************************************************************************/
     .text : {
         KEEP(*(.text._start))
+        *(.text*)
     } :segment_code
 
-    .bss : {
-        . = _bss_start;
+    .rodata : ALIGN(8) { *(.rodata*) } :segment_code
+
+    .data : { *(.data*) } :segment_data
+
+    .bss (NOLOAD) : ALIGN(16) {
+        _bss_start = .;
         *(.bss)
-        . = _bss_end;
-    }
+        . = ALIGN(16);
+        _bss_end = .;
+    } :segment_data
 }

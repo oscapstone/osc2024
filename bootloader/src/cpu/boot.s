@@ -8,6 +8,10 @@ _stack_start    = 0x90000
 .global _bss_end
 
 _start:
+    # Store device tree address to 0x70000
+    ldr x1 , =0x8F000
+    str x0, [x1]
+
     # Copy code to addres 0x60000
     ldr x0, =0x80000
     ldr x1, =0x60000
