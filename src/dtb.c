@@ -4,20 +4,16 @@
 #include "stdint.h"
 #include "string.h"
 #include "initrd.h"
+#include "stddef.h"
 
 #define NULL ((void *)0)
 extern unsigned char __dtb_address;
 
 fdt_header *dtb_address;
 
-// uint32_t swap_endian(uint32_t num)
-// {
-//     return num >> 24 | num << 24 | (num & 0x0000ff00) << 8 | (num & 0x00ff0000) >> 8;
-// }
-
 void fdt_init()
 {
-    uint32_t *tmp_pointer = (uint32_t *) &__dtb_address;
+    uint64_t *tmp_pointer = (uint64_t *) &__dtb_address;
     dtb_address = (fdt_header *) *tmp_pointer;
 }
 

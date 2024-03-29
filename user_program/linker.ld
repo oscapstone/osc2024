@@ -23,13 +23,22 @@
  *
  */
 
-#ifndef __DELAYS_H__
-#define __DELAYS_H__
+SECTIONS
+{
+    . = 0x10A0000;
+    .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
+    .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
+    PROVIDE(_data = .);
+    .data : { *(.data .data.* .gnu.linkonce.d*) }
+    .bss (NOLOAD) : {
+        . = ALIGN(16);
+        __bss_start = .;
+        *(.bss .bss.*)
+        *(COMMON)
+        __bss_end = .;
+    }
+    _end = .;
 
-void wait_cycles(unsigned int n);
-void wait_msec(unsigned int n);
-unsigned long get_system_timer();
-void wait_msec_st(unsigned int n);
-void wait_sec(unsigned int n);
-
-#endif // __DELAYS_H__
+   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+}
+__bss_size = (__bss_end - __bss_start)>>3;

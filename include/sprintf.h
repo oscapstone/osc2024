@@ -22,14 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
+#ifndef __SPRINTF_H__
+#define __SPRINTF_H__
 
-#ifndef __DELAYS_H__
-#define __DELAYS_H__
 
-void wait_cycles(unsigned int n);
-void wait_msec(unsigned int n);
-unsigned long get_system_timer();
-void wait_msec_st(unsigned int n);
-void wait_sec(unsigned int n);
+unsigned int sprintf(char *dst, char *fmt, ...);
+unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args);
 
-#endif // __DELAYS_H__
+
+#endif // __SPRINTF_H__

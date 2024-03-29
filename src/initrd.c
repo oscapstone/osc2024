@@ -77,12 +77,12 @@ void initrd_ls()
     uart_puts(".\n");
 
     // if it's a cpio newc archive. Cpio also has a trailer entry
-    while(!memcmp(buf,"070701",6) && memcmp(buf+sizeof(cpio_f),"TRAILER!!",9)) {
+    while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) {
         cpio_f *header = (cpio_f*) buf;
         int ns = hex2bin(header->namesize, 8);
         int fs = ALIGN(hex2bin(header->filesize, 8), 4);
         // print out filename
-        uart_puts(buf+sizeof(cpio_f));      // filename
+        uart_puts(buf + sizeof(cpio_f));      // filename
         uart_puts("\n");
         // jump to the next file
         buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
@@ -92,7 +92,7 @@ void initrd_ls()
 void initrd_cat()
 {
     char *buf = cpio_base;
-    if (memcmp(buf, "070701", 6))
+    if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
         return;
     char buffer[buf_size];
 
@@ -120,7 +120,58 @@ void initrd_cat()
         }
 
         // jump to the next file
-        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
+        buf += (sizeof(cpio_f) + ns + fs);
+    }
+    uart_puts("File not found\n");
+}
+
+void initrd_usr_prog(char *cmd)
+{
+    char *buf = cpio_base;
+    if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
+        return;
+    
+    // if it's a cpio newc archive. Cpio also has a trailer entry
+    while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) { // check if it's a cpio newc archive and not the last file
+        cpio_f *header = (cpio_f*) buf;
+        int ns = hex2bin(header->namesize, 8);
+        int fs = hex2bin(header->filesize, 8);
+
+        // check filename with buffer
+        if (!strcmp(cmd, buf + sizeof(cpio_f))) {
+            if (fs == 0) {
+                uart_send('\n');
+                uart_puts("user_program is empty.\n");
+                return;
+            } else {
+                uart_puts("\nInto user_program: ");
+                uart_puts(buf + sizeof(cpio_f));
+                uart_puts("\nAddress: ");
+                uart_hex((int) buf + sizeof(cpio_f));
+                uart_send('\n');
+                // get program start address
+                char *prog_addr = buf + sizeof(cpio_f) + ns;
+                
+                char *program_position = (char *)0x10A0000;
+
+                while (fs--)
+                {
+                    *program_position = *prog_addr;
+                    program_position++;
+                    prog_addr++;
+                }
+                asm volatile(
+                    "mov x0, 0          \n\t"
+                    "msr spsr_el1, x0       \n\t"
+                    "mov x0, 0x10A0000      \n\t"
+                    "msr elr_el1, x0        \n\t"
+                    "mov x0, 0x60000        \n\t"
+                    "msr sp_el0, x0         \n\t"
+                    "eret                   \n\t");
+            }
+        }
+        // jump to the next file
+        buf += (sizeof(cpio_f) + ns + fs);
     }
     uart_puts("File not found\n");
 }

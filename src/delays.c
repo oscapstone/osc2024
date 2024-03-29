@@ -53,6 +53,14 @@ void wait_msec(unsigned int n)
 }
 
 /**
+ * Wait N seconds (ARM CPU only)
+*/
+void wait_sec(unsigned int n)
+{
+    wait_msec(n * 1000000);
+}
+
+/**
  * Get System Timer's counter
  */
 unsigned long get_system_timer()
