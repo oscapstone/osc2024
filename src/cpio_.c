@@ -80,3 +80,22 @@ void cpio_cat(const char *filename) {
     uart_puts(" not found");
   }
 }
+
+char *cpio_get_file_content_st_addr(const char *filename) {
+  char *file = findFile(filename);
+  if (file) {
+    cpio_header *header = (cpio_header *)file;
+    unsigned int filename_size =
+        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+    unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
+    unsigned int file_size =
+        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+    align_inplace(&headerPathname_size, 4);
+    align_inplace(&file_size, 4);
+    char *file_content = (char *)header + headerPathname_size;
+    return file_content;
+  }
+  uart_send_string(filename);
+  uart_puts(" not found");
+  return (char *)0;
+}

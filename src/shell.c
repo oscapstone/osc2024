@@ -1,10 +1,19 @@
+#include "shell.h"
+
 #include "alloc.h"
 #include "cpio_.h"
+#include "interrupt.h"
 #include "mbox.h"
 #include "my_string.h"
 #include "uart1.h"
 #include "utli.h"
 
+extern void enable_interrupt();
+extern void disable_interrupt();
+extern void core_timer_enable();
+extern void core_timer_disable();
+
+enum shell_status { Read, Parse };
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
 
 enum ANSI_ESC decode_csi_key() {
@@ -105,7 +114,11 @@ void shell_controller(char *cmd) {
     uart_puts("brn: get rpi3’s board revision number");
     uart_puts("bsn: get rpi3’s board serial number");
     uart_puts("arm_mem: get ARM memory base address and size");
+    uart_puts("test_timer: test the timer and EL1 interrupt handler");
+    uart_puts("exec: run a user program in EL0");
+    uart_puts("async_uart: activate async uart I/O");
     uart_puts("loadimg: reupload the kernel image if the bootloader is used");
+
   } else if (!strcmp(cmd, "hello")) {
     uart_puts("Hello World!");
   } else if (!strcmp(cmd, "ls")) {
@@ -146,8 +159,24 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "arm_mem")) {
     get_arm_base_memory_sz();
   } else if (!strcmp(cmd, "timestamp")) {
-    uart_int(get_timestamp());
-    uart_send_string("\r\n");
+    print_timestamp();
+  } else if (!strcmp(cmd, "test_timer")) {
+    core_timer_enable();
+    enable_interrupt();
+    wait_usec(2000000);
+    disable_interrupt();
+    core_timer_disable();
+  } else if (!strcmp(cmd, "exec")) {
+    core_timer_enable();
+    exec_in_el0(cpio_get_file_content_st_addr("user_prog.img"));
+
+  } else if (!strcmp(cmd, "async_uart")) {
+    enable_interrupt();
+    enable_uart_interrupt();
+    core_timer_enable();
+    uart_send_string_async("hello\r\n");
+    core_timer_disable();
+    disable_interrupt();
   } else if (!strcmp(cmd, "loadimg")) {
     asm volatile(
         "ldr x30, =0x60160;"
@@ -156,3 +185,21 @@ void shell_controller(char *cmd) {
     uart_puts("shell: unvaild command");
   }
 }
+
+void shell_start() {
+  enum shell_status status = Read;
+  char cmd[CMD_LEN];
+  while (1) {
+    switch (status) {
+      case Read:
+        shell_input(cmd);
+        status = Parse;
+        break;
+
+      case Parse:
+        shell_controller(cmd);
+        status = Read;
+        break;
+    }
+  }
+};

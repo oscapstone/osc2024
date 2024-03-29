@@ -35,16 +35,17 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
 asm: all
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -d in_asm -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial stdio -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
 
 tty: all
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
 
 debug: all
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
+
 
 clean:
 	rm -f $(BUILD_DIR)/* bootloader.*

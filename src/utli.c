@@ -1,16 +1,12 @@
+#include "utli.h"
+
 #include "mbox.h"
 #include "my_math.h"
 #include "peripherals/gpio.h"
 #include "peripherals/mbox.h"
 #include "peripherals/mmio.h"
 #include "uart1.h"
-
-#define PM_PASSWORD 0x5a000000
-#define PM_RSTC ((volatile unsigned int *)(MMIO_BASE + 0x0010001c))
-#define PM_RSTS ((volatile unsigned int *)(MMIO_BASE + 0x00100020))
-#define PM_WDOG ((volatile unsigned int *)(MMIO_BASE + 0x00100024))
-#define PM_WDOG_MAGIC 0x5a000000
-#define PM_RSTC_FULLRST 0x00000020
+#include "utli.h"
 
 char *itox(int value, char *s) {
   int idx = 0;
@@ -92,26 +88,24 @@ void align_inplace(unsigned int *size, unsigned int s) {
   *size = ((*size) + (s - 1)) & (~(s - 1));
 }
 
-unsigned long int get_timestamp() {
+void print_timestamp() {
   register unsigned long long f, c;
   asm volatile("mrs %0, cntfrq_el0"
                : "=r"(f));  // get current counter frequency
   asm volatile("mrs %0, cntpct_el0" : "=r"(c));  // read current counter
-  return c / f;
+  uart_send_string("current timestamp: ");
+  uart_int(c / f);
+  uart_send_string("\r\n");
 }
 
-unsigned int get(volatile unsigned int *addr) { return *addr; }
-
-void set(volatile unsigned int *addr, unsigned int val) { *addr = val; }
-
-void reset(int tick) {               // reboot after watchdog timer expire
-  set(PM_RSTC, PM_PASSWORD | 0x20);  // full reset
-  set(PM_WDOG, PM_PASSWORD | tick);  // number of watchdog tick
+void reset(int tick) {            // reboot after watchdog timer expire
+  *PM_RSTC = PM_PASSWORD | 0x20;  // full reset
+  *PM_WDOG = PM_PASSWORD | tick;  // number of watchdog tick
 }
 
 void cancel_reset() {
-  set(PM_RSTC, PM_PASSWORD | 0);  // full reset
-  set(PM_WDOG, PM_PASSWORD | 0);  // number of watchdog tick
+  *PM_RSTC = PM_PASSWORD | 0;  // full reset
+  *PM_WDOG = PM_PASSWORD | 0;  // number of watchdog tick
 }
 
 void wait_cycles(int r) {
@@ -142,28 +136,28 @@ void power_off() {
   }
 
   // power off gpio pins (but not VCC pins)
-  set(GPFSEL0, 0);
-  set(GPFSEL1, 0);
-  set(GPFSEL2, 0);
-  set(GPFSEL3, 0);
-  set(GPFSEL4, 0);
-  set(GPFSEL5, 0);
-  set(GPPUD, 0);
+  *GPFSEL0 = 0;
+  *GPFSEL1 = 0;
+  *GPFSEL2 = 0;
+  *GPFSEL3 = 0;
+  *GPFSEL4 = 0;
+  *GPFSEL5 = 0;
+  *GPPUD = 0;
 
   wait_cycles(150);
-  set(GPPUDCLK0, 0xffffffff);
-  set(GPPUDCLK1, 0xffffffff);
+  *GPPUDCLK0 = 0xffffffff;
+  *GPPUDCLK1 = 0xffffffff;
   wait_cycles(150);
-  set(GPPUDCLK0, 0);
-  set(GPPUDCLK1, 0);  // flush GPIO setup
+  *GPPUDCLK0 = 0;
+  *GPPUDCLK1 = 0;  // flush GPIO setup
 
   // power off the SoC (GPU + CPU)
-  r = get(PM_RSTS);
+  r = *PM_RSTS;
   r &= ~0xfffffaaa;
   r |= 0x555;  // partition 63 used to indicate halt
-  set(PM_RSTS, PM_WDOG_MAGIC | r);
-  set(PM_WDOG, PM_WDOG_MAGIC | 10);
-  set(PM_RSTC, PM_WDOG_MAGIC | PM_RSTC_FULLRST);
+  *PM_RSTS = PM_WDOG_MAGIC | r;
+  *PM_WDOG = PM_WDOG_MAGIC | 10;
+  *PM_RSTC = PM_WDOG_MAGIC | PM_RSTC_FULLRST;
 }
 
 /**
@@ -193,6 +187,14 @@ void print_cur_el() {
   uart_send_string("\r\n");
 }
 
+void print_cur_sp() {
+  unsigned long sp_val;
+  asm volatile("mov %0, sp" : "=r"(sp_val));
+  uart_send_string("cur sp: ");
+  uart_hex(sp_val);
+  uart_send_string("\r\n");
+}
+
 void print_el1_sys_reg() {
   unsigned long spsr_el1, elr_el1, esr_el1;
 
@@ -210,4 +212,18 @@ void print_el1_sys_reg() {
   uart_send_string("ESR_EL1 : ");
   uart_hex(esr_el1);
   uart_send_string("\r\n");
+}
+
+void exec_in_el0(void *prog_st_addr) {
+  asm volatile(
+      "mov	x1, 0x0;"       // open interrupt for 2sec time_interrupt, 0000:
+                                // EL0t(jump to EL0)
+      "msr	SPSR_EL1, x1;"  // saved process state when an exception is
+                                // taken to EL1
+      "msr	ELR_EL1,  x0;"  // put program_start -> ELR_EL1
+      "mov	x1, #0x20000;"  // set sp on 0x20000
+      "msr	SP_EL0, x1;"    // set EL0 stack pointer
+      "ERET"                    // exception return
+  );
+  return;
 }

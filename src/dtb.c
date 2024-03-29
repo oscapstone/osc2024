@@ -8,20 +8,6 @@
 void *_dtb_ptr;          // should be 0x2EFF7A00
 extern char *cpio_addr;  // should be 0x20000000
 
-#define FDT_BEGIN_NODE \
-  0x00000001  // marks the beginnning of a node repersentation
-#define FDT_END_NODE 0x00000002  // marks the ends of a node repersentation
-#define FDT_PROP \
-  0x00000003  // marks the beginning of the representation of one property in
-              // the devicetree
-#define FDT_NOP \
-  0x00000004  // should be ignored by any program parsing the device tree
-#define FDT_END \
-  0x00000009  // marks the end of the structure block. There shall be only one
-              // FDT_END token, and it shall be the last token in the structure
-              // block.
-#define UNUSED(x) (void)(x)
-
 static unsigned int fdt_u32_le2be(const void *addr) {
   const unsigned char *bytes = (const unsigned char *)addr;
   unsigned int ret = (unsigned int)bytes[0] << 24 |
