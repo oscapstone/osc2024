@@ -2,11 +2,13 @@
 #![no_main]
 #![no_std]
 #![feature(default_alloc_error_handler)]
+#![feature(format_args_nl)]
 
 mod bsp;
 mod cpu;
 mod panic_wait;
 mod allocator;
+mod print;
 
 extern crate alloc; 
 
@@ -25,27 +27,19 @@ static mut ALLOCATOR: MyAllocator = MyAllocator::new();
 unsafe fn kernel_init() -> ! {
     
     uart::init_uart();
-    uart::_print("Revision: ");
+    println!("Revision: {:#x}", mailbox::get_board_revisioin());
     // get board revision
     let revision = mailbox::get_board_revisioin();
-    let h = alloc::string::String::from("Hello");
-
 
     // print hex of revision
-    uart::print_hex(revision);
-    uart::println("");
 
     // get ARM memory base address and size
     let (base, size) = mailbox::get_arm_memory();
 
     // print ARM memory base address and size
-    uart::_print("ARM memory base address: ");
-    uart::print_hex(base);
-    uart::_print("\r\n");
+    println!("ARM memory base address: {:#x}", base);
 
-    uart::_print("ARM memory size: ");
-    uart::print_hex(size);
-    uart::_print("\r\n");
+    println!("ARM memory size: {:#x}", size);
 
     let mut out_buf: [u8; 128] = [0; 128];
     let mut in_buf: [u8; 128] = [0; 128];
@@ -53,12 +47,12 @@ unsafe fn kernel_init() -> ! {
 
     let mut handler: CpioHandler = CpioHandler::new(QEMU_INITRD_START as *mut u8);
     loop {
-        uart::_print(">> ");
+        uart::uart_write_str(">> ");
         let inp = uart::getline(&mut in_buf, true);
         if inp == "Hello" {
-            uart::_print("Hello World!\r\n");
+            uart::uart_write_str("Hello World!\r\n");
         } else if inp == "help" {
-            uart::_print("help    : print this help menu\r\nhello   : print Hello World!\r\nreboot  : reboot the device\r\n");
+            uart::uart_write_str("help    : print this help menu\r\nhello   : print Hello World!\r\nreboot  : reboot the device\r\n");
         } else if inp == "reboot" {
             const PM_PASSWORD: u32 = 0x5a000000;
             const PM_RSTC: u32 = 0x3F10001c;
@@ -73,8 +67,8 @@ unsafe fn kernel_init() -> ! {
                 if name == "TRAILER!!!\0" {
                     break;
                 }
-                uart::_print(name);
-                uart::_print("\r\n");
+                uart::uart_write_str(name);
+                uart::uart_write_str("\r\n");
     
                 handler.next_file();
             }
@@ -94,12 +88,12 @@ unsafe fn kernel_init() -> ! {
                     name
                 };
                 if name == target {
-                    uart::_print("File: ");
-                    uart::_print(name);
-                    uart::_print("\r\n");
+                    uart::uart_write_str("File: ");
+                    uart::uart_write_str(name);
+                    uart::uart_write_str("\r\n");
                     let contant =handler.read_current_file();
-                    uart::_print(core::str::from_utf8(contant).unwrap());
-                    uart::_print("\r\n");
+                    uart::uart_write_str(core::str::from_utf8(contant).unwrap());
+                    uart::uart_write_str("\r\n");
                 }
                 handler.next_file();
             }
@@ -107,7 +101,7 @@ unsafe fn kernel_init() -> ! {
         } 
         
         else {
-            uart::_print("Command not found\r\n");
+            uart::uart_write_str("Command not found\r\n");
         }
 
         uart::uart_nops();

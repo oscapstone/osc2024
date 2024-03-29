@@ -78,9 +78,46 @@ pub fn init_uart() {
     }
 }
 
+
+pub struct Uart;
+
+use core::fmt::{self, Write};
+
+pub struct UartWriter;
+// core::fmt::write needs a mutable reference to the writer
+// we create a UartWriter which is implemented for Write trait with write_str method
+// write_str method writes the formatted string to the buffer
+impl Write for UartWriter {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        unsafe {
+            for i in s.bytes() {
+                write_u8(i);
+            }
+        }
+        Ok(())
+    }
+    fn write_fmt(&mut self, args: core::fmt::Arguments) -> core::fmt::Result {
+        core::fmt::write(&mut UartWriter, args).unwrap();
+        Ok(())
+    }
+}
+
+impl UartWriter {
+    pub fn new() -> UartWriter {
+        UartWriter
+    }
+}
+
+
+impl Uart {
+    pub fn new() -> Uart {
+        Uart
+    }
+}
+
 #[no_mangle]
 #[inline(never)]
-pub unsafe fn _print(s: &str) {
+pub unsafe fn uart_write_str(s: &str) {
     for i in s.bytes() {
         write_u8(i);
     }
@@ -191,6 +228,6 @@ pub unsafe fn strncmp(s1: &str, s2: &str, n: usize) -> bool {
 // println
 #[no_mangle]
 pub unsafe fn println(s: &str) {
-    _print(s);
-    _print("\n\r");
+    uart_write_str(s);
+    uart_write_str("\n\r");
 }
