@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
+
+/* Ref: // https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf */
 #ifndef __GPIO_H__
 #define __GPIO_H__
 

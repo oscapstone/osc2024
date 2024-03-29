@@ -11,6 +11,6 @@ typedef unsigned long size_t;
 extern volatile unsigned long available;
 
 void *simple_malloc(size_t size);
-int return_available();
+long return_available();
 
 #endif

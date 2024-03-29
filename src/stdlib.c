@@ -13,7 +13,7 @@ void *simple_malloc(size_t size)
 }
 
 /* return available address */
-int return_available()
+long return_available()
 {
-    return (int) BASE + available;
+    return (long) BASE + available;
 }

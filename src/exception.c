@@ -145,16 +145,16 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
 
 void uart_interrupt_handler()
 {
-    if (*AUX_MU_IIR & 0x2) { // Transmit holds register empty
+    if (AUX->AUX_MU_IIR_REG & 0x2) { // Transmit holds register empty
         uart_puts("Transmit holds register empty, should not be here right now\n"); // cause we only enable receive interrupt
-    } else if (*AUX_MU_IIR & 0x4) { // Receiver holds valid bytes
-        if (*AUX_MU_LSR & 0x1) { // Receiver FIFO holds valid bytes
-            char r = (char) (*AUX_MU_IO); // If we take char from AUX_MU_IO, the interrupt will be cleared.
+    } else if (AUX->AUX_MU_IIR_REG & 0x4) { // Receiver holds valid bytes
+        if (AUX->AUX_MU_LSR_REG & 0x1) { // Receiver FIFO holds valid bytes
+            char r = (char) (AUX->AUX_MU_IO_REG); // If we take char from AUX_MU_IO, the interrupt will be cleared.
             r = (r == '\r') ? '\n' : r;
 
             // ouput the char to screen (uart_send without pooling)
-            if (*AUX_MU_LSR & 0x20)
-                *AUX_MU_IO = r;
+            if (AUX->AUX_MU_LSR_REG & 0x20)
+                AUX->AUX_MU_IO_REG = r;
         } else {
             uart_puts("Something unexpected\n");
         }
@@ -166,7 +166,7 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
 {
     // uart_puts("IRQ handler\n");
     int irq_core0 = *CORE0_IRQ_SOURCE;
-    int irq_pend1 = *IRQ_PEND1;
+    int irq_pend1 = IRQ->IRQ_PENDING1;
     if (irq_core0 & 0x2) {
         core_timer_handler();
     } else if (irq_pend1 & (1 << 29)) {

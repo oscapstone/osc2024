@@ -6,7 +6,6 @@
 #include "initrd.h"
 #include "stddef.h"
 
-#define NULL ((void *)0)
 extern unsigned char __dtb_address;
 
 fdt_header *dtb_address;
@@ -23,7 +22,7 @@ void fdt_traverse(void (*callback)(fdt_prop *, char *, char *))
         return;
 
     uint32_t *struct_sp = (uint32_t *) ((char *)dtb_address + bswap_32(dtb_address->off_dt_struct)); // offset to structure
-    char *string_sp = (char *) ((uint32_t) dtb_address + bswap_32(dtb_address->off_dt_strings)); // offset to string
+    char *string_sp = (char *) ((char *)dtb_address + bswap_32(dtb_address->off_dt_strings)); // offset to string
     
     char *node_name = NULL;
     bool END = false;

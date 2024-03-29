@@ -150,7 +150,7 @@ void initrd_usr_prog(char *cmd)
                 uart_puts("\nInto user_program: ");
                 uart_puts(buf + sizeof(cpio_f));
                 uart_puts("\nAddress: ");
-                uart_hex((int) buf + ALIGN(sizeof(cpio_f) + ns, 4));
+                uart_hex((unsigned long) buf + ALIGN(sizeof(cpio_f) + ns, 4));
                 uart_send('\n');
                 // get program start address
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
@@ -172,11 +172,16 @@ void initrd_usr_prog(char *cmd)
 
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
 {
+    // uart_puts("==== node_name: ");
+    // uart_puts(node_name);
+    // uart_puts(", property_name: ");
+    // uart_puts(property_name);
+    // uart_send('\n');
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
-        cpio_base = bswap_32(load_addr);
+        cpio_base = (char *)((unsigned long)bswap_32(load_addr));
         uart_puts("==== cpio_base: ");
-        uart_hex((unsigned int)cpio_base);
+        uart_hex((unsigned long)cpio_base);
         uart_send('\n');
     }
 }
