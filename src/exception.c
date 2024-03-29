@@ -69,7 +69,7 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     uart_puts("\n");
 
     // no return from exception for now
-    while(1);
+    // while(1);
 }
 
 /**
@@ -131,6 +131,10 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
             shell_input(message);
             uart_puts("\n");
             timer_set(timeout, message);
+            break;
+        case 4:
+            uart_puts("svc 4: User Program System call\n");
+            exc_handler(esr, elr, spsr, far); // for Lab 3, print out the reg info.
             break;
         default:
             uart_puts("Unknown svc, print reg information\n");
@@ -203,7 +207,7 @@ void print_current_el(void)
 {
     unsigned long current_el;
     asm volatile("mrs %0, CurrentEL" : "=r" (current_el));
-    uart_puts("CurrentEL: ");
+    uart_puts("==== CurrentEL: ");
     uart_hex((current_el >> 2) & 0x3);
     uart_puts("\n");
 }

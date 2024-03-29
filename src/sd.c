@@ -96,6 +96,38 @@ int sd_int(unsigned int mask)
     return 0;
 }
 
+/**
+ * Send a command
+ */
+int sd_cmd(unsigned int code, unsigned int arg)
+{
+    int r=0;
+    sd_err=SD_OK;
+    if(code&CMD_NEED_APP) {
+        r=sd_cmd(CMD_APP_CMD|(sd_rca?CMD_RSPNS_48:0),sd_rca);
+        if(sd_rca && !r) { uart_puts("ERROR: failed to send SD APP command\n"); sd_err=SD_ERROR;return 0;}
+        code &= ~CMD_NEED_APP;
+    }
+    if(sd_status(SR_CMD_INHIBIT)) { uart_puts("ERROR: EMMC busy\n"); sd_err= SD_TIMEOUT;return 0;}
+    uart_puts("EMMC: Sending command ");uart_hex(code);uart_puts(" arg ");uart_hex(arg);uart_puts("\n");
+    EMMC->INTERRUPT = EMMC->INTERRUPT; EMMC->ARG1=arg; EMMC->CMDTM=code;
+    if(code==CMD_SEND_OP_COND) wait_msec(1000); else
+    if(code==CMD_SEND_IF_COND || code==CMD_APP_CMD) wait_msec(100);
+    if((r=sd_int(INT_CMD_DONE))) {uart_puts("ERROR: failed to send EMMC command\n");sd_err=r;return 0;}
+    r=EMMC->RESP0;
+    if(code==CMD_GO_IDLE || code==CMD_APP_CMD) return 0; else
+    if(code==(CMD_APP_CMD|CMD_RSPNS_48)) return r&SR_APP_CMD; else
+    if(code==CMD_SEND_OP_COND) return r; else
+    if(code==CMD_SEND_IF_COND) return r==arg? SD_OK : SD_ERROR; else
+    if(code==CMD_ALL_SEND_CID) {r|=EMMC->RESP3; r|=EMMC->RESP2; r|=EMMC->RESP1; return r; } else
+    if(code==CMD_SEND_REL_ADDR) {
+        sd_err=(((r&0x1fff))|((r&0x2000)<<6)|((r&0x4000)<<8)|((r&0x8000)<<8))&CMD_ERRORS_MASK;
+        return r&CMD_RCA_MASK;
+    }
+    return r&CMD_ERRORS_MASK;
+    // make gcc happy
+    return 0;
+}
 
 /**
  * read a block from sd card and return the number of bytes read
@@ -170,40 +202,6 @@ int sd_clk(unsigned int f)
     }
     return SD_OK;
 }
-
-/**
- * Send a command
- */
-int sd_cmd(unsigned int code, unsigned int arg)
-{
-    int r=0;
-    sd_err=SD_OK;
-    if(code&CMD_NEED_APP) {
-        r=sd_cmd(CMD_APP_CMD|(sd_rca?CMD_RSPNS_48:0),sd_rca);
-        if(sd_rca && !r) { uart_puts("ERROR: failed to send SD APP command\n"); sd_err=SD_ERROR;return 0;}
-        code &= ~CMD_NEED_APP;
-    }
-    if(sd_status(SR_CMD_INHIBIT)) { uart_puts("ERROR: EMMC busy\n"); sd_err= SD_TIMEOUT;return 0;}
-    uart_puts("EMMC: Sending command ");uart_hex(code);uart_puts(" arg ");uart_hex(arg);uart_puts("\n");
-    EMMC->INTERRUPT = EMMC->INTERRUPT; EMMC->ARG1=arg; EMMC->CMDTM=code;
-    if(code==CMD_SEND_OP_COND) wait_msec(1000); else
-    if(code==CMD_SEND_IF_COND || code==CMD_APP_CMD) wait_msec(100);
-    if((r=sd_int(INT_CMD_DONE))) {uart_puts("ERROR: failed to send EMMC command\n");sd_err=r;return 0;}
-    r=EMMC->RESP0;
-    if(code==CMD_GO_IDLE || code==CMD_APP_CMD) return 0; else
-    if(code==(CMD_APP_CMD|CMD_RSPNS_48)) return r&SR_APP_CMD; else
-    if(code==CMD_SEND_OP_COND) return r; else
-    if(code==CMD_SEND_IF_COND) return r==arg? SD_OK : SD_ERROR; else
-    if(code==CMD_ALL_SEND_CID) {r|=EMMC->RESP3; r|=EMMC->RESP2; r|=EMMC->RESP1; return r; } else
-    if(code==CMD_SEND_REL_ADDR) {
-        sd_err=(((r&0x1fff))|((r&0x2000)<<6)|((r&0x4000)<<8)|((r&0x8000)<<8))&CMD_ERRORS_MASK;
-        return r&CMD_RCA_MASK;
-    }
-    return r&CMD_ERRORS_MASK;
-    // make gcc happy
-    return 0;
-}
-
 
 /**
  * initialize EMMC to read SDHC card

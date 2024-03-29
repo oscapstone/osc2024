@@ -23,40 +23,28 @@ extern void core_timer_enable(void); // defined in timer_.S
 void main()
 {
     shell_init();
-
-    // initialize EMMC and detect SD card type
-    // if(sd_init()==SD_OK) {
-    //     // read the master boot record after our bss segment
-    //     if(sd_readblock(0,&_end,1)) {
-    //         // dump it to serial console
-    //         uart_dump(&_end);
-    //     }
-    // }
-
-    get_board_revision();
-    get_memory_info();
-
-    // uart_async_init();
     fdt_init();
     fdt_traverse(initramfs_callback);
 
-    timer_init();
+    // uart_async_init();
+
+    // timer_init();
     // core_timer_enable(); // User have to use `timer_on` to enable timer before `set_timeout`.
 
     print_current_el(); // read the current level from system register.
 
-    task_init();
+    // task_init();
 
-    disable_interrupt();
+    // disable_interrupt();
 
-    sched_init(); // start schedule
+    // sched_init(); // start schedule
 
     /* Switch to el0 before running shell. Unnessasary in lab 4*/
-    // move_to_user_mode();
+    move_to_user_mode();
     while(1) {
-        // uart_puts("# ");
-        // char cmd[CMD_LEN];
-        // shell_input(cmd);
-        // shell_controller(cmd);
+        uart_puts("# ");
+        char cmd[CMD_LEN];
+        shell_input(cmd);
+        shell_controller(cmd);
     }
 }

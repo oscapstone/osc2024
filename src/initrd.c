@@ -120,7 +120,7 @@ void initrd_cat()
         }
 
         // jump to the next file
-        buf += (sizeof(cpio_f) + ns + fs);
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
     uart_puts("File not found\n");
 }
@@ -135,7 +135,7 @@ void initrd_usr_prog(char *cmd)
     while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) { // check if it's a cpio newc archive and not the last file
         cpio_f *header = (cpio_f*) buf;
         int ns = hex2bin(header->namesize, 8);
-        int fs = hex2bin(header->filesize, 8);
+        int fs = ALIGN(hex2bin(header->filesize, 8), 4);
 
         // check filename with buffer
         if (!strcmp(cmd, buf + sizeof(cpio_f))) {
@@ -147,10 +147,10 @@ void initrd_usr_prog(char *cmd)
                 uart_puts("\nInto user_program: ");
                 uart_puts(buf + sizeof(cpio_f));
                 uart_puts("\nAddress: ");
-                uart_hex((int) buf + sizeof(cpio_f));
+                uart_hex((int) buf + ALIGN(sizeof(cpio_f) + ns, 4));
                 uart_send('\n');
                 // get program start address
-                char *prog_addr = buf + sizeof(cpio_f) + ns;
+                char *prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
                 
                 char *program_position = (char *)0x10A0000;
 
@@ -171,7 +171,7 @@ void initrd_usr_prog(char *cmd)
             }
         }
         // jump to the next file
-        buf += (sizeof(cpio_f) + ns + fs);
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
     uart_puts("File not found\n");
 }

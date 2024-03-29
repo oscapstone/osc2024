@@ -126,12 +126,6 @@ void uart_hex(unsigned int d)
     }
 }
 
-int check_digit(char ch)
-{
-    return (ch >= '0') && (ch <= '9');
-}
-
-
 /**
  * Display a string
  */

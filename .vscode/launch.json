@@ -1,0 +1,31 @@
+{
+    // SOURCE: https://medium.com/@karel.l.vermeiren/ \
+    // cross-architecture-remote-debugging-using-gdb-with-visual-studio-code-vscode-on-linux-c0572794b4ef
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // More information at: https://go.microsoft.com/fwlink/linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    {
+    "name": "GDB debug - custom",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "~/Desktop/osc2023_robert/kernel8.elf",
+    "args": [],
+    "stopAtEntry": true,
+    "cwd": "${workspaceFolder}",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+    {
+    "description": "Enable pretty-printing for gdb",
+    "text": "-enable-pretty-printing",
+    "ignoreFailures": true
+    }
+    ],
+    "miDebuggerPath": "gdb-multiarch",
+    "miDebuggerServerAddress": "127.0.0.1:1234"
+    }
+    ]
+}

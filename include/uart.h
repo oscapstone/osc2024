@@ -43,8 +43,6 @@
 #define AUX_MU_STAT     ((volatile unsigned int*)(MMIO_BASE+0x00215064))
 #define AUX_MU_BAUD     ((volatile unsigned int*)(MMIO_BASE+0x00215068))
 
-#define IRQ_BASE        MMIO_BASE+0x0000B000
-
 #define IRQ_BASIC       ((volatile unsigned int*)(IRQ_BASE+0x00000200)) // irq basic pending
 #define IRQ_PEND1       ((volatile unsigned int*)(IRQ_BASE+0x00000204)) // irq pending 1
 #define IRQ_PEND2       ((volatile unsigned int*)(IRQ_BASE+0x00000208)) // irq pending 2
