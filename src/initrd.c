@@ -127,15 +127,18 @@ void initrd_cat()
 
 void initrd_usr_prog(char *cmd)
 {
-    char *buf = cpio_base;
+    char *buf = cpio_base, *prog_addr;
+    int ns, fs;
+    cpio_f *header;
+
     if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
         return;
     
     // if it's a cpio newc archive. Cpio also has a trailer entry
     while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) { // check if it's a cpio newc archive and not the last file
-        cpio_f *header = (cpio_f*) buf;
-        int ns = hex2bin(header->namesize, 8);
-        int fs = ALIGN(hex2bin(header->filesize, 8), 4);
+        header = (cpio_f*) buf;
+        ns = hex2bin(header->namesize, 8);
+        fs = ALIGN(hex2bin(header->filesize, 8), 4);
 
         // check filename with buffer
         if (!strcmp(cmd, buf + sizeof(cpio_f))) {
@@ -150,24 +153,15 @@ void initrd_usr_prog(char *cmd)
                 uart_hex((int) buf + ALIGN(sizeof(cpio_f) + ns, 4));
                 uart_send('\n');
                 // get program start address
-                char *prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
-                
-                char *program_position = (char *)0x10A0000;
+                prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
-                while (fs--)
-                {
-                    *program_position = *prog_addr;
-                    program_position++;
-                    prog_addr++;
-                }
-                asm volatile(
-                    "mov x0, 0          \n\t"
-                    "msr spsr_el1, x0       \n\t"
-                    "mov x0, 0x10A0000      \n\t"
-                    "msr elr_el1, x0        \n\t"
-                    "mov x0, 0x60000        \n\t"
-                    "msr sp_el0, x0         \n\t"
-                    "eret                   \n\t");
+                asm volatile("mov x0, 0              \n\t"
+                             "msr spsr_el1, x0       \n\t");
+                asm volatile("mov x0, %0             \n\t"
+                             "msr elr_el1, x0        \n\t"::"r" (prog_addr));
+                asm volatile("mov x0, 0x60000        \n\t"
+                             "msr sp_el0, x0         \n\t");
+                asm volatile("eret                   \n\t");
             }
         }
         // jump to the next file
