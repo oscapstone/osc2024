@@ -3,6 +3,7 @@
 #include "delays.h"
 #include "string.h"
 #include "uart.h"
+#include "stdint.h"
 
 struct timer timer_pool[NR_TIMER];
 
@@ -51,9 +52,12 @@ void timer_update()
 {
     /* Get the current time and compare with the timeout */
     unsigned long current = get_current_time();
+    bool is_timer_enable = false;
+
     for (int i = 0; i < NR_TIMER; i++) {
         if (timer_pool[i].enable == TIMER_DISABLE)
             continue;
+        is_timer_enable = true;
         unsigned long deadline = timer_pool[i].start_time + timer_pool[i].timeout;
         if (timer_pool[i].enable == TIMER_ENABLE && deadline < current) {
             printf("One timer is timeout: %s\n", timer_pool[i].message);
@@ -62,5 +66,7 @@ void timer_update()
             timer_pool[i].message[0] = '\0';
         }
     }
+    if (is_timer_enable)
+        printf("Current time: %d\n", current);
 }
 
