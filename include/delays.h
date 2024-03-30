@@ -26,7 +26,7 @@
 #ifndef __DELAYS_H__
 #define __DELAYS_H__
 
-void wait_cycles(unsigned int n);
+void wait_cycles(unsigned long n);
 void wait_msec(unsigned int n);
 unsigned long get_system_timer();
 void wait_msec_st(unsigned int n);

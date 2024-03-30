@@ -110,15 +110,36 @@ void user_test()
 }
 
 /* Lab 3 Basic Exercise 3: Asynchronous UART */
+// void demo_async_uart()
+// {
+//     uart_async_init();
+//     uart_async_puts("Demo lab 3: Asynchronous UART\n");
+//     wait_cycles(100);
+//     while (1) {
+//         char c = uart_async_getc();
+//         wait_cycles(10000000);
+//         uart_async_send(c);
+//         wait_cycles(10000000);
+//     };
+// }
+
 void demo_async_uart()
 {
-    uart_async_init();
-    uart_async_puts("Demo lab 3: Asynchronous UART\n");
-    wait_cycles(100);
+    char string[64];
+    int len;
+
+    uart_async_init(); // Initialize the Asynchronous UART
+    uart_async_puts("Demo lab 3: Asynchronous UART\n"); // Put the string to write_buffer
+    wait_cycles(150);
     while (1) {
-        char c = uart_async_getc();
-        wait_cycles(10000000);
-        uart_async_send(c);
-        wait_cycles(10000000);
+        len = uart_async_gets(string); // Get all data in read_buffer
+        wait_cycles(150);
+        if (len > 0) {
+            uart_hex(len); // output the length of the string
+            uart_async_puts("\n");
+            uart_async_puts(string); // output the string in read_buffer
+            uart_async_puts("\n");
+        }
+        wait_cycles(1000000000);
     };
 }

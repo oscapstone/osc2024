@@ -31,7 +31,7 @@
 /**
  * Wait N CPU cycles (ARM CPU only)
  */
-void wait_cycles(unsigned int n)
+void wait_cycles(unsigned long n)
 {
     if(n) while(n--) { asm volatile("nop"); }
 }

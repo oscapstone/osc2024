@@ -41,4 +41,5 @@ void uart_async_init();
 char uart_async_getc(void);
 void uart_async_puts(char *s);
 void uart_async_send(unsigned int c);
+int uart_async_gets(char *buf);
 #endif

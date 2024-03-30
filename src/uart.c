@@ -205,3 +205,15 @@ void uart_async_puts(char *s)
     }
     AUX->AUX_MU_IER_REG |= (1 << 1); // enable transmit interrupt
 }
+
+/**
+ * Get all characters in read_buffer.
+*/
+int uart_async_gets(char *buf)
+{
+    int i = 0;
+    while (!is_empty(&read_buffer))
+        buf[i++] = dequeue(&read_buffer);
+    buf[i] = '\0';
+    return i;
+}
