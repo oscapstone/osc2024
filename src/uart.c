@@ -44,8 +44,8 @@ void uart_init()
     AUX->AUX_MU_CNTL_REG = 0;       // Disable transmitter and receiver during configuration.
     AUX->AUX_MU_LCR_REG = 3;        // 8 bits
     AUX->AUX_MU_MCR_REG = 0;        // RTS line high
-    AUX->AUX_MU_IER_REG = 0;        // Disable interrupts.
-    AUX->AUX_MU_IIR_REG = 0xc6;     // disable interrupts
+    AUX->AUX_MU_IER_REG = 0;        // Disable transmit/receive interrupts.
+    AUX->AUX_MU_IIR_REG = 0xc6;     // Clear the transmit/receive FIFO.
     AUX->AUX_MU_BAUD_REG = 270;     // 115200 baud
     /* map UART1 to GPIO pins */
     r = GPIO->GPFSEL[1];

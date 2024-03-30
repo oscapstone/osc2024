@@ -145,48 +145,34 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
 
 void uart_interrupt_handler()
 {
+    char c;
+
     if (AUX->AUX_MU_IIR_REG & (0b01 << 1)) { // Transmit holds register empty
-        /* Check the write_buffer status, if it is not empty, then output it */
-        while (!is_empty(&write_buffer)) {
-            char c = dequeue(&write_buffer);
-            if (AUX->AUX_MU_LSR_REG & 0x20) {
+        while (!is_empty(&write_buffer)) { // Check the write_buffer status, if it is not empty, then output it.
+            c = dequeue(&write_buffer);
+            if (AUX->AUX_MU_LSR_REG & 0x20) // If the transmitter FIFO can accept at least one byte
                 AUX->AUX_MU_IO_REG = c;
-            } else {
-                uart_puts("Transmit FIFO is full\n");
-                break;
-            }
         }
 
-        /* If write_buffer is empty, we should disable the transmitter interrupt. */
-        if (is_empty(&write_buffer)) {
-            AUX->AUX_MU_IER_REG &= ~(1 << 1); // disable transmit interrupt
-        }
+        if (is_empty(&write_buffer)) // If write_buffer is empty, we should disable the transmitter interrupt.
+            AUX->AUX_MU_IER_REG &= ~(1 << 1);
     } else if (AUX->AUX_MU_IIR_REG & (0b10 << 1)) { // Receiver holds valid bytes
         if (AUX->AUX_MU_LSR_REG & 0x1) { // Receiver FIFO holds valid bytes
             char r = (char) (AUX->AUX_MU_IO_REG); // If we take char from AUX_MU_IO, the interrupt will be cleared.
             r = (r == '\r') ? '\n' : r;
-
-            /* ouput the char to screen (uart_send without pooling) */
-            // if (AUX->AUX_MU_LSR_REG & 0x20)
-            //     AUX->AUX_MU_IO_REG = r;
-            
-            /* output the char to read buffer. */
-            enqueue(&read_buffer, r);
-        } else {
-            uart_puts("Something unexpected\n");
+            enqueue(&read_buffer, r); // output the char to read buffer.
         }
-    } else 
-        uart_puts("Something unexpected\n");
+    } else
+        uart_puts("Unknown uart interrupt\n");
 }
 
 void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
 {
-    // uart_puts("IRQ handler\n");
     int irq_core0 = *CORE0_IRQ_SOURCE;
-    int irq_pend1 = IRQ->IRQ_PENDING1;
+
     if (irq_core0 & (1 << 1)) {
         core_timer_handler();
-    } else if (irq_pend1 & (1 << 29)) { // AUX interrupt, from ARM peripherals interrupts table
+    } else if (IRQ->IRQ_PENDING1 & (1 << 29)) { // AUX interrupt, from ARM peripherals interrupts table
         uart_interrupt_handler();
     }
 }
@@ -194,7 +180,6 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
 /* Substract the current task counter value */
 void do_timer()
 {
-    // printf("Current task: %d, counter %d\n", current->task_id, current->counter);
     if (--current->counter > 0)
         return;
     schedule();
@@ -202,13 +187,6 @@ void do_timer()
 
 void core_timer_handler()
 {
-    // unsigned int seconds;
-    // asm volatile(
-    //     "mrs x0, cntpct_el0     \n\t"
-    //     "mrs x1, cntfrq_el0     \n\t"
-    //     "udiv %0, x0, x1        \n\t": "=r" (seconds));
-    // printf("\nseconds: %d\n# ", seconds);
-
     /* Setup next timer interrupt*/
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
