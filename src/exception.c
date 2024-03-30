@@ -117,6 +117,7 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
         case 2:
             uart_puts("svc 2: enable timer\n");
             core_timer_enable();
+            printf("Current time: %d\n", get_current_time());
             break;
         case 3:
             unsigned long timeout;
@@ -201,11 +202,11 @@ void do_timer()
 
 void core_timer_handler()
 {
-    unsigned int seconds;
-    asm volatile(
-        "mrs x0, cntpct_el0     \n\t"
-        "mrs x1, cntfrq_el0     \n\t"
-        "udiv %0, x0, x1        \n\t": "=r" (seconds));
+    // unsigned int seconds;
+    // asm volatile(
+    //     "mrs x0, cntpct_el0     \n\t"
+    //     "mrs x1, cntfrq_el0     \n\t"
+    //     "udiv %0, x0, x1        \n\t": "=r" (seconds));
     // printf("\nseconds: %d\n# ", seconds);
 
     /* Setup next timer interrupt*/

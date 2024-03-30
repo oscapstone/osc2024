@@ -60,7 +60,7 @@ void timer_update()
         is_timer_enable = true;
         unsigned long deadline = timer_pool[i].start_time + timer_pool[i].timeout;
         if (timer_pool[i].enable == TIMER_ENABLE && deadline < current) {
-            printf("One timer is timeout: %s\n", timer_pool[i].message);
+            printf("\n==== One timer is timeout: %s\n", timer_pool[i].message);
             timer_pool[i].enable = TIMER_DISABLE;
             timer_pool[i].timeout = 0;
             timer_pool[i].message[0] = '\0';
