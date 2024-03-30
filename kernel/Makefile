@@ -31,6 +31,10 @@ debug: build
 obj: build
 	objdump target/aarch64-unknown-none-softfloat/release/$(project_name) -d > obj.txt
 
+.PHONY: table
+table: build
+	objdump target/aarch64-unknown-none-softfloat/release/$(project_name) -t > table.txt
+
 .PHONY: clean
 clean:
 	cargo clean

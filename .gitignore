@@ -4,3 +4,4 @@ target/
 */obj.txt
 *.cpio
 rootfs/
+*/table.txt
