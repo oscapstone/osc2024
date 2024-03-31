@@ -41,12 +41,7 @@ void bootloader_main(void *dtb)
                     */
                     void (*kernel_entry)(void *) = (void (*)(void *))0x80000; //jump into loaded kernel
                     kernel_entry(dtb); // (dtb is saved in x0 for kernel loaded)
-                    // asm volatile(""
-                    //     "mov x0, x10;"
-                    //     "mov x1, x11;"
-                    //     "mov x2, x12;"
-                    //     "mov x3, x13;"
-                    //     "mov x30, 0x80000; ret;"); // Jump to the new kernel
+
                     return;
                 }
                 idx = 0;

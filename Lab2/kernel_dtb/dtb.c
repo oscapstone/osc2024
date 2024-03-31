@@ -58,10 +58,6 @@ void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char
     char *newAddress = dtb_base + offset_struct;
     char *string_address = dtb_base + offset_strings;
     
-    // // point to the dtb structure
-    // while (*newAddress == NULL) {
-    //     newAddress++;
-    // }
 
     // parse nodes
     while (1)
@@ -83,6 +79,13 @@ void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char
 
         }
         else if(token == FDT_PROP_TOKEN){
+            
+            /*
+            struct {
+                uint32_t len;
+                uint32_t nameoff;
+            }*/
+
             // get the length of attribute
             int len = big_to_little_endian_add(newAddress);
             newAddress += 4;
