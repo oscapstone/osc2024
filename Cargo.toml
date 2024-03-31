@@ -1,0 +1,5 @@
+[workspace]
+
+members = ["bootloader", "driver", "filesystem", "kernel", "stdio"]
+
+resolver = "2"
