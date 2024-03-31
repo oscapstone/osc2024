@@ -36,7 +36,7 @@ clean:
 FORCE:
 
 $(KERNEL_ELF) $(BOOTLOADER_ELF): FORCE
-	$(CARGO) build
+	$(CARGO) build $(CARGO_FLAGS)
 
 $(KERNEL_IMG): $(KERNEL_ELF)
 	$(dir_guard)
