@@ -1,5 +1,4 @@
 use core::option::Option::{self, None, Some};
-use stdio;
 
 pub struct CpioArchive {
     data: *const u8,

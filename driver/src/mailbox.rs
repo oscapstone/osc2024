@@ -1,8 +1,6 @@
 use crate::mmio::regs::MailboxReg::*;
 use crate::mmio::regs::MmioReg::MailboxReg;
 use crate::mmio::Mmio;
-// use stdio::println;
-
 const MAILBOX_EMPTY: u32 = 0x4000_0000;
 const MAILBOX_FULL: u32 = 0x8000_0000;
 
@@ -32,14 +30,12 @@ fn mailbox_write(channel: u32, data: u32) {
 fn mailbox_call(mailbox: &mut [u32]) -> bool {
     let mailbox_ptr = mailbox.as_ptr() as u32;
     if mailbox_ptr & 0xF != 0 {
-        // println("Mailbox pointer is not 16-byte aligned");
         return false;
     }
 
     mailbox_write(CHANNEL_GPU, mailbox_ptr);
 
     if mailbox_read(CHANNEL_GPU) != mailbox_ptr | CHANNEL_GPU {
-        // println("Mailbox call failed");
         return false;
     }
 
