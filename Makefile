@@ -23,7 +23,7 @@ QEMU = qemu-system-aarch64
 
 dir_guard=@mkdir -p $(@D)
 
-.PHONY: all	clean run debug
+.PHONY: all clean run debug FORCE
 
 all: $(KERNEL_IMG) $(BOOTLOADER_IMG) $(INITRAMFS_CPIO)
 	@stat $(KERNEL_IMG) --printf="Kernel size: %s bytes\n"
@@ -33,8 +33,10 @@ clean:
 	$(CARGO) clean
 	rm -rf $(BUILD_DIR)
 
-$(KERNEL_ELF) $(BOOTLOADER_ELF): $(wildcard kernel/*) $(wildcard bootloader/*)
-	$(CARGO) build $(CARGO_FLAGS)
+FORCE:
+
+$(KERNEL_ELF) $(BOOTLOADER_ELF): FORCE
+	$(CARGO) build
 
 $(KERNEL_IMG): $(KERNEL_ELF)
 	$(dir_guard)
