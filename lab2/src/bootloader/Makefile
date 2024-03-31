@@ -26,10 +26,7 @@ debugRun : bootloader.img
 	qemu-system-aarch64 -M raspi3b -serial null -serial pty -display none -kernel $< -initrd ../../initramfs.cpio -S -s -dtb bcm2710-rpi-3-b-plus.dtb
 
 gdb-run :
-	gdb-multiarch
-	set architecture aarch64
-	file bootloader.elf
-	target remote localhost:1234
+	gdb-multiarch -ex 'set architecture aarch64' -ex 'file bootloader.elf' -ex 'target remote localhost:1234'
 
 clean:
 	rm $(OBJ_FILES) bootloader.img

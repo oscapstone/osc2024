@@ -3,9 +3,6 @@
 // functions
 .global _start
 
-// variables
-.global _dtb_ptr
-
 _start:
 	
 
@@ -20,13 +17,7 @@ halt:
 	b		halt
 
 init:
-	
-	// load the dtb addr
-	ldr		x1, =0x0
-	ldr		x2, [x1]
-	ldr		x3, =_dtb_ptr
-	str		x2, [x3]
-	
+
 	// init stack pointer, because the code start from _start so lower address space can be stack
 	ldr		x1, =_start
 	mov		sp, x1
@@ -41,8 +32,17 @@ clear_bss:
 	cbnz	w2, clear_bss			// if (w2 != 0) jmp clear_bss
 
 kernel_main:
+	// load the dtb addr
+	mov		x1, 0x70000
+	ldr		x2, [x1]
+	ldr		x3, =_dtb_ptr
+	str		x2, [x3]
+	
 	bl		main					// branch label: will link in linking state
 	b		halt
+
+// variables
+.global _dtb_ptr
 
 .section ".data"
 _dtb_ptr: .quad 0x0

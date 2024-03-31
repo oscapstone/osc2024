@@ -15,9 +15,9 @@ int parse_struct(fdt_callback cb, struct fdt_header* header) {
     UPTR stringsPtr = (UPTR)_dtb_ptr + (UPTR)utils_transferEndian(header->off_dt_strings);
     U32 totalSize = utils_transferEndian(header->totalsize);
 
-    uart_send_string("Total Size: 0x");
-    uart_binary_to_hex(totalSize);
-    uart_send_string("\n");
+    //uart_send_string("Total Size: 0x");
+    //uart_binary_to_hex(totalSize);
+    //uart_send_string("\n");
 
     UPTR endPtr = (UPTR)header + totalSize;
 
@@ -80,8 +80,8 @@ int fdt_traverse(fdt_callback cb) {
     struct fdt_header* header = (struct fdt_header*) _dtb_ptr;
 
     U32 magic = utils_transferEndian(header->magic);
-    uart_binary_to_hex(magic);
-    uart_send_string("\r\n");
+    //uart_binary_to_hex(magic);
+    //uart_send_string("\r\n");
 
     if (magic != 0xd00dfeed) {
         uart_send_string("DTB magic not correct");

@@ -68,7 +68,7 @@ void cpio_cat(char *filename, unsigned int len)
     if (!addr) {
         uart_send_string("Filename: ");
         uart_send_string_len(filename, len);
-        uart_send_string("\nFile not found\n");
+        uart_send_string(" not found\n");
         return;
     }
     struct cpio_newc_header* header = (struct cpio_newc_header*) addr;

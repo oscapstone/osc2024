@@ -5,7 +5,7 @@ SECTIONS
 	.text : { KEEP(*(.text.boot)) *(.text .text.*) } /* code section */
 	.rodata : { *(.rodata .rodata.*) }
 	PROVIDE(_data = .);
-	.data : { *(.data .data.*) }
+	.data : { . = ALIGN(16); *(.data .data.*) }
     .bss (NOLOAD) : {
         . = ALIGN(16);
         __bss_start = .;
@@ -13,7 +13,6 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
     }
-    __bootloader_end = .;
 
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

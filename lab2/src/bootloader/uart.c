@@ -82,9 +82,6 @@ char uart_get_char() {
  */
 void uart_send_string(char* s) {
     while(*s) {
-        /* convert newline to carriage return + newline */
-        if(*s=='\n')
-            uart_send_char('\r');
         uart_send_char(*s++);
     }
 }
@@ -103,3 +100,15 @@ void uart_binary_to_hex(unsigned int d) {
         uart_send_char(n);
     }
 }
+
+void uart_hex64(unsigned long long value) {
+    unsigned int n;
+    for(int c = 60; c >= 0;c -= 4) {
+        // get highest tetrad
+        n=(value >> c)&0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n += n > 9 ? 0x37 : 0x30;
+        uart_send_char(n);
+    }
+}
+
