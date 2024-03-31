@@ -153,6 +153,7 @@ void *simple_alloc(int size) {
 **Reference**
 * DTS code: https://github.com/raspberrypi/linux/blob/rpi-5.10.y/arch/arm/boot/dts/bcm2710-rpi-3-b-plus.dts
 * Specification: https://www.devicetree.org/specifications/
+* chosen: https://www.kernel.org/doc/Documentation/devicetree/bindings/chosen.txt
 
 ```
 qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb

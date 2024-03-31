@@ -65,6 +65,16 @@ char uart_getc() {
     return r=='\r'?'\n':r;
 }
 
+char uart_getb() {
+    char r;
+    /* wait until something is in the buffer */
+    do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));
+    /* read it and return */
+    r=(char)(*AUX_MU_IO);
+    /* convert carriage return to newline */
+    return r;
+}
+
 /**
  * Display a string
  */

@@ -4,6 +4,7 @@
 
 #define MEMORY_POOL_SIZE 1024
 
+
 static char memory_pool[MEMORY_POOL_SIZE];
 static char *next_free = memory_pool;
 
@@ -21,7 +22,7 @@ void main(void *dtb)
 {
     // set up serial console
     uart_init();
-    uart_hex(dtb);
+
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_callback);
     // say hello
     uart_puts("Booted, start testing simple_alloc\n");

@@ -2,7 +2,6 @@
 #include "uart.h"
 #include "shell.h"
 
-
 struct fdt_header {
     // big endian default
     unsigned int magic;             // Magic word, signifies the start of the FDT blob
@@ -35,84 +34,15 @@ unsigned int big_to_little_endian_add(const char *address) {
     return value;
 }
 
-
-void parse_new_node(char *address, char *string_address, char *target, void (*callback)(char *))
+void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char *))
 {
-    /*
-    Tranverse into every node, get struct which contains len of prop and name address when meet prop. String + name -> property name, len -> property size.
-    */
-    while (*(address) == FDT_BEGIN_NODE_TOKEN)
-    {
-        // skip name of the node
-        while (*(address) != NULL){
-            address++;
-        }
-        //NULL terminating and align
-        while (*(address) == NULL){
-            address++;
-        }
+    uart_hex((unsigned int) dtb_base);
+    uart_puts("\n\r");
 
-        // properties of the node
-        while (*address == FDT_PROP_TOKEN)
-        {
-            /*
-            struct {
-                uint32_t len;
-                uint32_t nameoff;
-            }
-            */
-            address++;
-
-            // get the length of attribute
-            int len = big_to_little_endian_add(address);
-            address += 4;
-
-            // get the length to find the target attribute
-            int temp = big_to_little_endian_add(address);
-            address += 4;
-
-            // if the attribute is correct, get the attribute address
-            if (strcmp(string_address + temp, target) == 0)
-            {
-                /* The /chosen node does not represent a real device in the system but describes parameters chosen or specified by 
-                the system firmware at run time. It shall be a child of the root node. */
-                callback((char *)big_to_little_endian_add(address));
-                uart_puts("found initrd!");
-                uart_puts("\n");
-                uart_send('\r');
-            }
-
-            // jump the value of the attribute
-            address += len;
-            while (*(address) == NULL){
-                address++;
-            }
-        }
-
-        // children
-        parse_new_node(address, string_address, target, callback);
-    }
-
-    // go to end
-    while (*(address) != FDT_END_NODE_TOKEN){
-        address++;
-    }
+    struct fdt_header * header = (struct fdt_header *) dtb_base;
     
-    address++;
+    unsigned int temp, offset_struct, offset_strings, magic;
 
-    while (*(address) == NULL){
-        address++;
-    }
-
-}
-
-
-void fdt_tranverse(char *address, char *target_property, void (*callback)(char *))
-{
-    
-    struct fdt_header * header = (struct fdt_header *) address;
-    unsigned int temp;
-    unsigned int offset_struct, offset_strings, magic;
     magic = big_to_little_endian(header -> magic);
 
     if (magic != FDT_MAGIC_NUMBER) //0xD00DFEED
@@ -125,26 +55,61 @@ void fdt_tranverse(char *address, char *target_property, void (*callback)(char *
     offset_struct = big_to_little_endian(header -> off_dt_struct); //the offset to get the structure block
     offset_strings = big_to_little_endian(header -> off_dt_strings); //the offset to get the property name
 
-    char *newAddress = address + offset_struct;
+    char *newAddress = dtb_base + offset_struct;
+    char *string_address = dtb_base + offset_strings;
     
-    // point to the dtb structure
-    while (*newAddress == NULL) {
-        newAddress++;
-    }
+    // // point to the dtb structure
+    // while (*newAddress == NULL) {
+    //     newAddress++;
+    // }
 
     // parse nodes
-    while (*(newAddress) != FDT_END_TOKEN)
+    while (1)
     {
-        parse_new_node(newAddress, address + offset_strings, target_property, callback);
+        unsigned int token = big_to_little_endian_add(newAddress);
+        newAddress += 4; //skip token
+        //parse_new_node(newAddress, dtb_base + offset_strings, target_property, callback);
 
-        //parse next node
-        while (*newAddress != FDT_END_NODE_TOKEN) {
-            newAddress++;
+        if (token == FDT_BEGIN_NODE_TOKEN){
+            int cnt = 0;
+            while(*newAddress != NULL){
+                cnt++;
+                newAddress++;
+            }
+
+            int align = (4 -  cnt % 4);            
+            if(align != 4)
+                newAddress += align;
+
         }
-        newAddress++;
-        
-        while (*newAddress == NULL) {
-            newAddress++;
+        else if(token == FDT_PROP_TOKEN){
+            // get the length of attribute
+            int len = big_to_little_endian_add(newAddress);
+            newAddress += 4;
+
+            // get the length to find the target attribute
+            int temp = big_to_little_endian_add(newAddress);
+            newAddress += 4;
+
+            if (strcmp(string_address + temp, target_property) == 0)
+            {
+                /* The /chosen node does not represent a real device in the system but describes parameters chosen or specified by 
+                the system firmware at run time. It shall be a child of the root node. */
+                callback((char *)big_to_little_endian_add(newAddress));
+                uart_puts("found initrd in ");
+                uart_hex((unsigned int)newAddress);
+                uart_puts("\n");
+                uart_send('\r');
+            }
+
+            // jump the value of the attribute
+            newAddress += len;
+            int align = (4 -  len % 4);            
+            if(align != 4)
+                newAddress += align;
+
         }
+        else if(token == FDT_END_TOKEN)
+            break;
     }
 }
