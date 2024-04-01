@@ -1,5 +1,13 @@
 #include "uart.h"
 
+static char *cpio_base;
+
+void initramfs_callback(char *address)
+{
+    cpio_base = address;
+}
+
+
 struct cpio_newc_header {
     //file metadata
     char c_magic[6];         // Magic number identifying the CPIO format
@@ -44,14 +52,14 @@ int hex_to_int(char *p, int len) {
 void cpio_ls(){
     uart_send('\r');
     uart_puts("");
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
-    char *current = (char *)0x20000000;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base;
+    char *current = (char *)cpio_base;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
         int file_size = hex_to_int(fs->c_filesize, 8);
         current += 110; // size of cpio_newc_header
-        if (strcmp(current, "TRAILER!!!") == 0) //end of archive
+        if (strcmp(current, "TRAILER!!!") == 0)
             break;
 
         uart_puts(current);
@@ -87,8 +95,8 @@ void cpio_cat(){
         }
     }
     
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
-    char *current = (char *)0x20000000;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base;
+    char *current = (char *)cpio_base;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);

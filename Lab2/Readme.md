@@ -49,7 +49,6 @@ Rpi 3b+ will automatically load kernel into 0x80000, so the bootloader should re
 
 _start:
 	// relocate bootloader
-    //mov     x28, x0
 	ldr x1, =0x80000 //64 bits for address, 0x1 = 1 byte
 	ldr x2, =0x60000 //ldr: put address to register
 	ldr w3, =__bootloader_size //size, 32 bit is enough
@@ -153,53 +152,29 @@ void *simple_alloc(int size) {
 **Reference**
 * DTS code: https://github.com/raspberrypi/linux/blob/rpi-5.10.y/arch/arm/boot/dts/bcm2710-rpi-3-b-plus.dts
 * Specification: https://www.devicetree.org/specifications/
-* chosen: https://www.kernel.org/doc/Documentation/devicetree/bindings/chosen.txt
+* Chosen: https://www.kernel.org/doc/Documentation/devicetree/bindings/chosen.txt
 
 ```
 qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 ```
 Name: NULL terminating
+Header Format: big-endian
 (Name -> NULL -> prop_token -> struct -> prop -> END)
 
 #### fdt_tranverse
-Tranverse into every node, get struct which contains len of prop and name address when meet prop. String + name -> property name, len -> property size.
-```
-while (*address == FDT_PROP_TOKEN)
-        {
-            /*
-            struct {
-                uint32_t len;
-                uint32_t nameoff;
-            }
-            */
-            address++;
-
-            // get the length of attribute
-            int len = big_to_little_endian_add(address);
-            address += 4;
-
-            // get the length to find the target attribute
-            int temp = big_to_little_endian_add(address);
-            address += 4;
-
-            // if the attribute is correct, get the attribute address
-            if (strcmp(string_address + temp, target) == 0)
-            {
-                /* The /chosen node does not represent a real device in the system but describes parameters chosen or specified by 
-                the system firmware at run time. It shall be a child of the root node. */
-                callback((char *)big_to_little_endian_add(address));
-                uart_puts("found initrd!");
-                uart_puts("\n");
-                uart_send('\r');
-            }
-
-            // jump the value of the attribute
-            address += len;
-            while (*(address) == NULL){
-                address++;
-            }
-        }
-```
+The memory of the dtb is aligned 4.
+1. Get the address of struct and string from header
+2. Parsing tree: Check token, 
+    *  FDT_BEGIN_NODE -> skip name to the struct
+    *  FDT_PROP -> Followed by a structure, get the name and compare with target. To move on, add 8 for struct and len for content, then align 4.
+    ```
+    struct {
+        uint32_t len; // len of the property (in struct)
+        uint32_t nameoff; offset of name (in string)
+    }
+    ```
+    *  FDT_END -> Finished tranverse.
+  
 
 Example:
 ```

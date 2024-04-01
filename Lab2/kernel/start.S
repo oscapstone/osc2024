@@ -2,7 +2,7 @@
 
 .global _start
 
-_start:
+_start:  
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1 //get cpu num
     and     x1, x1, #3 //see if cpu num is 0
