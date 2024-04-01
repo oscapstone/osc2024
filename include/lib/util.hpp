@@ -24,6 +24,7 @@ extern "C" {
 void set32(addr_t address, uint32_t value);
 uint32_t get32(addr_t address);
 void wait_cycle(unsigned cycle);
+int get_el();
 
 // start.S
 [[noreturn]] void prog_hang();

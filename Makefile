@@ -30,10 +30,6 @@ ifneq ($(DEBUG),)
 	QEMU_FLAGS 	+= -s -S
 endif
 
-ifneq ($(QEMU_ASM),)
-	QEMU_FLAGS 	+= -d in_asm
-endif
-
 ifeq ($(QEMU_PTY_SERIAL),)
 	QEMU_FLAGS 	+= -serial null -serial stdio
 else

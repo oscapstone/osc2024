@@ -69,3 +69,5 @@ make disk
 - [Mailbox property interface](https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface)
 - [Devicetree Specification v0.4](https://www.devicetree.org/specifications/)
 - [Linux and the Devicetree](https://www.kernel.org/doc/html/latest/devicetree/usage-model.html)
+- [Device Tree for Dummies](https://bootlin.com/pub/conferences/2013/elce/petazzoni-device-tree-dummies/petazzoni-device-tree-dummies.pdf)
+- [ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile](https://developer.arm.com/documentation/ddi0487/aa/?lang=en)
