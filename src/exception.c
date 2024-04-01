@@ -143,13 +143,14 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     }
 }
 
+/* In UART interrupt handler, I put receiver interrupt to bottom half*/
 void uart_interrupt_handler()
 {
     char c;
 
     if (AUX->AUX_MU_IIR_REG & (0b01 << 1)) { // Transmit holds register empty
         while (!is_empty(&write_buffer)) { // Check the write_buffer status, if it is not empty, then output it.
-            c = dequeue(&write_buffer);
+            c = dequeue_char(&write_buffer);
             if (AUX->AUX_MU_LSR_REG & 0x20) // If the transmitter FIFO can accept at least one byte
                 AUX->AUX_MU_IO_REG = c;
         }
@@ -158,19 +159,18 @@ void uart_interrupt_handler()
             AUX->AUX_MU_IER_REG &= ~(1 << 1);
     } else if (AUX->AUX_MU_IIR_REG & (0b10 << 1)) { // Receiver holds valid bytes
         if (AUX->AUX_MU_LSR_REG & 0x1) { // Receiver FIFO holds valid bytes
-            char r = (char) (AUX->AUX_MU_IO_REG); // If we take char from AUX_MU_IO, the interrupt will be cleared.
-            r = (r == '\r') ? '\n' : r;
-            enqueue(&read_buffer, r); // output the char to read buffer.
+            c = (char) (AUX->AUX_MU_IO_REG); // If we take char from AUX_MU_IO, the interrupt will be cleared.
+            c = (c == '\r') ? '\n' : c;
+            enqueue_char(&read_buffer, c); // output the char to read buffer.
         }
     } else
         uart_puts("Unknown uart interrupt\n");
 }
 
+/* IRQ handler */
 void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsigned long far)
 {
-    int irq_core0 = *CORE0_IRQ_SOURCE;
-
-    if (irq_core0 & (1 << 1)) {
+    if (*CORE0_IRQ_SOURCE & (1 << 1)) {
         core_timer_handler();
     } else if (IRQ->IRQ_PENDING1 & (1 << 29)) { // AUX interrupt, from ARM peripherals interrupts table
         uart_interrupt_handler();
@@ -187,15 +187,24 @@ void do_timer()
 
 void core_timer_handler()
 {
-    /* Setup next timer interrupt*/
+    /* #1: Mask the core timer interrupt first. Mask CORE0_TIMER_IRQ_CTRL. Spec says it will be done automatically? */
+    *CORE0_TIMER_IRQ_CTRL &= ~(1 << 1);
+    
+    /* #2: Do the jobs with interrupt disabled */
+    /*     Setup next timer interrupt */
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
         "mov x1, #2             \n\t"
         "mul x0, x0, x1         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
+    /* #3: Move bottom half job to task queue */
+    /* #4: Enable other interrupt */
     
-    timer_update();
-    // do_timer();
+    timer_update(); // this can be done in the bottom half
+    // do_timer(); // multi-tasking function
+
+    /* #5: At the end, enable the core timer interrupt */
+    *CORE0_TIMER_IRQ_CTRL |= (1 << 1);
 }
 
 void print_current_el(void)

@@ -15,17 +15,17 @@
 #define SYSCALL_SUCCESS 0
 #define SYSCALL_ERROR -1
 
-#endif
 
 /** 
  * Because include syscall.h will copy all the content in header file,
  * considering the portability, we should split the content in syscall.h.
  * Content above is the content for systemcall.S and content below is for syscall.c.
  * */
-#ifndef __ASSEMBLY__ // Content below is not included in assembly file. (__ASSEMBLY__ is defined in assembly file)
+#ifndef __ASSEMBLER__ // Content below is not included in assembly file. (__ASSEMBLY__ is defined in assembly file)
 
 
 #include "stdlib.h"
+#include "stdint.h"
 
 
 struct trapframe {
@@ -51,8 +51,8 @@ int sys_exec(struct trapframe *trapframe);
 int sys_fork(struct trapframe *trapframe);
 int sys_exit(struct trapframe *trapframe);
 
-typedef int (*syscall_t) (struct trapframe *);
+typedef int (*syscall_t)(struct trapframe *);
 extern syscall_t sys_call_table[SYSCALL_NUM];
 
-
+#endif // __ASSEMBLER__
 #endif // __SYSCALL_H__

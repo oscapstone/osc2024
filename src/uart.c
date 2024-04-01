@@ -189,19 +189,19 @@ char uart_async_getc(void)
 {
     if (is_empty(&read_buffer))
         return 0;
-    return dequeue(&read_buffer);
+    return dequeue_char(&read_buffer);
 }
 
 void uart_async_send(unsigned int c)
 {
-    enqueue(&write_buffer, c);
+    enqueue_char(&write_buffer, c);
     AUX->AUX_MU_IER_REG |= (1 << 1); // enable transmit interrupt
 }
 
 void uart_async_puts(char *s)
 {
     while(*s) {
-        enqueue(&write_buffer, *s++);
+        enqueue_char(&write_buffer, *s++);
     }
     AUX->AUX_MU_IER_REG |= (1 << 1); // enable transmit interrupt
 }
@@ -213,7 +213,7 @@ int uart_async_gets(char *buf)
 {
     int i = 0;
     while (!is_empty(&read_buffer))
-        buf[i++] = dequeue(&read_buffer);
+        buf[i++] = dequeue_char(&read_buffer);
     buf[i] = '\0';
     return i;
 }

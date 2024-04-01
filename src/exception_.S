@@ -141,13 +141,13 @@ set_exception_vector_table:
     msr vbar_el1, x0
     ret
 
+/* Handle synchronous exception and SVC */
 exception_handler:
     save_all
     mrs     x0, esr_el1
     mrs     x1, elr_el1
     mrs     x2, spsr_el1
     mrs     x3, far_el1
-    //bl exc_handler // general exception handler
     mov     x4, sp // for system call's trapframe
     bl svc_handler
     load_all
@@ -171,3 +171,23 @@ non_handler:
 exit_kernel:
     load_all
     eret
+
+.global disable_interrupt
+disable_interrupt:
+    msr daifset, #0xf
+    ret
+
+.global enable_interrupt
+enable_interrupt:
+    msr daifclr, #0xf
+    ret
+
+.global enable_irq
+enable_irq:
+    msr daifclr, #0x2
+    ret
+
+.global disable_irq
+disable_irq:
+    msr daifset, #0x2
+    ret

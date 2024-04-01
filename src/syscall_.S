@@ -1,5 +1,3 @@
-#define __ASSEMBLY__
-
 #include "syscall.h"
 
 .global get_taskid

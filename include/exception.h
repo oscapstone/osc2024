@@ -9,14 +9,11 @@ void uart_interrupt_handler();
 void print_current_el(void);
 extern void exit_kernel();
 
-static inline void enable_interrupt()
-{
-    asm volatile("msr daifclr, 0xf  \n\t");
-}
 
-static inline void disable_interrupt()
-{
-    asm volatile("msr daifset, 0xf  \n\t");
-}
+extern void move_to_user_mode(void); // defined in exception_.S
+extern void enable_interrupt();
+extern void disable_interrupt();
+extern void enable_irq();
+extern void disable_irq();
 
 #endif // __EXCEPTION_H__
