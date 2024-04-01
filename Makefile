@@ -11,14 +11,15 @@ DISK_DIR 	= disk
 
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
-			  -mcpu=cortex-a53 \
+			  -mcpu=cortex-a53 -mgeneral-regs-only \
 			  --target=aarch64-unknown-none-elf \
 			  -D_LIBCPP_HAS_NO_THREADS \
 			  -D_LIBCPP_DISABLE_AVAILABILITY \
 			  -std=c++20 \
 			  -nostdlib -Os -fPIE
 QEMU_FLAGS 	= -display none -smp cpus=4 \
-			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb
+			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb \
+			  $(QEMU_EXT_FLAGS)
 
 ifeq ($(TARGET),)
 	TARGET = kernel
