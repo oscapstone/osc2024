@@ -80,8 +80,8 @@ char uart_get_char() {
 /**
  * Display a string
  */
-void uart_send_string(char* s) {
-    while(*s) {
+void uart_send_string(char* s, unsigned int len) {
+    for (int i = 0; i < len; i++) {
         uart_send_char(*s++);
     }
 }

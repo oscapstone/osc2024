@@ -7,9 +7,10 @@ def read_line(s):
     received_string = ""
     while True:
         c = s.read().decode()
-        if c=="\r":
+        print(c)
+        if c == '\r':
             continue
-        if c=="\n":
+        if c == '\n':
             break
         received_string += c
     return received_string

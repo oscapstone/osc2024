@@ -24,7 +24,7 @@ void main() {
     while(size--) *kernel++ = uart_get_char();
 
     uart_hex64((unsigned long long)kernel);
-    uart_send_string("kernel loaded.\n");
+    uart_send_string("kernel loaded.\r\n", 16);
     
     // make sure wait enough to get correct string instead of reinit uart to get wired result
 	r = 500; while (r--) { asm volatile("nop"); }	
