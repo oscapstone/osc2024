@@ -16,7 +16,7 @@ void disable_uart_interrupt();
 void enable_uart_interrupt();
 void uart_write_async(unsigned int c);
 char uart_read_async();
-void uart_send_string_async(const char *str);
+unsigned int uart_send_string_async(const char *str);
 unsigned int uart_read_string_async(char *str);
 void uart_interrupt_handler();
 #endif

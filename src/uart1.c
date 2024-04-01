@@ -170,6 +170,17 @@ char uart_read_async() {
   return c;
 }
 
+unsigned int uart_send_string_async(const char *str) {
+  unsigned int i = 0;
+  while ((w_b + 1) % MAX_BUF_SIZE != w_f &&
+         str[i] != '\0') {  // full buffer -> wait
+    async_uart_write_buf[w_b++] = str[i++];
+    w_b %= MAX_BUF_SIZE;
+  }
+  enable_uart_tx_interrupt();
+  return i;
+}
+
 unsigned int uart_read_string_async(char *str) {
   unsigned int i = 0;
   while (r_f != r_b) {

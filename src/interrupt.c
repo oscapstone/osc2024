@@ -1,5 +1,6 @@
 #include "interrupt.h"
 
+#include "task.h"
 #include "timer.h"
 #include "uart1.h"
 #include "utli.h"
@@ -37,10 +38,10 @@ void el0_64_irq_interrupt_handler() {
 void el1h_irq_interrupt_handler() {
   if (*CORE0_INT_SRC & CORE0_INT_SRC_TIMER) {
     el1_timer_interrupt_handler();
-  } else if ((*CORE0_INT_SRC & CORE0_INT_SRC_GPU) &&
-             (*IRQ_PENDING_1 &
-              IRQ_PENDING_1_AUX_INT)) {  //  bit 29 : AUX intterupt
-                                         //  (uart1_interrupt)
+  }
+  if ((*CORE0_INT_SRC & CORE0_INT_SRC_GPU) &&
+      (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT)) {  //  bit 29 : AUX intterupt
+                                                   //  (uart1_interrupt)
     uart_interrupt_handler();
   }
 }

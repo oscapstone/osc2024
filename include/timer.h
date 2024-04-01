@@ -4,10 +4,10 @@
 typedef void (*timer_callback)(char* arg);
 
 typedef struct timer_event {
-  struct timer_event *prev, *next;
+  struct timer_event* next;
   unsigned int expire_time;
-  char* arg;
-  void (*func)(char*);
+  char* message;
+  timer_callback func;
 } timer_event;
 
 void print_message(char* msg);

@@ -137,7 +137,9 @@ void print_el1_sys_reg() {
   // Access the registers using inline assembly
   asm volatile("mrs %0, SPSR_EL1" : "=r"(spsr_el1));
   asm volatile("mrs %0, ELR_EL1" : "=r"(elr_el1));
-  asm volatile("mrs %0, ESR_EL1" : "=r"(esr_el1));
+  asm volatile("mrs %0, ESR_EL1"
+               : "=r"(esr_el1));  // esr_el1: holds syndrome information for an
+                                  // exception taken to EL1
 
   uart_send_string("SPSR_EL1 : ");
   uart_hex(spsr_el1);

@@ -197,6 +197,9 @@ void shell_controller(char *cmd) {
     uart_send_string(" bytes received: ");
     uart_puts(str_buf);
 
+    n = uart_send_string_async("12345678, ");
+    uart_int(n);
+    uart_puts(" bytes sent");
     disable_uart_interrupt();
     disable_interrupt();
   } else if (!strncmp(cmd, "set_timeout", 11)) {

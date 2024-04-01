@@ -1,6 +1,7 @@
 #include "timer.h"
 
 #include "alloc.h"
+#include "string.h"
 #include "uart1.h"
 #include "utli.h"
 
@@ -8,7 +9,7 @@ extern void core_timer_handler(unsigned int s);
 extern void core0_timer_interrupt_enable();
 extern void core0_timer_interrupt_disable();
 
-timer_event* te_head = (timer_event*)0;
+static timer_event* te_head = (timer_event*)0;
 
 void print_message(char* msg) {
   uart_send_string("\r\nTimeout message: ");
@@ -17,7 +18,7 @@ void print_message(char* msg) {
   print_timestamp();
 }
 
-void add_timer(timer_callback cb, char* arg, unsigned int sec) {
+void add_timer(timer_callback cb, char* msg, unsigned int sec) {
   timer_event* new_event = (timer_event*)simple_malloc(sizeof(timer_event));
 
   if (!new_event) {
@@ -28,7 +29,8 @@ void add_timer(timer_callback cb, char* arg, unsigned int sec) {
   new_event->next = (timer_event*)0;
   new_event->func = cb;
   new_event->expire_time = get_timestamp() + sec;
-  new_event->arg = arg;
+  new_event->message = (char*)simple_malloc(strlen(msg) + 1);
+  memcpy(new_event->message, msg, strlen(msg) + 1);
 
   core0_timer_interrupt_disable();
   if (!te_head || new_event->expire_time < te_head->expire_time) {
@@ -43,6 +45,7 @@ void add_timer(timer_callback cb, char* arg, unsigned int sec) {
         cur->next = new_event;
         break;
       }
+      cur = cur->next;
     }
   }
   core0_timer_interrupt_enable();
@@ -55,7 +58,7 @@ void timer_event_pop() {
     return;
   }
   timer_event* te = te_head;
-  te->func(te->arg);
+  te->func(te->message);
   te_head = te_head->next;
   if (!te_head) {
     core0_timer_interrupt_disable();
