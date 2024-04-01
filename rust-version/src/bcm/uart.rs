@@ -202,6 +202,7 @@ impl core::fmt::Write for UartInner {
         {
             asm::nop();
         }
+
         self.registers.AUX_MU_IO.set(c as u32);
         self.chars_written += 1;
         Ok(())

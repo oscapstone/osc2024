@@ -27,10 +27,12 @@ BOOTLOADER_RUSTFLAGS      = $(RUSTC_MISC_ARGS)   \
 # build my kernel
 KERNEL_ELF = target/$(TARGET)/debug/kernel
 KERNEL_ELF_DEPS = $(filter-out %: ,$(file < $(KERNEL_ELF).d)) Cargo.toml
+BOOT_ELF = target/$(TARGET)/debug/bootloader
+BOOT_ELF_DEPS = $(filter-out %: ,$(file < $(BOOT_ELF).d)) Cargo.toml
 
 COMPILER_ARGS = --target=$(TARGET)
 
-all: $(KERNEL_BIN)
+all: $(KERNEL_BIN) $(BOOT_BIN)
 
 $(KERNEL_ELF): $(KERNEL_ELF_DEPS)
 	@RUSTFLAGS="$(KERNEL_RUSTFLAGS)" cargo rustc $(COMPILER_ARGS)
@@ -51,7 +53,7 @@ test: $(KERNEL_BIN) $(BOOT_BIN)
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio
 
 clean:
-	rm -rf target $(KERNEL_BIN)
+	rm -rf target $(KERNEL_BIN) $(BOOT_BIN)
 
 # debugging
 readelf:
