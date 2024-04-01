@@ -118,7 +118,7 @@ void print_cur_el() {
   asm volatile(
       "mrs %0,CurrentEL"
       : "=r"(el));  // CurrentEL reg; bits[3:2]: current EL; bits[1:0]: reserved
-  uart_send_string("current EL is : ");
+  uart_send_string("current EL: ");
   uart_int((el >> 2) & 3);
   uart_send_string("\r\n");
 }
@@ -126,7 +126,7 @@ void print_cur_el() {
 void print_cur_sp() {
   unsigned long sp_val;
   asm volatile("mov %0, sp" : "=r"(sp_val));
-  uart_send_string("cur sp: ");
+  uart_send_string("current sp: 0x");
   uart_hex(sp_val);
   uart_send_string("\r\n");
 }
@@ -135,32 +135,36 @@ void print_el1_sys_reg() {
   unsigned long spsr_el1, elr_el1, esr_el1;
 
   // Access the registers using inline assembly
-  asm volatile("mrs %0, SPSR_EL1" : "=r"(spsr_el1));
+  asm volatile("mrs %0, SPSR_EL1"
+               : "=r"(spsr_el1));  // spsr_el1:holds the saved processor state
+                                   // when an exception is taken to EL1
   asm volatile("mrs %0, ELR_EL1" : "=r"(elr_el1));
   asm volatile("mrs %0, ESR_EL1"
                : "=r"(esr_el1));  // esr_el1: holds syndrome information for an
                                   // exception taken to EL1
-
   uart_send_string("SPSR_EL1 : ");
   uart_hex(spsr_el1);
   uart_send_string("\r\n");
   uart_send_string("ELR_EL1 : ");
   uart_hex(elr_el1);
   uart_send_string("\r\n");
-  uart_send_string("ESR_EL1 : ");
-  uart_hex(esr_el1);
-  uart_send_string("\r\n");
+  uart_send_string("ESR_EL1 : ");  // EC(bits[31:26]): indicates the cause of
+  uart_hex(esr_el1);               // the exception; 0x15 here -> SVC
+  uart_send_string("\r\n");        // instruction from AArch64
+                                   // IL(bit[25]): the instrction length bit,
+                                   // for sync exceptions; is set to 1 here ->
+                                   // 32-bit trapped instruction
 }
 
 void exec_in_el0(void *prog_st_addr) {
   asm volatile(
       "mov	x1, 0x0;"       // open interrupt for 2sec time_interrupt, 0000:
                                 // EL0t(jump to EL0)
-      "msr	SPSR_EL1, x1;"  // saved process state when an exception is
+      "msr	spsr_el1, x1;"  // saved process state when an exception is
                                 // taken to EL1
-      "msr	ELR_EL1,  x0;"  // put program_start -> ELR_EL1
+      "msr	elr_el1,  x0;"  // put program_start -> ELR_EL1
       "mov	x1, #0x20000;"  // set sp on 0x20000
-      "msr	SP_EL0, x1;"    // set EL0 stack pointer
+      "msr	sp_el0, x1;"    // set EL0 stack pointer
       "ERET"                    // exception return
   );
   return;

@@ -91,8 +91,8 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
 */
 
 int fdt_traverse(fdt_callback cb) {
-  uart_send_string("dtb_ptr address is at: 0x");
-  uart_hex((unsigned long int)_dtb_ptr);
+  uart_send_string("dtb_ptr address: 0x");
+  uart_hex((unsigned long long)_dtb_ptr);
   uart_send_string("\r\n");
 
   fdt_header *header = (fdt_header *)_dtb_ptr;
@@ -118,9 +118,9 @@ void get_cpio_addr(int token, const char *name, const void *data,
                    unsigned int size) {
   UNUSED(size);
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-start")) {
-    cpio_addr = (char *)(unsigned long int)fdt_u32_le2be(data);
-    uart_send_string("cpio address is at: 0x");
-    uart_hex((unsigned long int)cpio_addr);
+    cpio_addr = (char *)(unsigned long long)fdt_u32_le2be(data);
+    uart_send_string("cpio address: 0x");
+    uart_hex((unsigned long long)cpio_addr);
     uart_send_string("\r\n");
   }
   return;

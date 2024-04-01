@@ -93,7 +93,7 @@ void uart_flush() {
   }
 }
 
-void uart_int(unsigned int d) {
+void uart_int(unsigned long long d) {
   if (d == 0) {
     uart_write('0');
   }
@@ -122,8 +122,8 @@ void uart_hex(unsigned int d) {
   }
 }
 
-void uart_hex_64(unsigned long int d) {
-  unsigned long int n;
+void uart_hex_64(unsigned long long d) {
+  unsigned long long n;
   int c;
   for (c = 60; c >= 0; c -= 4) {
     n = (d >> c) & 0xF;

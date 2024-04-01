@@ -33,7 +33,7 @@ core_timer_handler:
   msr cntp_tval_el0, x1 // if CNTP_CTL_EL0[0] is 1, then the timer met when (CNTPCT_EL0-CNTP_CVAL_EL0) >= 0
   ret
 
-// cntp_ctl_el0: control register for the el1 physical
+// cntp_ctl_el0: control register for the el1 physical.
 // cntpct_el0: The timer’s current count.
-// cntp_cval_el0: A compared timer count. If cntpct_el0 >= cntp_cval_el0, interrupt the CPU core
+// cntp_cval_el0: A compared timer count. If cntpct_el0 >= cntp_cval_el0, interrupt the CPU core.
 // cntp_tval_el0: (cntp_cval_el0 - cntpct_el0). Use it to set an expired timer after the current timer count.

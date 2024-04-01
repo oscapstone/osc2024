@@ -12,7 +12,7 @@ extern void core0_timer_interrupt_disable();
 static timer_event* te_head = (timer_event*)0;
 
 void print_message(char* msg) {
-  uart_send_string("\r\nTimeout message: ");
+  uart_send_string("\r\ntimeout message: ");
   uart_send_string(msg);
   uart_send_string(", ");
   print_timestamp();

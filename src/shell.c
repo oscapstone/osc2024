@@ -11,6 +11,7 @@
 
 extern void enable_interrupt();
 extern void disable_interrupt();
+extern void core_timer_enable();
 extern void core0_timer_interrupt_enable();
 extern void core0_timer_interrupt_disable();
 extern void core_timer_handler(unsigned int s);
@@ -180,7 +181,6 @@ void shell_controller(char *cmd) {
     core0_timer_interrupt_enable();
     exec_in_el0(cpio_get_file_content_st_addr("user_prog.img"));
   } else if (!strcmp(cmd, "async_uart")) {
-    enable_interrupt();
     enable_uart_interrupt();
 
     uart_puts("input 'q' to quit:");
@@ -201,7 +201,7 @@ void shell_controller(char *cmd) {
     uart_int(n);
     uart_puts(" bytes sent");
     disable_uart_interrupt();
-    disable_interrupt();
+
   } else if (!strncmp(cmd, "set_timeout", 11)) {
     char *msg = args[0];
     unsigned int sec = atoi(args[1]);
@@ -223,6 +223,9 @@ void shell_controller(char *cmd) {
 }
 
 void shell_start() {
+  enable_interrupt();
+  core_timer_enable();
+
   enum shell_status status = Read;
   char cmd[CMD_LEN];
   while (1) {
