@@ -116,12 +116,6 @@ int do_cmd_help()
         puts(cmd_list[i].help);
         puts("\r\n");
     }
-    puts("dtb:");
-    put_hex((unsigned int)dtb);
-    puts("\r\n");
-    puts("dtb_address in shell: ");
-    put_hex((unsigned int)&dtb);
-    puts("\r\n");
     return 0;
 }
 
