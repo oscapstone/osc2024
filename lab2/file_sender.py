@@ -1,9 +1,10 @@
 import serial
 import time
+import sys
 
 kernel_image_path = "kernel/kernel8.img"
 
-dev_name = input("Enter the device name: ")
+dev_name = sys.argv[1]
 ser = serial.Serial(dev_name, 115200, timeout=1)
 
 input("Press any button to continue...")
