@@ -45,6 +45,11 @@ const Cmd cmds[] = {
         .help = "print device tree",
         .fp = cmd_devtree,
     },
+    {
+        .name = "run",
+        .help = "run user program",
+        .fp = cmd_run,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 
