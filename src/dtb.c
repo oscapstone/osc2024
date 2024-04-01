@@ -1,12 +1,20 @@
 #include "dtb.h"
 
 #include "cpio_.h"
-#include "my_string.h"
+#include "string.h"
 #include "uart1.h"
 #include "utli.h"
 
 void *_dtb_ptr;          // should be 0x2EFF7A00
 extern char *cpio_addr;  // should be 0x20000000
+
+static unsigned int dtb_strlen(const char *s) {
+  unsigned int i = 0;
+  while (s[i]) {
+    i++;
+  }
+  return i + 1;
+}
 
 static unsigned int fdt_u32_le2be(const void *addr) {
   const unsigned char *bytes = (const unsigned char *)addr;
@@ -32,7 +40,7 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
         node being opened.
         */
         cb(token, (char *)cur_ptr, (void *)0, 0);
-        cur_ptr += align(strlen((char *)cur_ptr), 4);
+        cur_ptr += align(dtb_strlen((char *)cur_ptr), 4);
         break;
       case FDT_END_NODE:
         /*

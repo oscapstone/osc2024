@@ -1,8 +1,6 @@
 .section ".text.boot"
 
 .global _start 
-.global proc_hang 
-
 _start:
     mrs     x1, MPIDR_EL1   // get cpu id and put to reg x1
     and     x1, x1, #0x3      // Keep the lowest two bits

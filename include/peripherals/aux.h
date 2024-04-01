@@ -60,8 +60,4 @@
 #define AUX_SPI1_PEEK \
   ((volatile unsigned int *)(AUX_BASE + 0xD4))  // SPI1 data peek register
 
-#define IRQ_PENDING_1 ((volatile unsigned int *)MMIO_BASE + 0x0000B204)
-#define ENABLE_IRQS_1 ((volatile unsigned int *)(MMIO_BASE + 0x0000B210))
-#define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)0x40000060)
-
 #endif

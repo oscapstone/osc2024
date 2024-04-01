@@ -1,12 +1,13 @@
 #include "uart1.h"
 
-#include "my_string.h"
+#include "interrupt.h"
 #include "peripherals/aux.h"
 #include "peripherals/gpio.h"
+#include "string.h"
 #include "utli.h"
 
-unsigned int w_f = 0, w_b = 0;
-unsigned int r_f = 0, r_b = 0;
+static unsigned int w_f = 0, w_b = 0;
+static unsigned int r_f = 0, r_b = 0;
 char async_uart_read_buf[MAX_BUF_SIZE];
 char async_uart_write_buf[MAX_BUF_SIZE];
 extern void enable_interrupt();
@@ -131,32 +132,85 @@ void uart_hex_64(unsigned long int d) {
   }
 }
 
-void enable_uart_interrupt() {
-  *AUX_MU_IER = 0x1;         // enable RX interrupt
-  *ENABLE_IRQS_1 = 1 << 29;  // Enable mini uart interrupt, connect the GPU
-                             // IRQ to CORE0's IRQ
+static void enable_uart_tx_interrupt() { *AUX_MU_IER |= 2; }
+
+static void disable_uart_tx_interrupt() { *AUX_MU_IER &= ~(2); }
+
+static void enable_uart_rx_interrupt() { *AUX_MU_IER |= 1; }
+
+static void disable_uart_rx_interrupt() { *AUX_MU_IER &= ~(1); }
+
+void disable_uart_interrupt() {
+  disable_uart_rx_interrupt();
+  disable_uart_tx_interrupt();
 }
 
-void uart_send_string_async(const char *str) {
-  disable_interrupt();
-  for (int i = 0; str[i] != '\0'; i++) {
-    async_uart_write_buf[w_b++] = str[i];
-  };
-  async_uart_write_buf[w_b] = '\0';
+void enable_uart_interrupt() {
+  enable_uart_rx_interrupt();  // enable RX interrupt
+  *ENABLE_IRQS_1 |= 1 << 29;   // Enable mini uart interrupt, connect the
+                               // GPU IRQ to CORE0's IRQ
+}
 
-  uart_hex(*AUX_MU_IER);
-  uart_send_string("\r\n");
-  *AUX_MU_IER |= 0x2;  // enable TX interrupt
-  uart_hex(*AUX_MU_IER);
-  uart_send_string("\r\n");
-  enable_interrupt();
+void uart_write_async(unsigned int c) {
+  while ((w_b + 1) % MAX_BUF_SIZE == w_f) {  // full buffer -> wait
+    asm volatile("nop");
+  }
+  async_uart_write_buf[w_b++] = c;
+  w_b %= MAX_BUF_SIZE;
+  enable_uart_tx_interrupt();
+}
+
+char uart_read_async() {
+  while (r_f == r_b) {
+    asm volatile("nop");
+  }
+  char c = async_uart_read_buf[r_f++];
+  r_f %= MAX_BUF_SIZE;
+  enable_uart_rx_interrupt();
+  return c;
 }
 
 unsigned int uart_read_string_async(char *str) {
-  *AUX_MU_IER &= 0x2;  // disable RX interrupt while keep TX interrupt
-  unsigned int i;
-  for (i = 0; async_uart_read_buf[i] != '\0'; i++) {
-    str[i] = async_uart_read_buf[i];
-  };
-  return i + 1;
+  unsigned int i = 0;
+  while (r_f != r_b) {
+    str[i++] = async_uart_read_buf[r_f++];
+    r_f %= MAX_BUF_SIZE;
+  }
+  str[i] = '\0';
+  enable_uart_rx_interrupt();
+  return i;
+}
+
+static void uart_tx_interrupt_handler() {
+  disable_uart_tx_interrupt();
+  if (w_b == w_f) {  // the buffer is empty
+    return;
+  }
+  *AUX_MU_IO = (unsigned int)async_uart_write_buf[w_f++];
+  w_f %= MAX_BUF_SIZE;
+  enable_uart_tx_interrupt();
+}
+
+static void uart_rx_interrupt_handler() {
+  disable_uart_rx_interrupt();
+  if ((r_b + 1) % MAX_BUF_SIZE == r_f) {
+    return;
+  }
+  async_uart_read_buf[r_b++] = (char)(*AUX_MU_IO);
+  r_b %= MAX_BUF_SIZE;
+  enable_uart_rx_interrupt();
+}
+
+void uart_interrupt_handler() {
+  if (*AUX_MU_IIR &
+      0x2)  // bit[2:1]=01: Transmit holding register empty (FIFO empty)
+  {
+    // uart_puts("uart_tx_interrupt_handler!");
+    uart_tx_interrupt_handler();
+  } else if (*AUX_MU_IIR & 0x4)  // bit[2:1]=10: Receiver holds valid byte
+                                 // (FIFO hold at least 1 symbol)
+  {
+    // uart_puts("uart_rx_interrupt_handler!");
+    uart_rx_interrupt_handler();
+  }
 }

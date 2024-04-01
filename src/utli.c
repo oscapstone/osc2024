@@ -1,91 +1,27 @@
 #include "utli.h"
 
+#include "math.h"
 #include "mbox.h"
-#include "my_math.h"
 #include "peripherals/gpio.h"
 #include "peripherals/mbox.h"
 #include "peripherals/mmio.h"
 #include "uart1.h"
 #include "utli.h"
 
-char *itox(int value, char *s) {
-  int idx = 0;
-  unsigned int n;
-  for (int c = 28; c >= 0; c -= 4) {
-    // get highest tetrad
-    n = (value >> c) & 0xF;
-    // 0-9 => '0'-'9', 10-15 => 'A'-'F'
-    n += n > 9 ? 0x37 : 0x30;
-    s[idx++] = n;
-  }
-  s[idx] = '\0';
-  return s;
-}
-
-char *itoa(int value, char *s) {
-  int idx = 0;
-  if (value < 0) {
-    value *= -1;
-    s[idx++] = '-';
-  }
-
-  char tmp[10];
-  int tidx = 0;
-  do {
-    tmp[tidx++] = '0' + value % 10;
-    value /= 10;
-  } while (value != 0 && tidx < 11);
-
-  // reverse tmp
-  int i;
-  for (i = tidx - 1; i >= 0; i--) {
-    s[idx++] = tmp[i];
-  }
-  s[idx] = '\0';
-
-  return s;
-}
-
-char *ftoa(float value, char *s) {
-  int idx = 0;
-  if (value < 0) {
-    value = -value;
-    s[idx++] = '-';
-  }
-
-  int ipart = (int)value;
-  float fpart = value - (float)ipart;
-
-  // convert ipart
-  char istr[11];  // 10 digit
-  itoa(ipart, istr);
-
-  // convert fpart
-  char fstr[7];  // 6 digit
-  fpart *= pow(10, 6);
-  itoa((int)fpart, fstr);
-
-  // copy int part
-  char *ptr = istr;
-  while (*ptr) s[idx++] = *ptr++;
-  s[idx++] = '.';
-  // copy float part
-  ptr = fstr;
-  while (*ptr) s[idx++] = *ptr++;
-  s[idx] = '\0';
-
-  return s;
-}
-
 unsigned int align(unsigned int size, unsigned int s) {
   return (size + s - 1) & (~(s - 1));
 }
 
 void align_inplace(unsigned int *size, unsigned int s) {
-  // unsigned int *x = (unsigned int *)size;
-  // unsigned int mask = s - 1;
-  // *x = ((*x) + mask) & (~mask);
   *size = ((*size) + (s - 1)) & (~(s - 1));
+}
+
+unsigned int get_timestamp() {
+  register unsigned long long f, c;
+  asm volatile("mrs %0, cntfrq_el0"
+               : "=r"(f));  // get current counter frequency
+  asm volatile("mrs %0, cntpct_el0" : "=r"(c));  // read current counter
+  return c / f;
 }
 
 void print_timestamp() {

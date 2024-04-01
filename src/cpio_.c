@@ -1,13 +1,13 @@
 #include "cpio_.h"
 
-#include "my_string.h"
+#include "string.h"
 #include "uart1.h"
 #include "utli.h"
 
 // char *cpio_addr = (char *)0x20000000;
 char *cpio_addr;
 
-static unsigned int atoi(const char *s, int char_size) {
+static unsigned int cpio_atoi(const char *s, int char_size) {
   unsigned int num = 0;
   for (int i = 0; i < char_size; i++) {
     num = num * 16;
@@ -28,10 +28,10 @@ void cpio_ls() {
   while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     cpio_header *header = (cpio_header *)addr;
     unsigned int filename_size =
-        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
     unsigned int file_size =
-        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     uart_send_string(addr + sizeof(cpio_header));
@@ -48,9 +48,9 @@ char *findFile(const char *name) {
     }
     cpio_header *header = (cpio_header *)addr;
     unsigned int pathname_size =
-        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     unsigned int file_size =
-        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     unsigned int headerPathname_size = sizeof(cpio_header) + pathname_size;
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
@@ -64,10 +64,10 @@ void cpio_cat(const char *filename) {
   if (file) {
     cpio_header *header = (cpio_header *)file;
     unsigned int filename_size =
-        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
     unsigned int file_size =
-        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     char *file_content = (char *)header + headerPathname_size;
@@ -86,10 +86,10 @@ char *cpio_get_file_content_st_addr(const char *filename) {
   if (file) {
     cpio_header *header = (cpio_header *)file;
     unsigned int filename_size =
-        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
     unsigned int file_size =
-        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     char *file_content = (char *)header + headerPathname_size;

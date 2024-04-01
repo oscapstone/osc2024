@@ -4,14 +4,16 @@
 #include "cpio_.h"
 #include "interrupt.h"
 #include "mbox.h"
-#include "my_string.h"
+#include "string.h"
+#include "timer.h"
 #include "uart1.h"
 #include "utli.h"
 
 extern void enable_interrupt();
 extern void disable_interrupt();
-extern void core_timer_enable();
-extern void core_timer_disable();
+extern void core0_timer_interrupt_enable();
+extern void core0_timer_interrupt_disable();
+extern void core_timer_handler(unsigned int s);
 
 enum shell_status { Read, Parse };
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
@@ -42,7 +44,7 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
   uart_init();
   uart_flush();
-  uart_send_string("\nInit UART done\r\n");
+  // uart_send_string("\nInit UART done\r\n");
 }
 
 void shell_input(char *cmd) {
@@ -90,7 +92,6 @@ void shell_input(char *cmd) {
       cmd[idx++] = c;
       cmd[++end] = '\0';
     }
-    // uart_printf("\r# %s \r\e[%dC", cmd, idx + 2);
     uart_send_string("\r# ");
     uart_send_string(cmd);
   }
@@ -100,13 +101,25 @@ void shell_input(char *cmd) {
 void shell_controller(char *cmd) {
   if (!strcmp(cmd, "")) {
     return;
-  } else if (!strcmp(cmd, "help")) {
+  }
+
+  char *args[5];
+  unsigned int i = 0, idx = 0;
+  while (cmd[i] != '\0') {
+    if (cmd[i] == ' ') {
+      cmd[i] = '\0';
+      args[idx++] = cmd + i + 1;
+    }
+    i++;
+  }
+
+  if (!strcmp(cmd, "help")) {
     uart_puts("help: print this help menu");
     uart_puts("hello: print Hello World!");
     uart_puts("ls: list the filenames in cpio archive");
     uart_puts(
-        "cat: display the content of the speficied file included in cpio "
-        "archive");
+        "cat <file name>: display the content of the speficied file included "
+        "in cpio archive");
     uart_puts("malloc: get a continuous memory space");
     uart_puts("timestamp: get current timestamp");
     uart_puts("reboot: reboot the device");
@@ -114,9 +127,11 @@ void shell_controller(char *cmd) {
     uart_puts("brn: get rpi3’s board revision number");
     uart_puts("bsn: get rpi3’s board serial number");
     uart_puts("arm_mem: get ARM memory base address and size");
-    uart_puts("test_timer: test the timer and EL1 interrupt handler");
     uart_puts("exec: run a user program in EL0");
     uart_puts("async_uart: activate async uart I/O");
+    uart_puts(
+        "set_timeout <MESSAGE> <SECONDS>: print the message after given "
+        "seconds");
     uart_puts("loadimg: reupload the kernel image if the bootloader is used");
 
   } else if (!strcmp(cmd, "hello")) {
@@ -124,7 +139,7 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "ls")) {
     cpio_ls();
   } else if (!strncmp(cmd, "cat", 3)) {
-    cpio_cat(cmd + 4);
+    cpio_cat(args[0]);
   } else if (!strcmp(cmd, "malloc")) {
     char *m1 = (char *)simple_malloc(8);
     if (!m1) {
@@ -160,23 +175,41 @@ void shell_controller(char *cmd) {
     get_arm_base_memory_sz();
   } else if (!strcmp(cmd, "timestamp")) {
     print_timestamp();
-  } else if (!strcmp(cmd, "test_timer")) {
-    core_timer_enable();
-    enable_interrupt();
-    wait_usec(2000000);
-    disable_interrupt();
-    core_timer_disable();
   } else if (!strcmp(cmd, "exec")) {
-    core_timer_enable();
+    core_timer_handler(1);
+    core0_timer_interrupt_enable();
     exec_in_el0(cpio_get_file_content_st_addr("user_prog.img"));
-
   } else if (!strcmp(cmd, "async_uart")) {
     enable_interrupt();
     enable_uart_interrupt();
-    core_timer_enable();
-    uart_send_string_async("hello\r\n");
-    core_timer_disable();
+
+    uart_puts("input 'q' to quit:");
+    char c;
+    while ((c = uart_read_async()) != 'q') {
+      uart_write_async(c);
+    }
+    uart_send_string("\r\n");
+
+    wait_usec(2000000);
+    char str_buf[50];
+    unsigned int n = uart_read_string_async(str_buf);
+    uart_int(n);
+    uart_send_string(" bytes received: ");
+    uart_puts(str_buf);
+
+    disable_uart_interrupt();
     disable_interrupt();
+  } else if (!strncmp(cmd, "set_timeout", 11)) {
+    char *msg = args[0];
+    unsigned int sec = atoi(args[1]);
+
+    uart_send_string("set timeout: ");
+    uart_int(sec);
+    uart_send_string("s, ");
+    print_timestamp();
+
+    add_timer(print_message, msg, sec);
+
   } else if (!strcmp(cmd, "loadimg")) {
     asm volatile(
         "ldr x30, =0x60160;"

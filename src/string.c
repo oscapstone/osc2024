@@ -1,4 +1,4 @@
-#include "my_math.h"
+#include "math.h"
 #include "uart1.h"
 #include "utli.h"
 
@@ -29,9 +29,29 @@ int strncmp(const char *X, const char *Y, unsigned int n) {
 }
 
 unsigned int strlen(const char *s) {
-  int i = 0;
+  unsigned int i = 0;
   while (s[i]) {
     i++;
   }
-  return i + 1;
+  return i;
+}
+
+unsigned int atoi(char *str) {
+  unsigned int ret = 0;
+  for (int i = 0; str[i] != '\0'; ++i) {
+    if (str[i] > '9' || str[i] < '0') {
+      return ret;
+    }
+    ret = ret * 10 + str[i] - '0';
+  }
+  return ret;
+}
+
+char *memcpy(void *dest, const void *src, unsigned long long len) {
+  char *d = dest;
+  const char *s = src;
+  while (len--) {
+    *d++ = *s++;
+  }
+  return dest;
 }

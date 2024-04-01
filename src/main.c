@@ -5,6 +5,7 @@
 #include "utli.h"
 extern void *_dtb_ptr;
 extern void core_timer_enable();
+extern void enable_interrupt();
 
 void kernel_init(void *arg) {
   _dtb_ptr = arg;
@@ -12,8 +13,9 @@ void kernel_init(void *arg) {
   fdt_traverse(get_cpio_addr);
   print_cur_el();
   print_cur_sp();
-  // core_timer_enable();
-  // enable_uart_interrupt();
+  enable_interrupt();
+  core_timer_enable();
+  // core0_timer_interrupt_enable();
 }
 
 void main(void *arg) {

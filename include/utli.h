@@ -8,11 +8,9 @@
 #define PM_WDOG_MAGIC 0x5a000000
 #define PM_RSTC_FULLRST 0x00000020
 
-char *itox(int value, char *s);
-char *itoa(int value, char *s);
-char *ftoa(float value, char *s);
 unsigned int align(unsigned int size, unsigned int s);
 void align_inplace(unsigned int *size, unsigned int s);
+unsigned int get_timestamp();
 void print_timestamp();
 void reset();
 void cancel_reset();

@@ -1,5 +1,5 @@
 .macro save_all_general_regs				// save general registers to stack
-  sub sp, sp, 32 * 8
+  sub sp, sp, 16 * 17
   stp x0, x1, [sp ,16 * 0]		      //store pair of registers to sp+16*0
   stp x2, x3, [sp ,16 * 1]
   stp x4, x5, [sp ,16 * 2]
@@ -43,7 +43,7 @@
   ldp x26, x27, [sp ,16 * 13]
   ldp x28, x29, [sp ,16 * 14]
   ldr x30, [sp, 16 * 15]
-  add sp, sp, 32 * 8
+  add sp, sp, 16 * 17
 .endm
 
 .macro	ventry	label       //  used to create entries in the vector table.
