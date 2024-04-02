@@ -4,6 +4,7 @@
 #include "peripherals/aux.h"
 #include "peripherals/gpio.h"
 #include "string.h"
+#include "task.h"
 #include "utli.h"
 
 static unsigned int w_f = 0, w_b = 0;
@@ -123,7 +124,7 @@ void uart_hex(unsigned int d) {
 }
 
 void uart_hex_64(unsigned long long d) {
-  unsigned long long n;
+  unsigned long n;
   int c;
   for (c = 60; c >= 0; c -= 4) {
     n = (d >> c) & 0xF;
@@ -193,7 +194,6 @@ unsigned int uart_read_string_async(char *str) {
 }
 
 static void uart_tx_interrupt_handler() {
-  disable_uart_tx_interrupt();
   if (w_b == w_f) {  // the buffer is empty
     return;
   }
@@ -203,7 +203,6 @@ static void uart_tx_interrupt_handler() {
 }
 
 static void uart_rx_interrupt_handler() {
-  disable_uart_rx_interrupt();
   if ((r_b + 1) % MAX_BUF_SIZE == r_f) {
     return;
   }
@@ -217,11 +216,13 @@ void uart_interrupt_handler() {
       0x2)  // bit[2:1]=01: Transmit holding register empty (FIFO empty)
   {
     // uart_puts("uart_tx_interrupt_handler!");
-    uart_tx_interrupt_handler();
+    disable_uart_tx_interrupt();
+    add_task(uart_tx_interrupt_handler, UART_INT_PRIORITY);
   } else if (*AUX_MU_IIR & 0x4)  // bit[2:1]=10: Receiver holds valid byte
                                  // (FIFO hold at least 1 symbol)
   {
     // uart_puts("uart_rx_interrupt_handler!");
-    uart_rx_interrupt_handler();
+    disable_uart_rx_interrupt();
+    add_task(uart_rx_interrupt_handler, UART_INT_PRIORITY);
   }
 }

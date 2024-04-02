@@ -5,7 +5,8 @@
 #include "uart1.h"
 #include "utli.h"
 
-extern void core_timer_handler(unsigned int s);
+extern void set_core_timer_int(unsigned long long s);
+extern void set_core_timer_int_sec(unsigned int s);
 extern void core0_timer_interrupt_enable();
 extern void core0_timer_interrupt_disable();
 
@@ -36,7 +37,7 @@ void add_timer(timer_callback cb, char* msg, unsigned int sec) {
   if (!te_head || new_event->expire_time < te_head->expire_time) {
     new_event->next = te_head;
     te_head = new_event;
-    core_timer_handler(sec);
+    set_core_timer_int_sec(sec);
   } else {
     timer_event* cur = te_head;
     while (1) {
@@ -53,16 +54,14 @@ void add_timer(timer_callback cb, char* msg, unsigned int sec) {
 
 void timer_event_pop() {
   if (!te_head) {
-    uart_puts("timer_event_pop: event list is empty.");
-    core0_timer_interrupt_disable();
     return;
   }
+
   timer_event* te = te_head;
   te->func(te->message);
   te_head = te_head->next;
-  if (!te_head) {
-    core0_timer_interrupt_disable();
-  } else {
-    core_timer_handler(te_head->expire_time - get_timestamp());
+
+  if (te_head) {
+    set_core_timer_int_sec(te_head->expire_time - get_timestamp());
   }
 }

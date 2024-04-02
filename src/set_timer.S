@@ -26,8 +26,15 @@ core0_timer_interrupt_disable:
   str w0, [x1]          // mask timer interrupt
   ret
 
-.global core_timer_handler
-core_timer_handler:
+.global set_core_timer_int
+set_core_timer_int:
+  mrs x1, cntfrq_el0    // Counter-timer Frequency register: holds the clock frequency of the system
+  add x1, x1, x0        // set expired time(on a write of this register, CNTP_CVAL_EL0 is set to (CNTPCT_EL0 + timer value)
+  msr cntp_tval_el0, x1 // if CNTP_CTL_EL0[0] is 1, then the timer met when (CNTPCT_EL0-CNTP_CVAL_EL0) >= 0
+  ret
+
+.global set_core_timer_int_sec
+set_core_timer_int_sec:
   mrs x1, cntfrq_el0    // Counter-timer Frequency register: holds the clock frequency of the system
   mul x1, x0, x1        // set expired time(on a write of this register, CNTP_CVAL_EL0 is set to (CNTPCT_EL0 + timer value)
   msr cntp_tval_el0, x1 // if CNTP_CTL_EL0[0] is 1, then the timer met when (CNTPCT_EL0-CNTP_CVAL_EL0) >= 0

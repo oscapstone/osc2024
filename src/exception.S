@@ -147,7 +147,7 @@ error_el1h:
 
 sync_el0_64:	
   save_all_general_regs
-  bl  print_el1_sys_reg
+  bl  el0_64_sync_interrupt_handler
   load_all_general_regs
   eret
 irq_el0_64:

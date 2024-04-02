@@ -9,6 +9,7 @@ void kernel_init(void *arg) {
   fdt_traverse(get_cpio_addr);
   print_cur_el();
   print_cur_sp();
+  
 }
 
 void main(void *arg) {

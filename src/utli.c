@@ -16,6 +16,12 @@ void align_inplace(unsigned int *size, unsigned int s) {
   *size = ((*size) + (s - 1)) & (~(s - 1));
 }
 
+unsigned long long get_clk_freq() {
+  register unsigned long long f;
+  asm volatile("mrs %0, cntfrq_el0" : "=r"(f));
+  return f;
+}
+
 unsigned int get_timestamp() {
   register unsigned long long f, c;
   asm volatile("mrs %0, cntfrq_el0"
@@ -169,3 +175,5 @@ void exec_in_el0(void *prog_st_addr) {
   );
   return;
 }
+
+void fake_long_handler() { wait_usec(3000000); }

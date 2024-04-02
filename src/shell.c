@@ -5,6 +5,7 @@
 #include "interrupt.h"
 #include "mbox.h"
 #include "string.h"
+#include "task.h"
 #include "timer.h"
 #include "uart1.h"
 #include "utli.h"
@@ -14,7 +15,8 @@ extern void disable_interrupt();
 extern void core_timer_enable();
 extern void core0_timer_interrupt_enable();
 extern void core0_timer_interrupt_disable();
-extern void core_timer_handler(unsigned int s);
+extern void set_core_timer_int(unsigned long long s);
+extern void set_core_timer_int_sec(unsigned int s);
 
 enum shell_status { Read, Parse };
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
@@ -133,6 +135,7 @@ void shell_controller(char *cmd) {
     uart_puts(
         "set_timeout <MESSAGE> <SECONDS>: print the message after given "
         "seconds");
+    uart_puts("demo_preempt: for the demo of the preemption mechanism");
     uart_puts("loadimg: reupload the kernel image if the bootloader is used");
 
   } else if (!strcmp(cmd, "hello")) {
@@ -177,8 +180,7 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "timestamp")) {
     print_timestamp();
   } else if (!strcmp(cmd, "exec")) {
-    core_timer_handler(1);
-    core0_timer_interrupt_enable();
+    set_core_timer_int_sec(1);
     exec_in_el0(cpio_get_file_content_st_addr("user_prog.img"));
   } else if (!strcmp(cmd, "async_uart")) {
     enable_uart_interrupt();
@@ -213,6 +215,16 @@ void shell_controller(char *cmd) {
 
     add_timer(print_message, msg, sec);
 
+  } else if (!strcmp(cmd, "demo_preempt")) {
+    char buf[100];
+    enable_uart_interrupt();
+    add_task(fake_long_handler, 99);
+    pop_task();
+    uart_read_string_async(buf);
+    uart_send_string_async(buf);
+    wait_usec(100000);
+    disable_uart_interrupt();
+    uart_send_string("\r\n");
   } else if (!strcmp(cmd, "loadimg")) {
     asm volatile(
         "ldr x30, =0x60160;"
@@ -225,7 +237,7 @@ void shell_controller(char *cmd) {
 void shell_start() {
   enable_interrupt();
   core_timer_enable();
-
+  core0_timer_interrupt_enable();
   enum shell_status status = Read;
   char cmd[CMD_LEN];
   while (1) {
