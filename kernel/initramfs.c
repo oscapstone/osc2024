@@ -21,13 +21,11 @@ void parse_initramfs()
         c = (char *) (hdr+1);
 
         cur->filename = c;
-        // padding = PADDING_4(sizeof(cpio_hdr_t) + namesize);
-        padding = (sizeof(cpio_hdr_t) + namesize + 3) & (~0x03);
+        padding = PADDING_4(sizeof(cpio_hdr_t) + namesize);
         c = (char *) hdr + padding;
 
         cur->content = c;
-        padding = (filesize + 3) & (~0x03);   // TODO: use macro
-        // padding = PADDING_4(filesize);
+        padding = PADDING_4(filesize);
         c += padding;
 
         if (!strcmp(cur->filename, "TRAILER!!!")) {
