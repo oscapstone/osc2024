@@ -2,6 +2,7 @@
 #include "initramfs.h"
 #include "malloc.h"
 #include "string.h"
+#include "type.h"
 #include "uart.h"
 
 static cpio_meta_t *head = NULL;
