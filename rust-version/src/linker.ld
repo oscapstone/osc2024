@@ -70,6 +70,9 @@ SECTIONS
     {
         __bss_start = .;
         *(.bss*);
+        . = ALIGN(8);
+        __dtb = .;
+        . += 8;
         . = ALIGN(16);
         __bss_end_exclusive = .;
     } :segment_data

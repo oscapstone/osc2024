@@ -38,6 +38,11 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
+
+	// save x0 to 0x50000
+	ldr	x1, =0x50000
+	str	x0, [x1]
+
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	# Extract the Affinity Level 0 (core) number.

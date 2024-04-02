@@ -38,6 +38,12 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
+
+	// load address 0x50000's value and save it into __dtb
+	ADR_ABS	x0, __dtb
+	ldr	x1, =0x50000
+	str	x1, [x0]
+
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	# Extract the Affinity Level 0 (core) number.

@@ -47,10 +47,10 @@ $(BOOT_BIN): $(BOOT_ELF)
 	rust-objcopy -O binary $(BOOT_ELF) $(BOOT_BIN)
 
 testboot: $(KERNEL_BIN) $(BOOT_BIN)
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -s
 
 test: $(KERNEL_BIN) $(BOOT_BIN)
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 clean:
 	rm -rf target $(KERNEL_BIN) $(BOOT_BIN)

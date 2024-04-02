@@ -42,7 +42,8 @@ pub fn interactiave_shell() -> ! {
         print!("{}", c);
         if c == '\r' {
             println!();
-            let cmd = core::str::from_utf8(&array[0..cnt]).unwrap();
+            // println!("{}", core::str::from_utf8(&array[0..cnt]).unwrap());
+            let cmd = core::str::from_utf8(&array[0..cnt]).unwrap_or(" ");
             let cmd_0 = cmd.split_whitespace().next().unwrap_or("");
             let arg_1 = cmd.split_whitespace().nth(1).unwrap_or("");
             match cmd_0 {
@@ -82,12 +83,13 @@ pub fn interactiave_shell() -> ! {
                 }
                 "mem" => {
                     check_mem_alloc();
+                    memory::device_tree::get_device_tree_ptr();
                 }
                 _ => {
                     if cnt > 0 {
                         println!(
                             "Unknown command: {:?}",
-                            &core::str::from_utf8(&array[0..cnt]).unwrap()
+                            &core::str::from_utf8(&array[0..cnt]).unwrap_or("")
                         );
                         help();
                     }
@@ -98,5 +100,6 @@ pub fn interactiave_shell() -> ! {
             cnt = 0;
         }
         cnt += if c == '\r' { 0 } else { 1 };
+        cnt = cnt % MAXCHAR;
     }
 }

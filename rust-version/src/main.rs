@@ -5,6 +5,7 @@
 #![feature(trait_alias)]
 #![no_main]
 #![no_std]
+#![feature(pointer_is_aligned)]
 
 use core::arch::global_asm;
 use crate::bcm::common::map::layout;

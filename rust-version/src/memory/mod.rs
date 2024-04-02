@@ -1,5 +1,6 @@
 pub mod bump_allocator;
 pub mod initramfs;
+pub mod device_tree;
 
 
 #[global_allocator]

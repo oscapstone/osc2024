@@ -6,7 +6,7 @@ import time
 # FIXME: use rust to rewrite this script maybe good for rust exercise
 
 KERNEL_NAME = "kernel8.img"
-DEVICE_NAME = "/dev/pts/6"
+DEVICE_NAME = "/dev/pts/15"
 # DEVICE_NAME = "/dev/ttyUSB0"
 DEVICE_BAUDRATE = "115200"
 
@@ -31,4 +31,6 @@ with open(DEVICE_NAME, "wb+", buffering = 0) as f:
     f.flush()
 
 # start subprocess to attach to the serial port
-# subprocess.run(["screen", "/dev/pts/8", "115200"])
+# subprocess.run(["screen", DEVICE_NAME, "115200"])
+subprocess.run(["busybox", "microcom", "-s", DEVICE_BAUDRATE, DEVICE_NAME])
+

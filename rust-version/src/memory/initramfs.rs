@@ -36,9 +36,12 @@ pub fn list_initramfs_files() {
         // let file_mode = u32::from_str_radix(core::str::from_utf8(&header.c_mode).unwrap(), 16).unwrap();
         // let file_owner = u32::from_str_radix(core::str::from_utf8(&header.c_uid).unwrap(), 16).unwrap();
         // let file_group = u32::from_str_radix(core::str::from_utf8(&header.c_gid).unwrap(), 16).unwrap();
-        let file_size = u32::from_str_radix(core::str::from_utf8(&header.c_filesize).unwrap(), 16).unwrap();
-        let filename_size = u32::from_str_radix(core::str::from_utf8(&header.c_namesize).unwrap(), 16).unwrap();
-        let filename = unsafe { core::slice::from_raw_parts(initramfs_ptr.add(110), filename_size as usize) };
+        let file_size =
+            u32::from_str_radix(core::str::from_utf8(&header.c_filesize).unwrap(), 16).unwrap();
+        let filename_size =
+            u32::from_str_radix(core::str::from_utf8(&header.c_namesize).unwrap(), 16).unwrap();
+        let filename =
+            unsafe { core::slice::from_raw_parts(initramfs_ptr.add(110), filename_size as usize) };
         let filename_padding = (4 - ((filename_size + 110) % 4)) % 4;
         // let file_content = unsafe { core::slice::from_raw_parts(initramfs_ptr.add(110 + filename_size as usize + filename_padding as usize), file_size as usize) };
         let file_content_padding = (4 - (file_size % 4)) % 4;
@@ -55,10 +58,16 @@ pub fn list_initramfs_files() {
         println!("{}", filename);
         // print all
         // println!("inode: {:x}, mode: {:x}, owner: {:x}, group: {:x}, size: {:x}, filename: {}, file_content_padding: {}", inode, file_mode, file_owner, file_group, file_size, core::str::from_utf8(filename).unwrap(), file_content_padding);
-        initramfs_ptr = unsafe { initramfs_ptr.add(110 + filename_size as usize + filename_padding as usize + file_size as usize + file_content_padding as usize) };
+        initramfs_ptr = unsafe {
+            initramfs_ptr.add(
+                110 + filename_size as usize
+                    + filename_padding as usize
+                    + file_size as usize
+                    + file_content_padding as usize,
+            )
+        };
     }
 }
-
 
 pub fn get_initramfs_files(cur_filename: &str) {
     let mut initramfs_ptr = INITRAMFS_POS as *const u8;
@@ -69,11 +78,19 @@ pub fn get_initramfs_files(cur_filename: &str) {
         if &header.c_magic != b"070701" {
             break;
         }
-        let file_size = u32::from_str_radix(core::str::from_utf8(&header.c_filesize).unwrap(), 16).unwrap();
-        let filename_size = u32::from_str_radix(core::str::from_utf8(&header.c_namesize).unwrap(), 16).unwrap();
-        let filename = unsafe { core::slice::from_raw_parts(initramfs_ptr.add(110), filename_size as usize) };
+        let file_size =
+            u32::from_str_radix(core::str::from_utf8(&header.c_filesize).unwrap(), 16).unwrap();
+        let filename_size =
+            u32::from_str_radix(core::str::from_utf8(&header.c_namesize).unwrap(), 16).unwrap();
+        let filename =
+            unsafe { core::slice::from_raw_parts(initramfs_ptr.add(110), filename_size as usize) };
         let filename_padding = (4 - ((filename_size + 110) % 4)) % 4;
-        let file_content = unsafe { core::slice::from_raw_parts(initramfs_ptr.add(110 + filename_size as usize + filename_padding as usize), file_size as usize) };
+        let file_content = unsafe {
+            core::slice::from_raw_parts(
+                initramfs_ptr.add(110 + filename_size as usize + filename_padding as usize),
+                file_size as usize,
+            )
+        };
         let file_content_padding = (4 - (file_size % 4)) % 4;
 
         let mut filename = core::str::from_utf8(filename).unwrap();
@@ -82,7 +99,6 @@ pub fn get_initramfs_files(cur_filename: &str) {
             println!("not found!!\0");
             break;
         }
-
 
         // abs path
         if cur_filename.starts_with("/") {
@@ -101,6 +117,13 @@ pub fn get_initramfs_files(cur_filename: &str) {
         }
 
         // println!("inode: {:x}, mode: {:x}, owner: {:x}, group: {:x}, size: {:x}, filename: {}, file_content_padding: {}", inode, file_mode, file_owner, file_group, file_size, core::str::from_utf8(filename).unwrap(), file_content_padding);
-        initramfs_ptr = unsafe { initramfs_ptr.add(110 + filename_size as usize + filename_padding as usize + file_size as usize + file_content_padding as usize) };
+        initramfs_ptr = unsafe {
+            initramfs_ptr.add(
+                110 + filename_size as usize
+                    + filename_padding as usize
+                    + file_size as usize
+                    + file_content_padding as usize,
+            )
+        };
     }
 }
