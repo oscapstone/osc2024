@@ -19,9 +19,11 @@ void fdt_traverse(fdt_callback_t cb)
         p[i] = swap_endian(p[i]);
     }
 
-    uint32_t *aa = (uint32_t *) ((char *) fdt_header + fdt_header->off_dt_struct);  // +off_dt_struct
+    blob_t *blob = (blob_t *) malloc(sizeof(blob_t));
+    blob->ptr = (uint32_t *) fdt_header;
+    BLOB_ADVANCE(blob, fdt_header->off_dt_struct);
 
-    unflatten_tree(aa);
+    unflatten_tree(blob);
 
     // execute callback fn
 }
@@ -41,7 +43,7 @@ fdt_node_t *build_node(fdt_property_t *proplist, fdt_node_t *children)
     return node;
 }
 
-fdt_node_t *unflatten_tree(uint32_t *blob)
+fdt_node_t *unflatten_tree(blob_t *blob)
 {
     fdt_node_t *node = build_node(NULL, NULL);
     int eaten;
@@ -50,7 +52,7 @@ fdt_node_t *unflatten_tree(uint32_t *blob)
 
     int index = 0;
     do {
-        switch (swap_endian(*blob)) {
+        switch (swap_endian(*blob->ptr)) {
         case FDT_BEGIN_NODE:
             uart_puts("FDT_BEGIN_NODE\n");
             break;
@@ -73,19 +75,20 @@ fdt_node_t *unflatten_tree(uint32_t *blob)
         }
     } while (index++ < 3);
 
+    // TODO: unflatten return 前應該要加 blob->ptr
     return node;
 }
 
 /**
  * Return: bytes eaten
 */
-int read_string(fdt_node_t *node, uint32_t *blob)
+int read_string(fdt_node_t *node, blob_t *blob)
 {
     // TODO: refactor structure here
     int eaten = 0;
 
     // read node name (start from FDT_BEGIN_NODE)
-    if (swap_endian(*(blob++)) != FDT_BEGIN_NODE) {
+    if (swap_endian(*(blob->ptr++)) != FDT_BEGIN_NODE) {
         uart_puts("invalid (sub-)tree\n");
         return NULL;
     }
@@ -93,34 +96,34 @@ int read_string(fdt_node_t *node, uint32_t *blob)
 
     int len = 0;
     char c;
-    node->name = blob;
+    node->name = blob->ptr;
     do {
         len++;
-    } while((c = *((char *)blob + len)) != '\0');
+    } while((c = *((char *)blob->ptr + len)) != '\0');
     int padding = PADDING_4(len);
 
     eaten += padding;
     return eaten;
 }
 
-int read_property(fdt_node_t *node, uint32_t *blob)
+int read_property(fdt_node_t *node, blob_t *blob)
 {
-    uint32_t *original = blob;
+    uint32_t *original = blob->ptr;
     fdt_propmeta_t *meta;
 
     while (1) {
-        if (swap_endian(*blob) != FDT_PROP) {
+        if (swap_endian(*blob->ptr) != FDT_PROP) {
             uart_puts("NONONO\n");
             break;
         }
         BLOB_ADVANCE(blob, sizeof(uint32_t));
-        meta = (fdt_propmeta_t *) blob;
+        meta = (fdt_propmeta_t *) blob->ptr;
 
         BLOB_ADVANCE(blob, sizeof(fdt_propmeta_t));
         BLOB_ADVANCE(blob, PADDING_4(swap_endian(meta->len)));
     }
 
-    return (int) ((char *) blob - (char *) original);
+    return (int) ((char *) blob->ptr - (char *) original);
 }
 
 fdt_property_t *init_property_t()

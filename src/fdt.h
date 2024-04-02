@@ -54,11 +54,15 @@ typedef struct {
     uint32_t nameoff;
 } fdt_propmeta_t;
 
+typedef struct {
+    uint32_t *ptr;
+} blob_t;
+
 // https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/livetree.c#L100
 fdt_node_t *build_node(fdt_property_t *, fdt_node_t *);
 
 // https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/flattree.c#L745
-fdt_node_t *unflatten_tree(uint32_t *);
+fdt_node_t *unflatten_tree(blob_t *);
 
 // https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/livetree.c#L249
 void add_property(fdt_node_t *, fdt_property_t *);
@@ -66,10 +70,10 @@ void add_property(fdt_node_t *, fdt_property_t *);
 // https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/livetree.c#L281
 void add_child(fdt_node_t *, fdt_node_t *);
 
-int read_string(fdt_node_t *, uint32_t *);
-int read_property(fdt_node_t *, uint32_t *);
+int read_string(fdt_node_t *, blob_t *);
+int read_property(fdt_node_t *, blob_t *);
 
-#define BLOB_ADVANCE(b, e) (b = (uint32_t *) ((char *) (b) + (e)))
+#define BLOB_ADVANCE(b, e) (b->ptr = (uint32_t *) ((char *) (b->ptr) + (e)))
 
 fdt_property_t *init_property_t();
 
