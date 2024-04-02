@@ -21,10 +21,12 @@ void parse_initramfs()
         c = (char *) (hdr+1);
 
         cur->filename = c;
+        cur->namesize = namesize;
         padding = PADDING_4(sizeof(cpio_hdr_t) + namesize);
         c = (char *) hdr + padding;
 
         cur->content = c;
+        cur->filesize = filesize;
         padding = PADDING_4(filesize);
         c += padding;
 
@@ -48,8 +50,8 @@ void list_initramfs()
     while (cur != NULL) {
         char *c = cur->filename;
 
-        while (*c != '\0') {
-            uart_send(*c++);
+        for (int i = 0; i < cur->namesize; i++) {
+            uart_send(c[i]);
         }
         uart_puts("\n");
 
@@ -76,8 +78,8 @@ void cat_initramfs()
     while (cur != NULL) {
         if (!strcmp(cur->filename, line)) {
             char *ch = cur->content;
-            while (*ch != '\0') {
-                uart_send(*ch++);
+            for (int i = 0; i < cur->filesize; i++) {
+                uart_send(ch[i]);
             }
             uart_puts("\n");
             break;

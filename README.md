@@ -15,8 +15,20 @@
 make kernel.img
 ```
 
+## Test With rpi3b+
+
+- cpio
+  - copy to SD card
+  - config.txt
+    - `initramfs initramfs.cpio 0x20000000`
+- dtb
+  - 
+
 ## Test With QEMU
 
+- cpio
+  - `-initrd <cpio archive>`
+  - 0x8000000
 - Run bootloader
   - `make clean & make`
   - `make run-pty`

@@ -21,6 +21,8 @@ typedef struct {
 typedef struct cpio_meta {
     char *filename;
     char *content;
+    int namesize;
+    int filesize;
     struct cpio_meta *next;
     struct cpio_meta *prev;
 } cpio_meta_t;
