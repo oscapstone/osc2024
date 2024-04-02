@@ -8,7 +8,7 @@ int strcmp(char *s1, char *s2) {
     return (*(unsigned char *)s1) - (*(unsigned char *)s2);
 }
 
-void bootloader_main(void* dtb)
+void bootloader_main(void *dtb)
 {
     // set up serial console
     uart_init();
@@ -28,11 +28,11 @@ void bootloader_main(void* dtb)
                     unsigned int size = 0;
                     unsigned char *size_buffer = (unsigned char *) &size;
                     for(int i=0; i<4; i++) //recieve for bytes of data -> size of kernel
-                        size_buffer[i] = uart_getc();
+                        size_buffer[i] = uart_getb();
                     uart_puts("got kernel size, start receiving kernel\r\n");
 
                     char *kernel = (char *) 0x80000; // load kernel in 0x80000
-                    while(size--) *kernel++ = uart_getc(); // reed bytes with the size of kernel
+                    while(size--) *kernel++ = uart_getb(); // reed bytes with the size of kernel
 
                     uart_puts("kernel-loaded\r\n");
                     

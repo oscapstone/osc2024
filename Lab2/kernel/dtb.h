@@ -45,4 +45,4 @@ header
 */
 
 unsigned int big_to_little_endian(unsigned int value);
-void fdt_tranverse(char *address, char *target_property, void (*callback)(char *));
+void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char *));

@@ -77,6 +77,13 @@ void uart_puts(char *s) {
     }
 }
 
+void uart_puts2(char *s) {
+    while(*s) {
+        /* convert newline to carriage return + newline */
+        s++;
+    }
+}
+
 // hex for mailbox
 void uart_hex(unsigned int d) {
     unsigned int n;
