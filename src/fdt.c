@@ -73,7 +73,7 @@ fdt_node_t *unflatten_tree(blob_t *blob)
             uart_puts("Default\n");
             break;
         }
-    } while (index++ < 3);
+    } while (++index < 7);
 
     // TODO: unflatten return 前應該要加 blob->ptr
     return node;
@@ -111,17 +111,14 @@ int read_property(fdt_node_t *node, blob_t *blob)
     uint32_t *original = blob->ptr;
     fdt_propmeta_t *meta;
 
-    while (1) {
-        if (swap_endian(*blob->ptr) != FDT_PROP) {
-            uart_puts("NONONO\n");
-            break;
-        }
-        BLOB_ADVANCE(blob, sizeof(uint32_t));
-        meta = (fdt_propmeta_t *) blob->ptr;
-
-        BLOB_ADVANCE(blob, sizeof(fdt_propmeta_t));
-        BLOB_ADVANCE(blob, PADDING_4(swap_endian(meta->len)));
+    if (swap_endian(*blob->ptr) != FDT_PROP) {
+        return -1;
     }
+    BLOB_ADVANCE(blob, sizeof(uint32_t));
+    meta = (fdt_propmeta_t *) blob->ptr;
+
+    BLOB_ADVANCE(blob, sizeof(fdt_propmeta_t));
+    BLOB_ADVANCE(blob, PADDING_4(swap_endian(meta->len)));
 
     return (int) ((char *) blob->ptr - (char *) original);
 }
