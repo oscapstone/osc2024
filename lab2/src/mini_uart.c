@@ -1,10 +1,11 @@
 #include "aux_reg.h"
 #include "gpio.h"
 
-void uart_send(unsigned int c)
+void uart_send_char(unsigned int c)
 {
     while (1)
     {
+        asm volatile("nop");
         if (*AUX_MU_LSR_REG & 0x20) // 0x20 transmitter empty 
         {
             break;
@@ -14,7 +15,7 @@ void uart_send(unsigned int c)
     return;
 }
 
-char uart_recv()
+char uart_get_char()
 {
     while (1)
     {
@@ -33,7 +34,7 @@ void uart_send_string(char *str)
 {
     for (int i = 0; str[i] != '\0'; i++)
     {
-        uart_send(str[i]);
+        uart_send_char(str[i]);
         // uart_send((char)str[i]);
     }
     return;
@@ -47,7 +48,7 @@ void uart_hex(unsigned int d) //binary -> hexadecimal
     {
         n = (d >> c) & 0xF;
         n += (n > 9) ? 0x37 : 0x30; // 0x30 : 0 , 0x37+10 = 0x41 : A
-        uart_send(n);
+        uart_send_char(n);
     }
 }
 
