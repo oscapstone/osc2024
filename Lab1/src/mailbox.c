@@ -8,7 +8,7 @@ int mbox_call( mbox_channel_type channel, unsigned int value )
     // Add channel to lower 4 bit
     value &= ~(0xF);
     value |= channel;
-    while ( (*MBOX_STATUS & BCM_ARM_VC_MS_FULL) != 0 ) {}
+    while ( (*MBOX_STATUS & BCM_ARM_VC_MS_FULL) ) {}
     // Write to Register
     *MBOX_WRITE = value;
     while(1) {

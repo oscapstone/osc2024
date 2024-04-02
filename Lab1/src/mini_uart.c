@@ -50,6 +50,7 @@ void uart_init ( void )
 	put32(AUX_MU_LCR_REG,3);                //Enable 8 bit mode
 	put32(AUX_MU_MCR_REG,0);                //Set RTS line to be always high
 	put32(AUX_MU_BAUD_REG,270);             //Set baud rate to 115200
-
+	put32(AUX_MU_IIR_REG,6);		//clear the receive FIFO and the transmit FIFO
+	
 	put32(AUX_MU_CNTL_REG,3);               //Finally, enable transmitter and receiver
 }
