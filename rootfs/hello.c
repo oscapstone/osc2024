@@ -16,7 +16,7 @@ void set32(addr_t address, uint32_t value) {
 }
 uint32_t get32(addr_t address) {
   uint32_t value;
-  asm volatile("ldr %w[v],[%[a]]" : [v] "+r"(value) : [a] "r"(address));
+  asm volatile("ldr %w[v],[%[a]]" : [v] "=r"(value) : [a] "r"(address));
   return value;
 }
 

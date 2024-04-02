@@ -19,13 +19,29 @@ inline T align(T p) {
   return (T)(((uint64_t)p + sz - 1) & ~(sz - 1));
 }
 
-extern "C" {
-// util-asm.S
-void set32(addr_t address, uint32_t value);
-uint32_t get32(addr_t address);
-void wait_cycle(unsigned cycle);
-int get_el();
+inline void set32(addr_t address, uint32_t value) {
+  asm volatile("str %w[v],[%[a]]" ::[a] "r"(address), [v] "r"(value));
+}
+inline uint32_t get32(addr_t address) {
+  uint32_t value;
+  asm volatile("ldr %w[v],[%[a]]" : [v] "=r"(value) : [a] "r"(address));
+  return value;
+}
+inline void wait_cycle(unsigned cycle) {
+  while (cycle--)
+    NOP;
+}
 
+// ref:
+// https://github.com/torvalds/linux/blob/v6.8/tools/lib/perf/mmap.c#L313-L317
+#define read_sysreg(r) \
+  ({ \
+    uint64_t __val; \
+    asm volatile("mrs %0, " #r : "=r"(__val)); \
+    __val; \
+  })
+
+extern "C" {
 // start.S
 [[noreturn]] void prog_hang();
 }

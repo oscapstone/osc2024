@@ -1,5 +1,6 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
+#include "exception.hpp"
 #include "fdt.hpp"
 #include "heap.hpp"
 #include "initramfs.hpp"
