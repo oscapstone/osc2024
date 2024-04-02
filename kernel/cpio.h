@@ -18,33 +18,13 @@ typedef struct {
     char c_check[8];
 } cpio_hdr_t;
 
-typedef struct {
+typedef struct cpio_meta {
     char *filename;
     char *content;
+    struct cpio_meta *next;
+    struct cpio_meta *prev;
 } cpio_meta_t;
 
-typedef struct {
-    void (*cat)();
-    void (*stat)();
-} cpio_ops_t;
-
-// FIXME: use linked list structure for now
-typedef struct cpio_obj {
-    cpio_hdr_t  *hdr;
-    cpio_meta_t *meta;
-    cpio_ops_t  *ops;
-    struct cpio_obj *next;
-    // FIXME: use doubly linked list maybe?
-} cpio_obj_t;
-
-
-void cpio_cat();
-void cpio_stat();
-cpio_obj_t *init_cpio_obj();
-int parse(cpio_obj_t *, char *);
-int parse_c_magic(cpio_obj_t *, char *);
-int parse_8_bytes(char *, char *);
-int parse_filename(cpio_obj_t *, char *);
-int parse_content(cpio_obj_t *, char *);
+cpio_meta_t *init_cpio_meta();
 
 #endif

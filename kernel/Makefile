@@ -56,7 +56,7 @@ run:
 	qemu-system-aarch64 -M raspi3b -kernel $(DIST_DIR)/kernel8.img -display none -d in_asm
 
 run-mini-uart:
-	qemu-system-aarch64 -M raspi3b -initrd $(DIST_DIR)/initramfs.cpio -kernel $(DIST_DIR)/kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -initrd ../initramfs.cpio -kernel $(DIST_DIR)/kernel8.img -display none -serial null -serial stdio
 
 run-debug:
 	qemu-system-aarch64 -M raspi3b -initrd $(DIST_DIR)/initramfs.cpio -kernel $(DIST_DIR)/kernel8.img -display none -S -s

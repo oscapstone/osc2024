@@ -92,3 +92,37 @@ void uart_putints(int d)
         uart_send(buffer[--idx]);
     }
 }
+
+void uart_putuints(unsigned int d)
+{
+    char buffer[100];
+    int idx = 0;
+    if (d == 0) {
+        buffer[idx++] = '0';
+    } else {
+        while (d) {
+            buffer[idx++] = '0' + (d % 10);
+            d /= 10;
+        }
+    }
+    while (idx > 0) {
+        uart_send(buffer[--idx]);
+    }
+}
+
+void uart_putlong(long d)
+{
+    char buffer[100];
+    int idx = 0;
+    if (d == 0) {
+        buffer[idx++] = '0';
+    } else {
+        while (d) {
+            buffer[idx++] = '0' + (d % 10);
+            d /= 10;
+        }
+    }
+    while (idx > 0) {
+        uart_send(buffer[--idx]);
+    }
+}

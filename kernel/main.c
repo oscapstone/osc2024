@@ -8,5 +8,6 @@ void main()
 
     parse_initramfs();
 
+    uart_puts("\nWelcome to kernel!\n");
     shell_start();
 }

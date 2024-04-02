@@ -3,9 +3,9 @@ TODO: set stack pointer
 */
 
 MEMORY {
-  MEM_TEXT    (rx)  : ORIGIN = 0x080000, LENGTH = 1M
-  MEM_RODATA  (rx)  : ORIGIN = 0x180000, LENGTH = 1M
-  MEM_DATA    (rwx) : ORIGIN = 0x280000, LENGTH = 1M
+  MEM_TEXT    (rx)  : ORIGIN = 0x080000, LENGTH = 256K
+  MEM_RODATA  (rx)  : ORIGIN = 0x090000, LENGTH = 64K
+  MEM_DATA    (rwx) : ORIGIN = 0x098000, LENGTH = 64K
   /* MEM_STACK   (rwx) : ORIGIN = 0x380000, LENGTH = 1M */
 }
 
@@ -29,7 +29,8 @@ SECTIONS
     *(.text .text.boot)
   } > MEM_TEXT
 
-  __stack_top = 0x380000;
+  /* 128K stack */
+  __stack_top = 0x0A0000;
 }
 
 __bss_size = (__bss_end - __bss_start);

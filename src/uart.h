@@ -36,6 +36,8 @@ void uart_puts(char*);   // write data
 char uart_getc(void);   // read data
 void uart_hex(unsigned int);
 void uart_putints(int);
+void uart_putuints(unsigned int);
+void uart_putlong(long);
 
 
 #endif

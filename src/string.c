@@ -7,6 +7,7 @@ int strlen(const char* s)
         return 0;
     }
 
+    // TODO: wrong length here
     int len = 0;
     while (s[len+1] != '\0') {
         len++;

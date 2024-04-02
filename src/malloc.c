@@ -11,7 +11,7 @@ void *malloc(unsigned int size)
     }
 
     // insufficient heap space
-    if ((unsigned long) heap_end + size > HEAP_SIZE) {
+    if ((unsigned long) heap_end + size > HEAP_START + HEAP_SIZE) {
         uart_puts("insufficient heap space\n");
         return NULL;
     }
