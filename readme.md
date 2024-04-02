@@ -1,11 +1,11 @@
-# OSC2023
+# OSC2024
 
 | Github Account | Student ID | Name           |
 |----------------|------------|----------------|
 | chauuyun       | A122073    | Chiao-Yun Hung |
 
 
-## Requirements
+## Requirements 
 
 Using lab0/install_env.sh for the tools
 
@@ -14,9 +14,9 @@ Using lab0/install_env.sh for the tools
 
 ## Course Website
 
-IOC5226: Operating System Capstone
+Operating System Capstone  
 
-https://oscapstone.github.io/
+https://nycu-caslab.github.io/OSC2024/
 
 ## Labs list
 
@@ -40,7 +40,7 @@ Lab8: Non-volatile Storage
 
 ## How to upload lab in Github
 
- git add .
- git commit -m "some message"
- git push
+ git add .  
+ git commit -m "some message"  
+ git push  
 
