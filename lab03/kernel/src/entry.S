@@ -71,58 +71,57 @@ exception_vector_table:
     //==========================================================
     // Exception from the current EL while using SP_EL0 (exception level not changed)
 
-    ventry default_exception_handler_0 /* Synchronous EL1t */
-    ventry default_exception_handler_1 /* IRQ or vIRQ EL1t */
-    ventry default_exception_handler_2 /* FIQ or vFIQ EL1t */
-    ventry default_exception_handler_3 /* SError or vSError EL1t */
+    ventry SYNC_EL1T        /* Synchronous EL1t */
+    ventry IRQ_EL1T         /* IRQ or vIRQ EL1t */
+    ventry FIQ_EL1T         /* FIQ or vFIQ EL1t */
+    ventry SERROR_EL1T      /* SError or vSError EL1t */
     
 
     //==========================================================
     // Exception from the current EL while using SP_ELx (exception level not changed)
 
-    ventry default_exception_handler_4 /* Synchronous EL1h */
-    ventry el1_irq_handler             /* IRQ or vIRQ EL1h */
-    ventry default_exception_handler_6 /* FIQ or vFIQ EL1h */
-    ventry default_exception_handler_7 /* SError or vSError EL1h */
+    ventry SYNC_EL1H        /* Synchronous EL1h */
+    ventry el1_irq_handler  /* IRQ or vIRQ EL1h */
+    ventry FIQ_EL1H         /* FIQ or vFIQ EL1h */
+    ventry SERROR_EL1H      /* SError or vSError EL1h */
 
     //==========================================================
     // Exception from a lower EL and all lower ELs are AArch64 (Moves to higher exception level)
 
-    ventry default_exception_handler_8  /* Synchronous EL0t */
-    ventry el0_irq_handler              /* IRQ or vIRQ EL0t */
-    ventry default_exception_handler_10 /* FIQ or vFIQ EL0t */
-    ventry default_exception_handler_11 /* SError or vSError EL0t 
+    ventry SYNC_64_EL0T     /* Synchronous EL0t */
+    ventry el0_irq_handler  /* IRQ or vIRQ EL0t */
+    ventry FIQ_64_EL0T      /* FIQ or vFIQ EL0t */
+    ventry SERROR_64_EL0T   /* SError or vSError EL0t */
     //==========================================================
-    // Exception from a lower EL and all lower ELs are AArch32 (Moves to higher exception level)
+    // Exception from a lower EL and all lower ELs are AArch32 Moves to higher exception level
 
-    ventry default_exception_handler_12 /* Synchronous 32-bit EL0t */
-    ventry default_exception_handler_13 /* IRQ or vIRQ 32-bit EL0t */
-    ventry default_exception_handler_14 /* FIQ or vFIQ 32-bit EL0t */
-    ventry default_exception_handler_15 /* SError or vSError 32-bit EL0t */
+    ventry SYNC_32_EL0T     /* Synchronous 32-bit EL0t */
+    ventry IRQ_32_EL0T      /* IRQ or vIRQ 32-bit EL0t */
+    ventry FIQ_32_EL0T      /* FIQ or vFIQ 32-bit EL0t */
+    ventry SERROR_32_EL0T   /* SError or vSError 32-bit EL0t */
 
 
 
-handler_warpper el0_irq_handler el0_irq_entry IRQ_INVALID_EL0_64
-handler_warpper el1_irq_handler el1_irq_entry IRQ_INVALID_EL1h
+handler_warpper el0_irq_handler     el0_irq_entry IRQ_INVALID_EL0_64
+handler_warpper el1_irq_handler     el1_irq_entry IRQ_INVALID_EL1h
 
-handler_warpper default_exception_handler_0 default_exception_entry SYNC_INVALID_EL1t
-handler_warpper default_exception_handler_1 default_exception_entry IRQ_INVALID_EL1t
-handler_warpper default_exception_handler_2 default_exception_entry FIQ_INVALID_EL1t
-handler_warpper default_exception_handler_3 default_exception_entry ERROR_INVALID_EL1t
+handler_warpper SYNC_EL1T           default_exception_entry SYNC_INVALID_EL1t
+handler_warpper IRQ_EL1T            default_exception_entry IRQ_INVALID_EL1t
+handler_warpper FIQ_EL1T            default_exception_entry FIQ_INVALID_EL1t
+handler_warpper SERROR_EL1T         default_exception_entry ERROR_INVALID_EL1t
 
-handler_warpper default_exception_handler_4 default_exception_entry SYNC_INVALID_EL1h
-handler_warpper default_exception_handler_6 default_exception_entry FIQ_INVALID_EL1h
-handler_warpper default_exception_handler_7 default_exception_entry ERROR_INVALID_EL1h
+handler_warpper SYNC_EL1H           default_exception_entry SYNC_INVALID_EL1h
+handler_warpper FIQ_EL1H            default_exception_entry FIQ_INVALID_EL1h
+handler_warpper SERROR_EL1H         default_exception_entry ERROR_INVALID_EL1h
 
-handler_warpper default_exception_handler_8 default_exception_entry SYNC_INVALID_EL0_64
-handler_warpper default_exception_handler_10 default_exception_entry FIQ_INVALID_EL0_64
-handler_warpper default_exception_handler_11 default_exception_entry ERROR_INVALID_EL0_64
+handler_warpper SYNC_64_EL0T        default_exception_entry SYNC_INVALID_EL0_64
+handler_warpper FIQ_64_EL0T         default_exception_entry FIQ_INVALID_EL0_64
+handler_warpper SERROR_64_EL0T      default_exception_entry ERROR_INVALID_EL0_64
 
-handler_warpper default_exception_handler_12 default_exception_entry SYNC_INVALID_EL0_32
-handler_warpper default_exception_handler_13 default_exception_entry IRQ_INVALID_EL0_32
-
-handler_warpper default_exception_handler_14 default_exception_entry FIQ_INVALID_EL0_32
-handler_warpper default_exception_handler_15 default_exception_entry ERROR_INVALID_EL0_32
+handler_warpper SYNC_32_EL0T        default_exception_entry SYNC_INVALID_EL0_32
+handler_warpper IRQ_32_EL0T         default_exception_entry IRQ_INVALID_EL0_32
+handler_warpper FIQ_32_EL0T         default_exception_entry FIQ_INVALID_EL0_32
+handler_warpper SERROR_32_EL0T      default_exception_entry ERROR_INVALID_EL0_32
 
 set_exception_vector_table:
     adr x0, exception_vector_table  // get the base address of the exception vector table
