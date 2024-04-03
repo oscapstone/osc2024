@@ -1,8 +1,6 @@
-use alloc::vec::Vec;
-
 use crate::cpu::{mailbox, uart};
 use crate::os::shell;
-use crate::os::stdio::*;
+use crate::println;
 use core::arch::{asm, global_asm};
 
 global_asm!(include_str!("boot.s"));
@@ -11,46 +9,40 @@ global_asm!(include_str!("boot.s"));
 pub unsafe fn _start_rust() {
     crate::os::allocator::ALLOCATOR.init();
     uart::initialize();
-    println("starting rust");
+    println!("Starting rust");
     
     // test_allocator();
 
     let dt = super::device_tree::DeviceTree::init();
-    println("Device tree initialized");
+    println!("Device tree initialized");
     let initrd_start = match dt.get("linux,initrd-start") {
         Some(v) => {
-            print("Initrd start: ");
-            
             let mut val = 0u32;
             for i in 0..4 {
                 val |= (v[i] as u32) << (i * 8);
             }
-            print_hex(val.swap_bytes());
-            val.swap_bytes()
+            val = val.swap_bytes();
+            println!("Initrd start: {:#X}", val);
+            val
         }
         None => {
-            println("No initrd");
+            println!("No initrd");
             0
         }
     };
-
-    let initrd_start = 0x8000000;
-
+    // let initrd_start = 0x8000000;
 
     let a = mailbox::get(mailbox::MailboxTag::GetBoardRevision);
-    print("Board revision: ");
-    print_hex(a.0);
+    println!("Board revision: {:#010X}", a.0);
 
     let a = mailbox::get(mailbox::MailboxTag::GetArmMemory);
-    print("Memory base: ");
-    print_hex(a.0);
-    print("Memory size: ");
-    print_hex(a.1);
+    println!("Memory base: {:#010X}", a.0);
+    println!("Memory size: {:#010X}", a.1);
     shell::start(initrd_start);
     loop {}
 }
 
-
+/*
 fn test_allocator() {
     print("Testing allocator");
     for i in 0..1000 {
@@ -82,3 +74,4 @@ fn test_allocator() {
     }
     println("\rAllocator test passed");
 }
+*/

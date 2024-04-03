@@ -102,3 +102,13 @@ pub fn print_char_64(chars: u64) {
     }
     println("");
 }
+
+// format println macro
+#[macro_export]
+macro_rules! println {
+    () => ($crate::os::stdio::println($str));
+    ($str:expr) => ($crate::os::stdio::println($str));
+    ($($arg:tt)*) => {{
+        $crate::os::stdio::println(alloc::format!($($arg)*).as_str());
+    }};
+}
