@@ -7,6 +7,8 @@
 #include "sched.h"
 #include "syscall.h"
 #include "queue.h"
+#include "interrupt.h"
+#include "delays.h"
 
 
 extern void from_el1_to_el0(void);
@@ -148,23 +150,38 @@ void uart_interrupt_handler()
 {
     char c;
 
+    /* Disable the uart interrupt */
+    AUX->AUX_MU_IER_REG &= ~(1 << 0);
+    
     if (AUX->AUX_MU_IIR_REG & (0b01 << 1)) { // Transmit holds register empty
+        /* Disable the transmit interrupt */
+        AUX->AUX_MU_IER_REG &= ~(1 << 1);
+
         while (!is_empty(&write_buffer)) { // Check the write_buffer status, if it is not empty, then output it.
             c = dequeue_char(&write_buffer);
             if (AUX->AUX_MU_LSR_REG & 0x20) // If the transmitter FIFO can accept at least one byte
                 AUX->AUX_MU_IO_REG = c;
         }
-
-        if (is_empty(&write_buffer)) // If write_buffer is empty, we should disable the transmitter interrupt.
-            AUX->AUX_MU_IER_REG &= ~(1 << 1);
     } else if (AUX->AUX_MU_IIR_REG & (0b10 << 1)) { // Receiver holds valid bytes
         if (AUX->AUX_MU_LSR_REG & 0x1) { // Receiver FIFO holds valid bytes
             c = (char) (AUX->AUX_MU_IO_REG); // If we take char from AUX_MU_IO, the interrupt will be cleared.
             c = (c == '\r') ? '\n' : c;
-            enqueue_char(&read_buffer, c); // output the char to read buffer.
+
+            /* Add a tasklet to tl_head */
+            tl_pool[UART_TASKLET - 1].data = (unsigned long) c;
+            tasklet_add(&tl_pool[UART_TASKLET - 1]);
+            /* Enable other interrupt */
+            enable_interrupt();
+            /* Do tasklet */
+            do_tasklet();
+
+            // enqueue_char(&read_buffer, c); // output the char to read buffer.
         }
     } else
         uart_puts("Unknown uart interrupt\n");
+    
+    /* Enable the uart interrupt */
+    AUX->AUX_MU_IER_REG |= (1 << 0);
 }
 
 /* IRQ handler */

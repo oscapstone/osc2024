@@ -110,19 +110,6 @@ void user_test()
 }
 
 /* Lab 3 Basic Exercise 3: Asynchronous UART */
-// void demo_async_uart()
-// {
-//     uart_async_init();
-//     uart_async_puts("Demo lab 3: Asynchronous UART\n");
-//     wait_cycles(100);
-//     while (1) {
-//         char c = uart_async_getc();
-//         wait_cycles(10000000);
-//         uart_async_send(c);
-//         wait_cycles(10000000);
-//     };
-// }
-
 void demo_async_uart()
 {
     char string[64];
@@ -140,6 +127,6 @@ void demo_async_uart()
             uart_async_puts(string); // output the string in read_buffer
             uart_async_puts("\n");
         }
-        wait_cycles(1000000000);
+        wait_cycles(100000000);
     };
 }

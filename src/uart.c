@@ -181,8 +181,8 @@ void uart_dump(void *ptr)
 */
 void uart_async_init()
 {
-    AUX->AUX_MU_IER_REG = 0x1; // enable receive interrupt. transmit interrupt will be enabled when we write data to write_buffer.
-    IRQ->ENABLE_IRQS1 = (1 << 29); // set IRQ_ENABLE to enable mini UART interrupt (AUX interrupt) which is at pending bit 29.
+    AUX->AUX_MU_IER_REG |= (1 << 0); // enable receive interrupt. transmit interrupt will be enabled when we write data to write_buffer.
+    IRQ->ENABLE_IRQS1 |= (1 << 29); // set IRQ_ENABLE to enable mini UART interrupt (AUX interrupt) which is at pending bit 29.
 }
 
 char uart_async_getc(void)
@@ -216,4 +216,11 @@ int uart_async_gets(char *buf)
         buf[i++] = dequeue_char(&read_buffer);
     buf[i] = '\0';
     return i;
+}
+
+/* uart_tasklet: do enqueue read buffer */
+void uart_tasklet(unsigned long data)
+{
+    char c = (char)data;
+    enqueue_char(&read_buffer, c);
 }

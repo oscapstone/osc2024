@@ -18,20 +18,6 @@ char dequeue_char(struct queue *q)
     return c;
 }
 
-void enqueue_softirq(struct queue *q, void (*action)(void *data), void *data)
-{
-    q->softirq_vec[q->head].action = action;
-    // q->softirq_vec[q->head].data = data;
-    q->head = (q->head + 1) % q->size;
-}
-
-struct softirq_action dequeue_softirq(struct queue *q)
-{
-    struct softirq_action action = q->softirq_vec[q->tail];
-    q->tail = (q->tail + 1) % q->size;
-    return action;
-}
-
 int is_empty(struct queue *q)
 {
     return q->head == q->tail;

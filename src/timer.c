@@ -70,3 +70,8 @@ void timer_update()
         printf("Current time: %d\n", current);
 }
 
+/* Timer tasklet: do timer_update(). */
+void timer_tasklet(unsigned long data)
+{
+    timer_update();
+}

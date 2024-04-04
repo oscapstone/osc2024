@@ -34,5 +34,7 @@ void timer_init(void);
 void timer_update(void);
 int timer_set(unsigned long timeout, char *message);
 
+void timer_tasklet(unsigned long data); // Do timer_update in tasklet.
+
 #endif // __ASSEMBLER__
 #endif // __TIMER_H__

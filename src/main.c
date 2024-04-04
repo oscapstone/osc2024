@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "sched.h"
 #include "timer.h"
+#include "interrupt.h"
 
 #define CMD_LEN 128
 
@@ -19,6 +20,7 @@ void main()
     fdt_init();
     fdt_traverse(initramfs_callback);
     timer_init(); // initialize timer pool
+    tasklet_init(); // initialize tasklet related structure
 
     print_current_el(); // read the current level from system register.
 
