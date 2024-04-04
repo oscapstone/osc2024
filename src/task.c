@@ -6,11 +6,10 @@
 extern void enable_interrupt();
 extern void disable_interrupt();
 
-static unsigned int cur_priority = NO_TASK;
+static uint32_t cur_priority = NO_TASK;
 static task* t_head = (task*)0;
-// static unsigned int task_cnt = 0;
 
-void add_task(task_callback cb, unsigned prio) {
+void add_task(task_callback cb, uint32_t prio) {
   task* new_task = (task*)simple_malloc(sizeof(task));
   if (!new_task) {
     uart_puts("add_task: new_task memory allocation fail");
@@ -19,11 +18,6 @@ void add_task(task_callback cb, unsigned prio) {
   new_task->func = cb;
   new_task->next = (task*)0;
   new_task->priority = prio;
-
-  // task_cnt++;
-  // uart_send_string("add_task: task count: ");
-  // uart_int(task_cnt);
-  // uart_send_string("\r\n");
 
   disable_interrupt();
   if (!t_head || t_head->priority > new_task->priority) {
@@ -44,7 +38,7 @@ void add_task(task_callback cb, unsigned prio) {
 }
 
 void pop_task() {
-  unsigned int ori_priority = cur_priority;
+  uint32_t ori_priority = cur_priority;
   while (t_head && t_head->priority != ori_priority) {
     disable_interrupt();
     cur_priority = t_head->priority;

@@ -1,6 +1,7 @@
 SECTIONS
 {
 	. = 0x80000;
+	__kernel_start = .;
 	.text : { KEEP(*(.text.boot)) *(.text .text.*) }
 	.data : { *(.data) }
 	. = ALIGN(16);
@@ -10,6 +11,7 @@ SECTIONS
 		*(.bss)
 		__bss_end = .;
 	}
+	__kernel_end = .;
 }
 __bss_size = (__bss_end - __bss_start)>>3;
 

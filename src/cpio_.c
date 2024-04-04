@@ -7,8 +7,8 @@
 char *cpio_start_addr;
 char *cpio_end_addr;
 
-static unsigned int cpio_atoi(const char *s, int char_size) {
-  unsigned int num = 0;
+static uint32_t cpio_atoi(const char *s, int32_t char_size) {
+  uint32_t num = 0;
   for (int i = 0; i < char_size; i++) {
     num = num * 16;
     if (*s >= '0' && *s <= '9') {
@@ -27,10 +27,10 @@ void cpio_ls() {
   char *addr = cpio_start_addr;
   while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     cpio_header *header = (cpio_header *)addr;
-    unsigned int filename_size =
+    uint32_t filename_size =
         cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
-    unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
-    unsigned int file_size =
+    uint32_t headerPathname_size = sizeof(cpio_header) + filename_size;
+    uint32_t file_size =
         cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
@@ -47,11 +47,11 @@ char *findFile(const char *name) {
       return addr;
     }
     cpio_header *header = (cpio_header *)addr;
-    unsigned int pathname_size =
+    uint32_t pathname_size =
         cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
-    unsigned int file_size =
+    uint32_t file_size =
         cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
-    unsigned int headerPathname_size = sizeof(cpio_header) + pathname_size;
+    uint32_t headerPathname_size = sizeof(cpio_header) + pathname_size;
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     addr += (headerPathname_size + file_size);
@@ -63,15 +63,15 @@ void cpio_cat(const char *filename) {
   char *file = findFile(filename);
   if (file) {
     cpio_header *header = (cpio_header *)file;
-    unsigned int filename_size =
+    uint32_t filename_size =
         cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
-    unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
-    unsigned int file_size =
+    uint32_t headerPathname_size = sizeof(cpio_header) + filename_size;
+    uint32_t file_size =
         cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     char *file_content = (char *)header + headerPathname_size;
-    for (unsigned int i = 0; i < file_size; i++) {
+    for (uint32_t i = 0; i < file_size; i++) {
       uart_write(file_content[i]);
     }
     uart_send_string("\r\n");
@@ -85,10 +85,10 @@ char *cpio_get_file_content_st_addr(const char *filename) {
   char *file = findFile(filename);
   if (file) {
     cpio_header *header = (cpio_header *)file;
-    unsigned int filename_size =
+    uint32_t filename_size =
         cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
-    unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
-    unsigned int file_size =
+    uint32_t headerPathname_size = sizeof(cpio_header) + filename_size;
+    uint32_t file_size =
         cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);

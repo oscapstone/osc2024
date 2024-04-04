@@ -7,10 +7,10 @@ _start:
     and     x1, x1, #0x3      // Keep the lowest two bits
     cbz     x1, setting     // if cpu_id > 0, stop
 proc_hang:
-    wfe                     // wait-for-event instruction, which makes processors 
+    wfe                     
     b       proc_hang
 setting:                      // if cpu_id == 0
-    //mov     x27, x0
+    mov     x27, x0
     bl      set_exception_vector_table
     ldr     x1, =_start       // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     mov     sp, x1
@@ -32,17 +32,21 @@ master:
     b       proc_hang       // halt this core if return
 
 from_el2_to_el1:
-    mov     x0, (1 << 31)   // RW, bit[31] (in HCR_EL2 reg) set to 1 -> EL1 uses aarch64; 0 -> low levels are all aarch32
-    msr     hcr_el2, x0     // Hypervisor Configuration Register for EL2
+    mov     x0, (1 << 31)   // RW, bit[31] (in HCR_EL2 reg) set to 1 -> EL1 uses aarch64; 0 -> all low levels are aarch32
+                            // aarch64: the 64-bit execution state; aarch32: the 32-bit execution state
+                            // The PE can change the execution state only at reset or on a change of EL.
+    msr     hcr_el2, x0     // hcr_el2: Hypervisor Configuration Register for EL2
     mov     x0, 0x3c5       // EL1h (SPSel = 1) with interrupt disabled
                             // bit[9](PSTATE.D): the debug exception mask bit, bit[8](PSTATE.A): SEerror mask bit
                             // bit[7](PSTATE.I): the IRQ mask bit, bit[6](PSTATE.F): The FIQ mask bit
                             // bits[3:2](PSTATE.EL): The Exception Level; bit[0](PSTATE.SP): The stack pointer selection bit 
     msr     spsr_el2, x0    // Saved Program Status Register for EL2
+                            // On return from the exception, restore the PE state to the state stored
+                            // in the SPSR at the Exception level the exception is returning from
     mov		x0, #0x40000    // put EL1 stack start from 0x40000	
     msr	    SP_EL1, x0      // By default, taking an exception selects the stack pointer for the target Exception level, SP_ELx
-    msr     elr_el2, lr
-    eret                    // return to EL1
+    msr     elr_el2, lr     // elr: exception link registers (for the preferred return address)
+    eret                    // exception return to EL1
 
 // mrs: Load value from a system register to one of the general purpose registers (x0–x30)
 // and: Perform the logical AND operation. We use this command to strip the last byte from the value we obtain from the mpidr_el1 register.
@@ -54,4 +58,4 @@ from_el2_to_el1:
 // mov: Move a value between registers or from a constant to a register.
 // ldr: load data from memory into a register
 // str: store (write) a value from a register into memory at a specified address.
-
+// wfe: wait-for-event instruction, which makes processors and is targeted at entering either standby, dormant or shutdown mode, where an interrupt is required to wake-up the processor.

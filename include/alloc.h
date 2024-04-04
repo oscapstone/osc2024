@@ -1,8 +1,10 @@
 #ifndef _ALLOC_H
 #define _ALLOC_H
 
-#define SIMPLE_MALLOC_BUFFER_SIZE (1 << 20)
+#include "types.h"
 
-void *simple_malloc(unsigned int size);
+#define SIMPLE_MALLOC_BUFFER_SIZE (1 << 25)
+
+void *simple_malloc(uint32_t size);
 
 #endif

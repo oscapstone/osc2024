@@ -5,32 +5,32 @@
 #include "uart1.h"
 #include "utli.h"
 
-void *_dtb_ptr;                // should be 0x2EFF7A00
+void *_dtb_ptr_start;  // should be 0x2EFF7A00
+void *_dtb_ptr_end;
 extern char *cpio_start_addr;  // should be 0x20000000
 extern char *cpio_end_addr;
 
-static unsigned int dtb_strlen(const char *s) {
-  unsigned int i = 0;
+static uint32_t dtb_strlen(const char *s) {
+  uint32_t i = 0;
   while (s[i]) {
     i++;
   }
   return i + 1;
 }
 
-static unsigned int fdt_u32_le2be(const void *addr) {
-  const unsigned char *bytes = (const unsigned char *)addr;
-  unsigned int ret = (unsigned int)bytes[0] << 24 |
-                     (unsigned int)bytes[1] << 16 |
-                     (unsigned int)bytes[2] << 8 | (unsigned int)bytes[3];
+static uint32_t fdt_u32_le2be(const void *addr) {
+  const uint8_t *bytes = (const uint8_t *)addr;
+  uint32_t ret = (uint32_t)bytes[0] << 24 | (uint32_t)bytes[1] << 16 |
+                 (uint32_t)bytes[2] << 8 | (uint32_t)bytes[3];
   return ret;
 }
 
-static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
-                        unsigned int totalsize) {
+static int32_t parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
+                            uint32_t totalsize) {
   void *end_ptr = cur_ptr + totalsize;
 
   while (cur_ptr < end_ptr) {
-    unsigned int token = fdt_u32_le2be(cur_ptr);
+    uint32_t token = fdt_u32_le2be(cur_ptr);
     cur_ptr += 4;
 
     switch (token) {
@@ -57,9 +57,9 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
         the strings block (nameoff). Property data (variable length): Contains
         the property data itself, the size of which is determined by len.
         */
-        unsigned int len = fdt_u32_le2be(cur_ptr);
+        uint32_t len = fdt_u32_le2be(cur_ptr);
         cur_ptr += 4;
-        unsigned int nameoff = fdt_u32_le2be(cur_ptr);
+        uint32_t nameoff = fdt_u32_le2be(cur_ptr);
         cur_ptr += 4;
         // second parameter name here is property name not node name
         cb(token, (char *)(strings_ptr + nameoff), (void *)cur_ptr, len);
@@ -91,14 +91,19 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
    +-----------------+
 */
 
-int fdt_traverse(fdt_callback cb) {
-  uart_send_string("dtb_ptr address: 0x");
-  uart_hex((unsigned long long)_dtb_ptr);
+int32_t fdt_traverse(fdt_callback cb) {
+  uart_send_string("dtb start address: 0x");
+  uart_hex_64((uint64_t)_dtb_ptr_start);
   uart_send_string("\r\n");
 
-  fdt_header *header = (fdt_header *)_dtb_ptr;
+  fdt_header *header = (fdt_header *)_dtb_ptr_start;
 
-  unsigned int magic = fdt_u32_le2be(&(header->magic));
+  _dtb_ptr_end = _dtb_ptr_start + fdt_u32_le2be(&header->totalsize);
+  uart_send_string("dtb end address: 0x");
+  uart_hex_64((uint64_t)_dtb_ptr_end);
+  uart_send_string("\r\n");
+
+  uint32_t magic = fdt_u32_le2be(&(header->magic));
   uart_send_string("magic number: 0x");
   uart_hex(magic);
   uart_send_string("\r\n");
@@ -108,27 +113,22 @@ int fdt_traverse(fdt_callback cb) {
     return -1;
   }
 
-  void *struct_ptr = _dtb_ptr + fdt_u32_le2be(&(header->off_dt_struct));
-  void *strings_ptr = _dtb_ptr + fdt_u32_le2be(&(header->off_dt_strings));
-  unsigned int totalsize = fdt_u32_le2be(&(header->totalsize));
+  void *struct_ptr = _dtb_ptr_start + fdt_u32_le2be(&(header->off_dt_struct));
+  void *strings_ptr = _dtb_ptr_start + fdt_u32_le2be(&(header->off_dt_strings));
+  uint32_t totalsize = fdt_u32_le2be(&(header->totalsize));
   parse_struct(cb, struct_ptr, strings_ptr, totalsize);
   return 1;
 };
 
-void get_cpio_addr(int token, const char *name, const void *data,
-                   unsigned int size) {
+void get_cpio_addr(int32_t token, const char *name, const void *data,
+                   uint32_t size) {
   UNUSED(size);
+
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-start")) {
-    cpio_start_addr = (char *)(unsigned long long)fdt_u32_le2be(data);
-    uart_send_string("cpio_start_address: 0x");
-    uart_hex((unsigned long long)cpio_start_addr);
-    uart_send_string("\r\n");
+    cpio_start_addr = (char *)(uint64_t)fdt_u32_le2be(data);
   }
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-end")) {
-    cpio_end_addr = (char *)(unsigned long long)fdt_u32_le2be(data);
-    uart_send_string("cpio_end_address: 0x");
-    uart_hex((unsigned long long)cpio_start_addr);
-    uart_send_string("\r\n");
+    cpio_end_addr = (char *)(uint64_t)fdt_u32_le2be(data);
   }
   return;
 }

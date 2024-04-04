@@ -26,13 +26,13 @@ static void el1_timer_interrupt_handler() {
 };
 
 void el0_64_sync_interrupt_handler() {
-  add_task(print_el1_sys_reg, 20);
+  add_task(print_el1_sys_reg, SW_INT_PRIORITY);
   pop_task();
   // print_el1_sys_reg();
 }
 
 void el0_64_irq_interrupt_handler() {
-  if (*CORE0_INT_SRC & CORE0_INT_SRC_TIMER) {
+  if (*CORE0_INT_SRC & CORE_INT_SRC_TIMER) {
     set_core_timer_int(get_clk_freq() / 100);
     // for going back to shell
     el0_timer_trigger_cnt++;
@@ -53,12 +53,12 @@ void el0_64_irq_interrupt_handler() {
 }
 
 void el1h_irq_interrupt_handler() {
-  if (*CORE0_INT_SRC & CORE0_INT_SRC_TIMER) {
+  if (*CORE0_INT_SRC & CORE_INT_SRC_TIMER) {
     set_core_timer_int(get_clk_freq() / 100);
     core0_timer_interrupt_disable();
     add_task(el1_timer_interrupt_handler, TIMER_INT_PRIORITY);
   }
-  if ((*CORE0_INT_SRC & CORE0_INT_SRC_GPU) &&      //  (uart1_interrupt)
+  if ((*CORE0_INT_SRC & CORE_INT_SRC_GPU) &&       //  (uart1_interrupt)
       (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT)) {  //  bit 29 : AUX interrupt
     uart_interrupt_handler();
   }

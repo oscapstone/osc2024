@@ -2,6 +2,7 @@
 #define _PERIPHERALS_MBOX_H
 
 #include "peripherals/mmio.h"
+#include "types.h"
 /*
 Mailbox is a communication mechanism between ARM and VideoCoreIV GPU
 
@@ -11,9 +12,9 @@ and messages.
 
 #define MBOX_BASE (MMIO_BASE + 0xb880)
 /* Regs */
-#define MBOX_READ ((volatile unsigned int *)(MBOX_BASE + 0x00))
-#define MBOX_STATUS ((volatile unsigned int *)(MBOX_BASE + 0x18))
-#define MBOX_WRITE ((volatile unsigned int *)(MBOX_BASE + 0x20))
+#define MBOX_READ ((volatile uint32_t *)(MBOX_BASE + 0x00))
+#define MBOX_STATUS ((volatile uint32_t *)(MBOX_BASE + 0x18))
+#define MBOX_WRITE ((volatile uint32_t *)(MBOX_BASE + 0x20))
 
 /* tags */
 #define MBOX_TAG_LAST 0x00000000

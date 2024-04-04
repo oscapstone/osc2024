@@ -1,6 +1,8 @@
 #ifndef _DTB_H
 #define _DTB_H
 
+#include "types.h"
+
 #define FDT_BEGIN_NODE \
   0x00000001  // marks the beginnning of a node repersentation
 #define FDT_END_NODE 0x00000002  // marks the ends of a node repersentation
@@ -16,28 +18,26 @@
 #define UNUSED(x) (void)(x)
 
 typedef void (*fdt_callback)(int type, const char *name, const void *data,
-                             unsigned int size);
+                             uint32_t size);
 
 typedef struct {
-  unsigned int magic;           // contain the value 0xd00dfeed (big-endian).
-  unsigned int totalsize;       // in byte
-  unsigned int off_dt_struct;   // the offset in bytes of the structure block
-                                // from the beginning of the header
-  unsigned int off_dt_strings;  // the offset in bytes of the strings block from
-                                // the beginning of the header
-  unsigned int off_mem_rsvmap;
-  unsigned int version;
-  unsigned int last_comp_version;
-  unsigned int boot_cpuid_phys;
-  unsigned int
-      size_dt_strings;  // the length in bytes of the strings block section
-  unsigned int size_dt_struct;
+  uint32_t magic;           // contain the value 0xd00dfeed (big-endian).
+  uint32_t totalsize;       // in byte
+  uint32_t off_dt_struct;   // the offset in bytes of the structure block
+                            // from the beginning of the header
+  uint32_t off_dt_strings;  // the offset in bytes of the strings block from
+                            // the beginning of the header
+  uint32_t off_mem_rsvmap;
+  uint32_t version;
+  uint32_t last_comp_version;
+  uint32_t boot_cpuid_phys;
+  uint32_t size_dt_strings;  // the length in bytes of the strings block section
+  uint32_t size_dt_struct;
 } __attribute__((packed)) fdt_header;
 
 int fdt_traverse(fdt_callback cb);
 void get_cpio_addr(int token, const char *name, const void *data,
-                   unsigned int size);
-void print_dtb(int token, const char *name, const void *data,
-               unsigned int size);
+                   uint32_t size);
+void print_dtb(int token, const char *name, const void *data, uint32_t size);
 
 #endif

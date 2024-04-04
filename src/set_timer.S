@@ -4,20 +4,21 @@
 core_timer_enable:
   mov x0, 1
   msr cntp_ctl_el0, x0  // bit0 : timer enabled , bit1 : IMASK won't trigger interrupt
-  ret
+  ret                   // cntp_ctl_el0 : control register for the EL1 physical timer 
 
 .global core0_timer_interrupt_enable
 core0_timer_interrupt_enable:
-  mov x0, 2
+  mov x0, 2             // bit1 (nCNTPNSIRQ IRQ control) : set to 1 -> IRQ enable)
   ldr x1, =CORE0_TIMER_IRQ_CTRL         
-  str w0, [x1]          // unmask timer interrupt (bit1 : IRQ enable)
-  ret
+  str w0, [x1]          // unmask the core0's timer interrupt 
+  ret                  
 
 .global core_timer_disable
 core_timer_disable:
   mov x0, 0
   msr cntp_ctl_el0, x0  // disable (bit0: timer output signal);
-  ret
+  ret                   // Setting this bit to 0 disables the timer output signal, but the timer value accessible from 
+                        // CNTP_TVAL_EL0 continues to count down
 
 .global core0_timer_interrupt_disable
 core0_timer_interrupt_disable:
