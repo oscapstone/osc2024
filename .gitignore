@@ -4,6 +4,4 @@ kernel8.*
 build
 bootloader/bootloader.*
 bootloader_norlc/bootloader.*
-initramfs.cpio
 config.txt
-bcm2710-rpi-3-b-plus.dtb
