@@ -5,8 +5,9 @@
 #include "uart1.h"
 #include "utli.h"
 
-void *_dtb_ptr;          // should be 0x2EFF7A00
-extern char *cpio_addr;  // should be 0x20000000
+void *_dtb_ptr;                // should be 0x2EFF7A00
+extern char *cpio_start_addr;  // should be 0x20000000
+extern char *cpio_end_addr;
 
 static unsigned int dtb_strlen(const char *s) {
   unsigned int i = 0;
@@ -118,9 +119,15 @@ void get_cpio_addr(int token, const char *name, const void *data,
                    unsigned int size) {
   UNUSED(size);
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-start")) {
-    cpio_addr = (char *)(unsigned long long)fdt_u32_le2be(data);
-    uart_send_string("cpio address: 0x");
-    uart_hex((unsigned long long)cpio_addr);
+    cpio_start_addr = (char *)(unsigned long long)fdt_u32_le2be(data);
+    uart_send_string("cpio_start_address: 0x");
+    uart_hex((unsigned long long)cpio_start_addr);
+    uart_send_string("\r\n");
+  }
+  if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-end")) {
+    cpio_end_addr = (char *)(unsigned long long)fdt_u32_le2be(data);
+    uart_send_string("cpio_end_address: 0x");
+    uart_hex((unsigned long long)cpio_start_addr);
     uart_send_string("\r\n");
   }
   return;

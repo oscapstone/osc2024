@@ -4,8 +4,8 @@
 #include "uart1.h"
 #include "utli.h"
 
-// char *cpio_addr = (char *)0x20000000;
-char *cpio_addr;
+char *cpio_start_addr;
+char *cpio_end_addr;
 
 static unsigned int cpio_atoi(const char *s, int char_size) {
   unsigned int num = 0;
@@ -24,7 +24,7 @@ static unsigned int cpio_atoi(const char *s, int char_size) {
 }
 
 void cpio_ls() {
-  char *addr = cpio_addr;
+  char *addr = cpio_start_addr;
   while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     cpio_header *header = (cpio_header *)addr;
     unsigned int filename_size =
@@ -41,7 +41,7 @@ void cpio_ls() {
 }
 
 char *findFile(const char *name) {
-  char *addr = cpio_addr;
+  char *addr = cpio_start_addr;
   while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     if (!strcmp((char *)(addr + sizeof(cpio_header)), name)) {
       return addr;
