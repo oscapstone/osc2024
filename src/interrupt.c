@@ -4,7 +4,7 @@
 #include "uart.h"
 #include "stdint.h"
 
-#define FIFO
+#define INSERT_TAIL
 
 struct tasklet_struct tl_pool[2] = {
     {NULL, UART_TASKLET, uart_tasklet, 0},
@@ -25,7 +25,7 @@ void tasklet_init(void)
 /* Add a tasklet to the tasklet list. */
 void tasklet_add(struct tasklet_struct *tl)
 {
-#ifdef FIFO
+#ifdef INSERT_TAIL
     tl->next = NULL;
     *(tl_head.tail) = tl;
     tl_head.tail = &tl->next;
@@ -67,7 +67,7 @@ void do_tasklet(void)
             break;
         
         /* Remove the tasklet from the tl_head list */
-#ifdef FIFO
+#ifdef INSERT_TAIL
         if (!(*tl)->next) // if `*tl` is the last element, we should move the tl_head.tail
             tl_head.tail = tl;
 #endif
