@@ -2,5 +2,8 @@
 #define _INT_H
 
 typedef unsigned int size_t;
+typedef unsigned int u32_t;
 
-#endif // _INT_H
+int align(int num, int n);
+
+#endif  // _INT_H

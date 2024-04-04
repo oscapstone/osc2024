@@ -2,11 +2,15 @@
 #include "uart.h"
 
 void main() {
-  // set up serial console
+  /* set up serial console */
   uart_init();
 
-  // say hello
+  /* say hello */
   uart_println("Hello World from boot");
 
-  shell_loop();
+  /* register commands */
+  shell_t s;
+  register_cmds(&s);
+
+  shell_loop(&s);
 }

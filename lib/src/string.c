@@ -1,5 +1,7 @@
 #include "string.h"
 
+#include "int.h"
+
 int strncmp(const char *str1, const char *str2, size_t size) {
   int index = 0;
 
@@ -19,6 +21,30 @@ int strncmp(const char *str1, const char *str2, size_t size) {
   return 0;
 }
 
+u32_t strnlen(char *s, u32_t n) {
+  u32_t size = 0;
+  while (*s != '\0' && size < n) {
+    size++, s++, n++;
+  }
+
+  return size;
+}
+
+int isspace(char c) {
+  char sp[] = {' ', '\t', '\r', '\n', '\v', '\f'};
+  for (int i = 0; i < sizeof(sp) / sizeof(char); i++) {
+    if (c == sp[i]) return 1;
+  }
+
+  return 0;
+}
+
+char *trim_left(char *s, u32_t n) {
+  while (n-- && isspace(*s)) s++;
+
+  return s;
+}
+
 char *itoa(int value, char *s) {
   int idx = 0;
 
@@ -30,7 +56,7 @@ char *itoa(int value, char *s) {
   char tmp[10];
   int tidx = 0;
 
-  // read from least significant difit
+  // read from least significant digit
   do {
     tmp[tidx++] = '0' + value % 10;
     value /= 10;
@@ -44,4 +70,29 @@ char *itoa(int value, char *s) {
   s[idx] = '\0';
 
   return s;
+}
+
+char tolower(char c) {
+  if (c < 'A' || c > 'Z') {
+    return c;
+  }
+
+  return c + 'a' - 'A';
+}
+
+u32_t hex_to_i(char *h, int n) {
+  int val = 0;
+  while (n--) {
+    val <<= 4;
+    char c = tolower(*h++);
+
+    if (c >= 'a' && c <= 'f') {
+      val += c - 'a' + 10;
+      continue;
+    }
+
+    val += c - '0';
+  }
+
+  return val;
 }

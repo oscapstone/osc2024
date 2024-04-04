@@ -5,8 +5,9 @@ OBJCOPY = llvm-objcopy
 
 SRC_DIR = src
 OBJ_DIR = obj
+SUB_DIR = command
 
-SRC_FILES= $(wildcard $(SRC_DIR)/*.c)
+SRC_FILES= $(shell find $(SRC_DIR) -type f -name "*.c")
 # for files in SRC_FILES, turn them from src/*.c to obj/*.o
 OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
@@ -29,6 +30,7 @@ start.o: start.S
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
+	mkdir $(OBJ_DIR)/$(SUB_DIR)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
