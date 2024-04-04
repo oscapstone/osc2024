@@ -5,12 +5,14 @@ SECTIONS
     .text : { *(.text) }
     .rodata : { *(.rodata) }
     .data : { *(.data) }
+
     . = ALIGN(0x8);
     bss_begin = .;
     .bss : { *(.bss*) }
     bss_end = .;
+
     . = ALIGN(0x8);
     heap_begin = .;
-    .heap : {*(.heap) }
-    heap_end = .;
+    .heap : { }
+    heap_end = heap_begin + 0x100000;
 }

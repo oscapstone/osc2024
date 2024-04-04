@@ -21,10 +21,13 @@ void show_invalid_entry_message(int type,
 {
     uart_send_string(entry_error_type[type]);
     uart_send_string(", SPSR: 0x");
+    uart_send_hex(spsr >> 32);
     uart_send_hex(spsr);
     uart_send_string(", ESR: 0x");
+    uart_send_hex(esr >> 32);
     uart_send_hex(esr);
     uart_send_string(", ELR: 0x");
+    uart_send_hex(elr >> 32);
     uart_send_hex(elr);
     uart_send_string("\n");
     while (1)
