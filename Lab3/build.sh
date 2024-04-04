@@ -2,8 +2,12 @@
 # cd bootloader
 # make all
 
-echo -e "\nBuilding Kernel image...\n"
+echo -e "\nBuilding Kernel Image...\n"
 cd kernel
+make all
+
+echo -e "\nBuilding User Program...\n"
+cd ../user_prog
 make all
 
 echo -e  "\nArchive rootfs..."
