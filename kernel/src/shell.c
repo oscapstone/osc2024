@@ -22,7 +22,10 @@ void register_cmds(shell_t *s) {
 }
 
 void handle_line(const shell_t *s, char *line, int n) {
-  if (strncmp(line, "help", 4) == 0) {
+  char cmd[0x100];
+  char *args = strtok(line, cmd, 0x100, ' ');
+
+  if (strncmp(cmd, "help", 4) == 0) {
     uart_println("help:\t print this help menu");
     for (int i = 0; i < s->n_cmds; i++) {
       uart_printf("%s:\t %s\n", s->cmds[i].name, s->cmds[i].help);
@@ -32,19 +35,16 @@ void handle_line(const shell_t *s, char *line, int n) {
 
   for (int i = 0; i < s->n_cmds; i++) {
     u32_t cmd_size = strnlen(s->cmds[i].name, 256);
-    if (strncmp(s->cmds[i].name, line, cmd_size) != 0) {
+    if (strncmp(s->cmds[i].name, cmd, cmd_size) != 0) {
       continue;
     }
 
-    char *args = line + cmd_size;
-    while (isspace(*args)) args++;
-
-    s->cmds[i].execute(args, n - (args - line));
+    s->cmds[i].execute(args, strnlen(args, 0x100));
     return;
   }
 
   /* unhandled input */
-  uart_printf("command not found: %s\n", line);
+  uart_printf("command not found: %s\n", cmd);
 }
 
 void shell_loop(const shell_t *s) {

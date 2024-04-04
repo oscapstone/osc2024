@@ -2,6 +2,28 @@
 
 #include "int.h"
 
+char *strtok(char *src, char *dest, size_t n, char delimeter) {
+  size_t tok_size = 0;
+
+  while (tok_size < n - 1) {
+    if (*src == '\0') {
+      break;
+    }
+
+    if (*src == delimeter) {
+      if (tok_size) break;
+
+      src++;
+      continue;
+    }
+
+    dest[tok_size++] = *src++;
+  }
+
+  dest[tok_size] = '\0';
+  return src;
+}
+
 int strncmp(const char *str1, const char *str2, size_t size) {
   int index = 0;
 
@@ -37,12 +59,6 @@ int isspace(char c) {
   }
 
   return 0;
-}
-
-char *trim_left(char *s, u32_t n) {
-  while (n-- && isspace(*s)) s++;
-
-  return s;
 }
 
 char *itoa(int value, char *s) {

@@ -4,6 +4,14 @@
 #include "int.h"
 
 /**
+ * tokenize string that separated by delimeter
+ * @params
+ * - n: size of dest buffer
+ * @return the next address of the token
+ */
+char *strtok(char *src, char *dest, size_t n, char delimeter);
+
+/**
  * compare part of two string
  * @return 0 if the same, -1 otherwise
  */
@@ -25,8 +33,6 @@ char *itoa(int value, char *s);
  * @return 1 if the character is a whitespace character, 0 otherwise
  */
 int isspace(char c);
-
-char *trim_left(char *s, u32_t n);
 
 char tolower(char c);
 u32_t hex_to_i(char *h, int n);
