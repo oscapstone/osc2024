@@ -39,6 +39,7 @@ kernel8.img: start.o $(OBJ_FILES) $(LIB)
 	$(LD) -m aarch64elf -nostdlib start.o $(OBJ_FILES) -T linker.ld -o kernel8.elf $(LIBFLAG)
 	$(OBJCOPY) -O binary kernel8.elf kernel8.img
 
+.PHONY: $(LIB)
 $(LIB):
 	$(MAKE) -C $(LIBPATH)
 

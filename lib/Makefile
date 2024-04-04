@@ -10,12 +10,12 @@ OBJFILES = $(SRCFILES:$(SRC)/%.c=$(OBJ)/%.o)
 
 
 .PHONY: all
-all: libab.a
+all: $(OBJ) libab.a
 
 libab.a: $(OBJFILES)
-	@ar -rv $@ $^
+	@ar -rv $@ $(OBJFILES)
 
-$(OBJ)/%.o: $(SRC)/%.c $(OBJ)
+$(OBJ)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) $(TARGET) -c $< -o $@
 
 $(OBJ):
