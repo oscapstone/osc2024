@@ -1,26 +1,20 @@
 #include "dtb.h"
 
 #include "cpio_.h"
-#include "my_string.h"
-#include "uart0.h"
+#include "string.h"
+#include "uart1.h"
 #include "utli.h"
 
-extern void *_dtb_ptr;   // should be 0x2EFF7A00
+void *_dtb_ptr;          // should be 0x2EFF7A00
 extern char *cpio_addr;  // should be 0x20000000
 
-#define FDT_BEGIN_NODE \
-  0x00000001  // marks the beginnning of a node repersentation
-#define FDT_END_NODE 0x00000002  // marks the ends of a node repersentation
-#define FDT_PROP \
-  0x00000003  // marks the beginning of the representation of one property in
-              // the devicetree
-#define FDT_NOP \
-  0x00000004  // should be ignored by any program parsing the device tree
-#define FDT_END \
-  0x00000009  // marks the end of the structure block. There shall be only one
-              // FDT_END token, and it shall be the last token in the structure
-              // block.
-#define UNUSED(x) (void)(x)
+static unsigned int dtb_strlen(const char *s) {
+  unsigned int i = 0;
+  while (s[i]) {
+    i++;
+  }
+  return i + 1;
+}
 
 static unsigned int fdt_u32_le2be(const void *addr) {
   const unsigned char *bytes = (const unsigned char *)addr;
@@ -46,7 +40,7 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
         node being opened.
         */
         cb(token, (char *)cur_ptr, (void *)0, 0);
-        cur_ptr += align(strlen((char *)cur_ptr), 4);
+        cur_ptr += align(dtb_strlen((char *)cur_ptr), 4);
         break;
       case FDT_END_NODE:
         /*
@@ -97,12 +91,19 @@ static int parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
 */
 
 int fdt_traverse(fdt_callback cb) {
-  uart_printf("dtb_ptr address is at: 0x%x\n", (unsigned long int)_dtb_ptr);
+  uart_send_string("dtb_ptr address: 0x");
+  uart_hex((unsigned long long)_dtb_ptr);
+  uart_send_string("\r\n");
+
   fdt_header *header = (fdt_header *)_dtb_ptr;
+
   unsigned int magic = fdt_u32_le2be(&(header->magic));
-  uart_printf("magic number: 0x%x\n", magic);
+  uart_send_string("magic number: 0x");
+  uart_hex(magic);
+  uart_send_string("\r\n");
+
   if (magic != 0xd00dfeed) {
-    uart_printf("The header magic is wrong\n");
+    uart_puts("The header magic is wrong");
     return -1;
   }
 
@@ -117,8 +118,10 @@ void get_cpio_addr(int token, const char *name, const void *data,
                    unsigned int size) {
   UNUSED(size);
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-start")) {
-    cpio_addr = (char *)(unsigned long int)fdt_u32_le2be(data);
-    uart_printf("cpio address is at: 0x%x\n", (unsigned long int)cpio_addr);
+    cpio_addr = (char *)(unsigned long long)fdt_u32_le2be(data);
+    uart_send_string("cpio address: 0x");
+    uart_hex((unsigned long long)cpio_addr);
+    uart_send_string("\r\n");
   }
   return;
 }
