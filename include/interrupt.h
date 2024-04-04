@@ -14,4 +14,5 @@
 void el0_64_sync_interrupt_handler();
 void el0_64_irq_interrupt_handler();
 void el1h_irq_interrupt_handler();
+void fake_long_handler();
 #endif

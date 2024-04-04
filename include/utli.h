@@ -22,5 +22,4 @@ void print_cur_sp();
 void print_cur_el();
 void print_el1_sys_reg();
 void exec_in_el0(void *prog_st_addr);
-void fake_long_handler();
 #endif

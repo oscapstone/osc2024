@@ -176,4 +176,3 @@ void exec_in_el0(void *prog_st_addr) {
   return;
 }
 
-void fake_long_handler() { wait_usec(3000000); }

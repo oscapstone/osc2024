@@ -192,7 +192,7 @@ void shell_controller(char *cmd) {
     }
     uart_send_string("\r\n");
 
-    wait_usec(2000000);
+    wait_usec(1500000);
     char str_buf[50];
     unsigned int n = uart_read_string_async(str_buf);
     uart_int(n);
@@ -200,6 +200,7 @@ void shell_controller(char *cmd) {
     uart_puts(str_buf);
 
     n = uart_send_string_async("12345678, ");
+    wait_usec(100000);
     uart_int(n);
     uart_puts(" bytes sent");
     disable_uart_interrupt();

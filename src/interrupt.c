@@ -64,3 +64,8 @@ void el1h_irq_interrupt_handler() {
   }
   pop_task();
 }
+
+void fake_long_handler() {
+  wait_usec(3000000);
+  uart_puts("fake long interrupt handler finish");
+}
