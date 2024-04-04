@@ -53,7 +53,8 @@ void help(void)
         "  cat       - display file content\n"
         "  malloc    - allocate memory\n"
         "  print_dtb - print device tree blob\n"
-        "  logo      - print raspberry pi logo\n");
+        "  logo      - print raspberry pi logo\n"
+        "  exec      - execute a program\n");
 }
 
 void hello(void)
@@ -109,7 +110,14 @@ void parse_command(char* cmd)
         send_logo();
     else if (!str_cmp(cmd_name, "asia_godtone"))
         send_asiagodtone();
-    else {
+    else if (!str_cmp(cmd_name, "exec")) {
+        char* file_name = str_tok(NULL, " ");
+        if (!file_name) {
+            uart_send_string("Usage: exec <filename>\n");
+            return;
+        }
+        exec(file_name);
+    } else {
         uart_send_string("Command '");
         uart_send_string(cmd);
         uart_send_string("' not found\n");

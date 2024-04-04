@@ -1,6 +1,7 @@
 #include "cpio.h"
 #include "dtb.h"
 #include "int.h"
+#include "irq.h"
 #include "logo.h"
 #include "memory.h"
 #include "mini_uart.h"
@@ -17,6 +18,8 @@ void kernel_main(uintptr_t x0)
     uart_send_string("Current exception level: ");
     uart_send_dec(get_el());
     uart_send_string("\n");
+
+    irq_vector_init();
 
 
     /* get dtb addr */
