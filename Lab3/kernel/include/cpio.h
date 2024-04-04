@@ -33,6 +33,7 @@ struct cpio_newc_header {
 
 void cpio_ls();
 void cpio_cat();
+void cpio_exec();
 void initramfs_callback(char*, char*, struct fdt_prop*);
 
 #endif

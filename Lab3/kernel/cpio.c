@@ -77,6 +77,59 @@ void cpio_cat(){
         print_str("\nNo match file");
 }
 
+void cpio_exec(){
+    struct cpio_newc_header *head = (struct cpio_newc_header *)DEVTREE_CPIO_BASE;
+    uint32_t h_size = sizeof(struct cpio_newc_header);
+
+    char input_buffer[256];
+    print_str("\nFile to be executed: ");
+    read_input(input_buffer);
+
+    int no_match = 1;
+
+    while (strncmp(head->c_magic, CPIO_MAGIC, MAGIC_SIZE)){
+        char* f_name = ((char*)head) + h_size;
+
+        uint32_t name_len = atoi(head->c_namesize, FIELD_SIZE);
+        uint32_t f_size = atoi(head->c_filesize, FIELD_SIZE);
+        uint32_t file_offset = h_size + name_len;
+
+        if (strncmp(f_name, CPIO_END, name_len))
+            break;
+
+        if (file_offset % 4 != 0) 
+            file_offset = 4 * ((file_offset + 4) / 4);
+
+        if (strncmp(f_name, input_buffer, name_len)){
+            no_match = 0;
+            char* file_content = (char*)head + file_offset;
+
+            unsigned int sp_loc = 0x600000;
+
+            asm volatile(
+                "mov   x20, 0x3c0;"
+                "msr   spsr_el1, x20;"
+                "msr   elr_el1, %0;"
+                "msr   sp_el0, %1;"
+                "eret;"
+                :: 
+                "r"(file_content),
+                "r"(sp_loc)
+            );           
+
+            break;
+        }
+
+        if(f_size % 4 != 0) 
+            f_size = 4 * ((f_size + 4) / 4);
+
+        head = (struct cpio_newc_header*)((uint8_t*)head + file_offset + f_size);
+    }
+
+    if (no_match)
+        print_str("\nNo match file");
+}
+
 void initramfs_callback(char* node_name, char* prop_name, struct fdt_prop* prop){
 
     if (strncmp(node_name, "chosen", 7) && 

@@ -27,6 +27,10 @@ void ls(){
     cpio_ls();
 }
 
+void exec(){
+    cpio_exec();
+}
+
 void malloc(){
     print_str("\n----------");
     print_str("\nTesting allocating memory for \"short str\"");
@@ -74,6 +78,8 @@ void shell(){
         ls();
     }else if (strcmp(cmd, "malloc")){
         malloc();
+    }else if (strcmp(cmd, "exectable")){
+        exec();
     }else{
         print_str("\nCommand Not Found");
     }

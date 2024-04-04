@@ -8,7 +8,13 @@ _start:
     and     x1, x1, #3
     cbz     x1, bss_setting
     bl      from_el2_to_el1
+    mrs     x1, CurrentEL
+    ubfx    x1, x1, #2, #2
+    cmp     x1, #1
+    bne     proc_hang
+
     # bl      set_exception_vector_table
+
     // cpu id > 0, stop
 proc_hang:  
     wfe
