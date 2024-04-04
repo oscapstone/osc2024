@@ -44,10 +44,9 @@ const REQUEST_FAILED: u32 = 0x80000001;
 const TAG_REQUEST_CODE: u32 = 0x00000000;
 const END_TAG: u32 = 0x00000000;
 
-pub unsafe fn get_board_revisioin() -> u32 {
+pub fn get_board_revisioin() -> u32 {
     let mut mailbox: [u32; 32] = [0; 32];
-    let idx_offset:usize = (0x10 - mailbox.as_ptr() as u32 & 0xf) as usize;
-
+    let idx_offset: usize = (0x10 - mailbox.as_ptr() as u32 & 0xf) as usize;
 
     mailbox[0 + idx_offset] = 7 * 4;
     mailbox[1 + idx_offset] = REQUEST_CODE;
@@ -57,17 +56,17 @@ pub unsafe fn get_board_revisioin() -> u32 {
     mailbox[5 + idx_offset] = 0;
     mailbox[6 + idx_offset] = END_TAG;
 
-
-    mailbox_call(&mut mailbox[idx_offset..(idx_offset + 7)]);
-
+    unsafe {
+        mailbox_call(&mut mailbox[idx_offset..(idx_offset + 7)]);
+    }
     mailbox[5]
 }
 
 // Get ARM memory base address and size using mailbox
 const GET_ARM_MEMORY: u32 = 0x00010005;
-pub unsafe fn get_arm_memory() -> (u32, u32) {
+pub fn get_arm_memory() -> (u32, u32) {
     let mut mailbox: [u32; 32] = [0; 32];
-    let idx_offset:usize = (0x10 - mailbox.as_ptr() as u32 & 0xf) as usize;
+    let idx_offset: usize = (0x10 - mailbox.as_ptr() as u32 & 0xf) as usize;
 
     mailbox[0 + idx_offset] = 8 * 4;
     mailbox[1 + idx_offset] = REQUEST_CODE;
@@ -78,7 +77,7 @@ pub unsafe fn get_arm_memory() -> (u32, u32) {
     mailbox[6 + idx_offset] = 0;
     mailbox[7 + idx_offset] = END_TAG;
 
-    mailbox_call(&mut mailbox[idx_offset..(idx_offset + 8)]);
-
+    unsafe {mailbox_call(&mut mailbox[idx_offset..(idx_offset + 8)]);
+    }
     (mailbox[5], mailbox[6])
 }

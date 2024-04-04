@@ -29,5 +29,5 @@ SECTIONS
         . = ALIGN(16);
         __bss_end_exclusive = .;
     }
-
-}
+    __dtb_addr = .;
+}   

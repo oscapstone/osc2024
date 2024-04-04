@@ -24,7 +24,6 @@ SECTIONS
     . = ALIGN(16);
     __relo_end = .;
 
-    /* Section is zeroed in pairs of u64. Align start and end to 16 bytes */
 
     .bss (NOLOAD): ALIGN(16)
     {
@@ -33,5 +32,6 @@ SECTIONS
         . = ALIGN(16);
         __bss_end_exclusive = .;
     }
+    __dtb_addr = .;
 
 }

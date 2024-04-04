@@ -5,3 +5,5 @@ target
 rootfs
 .gdbinit
 initramfs.cpio
+*.dtb
+*.txt

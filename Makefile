@@ -14,6 +14,8 @@ QEMU_TTY_ARGS   = -display none -serial null -serial pty
 QEMU_TTY_DEBUG_ARGS   = -display none -S -s -serial null -serial pty
 EXEC_QEMU = $(QEMU_BINARY) -M $(QEMU_MACHINE_TYPE)
 
+QEMU_DTB_PATH	 = -dtb $(shell pwd)/bcm2710-rpi-3-b-plus.dtb
+
 OBJDUMP_BINARY    = aarch64-none-elf-objdump
 NM_BINARY         = aarch64-none-elf-mn
 READELF_BINARY    = aarch64-none-elf-readelf
@@ -57,23 +59,22 @@ bootloader_elf:
 
 kernel_qemu: $(KERNEL_BIN)
 	$(call color_header, "Launching QEMU")
-	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
+	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
 
 kernel_gdb: $(KERNEL_BIN)
 	$(call color_header, "Launching QEMU in background")
-	$(EXEC_QEMU) $(QEMU_DEBUG_ARGS) -kernel $(KERNEL_BIN)
+	$(EXEC_QEMU) $(QEMU_DEBUG_ARGS) $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
 
 kernel_initramfs_qemu: $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU")
-	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN) -initrd initramfs.cpio                                                                                                                                                                                                                  
-
-bootloader_qemu: $(BOOTLOADER_BIN)
+	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN) -initrd initramfs.cpio
+bootloader_qemu:$(BOOTLOADER_BIN) $(KERNEL_BIN) cpio 
 	$(call color_header, "Launching QEMU")
-	$(EXEC_QEMU) $(QEMU_TTY_ARGS) -kernel $(BOOTLOADER_BIN)
-	
+	$(EXEC_QEMU) $(QEMU_TTY_ARGS) -kernel $(BOOTLOADER_BIN) -initrd initramfs.cpio
+
 # -device loader,file=$(BOOTLOADER_BIN),addr=0x60000,cpu-num=0
 
-bootloader_gdb: $(BOOTLOADER_BIN)
+bootloader_gdb: $(BOOTLOADER_BIN) $(KERNEL_BIN) cpio 
 	$(call color_header, "Launching QEMU in background")
 	$(EXEC_QEMU) $(QEMU_TTY_DEBUG_ARGS) -kernel $(BOOTLOADER_BIN)
 

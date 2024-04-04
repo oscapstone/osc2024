@@ -29,7 +29,7 @@ elif args.type == 'pty':
         kernel_data = kernel.read()
         # Print the size of the kernel image
         print("Kernel size: ", len(kernel_data))
-        with open(sys.argv[1], "wb", buffering = 0) as tty:
+        with open(args.device, "wb", buffering = 0) as tty:
             # Send kernel size to ttyUSB0
             tty.write(len(kernel_data).to_bytes(4, byteorder='little'))
             # Write the kernel image to the ttyUSB0 port

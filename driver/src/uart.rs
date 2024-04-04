@@ -1,12 +1,8 @@
-
-
-
 use core::arch::asm;
 use core::{
     ptr::{read_volatile, write_volatile},
     usize,
 };
-
 
 const AUXENB: u32 = 0x3F215004;
 const AUX_MU_CNTL_REG: u32 = 0x3F215060;
@@ -78,7 +74,6 @@ pub fn init_uart() {
     }
 }
 
-
 pub struct Uart;
 
 use core::fmt::{self, Write};
@@ -108,7 +103,6 @@ impl UartWriter {
     }
 }
 
-
 impl Uart {
     pub fn new() -> Uart {
         Uart
@@ -124,9 +118,9 @@ pub unsafe fn uart_write_str(s: &str) {
 }
 
 #[no_mangle]
-pub fn getline(s: &mut [u8; 128], is_echo: bool) ->  &str {
+pub fn getline(s: &mut [u8; 128], is_echo: bool) -> &str {
     let mut ptr: usize = 0;
-    unsafe{
+    unsafe {
         loop {
             let c = read_u8();
             match c {
@@ -145,7 +139,6 @@ pub fn getline(s: &mut [u8; 128], is_echo: bool) ->  &str {
             }
             asm!("nop");
         }
-
     }
     core::str::from_utf8(&s[0..ptr]).unwrap()
 }
@@ -178,7 +171,6 @@ pub unsafe fn read_u8() -> Option<u8> {
     }
 }
 
-
 pub unsafe fn read(s: *mut u8, len: usize) {
     let mut ptr: usize = 0;
     while ptr < len {
@@ -195,7 +187,7 @@ pub unsafe fn read(s: *mut u8, len: usize) {
 
 // print u32 in hex
 #[no_mangle]
-pub unsafe fn print_hex(n: u32) {
+pub fn print_hex(n: u32) {
     let mut buf: [u8; 8] = [0; 8];
     let mut ptr: usize = 0;
     let mut num: u32 = n;
@@ -210,11 +202,13 @@ pub unsafe fn print_hex(n: u32) {
         num = num / 16;
     }
     for i in buf.iter().take(8).rev() {
-        write_u8(*i);
+        unsafe {
+            write_u8(*i);
+        }
     }
 }
 
-pub unsafe fn strncmp(s1: &str, s2: &str, n: usize) -> bool {
+pub fn strncmp(s1: &str, s2: &str, n: usize) -> bool {
     let mut i = 0;
     while i < n {
         if s1.as_bytes()[i] != s2.as_bytes()[i] {
@@ -223,11 +217,4 @@ pub unsafe fn strncmp(s1: &str, s2: &str, n: usize) -> bool {
         i = i + 1;
     }
     true
-}
-
-// println
-#[no_mangle]
-pub unsafe fn println(s: &str) {
-    uart_write_str(s);
-    uart_write_str("\n\r");
 }

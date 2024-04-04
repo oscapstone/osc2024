@@ -14,6 +14,10 @@
 //------------------------------------------------------------------------------
 _start:
 	// Only proceed on the boot core. Park it otherwise.
+	// save dtb address (x0) to uar
+	ADR_REL x1, __dtb_addr
+	str x0, [x1]
+	
 	mrs	x0, MPIDR_EL1
 	and	x0, x0, {CONST_CORE_ID_MASK}
 	ldr	x1, BOOT_CORE_ID      // provided by bsp/__board_name__/cpu.rs
