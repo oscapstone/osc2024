@@ -26,7 +26,7 @@ void main()
 
     disable_interrupt(); // this is necessary in lab 3 basic 3: asynchronous uart
 
-    /* Switch to el0 before running shell. */
+    /* Switch to el0 with interrupt enabled. */
     move_to_user_mode();
     while(1) {
         uart_puts("# ");

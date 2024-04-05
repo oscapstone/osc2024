@@ -29,6 +29,7 @@
 #include "uart.h"
 #include "sprintf.h"
 #include "queue.h" // for async uart
+#include "demo.h"
 
 extern unsigned char _end;
 
@@ -221,6 +222,15 @@ int uart_async_gets(char *buf)
 /* uart_tasklet: do enqueue read buffer */
 void uart_tasklet(unsigned long data)
 {
+#ifdef DEMO
+    uart_puts("Into uart_tasklet\n");
+#endif
+
     char c = (char)data;
     enqueue_char(&read_buffer, c);
+
+#ifdef DEMO
+    wait_cycles(500000000);
+    uart_puts("Exit uart_tasklet\n");
+#endif
 }

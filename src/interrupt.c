@@ -29,7 +29,7 @@ void tasklet_add(struct tasklet_struct *tl)
     tl->next = NULL;
     *(tl_head.tail) = tl;
     tl_head.tail = &tl->next;
-#else // LIFO
+#else // INSERT_HEAD
     tl->next = tl_head.head;
     tl_head.head = tl;
 #endif

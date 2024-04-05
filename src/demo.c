@@ -4,6 +4,8 @@
 #include "syscall.h"
 #include "delays.h"
 #include "exception.h"
+#include "interrupt.h"
+#include "timer.h"
 
 
 void demo_task1()
@@ -129,4 +131,17 @@ void demo_async_uart()
         }
         wait_cycles(100000000);
     };
+}
+
+/* Lab3 Advanced 2: bottom half irq */
+void demo_bh_irq(void)
+{
+    enable_interrupt(); /* In this demo, we are in el1. So enable interrupt in el1 first. */
+    core_timer_enable();
+    uart_async_init();
+    uart_puts("Demo Lab3 Advanced 2: bottom half irq\n");
+    while (1) {
+        do_tasklet();
+        // wait_cycles(1000000000);
+    }
 }

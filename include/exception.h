@@ -10,7 +10,7 @@ void print_current_el(void);
 extern void exit_kernel();
 
 
-extern void move_to_user_mode(void); // defined in exception_.S
+extern void move_to_user_mode(void); /* Move to user mode and enable interrupt in el0. Defined in exception_.S */
 extern void enable_interrupt();
 extern void disable_interrupt();
 extern void enable_irq();

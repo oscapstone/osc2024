@@ -9,10 +9,7 @@
 #include "queue.h"
 #include "interrupt.h"
 #include "delays.h"
-
-
-extern void from_el1_to_el0(void);
-extern void core_timer_enable(void);
+#include "demo.h"
 
 /**
  * common exception handler
@@ -138,6 +135,10 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
             uart_puts("svc 4: User Program System call\n");
             exc_handler(esr, elr, spsr, far); // for Lab 3, print out the reg info.
             break;
+        case 5:
+            uart_puts("svc 5: Demo bottom half irq\n");
+            demo_bh_irq();
+            break;
         default:
             uart_puts("Unknown svc, print reg information\n");
             exc_handler(esr, elr, spsr, far);
@@ -174,8 +175,6 @@ void uart_interrupt_handler()
             enable_interrupt();
             /* Do tasklet */
             do_tasklet();
-
-            // enqueue_char(&read_buffer, c); // output the char to read buffer.
         }
     } else
         uart_puts("Unknown uart interrupt\n");
@@ -204,23 +203,26 @@ void do_timer()
 
 void core_timer_handler()
 {
-    /* #1: Mask the core timer interrupt first. Mask CORE0_TIMER_IRQ_CTRL. Spec says it will be done automatically? */
+    /* Mask the core timer interrupt first. Mask CORE0_TIMER_IRQ_CTRL. Spec says it will be done automatically? */
     *CORE0_TIMER_IRQ_CTRL &= ~(1 << 1);
-    
-    /* #2: Do the jobs with interrupt disabled */
+
     /*     Setup next timer interrupt */
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
         "mov x1, #2             \n\t"
         "mul x0, x0, x1         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
-    /* #3: Move bottom half job to task queue */
-    /* #4: Enable other interrupt */
-    
-    timer_update(); // this can be done in the bottom half
-    // do_timer(); // multi-tasking function
 
-    /* #5: At the end, enable the core timer interrupt */
+    /* Add a tasklet to tl_head */
+    tasklet_add(&tl_pool[TIMER_TASKLET - 1]);
+    /* Enable other interrupt */
+    enable_interrupt();
+    /* Do tasklet */
+    do_tasklet();
+
+    // do_timer(); // multi-tasking function.
+
+    /* Enable the core timer interrupt */
     *CORE0_TIMER_IRQ_CTRL |= (1 << 1);
 }
 

@@ -4,6 +4,7 @@
 #include "string.h"
 #include "uart.h"
 #include "stdint.h"
+#include "demo.h"
 
 struct timer timer_pool[NR_TIMER];
 
@@ -73,5 +74,14 @@ void timer_update()
 /* Timer tasklet: do timer_update(). */
 void timer_tasklet(unsigned long data)
 {
+#ifdef DEMO
+    uart_puts("Into timer_tasklet\n");
+#endif
+
     timer_update();
+
+#ifdef DEMO
+    wait_cycles(50000000);
+    uart_puts("Exit timer_tasklet\n");
+#endif
 }

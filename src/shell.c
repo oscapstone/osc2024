@@ -38,6 +38,7 @@ void shell_controller(char *cmd)
         uart_puts("timer_on       : enable timer and print out current second periodiccally.\n");
         uart_puts("set_timeout    : set the timer to trigger an interrupt after given second.\n");
         uart_puts("demo_uart      : demo for asynchronous uart. Lab 3 Basic Exercise 3\n");
+        uart_puts("demo_irq       : demo for bottom half irq. Lab 3 Advanced Exercise 2\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_puts("Hello World!\n");
     } else if (!strcmp(cmd, "reboot")) {
@@ -58,6 +59,8 @@ void shell_controller(char *cmd)
         asm volatile ("svc 3");
     } else if (!strcmp(cmd, "demo_uart")) {
         demo_async_uart();
+    } else if (!strcmp(cmd, "demo_irq")) {
+        asm volatile ("svc 5");
     } else {
         uart_puts("shell: command not found\n");
     }
