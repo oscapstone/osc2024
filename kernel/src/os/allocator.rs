@@ -14,23 +14,12 @@ struct Header {
 pub struct Allocator;
 
 impl Allocator {
-    pub fn init(&self) {
-        // Initialize the allocator
-        let start = 0x3001_0000 as *mut Header;
-        unsafe {
-            *start = Header {
-                size: 0,
-                start: 0x3001_0020 as *mut u8,
-                next: null_mut(),
-            };
-        }
-    }
 }
 
-static mut count: u32 = 4;
 
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        static mut count: u32 = 0;
         if layout.size() == 0 {
             println("Warning: Allocating zero size");
             return null_mut();
@@ -42,7 +31,7 @@ unsafe impl GlobalAlloc for Allocator {
 
         count += (layout.size() + aligned_start) as u32;
 
-        if allocated_start as u32 > 0x3000_0000 {
+        if allocated_start as u32 > 0x2000_0000 {
             print_hex(count);
             panic!("Out of memory");
         }

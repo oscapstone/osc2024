@@ -7,7 +7,7 @@ global_asm!(include_str!("boot.s"));
 
 #[no_mangle]
 pub unsafe fn _start_rust() {
-    crate::os::allocator::ALLOCATOR.init();
+    // crate::os::allocator::ALLOCATOR.init();
     uart::initialize();
     println!("Starting rust");
     

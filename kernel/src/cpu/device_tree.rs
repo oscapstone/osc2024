@@ -127,14 +127,14 @@ impl DeviceTree {
             ..Default::default()
         };
 
-        print("Device tree pointer: ");
-        print_hex(ret.device_tree_ptr as u32);
+        // print("Device tree pointer: ");
+        // print_hex(ret.device_tree_ptr as u32);
         // for i in 0..32 {
         //     print_hex(unsafe { *(ret.device_tree_ptr.offset(i as isize)) as u32});
         // }
 
-        print("Magic: ");
-        print_hex(ret.get_header(FdtHeader::Magic));
+        // print("Magic: ");
+        // print_hex(ret.get_header(FdtHeader::Magic));
 
         ret.total_size = ret.get_header(FdtHeader::TotalSize);
         ret.struct_ptr = unsafe {
@@ -153,12 +153,12 @@ impl DeviceTree {
         ret.struct_size = ret.get_header(FdtHeader::SizeDtStruct);
         ret.strings_size = ret.get_header(FdtHeader::SizeDtStrings);
 
-        print_hex(ret.strings_size);
+        // print_hex(ret.strings_size);
 
         let mut memory_reservation_map: Vec<FdtReserveEntry> = Vec::new();
         let mut i = 0;
         // Parse memory reservation map
-        println("Memory reservation map:");
+        // println("Memory reservation map:");
         loop {
             memory_reservation_map.push(FdtReserveEntry {
                 address: unsafe { (*(ret.memrsv_ptr.offset(i))).swap_bytes() },
@@ -174,7 +174,7 @@ impl DeviceTree {
         }
 
         // Parse device tree structure
-        println("Device tree structure:");
+        // println("Device tree structure:");
         let mut root = Node {
             name: String::from("root"),
             properties: Vec::new(),
@@ -188,17 +188,17 @@ impl DeviceTree {
     }
 
     fn construct_node(&self, now_node: &mut Node, offset: usize, depth: u32) -> usize {
-        println("Constructing node");
-        print_dec(offset as u32);
-        print_dec(depth);
+        // println("Constructing node");
+        // print_dec(offset as u32);
+        // print_dec(depth);
         let mut i = offset;
         loop {
-            unsafe {
-                print_hex((self.struct_ptr.add(i)) as u32);
-            }
+            // unsafe {
+            //     print_hex((self.struct_ptr.add(i)) as u32);
+            // }
             match unsafe { (*(self.struct_ptr.add(i))).swap_bytes() } {
                 DeviceTree::FDT_BEGIN_NODE => {
-                    println("Begin node");
+                    // println("Begin node");
                     i += 1;
 
                     let mut node = Node {
@@ -206,7 +206,7 @@ impl DeviceTree {
                         properties: Vec::new(),
                         children: Vec::new(),
                     };
-                    println("Node name: ");
+                    // println("Node name: ");
                     'aa: loop {
                         let a = unsafe { *(self.struct_ptr).add(i) };
                         for k in 0..4 {
@@ -222,13 +222,13 @@ impl DeviceTree {
                     let name = node.name.clone();
 
                     now_node.children.push(node);
-                    println("Pushed child node");
+                    // println("Pushed child node");
                     let len = now_node.children.len();
                     if now_node.children[len - 1].name != name {
                         println("Error");
                         loop {}
                     }
-                    println("Constructing child node");
+                    // println("Constructing child node");
                     i = self.construct_node(
                         &mut now_node.children.last_mut().unwrap(),
                         i,
@@ -266,7 +266,7 @@ impl DeviceTree {
 
                     let name = prop_node.name.clone();
 
-                    println(&prop_node.name);
+                    // println(&prop_node.name);
 
                     now_node.properties.push(prop_node);
                     let len = now_node.properties.len();
@@ -276,7 +276,7 @@ impl DeviceTree {
                     }
                 }
                 DeviceTree::FDT_END_NODE => {
-                    println("End node");
+                    // println("End node");
                     i += 1;
                     return i;
                 }

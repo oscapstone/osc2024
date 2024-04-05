@@ -112,3 +112,13 @@ macro_rules! println {
         $crate::os::stdio::println(alloc::format!($($arg)*).as_str());
     }};
 }
+
+// format print macro
+#[macro_export]
+macro_rules! print {
+    () => ($crate::os::stdio::print($str));
+    ($str:expr) => ($crate::os::stdio::print($str));
+    ($($arg:tt)*) => {{
+        $crate::os::stdio::print(alloc::format!($($arg)*).as_str());
+    }};
+}

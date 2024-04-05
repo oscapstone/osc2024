@@ -1,4 +1,7 @@
+use crate::println;
+
 use crate::os::stdio::*;
+use alloc::vec::Vec;
 
 pub enum CpioHeaderField {
     Magic,
@@ -26,6 +29,20 @@ impl CpioArchive {
         CpioArchive {
             header_ptr: address,
         }
+    }
+
+    pub fn get_file_list(&self) -> Vec<&str> {
+        let mut files = Vec::new();
+        let mut current_ptr = self.header_ptr;
+        loop {
+            files.push(self.get_file_name(current_ptr));
+
+            match self.get_next_file_ptr(current_ptr) {
+                Some(ptr) => current_ptr = ptr,
+                None => break,
+            }
+        }
+        files
     }
 
     pub fn print_file_list(&self) {
@@ -56,6 +73,18 @@ impl CpioArchive {
             }
         }
         println("File not found");
+    }
+
+    pub fn load_file_to_memory(&self, filename: &str, addr: *mut u8) -> bool {
+        match self.get_file_content_by_name(filename) {
+            Some(content) => {
+                unsafe {
+                    core::ptr::copy_nonoverlapping(content.as_ptr(), addr, content.len());
+                }
+                true
+            }
+            None => false,
+        }
     }
 
     pub fn get_num_files(&self) -> u32 {
@@ -96,12 +125,30 @@ impl CpioArchive {
             // Check if the ptr is pointed to the magic number
             assert_eq!(*next_ptr, b'0');
 
-            if self.get_namesize(next_ptr) == 11 && self.get_file_name(next_ptr).starts_with("TRAILER!!!") {
+            if self.get_namesize(next_ptr) == 11
+                && self.get_file_name(next_ptr).starts_with("TRAILER!!!")
+            {
                 return None;
             }
 
             Some(next_ptr)
         }
+    }
+
+    fn get_file_content_by_name(&self, name: &str) -> Option<&[u8]> {
+        let mut current_ptr = self.header_ptr;
+        loop {
+            let file_name = self.get_file_name(current_ptr).trim_end_matches('\0');
+            if file_name == name {
+                return Some(self.get_file_content(current_ptr));
+            }
+            match self.get_next_file_ptr(current_ptr) {
+                Some(ptr) => current_ptr = ptr,
+                None => break,
+            }
+        }
+
+        None
     }
 
     fn get_file_content(&self, ptr: *const u8) -> &[u8] {
@@ -121,21 +168,16 @@ impl CpioArchive {
             offset += 4 - (offset % 4);
         }
 
-        let file_ptr = unsafe {
-            ptr.offset(offset as isize)
-        };
+        let file_ptr = unsafe { ptr.offset(offset as isize) };
 
-        unsafe {
-            core::slice::from_raw_parts(file_ptr, filesize as usize)
-        }
+        unsafe { core::slice::from_raw_parts(file_ptr, filesize as usize) }
     }
 
     fn get_file_name(&self, ptr: *const u8) -> &str {
         let namesize = self.get_namesize(ptr);
-        
-        let bytes_slice = unsafe {
-            core::slice::from_raw_parts(ptr.offset(110), namesize as usize)
-        };
+
+        let bytes_slice =
+            unsafe { core::slice::from_raw_parts(ptr.offset(110), namesize as usize) };
 
         core::str::from_utf8(bytes_slice).unwrap()
     }
@@ -205,6 +247,4 @@ impl CpioArchive {
         }
         value
     }
-
-    
 }
