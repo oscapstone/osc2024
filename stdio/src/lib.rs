@@ -1,5 +1,6 @@
 #![no_std]
 
+pub mod macros;
 use driver::uart;
 
 fn send(c: u8) {
@@ -25,28 +26,17 @@ fn recv() -> u8 {
 }
 
 #[allow(dead_code)]
-pub fn read(buf: &mut [u8]) {
+fn read(buf: &mut [u8]) {
     for i in buf.iter_mut() {
         *i = recv();
     }
 }
 
 #[allow(dead_code)]
-pub fn write(buf: &[u8]) {
+fn write(buf: &[u8]) {
     for &c in buf {
         send(c);
     }
-}
-
-#[allow(dead_code)]
-pub fn puts(buf: &[u8]) {
-    for &c in buf {
-        if c == 0 {
-            break;
-        }
-        send(c);
-    }
-    write(b"\r\n".as_ref());
 }
 
 #[allow(dead_code)]
@@ -76,70 +66,4 @@ pub fn gets(buf: &mut [u8]) -> usize {
         }
     }
     i
-}
-
-#[allow(dead_code)]
-pub fn print(buf: &str) {
-    write(buf.as_bytes());
-}
-
-#[allow(dead_code)]
-pub fn println(buf: &str) {
-    puts(buf.as_bytes());
-}
-
-#[allow(dead_code)]
-pub fn print_u32(val: u32) {
-    let hex = u32_to_hex(val);
-    write(&hex);
-}
-
-#[allow(dead_code)]
-pub fn print_u64(val: u64) {
-    let hex = u64_to_hex(val);
-    write(&hex);
-}
-
-#[allow(dead_code)]
-pub fn u32_to_hex(val: u32) -> [u8; 10] {
-    let mut hex = [0; 10];
-    hex[0] = b'0';
-    hex[1] = b'x';
-    for i in 0..8 {
-        let nibble = (val >> (28 - i * 4)) & 0xF;
-        hex[i + 2] = if nibble < 10 {
-            nibble as u8 + b'0'
-        } else {
-            nibble as u8 + b'A' - 10
-        };
-    }
-    hex
-}
-
-#[allow(dead_code)]
-pub fn u64_to_hex(val: u64) -> [u8; 18] {
-    let mut hex = [0; 18];
-    hex[0] = b'0';
-    hex[1] = b'x';
-    for i in 0..16 {
-        let nibble = (val >> (60 - i * 4)) & 0xF;
-        hex[i + 2] = if nibble < 10 {
-            nibble as u8 + b'0'
-        } else {
-            nibble as u8 + b'A' - 10
-        };
-    }
-    hex
-}
-
-#[allow(dead_code)]
-pub fn atoi(s: &[u8]) -> u32 {
-    let mut val = 0;
-    for &c in s {
-        if c < b'0' || c > b'9' {
-            break;
-        }
-        val = val * 10 + (c - b'0') as u32;
-    }
-    val
 }

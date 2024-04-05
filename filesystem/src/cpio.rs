@@ -32,7 +32,7 @@ impl CpioArchive {
         loop {
             let header = unsafe { &*(current as *const CpioHeader) };
             if header.magic != *b"070701" {
-                stdio::puts(b"Invalid CPIO magic");
+                stdio::println!("Invalid CPIO magic");
                 break;
             }
             let namesize = u64::from_str_radix(
@@ -56,7 +56,7 @@ impl CpioArchive {
                 break;
             }
 
-            stdio::puts(name.as_bytes());
+            stdio::println!("{} ({} bytes)", name, filesize);
 
             current = unsafe { current.add(110 + namesize as usize) };
             if current as usize % 4 != 0 {

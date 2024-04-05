@@ -5,21 +5,20 @@ mod boot;
 mod panic;
 
 use driver::uart;
-use stdio::{print, print_u32, println};
+use stdio::{print, println};
 
 const KERNEL_ADDR: u32 = 0x80000;
 
 fn main() {
     uart::init();
-    println("Hello, world!");
+    println!("Hello, world!");
 
     let dtb_addr = 0x8f000 as *const u8;
     let dtb_addr = unsafe { core::ptr::read_volatile(dtb_addr as *const u32) };
-    print("DTB address: ");
-    print_u32(dtb_addr);
-    println("");
 
-    println("Please send a kernel image.");
+    println!("DTB address: {:#x}", dtb_addr);
+
+    println!("Please send a kernel image.");
     // receive kernel until delay
     let mut pos = KERNEL_ADDR;
     let mut delay = 0;
@@ -31,7 +30,7 @@ fn main() {
             }
             delay = 0;
             if pos % 0x400 == 0 {
-                print(".");
+                print!(".");
             }
             pos += 1;
         } else {
@@ -41,24 +40,22 @@ fn main() {
             delay += 1;
             if delay >= 1000000 {
                 if pos < KERNEL_ADDR + 0x1000 {
-                    println("");
-                    println("Kernel image not received!");
-                    println("Please send a kernel image.");
+                    println!("");
+                    println!("Kernel image not received!");
+                    println!("Please send a kernel image.");
                     pos = KERNEL_ADDR;
                     delay = 0;
                     continue;
                 }
-                println("");
-                println("Kernel image received!");
-                print("Kernel size: ");
-                print_u32(pos - KERNEL_ADDR);
-                println(" bytes");
+                println!("");
+                println!("Kernel image received!");
+                println!("Kernel size: {} bytes", pos - KERNEL_ADDR);
                 break;
             }
         }
     }
 
-    println("Jumping to kernel");
+    println!("Jumping to kernel");
     // jump to KERNEL_ADDR
     let kernel = KERNEL_ADDR as *const ();
     let kernel: fn() = unsafe { core::mem::transmute(kernel) };
