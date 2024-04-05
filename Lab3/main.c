@@ -3,7 +3,6 @@
 
 #define MEMORY_POOL_SIZE 1024
 
-
 static char memory_pool[MEMORY_POOL_SIZE];
 static char *next_free = memory_pool;
 
@@ -19,12 +18,18 @@ void *simple_alloc(int size) {
 
 void main()
 {
+    unsigned long el;
     // set up serial console
     uart_init();
+    // show el
+    asm volatile ("mrs %0, CurrentEL" : "=r" (el));
+    el = el >> 2; // CurrentEL的值在高两位
 
-    // say hello
-    uart_puts("Greetings\n");
-
+    // print current exception level
+    uart_puts("Booted! Current EL: ");
+    uart_send('0' + el);
+    uart_puts("\n");
+ 
     int idx = 0;
     char in_char;
     // echo everything back

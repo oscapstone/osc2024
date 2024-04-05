@@ -18,17 +18,12 @@ struct cpio_newc_header {
     char c_check[8];
 };
 
-static char *cpio_base;
-
-void initramfs_callback(char *address);
 
 int string_length(char *s);
 int strcmp(char *s1, char *s2);
-
 int hex_to_int(char *p, int len);
-
 void cpio_ls();
-
 void shell(char * cmd);
+void core_timer_handler();
 
 #endif // SHELL_H

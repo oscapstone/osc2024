@@ -103,3 +103,30 @@ void uart_hex_long(unsigned long d) {
         uart_send(n);
     }
 }
+
+void uart_int(int d) {
+    if (d == 0) {
+        uart_send('0');
+        return;
+    }
+
+    if (d < 0) {
+        uart_send('-');
+        d = -d;
+    }
+
+    char buffer[12];
+    int i = 10;
+    buffer[11] = '\0'; 
+
+    while (d != 0) {
+        buffer[i--] = (d % 10) + '0';
+        d /= 10;
+    }
+
+    for (i++; i < 12; i++) {
+        if (buffer[i] != '\0') {
+            uart_send(buffer[i]);
+        }
+    }
+}

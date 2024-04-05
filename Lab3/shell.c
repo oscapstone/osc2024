@@ -68,10 +68,10 @@ void run_user_program(){
     uart_puts("found user.img\n");
     
     // current is the file address
-    asm volatile ("mov x0, 0x3c0"); 
+    asm volatile ("mov x0, 0"); 
     asm volatile ("msr spsr_el1, x0"); 
     asm volatile ("msr elr_el1, %0": :"r" (current));
-    asm volatile ("mov x0, 0x80000");
+    asm volatile ("mov x0, 0x20000");
     asm volatile ("msr sp_el0, x0");
     asm volatile ("eret");
 }
@@ -105,4 +105,16 @@ void shell(char * cmd){
     else if(strcmp(cmd, "run") == 0){
         run_user_program();
     }
+}
+
+void core_timer_handler() {
+    unsigned long cntfrq, cntpct;
+    asm volatile ("mrs %0, cntfrq_el0" : "=r" (cntfrq));
+    asm volatile ("msr cntp_tval_el0, %0" : : "r" (cntfrq * 2));
+    asm volatile ("mrs %0, cntpct_el0" : "=r" (cntpct));
+    cntpct /= cntfrq;
+
+    uart_puts("Seconds since boot: ");
+    uart_int(cntpct);
+    uart_puts("\n");
 }

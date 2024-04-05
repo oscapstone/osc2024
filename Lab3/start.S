@@ -5,7 +5,9 @@
 _start:  
     // read cpu id, stop slave cores
     bl      from_el2_to_el1
+    bl      core_timer_enable
     bl      set_exception_vector_table
+
     mrs     x1, mpidr_el1 //get cpu num
     and     x1, x1, #3 //see if cpu num is 0
     cbz     x1, 2f //cpu 0 jump to 2f (others wfe)
@@ -116,7 +118,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b exception_handler
+  b timer_interrupt_handler
   .align 7
   b exception_handler
   .align 7
@@ -136,3 +138,21 @@ set_exception_vector_table:
   adr x0, exception_vector_table
   msr vbar_el1, x0
   ret
+
+#define CORE0_TIMER_IRQ_CTRL 0x40000040
+
+core_timer_enable:
+    mov x0, 1
+    msr cntp_ctl_el0, x0 // enable
+    mrs x0, cntfrq_el0
+    msr cntp_tval_el0, x0 // set expired time
+    mov x0, 2
+    ldr x1, =CORE0_TIMER_IRQ_CTRL
+    str w0, [x1] // unmask timer interrupt
+    ret
+
+timer_interrupt_handler:
+    save_all
+    bl core_timer_handler
+    load_all
+    eret
