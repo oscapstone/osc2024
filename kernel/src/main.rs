@@ -70,6 +70,6 @@ fn execute_command(command: &[u8]) {
 fn print_mailbox_info() {
     let revision = driver::mailbox::get_board_revision();
     let (lb, ub) = driver::mailbox::get_arm_memory();
-    println!("Board revision: {}", revision);
-    println!("ARM memory: {} - {}", lb, ub);
+    println!("Board revision: {:x}", revision);
+    println!("ARM memory: {:x} - {:x}", lb, ub);
 }
