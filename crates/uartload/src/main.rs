@@ -1,3 +1,4 @@
+#![feature(asm_const)]
 #![no_std]
 #![no_main]
 
@@ -16,7 +17,10 @@ const BANNER: &str = r#"
 \____/_/ |_/_/|_| /_/ /____/\____/_/ |_/____/ 
                                               "#;
 
-global_asm!(include_str!("boot.s"));
+global_asm!(
+    include_str!("boot.s"),
+    CONST_CORE_ID_MASK= const 0b11,
+);
 
 #[no_mangle]
 #[link_section = ".text._start_arguments"]

@@ -1,5 +1,6 @@
 //! A panic handler that infinitely waits.
 
+#![feature(panic_info_message)]
 #![no_std]
 
 use core::panic::PanicInfo;
@@ -9,7 +10,20 @@ use small_std::println;
 fn panic(info: &PanicInfo) -> ! {
     panic_prevent_reenter();
 
-    println!("{}", info);
+    let (location, line, column) = match info.location() {
+        Some(location) => (location.file(), location.line(), location.column()),
+        None => ("<unknown>", 0, 0),
+    };
+
+    println!(
+        "Kernel panicked!\n\n\
+        Panic location: {}:{}:{}\n\n\
+        {}",
+        location,
+        line,
+        column,
+        info.message().unwrap()
+    );
 
     cpu::wait_forever();
 }

@@ -4,7 +4,10 @@ use core::arch::global_asm;
 #[link_section = ".text._start_arguments"]
 pub static BOOT_CORE_ID: u64 = 0;
 
-global_asm!(include_str!("boot.s"));
+global_asm!(
+    include_str!( "boot.s"),
+    CONST_CORE_ID_MASK = const 0b11
+);
 
 #[no_mangle]
 pub unsafe fn _start_rust() -> ! {

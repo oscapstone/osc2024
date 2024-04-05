@@ -10,7 +10,7 @@
 _start:
     // Read cpu id to x0
     mrs     x0, MPIDR_EL1
-    and     x0, x0, #3              // asm_const is an unstable feature, write immediate constants directly.
+    and     x0, x0, {CONST_CORE_ID_MASK}
     // Load the boot core id to x1
     ldr     x1, BOOT_CORE_ID
     cmp     x0, x1
