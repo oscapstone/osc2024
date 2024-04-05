@@ -87,7 +87,7 @@ void uart_send_dec(unsigned int data)
         uart_send(buffer[i] + '0');
 }
 
-void uart_send_space_level(unsigned int level)
+    void uart_send_space_level(unsigned int level)
 {
     for (unsigned int i = 0; i < level; i++)
         uart_send(' ');

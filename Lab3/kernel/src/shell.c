@@ -2,6 +2,7 @@
 #include "cpio.h"
 #include "def.h"
 #include "dtb.h"
+#include "irq.h"
 #include "logo.h"
 #include "mailbox.h"
 #include "memory.h"
@@ -9,6 +10,7 @@
 #include "peripheral/pm.h"
 #include "reboot.h"
 #include "string.h"
+#include "timer.h"
 #include "utils.h"
 
 #define BUFFER_SIZE 128
@@ -54,7 +56,8 @@ void help(void)
         "  malloc    - allocate memory\n"
         "  print_dtb - print device tree blob\n"
         "  logo      - print raspberry pi logo\n"
-        "  exec      - execute a program\n");
+        "  exec      - execute a program\n"
+        "  timer_irq - set core timer interrupt\n");
 }
 
 void hello(void)
@@ -94,6 +97,11 @@ void parse_command(char* cmd)
             uart_send_string("Usage: malloc <size>\n");
             return;
         }
+        int dec_size = decstr2int(size);
+        if (dec_size < 0) {
+            uart_send_string("Invalid size\n");
+            return;
+        }
         void* ret = mem_alloc(decstr2int(size));
         if (!ret) {
             uart_send_string("Failed to allocate ");
@@ -104,19 +112,38 @@ void parse_command(char* cmd)
             uart_send_hex((unsigned long)ret);
             uart_send_string("\n");
         }
-    } else if (!str_cmp(cmd_name, "print_dtb"))
-        fdt_traverse(print_dtb);
-    else if (!str_cmp(cmd_name, "logo"))
-        send_logo();
-    else if (!str_cmp(cmd_name, "asia_godtone"))
-        send_asiagodtone();
-    else if (!str_cmp(cmd_name, "exec")) {
-        char* file_name = str_tok(NULL, " ");
-        if (!file_name) {
-            uart_send_string("Usage: exec <filename>\n");
+        } else if (!str_cmp(cmd_name, "print_dtb"))
+            fdt_traverse(print_dtb);
+        else if (!str_cmp(cmd_name, "logo"))
+            send_logo();
+        else if (!str_cmp(cmd_name, "asia_godtone"))
+            send_asiagodtone();
+        else if (!str_cmp(cmd_name, "exec")) {
+            char* file_name = str_tok(NULL, " ");
+            if (!file_name) {
+                uart_send_string("Usage: exec <filename>\n");
+                return;
+            }
+            exec(file_name);
+    } else if (!str_cmp(cmd_name, "timer_irq")) {
+        char* time = str_tok(NULL, " ");
+        if (!time) {
+            uart_send_string("Usage: timer_irq <seconds>\n");
             return;
         }
-        exec(file_name);
+        int seconds = decstr2int(time);
+        if (seconds < 0) {
+            uart_send_string("Invalid time\n");
+            return;
+        }
+        set_seconds(seconds);
+        enable_core0_timer();
+        set_core_timer_timeout();
+    } else if (!str_cmp(cmd_name, "fuck")) {
+        disable_irq();
+        disable_core0_timer();
+        uart_send_string("No more fucking timer_irq !!!\n");
+        enable_irq();
     } else {
         uart_send_string("Command '");
         uart_send_string(cmd);

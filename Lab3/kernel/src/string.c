@@ -99,15 +99,21 @@ char* str_cpy(char* dest, const char* src)
     return dest;
 }
 
-static inline unsigned int decchar2int(unsigned char in)
+static inline int decchar2int(unsigned char in)
 {
+    if (in < '0' || in > '9')
+        return -1;
     return in - '0';
 }
 
-unsigned int decstr2int(char* dec_str)
+int decstr2int(char* dec_str)
 {
     unsigned int result = 0;
-    while (*dec_str)
-        result = result * 10 + decchar2int(*dec_str++);
+    while (*dec_str) {
+        int digit = decchar2int(*dec_str++);
+        if (digit == -1)
+            return -1;
+        result = result * 10 + digit;
+    }
     return result;
 }

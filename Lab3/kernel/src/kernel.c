@@ -7,6 +7,7 @@
 #include "mini_uart.h"
 #include "shell.h"
 #include "string.h"
+#include "timer.h"
 #include "utils.h"
 
 void kernel_main(uintptr_t x0)
@@ -21,6 +22,7 @@ void kernel_main(uintptr_t x0)
 
     irq_vector_init();
 
+    enable_irq();
 
     /* get dtb addr */
     // uart_send_string("DTB addr: 0x");
