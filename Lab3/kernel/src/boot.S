@@ -5,6 +5,8 @@
 
 .globl _start
 _start:
+    mov x10, x0 // protect the dtb address sent from the bootloader
+
     mrs x1, mpidr_el1
     and x1, x1, #3
     cbz x1, master
@@ -55,7 +57,6 @@ from_el2_to_el1:
     eret
 
 el1_entry:
-    mov x10, x0
     adr x0, bss_begin 
     adr x1, bss_end
     sub x1, x1, x0

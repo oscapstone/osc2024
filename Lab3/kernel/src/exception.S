@@ -56,6 +56,13 @@
     eret
 .endm
 
+.macro handle_timer_irq 
+    save_all
+    bl timer_irq_exception_handler
+    load_all
+    eret
+.endm
+
 
 
 .align 11
@@ -102,7 +109,7 @@ sync_invalid_el1h:
 handle_invalid_entry  SYNC_INVALID_EL1h
 
 irq_invalid_el1h:
-handle_invalid_entry  IRQ_INVALID_EL1h
+handle_timer_irq 
 
 fiq_invalid_el1h:
 handle_invalid_entry  FIQ_INVALID_EL1h
