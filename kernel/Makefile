@@ -21,6 +21,10 @@ LIBPATH = ../lib
 LIBFLAG = -L../lib -lab
 LIB = ../lib/libab.a
 
+ifeq ($(QEMU), 1)
+	CFLAGS += -D__QEMU__
+endif
+
 ### dependencies
 .PHONY: all
 all: kernel8.img
@@ -44,6 +48,10 @@ $(LIB):
 	$(MAKE) -C $(LIBPATH)
 
 
+initramfs.cpio: rootfs
+	find $< | cpio -o -H newc > $@
+
+
 ### actions
 .PHONY: clean
 clean:
@@ -52,9 +60,9 @@ clean:
 	-@rm -v start.o
 
 .PHONY: run
-run: kernel8.img
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio
+run: kernel8.img initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -serial null -serial stdio
 
 .PHONY: debug
-debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -S -s -display none
+debug: kernel8.img initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -S -s -display none

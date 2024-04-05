@@ -1,5 +1,6 @@
 #include "shell.h"
 
+#include "command/file.h"
 #include "command/fireware.h"
 #include "command/other.h"
 #include "string.h"
@@ -8,17 +9,29 @@
 void register_cmd(shell_t *s, cmd_t cmd) { s->cmds[s->n_cmds++] = cmd; }
 
 void register_cmds(shell_t *s) {
-  register_cmd(s, (cmd_t){.help = "print Hello World!",
-                          .name = "hello",
-                          .execute = hello_cmd});
+  register_cmd(s, (cmd_t){
+                      .help = "print Hello World!",
+                      .name = "hello",
+                      .execute = hello_cmd,
+                  });
 
-  register_cmd(s, (cmd_t){.help = "show board info",  //
-                          .name = "board",
-                          .execute = board_cmd});
+  register_cmd(s, (cmd_t){
+                      .help = "show board info",
+                      .name = "board",
+                      .execute = board_cmd,
+                  });
 
-  register_cmd(s, (cmd_t){.help = "reboot the device",
-                          .name = "reboot",
-                          .execute = reboot_cmd});
+  register_cmd(s, (cmd_t){
+                      .help = "reboot the device",
+                      .name = "reboot",
+                      .execute = reboot_cmd,
+                  });
+
+  register_cmd(s, (cmd_t){
+                      .help = "list files",
+                      .name = "ls",
+                      .execute = list_files,
+                  });
 }
 
 void handle_line(const shell_t *s, char *line, int n) {
