@@ -2,6 +2,9 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,c
 
 ### BaBa ###
+# initrd
+*.cpio
+
 # Test files
 test
 test.*
