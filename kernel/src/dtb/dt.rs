@@ -2,6 +2,7 @@ use super::strings::StringMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
+#[derive(Debug)]
 pub struct Dt {
     name: String,
     properties: Vec<Property>,
@@ -113,6 +114,7 @@ fn read_string(addr: u32) -> String {
     string
 }
 
+#[derive(Debug)]
 pub enum PropValue {
     Integer(u32),
     String(String),
@@ -133,6 +135,7 @@ impl PropertyHeader {
     }
 }
 
+#[derive(Debug)]
 pub struct Property {
     length: u32,
     pub name: String,

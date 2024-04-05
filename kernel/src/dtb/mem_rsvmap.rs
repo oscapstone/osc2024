@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct MemRsvMap {
     pub mem_rsv_map: Vec<MemRsv>,
 }
@@ -22,7 +23,7 @@ impl MemRsvMap {
 }
 
 #[repr(C, packed)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct MemRsv {
     pub addr: u64,
     pub size: u64,

@@ -1,4 +1,5 @@
 #[repr(C, packed)]
+#[derive(Debug)]
 pub struct FdtHeader {
     pub magic: u32,
     pub totalsize: u32,
