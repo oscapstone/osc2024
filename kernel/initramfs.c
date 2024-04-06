@@ -8,9 +8,6 @@
 static cpio_meta_t *head = NULL;
 void parse_initramfs(int addr)
 {
-    // cpio_hdr_t *hdr = (cpio_hdr_t *) 134217728;  // dt 弄出來的
-    // cpio_hdr_t *hdr = (cpio_hdr_t *) 0x8000000;    // qemu addr
-    // cpio_hdr_t *hdr = (cpio_hdr_t *) 0x20000000;    // rpi3 addr
     cpio_hdr_t *hdr = (cpio_hdr_t *) addr;
 
     char *c;
@@ -44,7 +41,7 @@ void parse_initramfs(int addr)
         hdr = (cpio_hdr_t *) c;
     }
 
-    uart_puts("initramfs parse complete^^\n");
+    uart_puts("initramfs parse complete :D\n");
 }
 
 void list_initramfs()
@@ -93,7 +90,6 @@ void cat_initramfs()
 
 int initramfs_callback(int addr)
 {
-    uart_puts("callback\n");
     parse_initramfs(addr);
     return 0;
 }

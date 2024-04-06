@@ -1,7 +1,9 @@
 .section .text
 
 _start:
-    mov     x28, x0     // move devicetree's addr
+    // move devicetree's addr
+    mov     x28, x0
+
     // set stack pointer
     ldr     x1, =__stack_top
     mov     sp, x1

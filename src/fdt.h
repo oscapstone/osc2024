@@ -6,7 +6,6 @@
 /**
  * FDT definition (flattened device tree)
 */
-
 typedef int(*fdt_callback_t) (int);
 void fdt_traverse(fdt_callback_t);
 
@@ -31,24 +30,6 @@ typedef struct {
 #define FDT_NOP         0x00000004
 #define FDT_END         0x00000009
 
-// FDT node
-// Linux fdt node: https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/dtc.h#L153
-typedef struct fdt_node {
-    char *name;
-    struct fdt_property *proplist;
-
-    struct fdt_node *parent;
-    struct fdt_node *children;
-    struct fdt_node *next_sibling;
-} fdt_node_t;
-
-typedef struct fdt_property {
-    char *name;
-    int length;
-    char *value;
-    struct fdt_property *next;
-} fdt_property_t;
-
 typedef struct {
     uint32_t len;
     uint32_t nameoff;
@@ -59,23 +40,9 @@ typedef struct {
     uint32_t *ptr;
 } blob_t;
 
-// https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/livetree.c#L100
-fdt_node_t *build_node(fdt_property_t *, fdt_node_t *);
-
 // https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/flattree.c#L745
-fdt_node_t *unflatten_tree(blob_t *);
-
-// https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/livetree.c#L249
-void add_property(fdt_node_t *, fdt_property_t *);
-
-// https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/livetree.c#L281
-void add_child(fdt_node_t *, fdt_node_t *);
-
-int read_string(fdt_node_t *, blob_t *);
-int read_property(fdt_node_t *, blob_t *);
+void unflatten_tree(blob_t *);
 
 #define BLOB_ADVANCE(b, e) (b->ptr = (uint32_t *) ((char *) (b->ptr) + (e)))
-
-fdt_property_t *init_property_t();
 
 #endif
