@@ -4,16 +4,17 @@
 
 extern crate alloc;
 
+mod allocator;
+mod boot;
+mod cpio;
+mod driver;
+mod shell;
+
 use cpio::CpioArchive;
 use panic_wait as _;
 use small_std::println;
 
 use crate::shell::ShellCommand;
-
-mod allocator;
-mod boot;
-mod driver;
-mod shell;
 
 const CPIO_ADDR: usize = 0x800_0000;
 

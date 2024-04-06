@@ -188,13 +188,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpio"
-version = "0.1.0"
-dependencies = [
- "small-std",
-]
-
-[[package]]
 name = "device"
 version = "0.1.0"
 dependencies = [
@@ -263,7 +256,6 @@ dependencies = [
 name = "kernel"
 version = "0.1.0"
 dependencies = [
- "cpio",
  "device",
  "panic-wait",
  "small-std",
