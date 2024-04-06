@@ -6,10 +6,12 @@
 #include "uart.h"
 
 static cpio_meta_t *head = NULL;
-void parse_initramfs()
+void parse_initramfs(int addr)
 {
-    cpio_hdr_t *hdr = (cpio_hdr_t *) 0x8000000;    // qemu addr
+    // cpio_hdr_t *hdr = (cpio_hdr_t *) 134217728;  // dt 弄出來的
+    // cpio_hdr_t *hdr = (cpio_hdr_t *) 0x8000000;    // qemu addr
     // cpio_hdr_t *hdr = (cpio_hdr_t *) 0x20000000;    // rpi3 addr
+    cpio_hdr_t *hdr = (cpio_hdr_t *) addr;
 
     char *c;
     int padding, namesize, filesize;
@@ -87,4 +89,11 @@ void cat_initramfs()
         }
         cur = cur->next;
     }
+}
+
+int initramfs_callback(int addr)
+{
+    uart_puts("callback\n");
+    parse_initramfs(addr);
+    return 0;
 }

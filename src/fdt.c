@@ -1,13 +1,14 @@
 #include "fdt.h"
 #include "malloc.h"
+#include "string.h"
 #include "uart.h"
-
 
 // Linux fdt.c
 //      https://elixir.free-electrons.com/linux/v4.15-rc9/source/drivers/of/fdt.c#L445
 // unflatten tree
 //      https://elixir.free-electrons.com/linux/v4.15-rc9/source/scripts/dtc/flattree.c#L745
 static fdt_header_t *fdt_header;
+static int initramfs_addr;
 void fdt_traverse(fdt_callback_t cb)
 {
     // parse header
@@ -20,12 +21,27 @@ void fdt_traverse(fdt_callback_t cb)
     }
 
     blob_t *blob = (blob_t *) malloc(sizeof(blob_t));
-    blob->ptr = (uint32_t *) fdt_header;
+    blob->base = (uint32_t *) fdt_header; 
+    blob->ptr = blob->base;
     BLOB_ADVANCE(blob, fdt_header->off_dt_struct);
 
+
+    // print dtb content (not the same)
+    // char c;
+    // for (int i = 0; i < 200; i++) {
+    //     c = *(((char *) blob->ptr) + i);
+    //     uart_hex(c);
+    //     uart_puts(" ");
+
+    //     if (i % 4 == 3) {
+    //         uart_puts("\n");
+    //     }
+    // }
+    // uart_puts("\n");
     unflatten_tree(blob);
 
     // execute callback fn
+    cb(initramfs_addr);
 }
 
 fdt_node_t *build_node(fdt_property_t *proplist, fdt_node_t *children)
@@ -45,38 +61,89 @@ fdt_node_t *build_node(fdt_property_t *proplist, fdt_node_t *children)
 
 fdt_node_t *unflatten_tree(blob_t *blob)
 {
-    fdt_node_t *node = build_node(NULL, NULL);
-    int eaten;
+    // fdt_node_t *node = build_node(NULL, NULL);
 
-    BLOB_ADVANCE(blob, read_string(node, blob));
+    // char *p = (char *) blob->ptr;
+
+    // BLOB_ADVANCE(blob, read_string(node, blob));
 
     int index = 0;
     do {
         switch (swap_endian(*blob->ptr)) {
         case FDT_BEGIN_NODE:
             uart_puts("FDT_BEGIN_NODE\n");
+            BLOB_ADVANCE(blob, sizeof(uint32_t));
+            BLOB_ADVANCE(blob, PADDING_4(strlen(blob->ptr) + 1));
             break;
         case FDT_END_NODE:
             uart_puts("FDT_END_NODE\n");
+            BLOB_ADVANCE(blob, sizeof(uint32_t));
             break;
         case FDT_PROP:
             uart_puts("FDT_PROP\n");
-            BLOB_ADVANCE(blob, read_property(node, blob));
+            BLOB_ADVANCE(blob, sizeof(uint32_t));
+
+            fdt_propmeta_t *meta = (fdt_propmeta_t *) blob->ptr;
+            BLOB_ADVANCE(blob, sizeof(fdt_propmeta_t));
+            // uart_puts("yo: ");
+            // uart_putints(swap_endian(meta->len));
+            // uart_puts(" ");
+            // uart_putints(swap_endian(meta->nameoff));
+            // uart_puts("\n");
+
+            uart_puts("prop name: ");
+            // uart_puts(blob->ptr);
+            char *propname = (char *) blob->base + fdt_header->off_dt_strings + swap_endian(meta->nameoff);
+
+            
+            // char *c = propname;
+            // uart_putints(c);
+            // uart_puts("\n");
+            // while (*c != '\0') {
+            //     uart_send(*c++);
+            //     uart_puts("-");
+            // }
+            uart_puts(propname);
+            uart_puts("\n");
+
+            uart_puts("value: ");
+            uart_putints(swap_endian(*((uint32_t *) blob->ptr)));
+            uart_puts("\n");
+
+            if (!strcmp("linux,initrd-start", propname)) {
+                initramfs_addr = swap_endian(*((uint32_t *) blob->ptr));
+                // uart_puts(blob->ptr);
+                // uart_puts("\n");
+                return;
+            }
+
+
+            BLOB_ADVANCE(blob, PADDING_4(swap_endian(meta->len)));
+
             break;
         case FDT_END:
             uart_puts("FDT_END\n");
             break;
         case FDT_NOP:
+            BLOB_ADVANCE(blob, sizeof(uint32_t));
             uart_puts("FDT_NOP\n");
             break;
+
+        case 0: // what?
+            uart_puts("FDT_PADDING\n");
+            BLOB_ADVANCE(blob, sizeof(uint32_t));
+            break;
         default:
-            uart_puts("Default\n");
+            uart_puts("FDT_DEFAULT: ");
+            uart_putints(swap_endian(*blob->ptr));
+            uart_puts("\n");
             break;
         }
-    } while (++index < 7);
+    } while (++index < 100);
+    // } while (1);
 
     // TODO: unflatten return 前應該要加 blob->ptr
-    return node;
+    return NULL;
 }
 
 /**

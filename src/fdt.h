@@ -7,7 +7,7 @@
  * FDT definition (flattened device tree)
 */
 
-typedef int(*fdt_callback_t) (int, int);
+typedef int(*fdt_callback_t) (int);
 void fdt_traverse(fdt_callback_t);
 
 typedef struct {
@@ -55,6 +55,7 @@ typedef struct {
 } fdt_propmeta_t;
 
 typedef struct {
+    uint32_t *base;
     uint32_t *ptr;
 } blob_t;
 

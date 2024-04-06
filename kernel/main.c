@@ -1,3 +1,4 @@
+#include "fdt.h"
 #include "initramfs.h"
 #include "uart.h"
 #include "shell.h"
