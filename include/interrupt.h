@@ -12,10 +12,6 @@ enum
 	TIMER_TASKLET = 2, // timer has highest priority
 };
 
-struct softirq_action {
-    void (*action)(void); // the function pointer should keep the data it needs.
-};
-
 /* Ref: linux/interrupt.h */
 struct tasklet_struct {
 	struct tasklet_struct *next;
@@ -40,6 +36,10 @@ void tasklet_init(void);
 
 
 /* Softirq not implemented in this project for now. */
+struct softirq_action {
+    void (*action)(void); // the function pointer should keep the data it needs.
+};
+
 enum
 {
 	HI_SOFTIRQ=0,

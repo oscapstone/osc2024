@@ -16,6 +16,7 @@ void fdt_init()
     dtb_address = (fdt_header *) *tmp_pointer;
 }
 
+/* Start from dtb_address, traverse all the node and property. */
 void fdt_traverse(void (*callback)(fdt_prop *, char *, char *))
 {
     if (bswap_32(dtb_address->magic) != FDT_MAGIC)

@@ -75,8 +75,8 @@ void do_tasklet(void)
         *tl = cur_tl->next;
         /* Do the tl tasklet. */
         cur_tl->func(cur_tl->data);
-    }
 
-    /* Restore the previous tasklet priority */
-    cur_tl_priority = prev_priority;
+        /* Reset cur_tl_priority, so we can choose next tasklet which priority higher than prev tasklet */
+        cur_tl_priority = prev_priority;
+    }
 }
