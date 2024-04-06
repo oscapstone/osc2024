@@ -1,4 +1,5 @@
 mod registers;
+mod utils;
 
 use registers::{Registers, GPFSEL1, GPPUD, GPPUDCLK0};
 use small_std::sync::Mutex;
@@ -27,12 +28,12 @@ impl GPIOInner {
         const DELAY: usize = 2000;
 
         self.registers.GPPUD.write(GPPUD::PUD::Off);
-        cpu::spin_for_cycles(DELAY);
+        utils::spin_for_cycles(DELAY);
 
         self.registers
             .GPPUDCLK0
             .write(GPPUDCLK0::PUDCLK15::AssertClock + GPPUDCLK0::PUDCLK14::AssertClock);
-        cpu::spin_for_cycles(DELAY);
+        utils::spin_for_cycles(DELAY);
 
         self.registers.GPPUD.write(GPPUD::PUD::Off);
         self.registers.GPPUDCLK0.set(0);

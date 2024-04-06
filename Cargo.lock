@@ -3,15 +3,6 @@
 version = 3
 
 [[package]]
-name = "aarch64-cpu"
-version = "9.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac42a04a61c19fc8196dd728022a784baecc5d63d7e256c01ad1b3fbfab26287"
-dependencies = [
- "tock-registers 0.8.1",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -204,20 +195,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpu"
-version = "0.1.0"
-dependencies = [
- "aarch64-cpu",
-]
-
-[[package]]
 name = "device"
 version = "0.1.0"
 dependencies = [
- "cpu",
  "paste",
  "small-std",
- "tock-registers 0.9.0",
+ "tock-registers",
 ]
 
 [[package]]
@@ -281,7 +264,6 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "cpio",
- "cpu",
  "device",
  "panic-wait",
  "small-std",
@@ -376,7 +358,6 @@ checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 name = "panic-wait"
 version = "0.1.0"
 dependencies = [
- "cpu",
  "small-std",
 ]
 
@@ -522,12 +503,6 @@ dependencies = [
  "cfg-if",
  "once_cell",
 ]
-
-[[package]]
-name = "tock-registers"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
 
 [[package]]
 name = "tock-registers"
