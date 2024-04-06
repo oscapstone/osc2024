@@ -32,9 +32,15 @@ void register_cmds(shell_t *s) {
                       .name = "ls",
                       .execute = list_files,
                   });
+
+  register_cmd(s, (cmd_t){
+                      .help = "print file content",
+                      .name = "cat",
+                      .execute = cat_file,
+                  });
 }
 
-void handle_line(const shell_t *s, char *line, int n) {
+void handle_line(const shell_t *s, char *line) {
   char cmd[0x100];
   char *args = strtok(line, cmd, 0x100, ' ');
 
@@ -71,7 +77,7 @@ void shell_loop(const shell_t *s) {
 
     // echo user input
     char c = uart_read();
-    uart_print(&c);
+    uart_write(c);
 
     cmd[cmd_index++] = c;
 
@@ -80,8 +86,8 @@ void shell_loop(const shell_t *s) {
       continue;
     }
 
-    cmd[cmd_index] = '\0';
-    handle_line(s, cmd, cmd_index);
+    cmd[cmd_index - 1] = '\0';
+    handle_line(s, cmd);
 
     cmd_index = 0;
   }

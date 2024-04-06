@@ -49,7 +49,7 @@ $(LIB):
 
 
 initramfs.cpio: rootfs
-	find $< | cpio -o -H newc > $@
+	cd $< && find . | cpio -o -H newc > ../$@
 
 
 ### actions
@@ -58,6 +58,7 @@ clean:
 	-@rm -v kernel8.*
 	-@rm -rv obj
 	-@rm -v start.o
+	-@rm -v initramfs.cpio
 
 .PHONY: run
 run: kernel8.img initramfs.cpio
