@@ -66,8 +66,9 @@ disable_interrupt:          // masking interrupts
 .global set_exception_vector_table			//use as function
 set_exception_vector_table:
   adr x0, exception_vector_table
-  msr vbar_el1, x0                // Vector Base Address Register for EL1
-  ret
+  msr vbar_el1, x0                // Vector Base Address Register for EL1: Holds the exception base address for any exception that is taken to EL1.
+  ret                             // Bits[10:0] in the vbar reg is reserved, while bits[63:11] is the vector base address,
+                                  // so the vector table address should be aligned to 0x800.
 
 .align 11                       // vector table should be aligned to 0x800 (2^11)
 .global exception_vector_table  // 16 exception handlers (4 exception levels multiplied by 4 execution states)

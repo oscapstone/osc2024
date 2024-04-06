@@ -10,7 +10,7 @@ proc_hang:
     wfe                     // wait-for-event instruction, which makes processors 
     b       proc_hang
 setting:                      // if cpu_id == 0
-    //mov     x27, x0
+    mov     x27, x0
     bl      set_exception_vector_table
     ldr     x1, =_start       // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     mov     sp, x1
