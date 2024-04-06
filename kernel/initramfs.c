@@ -8,7 +8,7 @@
 static cpio_meta_t *head = NULL;
 void parse_initramfs(int addr)
 {
-    cpio_hdr_t *hdr = (cpio_hdr_t *) addr;
+    cpio_hdr_t *hdr = (cpio_hdr_t *) ((long) addr);
 
     char *c;
     int padding, namesize, filesize;

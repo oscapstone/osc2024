@@ -39,7 +39,7 @@ void unflatten_tree(blob_t *blob)
         switch (swap_endian(*blob->ptr)) {
         case FDT_BEGIN_NODE:
             BLOB_ADVANCE(blob, sizeof(uint32_t));
-            BLOB_ADVANCE(blob, PADDING_4(strlen(blob->ptr) + 1));
+            BLOB_ADVANCE(blob, PADDING_4(strlen((const char *) blob->ptr) + 1));
             break;
 
         case FDT_END_NODE:
