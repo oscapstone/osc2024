@@ -3,3 +3,4 @@
 pub mod uart;
 pub mod mailbox;
 pub mod cpio;
+pub mod addr_loader;

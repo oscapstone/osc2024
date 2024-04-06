@@ -1,3 +1,9 @@
+extern crate alloc;
+
+use alloc::string::String;
+use alloc::vec::Vec;
+use crate::uart;
+
 // a paraser to read cpio archive
 #[repr(C, packed)]
 struct CpioNewcHeader {
@@ -63,20 +69,27 @@ impl CpioHandler {
         }
     }
 
-    pub fn get_current_header_magic(&self) -> &str {
+    fn get_current_header_magic(&self) -> &str {
         let cur_header = self.get_current_file_header();
         let magic_slice = &cur_header.c_magic;
         core::str::from_utf8(magic_slice).unwrap()
     }
 
-    pub fn get_current_file_name(&self) -> &str {
+    pub fn get_current_file_name(&self) -> Option<&str> {
         let cur_header = self.get_current_file_header();
         let namesize = hex_to_u64(&cur_header.c_namesize);
         let cur_pos = self.cpio_cur_pos as *mut u8;
         let name_ptr = (cur_pos as u64 + core::mem::size_of::<CpioNewcHeader>() as u64) as *mut u8;
-        unsafe {
-            let name_slice = &core::slice::from_raw_parts(name_ptr, namesize as usize);
-            core::str::from_utf8(name_slice).unwrap()
+        let name = unsafe {
+            core::str::from_utf8_unchecked(core::slice::from_raw_parts(
+                name_ptr,
+                (namesize - 1) as usize,
+            ))
+        };
+        if name == "TRAILER!!!" {
+            None
+        } else {
+            Some(name)
         }
     }
 
@@ -113,6 +126,21 @@ impl CpioHandler {
 
     pub fn rewind(&mut self) {
         self.cpio_cur_pos = self.cpio_start;
+    }
+
+    pub fn list_all_files(&mut self) -> Vec<alloc::string::String> {
+        uart::uart_write_str("Listing all files...\r\n");
+        let mut files = Vec::new();
+        loop {
+            if let Some(name) = self.get_current_file_name() {
+                files.push(String::from(name));
+            } else {
+                break;
+            }
+            self.next_file();
+        }
+        self.rewind();
+        files
     }
 }
 

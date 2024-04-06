@@ -111,9 +111,9 @@ impl Uart {
 
 #[no_mangle]
 #[inline(never)]
-pub unsafe fn uart_write_str(s: &str) {
+pub fn uart_write_str(s: &str) {
     for i in s.bytes() {
-        write_u8(i);
+        unsafe {write_u8(i)};
     }
 }
 
@@ -217,4 +217,15 @@ pub fn strncmp(s1: &str, s2: &str, n: usize) -> bool {
         i = i + 1;
     }
     true
+}
+
+pub fn reboot() {
+    const PM_PASSWORD: u32 = 0x5a000000;
+    const PM_RSTC: u32 = 0x3F10001c;
+    const PM_WDOG: u32 = 0x3F100024;
+    const PM_RSTC_WRCFG_FULL_RESET: u32 = 0x00000020;
+    unsafe {
+        write_volatile(PM_WDOG as *mut u32, PM_PASSWORD | 100);
+        write_volatile(PM_RSTC as *mut u32, PM_PASSWORD | PM_RSTC_WRCFG_FULL_RESET);
+    }
 }

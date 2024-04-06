@@ -13,8 +13,10 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
-	ADR_REL x1, __dtb_addr
+	// Save the address of the device tree blob.
+	ldr x1, =__dtb_addr
 	str x0, [x1]
+
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	and	x0, x0, {CONST_CORE_ID_MASK}
@@ -63,8 +65,8 @@ _start:
 	// Jump to Rust code.
 	bl	_start_rust
 
-	// load __dtb_addr value
-	ADR_REL x1, __dtb_addr
+	// restore the address of the device tree blob.
+	ldr x1, =__dtb_addr
 	ldr x0, [x1]
 	
 	// jump to 0x80000
