@@ -23,9 +23,7 @@ int string_length(char *s);
 int strcmp(char *s1, char *s2);
 int hex_to_int(char *p, int len);
 void cpio_ls();
-int shell(char * cmd);
-void interrupt_handler_entry();
+void shell(char * cmd);
 void core_timer_handler();
-
 
 #endif // SHELL_H

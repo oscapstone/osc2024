@@ -14,8 +14,6 @@
 #define AUX_MU_STAT     ((volatile unsigned int*)(MMIO_BASE+0x00215064))
 #define AUX_MU_BAUD     ((volatile unsigned int*)(MMIO_BASE+0x00215068))
 
-//#define AUX_MU_IER_REG  ((volatile unsigned int*)(0x3f215044))
-#define IRQS1 ((volatile unsigned int *)(0x3f00b210))
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
  */
@@ -41,14 +39,7 @@ void uart_init()
     *GPPUDCLK0 = (1<<14)|(1<<15); // apply to GPIO 14, 15
     r=150; while(r--) { asm volatile("nop"); }
     *GPPUDCLK0 = 0;        // flush GPIO setup
-    //*IRQS1 |= 1 << 29;
     *AUX_MU_CNTL = 3;      // enable Tx, Rx
-}
-
-void uart_interrupt(){
-    //*AUX_MU_IER = 1;
-    *AUX_MU_IER |= 0x02;
-    *IRQS1 |= 1 << 29;
 }
 
 /**

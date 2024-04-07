@@ -1,43 +1,4 @@
 #include "uart.h"
-#include "irq.h"
-
-#define BUFFER_SIZE 1024
-
-char uart_read_buffer[BUFFER_SIZE];
-unsigned int read_idx = 0;
-
-char uart_write_buffer[BUFFER_SIZE];
-unsigned int write_idx = 0;
-unsigned int write_cur = 0;
-int async;
-
-void uart_read_handler() {
-    char ch = (char)(*AUX_MU_IO);
-    if(ch == '\r'){ //command
-        //uart_send('\n');
-        uart_read_buffer[read_idx] = '\0';
-        //uart_puts(uart_read_buffer);
-        uart_write_buffer[write_idx] = '\n';
-        write_idx++;
-        result = shell(uart_read_buffer);
-        read_idx = 0;
-        uart_read_buffer[read_idx] = '\0';
-    }
-    else{
-        uart_read_buffer[read_idx] = ch;
-        uart_write_buffer[write_idx] = ch; 
-        //uart_send(uart_read_buffer[read_idx]);
-        read_idx++;
-        write_idx++;
-    }
-}
-
-void uart_write_handler(){
-    if(write_cur < write_idx){
-        *AUX_MU_IO=uart_write_buffer[write_cur];
-        write_cur++;
-    }
-}
 
 struct cpio_newc_header {
     //file metadata
@@ -105,9 +66,9 @@ void run_user_program(){
             current += (4 - (current - (char *)fs) % 4);
     }
     uart_puts("found user.img\n");
-
+    
     // current is the file address
-    asm volatile ("mov x0, 0x345"); 
+    asm volatile ("mov x0, 0"); 
     asm volatile ("msr spsr_el1, x0"); 
     asm volatile ("msr elr_el1, %0": :"r" (current));
     asm volatile ("mov x0, 0x20000");
@@ -131,14 +92,8 @@ void exception_entry() {
     uart_puts("\n");
 }
 
-void async_uart_io(){
-    async = 1;
-    uart_interrupt();
-    while(1){}
-}
 
-
-int shell(char * cmd){
+void shell(char * cmd){
     if(strcmp(cmd, "help") == 0){
         uart_send('\r');
         uart_puts("Lab3 Exception and Interrupt\n");
@@ -146,23 +101,10 @@ int shell(char * cmd){
         uart_puts("help\t: print all available commands\n");
         uart_send('\r');
         uart_puts("run\t: set and run user program\n");
-        uart_send('\r');
-        uart_puts("timer\t: start showing timer interrupt\n");
-        uart_send('\r');
-        uart_puts("async\t: start uart interrupt\n");
     }
     else if(strcmp(cmd, "run") == 0){
         run_user_program();
     }
-    else if(strcmp(cmd, "timer") == 0){
-        core_timer_enable();
-    }
-    else if(strcmp(cmd, "async") == 0){
-        async_uart_io();
-    }
-    else
-        return 0;
-    return 1;
 }
 
 void core_timer_handler() {
@@ -175,21 +117,4 @@ void core_timer_handler() {
     uart_puts("Seconds since boot: ");
     uart_int(cntpct);
     uart_puts("\n");
-}
-
-void interrupt_handler_entry(){
-    //asm volatile("msr DAIFSet, 0xf");
-    int irq_pending1 = *IRQ_PENDING_1;
-    int core0_irq = *CORE0_INTERRUPT_SOURCE;
-    int iir = *AUX_MU_IIR;
-    if (core0_irq & 2){
-        core_timer_handler();
-    }
-    else{
-        if ((iir & 0x06) == 0x04)
-            uart_read_handler();
-        else
-            uart_write_handler();
-    }
-    //asm volatile("msr DAIFClr, 0xf");
 }

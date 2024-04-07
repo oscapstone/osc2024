@@ -1,12 +1,11 @@
 .section ".text.boot"
 
 .global _start
-.global core_timer_enable
 
 _start:  
     // read cpu id, stop slave cores
     bl      from_el2_to_el1
-    //bl      core_timer_enable
+    bl      core_timer_enable
     bl      set_exception_vector_table
 
     mrs     x1, mpidr_el1 //get cpu num
@@ -41,7 +40,7 @@ _start:
 from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
-    mov x0, 0x345 // 3c5 EL1h (SPSel = 1) with interrupt disabled, 345 enable interrupt
+    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
     msr spsr_el2, x0
     msr elr_el2, lr
     eret // return to EL1
@@ -110,7 +109,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b interrupt_handler
+  b exception_handler
   .align 7
   b exception_handler
   .align 7
@@ -119,7 +118,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b interrupt_handler
+  b timer_interrupt_handler
   .align 7
   b exception_handler
   .align 7
@@ -152,8 +151,8 @@ core_timer_enable:
     str w0, [x1] // unmask timer interrupt
     ret
 
-interrupt_handler:
+timer_interrupt_handler:
     save_all
-    bl interrupt_handler_entry
+    bl core_timer_handler
     load_all
     eret
