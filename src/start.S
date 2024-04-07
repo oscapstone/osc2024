@@ -32,7 +32,7 @@ master:
     b       proc_hang       // halt this core if return
 
 from_el2_to_el1:
-    mov     x0, (1 << 31)   // RW, bit[31] (in HCR_EL2 reg) set to 1 -> EL1 uses aarch64; 0 -> low levels are all aarch32
+    mov     x0, (1 << 31)   // RW, bit[31] (in HCR_EL2 reg) set to 1 -> EL1 uses aarch64; 0 -> all low levels are aarch32
     msr     hcr_el2, x0     // Hypervisor Configuration Register for EL2
     mov     x0, 0x3c5       // EL1h (SPSel = 1) with interrupt disabled
                             // bit[9](PSTATE.D): the debug exception mask bit, bit[8](PSTATE.A): SEerror mask bit
