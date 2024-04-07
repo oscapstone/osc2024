@@ -10,4 +10,7 @@ fn main() {
         .filter_map(Result::ok)
         .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "ld"))
         .for_each(|f| println!("cargo:rerun-if-changed:={}", f.path().display()));
+
+    println!("cargo:rerun-if-changed=src/boot.s");
+    println!("cargo:rerun-if-changed=build.rs");
 }

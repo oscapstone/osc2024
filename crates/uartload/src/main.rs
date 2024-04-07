@@ -4,11 +4,12 @@
 
 mod drivers;
 
-use core::arch::global_asm;
+use core::arch::{asm, global_asm};
 use panic_wait as _;
 use small_std::{fmt::print::console::console, println};
 
 const RPI3_DEFAULT_LOAD_ADDR: *mut u8 = 0x80000 as *mut u8;
+static mut DEVICETREE_START_ADDR: usize = 0;
 
 const BANNER: &str = r#"
   __  _____   ___  ________   ____  ___   ___ 
@@ -28,6 +29,8 @@ pub static BOOT_CORE_ID: u64 = 0;
 
 #[no_mangle]
 pub unsafe fn _start_rust() -> ! {
+    asm!("mov {}, x0", out(reg) DEVICETREE_START_ADDR);
+
     if let Err(e) = drivers::register_drivers() {
         panic!("Failed to initialize driver subsystem: {}", e);
     }
@@ -41,7 +44,7 @@ fn main() -> ! {
     println!("{}", BANNER);
 
     println!("[uartload] startup complete.");
-    println!("[uartload] waiting for kernel from UART");
+    println!("[uartload] waiting for kernel sent through UART");
 
     // Make sure the console is in a clean state
     console().flush();
@@ -71,6 +74,8 @@ fn main() -> ! {
     println!("[uartload] kernel received, jumping to kernel");
     console().flush();
 
-    let kernel: fn() -> ! = unsafe { core::mem::transmute(RPI3_DEFAULT_LOAD_ADDR) };
-    kernel();
+    unsafe {
+        let kernel: fn(usize) -> ! = core::mem::transmute(RPI3_DEFAULT_LOAD_ADDR);
+        kernel(DEVICETREE_START_ADDR);
+    }
 }
