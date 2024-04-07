@@ -1,4 +1,5 @@
 #include "uart.h"
+
 #include "gpio.h"
 #include "io.h"
 
@@ -68,7 +69,7 @@ void uart_init() {
   *AUX_MU_BAUD = 270;
 
   *AUX_MU_IIR = 6;
-  *AUX_MU_CNTL = 3; // enable Tx, Rx
+  *AUX_MU_CNTL = 3;  // enable Tx, Rx
 }
 
 void uart_write(unsigned int c) {
@@ -123,7 +124,7 @@ void uart_println(char *s) {
   uart_print("\n");
 }
 
-void uart_hex(unsigned int d) {
+void uart_hex(size_t d) {
   unsigned int n;
   int c;
 

@@ -1,5 +1,7 @@
 #include "io.h"
+
 #include "string.h"
+#include "uart.h"
 
 size_t vsprintk(char *dst, char *fmt, __builtin_va_list args) {
   char *dst_orig = dst;
@@ -26,6 +28,17 @@ size_t vsprintk(char *dst, char *fmt, __builtin_va_list args) {
         int arg = __builtin_va_arg(args, int);
         char buf[11];
         char *p = itoa(arg, buf);
+        while (*p) {
+          *dst++ = *p++;
+        }
+      }
+
+      /* hex number */
+      else if (*fmt == 'x') {
+        size_t num = __builtin_va_arg(args, size_t);
+
+        char buf[17];
+        char *p = itohex(num, buf);
         while (*p) {
           *dst++ = *p++;
         }

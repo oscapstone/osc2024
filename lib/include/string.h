@@ -36,5 +36,6 @@ int isspace(char c);
 
 char tolower(char c);
 u32_t hex_to_i(char *h, int n);
+char *itohex(size_t value, char *s);
 
 #endif  // _STRING_H

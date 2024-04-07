@@ -1,6 +1,7 @@
 #include "string.h"
 
 #include "int.h"
+#include "uart.h"
 
 char *strtok(char *src, char *dest, size_t n, char delimeter) {
   size_t tok_size = 0;
@@ -81,6 +82,31 @@ char *itoa(int value, char *s) {
   // revserse
   for (int i = tidx - 1; i >= 0; i--) {
     s[idx++] = tmp[i];
+  }
+
+  s[idx] = '\0';
+
+  return s;
+}
+
+char *itohex(size_t value, char *s) {
+  short c, n;
+  size_t idx = 0;
+
+  for (c = sizeof(size_t) * 8 - 4; c >= 0; c -= 4) {
+    // get highest tetrad
+    n = (value >> c) & 0xF;
+
+    // remove prefix 0s
+    if (idx == 0 && n == 0) continue;
+
+    // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+    n += n > 9 ? 0x37 : 0x30;
+    s[idx++] = n;
+  }
+
+  if (idx == 0) {
+    s[idx++] = '0';
   }
 
   s[idx] = '\0';
