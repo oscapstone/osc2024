@@ -7,7 +7,7 @@
 #define PM_RSTC 0x3F10001c
 #define PM_WDOG 0x3F100024
 
-void board_cmd(char *args, u32_t arg_size) {
+void board_cmd(char *args, size_t arg_size) {
   unsigned int board_revision;
   if (get_board_revision(&board_revision) == 0) {
     uart_print("Board revision number is: ");
@@ -49,4 +49,4 @@ void cancel_reset() {
   set(PM_WDOG, PM_PASSWORD | 0);  // number of watchdog tick
 }
 
-void reboot_cmd(char *args, u32_t arg_size) { reset(100); }
+void reboot_cmd(char *args, size_t arg_size) { reset(100); }

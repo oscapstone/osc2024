@@ -2,4 +2,4 @@
 
 #include "uart.h"
 
-void hello_cmd(char *args, u32_t arg_size) { uart_println("Hello World!"); }
+void hello_cmd(char *args, size_t arg_size) { uart_println("Hello World!"); }

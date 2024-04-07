@@ -3,7 +3,7 @@
 
 #include "int.h"
 
-void board_cmd(char *args, u32_t arg_size);
-void reboot_cmd(char *args, u32_t arg_size);
+void board_cmd(char *args, size_t arg_size);
+void reboot_cmd(char *args, size_t arg_size);
 
 #endif  // _FIRMWRARE_H

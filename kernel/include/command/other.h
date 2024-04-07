@@ -3,6 +3,6 @@
 
 #include "int.h"
 
-void hello_cmd(char *args, u32_t arg_size);
+void hello_cmd(char *args, size_t arg_size);
 
 #endif  // _OTHER_H

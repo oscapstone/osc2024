@@ -5,7 +5,7 @@
 typedef struct cmd_s {
   char *name;
   char *help;
-  void (*execute)(char *args, u32_t arg_size);
+  void (*execute)(char *args, size_t arg_size);
 } cmd_t;
 
 typedef struct shell_s {
