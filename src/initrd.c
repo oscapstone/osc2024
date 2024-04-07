@@ -155,13 +155,14 @@ void initrd_usr_prog(char *cmd)
                 // get program start address
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
-                asm volatile("mov x0, 0              \n\t"
-                             "msr spsr_el1, x0       \n\t");
-                asm volatile("mov x0, %0             \n\t"
-                             "msr elr_el1, x0        \n\t"::"r" (prog_addr));
-                asm volatile("mov x0, 0x60000        \n\t"
-                             "msr sp_el0, x0         \n\t");
-                asm volatile("eret                   \n\t");
+                // jump to el0 and execute user program.
+                asm volatile("mov x1, 0              \n\t"
+                             "msr spsr_el1, x1       \n\t"
+                             "mov x1, %0             \n\t"
+                             "msr elr_el1, x1        \n\t"
+                             "mov x1, 0x60000        \n\t"
+                             "msr sp_el0, x1         \n\t"
+                             "eret                   \n\t"::"r" (prog_addr));
             }
         }
         // jump to the next file
