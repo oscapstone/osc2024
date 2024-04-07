@@ -1,5 +1,3 @@
-#![no_std]
-
 use core::marker::PhantomData;
 
 const CPIO_NEWC_MAGIC: &[u8] = b"070701";
