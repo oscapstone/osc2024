@@ -87,6 +87,8 @@ fn main() -> Result<()> {
                 match e.kind() {
                     std::io::ErrorKind::TimedOut => {
                         if timeout_retries == 0 {
+                            // Maybe we missed the start of the message
+                            // So we'll just start sending the kernel
                             break;
                         }
                         timeout_retries -= 1;

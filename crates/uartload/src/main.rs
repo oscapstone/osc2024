@@ -61,6 +61,7 @@ fn main() -> ! {
 
     console().write_char('O');
     console().write_char('K');
+    console().flush();
 
     unsafe {
         for i in 0..image_size {
