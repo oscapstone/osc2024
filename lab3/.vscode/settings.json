@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "dtb_parser.h": "c",
+        "uart.h": "c"
+    }
+}
