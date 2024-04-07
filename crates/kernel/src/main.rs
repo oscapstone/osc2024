@@ -1,4 +1,5 @@
 #![feature(asm_const)]
+#![feature(error_in_core)]
 #![no_std]
 #![no_main]
 
@@ -7,16 +8,20 @@ extern crate alloc;
 mod allocator;
 mod boot;
 mod cpio;
+mod devicetree;
 mod driver;
 mod shell;
 
 use cpio::CpioArchive;
+use devicetree::DeviceTree;
 use panic_wait as _;
+use shell::ShellCommand;
 use small_std::println;
 
-use crate::shell::ShellCommand;
+use crate::devicetree::DeviceTreeEntryValue;
 
-const CPIO_ADDR: usize = 0x800_0000;
+const INITRD_DEVICETREE_NODE: &str = "chosen";
+const INITRD_DEVICETREE_PROP: &str = "linux,initrd-start";
 
 unsafe fn kernel_init() -> ! {
     if let Err(e) = driver::register_drivers() {
@@ -41,7 +46,35 @@ fn main() -> ! {
 
     println!("[2] Echoing input now");
 
-    let cpio = unsafe { CpioArchive::new(CPIO_ADDR) };
+    let mut cpio_start_addr = 0;
+
+    let devicetree = unsafe { DeviceTree::new(boot::DEVICETREE_START_ADDR) };
+    if let Err(e) = devicetree.traverse(|node, props| {
+        if node != INITRD_DEVICETREE_NODE {
+            return;
+        }
+        for prop in props {
+            let prop = prop.unwrap();
+            if prop.name != INITRD_DEVICETREE_PROP {
+                continue;
+            }
+            match prop.value {
+                DeviceTreeEntryValue::U32(v) => cpio_start_addr = v as usize,
+                DeviceTreeEntryValue::U64(v) => cpio_start_addr = v as usize,
+                DeviceTreeEntryValue::String(v) => println!("invalid initrd start address: {}", v),
+                DeviceTreeEntryValue::Bytes(v) => println!("invalid initrd start address: {:?}", v),
+            }
+        }
+    }) {
+        println!("Failed to parse devicetree: {}", e);
+    };
+
+    if cpio_start_addr == 0 {
+        println!("No initrd found. Halting...");
+        loop {}
+    }
+
+    let cpio = unsafe { CpioArchive::new(cpio_start_addr) };
     let commands: &[&dyn ShellCommand] = &[
         &shell::commands::HelloCommand,
         &shell::commands::RebootCommand,
