@@ -49,21 +49,21 @@
 .macro	ventry	label       //  used to create entries in the vector table.
 	.align	7
 	b	\label
-	.endm
+.endm
   
 .global enable_interrupt    
-enable_interrupt:           // unmasking interrupt
-  msr DAIFClr, 0xf          // DAIFCler: asm symbol - used to clear any or all of DAIF to 0 (modify PSTATE fileds directly)
-  ret
+enable_interrupt:           
+  msr DAIFClr, 0xf          // DAIFCler: used to clear any or all of DAIF to 0 (modify PSTATE fileds directly)
+  ret                          
                             // ARM processor state has 4 bits that are responsible for holding mask status for different types of interrupts.
                             // D: Masks debug exceptions(a special type of synchronous exceptions), A: Masks SErrors
                             // I: Masks IRQs, F: Masks FIQs
 .global disable_interrupt
-disable_interrupt:          // masking interrupts
-  msr DAIFSet, 0xf          // DAIFset: asm symbol - used to set any or all of DAIF to 1 (modify PSTATE fileds directly)
+disable_interrupt:          // DAIFset: used to set any or all of DAIF to 1 (modify PSTATE fileds directly)
+  msr DAIFSet, 0xf          
   ret
 
-.global set_exception_vector_table			//use as function
+.global set_exception_vector_table			// use as function
 set_exception_vector_table:
   adr x0, exception_vector_table
   msr vbar_el1, x0                // Vector Base Address Register for EL1: Holds the exception base address for any exception that is taken to EL1.
