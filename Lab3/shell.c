@@ -5,9 +5,19 @@
 #define BUFFER_SIZE 1024
 #define MAX_TIMER 10
 
-unsigned long timer_times[MAX_TIMER];
-char timer_msgs[MAX_TIMER][1024];
-unsigned int timer_idx;
+typedef void (*timer_callback_t)(char* data);
+
+struct timer{
+    timer_callback_t callback;
+    char data[BUFFER_SIZE];
+    unsigned long expires;
+};
+
+struct timer timers[MAX_TIMER];
+
+// unsigned long timer_times[MAX_TIMER];
+// char timer_msgs[MAX_TIMER][1024];
+// unsigned int timer_idx;
 
 char uart_read_buffer[BUFFER_SIZE];
 unsigned int read_idx = 0;
@@ -15,18 +25,20 @@ unsigned int read_idx = 0;
 char uart_write_buffer[BUFFER_SIZE];
 unsigned int write_idx = 0;
 unsigned int write_cur = 0;
-int async;
+
 
 void uart_read_handler() {
+    asm volatile("msr DAIFSet, 0xf");
+    *AUX_MU_IER &= ~(0x01); //stop read interrupt
     char ch = (char)(*AUX_MU_IO);
     if(ch == '\r'){ //command
         //uart_send('\n');
         uart_read_buffer[read_idx] = '\0';
+        read_idx = 0;
         //uart_puts(uart_read_buffer);
         uart_write_buffer[write_idx] = '\n';
         write_idx++;
         shell(uart_read_buffer);
-        read_idx = 0;
         uart_read_buffer[read_idx] = '\0';
     }
     else{
@@ -36,13 +48,17 @@ void uart_read_handler() {
         read_idx++;
         write_idx++;
     }
+    *AUX_MU_IER |= 0x01; //start
+    asm volatile("msr DAIFClr, 0xf");
 }
 
 void uart_write_handler(){
+    *AUX_MU_IER &= ~(0x02);
     if(write_cur < write_idx){
-        *AUX_MU_IO=uart_write_buffer[write_cur];
+        *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
         write_cur++;
     }
+    *AUX_MU_IER |= 0x02;
 }
 
 struct cpio_newc_header {
@@ -160,30 +176,70 @@ void exception_entry() {
 }
 
 void async_uart_io(){
-    async = 1;
     uart_interrupt();
     while(1){}
 }
 
-int add_timer(unsigned long cur_time, char *s){
-    for(int i=0; i<MAX_TIMER; i++){
-        if(timer_times[i] == 0){
-            timer_times[i] = cur_time;
+void add_timer(timer_callback_t callback, char* data, unsigned long after){
+    asm volatile("msr DAIFSet, 0xf");
+    int i;
+    int allocated = 0;
+    unsigned long cur_time = get_current_time();
+    unsigned long print_time = cur_time + after;
+    for(i=0; i<MAX_TIMER; i++){
+        if(timers[i].expires == 0){
+            timers[i].expires = print_time;
             int j = 0;
-            while(*s != '\0'){
-                timer_msgs[i][j] = *s;
-                s++;
+            while(*data != '\0'){
+                timers[i].data[j] = *data;
+                data++;
                 j++;
             }
-            timer_msgs[i][j] = '\0';
-            //save message
-            return i; //allocated timer
+            timers[i].data[j] = '\0';
+            //uart_puts("timer data: ");
+            //uart_puts(timers[i].data[j]);
+            timers[i].callback = callback;
+            allocated = 1;
+            break;
         }
     }
-    return -1;
+
+    if(allocated == 0){
+        uart_puts("Timer Busy\n");
+    }
+
+    int new_irq = 1;
+    unsigned long min_time = print_time;
+    for(int i=0; i<MAX_TIMER; i++){
+        if(timers[i].expires < min_time && timers[i].expires > 0){
+            new_irq = 0;
+            break;
+        }
+    }
+
+    if(new_irq){
+        // uart_puts("New Interrupt Set in timer ");
+        // uart_int(i);
+        // uart_puts("\n");
+        set_timer_interrupt(print_time - cur_time);
+        //asm volatile ("msr cntp_tval_el0, %0" : : "r" (cntfrq));
+    }
+    uart_puts("Seconds to print: ");
+    uart_int(print_time);
+    uart_puts("\n");
+    asm volatile("msr DAIFClr, 0xf");
 }
 
-void add_message_timer(){
+
+void setTimeout_callback(char* data) {
+    // Convert data back to the appropriate type and print the message
+    uart_puts(data);
+    uart_puts("\n");
+    uart_send('\r');
+    uart_puts("# ");
+}
+
+void setTimeout_cmd(){
     uart_puts("MESSAGE: ");
     char in_char;
     char message[100];
@@ -219,37 +275,12 @@ void add_message_timer(){
     }
     unsigned long cur_time, print_time;
     int wait = str2int(countDown);
-    if(wait == 0){
+    if(wait <= 0){
         uart_puts("INVALID TIME\n");
         return;
     }
-    cur_time = get_current_time();
-    print_time = cur_time + wait;
     
-    int allocated = add_timer(print_time, message);
-    if(allocated < 0){
-        uart_puts("timer busy");
-        return;
-    }
-    int new_irq = 1;
-    unsigned long min_time = timer_times[allocated];
-    for(int i=0; i<MAX_TIMER; i++){
-        if(timer_times[i]<min_time && timer_times[i] > 0){
-            new_irq = 0;
-            break;
-        }
-    }
-
-    if(new_irq){
-        uart_puts("New Interrupt Set in timer ");
-        uart_int(allocated);
-        uart_puts("\n");
-        set_timer_interrupt(print_time - cur_time);
-        //asm volatile ("msr cntp_tval_el0, %0" : : "r" (cntfrq));
-    }
-    uart_puts("Seconds to print: ");
-    uart_int(print_time);
-    uart_puts("\n");
+    add_timer(setTimeout_callback, message, wait);
 }
 
 
@@ -273,7 +304,7 @@ int shell(char * cmd){
         async_uart_io();
     }
     else if(strcmp(cmd, "setTimeout") == 0 || strcmp(cmd, "st") == 0){
-        add_message_timer();
+        setTimeout_cmd();
     }
     else
         return 0;
@@ -281,22 +312,20 @@ int shell(char * cmd){
 }
 
 void timer_handler() {
+    asm volatile("msr DAIFSet, 0xf");
     unsigned long cur_time = get_current_time();
     unsigned long next = 9999;
     for(int i=0;i<MAX_TIMER;i++){
-        if(timer_times[i] == cur_time){
+        if(timers[i].expires == cur_time){
             uart_puts("\n[TIMER] ");
             uart_int(cur_time);
             uart_puts(" : ");
-            uart_puts(timer_msgs[i]);
-            uart_puts("\n");
-            uart_send('\r');
-            uart_puts("# ");
-            timer_times[i] = 0;
+            timers[i].callback(timers[i].data);
+            timers[i].expires = 0;
         }
-        else if(timer_times[i] > cur_time){
-            if(next > timer_times[i])
-                next = timer_times[i];
+        else if(timers[i].expires > cur_time){
+            if(next > timers[i].expires)
+                next = timers[i].expires;
         }
     }
     disable_core_timer();
@@ -304,16 +333,16 @@ void timer_handler() {
         set_timer_interrupt(next - cur_time);
         //uart_puts("resetted another timer\n");
     }
+    asm volatile("msr DAIFClr, 0xf");
 }
 
 void interrupt_handler_entry(){
     //asm volatile("msr DAIFSet, 0xf"); add here will boom, check how to add
-    int irq_pending1 = *IRQ_PENDING_1;
+
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
         timer_handler();
-        //timer_handler();
     }
     else{
         if ((iir & 0x06) == 0x04)
