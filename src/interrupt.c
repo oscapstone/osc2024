@@ -32,7 +32,7 @@ void el0_64_sync_interrupt_handler() {
 }
 
 void el0_64_irq_interrupt_handler() {
-  if (*CORE0_INT_SRC & CORE0_INT_SRC_TIMER) {
+  if (*CORE0_INT_SRC & CORE_INT_SRC_TIMER) {
     set_core_timer_int(get_clk_freq() / 100);
     // for going back to shell
     el0_timer_trigger_cnt++;
