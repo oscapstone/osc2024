@@ -3,11 +3,13 @@
 
 #include "int.h"
 
-#define FDT_BEGIN_NODE 0x00000001
-#define FDT_END_NODE 0x00000002
-#define FDT_PROP 0x00000003
-#define FDT_NOP 0x00000004
-#define FDT_END 0x00000009
+typedef enum fdt_tag_e {
+  FDT_BEGIN_NODE = 0x00000001,
+  FDT_END_NODE = 0x00000002,
+  FDT_PROP = 0x00000003,
+  FDT_NOP = 0x00000004,
+  FDT_END = 0x00000009,
+} fdt_tag_t;
 
 typedef struct fdt_header_s {
   /* This field shall contain the value 0xd00dfeed */
@@ -53,8 +55,27 @@ typedef struct fdt_prop_s {
   u32_t nameoff;
 } fdt_prop_t;
 
-typedef int (*traversal_callback_t)(u32_t token, char *name, fdt_prop_t *prop,
-                                    void *data);
+typedef struct fdt_node_u {
+  fdt_tag_t tag;
+
+  union {
+    struct {
+      char *node_name;
+    } begin_node;
+
+    struct {
+      char *prop_name;
+      fdt_prop_t prop;
+      char *prop_val;
+    } prop;
+
+    struct {
+    } end_node, nop, end;
+  };
+
+} fdt_node_t;
+
+typedef int (*traversal_callback_t)(fdt_node_t node);
 
 int fdt_traversal(char *dbt, traversal_callback_t cb);
 

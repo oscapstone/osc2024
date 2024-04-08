@@ -6,6 +6,6 @@
 
 extern char *initrd_base;
 
-int initrd_addr(u32_t token, char *name, fdt_prop_t *prop, void *data);
+int initrd_addr(fdt_node_t node);
 
 #endif  // _INITRD_H

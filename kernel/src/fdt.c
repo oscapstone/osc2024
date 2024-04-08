@@ -61,7 +61,10 @@ int fdt_traversal(char *dbt, traversal_callback_t cb) {
     switch (token) {
       case FDT_BEGIN_NODE: {
         char *name = cur;
-        cb(token, name, 0, 0);
+        cb((fdt_node_t){
+            .tag = token,
+            .begin_node = {.node_name = name},
+        });
 
         size_t size = strnlen(name, 256);
         cur += align(size, 4);
@@ -69,7 +72,7 @@ int fdt_traversal(char *dbt, traversal_callback_t cb) {
       }
 
       case FDT_END_NODE: {
-        cb(token, 0, 0, 0);
+        cb((fdt_node_t){.tag = token, .end_node = {}});
         break;
       }
 
@@ -80,19 +83,22 @@ int fdt_traversal(char *dbt, traversal_callback_t cb) {
         cur += sizeof(fdt_prop_t);
 
         char *property_name = strings_ptr + prop.nameoff;
-        cb(token, property_name, &prop, cur);
+        cb((fdt_node_t){
+            .tag = token,
+            .prop = {.prop_name = property_name, .prop = prop, .prop_val = cur},
+        });
 
         cur += align(prop.len, 4);
         break;
       }
 
       case FDT_NOP: {
-        cb(token, 0, 0, 0);
+        cb((fdt_node_t){.tag = token, .nop = {}});
         break;
       }
 
       case FDT_END: {
-        cb(token, 0, 0, 0);
+        cb((fdt_node_t){.tag = token, .end = {}});
         return 0;
       }
 
