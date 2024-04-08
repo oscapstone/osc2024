@@ -1,7 +1,6 @@
 #include "uart.h"
 #include "irq.h"
 #include "timer.h"
-#include "task_queue.h"
 
 #define BUFFER_SIZE 1024
 #define MAX_TIMER 10
@@ -27,22 +26,9 @@ char uart_write_buffer[BUFFER_SIZE];
 unsigned int write_idx = 0;
 unsigned int write_cur = 0;
 
-void uart_write_handler(){
-    //*AUX_MU_IER |= 0x02;
-    //uart_puts("hi\n");
-    //*AUX_MU_IER &= ~(0x02);
-    //asm volatile("msr DAIFSet, 0xf");
-    if(write_cur < write_idx){
-        *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
-        write_cur++;
-    }
-    //asm volatile("msr DAIFClr, 0xf");
-    //*AUX_MU_IER &= ~(0x02);
-    //*AUX_MU_IER |= 0x02;
-}
 
 void uart_read_handler() {
-    //asm volatile("msr DAIFSet, 0xf");
+    asm volatile("msr DAIFSet, 0xf");
     *AUX_MU_IER &= ~(0x01); //stop read interrupt
     char ch = (char)(*AUX_MU_IO);
     if(ch == '\r'){ //command
@@ -63,8 +49,16 @@ void uart_read_handler() {
         write_idx++;
     }
     *AUX_MU_IER |= 0x01; //start
-    //asm volatile("msr DAIFClr, 0xf");
-    create_task(uart_write_handler,2);
+    asm volatile("msr DAIFClr, 0xf");
+}
+
+void uart_write_handler(){
+    *AUX_MU_IER &= ~(0x02);
+    if(write_cur < write_idx){
+        *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
+        write_cur++;
+    }
+    *AUX_MU_IER |= 0x02;
 }
 
 struct cpio_newc_header {
@@ -312,9 +306,6 @@ int shell(char * cmd){
     else if(strcmp(cmd, "setTimeout") == 0 || strcmp(cmd, "st") == 0){
         setTimeout_cmd();
     }
-    else if(strcmp(cmd, "buf") == 0){
-        show_buffer();
-    }
     else
         return 0;
     return 1;
@@ -351,16 +342,13 @@ void interrupt_handler_entry(){
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
-        create_task(timer_handler, 3);
-        // timer_handler();
+        timer_handler();
     }
     else{
-        if ((iir & 0x06) == 0x04){
-            create_task(uart_read_handler,1);
-        }
-        // else
-        //     create_task(uart_write_handler,2);
+        if ((iir & 0x06) == 0x04)
+            uart_read_handler();
+        else
+            uart_write_handler();
     }
-    execute_task();
     //asm volatile("msr DAIFClr, 0xf");
 }

@@ -3,6 +3,19 @@
 
 #define MEMORY_POOL_SIZE 1024
 
+static char memory_pool[MEMORY_POOL_SIZE];
+static char *next_free = memory_pool;
+
+void *simple_alloc(int size) {
+    if (next_free + size - memory_pool > MEMORY_POOL_SIZE) {
+        return 0; 
+    }
+    void *allocated = next_free; 
+    next_free += size; 
+    return allocated; 
+}
+
+
 void main()
 {
     unsigned long el;

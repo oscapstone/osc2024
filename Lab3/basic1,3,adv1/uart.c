@@ -1,5 +1,4 @@
 #include "gpio.h"
-#include "uart.h"
 
 /* Auxilary mini UART registers */
 #define AUX_ENABLE      ((volatile unsigned int*)(MMIO_BASE+0x00215004))
@@ -47,8 +46,8 @@ void uart_init()
 }
 
 void uart_interrupt(){
-    *AUX_MU_IER = 1;
-    //*AUX_MU_IER |= 0x02;
+    //*AUX_MU_IER = 1;
+    *AUX_MU_IER |= 0x02;
     *IRQS1 |= 1 << 29;
 }
 
