@@ -24,6 +24,7 @@ pub enum Register {
     GPFSEL5 = 0x3F20_0014,
     GPPUD = 0x3F20_0094,
     GPPUDCLK0 = 0x3F20_0098,
+    IRQs1 = 0x3F00_B210,
 }
 
 impl Register {

@@ -47,14 +47,27 @@ pub fn start(initrd_start: u32) {
 
             unsafe {
                 asm!(
-                    "mov x0, 0x3c0",
-                    "msr spsr_el1, x0",
-                    "ldr x0, =0x20010000",
-                    "msr elr_el1, x0",
-                    "ldr x0, =0x2000F000",
-                    "msr sp_el0, x0",
+                    "mov {tmp}, 1",
+                    "msr cntp_ctl_el0, {tmp}", // Enable the timer
+                    "mrs {tmp}, cntfrq_el0",
+                    "msr cntp_tval_el0, {tmp}",
+                    "mov {tmp}, 2",
+                    "ldr {tmp2}, =0x40000040", // CORE0_TIMER_IRQ_CTRL
+                    "str {tmp}, [{tmp2}]",
+                    tmp = out(reg) _,
+                    tmp2 = out(reg) _,
+                );
+
+                asm!(
+                    "mov {tmp}, 0x200",
+                    "msr spsr_el1, {tmp}",
+                    "ldr {tmp}, =0x20010000", // Program counter
+                    "msr elr_el1, {tmp}",
+                    "ldr {tmp}, =0x2000F000", // Stack pointer
+                    "msr sp_el0, {tmp}",
                     "eret",
-                )
+                    tmp = out(reg) _,
+                );
             }
         } else if inp_buf.starts_with(b"M3") {
             println!("香的發糕");

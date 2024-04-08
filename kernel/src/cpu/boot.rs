@@ -38,6 +38,18 @@ pub unsafe fn _start_rust() {
     let a = mailbox::get(mailbox::MailboxTag::GetArmMemory);
     println!("Memory base: {:#010X}", a.0);
     println!("Memory size: {:#010X}", a.1);
+
+    // Get current timer value
+    let mut freq: u64;
+    let mut now: u64;
+    asm!(
+        "mrs {freq}, cntfrq_el0",
+        "mrs {now}, cntpct_el0",
+        freq = out(reg) freq,
+        now = out(reg) now,
+    );
+    println!("Boot time: {} ms", now / (freq / 1000));
+
     shell::start(initrd_start);
     loop {}
 }

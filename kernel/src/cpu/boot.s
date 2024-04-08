@@ -29,8 +29,28 @@ _start:
    b .L_clear_bss
 .L_done_clearing:
 
+    bl .from_el2_to_el1
+
+    mrs x0, CurrentEL
+    cmp x0, #0x4 // Check if we are in EL1
+    bne .from_el2_to_el1
+
+.set_exception_vector_table:
+    adr x0, exception_vector_table
+    msr vbar_el1, x0
+
     # Call rust main function
     b   _start_rust
+
+.from_el2_to_el1:
+    mov x0, (1 << 31) // EL1 uses aarch64
+    msr hcr_el2, x0
+    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
+    msr spsr_el2, x0
+    msr elr_el2, lr
+    mov x0, sp
+    msr sp_el1, x0
+    eret // return to EL1
 
 .L_parking_loop:
     wfe
@@ -38,4 +58,41 @@ _start:
 
 .size	_start, . - _start
 .type	_start, function
-.global	_start
+
+
+// .section .text.exception_vector_table
+.align 11
+.global exception_vector_table
+exception_vector_table:
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7

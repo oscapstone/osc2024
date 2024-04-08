@@ -25,6 +25,7 @@ SECTIONS
     .text : {
         KEEP(*(.text._start))
         *(.text*)
+        /* *(.text.exception_vector_table) */
     } :segment_code
 
     .rodata : ALIGN(8) { *(.rodata*) } :segment_code
