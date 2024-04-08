@@ -147,9 +147,9 @@ void disable_uart_interrupt() {
 }
 
 void enable_uart_interrupt() {
-  enable_uart_rx_interrupt();  // enable RX interrupt
+  enable_uart_rx_interrupt();  
   *ENABLE_IRQS_1 |= 1 << 29;   // Enable mini uart interrupt, connect the
-                               // GPU IRQ to CORE0's IRQ
+                               // GPU IRQ to CORE0's IRQ (bit29: AUX INT)
 }
 
 void uart_write_async(unsigned int c) {
