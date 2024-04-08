@@ -29,12 +29,12 @@ int cmd_run(int argc, char* argv[]) {
   asm volatile(
       "mov x0, 0x3c0\n"
       "msr SPSR_EL1, x0\n"
-      "mov x0, %0\n"
+      "mov x0, %[s]\n"
       "msr SP_EL0, x0\n"
-      "mov x0, %1\n"
+      "mov x0, %[t]\n"
       "msr ELR_EL1, x0\n"
-      "eret\n" ::"r"(__user_stack),
-      "r"(__user_text));
+      "eret\n" ::[s] "r"(__user_stack),
+      [t] "r"(__user_text));
 
   return 0;
 }

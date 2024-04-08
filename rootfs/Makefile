@@ -7,7 +7,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  --target=aarch64-unknown-none-elf \
 			  -nostdlib -Os -fPIE
 
-BINS = hello.bin
+BINS = hello.bin svc.bin
 
 .PHONY: all clean
 
@@ -20,6 +20,9 @@ clean:
 	$(CC) $(CFLAGS) -Wl,-T,$^ -o $@
 
 %.elf: %.c
+	$(CC) $(CFLAGS) $< -o $@
+
+%.elf: %.s
 	$(CC) $(CFLAGS) $< -o $@
 
 %.bin: %.elf
