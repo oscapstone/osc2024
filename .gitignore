@@ -4,5 +4,6 @@
 *.elf
 *kernel8.img
 *bootloader.img
+*user_proc.img
 */kernel/*.cpio
 */bootloader/*.cpio
