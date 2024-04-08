@@ -25,6 +25,7 @@ _start:
 	b.ne	.L_parking_loop
 
 	// If execution reaches here, it is the boot core.
+	bl from_el2_to_el1
 
 	// Initialize DRAM.
 	ADR_REL	x0, __bss_start
@@ -49,6 +50,14 @@ _start:
 .L_parking_loop:
 	wfe
 	b	.L_parking_loop
+
+from_el2_to_el1:
+    mov x0, (1 << 31) // EL1 uses aarch64
+    msr hcr_el2, x0
+    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
+    msr spsr_el2, x0
+    msr elr_el2, lr
+    eret // return to EL1
 
 .size	_start, . - _start
 .type	_start, function

@@ -58,15 +58,15 @@ kernel_elf:
 bootloader_elf:
 	make -C $(BOOTLOADER_PATH) all
 
-kernel_qemu: $(KERNEL_BIN)
+kernel_qemu: $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU")
 	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -initrd $(INITRD_PATH) -dtb $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
 
-kernel_gdb: $(KERNEL_BIN)
+kernel_gdb: $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU in background")
 	$(EXEC_QEMU) $(QEMU_DEBUG_ARGS) -dtb $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
 
-bootloader_qemu:$(BOOTLOADER_BIN) $(KERNEL_BIN) cpio 
+bootloader_qemu:$(BOOTLOADER_BIN) $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU")
 	$(EXEC_QEMU) $(QEMU_TTY_ARGS) -dtb $(QEMU_DTB_PATH) -kernel $(BOOTLOADER_BIN) -initrd $(INITRD_PATH)
 
@@ -74,7 +74,7 @@ bootloader_gdb: $(BOOTLOADER_BIN) $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU in background")
 	$(EXEC_QEMU) $(QEMU_TTY_DEBUG_ARGS) $(QEMU_DTB_PATH) -kernel $(BOOTLOADER_BIN) -initrd $(INITRD_PATH) 
 
-cpio:
+cpio: initramfs/*
 	$(call color_header, "Creating initramfs")
 	@cd initramfs && find . | cpio -H newc -o > ../initramfs.cpio
 
@@ -84,3 +84,4 @@ clean:
 	-rm -r target
 	-rm $(KERNEL_BIN)
 	-rm $(BOOTLOADER_BIN)
+	-rm $(INITRD_PATH)

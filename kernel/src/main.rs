@@ -67,32 +67,32 @@ fn kernel_init() -> ! {
                 break;
             }
             "ls" => {
-                for name in handler.list_all_files() {
-                    println!("{}", name);
+                for file in handler.get_files() {
+                    println!("{}", file.get_name());
                 }
             }
             "cat" => {
                 if cmd.len() < 2 {
-                    println!("Usage: cat <filename>");
+                    println!("Usage: cat <file>");
                     continue;
                 }
-                let target = cmd[1];
-                loop {
-                    if let Some(name) = handler.get_current_file_name() {
-                        if name == target {
-                            println!("File: {}", name);
-                            let content = handler.read_current_file();
-                            println!("{}", core::str::from_utf8(content).unwrap());
+                let mut file = handler.get_files().find(|f| f.get_name() == cmd[1]);
+                if let Some(mut f) = file {
+                    println!("File size: {}", f.get_size());
+                    loop {
+                        let data = f.read(32);
+                        if data.len() == 0 {
                             break;
                         }
-                        handler.next_file();
+                        for i in data {
+                            unsafe {
+                                uart::write_u8(*i);
+                            }
+                        }
                     }
-                    else {
-                        println!("File not found");
-                        break;
-                    }
+                } else {
+                    println!("File not found");
                 }
-                handler.rewind();
             }
             "dtb" => {
                 unsafe { println!("Start address: {:#x}", dtb_addr as u64) };
@@ -106,6 +106,9 @@ fn kernel_init() -> ! {
                 println!("ARM memory base address: {:#x}", base);
                 println!("ARM memory size: {:#x}", size);
             }
+            "exec" => {
+            
+            }
             "" => {
                 println!("");
             }
@@ -114,5 +117,6 @@ fn kernel_init() -> ! {
             }
         }
     }
+    
     panic!()
 }

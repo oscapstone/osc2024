@@ -73,7 +73,6 @@ pub fn init_uart() {
         write_volatile(AUX_MU_CNTL_REG as *mut u32, 3);
     }
 }
-
 pub struct Uart;
 
 use core::fmt::{self, Write};
