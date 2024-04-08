@@ -3,7 +3,9 @@ CompileFlags:
     -I/Users/hsunhsun/Documents/Course/OS-capstone/osc2024/kernel/include, 
     -I/Users/hsunhsun/Documents/Course/OS-capstone/osc2024/lib/include,
     -ffreestanding,
-    -Wno-main-return-type
+    -nostdlib, 
+    -nostdinc,
+    -Wno-main-return-type,
   ]
 
 
