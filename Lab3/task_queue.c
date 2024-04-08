@@ -68,8 +68,8 @@ void execute_task(){
         else
             task_queue.min_priority = 0;
     }
-    // exec_buffer[exec_idx] = ' ';
-    // exec_idx++;
+    exec_buffer[exec_idx] = ' ';
+    exec_idx++;
 }
 
 void show_buffer(){
