@@ -19,3 +19,10 @@ disable_core0_timer:
     ldr x2, =CORE0_TIMER_IRQ_CTRL
     str w1, [x2]
     ret
+
+.globl get_current_time
+get_current_time:
+    mrs x0, cntpct_el0
+    mrs x1, cntfrq_el0
+    udiv x0, x0, x1
+    ret

@@ -1,6 +1,9 @@
 #include "entry.h"
 #include "mini_uart.h"
+#include "peripheral/mini_uart.h"
+#include "peripheral/timer.h"
 #include "timer.h"
+#include "utils.h"
 
 const char* entry_error_type[] = {
     "SYNC_INVALID_EL1t",   "IRQ_INVALID_EL1t",
@@ -107,15 +110,15 @@ void show_invalid_entry_message(int type,
     uart_send_string("\n");
 }
 
-void core_timer_irq_handler(unsigned int seconds,
-                            unsigned long cntpct_el0,
-                            unsigned long cntfrq_el0)
+void irq_handler(void)
 {
-    set_core_timer_timeout();
-    uart_send_string("Core timer interrupt\n");
-
-    unsigned long boot_seconds = cntpct_el0 / cntfrq_el0;
-
-    uart_send_dec(boot_seconds);
-    uart_send_string(" seconds since boot\n");
+    unsigned int irq_pending_1 = get32(IRQ_PENDING_1);
+    unsigned int core_irq_source = get32(CORE0_IRQ_SOURCE);
+    if (irq_pending_1 & AUX_INT) {
+        uart_handle_irq();
+    } else if (core_irq_source & CNTPNSIRQ) {
+        core_timer_handle_irq();
+    } else {
+        uart_send_string("Unknown pending interrupt\n");
+    }
 }

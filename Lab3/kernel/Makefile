@@ -4,7 +4,7 @@ CC = $(GNU_PREFIX)-gcc
 LD = $(GNU_PREFIX)-ld
 OC = $(GNU_PREFIX)-objcopy
 EMU = qemu-system-aarch64
-DB = gdb-multiarch
+DB = $(GNU_PREFIX)-gdb
 
 BUILD_DIR = build
 SRC_DIR = src
@@ -54,3 +54,7 @@ kernel8.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 .PHONY: emu
 emu: kernel8.img
 	$(EMU) $(EMUFLAGS) -kernel $<
+
+.PHONY: gdb
+gdb: $(BUILD_DIR)/kernel8.elf
+	$(DB) $<

@@ -38,6 +38,8 @@ void kernel_main(uintptr_t x0)
     // uart_send_hex(get_cpio_ptr());
     // uart_send_string("\n");
 
+    test_uart_async();
+
     shell();
 
     while (1)

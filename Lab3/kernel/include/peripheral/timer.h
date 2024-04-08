@@ -10,6 +10,13 @@
 
 
 /*
+ * Core interrupt source, Page 16 of QA7_rev3.4 data sheet
+ */
+#define CORE0_IRQ_SOURCE 0x40000060
+#define CNTPNSIRQ        (1 << 1)
+
+
+/*
  * CNTP_CTL_EL0, Counter-timer Physical Timer Control register, Page 2945 of
  * AArch64-Reference-Manual
  */

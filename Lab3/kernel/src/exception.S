@@ -56,11 +56,9 @@
     eret
 .endm
 
-.macro handle_core_timer_irq 
+.macro handle_irq 
     save_all
-    mrs x1, cntpct_el0
-    mrs x2, cntfrq_el0
-    bl core_timer_irq_handler
+    bl irq_handler
     load_all
     eret
 .endm
@@ -111,7 +109,7 @@ sync_invalid_el1h:
 handle_invalid_entry  SYNC_INVALID_EL1h
 
 irq_invalid_el1h:
-handle_core_timer_irq 
+handle_irq 
 
 fiq_invalid_el1h:
 handle_invalid_entry  FIQ_INVALID_EL1h
