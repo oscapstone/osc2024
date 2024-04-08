@@ -62,7 +62,7 @@ clean:
 
 .PHONY: run
 run: kernel8.img initramfs.cpio
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio --dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial stdio
 
 .PHONY: debug
 debug: kernel8.img initramfs.cpio

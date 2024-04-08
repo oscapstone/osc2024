@@ -1,12 +1,7 @@
 #include "cpio.h"
 
+#include "initrd.h"
 #include "string.h"
-
-#ifdef __QEMU__
-#define INITRD_BASE (0x8000000)
-#else
-#define INITRD_BASE (0x2000000)
-#endif
 
 void file_iter_next(file_iter_t *cur) {
   cpio_header_t *header = (cpio_header_t *)cur->next_addr;
@@ -24,7 +19,7 @@ void file_iter_next(file_iter_t *cur) {
 }
 
 file_iter_t cpio_list() {
-  char *addr = (char *)INITRD_BASE;
+  char *addr = initrd_base;
 
   cpio_stat_t stat = parse_header((cpio_header_t *)addr);
   file_iter_t begin = {

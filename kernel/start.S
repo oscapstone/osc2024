@@ -1,8 +1,12 @@
 .section ".text.boot"
 
 .global _start
+.global prog_hang
 
 _start:
+	// move dbt ptr to an unused register
+	mov x19, x0
+
 	// read cpu id, stop slave cores
 	// the last 8 bits indicate the core number in cortex-a53
 	mrs x1, mpidr_el1
@@ -10,9 +14,10 @@ _start:
 	cbz x1, 1f
 
 	// if core number > 0, let the core hangs
-halt:
+
+prog_hang:
 	wfe
-	b halt
+	b prog_hang
 
 1:
 	// set top of stack just before our code (stack grows to a lower address)
@@ -32,8 +37,12 @@ halt:
 	cbnz w2, 2b
 
 3:
+	// load dbt ptr to the first parameter
+	mov x0, x19
+
 	// jump to C code, should not return
 	bl main
 
-	// for failsafe, ,halt this core too
-	b halt
+	// for failsafe, halt this core too
+	b prog_hang
+
