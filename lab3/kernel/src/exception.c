@@ -86,9 +86,9 @@ void timer_handler_entry()
     unsigned long long cntfrq_el0 = 0;
     asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
 
-    uart_asyn_puts("time: ");
-    uart_asyn_dec(cntpct_el0 / cntfrq_el0);
-    uart_asyn_puts("s\n");
+    uart_puts("time: ");
+    uart_dec(cntpct_el0 / cntfrq_el0);
+    uart_puts("s\n");
 
     asm volatile(
         "mrs x0, cntfrq_el0\n"
