@@ -2,6 +2,9 @@
 .global _start
 
 _start:
+    // move device tree's addr
+    mov     x28, x0
+
     // set stack pointer
     ldr     x1, =__stack_top
     mov     sp, x1

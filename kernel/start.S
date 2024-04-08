@@ -1,8 +1,8 @@
 .section .text
 
 _start:
-    // move devicetree's addr
-    mov     x28, x0
+    // move devicetree's addr (ENABLE WHEN USING QEMU)
+    // mov     x28, x0
 
     // set stack pointer
     ldr     x1, =__stack_top
