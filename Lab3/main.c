@@ -29,7 +29,7 @@ void main()
     uart_puts("Booted! Current EL: ");
     uart_send('0' + el);
     uart_puts("\n");
- 
+    //core_timer_enable();
     int idx = 0;
     char in_char;
     // echo everything back

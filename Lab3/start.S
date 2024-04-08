@@ -110,7 +110,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b interrupt_handler
+  b interrupt_handler //uart, timer
   .align 7
   b exception_handler
   .align 7
@@ -119,7 +119,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b interrupt_handler
+  b interrupt_handler //el0 interrupt
   .align 7
   b exception_handler
   .align 7

@@ -1,7 +1,13 @@
 #include "uart.h"
 #include "irq.h"
+#include "timer.h"
 
 #define BUFFER_SIZE 1024
+#define MAX_TIMER 10
+
+unsigned long timer_times[MAX_TIMER];
+char timer_msgs[MAX_TIMER][1024];
+unsigned int timer_idx;
 
 char uart_read_buffer[BUFFER_SIZE];
 unsigned int read_idx = 0;
@@ -19,7 +25,7 @@ void uart_read_handler() {
         //uart_puts(uart_read_buffer);
         uart_write_buffer[write_idx] = '\n';
         write_idx++;
-        result = shell(uart_read_buffer);
+        shell(uart_read_buffer);
         read_idx = 0;
         uart_read_buffer[read_idx] = '\0';
     }
@@ -63,6 +69,28 @@ int strcmp(char *s1, char *s2) {
         s2++;
     }
     return (*(unsigned char *)s1) - (*(unsigned char *)s2);
+}
+
+int str2int(char* s) {
+    int result = 0;
+    int sign = 1; // This is to handle negative numbers
+
+    // Check for negative number
+    if (*s == '-') {
+        sign = -1;
+        s++; // Move to the next character
+    }
+
+    while (*s) {
+        if (*s < '0' || *s > '9') {
+            // Handle error: not a digit
+            return 0; // Or some error code
+        }
+        result = result * 10 + (*s - '0');
+        s++;
+    }
+
+    return result * sign;
 }
 
 int hex_to_int(char *p, int len) {
@@ -137,6 +165,93 @@ void async_uart_io(){
     while(1){}
 }
 
+int add_timer(unsigned long cur_time, char *s){
+    for(int i=0; i<MAX_TIMER; i++){
+        if(timer_times[i] == 0){
+            timer_times[i] = cur_time;
+            int j = 0;
+            while(*s != '\0'){
+                timer_msgs[i][j] = *s;
+                s++;
+                j++;
+            }
+            timer_msgs[i][j] = '\0';
+            //save message
+            return i; //allocated timer
+        }
+    }
+    return -1;
+}
+
+void add_message_timer(){
+    uart_puts("MESSAGE: ");
+    char in_char;
+    char message[100];
+    int idx = 0;
+    while(1){
+        in_char = uart_getc();
+        uart_send(in_char);
+        if(in_char == '\n'){
+            message[idx] = '\0';
+            idx = 0;
+            break;
+        }
+        else{
+            message[idx] = in_char;
+            idx++;
+        }
+    }
+    uart_puts("SECONDS: ");
+    idx = 0;
+    char countDown[100];
+    while(1){
+        in_char = uart_getc();
+        uart_send(in_char);
+        if(in_char == '\n'){
+            countDown[idx] = '\0';
+            idx = 0;
+            break;
+        }
+        else{
+            countDown[idx] = in_char;
+            idx++;
+        }
+    }
+    unsigned long cur_time, print_time;
+    int wait = str2int(countDown);
+    if(wait == 0){
+        uart_puts("INVALID TIME\n");
+        return;
+    }
+    cur_time = get_current_time();
+    print_time = cur_time + wait;
+    
+    int allocated = add_timer(print_time, message);
+    if(allocated < 0){
+        uart_puts("timer busy");
+        return;
+    }
+    int new_irq = 1;
+    unsigned long min_time = timer_times[allocated];
+    for(int i=0; i<MAX_TIMER; i++){
+        if(timer_times[i]<min_time && timer_times[i] > 0){
+            new_irq = 0;
+            break;
+        }
+    }
+
+    if(new_irq){
+        uart_puts("New Interrupt Set in timer ");
+        uart_int(allocated);
+        uart_puts("\n");
+        set_timer_interrupt(print_time - cur_time);
+        //asm volatile ("msr cntp_tval_el0, %0" : : "r" (cntfrq));
+    }
+    uart_puts("Seconds to print: ");
+    uart_int(print_time);
+    uart_puts("\n");
+}
+
 
 int shell(char * cmd){
     if(strcmp(cmd, "help") == 0){
@@ -147,43 +262,58 @@ int shell(char * cmd){
         uart_send('\r');
         uart_puts("run\t: set and run user program\n");
         uart_send('\r');
-        uart_puts("timer\t: start showing timer interrupt\n");
+        uart_puts("st\t: set a timer interrupt\n");
         uart_send('\r');
         uart_puts("async\t: start uart interrupt\n");
     }
     else if(strcmp(cmd, "run") == 0){
         run_user_program();
     }
-    else if(strcmp(cmd, "timer") == 0){
-        core_timer_enable();
-    }
     else if(strcmp(cmd, "async") == 0){
         async_uart_io();
+    }
+    else if(strcmp(cmd, "setTimeout") == 0 || strcmp(cmd, "st") == 0){
+        add_message_timer();
     }
     else
         return 0;
     return 1;
 }
 
-void core_timer_handler() {
-    unsigned long cntfrq, cntpct;
-    asm volatile ("mrs %0, cntfrq_el0" : "=r" (cntfrq));
-    asm volatile ("msr cntp_tval_el0, %0" : : "r" (cntfrq * 2));
-    asm volatile ("mrs %0, cntpct_el0" : "=r" (cntpct));
-    cntpct /= cntfrq;
-
-    uart_puts("Seconds since boot: ");
-    uart_int(cntpct);
-    uart_puts("\n");
+void timer_handler() {
+    unsigned long cur_time = get_current_time();
+    unsigned long next = 9999;
+    for(int i=0;i<MAX_TIMER;i++){
+        if(timer_times[i] == cur_time){
+            uart_puts("\n[TIMER] ");
+            uart_int(cur_time);
+            uart_puts(" : ");
+            uart_puts(timer_msgs[i]);
+            uart_puts("\n");
+            uart_send('\r');
+            uart_puts("# ");
+            timer_times[i] = 0;
+        }
+        else if(timer_times[i] > cur_time){
+            if(next > timer_times[i])
+                next = timer_times[i];
+        }
+    }
+    disable_core_timer();
+    if(next != 9999){
+        set_timer_interrupt(next - cur_time);
+        //uart_puts("resetted another timer\n");
+    }
 }
 
 void interrupt_handler_entry(){
-    //asm volatile("msr DAIFSet, 0xf");
+    //asm volatile("msr DAIFSet, 0xf"); add here will boom, check how to add
     int irq_pending1 = *IRQ_PENDING_1;
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
-        core_timer_handler();
+        timer_handler();
+        //timer_handler();
     }
     else{
         if ((iir & 0x06) == 0x04)

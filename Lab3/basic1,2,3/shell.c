@@ -9,24 +9,35 @@ unsigned int read_idx = 0;
 char uart_write_buffer[BUFFER_SIZE];
 unsigned int write_idx = 0;
 unsigned int write_cur = 0;
+int async;
 
 void uart_read_handler() {
     char ch = (char)(*AUX_MU_IO);
     if(ch == '\r'){ //command
-        uart_send('\n');
+        //uart_send('\n');
         uart_read_buffer[read_idx] = '\0';
         //uart_puts(uart_read_buffer);
+        uart_write_buffer[write_idx] = '\n';
+        write_idx++;
         shell(uart_read_buffer);
         read_idx = 0;
         uart_read_buffer[read_idx] = '\0';
     }
     else{
         uart_read_buffer[read_idx] = ch;
-        uart_send(uart_read_buffer[read_idx]);
+        uart_write_buffer[write_idx] = ch; 
+        //uart_send(uart_read_buffer[read_idx]);
         read_idx++;
+        write_idx++;
     }
 }
 
+void uart_write_handler(){
+    if(write_cur < write_idx){
+        *AUX_MU_IO=uart_write_buffer[write_cur];
+        write_cur++;
+    }
+}
 
 struct cpio_newc_header {
     //file metadata
@@ -94,7 +105,7 @@ void run_user_program(){
             current += (4 - (current - (char *)fs) % 4);
     }
     uart_puts("found user.img\n");
-    
+
     // current is the file address
     asm volatile ("mov x0, 0x345"); 
     asm volatile ("msr spsr_el1, x0"); 
@@ -121,6 +132,7 @@ void exception_entry() {
 }
 
 void async_uart_io(){
+    async = 1;
     uart_interrupt();
     while(1){}
 }
@@ -166,7 +178,7 @@ void core_timer_handler() {
 }
 
 void interrupt_handler_entry(){
-    //asm volatile("msr DAIFSet, 0xf");
+    asm volatile("msr DAIFSet, 0xf");
     int irq_pending1 = *IRQ_PENDING_1;
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
@@ -176,6 +188,8 @@ void interrupt_handler_entry(){
     else{
         if ((iir & 0x06) == 0x04)
             uart_read_handler();
+        else
+            uart_write_handler();
     }
     //asm volatile("msr DAIFClr, 0xf");
 }
