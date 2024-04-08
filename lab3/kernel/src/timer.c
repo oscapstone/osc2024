@@ -15,7 +15,7 @@ void timer_list_init(){
 void core_timer_enable(){
     __asm__ __volatile__(
         "mov x1, 1\n\t"
-        "msr cntp_ctl_el0, x1\n\t" // cntp_ctl_el0[0]: enable, Control register for the EL1 physical timer. (textbook p12-7)
+        "msr cntp_ctl_el0, x1\n\t" // cntp_ctl_el0[0]: enable, Control register for the EL1 physical timer.
                                    // cntp_tval_el0: Holds the timer value for the EL1 physical timer
         "mov x2, 2\n\t"
         "ldr x1, =" XSTR(CORE0_TIMER_IRQ_CTRL) "\n\t"
@@ -78,7 +78,7 @@ void add_timer(void *callback, unsigned long long timeout, char* args){
     the_timer_event->callback = callback;
     INIT_LIST_HEAD(&the_timer_event->listhead);
 
-    // add the timer_event into timer_event_list (sorted) from small to big
+    // add the timer_event into timer_event_list (sorted)
     struct list_head* curr;
     list_for_each(curr,timer_event_list)
     {
@@ -112,16 +112,14 @@ void set_core_timer_interrupt(unsigned long long expired_time){
         "mrs x1, cntfrq_el0\n\t"    // cntfrq_el0 -> frequency of the timer
         "mul x1, x1, %0\n\t"        // cntpct_el0 = cntfrq_el0 * seconds: relative timer to cntfrq_el0
         "msr cntp_tval_el0, x1\n\t" // Set expired time to cntp_tval_el0, which stores time value of EL1 physical timer.
-    :
-    :"r" (expired_time));
+    :"=r" (expired_time));
 }
 
 // directly set timer interrupt time to a cpu tick  (directly)
 void set_core_timer_interrupt_by_tick(unsigned long long tick){
     __asm__ __volatile__(
         "msr cntp_cval_el0, %0\n\t"  //cntp_cval_el0 -> absolute timer
-    :
-    :"r" (tick));
+    :"=r" (tick));
 }
 
 // get timer pending queue size

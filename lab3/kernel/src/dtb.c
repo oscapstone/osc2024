@@ -2,8 +2,10 @@
 #include "uart1.h"
 #include "u_string.h"
 #include "cpio.h"
+// #include "memory.h"
 
-extern void* CPIO_DEFAULT_PLACE;
+void* CPIO_DEFAULT_START;
+void* CPIO_DEFAULT_END;
 extern char* dtb_ptr;
 
 //stored as big endian
@@ -20,10 +22,22 @@ struct fdt_header {
     uint32_t size_dt_struct;
 };
 
+// memory reservation block - https://zhuanlan.zhihu.com/p/144863497
+struct fdt_reserve_entry {
+    uint64_t address;
+    uint64_t size;
+};
+
 uint32_t uint32_endian_big2lttle(uint32_t data)
 {
     char* r = (char*)&data;
     return (r[3]<<0) | (r[2]<<8) | (r[1]<<16) | (r[0]<<24);
+}
+
+uint64_t uint64_endian_big2lttle(uint64_t data)
+{
+    char *r = (char *)&data;
+    return ((unsigned long long)r[7] << 0) | ((unsigned long long)r[6] << 8) | ((unsigned long long)r[5] << 16) | ((unsigned long long)r[4] << 24) | ((unsigned long long)r[3] << 32) | ((unsigned long long)r[2] << 40) | ((unsigned long long)r[1] << 48) | ((unsigned long long)r[0] << 56);
 }
 
 void traverse_device_tree(void *dtb_ptr, dtb_callback callback)
@@ -102,8 +116,12 @@ void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size) {
     // https://github.com/stweil/raspberrypi-documentation/blob/master/configuration/device-tree.md
     // linux,initrd-start will be assigned by start.elf based on config.txt
-    if(node_type==FDT_PROP && strcmp(name,"linux,initrd-start")==0)
+    if (node_type == FDT_PROP && strcmp(name,"linux,initrd-start") == 0)
     {
-        CPIO_DEFAULT_PLACE = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t*)value);
+        CPIO_DEFAULT_START = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t*)value);
+    }
+    if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0)
+    {
+        CPIO_DEFAULT_END = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t *)value);
     }
 }

@@ -7,36 +7,32 @@
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable(){
-    __asm__ __volatile__("msr daifclr, 0xf"); // umask all DAIF, it's column D,A,I,F on the register PASATE 
+    __asm__ __volatile__("msr daifclr, 0xf"); // umask all DAIF
 }
 
 void el1_interrupt_disable(){
-    __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF, it's column D,A,I,F on the register PASATE 
+    __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
 void el1h_irq_router(){
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
-    // It is for terminal input and output.
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        // It is for terminal output. (Like printf function in C)
-        if (*AUX_MU_IER_REG & (1 << 1))
+        if (*AUX_MU_IIR_REG & (1 << 1))
         {
-            *AUX_MU_IIR_REG &= ~(2);  // disable write interrupt
+            *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
-        // It is for terminal input. (Like scanf function in C)
-        else if (*AUX_MU_IER_REG & (2 << 1))
+        else if (*AUX_MU_IIR_REG & (2 << 1))
         {
-            *AUX_MU_IIR_REG &= ~(1);  // disable read interrupt
+            *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive();
         }
     }
-    // It is for timer interrupt.
     else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
         core_timer_disable();
@@ -62,15 +58,15 @@ void el0_irq_64_router(){
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IER_REG & (0b01 << 1))
+        if (*AUX_MU_IIR_REG & (0b01 << 1))
         {
-            *AUX_MU_IIR_REG &= ~(2);  // disable write interrupt
+            *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive();
         }
-        else if (*AUX_MU_IER_REG & (0b10 << 1))
+        else if (*AUX_MU_IIR_REG & (0b10 << 1))
         {
-            *AUX_MU_IIR_REG &= ~(1);  // disable read interrupt
+            *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive();
         }
@@ -124,7 +120,7 @@ void irqtask_add(void *task_function,unsigned long long priority){
 
     // mask the device's interrupt line
     el1_interrupt_disable();
-    // enqueue the processing task to the event queue with sorting. from low to high
+    // enqueue the processing task to the event queue with sorting.
     list_for_each(curr, task_list)
     {
         if (((irqtask_t *)curr)->priority > the_task->priority)

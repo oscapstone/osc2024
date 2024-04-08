@@ -12,6 +12,8 @@ typedef struct CLI_CMDS
     char help[MSG_MAX_LEN];
 } CLI_CMDS;
 
+void cli_cmd_init();
+void cli_cmd();
 int  cli_cmd_strcmp(const char*, const char*);
 void cli_cmd_clear(char*, int);
 void cli_cmd_read(char*);
@@ -30,7 +32,5 @@ DO_CMD_FUNC(do_cmd_setTimeout);
 DO_CMD_FUNC(do_cmd_set2sAlert);
 DO_CMD_FUNC(do_cmd_reboot);
 DO_CMD_FUNC(do_cmd_cancel_reboot);
-
-
 
 #endif /* _SHELL_H_ */

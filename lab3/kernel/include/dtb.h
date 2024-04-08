@@ -2,6 +2,7 @@
 #define _DTB_H_
 
 #define uint32_t unsigned int
+#define uint64_t unsigned long long
 
 // manipulate device tree with dtb file format
 // linux kernel fdt.h

@@ -13,9 +13,11 @@
 #define USTACK_SIZE 0x10000   // the size of user stack
 
 extern char* dtb_ptr;
-void* CPIO_DEFAULT_PLACE;
+// void* CPIO_DEFAULT_PLACE;
+extern void* CPIO_DEFAULT_START;
+
+
 int cmd_list_size = 0;
-// struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
 struct CLI_CMDS cmd_list[] =
 {
     {.command="help",       .func=do_cmd_help,          .help="print all available commands"},
@@ -36,7 +38,17 @@ void cli_cmd_init()
 {
     cmd_list_size = sizeof(cmd_list) / sizeof(struct CLI_CMDS);
 }
-
+void cli_cmd()
+{
+    char input_buffer[CMD_MAX_LEN];
+    while(1){
+        cli_cmd_clear(input_buffer, CMD_MAX_LEN);
+        uart_puts("# ");
+        // uart_sendline("# ");
+        cli_cmd_read(input_buffer);
+        cli_cmd_exec(input_buffer);
+    }
+}
 void cli_cmd_clear(char* buffer, int length)
 {
     for(int i=0; i<length; i++)
@@ -52,7 +64,6 @@ void cli_cmd_read(char* buffer)
     while(1)
     {
         if ( idx >= CMD_MAX_LEN ) break;
-
         c = uart_async_getc();
 
         // if user key 'enter'
@@ -147,7 +158,7 @@ DO_CMD_FUNC(do_cmd_cat)
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
 
     while(header_ptr!=0)
     {
@@ -197,7 +208,7 @@ DO_CMD_FUNC(do_cmd_exec)
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
 
     while(header_ptr!=0)
     {
@@ -297,7 +308,7 @@ DO_CMD_FUNC(do_cmd_ls)
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
 
     while(header_ptr!=0)
     {

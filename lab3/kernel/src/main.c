@@ -9,12 +9,14 @@
 char* dtb_ptr;
 
 void main(char* arg){
-    char input_buffer[CMD_MAX_LEN];
+    // char input_buffer[CMD_MAX_LEN];
 
     dtb_ptr = arg;
-    traverse_device_tree(dtb_ptr, dtb_callback_initramfs);
+    traverse_device_tree(dtb_ptr, dtb_callback_initramfs); // get initramfs location from dtb
 
+    cli_cmd_init();
     uart_init();
+    uart_sendline("\n");
     irqtask_list_init();
     timer_list_init();
 
@@ -22,11 +24,12 @@ void main(char* arg){
     el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
     core_timer_enable();
 
+#if DEBUG
+    cli_cmd_read(input_buffer); // Wait for input, Windows cannot attach to SERIAL from two processes.
+#endif
+    // init_allocator();
+    // init_thread_sched();
+
     cli_print_banner();
-    while(1){
-        cli_cmd_clear(input_buffer, CMD_MAX_LEN);
-        uart_puts("# ");
-        cli_cmd_read(input_buffer);
-        cli_cmd_exec(input_buffer);
-    }
+    cli_cmd();
 }
