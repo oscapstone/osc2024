@@ -8,6 +8,11 @@ OBJDIR = obj
 SRCFILES = $(wildcard $(SRCDIR)/*.c)
 OBJFILES = $(SRCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
+
+KERNEL_IMG = ../kernel/kernel8.img
+INITRD = ../kernel/initramfs.cpio
+DTB = ../kernel/bcm2710-rpi-3-b-plus.dtb
+
 # flags
 INCLUDE = -Iinclude -I../lib/include
 TARGET = -mcpu=cortex-a53 --target=aarch64-rpi3-elf 
@@ -48,14 +53,19 @@ $(OBJDIR):
 	mkdir $@
 
 
+.PHONY: $(KERNEL_IMG)
+$(KERNEL_IMG):
+	make -C ../kernel
+
+
 .PHONY: run
-run: bootloader.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial pty -serial stdio
+run: bootloader.img $(KERNEL_IMG)
+	qemu-system-aarch64 -M raspi3b -kernel $< -display none -initrd $(INITRD) -dtb $(DTB) -serial null -serial pty
 
 
 .PHONY: debug
 debug: bootloader.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -S -s -display none
+	qemu-system-aarch64 -M raspi3b -kernel $< -display none -initrd $(INITRD) -dtb $(DTB) -serial null -serial pty -S -s
 
 .PHONY: clean
 clean:

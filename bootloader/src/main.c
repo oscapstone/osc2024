@@ -1,5 +1,7 @@
 #include "uart.h"
 
+typedef void (*kernel_main)(char *dbt);
+
 void load_img() {
   unsigned int size = 0;
   unsigned char *size_buffer = (unsigned char *)&size;
@@ -10,22 +12,20 @@ void load_img() {
   uart_printf("Image size: %d\n", size);
 
   char *kernel = (char *)0x80000;
-  while (size--) {
-    *(kernel++) = uart_read();
+  for (int i = 0; i < size; i++) {
+    kernel[i] = uart_read_raw();
   }
 
   uart_println("Image loaded");
-
-  /* In AArch64 state, the Link Register(LR) stores the return address when a
-   * subroutine call is made */
-  asm volatile("mov x30, 0x80000;");
-  asm volatile("ret");
 }
 
-void main() {
+void main(void *dtb) {
   // set up serial console
   uart_init();
 
   uart_println("Start Bootloading...");
   load_img();
+
+  kernel_main kernel = (kernel_main)0x80000;
+  kernel(dtb);
 }

@@ -3,6 +3,9 @@
 .global _start
 
 _start:
+	// move dbt ptr to an unused register
+	mov x19, x0
+
 	// read cpu id, stop slave cores
 	// the last 8 bits indicate the core number in cortex-a53
 	mrs x1, mpidr_el1
@@ -40,6 +43,8 @@ clear_bss:
 	cbnz w2, clear_bss
 
 jump_to_main:
+	mov x0, x19
+
 	// jump to bootloader
 	// bl will set x30, make it a subroutine call
 	// because we are in 0x8XXXX, but text section is located at 0x6XXXX

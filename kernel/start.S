@@ -14,7 +14,6 @@ _start:
 	cbz x1, 1f
 
 	// if core number > 0, let the core hangs
-
 prog_hang:
 	wfe
 	b prog_hang
@@ -41,7 +40,7 @@ prog_hang:
 	mov x0, x19
 
 	// jump to C code, should not return
-	bl main
+	bl kernel_main
 
 	// for failsafe, halt this core too
 	b prog_hang

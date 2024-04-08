@@ -47,8 +47,6 @@ int fdt_traversal(char *dbt, traversal_callback_t cb) {
     return -2;
   }
 
-  uart_printf("struct size: %d\n", header.size_dt_struct);
-
   char *cur = dbt + header.off_dt_struct;
 
   char *struct_end = cur + header.size_dt_struct;

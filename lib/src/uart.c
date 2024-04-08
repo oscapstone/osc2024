@@ -81,7 +81,7 @@ void uart_write(unsigned int c) {
   *AUX_MU_IO = c;
 }
 
-char uart_read() {
+char uart_read_raw() {
   char r;
   // wait until something is in the buffer
   do {
@@ -90,6 +90,11 @@ char uart_read() {
 
   r = (char)(*AUX_MU_IO);
 
+  return r;
+}
+
+char uart_read() {
+  char r = uart_read_raw();
   // convert carriage return to newline
   return r == '\r' ? '\n' : r;
 }
@@ -128,7 +133,7 @@ void uart_hex(size_t d) {
   unsigned int n;
   int c;
 
-  for (c = 28; c >= 0; c -= 4) {
+  for (c = 60; c >= 0; c -= 4) {
     // get highest tetrad
     n = (d >> c) & 0xF;
 

@@ -1,5 +1,6 @@
 #include "fdt.h"
 #include "initrd.h"
+#include "int.h"
 #include "shell.h"
 #include "uart.h"
 #include "utils.h"
@@ -14,7 +15,7 @@ void memncpy(void *src, void *dest, size_t n) {
   }
 }
 
-void main(char *dtb_ptr) {
+void kernel_main(char *dtb_ptr) {
   /* set up serial console */
   uart_init();
 
