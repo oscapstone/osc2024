@@ -1,5 +1,5 @@
-#include "mailbox.h"
 #include "uart.h"
+#include "mailbox.h"
 
 #define MMIO_BASE 0x3f000000
 #define MAILBOX_BASE (MMIO_BASE + 0x0000B880)

@@ -1,3 +1,6 @@
+#ifndef __CPIO_H
+#define __CPIO_H
+
 #define MAX_FILE_SIZE 1024
 
 typedef struct cpio_newc_header
@@ -33,3 +36,5 @@ void build_file_arr();
 void traverse_file();
 void look_file_content(char *pathname);
 void exec_program(char *pathname);
+
+#endif

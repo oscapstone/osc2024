@@ -1,3 +1,6 @@
+#ifndef __UART_H
+#define __UART_H
+
 #define MAX_SIZE 256
 
 void uart_init();
@@ -6,7 +9,7 @@ void uart_write(unsigned int c);
 void uart_puts(char *s);
 void uart_hex_upper_case(unsigned int d);
 void uart_hex_lower_case(unsigned int d);
-void uart_dec(unsigned int d);
+void uart_dec(unsigned long long d);
 
 void enable_uart_rx_interrupt();
 void disable_uart_rx_interrupt();
@@ -27,3 +30,5 @@ extern int read_front;
 extern int read_back;
 extern int write_front;
 extern int write_back;
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef __DTB_PARSER_H
+#define __DTB_PARSER_H
+
 #define FDT_BEGIN_NODE 0x1 /* Start node: full name */
 #define FDT_END_NODE 0x2   /* End node */
 #define FDT_PROP 0x3       /* Property: name off, size, content */
@@ -40,3 +43,5 @@ void fdt_traverse(FuncPtr fun_ptr);
 void struct_parser(FuncPtr fun_ptr, struct fdt_header *header, char *struct_ptr, char *string_ptr);
 void initramfs_callback(uint32_t token , char *name, char *prop);
 void device_name_callback(uint32_t token , char *name, char *prop);
+
+#endif

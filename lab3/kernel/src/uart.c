@@ -1,6 +1,6 @@
-#include "uart.h"
 #include "gpio.h"
 #include "exception.h"
+#include "uart.h"
 
 /* Auxilary mini UART registers */
 #define AUX_ENABLE ((volatile unsigned int *)(MMIO_BASE + 0x00215004))
@@ -109,7 +109,7 @@ void uart_hex_lower_case(unsigned int d)
     }
 }
 
-void uart_dec(unsigned int d)
+void uart_dec(unsigned long long d)
 {
     char reverse[100];
     int count = 0;

@@ -1,6 +1,6 @@
-#include "cpio.h"
 #include "utils.h"
 #include "uart.h"
+#include "cpio.h"
 
 FILE file_arr[MAX_FILE_SIZE];
 int file_num = 0;

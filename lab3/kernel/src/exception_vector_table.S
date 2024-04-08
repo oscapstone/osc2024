@@ -48,15 +48,9 @@ exception_handler:
   load_all
   eret
 
-core_timer_handler:
+irq_handler:
   save_all
-  bl timer_handler_entry
-  load_all
-  eret
-
-uart_handler:
-  save_all
-  bl uart_handler_entry
+  bl irq_handler_entry
   load_all
   eret
 
@@ -74,7 +68,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b uart_handler_entry
+  b irq_handler
   .align 7
   b exception_handler
   .align 7
@@ -83,7 +77,7 @@ exception_vector_table:
 
   b exception_handler
   .align 7
-  b core_timer_handler
+  b irq_handler
   .align 7
   b exception_handler
   .align 7

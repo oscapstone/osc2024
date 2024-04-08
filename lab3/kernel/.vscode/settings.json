@@ -7,7 +7,10 @@
         "uart.h": "c",
         "dtb_parser.h": "c",
         "mailbox.h": "c",
-        "shell.h": "c"
+        "shell.h": "c",
+        "timer_heap.h": "c",
+        "gpio.h": "c",
+        "utils.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

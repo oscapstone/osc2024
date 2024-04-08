@@ -3,6 +3,8 @@
 #include "utils.h"
 #include "cpio.h"
 #include "timer.h"
+#include "allocator.h"
+#include "shell.h"
 
 #define buf_size 1024
 
@@ -47,23 +49,38 @@ void shell_cmd(char *cmd)
         uart_puts("exc user program\n");
         exec_program("user.img");
     }
-    else if (my_strcmp(cmd, "irq") == 0)
+    else if (my_strcmp(cmd, "timer") == 0)
     {
-        core_timer_enable();
         uart_puts("\n");
-        asm volatile(
-            "mov x10, 0x0\n"
-            "msr spsr_el1, x10\n"
-            "ldr x10, =halt\n"
-            "msr elr_el1, x10\n"
-            "msr sp_el0, x10\n"
-            "eret\n");
+        unsigned long long cntpct_el0 = 0;
+        asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
+        unsigned long long cntfrq_el0 = 0;
+        asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
+
+        periodic_timer(0, 0);
+        while(1);
     }
-    else if (my_strcmp(cmd,"asyn") == 0)
+    else if (my_strcmp(cmd, "asyn") == 0)
     {
         uart_puts("\n");
         while (1)
             uart_asyn_write(uart_asyn_read());
+    }
+    else if (my_strncmp(cmd, "setTimeout", 10) == 0)
+    {
+        uart_puts("\n");
+        char *message_start = cmd + 11, *message_end = cmd + 11;
+        while (*message_end != ' ')
+            message_end++;
+
+        int size = message_end - message_start + 1;
+        char *message = simple_malloc(sizeof(char) * size); // malloc for message
+        for (int i = 0; i < size; i++)
+            message[i] = message_start[i];
+        message[size - 1] = '\0';
+
+        int second = atoi(message_end + 1);
+        setTimeout(message, second);
     }
     else
         uart_puts("\n");

@@ -1,7 +1,7 @@
-#include "dtb_parser.h"
 #include "uart.h"
 #include "utils.h"
 #include "cpio.h"
+#include "dtb_parser.h"
 
 char *dtb_ptr;
 extern unsigned long long cpio_address;
