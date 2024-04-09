@@ -20,7 +20,7 @@ void fdt_traverse(void *_dtb_ptr, dtb_callback callback)
 {
     fdt_header *header = _dtb_ptr;
     if(uint32_endian_big2lttle(header->magic) != 0xD00DFEED) {
-        uart_puts("wrong magic in fdt_traverse\n");
+        uart_puts("wrong magic in fdt_traverse: Invalid file format\n");
         return;
     }
     uint32_t struct_size = uint32_endian_big2lttle(header->size_dt_struct);

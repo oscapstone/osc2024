@@ -31,6 +31,6 @@ int strcmp(const char* str1, const char* str2)
 unsigned long long strlen(const char *str)
 {
     int count = 0;
-    while((unsigned char)*str++)count++;
+    while((char)*str++)count++;
     return count;
 }

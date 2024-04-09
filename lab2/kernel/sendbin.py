@@ -10,7 +10,7 @@ size = os.stat("kernel8.img").st_size
 size_bytes = size.to_bytes(4,"little")
 s.write(size_bytes)
 
-time.sleep(1)
+time.sleep(1) # flush function
 
 with open("kernel8.img","rb") as f:
     # s.write(f.read())

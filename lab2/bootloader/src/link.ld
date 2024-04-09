@@ -1,7 +1,7 @@
 SECTIONS
 {
     /* text section start from 0x60000 */
-    . = 0x60000;
+    . = 0x80000;
     __bootloader_start = .;
     .text : { KEEP(*(.text.boot)) *(.text .text.* .gnu.linkonce.t*) }
     /* next section set rodata */

@@ -48,13 +48,13 @@ void shell(){
         cpio_cat(cpio_addr, filename);
     } else if (strcmp(command_string,"malloc")) {
         char* p = simple_malloc(10);
-        uart_puts("Copying 123456789 to memory\n");
+        uart_puts("\nCopying 123456789 to memory");
         strcpy(p, "123456789");
         uart_puts("\nMemory content: ");
         for(int i=0; i<10; i++){
             uart_send(p[i]);
         }
-        uart_puts("Copying 987654321 to memory\n");
+        uart_puts("\nCopying 987654321 to memory");
         strcpy(p, "987654321");
         uart_puts("\nMemory content: ");
         for(int i=0; i<10; i++){
