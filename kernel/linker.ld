@@ -26,6 +26,7 @@ SECTIONS
   } > DATA
 
   .text : ALIGN(8) {
+    *(.text.start)
     *(.text .text.boot)
   } > TEXT
 

@@ -110,6 +110,8 @@ void cmd_execute(void)
 
     memcpy(&__userspace_start, f->content, strlen_new(f->content));
 
+    // REF: https://gcc.gnu.org/onlinedocs/gcc/extensions-to-the-c-language-family/how-to-use-inline-assembly-language-in-c-code.html#extended-asm-assembler-instructions-with-c-expression-operands
+    // Output/Input Operands
     asm("mov x0, 0x3c0");
     asm("msr spsr_el1, x0");                                // state
     asm("msr elr_el1, %0" : : "r" (&__userspace_start));    // return address

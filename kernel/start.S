@@ -1,10 +1,15 @@
-.section .text
+.section .text.start
+.global _start
 
 _start:
     // move devicetree's addr (ENABLE WHEN USING QEMU)
 
     // switch from EL2 to EL1
     bl      from_el2_to_el1
+
+    // set EL1 exception handler
+    adr     x0, exception_vector_table
+    msr     vbar_el1, x0
 
     // set stack pointer
     ldr     x1, =__stack_top
@@ -23,8 +28,8 @@ _start:
 
 from_el2_to_el1:
     mov     x0, (1 << 31)
-    msr hcr_el2, x0 // use AARCH64 (64-bit)
-    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
-    msr spsr_el2, x0
-    msr elr_el2, lr
-    eret // return to EL1
+    msr     hcr_el2, x0     // use AARCH64 (64-bit)
+    mov     x0, 0x3c5       // EL1h (SPSel = 1) with interrupt disabled
+    msr     spsr_el2, x0
+    msr     elr_el2, lr
+    eret                    // return to EL1

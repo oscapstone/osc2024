@@ -15,6 +15,10 @@ SRC_OBJ_FILES=$(SRC_FILES:.c=.o)
 KERNEL_FILES=$(wildcard $(KERNEL_DIR)/*.c)
 KERNEL_OBJ_FILES=$(KERNEL_FILES:.c=.o)
 
+KERNL_ASM=$(wildcard $(KERNEL_DIR)/*.S)
+KERNL_ASM_OBJS=$(KERNL_ASM:.S=.S.o)
+
+
 .PHONY: clean run run-mini-uart
 
 all: kernel8.img initramfs.cpio
@@ -24,10 +28,10 @@ kernel8.img: kernel8.elf
 		$(DIST_DIR)/kernel8.elf	\
 		$(DIST_DIR)/kernel8.img
 
-kernel8.elf: start.o $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)
+kernel8.elf: $(KERNL_ASM_OBJS) $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)
 	mkdir -p $(DIST_DIR)
 	$(LD) -T $(LD_SCRIPT) -o $(DIST_DIR)/kernel8.elf \
-		start.o $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)
+		$(KERNL_ASM_OBJS) $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)
 
 # THIS FUCKED UP DEPS
 # start.o: $(SRC_DIR)/start.S
@@ -42,7 +46,7 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 $(KERNEL_DIR)/%.o: $(KERNEL_DIR)/%.c
 	$(CC) $(CFLAGS) $(INCLUDE_DIR) -o $@ -c $<
 
-start.o: start.S
+$(KERNEL_DIR)/%.S.o: $(KERNEL_DIR)/%.S
 	$(CC) $(CFLAGS) $(INCLUDE_DIR) -o $@ -c $<
 
 initramfs.cpio:
