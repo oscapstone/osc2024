@@ -46,11 +46,12 @@ start.o: start.S
 	$(CC) $(CFLAGS) $(INCLUDE_DIR) -o $@ -c $<
 
 initramfs.cpio:
-	cd ../rootfs && find . | cpio -o -H newc > ../kernel/$(DIST_DIR)/initramfs.cpio
+	cd ../rootfs && find . | cpio -o -H newc > ../initramfs.cpio
 
 clean:
 	rm -f start.o $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)
 	rm -rf $(DIST_DIR)
+	rm -f ../initramfs.cpio
 
 run:
 	qemu-system-aarch64 -M raspi3b -kernel $(DIST_DIR)/kernel8.img -display none -d in_asm

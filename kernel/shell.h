@@ -11,5 +11,9 @@ void cmd_help(void);
 void cmd_hello(void);
 void cmd_reboot(void);
 void cmd_default(void);
+void cmd_execute(void);
+
+extern int __userspace_start;
+extern int __userspace_end;
 
 #endif

@@ -11,7 +11,7 @@ void shell_start()
     while (1) {
         uart_puts("# ");
         getline(&line, MAX_GETLINE_LEN);    // FIXME: too many malloc without free?
-            do_cmd(line);
+        do_cmd(line);
     }
 }
 
@@ -23,7 +23,8 @@ static cmt_t command_funcs[] = {
     get_board_revision,
     get_arm_memory,
     list_initramfs,
-    cat_initramfs
+    cat_initramfs,
+    cmd_execute
 };
 static char* commands[] = {
     "help",
@@ -32,7 +33,8 @@ static char* commands[] = {
     "board",
     "arm",
     "ls",
-    "cat"
+    "cat",
+    "exec"
 };
 static char* command_descriptions[] = {
     "print this help menu",
@@ -41,7 +43,8 @@ static char* command_descriptions[] = {
     "print board info",
     "print arm memory info",
     "list initramfs",
-    "cat a file"
+    "cat a file",
+    "execute a program in userspace (EL0)"
 };
 
 void do_cmd(const char* line)
@@ -88,4 +91,28 @@ void cmd_reboot()
 void cmd_default()
 {
     uart_puts("command not found\n");
+}
+
+/**
+ * Execute binary executable from initramfs in userspace (EL0).
+*/
+void cmd_execute(void)
+{
+    char *filename = NULL;
+    uart_puts("Filename: ");
+    getline(&filename, 0x20);
+
+    // Find file from initramfs
+    cpio_meta_t *f = find_initramfs(filename);
+    if (f == NULL) {
+        return;
+    }
+
+    memcpy(&__userspace_start, f->content, strlen_new(f->content));
+
+    asm("mov x0, 0x3c0");
+    asm("msr spsr_el1, x0");                                // state
+    asm("msr elr_el1, %0" : : "r" (&__userspace_start));    // return address
+    asm("msr sp_el0, %0" : : "r" (&__userspace_end));       // stack pointer
+    asm("eret");
 }

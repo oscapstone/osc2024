@@ -3,7 +3,6 @@ misc
 *.elf
 *.img
 .vscode/
-test/
 lib/
 rootfs/
 *.log

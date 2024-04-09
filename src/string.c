@@ -34,6 +34,17 @@ int strcmp(const char* s1, const char* s2)
 }
 
 /**
+ * Correct new strlen() implementation.
+ * Use this one!
+*/
+int strlen_new(const char *str)
+{
+    const char *s;
+    for (s = str; *s; ++s);
+	return (s - str);
+}
+
+/**
  * Convert char array to int.
  * Only works with number >= 0
  * 
@@ -93,4 +104,24 @@ int getdelim(char **lineptr, int n, int delim)
 int getline(char **lineptr, int n)
 {
     return getdelim(lineptr, n, '\n');
+}
+
+/**
+ * Memory copy n bytes from src to dest
+ * 
+ * params:
+ *  - dest: destination
+ *  - src: source
+ *  - n: number of bytes to be copied from src to dest
+*/
+void *memcpy(void *dest, const void *src, int n)
+{
+    char *d = dest;
+
+    const char *s = src;
+    while (n--) {
+        *d++ = *s++;
+    }
+
+    return dest;
 }
