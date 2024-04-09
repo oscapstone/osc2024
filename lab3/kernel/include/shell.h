@@ -28,6 +28,6 @@ int do_cmd_info(int argc, char **argv);
 int do_cmd_reboot(int argc, char **argv);
 int do_cmd_ls(int argc, char **argv);
 int do_cmd_cat(int argc, char **argv);
-int do_cmd_malloc(int argc, char **argv);
+int do_cmd_kmalloc(int argc, char **argv);
 int do_cmd_dtb(int argc, char **argv);
 #endif /* _SHELL_H_ */
