@@ -1,8 +1,14 @@
 #include "uart.h"
 #include "exception.h"
+#include "timer.h"
 
 void disable_interrupt(void) { //ok
     asm volatile("msr DAIFSet, 0xf\r\n");
+}
+
+void el0_irq_entry() { //ok
+    print_boot_time();
+    //In the basic part, you only need to enable interrupt in EL0
 }
 
 void exception_entry(void) {

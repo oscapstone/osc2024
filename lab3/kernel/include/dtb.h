@@ -1,4 +1,4 @@
-#define uint32_t unsigned int
+#include "types.h"
 
 #define FDT_BEGIN_NODE 0x00000001
 #define FDT_END_NODE 0x00000002

@@ -17,5 +17,6 @@
 
 void exception_entry();
 void disable_interrupt();
+void el0_irq_entry();
 
 #endif

@@ -5,6 +5,8 @@
 #include "dtb.h"
 #include "memory.h"
 #include "string.h"
+#include "exception.h"
+#include "timer.h"
 
 extern char* _dtb_ptr;
 extern char* cpio_addr;
@@ -37,6 +39,7 @@ void shell(){
         uart_puts("malloc    : allocate memory\n");
         uart_puts("dtb	: print device tree\n");
         uart_puts("exec	: exec the user program\n");
+        uart_puts("timer	: Enable the timer’s interrupt\n");
         uart_puts("reboot	: print file content\n");
     } else if (strcmp(command_string,"ls")) {
         fdt_traverse(_dtb_ptr, initramfs_callback);
@@ -73,5 +76,19 @@ void shell(){
         uart_puts("Enter filename: ");
         get_command(filename);
         cpio_exec(cpio_addr, filename);
+    } else if (strcmp(command_string,"timer")) {
+        disable_interrupt();
+
+        core_timer_enable();
+        set_core_timer(2 * get_core_frequency());
+
+        void (*location)(void) = infinite;
+
+        asm volatile( "msr     elr_el1, %0\r\n\t" ::"r" (location) );
+        asm volatile( "mov     x0, 0x340\r\n\t");
+        asm volatile( "msr     spsr_el1, x0\r\n\t");
+        asm volatile( "mov     x0, sp\r\n\t");
+        asm volatile( "msr     sp_el0, x0\r\n\t");
+        asm volatile("eret    \r\n\t");
     }
 }

@@ -107,6 +107,18 @@ exception_handler:
     load_all
     eret
 
+el1h_irq_handler:
+    save_all
+    bl exception_entry
+    load_all
+    eret
+
+el0_irq_handler:
+    save_all
+    bl el0_irq_entry
+    load_all
+    eret
+
 
 .align 11                                /* vector table should be aligned to 0x800 */
 exception_vector_table:   // the blue graph
@@ -148,7 +160,7 @@ exception_vector_table:   // the blue graph
 
     b exception_handler  /* Synchronous 64-bit EL0 */
     .align 7
-    b exception_handler //In the basic part, you only need to enable interrupt in EL0
+    b el0_irq_handler //In the basic part, you only need to enable interrupt in EL0
     .align 7              /* IRQ 64-bit EL0 */
     b exception_handler   /* FIQ 64-bit EL0 */
     .align 7
