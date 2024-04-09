@@ -23,6 +23,7 @@ void do_cmd_info();
 void do_cmd_malloc();
 void do_cmd_ls(char*);
 void do_cmd_dtb();
+void do_cmd_exec(char*);
 void do_cmd_reboot();
 
 #endif /* _SHELL_H_ */

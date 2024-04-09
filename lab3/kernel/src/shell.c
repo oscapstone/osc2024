@@ -8,7 +8,8 @@
 #include "dtb.h"
 #include "heap.h"
 
-#define CLI_MAX_CMD 8
+#define CLI_MAX_CMD 9
+#define USTACK_SIZE 0x10000
 
 extern char* dtb_ptr;
 void* CPIO_DEFAULT_PLACE;
@@ -22,6 +23,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
     {.command="ls", .help="list directory contents"},
     {.command="malloc", .help="simple allocator in heap session"},
     {.command="dtb", .help="show device tree"},
+    {.command="exec", .help="execute a command, replacing current image with a new image"},
     {.command="reboot", .help="reboot the device"}
 };
 
@@ -88,10 +90,12 @@ void cli_cmd_exec(char* buffer)
         do_cmd_malloc();
     } else if (strcmp(cmd, "dtb") == 0){
         do_cmd_dtb();
+    } else if (strcmp(cmd, "exec") == 0){
+        do_cmd_exec(argvs);
     } else if (strcmp(cmd, "reboot") == 0) {
         do_cmd_reboot();
-    } else if (*buffer){
-        uart_puts(buffer);
+    } else if (cmd){
+        uart_puts(cmd);
         uart_puts(": command not found\r\n");
         uart_puts("Type 'help' to see command list.\r\n");
     }
@@ -105,7 +109,7 @@ void cli_print_banner()
     uart_puts("    //     //    ------    //          \r\n");
     uart_puts("   //     //          //  //           \r\n");
     uart_puts("    ------     ------      ------      \r\n");
-    uart_puts("            2024 Lab2 Booting          \r\n");
+    uart_puts("            2024 Lab3 Booting          \r\n");
     uart_puts("=======================================\r\n");
 }
 
@@ -232,6 +236,43 @@ void do_cmd_malloc()
 void do_cmd_dtb()
 {
     traverse_device_tree(dtb_ptr, dtb_callback_show_tree);
+}
+
+void do_cmd_exec(char* filepath)
+{
+    char* c_filepath;
+    char* c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+
+    while(header_ptr!=0)
+    {
+        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        //if parse header error
+        if(error)
+        {
+            uart_puts("cpio parse error");
+            break;
+        }
+
+        if(strcmp(c_filepath, filepath)==0)
+        {
+            //exec c_filedata
+            char* ustack = malloc(USTACK_SIZE);
+            asm("mov x1, 0x3c0\n\t"
+                "msr spsr_el1, x1\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
+                "msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
+                "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
+                "eret\n\t"              // Perform exception return. EL1 -> EL0
+                :: "r" (c_filedata),
+                   "r" (ustack+USTACK_SIZE));
+            break;
+        }
+
+        //if this is TRAILER!!! (last of file)
+        if(header_ptr==0) uart_puts("exec: %s: No such file or directory\n", filepath);
+    }
+
 }
 
 void do_cmd_reboot()
