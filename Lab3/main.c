@@ -1,8 +1,6 @@
 #include "uart.h"
 #include "shell.h"
 
-#define MEMORY_POOL_SIZE 1024
-
 void main()
 {
     unsigned long el;

@@ -27,14 +27,32 @@ char uart_write_buffer[BUFFER_SIZE];
 unsigned int write_idx = 0;
 unsigned int write_cur = 0;
 
+char async_cmd[BUFFER_SIZE];
+
+void strcpy(char *s1, char *s2){
+    while(*s1){
+        *s2 = *s1;
+        s1++;
+        s2++;
+    }
+    *s2 = '\0';
+}
+
 void uart_write_handler(){
     //*AUX_MU_IER |= 0x02;
     //uart_puts("hi\n");
     //*AUX_MU_IER &= ~(0x02);
     //asm volatile("msr DAIFSet, 0xf");
+    char ch;
     if(write_cur < write_idx){
         *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
+        ch = uart_write_buffer[write_cur];
         write_cur++;
+    }
+    if(ch == '\r'){
+        shell(async_cmd);
+        write_cur = 0;
+        write_idx = 0;
     }
     //asm volatile("msr DAIFClr, 0xf");
     //*AUX_MU_IER &= ~(0x02);
@@ -49,11 +67,15 @@ void uart_read_handler() {
         //uart_send('\n');
         uart_read_buffer[read_idx] = '\0';
         read_idx = 0;
+        strcpy(uart_read_buffer, async_cmd);
         //uart_puts(uart_read_buffer);
         uart_write_buffer[write_idx] = '\n';
         write_idx++;
-        shell(uart_read_buffer);
-        uart_read_buffer[read_idx] = '\0';
+        create_task(uart_write_handler,2);
+        uart_write_buffer[write_idx] = '\r';
+        write_idx++;
+        //shell(uart_read_buffer);
+        //uart_read_buffer[read_idx] = '\0';
     }
     else{
         uart_read_buffer[read_idx] = ch;
