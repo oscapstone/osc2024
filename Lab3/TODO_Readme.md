@@ -19,6 +19,7 @@ On 板子:
 * 記得再compile一次disable interrupt
 
 * 記得要把 跳到user program的指令改成0x3c0 而非0x3c5!
+* 可以試試看關掉timer的asm(但感覺不用)
 
 Demo:
 可以分開de各項目 (先用basic kernel跑 run 跟 timer，再用最後一個kernel跑uart跟advanced)
