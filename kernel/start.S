@@ -2,7 +2,9 @@
 
 _start:
     // move devicetree's addr (ENABLE WHEN USING QEMU)
-    // mov     x28, x0
+
+    // switch from EL2 to EL1
+    bl      from_el2_to_el1
 
     // set stack pointer
     ldr     x1, =__stack_top
@@ -18,3 +20,11 @@ _start:
 
     // jump to C code
 2:  bl      main
+
+from_el2_to_el1:
+    mov     x0, (1 << 31)
+    msr hcr_el2, x0 // use AARCH64 (64-bit)
+    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
+    msr spsr_el2, x0
+    msr elr_el2, lr
+    eret // return to EL1
