@@ -1,31 +1,17 @@
 #include "initramfs.h"
 #include "mailbox.h"
+#include "malloc.h"
 #include "shell.h"
 #include "string.h"
 #include "uart.h"
 
 void shell_start()
 {
-    uart_puts("# ");
-
-    char line[MAX_GETLINE_LEN];
-    char c;
-    unsigned int index = 0;
+    char *line = NULL;
     while (1) {
-        c = (char) uart_getc();
-
-        if (c == '\n') {
-            line[index++] = '\0';
-            uart_puts("\n");
-
+        uart_puts("# ");
+        getline(&line, MAX_GETLINE_LEN);    // FIXME: too many malloc without free?
             do_cmd(line);
-
-            index = 0;
-            uart_puts("# ");
-        } else {
-            line[index++] = c;
-            uart_send(c);
-        }
     }
 }
 

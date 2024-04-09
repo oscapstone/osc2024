@@ -1,3 +1,4 @@
+#include "malloc.h"
 #include "string.h"
 #include "uart.h"
 
@@ -59,4 +60,37 @@ int hex_atoi(const char *s, int len)
     }
 
     return num;
+}
+
+/**
+ * Getline from uart_getc(),
+ * delimited by `delim`.
+ * 
+ * params:
+ *  - lineptr: pointer to char array (char *)
+ *  - n: size of char array
+ *  - delim: delimiter
+*/
+int getdelim(char **lineptr, int n, int delim)
+{
+    *lineptr = (char *) malloc(sizeof(char) * n);
+
+    char c;
+    int idx = 0;
+    while ((c = (char) uart_getc()) != delim) {
+        (*lineptr)[idx++] = c;
+        uart_send(c);
+    }
+    (*lineptr)[idx++] = '\0';
+    uart_send('\n');
+
+    return idx;
+}
+
+/**
+ * Getline from uart_getc()
+*/
+int getline(char **lineptr, int n)
+{
+    return getdelim(lineptr, n, '\n');
 }

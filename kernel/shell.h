@@ -1,7 +1,7 @@
 #ifndef _DEF_SHELL
 #define _DEF_SHELL
 
-#define MAX_GETLINE_LEN 1024
+#define MAX_GETLINE_LEN 0x20
 
 void shell_start(void);
 void do_cmd(const char*);

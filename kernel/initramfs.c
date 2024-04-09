@@ -75,16 +75,8 @@ void cat_initramfs()
 {
     uart_puts("Filename: ");
 
-    // TODO: getline (cat and shell)
-    char line[1024];
-    char c;
-    int idx = 0;
-    while ((c = (char) uart_getc()) != '\n') {
-        line[idx++] = c;
-        uart_send(c);
-    }
-    line[idx++] = '\0';
-    uart_send('\n');
+    char *line = NULL;
+    getline(&line, 0x20);
 
     cpio_meta_t *f = find_initramfs(line);
     if (f == NULL) {
