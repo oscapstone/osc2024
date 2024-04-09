@@ -10,16 +10,34 @@ SUB_DIR = command
 SRC_FILES= $(shell find $(SRC_DIR) -type f -name "*.c")
 # for files in SRC_FILES, turn them from src/*.c to obj/*.o
 OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+OBJ_FILES += $(OBJ_DIR)/start.o
+
+DEP_FILES = $(OBJ_FILES:%.o=%.d)
 
 # flags
 INCLUDE = -Iinclude -I../lib/include
 TARGET = -mcpu=cortex-a53 --target=aarch64-rpi3-elf 
-CFLAGS = -g -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc $(TARGET) $(INCLUDE)
+CFLAGS = -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc -MMD $(TARGET) $(INCLUDE)
 
 # lib
 LIBPATH = ../lib
 LIBFLAG = -L../lib -lab
 LIB = ../lib/libab.a
+
+# ramdisk
+INITRD = initramfs.cpio
+DTB = bcm2710-rpi-3-b-plus.dtb
+
+# qemu
+QEMU_FLAG = -M raspi3b -display none \
+			-initrd $(INITRD) -dtb $(DTB) \
+			-serial null -serial stdio
+
+ifeq ($(DEBUG), 1)
+	CFLAGS += -g
+	QEMU_FLAG += -s -S
+endif
+
 
 ifeq ($(QEMU), 1)
 	CFLAGS += -D__QEMU__
@@ -27,21 +45,21 @@ endif
 
 ### dependencies
 .PHONY: all
-all: kernel8.img
+all: kernel8.img $(OBJ_DIR)
 
-start.o: start.S
-	$(CC) $(CFLAGS) -c start.S -o start.o
+-include $(DEP_FILES)
 
-$(OBJ_DIR):
-	mkdir $(OBJ_DIR)
-	mkdir $(OBJ_DIR)/$(SUB_DIR)
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(OBJ_DIR)
+$(OBJ_DIR)/start.o: start.S
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-kernel8.img: start.o $(OBJ_FILES) $(LIB)
-	$(LD) -m aarch64elf -nostdlib start.o $(OBJ_FILES) -T linker.ld -o kernel8.elf $(LIBFLAG)
-	$(OBJCOPY) -O binary kernel8.elf kernel8.img
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+kernel8.img: $(OBJ_FILES) $(LIB)
+	$(LD) -m aarch64elf -nostdlib $(OBJ_FILES) -T linker.ld -o kernel8.elf $(LIBFLAG)
+	$(OBJCOPY) -O binary kernel8.elf $@
 
 .PHONY: $(LIB)
 $(LIB):
@@ -57,12 +75,11 @@ initramfs.cpio: rootfs
 clean:
 	-@rm -v kernel8.*
 	-@rm -rv obj
-	-@rm -v start.o
 	-@rm -v initramfs.cpio
 
 .PHONY: run
 run: kernel8.img initramfs.cpio
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio --dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial stdio
+	qemu-system-aarch64 $(QEMU_FLAG) -kernel kernel8.img 
 
 .PHONY: debug
 debug: kernel8.img initramfs.cpio

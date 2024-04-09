@@ -1,25 +1,27 @@
 CC = clang
-CFLAGS = -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc -Iinclude
+CFLAGS = -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc -Iinclude -MMD
 TARGET = --target=aarch64-rpi3-elf -mcpu=cortex-a53
 
 SRC = src
 OBJ = obj
 
-SRCFILES = $(wildcard $(SRC)/*.c)
-OBJFILES = $(SRCFILES:$(SRC)/%.c=$(OBJ)/%.o)
+SRC_FILES = $(wildcard $(SRC)/*.c)
+OBJ_FILES = $(SRC_FILES:$(SRC)/%.c=$(OBJ)/%.o)
+DEP_FILES = $(OBJ_FILES:%.o=%.d)
 
 
 .PHONY: all
-all: $(OBJ) libab.a
+all: libab.a
 
-libab.a: $(OBJFILES)
-	@ar -rv $@ $(OBJFILES)
+libab.a: $(OBJ_FILES)
+	@ar -rv $@ $^ 
+
+-include $(DEP_FILES)
 
 $(OBJ)/%.o: $(SRC)/%.c
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(TARGET) -c $< -o $@
 
-$(OBJ):
-	mkdir -p $@
 
 .PHONY: clean
 clean:

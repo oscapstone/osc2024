@@ -2,11 +2,12 @@ CC = clang
 LD = ld.lld
 OBJCOPY = llvm-objcopy
 
-SRCDIR = src
-OBJDIR = obj
+SRC_DIR = src
+OBJ_DIR = obj
 
-SRCFILES = $(wildcard $(SRCDIR)/*.c)
-OBJFILES = $(SRCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
+SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
+OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+DEP_FILES = $(OBJ_FILES:%.o=%.d)
 
 
 KERNEL_IMG = ../kernel/kernel8.img
@@ -16,11 +17,7 @@ DTB = ../kernel/bcm2710-rpi-3-b-plus.dtb
 # flags
 INCLUDE = -Iinclude -I../lib/include
 TARGET = -mcpu=cortex-a53 --target=aarch64-rpi3-elf 
-CFLAGS = -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc $(TARGET) $(INCLUDE)
-ifeq ($(DEBUG), 1)
-	CFLAGS += -g
-endif
-
+CFLAGS = -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc -MMD $(TARGET) $(INCLUDE)
 
 LINKFLAGS = -m aarch64elf -nostdlib
 
@@ -31,27 +28,38 @@ LIB = ../lib/libab.a
 
 LINKFLAGS += $(LIBFLAG)
 
+# qemu
+QEMU_FLAG = -M raspi3b -display none \
+			-initrd $(INITRD) -dtb $(DTB) \
+			-serial null -serial pty
+
+ifeq ($(DEBUG), 1)
+	CFLAGS += -g
+	QEMU_FLAG += -s -S
+endif
+
+
 .PHONY: all
 all: bootloader.img
 
 bootloader.img: bootloader.elf
 	$(OBJCOPY) -O binary $< $@
 
-bootloader.elf: $(OBJDIR)/start.o $(OBJFILES) $(LIB)
+bootloader.elf: $(OBJ_DIR)/start.o $(OBJ_FILES) $(LIB)
 	$(LD) $(LINKFLAGS) $(filter-out $(LIB), $^) -T linker.ld -o $@
 
-$(OBJDIR)/start.o: start.S $(OBJDIR)
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/start.o: start.S 
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c $(OBJDIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(LIB):
 	$(MAKE) -C $(LIBPATH)
-
-$(OBJDIR):
-	mkdir $@
-
 
 .PHONY: $(KERNEL_IMG)
 $(KERNEL_IMG):
@@ -60,16 +68,12 @@ $(KERNEL_IMG):
 
 .PHONY: run
 run: bootloader.img $(KERNEL_IMG)
-	qemu-system-aarch64 -M raspi3b -kernel $< -display none -initrd $(INITRD) -dtb $(DTB) -serial null -serial pty
+	qemu-system-aarch64 $(QEMU_FLAG) -kernel $< 
 
-
-.PHONY: debug
-debug: bootloader.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -display none -initrd $(INITRD) -dtb $(DTB) -serial null -serial pty -S -s
 
 .PHONY: clean
 clean:
-	-@rm -rv $(OBJDIR)
+	-@rm -rv $(OBJ_DIR)
 	-@rm -v bootloader.img bootloader.elf
 
 
