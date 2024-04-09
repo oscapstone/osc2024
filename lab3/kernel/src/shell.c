@@ -14,7 +14,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "help", .help = "print all available commands", .func = do_cmd_help},
     {.command = "info", .help = "get device information via mailbox", .func = do_cmd_info},
     {.command = "ls", .help = "list directory contents", .func = do_cmd_ls},
-    {.command = "malloc", .help = "test malloc", .func = do_cmd_malloc},
+    {.command = "kmalloc", .help = "test kmalloc", .func = do_cmd_kmalloc},
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
 };
 
@@ -323,21 +323,21 @@ int do_cmd_cat(int argc, char **argv)
     return 0;
 }
 
-int do_cmd_malloc(int argc, char **argv)
+int do_cmd_kmalloc(int argc, char **argv)
 {
-    // test malloc
-    char *test1 = malloc(0x18);
-    strcpy(test1, "test malloc1");
+    // test kmalloc
+    char *test1 = kmalloc(0x18);
+    strcpy(test1, "test kmalloc1");
     puts(test1);
     puts("\r\n");
 
-    char *test2 = malloc(0x20);
-    strcpy(test2, "test malloc2");
+    char *test2 = kmalloc(0x20);
+    strcpy(test2, "test kmalloc2");
     puts(test2);
     puts("\r\n");
 
-    char *test3 = malloc(0x28);
-    strcpy(test3, "test malloc3");
+    char *test3 = kmalloc(0x28);
+    strcpy(test3, "test kmalloc3");
     puts(test3);
     puts("\r\n");
     return 0;
