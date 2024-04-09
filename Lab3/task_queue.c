@@ -38,6 +38,8 @@ void create_task(task_func_t callback, unsigned int priority){
             task_queue.tasks[i].func = callback;
             if(priority < task_queue.min_priority || task_queue.min_priority == 0)
                 task_queue.min_priority = priority;
+            // uart_puts("current min priority: ");
+            // uart_int(task_queue.min_priority);
             break;
         }
     }
