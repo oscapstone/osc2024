@@ -10,17 +10,16 @@ mod cpu;
 mod fdt;
 mod panic_wait;
 mod print;
+mod fs;
 
 extern crate alloc;
 
 use alloc::vec::Vec;
 use allocator::MyAllocator;
-use driver::cpio::CpioHandler;
+use fs::cpio::CpioHandler;
 use driver::mailbox;
 use driver::uart;
 use driver::addr_loader;
-
-const QEMU_INITRD_START: u64 = 0x8000000;
 
 #[global_allocator]
 static mut ALLOCATOR: MyAllocator = MyAllocator::new();
@@ -38,7 +37,7 @@ fn kernel_init() -> ! {
     let mut dtb_addr = addr_loader::load_dtb_addr();
     // init uart
     uart::init_uart();
-
+    uart::uart_write_str("Kernel started\r\n");
     // println!("DTB address: {:#x}", dtb_pos as u64);
     let dtb_parser = fdt::DtbParser::new(dtb_addr);
 
@@ -55,7 +54,7 @@ fn kernel_init() -> ! {
 
     let mut handler: CpioHandler = CpioHandler::new(initrd_start as *mut u8);
     loop {
-        print!("# ");
+        print!("meow>> ");
         let inp = alloc::string::String::from(uart::getline(&mut in_buf, true));
         let cmd = inp.trim().split(' ').collect::<Vec<&str>>();
         // split the input string
@@ -107,11 +106,9 @@ fn kernel_init() -> ! {
                 println!("ARM memory size: {:#x}", size);
             }
             "exec" => {
-            
+
             }
-            "" => {
-                println!("");
-            }
+            "" => {}
             _ => {
                 println!("Command not found\r\n");
             }

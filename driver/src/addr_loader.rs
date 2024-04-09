@@ -1,5 +1,4 @@
 
-
 pub fn load_dtb_addr() -> *mut u8 {
     let dtb_addr: *mut u64;
     unsafe {

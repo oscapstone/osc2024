@@ -5,6 +5,9 @@ TARGET            = aarch64-unknown-none-softfloat
 KERNEL_BIN        = kernel8.img
 BOOTLOADER_BIN    = bootloader.img
 
+include ./utils/format.mk
+include ./utils/os.mk
+
 # QEMU
 QEMU_BINARY       = qemu-system-aarch64
 QEMU_MACHINE_TYPE = raspi3b
@@ -28,6 +31,9 @@ INITRD_PATH = $(shell pwd)/initramfs.cpio
 KERNEL_ELF           = target/$(TARGET)/release/kernel
 BOOTLOADER_ELF	   = target/$(TARGET)/release/bootloader
 
+USER_PROG_IMG = userprog/prog/target/prog
+USER_PROG = userprog/prog
+
 OBJCOPY_CMD	 = rust-objcopy \
 			--strip-all 	\
 			-O binary
@@ -38,7 +44,7 @@ all: $(KERNEL_BIN) $(BOOTLOADER_BIN)
 
 $(KERNEL_BIN): kernel_elf
 	$(call color_header, "Generating stripped binary")
-	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
+	$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
 	$(call color_progress_prefix, "Name")
 	@echo $(KERNEL_BIN)
 	$(call color_progress_prefix, "Size")
@@ -46,7 +52,7 @@ $(KERNEL_BIN): kernel_elf
 
 $(BOOTLOADER_BIN): bootloader_elf
 	$(call color_header, "Generating stripped binary")
-	@$(OBJCOPY_CMD) $(BOOTLOADER_ELF) $(BOOTLOADER_BIN)
+	$(OBJCOPY_CMD) $(BOOTLOADER_ELF) $(BOOTLOADER_BIN)
 	$(call color_progress_prefix, "Name")
 	@echo $(BOOTLOADER_BIN)
 	$(call color_progress_prefix, "Size")
@@ -74,9 +80,13 @@ bootloader_gdb: $(BOOTLOADER_BIN) $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU in background")
 	$(EXEC_QEMU) $(QEMU_TTY_DEBUG_ARGS) $(QEMU_DTB_PATH) -kernel $(BOOTLOADER_BIN) -initrd $(INITRD_PATH) 
 
-cpio: initramfs/*
+$(USER_PROG_IMG): $(USER_PROG)/src/*
+	make -C userprog all
+
+cpio: initramfs/* $(USER_PROG_IMG)
 	$(call color_header, "Creating initramfs")
-	@cd initramfs && find . | cpio -H newc -o > ../initramfs.cpio
+	cp $(USER_PROG_IMG) initramfs/
+	cd initramfs && find . | cpio -H newc -o > ../initramfs.cpio
 
 clean:
 	make -C $(KERNEL_PATH) clean

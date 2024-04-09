@@ -136,7 +136,6 @@ pub fn getline(s: &mut [u8; 128], is_echo: bool) -> &str {
                 }
                 None => {}
             }
-            asm!("nop");
         }
     }
     core::str::from_utf8(&s[0..ptr]).unwrap()

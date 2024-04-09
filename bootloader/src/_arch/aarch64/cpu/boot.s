@@ -14,8 +14,8 @@
 //------------------------------------------------------------------------------
 _start:
 	// Save the address of the device tree blob.
-	ldr x1, =__dtb_addr
-	str x0, [x1]
+	; ldr x1, =__dtb_addr
+	; str x0, [x1]
 
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
@@ -66,8 +66,8 @@ _start:
 	bl	_start_rust
 
 	// restore the address of the device tree blob.
-	ldr x1, =__dtb_addr
-	ldr x0, [x1]
+	; ldr x1, =__dtb_addr
+	; ldr x0, [x1]
 	
 	// jump to 0x80000
 	ldr x1, =0x80000

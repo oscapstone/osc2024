@@ -1,8 +1,6 @@
 extern crate alloc;
 
 use alloc::string::String;
-use alloc::vec::Vec;
-use crate::uart;
 
 // a paraser to read cpio archive
 #[repr(C, packed)]
@@ -25,14 +23,12 @@ struct CpioNewcHeader {
 
 pub struct CpioHandler {
     cpio_start: *mut CpioNewcHeader,
-    pub files: CpioIterator,
 }
 
 impl CpioHandler {
     pub fn new(cpio_start: *mut u8) -> CpioHandler {
         CpioHandler {
             cpio_start: cpio_start as *mut CpioNewcHeader,
-            files: CpioIterator::new(&CpioHeaderWrapper::new(cpio_start as *mut CpioNewcHeader)),
         }
     }
 
@@ -172,8 +168,6 @@ impl CpioFile {
     }
 
 }
-
-
 
 fn hex_to_u64(hex: &[u8; 8]) -> u64 {
     let mut result: u64 = 0;

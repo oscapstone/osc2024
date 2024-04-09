@@ -11,7 +11,6 @@ use core::{
     ptr::{read_volatile, write_volatile},
     usize,
 };
-
 use driver::uart;
 
 const KERNEL_LOAD_ADDR: u64 = 0x80000;
@@ -36,7 +35,7 @@ unsafe fn bootloader(){
     let mut kernel_size: u32 = 0;
     
     // read kernel size (4 bytes) from uart
-    uart::read(&mut kernel_size as *mut u32 as *mut u8 /*(uint8_t)(&kernel_size) */, 4);
+    uart::read(&mut kernel_size as *mut u32 as *mut u8 , 4);
     uart::uart_write_str("Kernel size: ");
     uart::print_hex(kernel_size);
     uart::uart_write_str("\r\n");
