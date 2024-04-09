@@ -59,6 +59,18 @@ void list_initramfs()
     }
 }
 
+cpio_meta_t *find_initramfs(const char *s)
+{
+    cpio_meta_t *cur = head;
+    while (cur != NULL) {
+        if (!strcmp(cur->filename, s)) {
+            return cur;
+        }
+        cur = cur->next;
+    }
+    return NULL;
+}
+
 void cat_initramfs()
 {
     uart_puts("Filename: ");
@@ -74,18 +86,15 @@ void cat_initramfs()
     line[idx++] = '\0';
     uart_send('\n');
 
-    cpio_meta_t *cur = head;
-    while (cur != NULL) {
-        if (!strcmp(cur->filename, line)) {
-            char *ch = cur->content;
-            for (int i = 0; i < cur->filesize; i++) {
-                uart_send(ch[i]);
-            }
-            uart_puts("\n");
-            break;
-        }
-        cur = cur->next;
+    cpio_meta_t *f = find_initramfs(line);
+    if (f == NULL) {
+        return;
     }
+    char *ch = f->content;
+    for (int i = 0; i < f->filesize; i++) {
+        uart_send(ch[i]);
+    }
+    uart_puts("\n");
 }
 
 int initramfs_callback(int addr)
