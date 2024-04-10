@@ -6,14 +6,6 @@ use crate::{
 
 const MAXCHAR: usize = 100;
 
-fn check_mem_alloc() {
-    let mut v = alloc::vec![0u8; 10];
-    for i in 0..10 {
-        v.push(i);
-    }
-    println!("v = {:?}", v);
-}
-
 fn reboot() {
     println!("Rebooting...");
     common::reset(100);
@@ -34,6 +26,9 @@ fn help() {
 pub fn interactiave_shell() -> ! {
     let mut array: [u8; MAXCHAR] = [0; MAXCHAR];
     let mut cnt = 0;
+
+    // parse fdt tree
+    memory::device_tree::fdt_traverse(memory::device_tree::set_initrd_start);
 
     loop {
         let c = bcm::UART.get_char();
@@ -82,8 +77,7 @@ pub fn interactiave_shell() -> ! {
                     memory::initramfs::get_initramfs_files(arg_1);
                 }
                 "mem" => {
-                    check_mem_alloc();
-                    memory::device_tree::get_device_tree_ptr();
+                    println!("Initrd start: {:x}", memory::device_tree::get_initrd_start());
                 }
                 _ => {
                     if cnt > 0 {

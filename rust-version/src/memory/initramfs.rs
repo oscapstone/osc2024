@@ -1,7 +1,5 @@
 use crate::println;
 
-const INITRAMFS_POS: u64 = 0x800_0000;
-
 // FIXME:: use bincode to rewire following dirty code
 
 #[allow(dead_code)]
@@ -24,7 +22,8 @@ struct CpioNewcHeader {
 }
 
 pub fn list_initramfs_files() {
-    let mut initramfs_ptr = INITRAMFS_POS as *const u8;
+    let mut initramfs_ptr = crate::memory::device_tree::get_initrd_start() as *const u8;
+    // println!("initramfs_ptr: {:x}", initramfs_ptr as u32);
     let cwd = "rootfs";
     let mut header: &CpioNewcHeader;
     loop {
@@ -55,6 +54,15 @@ pub fn list_initramfs_files() {
             filename = filename.split("/").last().unwrap();
         }
 
+        if filename.is_empty() {
+            filename = "/";
+        }
+
+        // only contains '\0'
+        if filename.len() == 1 {
+            filename = ".";
+        }
+
         println!("{}", filename);
         // print all
         // println!("inode: {:x}, mode: {:x}, owner: {:x}, group: {:x}, size: {:x}, filename: {}, file_content_padding: {}", inode, file_mode, file_owner, file_group, file_size, core::str::from_utf8(filename).unwrap(), file_content_padding);
@@ -70,7 +78,9 @@ pub fn list_initramfs_files() {
 }
 
 pub fn get_initramfs_files(cur_filename: &str) {
-    let mut initramfs_ptr = INITRAMFS_POS as *const u8;
+    let mut initramfs_ptr = crate::memory::device_tree::get_initrd_start() as *const u8;
+    println!("initramfs_ptr: {:x}", initramfs_ptr as u32);
+
     let cwd = "rootfs";
     let mut header: &CpioNewcHeader;
     loop {

@@ -1,6 +1,9 @@
 use core::{char, mem::size_of};
 
-use crate::{print, println};
+use crate::{
+    println,
+    synchronization::{interface::Mutex, NullLock},
+};
 use alloc::{string::String, vec::Vec};
 
 #[repr(u32)]
@@ -34,6 +37,19 @@ struct FdtProp {
 
 extern "C" {
     static mut __dtb: u64;
+}
+
+// static initrd_start : Arc<NullLock<u32>> = Arc::new(NullLock::new(0));
+static INITRD_START: NullLock<usize> = NullLock::new(0);
+
+pub fn set_initrd_start(start: usize) {
+    INITRD_START.lock(|data| *data = start);
+}
+
+pub fn get_initrd_start() -> usize {
+    let mut start = 0;
+    INITRD_START.lock(|data| start = *data);
+    start
 }
 
 // align the pointer to n bytes
@@ -104,19 +120,20 @@ struct FdtManager {
 pub fn get_device_tree_ptr() -> *const u8 {
     let dev_tree_ptr_ptr = unsafe { __dtb as *const u64 };
     let dev_tree_ptr = unsafe { *dev_tree_ptr_ptr as *const u32 };
-    println!(
-        "Device Tree Pointer Pointer : {:x}",
-        dev_tree_ptr_ptr as u64
-    );
-    println!("Device Tree Pointer : {:x}", dev_tree_ptr as u64);
-    println!("Device Tree Pointer Value : {:x}", unsafe {
-        *dev_tree_ptr as u64
-    });
+    // println!(
+    //     "Device Tree Pointer Pointer : {:x}",
+    //     dev_tree_ptr_ptr as u64
+    // );
+    // println!("Device Tree Pointer : {:x}", dev_tree_ptr as u64);
+    // println!("Device Tree Pointer Value : {:x}", unsafe {
+    //     *dev_tree_ptr as u64
+    // });
 
     dev_tree_ptr as *const u8
 }
 
-pub fn fdt_traverse() {
+// pub fn fdt_traverse(cb: impl Fn(usize)) {
+pub fn fdt_traverse(cb: impl Fn(usize)) {
     let dev_tree_ptr = get_device_tree_ptr();
 
     // init FdtHeader struct with big endian
@@ -172,13 +189,13 @@ pub fn fdt_traverse() {
                         get_nullterm_string(fdt_strings_ptr.offset(fdt_prop.nameoff as isize));
 
                     if key.contains("linux,initrd-start") {
-                        println!(
-                            "kernel initrd start pos: {}",
-                            (*(fdt_start as *const u32)).swap_bytes()
-                        );
+                        cb((*(fdt_start as *const u32)).swap_bytes() as usize);
+                        // println!(
+                        //     "kernel initrd start pos: {}",
+                        //     (*(fdt_start as *const u32)).swap_bytes()
+                        // );
                     }
 
-                    println!("Prop Name : {}, Value : {}", key, value);
                     fdt_start =
                         align_ptr(fdt_start.byte_offset(fdt_prop.len as isize) as *mut u8, 4)
                             as *mut u8;
@@ -194,9 +211,12 @@ pub fn fdt_traverse() {
 
                 FdtToken::End => {
                     // println!("End");
+                    // println!("hey: {:x}", get_initrd_start());
                     break;
                 }
             }
         }
     }
+    // println!("hey1!");
+    // println!("hey: {}", get_initrd_start());
 }

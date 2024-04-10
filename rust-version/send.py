@@ -6,7 +6,7 @@ import time
 # FIXME: use rust to rewrite this script maybe good for rust exercise
 
 KERNEL_NAME = "kernel8.img"
-DEVICE_NAME = "/dev/pts/15"
+DEVICE_NAME = "/dev/pts/5"
 # DEVICE_NAME = "/dev/ttyUSB0"
 DEVICE_BAUDRATE = "115200"
 
