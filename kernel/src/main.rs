@@ -30,6 +30,21 @@ fn main() -> ! {
     }
     println!("Initramfs address: {:#x}", unsafe { INITRAMFS_ADDR });
 
+    // Get current timer value
+    unsafe {
+        let mut freq: u64;
+        let mut now: u64;
+        asm!(
+            "mrs {freq}, cntfrq_el0",
+            "mrs {now}, cntpct_el0",
+            freq = out(reg) freq,
+            now = out(reg) now,
+        );
+        println!("Current time: {}", now);
+        println!("Frequency: {} Hz", freq);
+        println!("Boot time: {} ms", now / (freq / 1000));
+    }
+
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         print!("> ");
@@ -81,9 +96,6 @@ fn execute_command(command: &[u8]) {
                     in(reg) PROGRAM_ENTRY as u64 - 0x1000,
                 );
             }
-            // let entry = PROGRAM_ENTRY;
-            // let entry_fn: extern "C" fn() = unsafe { core::mem::transmute(entry) };
-            // entry_fn();
         } else {
             println!(
                 "File not found: {}",

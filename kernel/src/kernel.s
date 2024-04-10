@@ -31,38 +31,131 @@ _loop:
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
-  b exception_handler // branch to a handler function.
-  .align 7 // entry size is 0x80, .align will pad 0
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler // branch to a handler function.
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
 
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    .align 7 // entry size is 0x80, .align will pad 0
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
 
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
 
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+    .align 7
