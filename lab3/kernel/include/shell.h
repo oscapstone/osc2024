@@ -1,10 +1,11 @@
 #ifndef _SHELL_H_
 #define _SHELL_H_
 
-#define CLI_MAX_CMD 8
+#define CLI_MAX_CMD 11
 #define CMD_MAX_LEN 32
 #define CMD_MAX_PARAM 10
 #define MSG_MAX_LEN 128
+#define USTACK_SIZE 0x10000
 
 typedef struct CLI_CMDS
 {
@@ -30,4 +31,7 @@ int do_cmd_ls(int argc, char **argv);
 int do_cmd_cat(int argc, char **argv);
 int do_cmd_kmalloc(int argc, char **argv);
 int do_cmd_dtb(int argc, char **argv);
+int do_cmd_exec(int argc, char **argv);
+int do_cmd_setTimeout(int argc, char **argv);
+int do_cmd_set2sAlert(int argc, char **argv);
 #endif /* _SHELL_H_ */

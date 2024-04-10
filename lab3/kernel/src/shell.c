@@ -6,15 +6,20 @@
 #include "cpio.h"
 #include "heap.h"
 #include "dtb.h"
+#include "timer.h"
+#include "uart1.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "cat", .help = "concatenate files and print on the standard output", .func = do_cmd_cat},
     {.command = "dtb", .help = "show device tree", .func = do_cmd_dtb},
+    {.command = "exec", .help = "execute a command, replacing current image with a new image", .func = do_cmd_exec},
     {.command = "hello", .help = "print Hello World!", .func = do_cmd_hello},
     {.command = "help", .help = "print all available commands", .func = do_cmd_help},
     {.command = "info", .help = "get device information via mailbox", .func = do_cmd_info},
-    {.command = "ls", .help = "list directory contents", .func = do_cmd_ls},
     {.command = "kmalloc", .help = "test kmalloc", .func = do_cmd_kmalloc},
+    {.command = "ls", .help = "list directory contents", .func = do_cmd_ls},
+    {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS]", .func = do_cmd_setTimeout},
+    {.command = "set2sAlert", .help = "set core timer interrupt every 2 second", .func = do_cmd_set2sAlert},
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
 };
 
@@ -24,12 +29,25 @@ void *CPIO_DEFAULT_PLACE;
 
 int start_shell()
 {
-    char input_buffer[CMD_MAX_LEN];
-    cli_print_banner();
+    // for (int i = 0; i < 10; i++)
+    // {
+    //     uart_puts("booting");
+    //     for (int j = 0; j < (i / 1) % 4; j++)
+    //     {
+    //         uart_puts(".");
+    //     }
+    //     for (int j = 0; j < 4 - ((i / 1) % 4); j++)
+    //     {
+    //         uart_puts(" ");
+    //     }
+    //     uart_puts("\r");
+    // }
+    char input_buffer[CMD_MAX_LEN] = {0};
+    // cli_print_banner();
     while (1)
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
-        puts("[ ( ´＿ゝ｀）...( •́ὤ•̀) < fuck ] $ ");
+        puts("[ (¦3[▓▓]  ...zzZ ] $ ");
         cli_cmd_read(input_buffer);
         cli_cmd_exec(input_buffer);
     }
@@ -150,15 +168,36 @@ void cli_cmd_exec(char *buffer)
 
 void cli_print_banner()
 {
-    puts("            ,.  ,.                                                 \r\n");
-    puts("            ||  ||        _____     _ _ _____         _            \r\n");
-    puts("           ,''--''.      |   __|___| | |     |___ ___| |___        \r\n");
-    puts("          : (.)(.) :     |   __| .'| | | | | | .'| . | | -_|       \r\n");
-    puts("         ,'        `.    |__|  |__,|_|_|_|_|_|__,|  _|_|___|       \r\n");
-    puts("         :          :                            |_|               \r\n");
-    puts("         :          :                                              \r\n");
-    puts("   -ctr- `._m____m_,'         https://github.com/HiFallMaple       \r\n");
-    puts("                                                                   \r\n");
+    // puts("            ,.  ,.                                                 \r\n");
+    // puts("            ||  ||        _____     _ _ _____         _            \r\n");
+    // puts("           ,''--''.      |   __|___| | |     |___ ___| |___        \r\n");
+    // puts("          : (.)(.) :     |   __| .'| | | | | | .'| . | | -_|       \r\n");
+    // puts("         ,'        `.    |__|  |__,|_|_|_|_|_|__,|  _|_|___|       \r\n");
+    // puts("         :          :                            |_|               \r\n");
+    // puts("         :          :                                              \r\n");
+    // puts("   -ctr- `._m____m_,'         https://github.com/HiFallMaple       \r\n");
+    // puts("                                                                   \r\n");
+    puts("                                                      \r\n");
+    puts("                   _oo0oo_                            \r\n");
+    puts("                  o8888888o                           \r\n");
+    puts("                  88\" . \"88                         \r\n");
+    puts("                  (| -_- |)                           \r\n");
+    puts("                  0\\  =  /0                          \r\n");
+    puts("                ___/`---'\\___                        \r\n");
+    puts("              .' \\\\|     |// '.                _____     _ _ _____         _                  \r\n");
+    puts("             / \\\\|||  :  |||// \\              |   __|___| | |     |___ ___| |___             \r\n");
+    puts("            / _||||| -:- |||||- \\             |   __| .'| | | | | | .'| . | | -_|            \r\n");
+    puts("           |   | \\\\\\  -  /// |   |            |__|  |__,|_|_|_|_|_|__,|  _|_|___|            \r\n");
+    puts("           | \\_|  ''\\---/''  |_/ |                  \r\n");
+    puts("           \\  .-\\__  '-'  ___/-. /            https://github.com/HiFallMaple       \r\n");
+    puts("         ___'. .'  /--.--\\  `. .'___                 \r\n");
+    puts("      .\"\" '<  `.___\\_<|>_/___.' >' \"\".           \r\n");
+    puts("     | | :  `- \\`.;`\\ _ /`;.`/ - ` : | |            \r\n");
+    puts("     \\  \\ `_.   \\_ __\\ /__ _/   .-` /  /          \r\n");
+    puts(" =====`-.____`.___ \\_____/___.-`___.-'=====          \r\n");
+    puts("                   `=---='                            \r\n");
+    puts("\r\n\r\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   \r\n");
+    puts("        佛祖保佑             永無BUG                   \r\n\r\n");
 }
 
 int do_cmd_help(int argc, char **argv)
@@ -293,7 +332,7 @@ int do_cmd_cat(int argc, char **argv)
     }
     else
     {
-        puts("Too many arguments\r\n");
+        puts("Incorrect number of parameters\r\n");
         return -1;
     }
     while (header_ptr != 0)
@@ -346,5 +385,81 @@ int do_cmd_kmalloc(int argc, char **argv)
 int do_cmd_dtb(int argc, char **argv)
 {
     traverse_device_tree(dtb_ptr, dtb_callback_show_tree);
+    return 0;
+}
+
+int do_cmd_exec(int argc, char **argv)
+{
+    char *filepath;
+    if (argc == 1)
+    {
+        filepath = argv[0];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    char *c_filepath;
+    char *c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+
+    while (header_ptr != 0)
+    {
+        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        // if parse header error
+        if (error)
+        {
+            puts("cpio parse error");
+            break;
+        }
+
+        if (strcmp(c_filepath, filepath) == 0)
+        {
+            // exec c_filedata
+            char *ustack = kmalloc(USTACK_SIZE);
+            asm("msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
+                "mov x10, 0x3c0\n\t"    // EL1h (SPSel = 1) with interrupt disabled
+                "msr spsr_el1, x10\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
+                "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
+                "eret\n\t"              // Perform exception return. EL1 -> EL0
+                ::"r"(c_filedata),
+                "r"(ustack + USTACK_SIZE));
+            // free(ustack);
+            break;
+        }
+
+        // if this is TRAILER!!! (last of file)
+        if (header_ptr == 0)
+        {
+            puts("cat: ");
+            puts(filepath);
+            puts(": No such file or directory\r\n");
+        }
+    }
+    return 0;
+}
+
+int do_cmd_setTimeout(int argc, char **argv)
+{
+    char *msg, *sec;
+    if (argc == 2)
+    {
+        msg = argv[0];
+        sec = argv[1];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    add_timer(puts, atoi(sec), msg);
+    return 0;
+}
+
+int do_cmd_set2sAlert(int argc, char **argv)
+{
+    add_timer(timer_set2sAlert, 2, "2sAlert");
     return 0;
 }
