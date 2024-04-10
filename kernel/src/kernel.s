@@ -3,7 +3,16 @@
 .global _start_kernel
 
 _start_kernel:
+    mrs x0, CurrentEL
+    and x0, x0, #0xc
+    cmp x0, #0b1000
+    bne _loop
+
     bl from_el2_to_el1
+
+    adr x0, exception_vector_table
+    msr vbar_el1, x0
+
     b _start_rust
 
 from_el2_to_el1:
@@ -15,3 +24,45 @@ from_el2_to_el1:
     mov x0, sp
     msr sp_el1, x0
     eret // return to EL1
+
+_loop:
+    b _loop
+
+.align 11 // vector table should be aligned to 0x800
+.global exception_vector_table
+exception_vector_table:
+  b exception_handler // branch to a handler function.
+  .align 7 // entry size is 0x80, .align will pad 0
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7
+  b exception_handler
+  .align 7

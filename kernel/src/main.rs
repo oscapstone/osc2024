@@ -5,8 +5,11 @@ extern crate alloc;
 
 mod allocator;
 mod dtb;
+mod exception;
 mod kernel;
 mod panic;
+
+use core::arch::asm;
 
 use driver::uart;
 use driver::watchdog;
@@ -35,6 +38,7 @@ fn main() -> ! {
     }
 }
 
+#[inline(never)]
 fn execute_command(command: &[u8]) {
     if command.starts_with(b"\x00") {
         return;
@@ -66,10 +70,20 @@ fn execute_command(command: &[u8]) {
         if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
             unsafe {
                 core::ptr::copy(data.as_ptr(), PROGRAM_ENTRY as *mut u8, data.len());
+                asm!(
+                    "mov {0}, 0x3c0",
+                    "msr spsr_el1, {0}",
+                    "msr elr_el1, {1}",
+                    "msr sp_el0, {2}",
+                    "eret",
+                    out(reg) _,
+                    in(reg) PROGRAM_ENTRY,
+                    in(reg) PROGRAM_ENTRY as u64 - 0x1000,
+                );
             }
-            let entry = PROGRAM_ENTRY;
-            let entry_fn: extern "C" fn() = unsafe { core::mem::transmute(entry) };
-            entry_fn();
+            // let entry = PROGRAM_ENTRY;
+            // let entry_fn: extern "C" fn() = unsafe { core::mem::transmute(entry) };
+            // entry_fn();
         } else {
             println!(
                 "File not found: {}",
@@ -84,6 +98,7 @@ fn execute_command(command: &[u8]) {
     }
 }
 
+#[inline(never)]
 fn print_mailbox_info() {
     let revision = driver::mailbox::get_board_revision();
     let (lb, ub) = driver::mailbox::get_arm_memory();
