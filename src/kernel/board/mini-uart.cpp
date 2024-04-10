@@ -167,8 +167,6 @@ int mini_uart_getline_echo(char* buffer, int length) {
       mini_uart_putc_raw('\n');
       break;
     }
-    if (r + 1 == length)
-      continue;
     switch (c) {
       case 8:     // ^H
       case 0x7f:  // backspace
@@ -186,8 +184,10 @@ int mini_uart_getline_echo(char* buffer, int length) {
       case '\t':  // skip \t
         break;
       default:
-        buffer[r++] = c;
-        mini_uart_putc_raw(c);
+        if (r + 1 < length) {
+          buffer[r++] = c;
+          mini_uart_putc_raw(c);
+        }
     }
   }
   buffer[r] = '\0';
