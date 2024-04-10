@@ -1,6 +1,16 @@
+#include "mini_uart.h"
 #include "utils.h"
-#include "peripherals/mini_uart.h"
+#include "exception.h"
+#include "peripherals/p_mini_uart.h"
 #include "peripherals/gpio.h"
+#include "peripherals/irq.h"
+
+char uart_read_buffer[BUFFER_SIZE];
+char uart_write_buffer[BUFFER_SIZE];
+int uart_read_index = 0;
+int uart_read_head = 0;
+int uart_write_index = 0;
+int uart_write_head = 0;
 
 void uart_send ( char c )
 {
@@ -27,6 +37,96 @@ void uart_send_string(const char* str)
 	while (*str) {
 		uart_send(*str++);
 	}
+}
+
+void uart_irq_handler() {
+	unsigned int iir = get32(AUX_MU_IIR_REG);
+
+	// check interrupt type
+
+	// check if it's a receive interrupt
+	if ((iir & 0x06) == 0x04) {
+		if((uart_read_index + 1) % BUFFER_SIZE == uart_read_head) {
+			// buffer is full, discard the data
+			unsigned int ier = get32(AUX_MU_IER_REG);
+	// only enable receiver interrupt for now
+			ier &= ~0x01;
+			put32(AUX_MU_IER_REG, ier);
+			return;
+		}
+		char c = get32(AUX_MU_IO_REG)&0xFF;
+		uart_read_buffer[uart_read_index++] = c;
+		if (uart_read_index >= BUFFER_SIZE) {
+			uart_read_index = 0;
+		}
+	} 
+	// check if it's a transmit interrupt
+	if ((iir & 0x06) == 0x02) {
+		// uart_send_string("Transmit interrupt\n");
+		if (uart_write_index != uart_write_head) {
+			put32(AUX_MU_IO_REG, uart_write_buffer[uart_write_index++]);
+			if (uart_write_index >= BUFFER_SIZE) {
+				uart_write_index = 0;
+			}
+			unsigned int ier = get32(AUX_MU_IER_REG);
+			ier |= 0x02;
+			put32(AUX_MU_IER_REG, ier);
+		} else {
+			// no more data to send, disable transmit interrupt
+			unsigned int ier = get32(AUX_MU_IER_REG);
+			ier &= ~0x02;
+			put32(AUX_MU_IER_REG, ier);
+		}
+	}
+}
+
+
+char uart_async_recv( void ) {
+
+	while (uart_read_index == uart_read_head) {
+		unsigned int ier = get32(AUX_MU_IER_REG);
+		// only enable receiver interrupt for now
+		ier |= 0x01;
+		put32(AUX_MU_IER_REG, ier);
+	}
+
+	el1_interrupt_disable();
+	char c = uart_read_buffer[uart_read_head++];
+	if (uart_read_head >= BUFFER_SIZE) {
+		uart_read_head = 0;
+	}
+	el1_interrupt_enable();
+	return c;
+}
+
+void uart_async_send_string(const char* str){
+
+	// if the write buffer is full, wait for it to be empty
+	while ((uart_write_index + 1) % BUFFER_SIZE == uart_write_head) {
+		unsigned int ier = get32(AUX_MU_IER_REG);
+		// only enable transmit interrupt for now
+		ier |= 0x02;
+		put32(AUX_MU_IER_REG, ier);
+	}
+	el1_interrupt_disable();
+	while(*str){
+		if(*str == '\n') {
+			uart_write_buffer[uart_write_head++] = '\r';
+			uart_write_buffer[uart_write_head++] = '\n';
+			str++;
+		} else {
+			uart_write_buffer[uart_write_head++] = *str++;
+		}
+		if (uart_write_head >= BUFFER_SIZE) {
+			uart_write_head = 0;
+		}
+	}
+	el1_interrupt_enable();
+	// enable transmit interrupt
+	unsigned int ier = get32(AUX_MU_IER_REG);
+	ier |= 0x02;
+	put32(AUX_MU_IER_REG, ier);
+	return;
 }
 
 void uart_hex(unsigned int d) {
@@ -65,4 +165,28 @@ void uart_init ( void )
 	put32(AUX_MU_MCR_REG,0);                //Set RTS line to be always high
 	put32(AUX_MU_BAUD_REG,270);             //Set baud rate to 115200
 	put32(AUX_MU_CNTL_REG,3);               //Finally, enable transmitter and receiver
+}
+
+void uart_enable_interrupt( void ) {
+	unsigned int ier = get32(AUX_MU_IER_REG);
+	// only enable receiver interrupt for now
+	ier |= 0x01;
+	// ier |= 0x02;
+	put32(AUX_MU_IER_REG, ier);
+
+	unsigned int enable_irqs_1 = get32(ENABLE_IRQS_1);
+	enable_irqs_1 |= 0x01 << 29;
+	put32(ENABLE_IRQS_1, enable_irqs_1);
+}
+
+void uart_disable_interrupt( void ) {
+	unsigned int ier = get32(AUX_MU_IER_REG);
+	// only enable receiver interrupt for now
+	ier &= ~0x01;
+	ier &= ~0x02;
+	put32(AUX_MU_IER_REG, ier);
+
+	unsigned int enable_irqs_1 = get32(ENABLE_IRQS_1);
+	enable_irqs_1 &= ~(0x01 << 29);
+	put32(ENABLE_IRQS_1, enable_irqs_1);
 }

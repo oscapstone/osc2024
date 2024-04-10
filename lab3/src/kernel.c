@@ -11,6 +11,7 @@ extern char *dtb_base;
 void main(char* base) {
 	dtb_base = base;
 	uart_init();
+	uart_enable_interrupt();
 	alloc_init();
 	simple_malloc(8);
 	uart_send_string("DTB base address: ");

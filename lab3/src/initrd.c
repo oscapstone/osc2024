@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "initrd.h"
+#include "alloc.h"
 #include "mini_uart.h"
 #include "string.h"
 #include "c_utils.h"
@@ -17,7 +18,7 @@ static int hextoi(char *s, int n)
 		r = r << 4;
 		if (*s >= 'A')
 			r += *s++ - 'A' + 10;
-		else if (*s >= 0)
+		else if (*s >= '0')
 			r += *s++ - '0';
 	}
 	return r;
@@ -155,4 +156,57 @@ void initrd_callback(unsigned int node_type, char *name, void *value, unsigned i
         uart_hex((unsigned long)ramfs_base);
         uart_send_string("\n");
     }
+}
+
+void initrd_exec_prog(char* target) {
+
+    char* target_addr = (char*) 0x20000;
+
+    char *filepath;
+    char *filedata;
+    unsigned int filesize;
+    // current pointer
+    cpio_t *header_pointer = (cpio_t *)(ramfs_base);
+
+    // print every cpio pathname
+    while (header_pointer)
+    {
+        // uart_send_string("header_pointer: ");
+        // uart_hex((unsigned long)header_pointer);
+        // uart_send_string("\n");
+        int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
+        // if parse header error
+        if (error)
+        {
+            // uart_printf("error\n");
+            uart_send_string("Error parsing cpio header\n");
+            break;
+        }
+        if (!strcmp(target, filepath))
+        {
+            for (unsigned int i = 0; i < filesize; i++){
+                *target_addr++ = filedata[i];
+            }
+            break;
+        }
+        // uart_send_string("header_pointer: ");
+        // uart_hex((unsigned long)header_pointer);
+        // uart_send_string("\n");
+        // if this is not TRAILER!!! (last of file)
+        if (header_pointer == 0){
+            uart_send_string("Program not found\n");
+            return;
+        }
+    }
+    
+    unsigned long spsr_el1 = 0x3c0;
+    unsigned long elr_el1 = 0x20000;
+    unsigned long sp = (unsigned long)simple_malloc(4096);
+
+    // "r": Any general-purpose register, except sp.
+    asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
+    asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
+    asm volatile("msr sp_el0, %0" : : "r" (sp));
+    asm volatile("eret");
+
 }

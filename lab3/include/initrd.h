@@ -29,5 +29,6 @@ int cpio_newc_parse_header(cpio_t *this_header_pointer, char **pathname, unsigne
 void initrd_list();
 void initrd_cat(const char *target);
 void initrd_callback(unsigned int node_type, char *name, void *value, unsigned int name_size);
+void initrd_exec_prog(char* target);
 
 #endif // INITRD_H
