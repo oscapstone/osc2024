@@ -19,7 +19,9 @@ extern "C" void kernel_main(void* dtb_addr) {
   core_timer_enable();
   enable_interrupt();
   mini_uart_printf("freq_of_timer: %ld\n", freq_of_timer);
-  mini_uart_printf("boot_timer_tick: %ld\n", boot_timer_tick);
+  mini_uart_printf("boot time    : " PRTval "s\n",
+                   FTval(tick2timeval(boot_timer_tick)));
+  set_core_timer(2);
 
   shell();
 }
