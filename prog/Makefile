@@ -8,15 +8,14 @@ TARGET = prog.img
 
 all: prog.img
 
+prog.img: prog
+	$(OBJCOPY) -O binary $< $@
 
-prog.elf: prog.o prog.ld
+prog: prog.o prog.ld
 	$(LD) -T prog.ld -o $@ prog.o
 
 prog.o: prog.S
 	$(CC) -c -o $@ $<
 
-prog.img: prog.elf
-	$(OBJCOPY) -O binary $< $@
-
 clean:
-	rm -f prog.o prog.elf
+	rm -f prog.o prog.elf prog.img
