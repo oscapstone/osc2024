@@ -186,3 +186,28 @@ char* memcpy(void *dest, const void *src, unsigned long long len)
         *d++ = *s++;
     return dest;
 }
+
+char* strcpy (char *dest, const char *src)
+{
+    return memcpy (dest, src, strlen (src) + 1);
+}
+
+char* str_SepbySpace(char* head)
+{
+    char* end;
+    while(1){
+        if(*head == '\0')
+        {
+            end = head;
+            break;
+        }
+        if(*head == ' ')
+        {
+            *head = '\0';
+            end = head + 1;
+            break;
+        }
+        head++;
+    }
+    return end;
+}

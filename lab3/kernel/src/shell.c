@@ -9,7 +9,7 @@
 #include "heap.h"
 #include "timer.h"
 
-#define CLI_MAX_CMD 9
+#define CLI_MAX_CMD 10
 #define USTACK_SIZE 0x10000
 
 extern char* dtb_ptr;
@@ -25,6 +25,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
     {.command="malloc", .help="simple allocator in heap session"},
     {.command="dtb", .help="show device tree"},
     {.command="exec", .help="execute a command, replacing current image with a new image"},
+    {.command="setTimeout", .help="setTimeout [MESSAGE] [SECONDS]"},
     {.command="reboot", .help="reboot the device"}
 };
 
@@ -94,6 +95,9 @@ void cli_cmd_exec(char* buffer)
         do_cmd_dtb();
     } else if (strcmp(cmd, "exec") == 0){
         do_cmd_exec(argvs);
+    } else if (strcmp(cmd, "setTimeout") == 0) {
+        char* sec = str_SepbySpace(argvs);
+        do_cmd_setTimeout(argvs, sec);
     } else if (strcmp(cmd, "reboot") == 0) {
         do_cmd_reboot();
     } else if (cmd){
@@ -275,6 +279,11 @@ void do_cmd_exec(char* filepath)
         if(header_ptr==0) uart_puts("exec: %s: No such file or directory\n", filepath);
     }
 
+}
+
+void do_cmd_setTimeout(char* msg, char* sec)
+{
+    add_timer(uart_sendline,atoi(sec),msg);
 }
 
 void do_cmd_reboot()

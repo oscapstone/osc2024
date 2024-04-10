@@ -12,6 +12,10 @@ void el1h_irq_router(){
         uart_interrupt_handler();
         // uart_puts("\n\t[Exception][el1h_irq]");
     }
+    else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
+    {
+        core_timer_handler();
+    }
 }
 
 void el0_sync_router(){

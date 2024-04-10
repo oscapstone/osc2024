@@ -10,5 +10,7 @@ unsigned long long strlen(const char *str);
 int                strcmp(const char*, const char*);
 int                strncmp(const char*, const char*, unsigned long long);
 char*              memcpy(void *dest, const void *src, unsigned long long len);
+char*              strcpy(char *dest, const char *src);
 
+char* str_SepbySpace(char* head);
 #endif /* _UTILS_H_ */

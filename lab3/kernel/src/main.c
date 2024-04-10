@@ -19,6 +19,8 @@ void main(char* arg){
     uart_interrupt_enable();
     el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
 
+    core_timer_enable();
+    timer_list_init();
     cli_print_banner();
 
     while(1){
