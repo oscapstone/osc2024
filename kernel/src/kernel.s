@@ -63,13 +63,6 @@ exception_vector_table:
     add sp, sp, 8
     eret
 
-    .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
-    eret
 
     .align 7
     sub sp, sp, 8
@@ -103,6 +96,15 @@ exception_vector_table:
     add sp, sp, 8
     eret
 
+
+    .align 7
+    sub sp, sp, 8
+    stp x30, x31, [sp]
+    bl exception_handler
+    ldp x30, x31, [sp]
+    add sp, sp, 8
+    eret
+
     .align 7
     sub sp, sp, 8
     stp x30, x31, [sp]
@@ -126,6 +128,7 @@ exception_vector_table:
     ldp x30, x31, [sp]
     add sp, sp, 8
     eret
+
 
     .align 7
     sub sp, sp, 8

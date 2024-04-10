@@ -45,6 +45,21 @@ fn main() -> ! {
         println!("Boot time: {} ms", now / (freq / 1000));
     }
 
+    unsafe {
+        asm!(
+            "mov {0}, 1",
+            "msr cntp_ctl_el0, {0}", // Enable the timer
+            "mrs {0}, cntfrq_el0",
+            "msr cntp_tval_el0, {0}",
+            "mov {0}, 2",
+            "ldr {1}, =0x40000040", // CORE0_TIMER_IRQ_CTRL
+            "str {0}, [{1}]",
+            "msr DAIFClr, 0xf",
+            out(reg) _,
+            out(reg) _,
+        );
+    }
+
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         print!("> ");
