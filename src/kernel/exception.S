@@ -1,3 +1,11 @@
+.section .text
+.global set_exception_vector_table
+set_exception_vector_table:
+    adr     x0, exception_vector_table
+    // D8.2.96 VBAR_EL1, Vector Base Address Register (EL1)
+    msr     VBAR_EL1, x0
+    ret
+
 // save general registers to stack
 .macro save_all
     sub     sp, sp, 17 * 16
@@ -58,8 +66,8 @@
 
 // D1.10.2 Exception vectors
 // https://developer.arm.com/documentation/102412/0103/Handling-exceptions/Taking-an-exception
-.align 11 // vector table should be aligned to 0x800
 .section .text.exception_vector
+.align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
     .org 0x000
@@ -74,7 +82,7 @@ exception_vector_table:
     .org 0x200
     CALL_WITH_CONTEXT 4 print_exception
     .org 0x280
-    CALL_WITH_CONTEXT 5 print_exception
+    CALL_WITH_CONTEXT 5 irq_handler
     .org 0x300
     CALL_WITH_CONTEXT 6 print_exception
     .org 0x380

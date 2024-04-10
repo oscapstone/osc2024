@@ -2,6 +2,9 @@
 
 #include "util.hpp"
 
+#define CORE0_IRQ_SOURCE ((addr_t)0x40000060)
+#define CNTPNSIRQ_INT    (1 << 1)
+
 struct ExceptionContext {
   uint64_t X[30];
   uint64_t lr;
@@ -15,5 +18,8 @@ inline int get_el() {
 }
 
 extern "C" {
-void print_exception(ExceptionContext*, int type);
+void print_exception(ExceptionContext* context, int type);
+void irq_handler(ExceptionContext* context, int type);
+// exception.S
+void set_exception_vector_table();
 }

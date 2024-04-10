@@ -1,4 +1,5 @@
 #include "arm.hpp"
+
 .section ".text._start"
 
 .global _start
@@ -33,10 +34,7 @@ primary_cpu_el1:
     adr     x0, __boot_core_stack_end
     mov     sp, x0
 
-    // set_exception_vector_table
-    adr     x0, exception_vector_table
-    // D8.2.96 VBAR_EL1, Vector Base Address Register (EL1)
-    msr     VBAR_EL1, x0
+    bl      set_exception_vector_table
 
     adr     x0, __bss_start
     adr     x1, __bss_end

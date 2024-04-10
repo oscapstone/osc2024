@@ -33,13 +33,18 @@ inline void wait_cycle(unsigned cycle) {
 }
 
 // ref:
-// https://github.com/torvalds/linux/blob/v6.8/tools/lib/perf/mmap.c#L313-L317
+// https://github.com/torvalds/linux/blob/v6.8/arch/arm64/include/asm/sysreg.h#L1117-L1135
 #define read_sysreg(r)                         \
   ({                                           \
     uint64_t __val;                            \
     asm volatile("mrs %0, " #r : "=r"(__val)); \
     __val;                                     \
   })
+#define write_sysreg(r, v)                           \
+  do {                                               \
+    uint64_t __val = (uint64_t)(v);                  \
+    asm volatile("msr " #r ", %x0" : : "rZ"(__val)); \
+  } while (0)
 
 extern "C" {
 // start.S
