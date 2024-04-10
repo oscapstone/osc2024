@@ -133,6 +133,9 @@ void tx_task()
 void timer_task()
 {
     timer t = timer_heap_extractMin(timer_hp);
+    if (t.expire == -1) //the timer heap is empty
+        return;
+
     t.callback(t.data, t.executed_time);
 
     if (timer_hp->size > 0)
@@ -155,10 +158,10 @@ void p0_task()
     task_heap_insert(task_hp, t);
     enable_interrupt();
     uart_asyn_write('\n'); // trigger interrupt
-    int count = 100000; //wait for interrupt
+    int count = 100000;    // wait for interrupt
     while (count--)
         asm volatile("nop\n");
-    
+
     uart_puts("p0_task end\n");
 }
 
@@ -174,7 +177,7 @@ void p1_task()
     enable_interrupt();
     uart_asyn_write('\n'); // trigger interrupt
 
-    int count = 100000; //wait for interrupt
+    int count = 100000; // wait for interrupt
     while (count--)
         asm volatile("nop\n");
 
@@ -193,7 +196,7 @@ void p2_task()
     enable_interrupt();
     uart_asyn_write('\n'); // trigger interrupt
 
-    int count = 100000; //wait for interrupt
+    int count = 100000; // wait for interrupt
     while (count--)
         asm volatile("nop\n");
 
@@ -216,7 +219,7 @@ void test_preemption()
     enable_interrupt();
 
     uart_asyn_write('\n'); // trigger interrupt
-    int count = 100000; //wait for interrupt
+    int count = 100000;    // wait for interrupt
     while (count--)
         asm volatile("nop\n");
 }

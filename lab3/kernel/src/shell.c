@@ -54,7 +54,18 @@ void shell_cmd(char *cmd)
     {
         uart_puts("\n");
         periodic_timer(0, 0);
-        while (1);
+        while (1)
+        {
+            char c = uart_read();
+            if (c == '\n')
+            {
+                core_timer_disable();
+                while (timer_hp->size > 0)
+                    timer_heap_extractMin(timer_hp);
+                core_timer_enable();
+                break;
+            }
+        }
     }
     else if (my_strcmp(cmd, "asyn") == 0)
     {

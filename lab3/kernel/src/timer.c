@@ -25,6 +25,7 @@ void set_min_expire()
 
 void add_timer(timer t)
 {
+    core_timer_disable();
     timer_heap_insert(timer_hp, t); // insert timer to min heap
     set_min_expire(); // find the min expire timer and set it to hareware timer
     core_timer_enable();
