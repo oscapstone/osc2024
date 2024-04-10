@@ -93,6 +93,12 @@ int mini_uart_getline_echo(char* buffer, int length) {
           mini_uart_puts("\b \b");
         }
         break;
+      case 0x15:  // ^U
+        while (r > 0) {
+          buffer[r--] = 0;
+          mini_uart_puts("\b \b");
+        }
+        break;
       case '\t':  // skip \t
         break;
       default:
