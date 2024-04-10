@@ -1,2 +1,3 @@
-build
-rpi3/kernel8.img
+build/
+target/
+.vscode/
