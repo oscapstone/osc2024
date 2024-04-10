@@ -129,7 +129,7 @@ void demo_async_uart()
             uart_async_puts(string); // output the string in read_buffer
             uart_async_puts("\n");
         }
-        wait_cycles(100000000);
+        wait_cycles(10000);
     };
 }
 

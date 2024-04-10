@@ -230,7 +230,7 @@ void uart_tasklet(unsigned long data)
     enqueue_char(&read_buffer, c);
 
 #ifdef DEMO
-    wait_cycles(500000000);
+    wait_cycles(5000000); // For demo nested irq in raspi 3b+, this delay is enough.
     uart_puts("Exit uart_tasklet\n");
 #endif
 }

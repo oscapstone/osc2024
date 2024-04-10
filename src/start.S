@@ -25,6 +25,8 @@
 
 .section ".text.boot"
 
+#define BOOTLOADER
+
 .global _start
 _start:
     // read cpu id, stop slave cores
@@ -35,9 +37,12 @@ _start:
 1:  wfe
     b       1b
 2:  // cpu id == 0, continue
+
+#ifndef BOOTLOADER
     // get the dtb address
     ldr     x1, =__dtb_address
     str     x0, [x1] // store the dtb address to the address given by the linker script
+#endif
 
     // set exception vector table
     bl      set_exception_vector_table

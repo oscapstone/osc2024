@@ -7,6 +7,7 @@ import serial
 import os
 import sys
 import time
+import fcntl
 
 parser = argparse.ArgumentParser()
 # parser.add_argument("image")
@@ -23,31 +24,23 @@ def receiveMsg():
     if ser.inWaiting() > 0:
         # Read all data in buffer
         data = ser.read(ser.inWaiting())
-        print(data.decode(errors='ignore'))
-    else:
-        print('====No data available====')
-
-def sendMsg():
-    cmd = input("$ ")
-    if cmd == "exit":
-        exit()
-    cmd = cmd + '\n'
-    for c in cmd:
-        ser.write(c.encode())
-        time.sleep(0.01)
-    # ser.write(b'\n')
-    time.sleep(0.1)
-    return 1
+        print(data.decode(errors='ignore'), end='')
 
 def communicate():
+    fd = sys.stdin.fileno()
+    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
     while True:
-        receiveMsg()
-        if sendMsg():
-            time.sleep(0.01)
-            receiveMsg()
-            time.sleep(0.01)
+        try:
+            key = sys.stdin.read(1)
+        except BlockingIOError:
+            pass
         else:
-            break
+            if key == '\r':
+                key = '\n' 
+            ser.write(key.encode())
+            time.sleep(0.01)
+        receiveMsg()
 
 def main():
     communicate()

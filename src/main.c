@@ -24,7 +24,7 @@ void main()
 
     print_current_el(); // read the current level from system register.
 
-    disable_interrupt(); // this is necessary in lab 3 basic 3: asynchronous uart
+    // disable_interrupt(); // this is necessary in lab 3 basic 3: asynchronous uart
 
     /* Switch to el0 with interrupt enabled. */
     move_to_user_mode();

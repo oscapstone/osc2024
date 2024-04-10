@@ -61,14 +61,21 @@ void timer_update()
         is_timer_enable = true;
         unsigned long deadline = timer_pool[i].start_time + timer_pool[i].timeout;
         if (timer_pool[i].enable == TIMER_ENABLE && deadline < current) {
-            printf("\n==== One timer is timeout: %s\n", timer_pool[i].message);
+            // printf("\n==== One timer is timeout: %s\n", timer_pool[i].message);
+            uart_puts("\n==== One timer is timeout: ");
+            uart_puts(timer_pool[i].message);
+            uart_puts("\n");
             timer_pool[i].enable = TIMER_DISABLE;
             timer_pool[i].timeout = 0;
             timer_pool[i].message[0] = '\0';
         }
     }
-    if (is_timer_enable)
-        printf("Current time: %d\n", current);
+    if (is_timer_enable) {
+        // printf("Current time: %d\n", current);
+        uart_puts("Current time: ");
+        uart_hex(current);
+        uart_puts("\n");
+    }
 }
 
 /* Timer tasklet: do timer_update(). */
@@ -81,7 +88,7 @@ void timer_tasklet(unsigned long data)
     timer_update();
 
 #ifdef DEMO
-    wait_cycles(50000000);
+    // wait_cycles(50000000); // For raspi 3b+, this delay is very long.
     uart_puts("Exit timer_tasklet\n");
 #endif
 }

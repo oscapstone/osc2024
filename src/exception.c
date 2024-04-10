@@ -116,7 +116,10 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
         case 2:
             uart_puts("svc 2: enable timer\n");
             core_timer_enable();
-            printf("Current time: %d\n", get_current_time());
+            // printf("Current time: %d\n", get_current_time());
+            uart_puts("Current time: ");
+            uart_hex(get_current_time());
+            uart_puts("\n");
             break;
         case 3:
             unsigned long timeout;
