@@ -18,7 +18,7 @@ decltype(&mini_uart_putc) mini_uart_putc_fp;
 RingBuffer rbuf, wbuf;
 
 void set_ier_reg(bool enable, int bit) {
-  (enable ? setbit : clearbit)(AUX_MU_IER_REG, bit);
+  SET_CLEAR_BIT(enable, AUX_MU_IER_REG, bit);
 }
 
 void mini_uart_use_async(bool use) {

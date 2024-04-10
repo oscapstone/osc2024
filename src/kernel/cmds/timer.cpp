@@ -1,4 +1,4 @@
-#include "board/timer.hpp"
+#include "timer.hpp"
 
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"

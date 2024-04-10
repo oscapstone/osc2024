@@ -1,7 +1,7 @@
 #include "exception.hpp"
 
 #include "board/mini-uart.hpp"
-#include "board/timer.hpp"
+#include "timer.hpp"
 
 void print_exception(ExceptionContext* context, int type) {
   mini_uart_printf("Type    : %d %d\n", type / 4, type % 4);

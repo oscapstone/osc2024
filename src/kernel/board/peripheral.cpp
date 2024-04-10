@@ -10,7 +10,7 @@ void set_peripheral_irq(bool enable, int bit) {
     addr = PERIPHERAL_ENABLE_IRQs_2;
     bit -= 32;
   }
-  (enable ? setbit : clearbit)(addr, bit);
+  SET_CLEAR_BIT(enable, addr, bit);
 }
 
 void set_aux_irq(bool enable) {

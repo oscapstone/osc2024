@@ -1,11 +1,11 @@
 #include "board/mini-uart.hpp"
-#include "board/timer.hpp"
 #include "exception.hpp"
 #include "fdt.hpp"
 #include "heap.hpp"
 #include "initramfs.hpp"
 #include "interrupt.hpp"
 #include "shell.hpp"
+#include "timer.hpp"
 
 extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_setup();
@@ -21,7 +21,7 @@ extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_printf("freq_of_timer: %ld\n", freq_of_timer);
   mini_uart_printf("boot time    : " PRTval "s\n",
                    FTval(tick2timeval(boot_timer_tick)));
-  set_core_timer(2);
+  set_timer(2);
 
   mini_uart_use_async(true);
 
