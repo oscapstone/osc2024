@@ -3,3 +3,12 @@
 members = ["bootloader", "driver", "filesystem", "kernel", "stdio"]
 
 resolver = "2"
+
+
+[profile.release]
+debug = false
+strip = true
+opt-level = 'z'
+codegen-units = 1
+lto = true
+panic = 'abort'

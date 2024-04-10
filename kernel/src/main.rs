@@ -5,6 +5,7 @@ extern crate alloc;
 
 mod allocator;
 mod dtb;
+mod kernel;
 mod panic;
 
 use driver::uart;
@@ -13,9 +14,9 @@ use stdio::{gets, print, println};
 
 static mut INITRAMFS_ADDR: u32 = 0;
 const MAX_COMMAND_LEN: usize = 0x400;
+const PROGRAM_ENTRY: *const u8 = 0x30010000 as *const u8;
 
-#[no_mangle]
-pub extern "C" fn main() -> ! {
+fn main() -> ! {
     uart::init();
     println!("Hello, world!");
     print_mailbox_info();
@@ -28,7 +29,7 @@ pub extern "C" fn main() -> ! {
 
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
-        print!("# ");
+        print!("> ");
         gets(&mut buf);
         execute_command(&buf);
     }
@@ -53,6 +54,22 @@ fn execute_command(command: &[u8]) {
         let filename = &command[4..];
         if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
             print!("{}", core::str::from_utf8(data).unwrap());
+        } else {
+            println!(
+                "File not found: {}",
+                core::str::from_utf8(filename).unwrap()
+            );
+        }
+    } else if command.starts_with(b"exec") {
+        let rootfs = filesystem::cpio::CpioArchive::load(unsafe { INITRAMFS_ADDR } as *const u8);
+        let filename = &command[5..];
+        if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
+            unsafe {
+                core::ptr::copy(data.as_ptr(), PROGRAM_ENTRY as *mut u8, data.len());
+            }
+            let entry = PROGRAM_ENTRY;
+            let entry_fn: extern "C" fn() = unsafe { core::mem::transmute(entry) };
+            entry_fn();
         } else {
             println!(
                 "File not found: {}",
