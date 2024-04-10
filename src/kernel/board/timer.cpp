@@ -1,8 +1,10 @@
 #include "board/timer.hpp"
 
+#include "board/mini-uart.hpp"
 #include "util.hpp"
 
 uint64_t freq_of_timer, boot_timer_tick;
+bool show_timer = true;
 
 uint64_t get_timetick() {
   return read_sysreg(CNTPCT_EL0);
@@ -27,4 +29,10 @@ void set_core_timer(int sec) {
 
 timeval get_boot_time() {
   return tick2timeval(get_timetick() - boot_timer_tick);
+}
+
+void timer_handler() {
+  set_core_timer(2);
+  if (show_timer)
+    mini_uart_printf("[" PRTval "] timer interrupt\n", FTval(get_boot_time()));
 }

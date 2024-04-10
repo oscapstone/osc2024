@@ -50,6 +50,11 @@ const Cmd cmds[] = {
         .help = "run user program",
         .fp = cmd_run,
     },
+    {
+        .name = "timer",
+        .help = "toggle timer",
+        .fp = cmd_timer,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

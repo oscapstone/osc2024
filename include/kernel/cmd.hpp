@@ -11,6 +11,7 @@ int cmd_cat(int, char*[]);
 int cmd_alloc(int, char*[]);
 int cmd_devtree(int, char*[]);
 int cmd_run(int, char*[]);
+int cmd_timer(int, char*[]);
 
 using cmd_fp = int (*)(int, char*[]);
 

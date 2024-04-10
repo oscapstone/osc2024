@@ -2,7 +2,6 @@
 
 #include "board/mini-uart.hpp"
 #include "board/timer.hpp"
-#include "timeval.hpp"
 
 void print_exception(ExceptionContext* context, int type) {
   mini_uart_printf("Type    : %d %d\n", type / 4, type % 4);
@@ -13,8 +12,6 @@ void print_exception(ExceptionContext* context, int type) {
 
 void irq_handler(ExceptionContext* context, int type) {
   auto irq_source = get32(CORE0_IRQ_SOURCE);
-  if ((irq_source & CNTPNSIRQ_INT) == CNTPNSIRQ_INT) {
-    set_core_timer(2);
-    mini_uart_printf("[" PRTval "] timer interrupt\n", FTval(get_boot_time()));
-  }
+  if ((irq_source & CNTPNSIRQ_INT) == CNTPNSIRQ_INT)
+    timer_handler();
 }
