@@ -1,7 +1,7 @@
 #pragma once
 
 class RingBuffer {
-  static constexpr int capacity = 0x100;
+  static constexpr int capacity = 0x1000;
   int head = 0, tail = 0;
   char buf[capacity]{};
 
