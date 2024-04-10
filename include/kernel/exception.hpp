@@ -15,5 +15,5 @@ inline int get_el() {
 }
 
 extern "C" {
-void exception_handler(ExceptionContext*, int type);
+void print_exception(ExceptionContext*, int type);
 }
