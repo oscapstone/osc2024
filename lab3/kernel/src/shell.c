@@ -44,14 +44,15 @@ void cli_cmd_read(char* buffer)
     {
         if ( idx >= CMD_MAX_LEN ) break;
 
-        c = uart_recv();
+        // c = uart_recv();
+        c = uart_async_getc();
         if ( c == '\n')
         {
-            uart_puts("\r\n");
+            // uart_puts("\r\n");
             break;
         }
         buffer[idx++] = c;
-        uart_send(c);
+        // uart_send(c);
     }
 }
 

@@ -123,7 +123,7 @@ el1h_sync:
 el1h_irq:
     save_all
     mov x0,5
-    bl invalid_exception_router
+    bl el1h_irq_router
     load_all
     eret
 el1h_fiq_invalid:

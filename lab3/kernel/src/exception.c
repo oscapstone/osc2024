@@ -5,6 +5,15 @@
 #include "timer.h"
 #include "heap.h"
 
+void el1h_irq_router(){
+    // Kernel is running in el1. CLI requires this irq to do async I/O
+    if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception  
+    {
+        uart_interrupt_handler();
+        // uart_puts("\n\t[Exception][el1h_irq]");
+    }
+}
+
 void el0_sync_router(){
     unsigned long long spsr_el1;
     __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r" (spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
@@ -25,6 +34,6 @@ void el0_irq_64_router(){
 }
 
 void invalid_exception_router(unsigned long long x0){
-    //uart_sendline("invalid exception : 0x%x\r\n",x0);
+    //uart_puts("invalid exception : 0x%x\r\n",x0);
     //while(1);
 }
