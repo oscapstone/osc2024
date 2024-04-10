@@ -15,6 +15,6 @@ void periodic_timer(void *data, int executed_time);
 void core_timer_enable();
 void core_timer_disable();
 
-extern heap *hp;
+extern timer_heap *timer_hp;
 
 #endif

@@ -1,13 +1,19 @@
 #include "gpio.h"
 #include "uart.h"
+#include "task.h"
 #include "timer.h"
 #include "exception.h"
 
 #define AUX_MU_IO ((volatile unsigned int *)(MMIO_BASE + 0x00215040))
 #define AUX_MU_IER ((volatile unsigned int *)(MMIO_BASE + 0x00215044))
 #define AUX_MU_IIR ((volatile unsigned int *)(MMIO_BASE + 0x00215048))
+#define AUX_MU_LSR ((volatile unsigned int *)(MMIO_BASE + 0x00215054))
 
 #define CORE0_INTERRUPT_SOURCE (volatile unsigned int *)0x40000060
+
+#define TX_PRIORITY 4
+#define RX_PRIORITY 4
+#define TIMER_PRIORITY 0
 
 extern char read_buf[MAX_SIZE];
 extern char write_buf[MAX_SIZE];
@@ -16,7 +22,8 @@ extern int read_back;
 extern int write_front;
 extern int write_back;
 
-extern heap *hp;
+extern task_heap *task_hp;
+extern timer_heap *timer_hp;
 
 void enable_interrupt()
 {
@@ -55,44 +62,161 @@ void exception_entry()
 
 void irq_handler_entry()
 {
-    disable_interrupt();                    // disable interrupt in handler first.
     if (*CORE0_INTERRUPT_SOURCE & (1 << 8)) // interrupt is from GPU
     {
         if ((*AUX_MU_IIR & 0b110) == 0b100) // check if it's receiver interrupt.
         {
-            if ((read_back + 1) % MAX_SIZE == read_front) // if buffer is full, disable interrupt.
-            {
-                disable_uart_rx_interrupt();
-                return;
-            }
-            read_buf[read_back] = (char)*AUX_MU_IO;
-            read_back = (read_back + 1) % MAX_SIZE;
+            disable_uart_rx_interrupt(); // masks the device’s interrupt line
+            task t;
+            t.callback = rx_task;
+            t.priority = RX_PRIORITY;
+
+            disable_interrupt();
+            task_heap_insert(task_hp, t);
+            enable_interrupt();
+
+            do_task();
         }
         else if ((*AUX_MU_IIR & 0b110) == 0b010) // check if it's transmiter interrupt
         {
-            if (write_front == write_back) // if buffer is empty, disable interrupt.
-            {
-                disable_uart_tx_interrupt();
-                return;
-            }
+            disable_uart_tx_interrupt(); // masks the device’s interrupt line
+            task t;
+            t.callback = tx_task;
+            t.priority = TX_PRIORITY;
 
-            while (write_front != write_back)
-            {
-                *AUX_MU_IO = (write_buf[write_front]);
-                write_front = (write_front + 1) % MAX_SIZE;
-            }
-            disable_uart_tx_interrupt();
+            disable_interrupt();
+            task_heap_insert(task_hp, t);
+            enable_interrupt();
+
+            do_task();
         }
     }
     else if (*CORE0_INTERRUPT_SOURCE & (1 << 1)) // interrupt is from CNTPNSIRQ
     {
-        timer t = extractMin(hp);
-        t.callback(t.data, t.executed_time);
+        core_timer_disable(); // masks the device’s interrupt line
+        task t;
+        t.callback = timer_task;
+        t.priority = TIMER_PRIORITY;
 
-        if (hp->size > 0)
-            set_min_expire();
-        else
-            core_timer_disable();
+        disable_interrupt();
+        task_heap_insert(task_hp, t);
+        enable_interrupt();
+
+        do_task();
     }
-    enable_interrupt(); // enable interrupt in the end
+}
+
+void rx_task()
+{
+    if ((read_back + 1) % MAX_SIZE == read_front) // if buffer is full, then return.
+        return;
+
+    while ((*AUX_MU_LSR & 1) && ((read_back + 1) % MAX_SIZE != read_front))
+    {
+        read_buf[read_back] = uart_read();
+        read_back = (read_back + 1) % MAX_SIZE;
+    }
+}
+
+void tx_task()
+{
+    if (write_front == write_back) // if buffer is empty, then return.
+        return;
+
+    while (write_front != write_back)
+    {
+        uart_write(write_buf[write_front]);
+        write_front = (write_front + 1) % MAX_SIZE;
+    }
+}
+
+void timer_task()
+{
+    timer t = timer_heap_extractMin(timer_hp);
+    t.callback(t.data, t.executed_time);
+
+    if (timer_hp->size > 0)
+    {
+        set_min_expire();
+        core_timer_enable();
+    }
+    else
+        core_timer_disable();
+}
+
+void p0_task()
+{
+    uart_puts("p0_task start\n");
+
+    task t;
+    t.callback = p3_task;
+    t.priority = 3;
+    disable_interrupt();
+    task_heap_insert(task_hp, t);
+    enable_interrupt();
+    uart_asyn_write('\n'); // trigger interrupt
+    int count = 100000; //wait for interrupt
+    while (count--)
+        asm volatile("nop\n");
+    
+    uart_puts("p0_task end\n");
+}
+
+void p1_task()
+{
+    uart_puts("p1_task start\n");
+
+    task t;
+    t.callback = p0_task;
+    t.priority = 0;
+    disable_interrupt();
+    task_heap_insert(task_hp, t);
+    enable_interrupt();
+    uart_asyn_write('\n'); // trigger interrupt
+
+    int count = 100000; //wait for interrupt
+    while (count--)
+        asm volatile("nop\n");
+
+    uart_puts("p1_task end\n");
+}
+
+void p2_task()
+{
+    uart_puts("p2_task start\n");
+
+    task t;
+    t.callback = p1_task;
+    t.priority = 1;
+    disable_interrupt();
+    task_heap_insert(task_hp, t);
+    enable_interrupt();
+    uart_asyn_write('\n'); // trigger interrupt
+
+    int count = 100000; //wait for interrupt
+    while (count--)
+        asm volatile("nop\n");
+
+    uart_puts("p2_task end\n");
+}
+
+void p3_task()
+{
+    uart_puts("p3_task start\n");
+    uart_puts("p3_task end\n");
+}
+
+void test_preemption()
+{
+    task t;
+    t.callback = p2_task;
+    t.priority = 2;
+    disable_interrupt();
+    task_heap_insert(task_hp, t);
+    enable_interrupt();
+
+    uart_asyn_write('\n'); // trigger interrupt
+    int count = 100000; //wait for interrupt
+    while (count--)
+        asm volatile("nop\n");
 }

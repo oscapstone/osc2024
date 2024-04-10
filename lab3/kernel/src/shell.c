@@ -4,6 +4,7 @@
 #include "cpio.h"
 #include "timer.h"
 #include "allocator.h"
+#include "exception.h"
 #include "shell.h"
 
 #define buf_size 1024
@@ -52,13 +53,8 @@ void shell_cmd(char *cmd)
     else if (my_strcmp(cmd, "timer") == 0)
     {
         uart_puts("\n");
-        unsigned long long cntpct_el0 = 0;
-        asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
-        unsigned long long cntfrq_el0 = 0;
-        asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
-
         periodic_timer(0, 0);
-        while(1);
+        while (1);
     }
     else if (my_strcmp(cmd, "asyn") == 0)
     {
@@ -81,6 +77,14 @@ void shell_cmd(char *cmd)
 
         int second = atoi(message_end + 1);
         setTimeout(message, second);
+    }
+    else if (my_strcmp(cmd, "test") == 0)
+    {
+        uart_puts("\n");
+        test_preemption();
+        int count = 100000; // wait for interrupt
+        while (count--)
+            asm volatile("nop\n");
     }
     else
         uart_puts("\n");

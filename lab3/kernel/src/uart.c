@@ -164,10 +164,10 @@ char uart_asyn_read()
     enable_uart_rx_interrupt();
     while (read_front == read_back); // if the read buffer is empty, then the process wait.
 
-    disable_interrupt();
+    disable_uart_rx_interrupt();
     char c = read_buf[read_front];
     read_front = (read_front + 1) % MAX_SIZE;
-    enable_interrupt();
+    enable_uart_rx_interrupt();
 
     return c == '\r' ? '\n' : c;
 }
@@ -177,11 +177,9 @@ void uart_asyn_write(unsigned int c)
     if ((write_back + 1) % MAX_SIZE == write_front) // if the write buffer is full, drop it down.
         return;
 
-    disable_interrupt();
+    disable_uart_tx_interrupt();
     write_buf[write_back] = c;
     write_back = (write_back + 1) % MAX_SIZE;
-    enable_interrupt();
-
     enable_uart_tx_interrupt();
 }
 

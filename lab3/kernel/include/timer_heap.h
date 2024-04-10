@@ -10,16 +10,16 @@ typedef struct timer{
     int expire;              // the time at which the timer will expire
 } timer;
 
-typedef struct heap{
+typedef struct timer_heap{
     timer *arr;
     int size;
     int capacity;
-} heap;
+} timer_heap;
 
-heap *createHeap(int capacity);
-void insertHelper(heap *h, int index);
-void heapify(heap *h, int index);
-timer extractMin(heap *h);
-void insert(heap *h, timer t);
+timer_heap *create_timer_heap(int capacity);
+void timer_heap_insertHelper(timer_heap *h, int index);
+void timer_heap_heapify(timer_heap *h, int index);
+timer timer_heap_extractMin(timer_heap *h);
+void timer_heap_insert(timer_heap *h, timer t);
 
 #endif

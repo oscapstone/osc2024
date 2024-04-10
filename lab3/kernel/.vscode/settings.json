@@ -10,7 +10,9 @@
         "shell.h": "c",
         "timer_heap.h": "c",
         "gpio.h": "c",
-        "utils.h": "c"
+        "utils.h": "c",
+        "task.h": "c",
+        "task_heap.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

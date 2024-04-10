@@ -1,18 +1,18 @@
 #include "uart.h"
 #include "timer.h"
 
-#define MAX_HEAP_SIZE 256
+#define MAX_TIMER_HEAP_SIZE 256
 
-heap *hp = 0;
+timer_heap *timer_hp = 0;
 
 void timer_heap_init()
 {
-    hp = createHeap(MAX_HEAP_SIZE);
+    timer_hp = create_timer_heap(MAX_TIMER_HEAP_SIZE);
 }
 
 void set_min_expire()
 {
-    int min_expire = hp->arr[0].expire;
+    int min_expire = timer_hp->arr[0].expire;
     unsigned long long cntpct_el0 = 0;
     asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
     unsigned long long cntfrq_el0 = 0;
@@ -25,7 +25,7 @@ void set_min_expire()
 
 void add_timer(timer t)
 {
-    insert(hp, t); // insert timer to min heap
+    timer_heap_insert(timer_hp, t); // insert timer to min heap
     set_min_expire(); // find the min expire timer and set it to hareware timer
     core_timer_enable();
 }
@@ -68,7 +68,7 @@ void periodic_timer(void *data, int executed_time)
     asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
     unsigned long long cntfrq_el0 = 0;
     asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
-
+    
     uart_puts("current time: ");
     uart_dec(cntpct_el0 / cntfrq_el0);
     uart_puts("s\n");
@@ -82,8 +82,6 @@ void periodic_timer(void *data, int executed_time)
 void core_timer_enable()
 {
     asm volatile(
-        "mov x0, 1\n"
-        "msr cntp_ctl_el0, x0\n" // enable
         "mov x0, 2\n"
         "ldr x1, =0x40000040\n"
         "str w0, [x1]\n"); // unmask timer interrupt
@@ -92,8 +90,6 @@ void core_timer_enable()
 void core_timer_disable()
 {
     asm volatile(
-        "mov x0, 0\n"
-        "msr cntp_ctl_el0, x0\n" // disable
         "mov x0, 0\n"
         "ldr x1, =0x40000040\n"
         "str w0, [x1]\n"); // mask timer interrupt
