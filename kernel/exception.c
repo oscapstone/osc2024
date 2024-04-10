@@ -32,6 +32,26 @@ void _init_core_timer(void)
 
 void handle_exception(void)
 {
+    uart_puts("exception raised!\n");
+
+    long spsr_el1, elr_el1, esr_el1;
+    asm("mrs %0, spsr_el1" : "=r"((long) spsr_el1));
+    asm("mrs %0, elr_el1" : "=r"((long) elr_el1));
+    asm("mrs %0, esr_el1" : "=r"((long) esr_el1));
+
+    uart_puts("spsr_el1: ");
+    uart_hex(spsr_el1);
+    uart_puts("\n");
+
+    uart_puts("elr_el1: ");
+    uart_hex(elr_el1);
+    uart_puts("\n");
+
+    uart_puts("esr_el1: ");
+    uart_hex(esr_el1);
+    uart_puts("\n");
+
+    uart_puts("\n");
 }
 
 void handle_interrupt(void)
@@ -53,11 +73,11 @@ void handle_interrupt(void)
 
 void el2_to_el1(void)
 {
-    asm("mov     x0, (1 << 31)");
-    asm("msr     hcr_el2, x0");
-    asm("mov     x0, 0x3c5");
-    asm("msr     spsr_el2, x0");
-    asm("msr     elr_el2, lr");
+    asm("mov x0, (1 << 31)");
+    asm("msr hcr_el2, x0");
+    asm("mov x0, 0x3c5");
+    asm("msr spsr_el2, x0");
+    asm("msr elr_el2, lr");
     asm("eret");
 }
 

@@ -44,20 +44,22 @@
     add sp, sp, 32 * 8
 .endm
 
-exception_handler:  // FIXME: infinite loop now
+
+default_handler:
     save_all
-    b handle_exception
     load_all
     eret
 
 interrupt_handler:
     save_all
-    b handle_interrupt
+    bl handle_interrupt
     load_all
     eret
 
-default_handler:
+// FIXME: infinite loop now
+exception_handler:
     save_all
+    bl handle_exception     // 不用 bl 會壞掉
     load_all
     eret
 
@@ -76,7 +78,7 @@ exception_vector_table:
     .align 7
 
     /* exception from lower EL */
-    b default_handler
+    b exception_handler
     .align 7
     b default_handler
     .align 7
@@ -86,7 +88,7 @@ exception_vector_table:
     .align 7
 
     /* exception from current EL */
-    b default_handler
+    b exception_handler     // TODO: why here? and still other program raise exception
     .align 7
     b interrupt_handler   // interrupt
     .align 7

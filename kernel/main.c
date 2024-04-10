@@ -13,7 +13,5 @@ void main()
     fdt_traverse(initramfs_callback);
 
     uart_puts("\nWelcome to kernel!\n");
-    // shell_start();
-
-    cmd_execute();
+    shell_start();
 }
