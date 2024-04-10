@@ -50,42 +50,56 @@ exception_handler:  // FIXME: infinite loop now
     load_all
     eret
 
+interrupt_handler:
+    save_all
+    b handle_interrupt
+    load_all
+    eret
 
+default_handler:
+    save_all
+    load_all
+    eret
+
+// Resembles the diagram here:
+//      https://nycu-caslab.github.io/OSC2024/labs/lab3.html#vector-table
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
-    b exception_handler // branch to a handler function.
+    b default_handler // branch to a handler function.
     .align 7 // entry size is 0x80, .align will pad 0
-    b exception_handler
+    b default_handler
     .align 7
-    b exception_handler
+    b default_handler
     .align 7
-    b exception_handler
-    .align 7
-
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
+    b default_handler
     .align 7
 
-    b exception_handler
+    /* exception from lower EL */
+    b default_handler
     .align 7
-    b exception_handler
+    b default_handler
     .align 7
-    b exception_handler
+    b default_handler
     .align 7
-    b exception_handler
+    b default_handler
     .align 7
 
-    b exception_handler
+    /* exception from current EL */
+    b default_handler
     .align 7
-    b exception_handler
+    b interrupt_handler   // interrupt
     .align 7
-    b exception_handler
+    b default_handler
     .align 7
-    b exception_handler
+    b default_handler
+    .align 7
+
+    b default_handler
+    .align 7
+    b default_handler
+    .align 7
+    b default_handler
+    .align 7
+    b default_handler
     .align 7

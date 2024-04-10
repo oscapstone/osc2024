@@ -53,7 +53,7 @@ initramfs.cpio:
 	cd ../rootfs && find . | cpio -o -H newc > ../initramfs.cpio
 
 clean:
-	rm -f start.o $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES)
+	rm -f start.o $(SRC_OBJ_FILES) $(KERNEL_OBJ_FILES) $(KERNL_ASM_OBJS)
 	rm -rf $(DIST_DIR)
 	rm -f ../initramfs.cpio
 

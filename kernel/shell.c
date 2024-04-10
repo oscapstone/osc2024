@@ -98,9 +98,10 @@ void cmd_default()
 */
 void cmd_execute(void)
 {
-    char *filename = NULL;
-    uart_puts("Filename: ");
-    getline(&filename, 0x20);
+    // char *filename = NULL;
+    char *filename = "el0.img";
+    // uart_puts("Filename: ");
+    // getline(&filename, 0x20);
 
     // Find file from initramfs
     cpio_meta_t *f = find_initramfs(filename);
@@ -108,13 +109,39 @@ void cmd_execute(void)
         return;
     }
 
-    memcpy(&__userspace_start, f->content, strlen_new(f->content));
+    // uart_hex(__userspace_start);
+    // uart_puts("\n");
+    // uart_hex(&__userspace_start);
+    // uart_puts("\n");
+    // todo: 可能寫壞了
+    memcpy(&__userspace_start, f->content, f->filesize);    // strlen_new() 會壞掉！因為開頭是 0
 
+    // asm("mov x0, 0");
     // REF: https://gcc.gnu.org/onlinedocs/gcc/extensions-to-the-c-language-family/how-to-use-inline-assembly-language-in-c-code.html#extended-asm-assembler-instructions-with-c-expression-operands
     // Output/Input Operands
-    asm("mov x0, 0x3c0");
+    asm("mov x0, 0");   // enable interrupt in EL0
     asm("msr spsr_el1, x0");                                // state
-    asm("msr elr_el1, %0" : : "r" (&__userspace_start));    // return address
+    asm("mov x0, 0x500000");
+    asm("msr elr_el1, x0");
+
+    // asm("mov x0, 0x505000");
+    // asm("msr sp_el0, x0");
+    // asm("msr elr_el1, 0x500000" : : "r" (&__userspace_start));    // return address
     asm("msr sp_el0, %0" : : "r" (&__userspace_end));       // stack pointer
+
+    // long elr_el1 = 87;
+    // asm("mrs %0, elr_el1" : "=r"((long) elr_el1));
+
+    // uart_puts("elr_el1: 0x");
+    // uart_hex(elr_el1);
+    // uart_send('\n');
+
+    // long sp_el0 = 87;
+    // asm("mrs %0, sp_el0" : "=r"((long) sp_el0));
+
+    // uart_puts("sp_el0: 0x");
+    // uart_hex(sp_el0);
+    // uart_send('\n');
+
     asm("eret");
 }
