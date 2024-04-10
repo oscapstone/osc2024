@@ -364,6 +364,7 @@ void interrupt_handler_entry(){
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
         timer_handler();
+        //uart_puts("hi");
     }
     else{
         if ((iir & 0x06) == 0x04)

@@ -107,7 +107,7 @@ void run_user_program(){
     uart_puts("found user.img\n");
 
     // current is the file address
-    asm volatile ("mov x0, 0x3c5"); 
+    asm volatile ("mov x0, 0x3c0"); 
     asm volatile ("msr spsr_el1, x0"); 
     asm volatile ("msr elr_el1, %0": :"r" (current));
     asm volatile ("mov x0, 0x20000");
@@ -178,8 +178,6 @@ void core_timer_handler() {
 }
 
 void interrupt_handler_entry(){
-    asm volatile("msr DAIFSet, 0xf");
-    int irq_pending1 = *IRQ_PENDING_1;
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
@@ -191,5 +189,4 @@ void interrupt_handler_entry(){
         else
             uart_write_handler();
     }
-    //asm volatile("msr DAIFClr, 0xf");
 }

@@ -54,13 +54,13 @@ void execute_task(){
                 uart_puts("this should be replaced");
             }
             else if(task_queue.tasks[i].priority == task_queue.min_priority){
-                asm volatile("msr DAIFSet, 0xf");
+                // asm volatile("msr DAIFSet, 0xf");
                 exec_buffer[exec_idx] = task_queue.tasks[i].priority + '0';
                 exec_idx++;
                 task_queue.tasks[i].func();
                 task_queue.tasks[i].priority = 0;
                 task_queue.task_count--;
-                asm volatile("msr DAIFClr, 0xf");
+                // asm volatile("msr DAIFClr, 0xf");
             }
             else if(task_queue.tasks[i].priority != 0){
                 if(task_queue.tasks[i].priority < next_min)

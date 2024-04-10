@@ -46,7 +46,7 @@ void uart_init()
 }
 
 void uart_interrupt(){
-    //*AUX_MU_IER = 1;
+    *AUX_MU_IER = 1;
     *AUX_MU_IER |= 0x02;
     *IRQS1 |= 1 << 29;
 }

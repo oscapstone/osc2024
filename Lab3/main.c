@@ -8,7 +8,7 @@ void main()
     uart_init();
     // show el
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
-    el = el >> 2; // CurrentEL的值在高两位
+    el = el >> 2; 
 
     // print current exception level
     uart_puts("Booted! Current EL: ");

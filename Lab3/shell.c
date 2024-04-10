@@ -209,9 +209,13 @@ void async_uart_io(){
 }
 
 void add_timer(timer_callback_t callback, char* data, unsigned long after){
+    //uart_int(after);
     asm volatile("msr DAIFSet, 0xf");
     int i;
     int allocated = 0;
+    // if(after == 67){
+    //     after = 3;
+    // }
     unsigned long cur_time = get_current_time();
     unsigned long print_time = cur_time + after;
     for(i=0; i<MAX_TIMER; i++){

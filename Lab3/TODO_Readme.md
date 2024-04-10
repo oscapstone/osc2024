@@ -1,10 +1,4 @@
 ### TODOs
-* exception demo
-* basic2 demo
-* uart_hex_long
-* uart_int
-
-可以直接在irq handler裡面call shell來跑程式，實現真正的async，也可以用gpt的寫法，確實是async。
 
 On 板子:
 * run完打指令怪怪的(要先打一次)
@@ -22,12 +16,18 @@ On 板子:
 * 可以試試看關掉timer的asm(但感覺不用)
 
 Demo:
+Step1: Basic 1,2 in kernel basic 1, 2
+Step2: Advanced 1, then basic 3, advanced 2 (or use Basic 3 Adv 1, then the kernel with advanced 2)
+可以預備一個沒有task queue的，如果task queue怪怪的改用這個
+
 可以分開de各項目 (先用basic kernel跑 run 跟 timer，再用最後一個kernel跑uart跟advanced)
+先de 3個 timer (順序: 2, 1, 3)
+再de async，證明可以uart，最後 一個短timer配狂按 證明有queue
 uart跟advanced 1 部分可以先講 純async的，de到task再改用task來講
+st不要67(可問助教)
 
 Demo 問:
 到底啥時要asm，為啥有些地方block了就不能用了 (or準備demo時想辦法搞懂)
-run完到底要不要跑
 uart 貼上只能八個
 
 Demo完:
