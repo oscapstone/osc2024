@@ -5,8 +5,8 @@
 struct Ctx {
   char* msg;
   uint64_t tick;
-  Ctx(char* m, uint64_t t) : msg(new char[strlen(m)]), tick(t) {
-    memcpy(msg, m, strlen(m));
+  Ctx(char* m, uint64_t t) : msg(new char[strlen(m) + 1]), tick(t) {
+    memcpy(msg, m, strlen(m) + 1);
   }
   ~Ctx() {
     delete[] msg;

@@ -18,6 +18,10 @@ template <uint64_t sz, typename T>
 inline T align(T p) {
   return (T)(((uint64_t)p + sz - 1) & ~(sz - 1));
 }
+template <typename T>
+inline T align(T p, uint64_t sz) {
+  return (T)(((uint64_t)p + sz - 1) & ~(sz - 1));
+}
 
 inline void set32(addr_t address, uint32_t value) {
   asm volatile("str %w[v],[%[a]]" ::[a] "r"(address), [v] "r"(value));
