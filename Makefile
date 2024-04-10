@@ -17,6 +17,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -D_LIBCPP_HAS_NO_THREADS \
 			  -D_LIBCPP_DISABLE_AVAILABILITY \
 			  -D_LIBCPP_CSTDLIB \
+			  -fno-exceptions \
 			  -std=c++20 \
 			  -nostdlib -Os -fPIE
 QEMU_FLAGS 	= -display none -smp cpus=4 \

@@ -17,3 +17,16 @@ void* heap_malloc(int size) {
 bool heap_free(int size) {
   return heap_cur + size <= __heap_end;
 }
+
+void* operator new(unsigned long size) {
+  return heap_malloc(size);
+}
+void* operator new[](unsigned long size) {
+  return heap_malloc(size);
+}
+void operator delete(void* /*ptr*/) noexcept {
+  // TODO
+}
+void operator delete[](void* /*ptr*/) noexcept {
+  // TODO
+}

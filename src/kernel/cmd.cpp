@@ -55,6 +55,11 @@ const Cmd cmds[] = {
         .help = "toggle timer",
         .fp = cmd_timer,
     },
+    {
+        .name = "setTimeout",
+        .help = "prints msg after secs",
+        .fp = cmd_setTimeout,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 
