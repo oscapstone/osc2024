@@ -1,13 +1,33 @@
 #include "exception.hpp"
 
 #include "board/mini-uart.hpp"
+#include "board/pm.hpp"
+#include "interrupt.hpp"
 #include "timer.hpp"
+#include "util.hpp"
+
+const char* ExceptionFrom[] = {
+    "Current Exception level with SP_EL0.",
+    "Current Exception level with SP_ELx, x>0.",
+    "Lower Exception level, using AArch64",
+    "Lower Exception level, using AArch32",
+};
+const char* ExceptionType[] = {
+    "Synchronous",
+    "IRQ or vIRQ",
+    "FIQ or vFIQ",
+    "SError or vSError",
+};
 
 void print_exception(ExceptionContext* context, int type) {
-  mini_uart_printf("Type    : %d %d\n", type / 4, type % 4);
-  mini_uart_printf("SPSR_EL1: 0x%lx\n", context->spsr_el1);
-  mini_uart_printf("ELR_EL1 : 0x%lx\n", context->elr_el1);
-  mini_uart_printf("ESR_EL1 : 0x%lx\n", context->esr_el1);
+  disable_interrupt();
+  mini_uart_printf_sync("%s: %s\n", ExceptionType[type % 4],
+                        ExceptionFrom[type / 4]);
+  mini_uart_printf_sync("SPSR_EL1: %032lb\n", context->spsr_el1);
+  mini_uart_printf_sync("ELR_EL1 : %032lb\n", context->elr_el1);
+  mini_uart_printf_sync("ESR_EL1 : %032lb\n", context->esr_el1);
+  reboot();
+  prog_hang();
 }
 
 void irq_handler(ExceptionContext* context, int type) {
