@@ -1,3 +1,6 @@
 -Iinclude/kernel
 -Iinclude/lib
 -std=c++20
+-D_LIBCPP_HAS_NO_THREADS
+-D_LIBCPP_DISABLE_AVAILABILITY
+-D_LIBCPP_CSTDLIB
