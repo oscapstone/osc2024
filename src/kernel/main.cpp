@@ -23,5 +23,7 @@ extern "C" void kernel_main(void* dtb_addr) {
                    FTval(tick2timeval(boot_timer_tick)));
   set_core_timer(2);
 
+  mini_uart_use_async(true);
+
   shell();
 }

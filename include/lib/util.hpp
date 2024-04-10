@@ -31,6 +31,12 @@ inline void wait_cycle(unsigned cycle) {
   while (cycle--)
     NOP;
 }
+inline void setbit(addr_t address, int bit) {
+  return set32(address, get32(address) | (1 << bit));
+}
+inline void clearbit(addr_t address, int bit) {
+  return set32(address, get32(address) & (~(1 << bit)));
+}
 
 // ref:
 // https://github.com/torvalds/linux/blob/v6.8/arch/arm64/include/asm/sysreg.h#L1117-L1135

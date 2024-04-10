@@ -4,6 +4,7 @@
 
 #define CORE0_IRQ_SOURCE ((addr_t)0x40000060)
 #define CNTPNSIRQ_INT    (1 << 1)
+#define GPU_INT          (1 << 8)
 
 struct ExceptionContext {
   uint64_t X[30];

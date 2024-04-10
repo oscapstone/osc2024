@@ -14,4 +14,6 @@ void irq_handler(ExceptionContext* context, int type) {
   auto irq_source = get32(CORE0_IRQ_SOURCE);
   if ((irq_source & CNTPNSIRQ_INT) == CNTPNSIRQ_INT)
     timer_handler();
+  if ((irq_source & GPU_INT) == GPU_INT)
+    mini_uart_handler();
 }

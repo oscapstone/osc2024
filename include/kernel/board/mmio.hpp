@@ -3,7 +3,8 @@
 
 #define MMIO_BASE 0x3F000000
 
-#define MAILBOX_BASE ((addr_t)(MMIO_BASE + 0xb880))
+#define INTERRUPT_BASE ((addr_t)(MMIO_BASE + 0xB000))
+#define MAILBOX_BASE   ((addr_t)(MMIO_BASE + 0xB880))
 
 #define PM_RSTC ((addr_t)(MMIO_BASE + 0x10001c))
 #define PM_WDOG ((addr_t)(MMIO_BASE + 0x100024))
