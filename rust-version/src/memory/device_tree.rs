@@ -3,11 +3,14 @@ use core::{char, mem::size_of};
 use crate::{print, println};
 use alloc::{string::String, vec::Vec};
 
-const FDT_BEGIN_NODE: u32 = 0x1;
-const FDT_END_NODE: u32 = 0x2;
-const FDT_PROP: u32 = 0x3;
-const FDT_NOP: u32 = 0x4;
-const FDT_END: u32 = 0x9;
+#[repr(u32)]
+enum FdtToken {
+    BeginNode = 0x1,
+    EndNode = 0x2,
+    Prop = 0x3,
+    Nop = 0x4,
+    End = 0x9,
+}
 
 #[repr(C)]
 struct FdtHeader {
@@ -21,13 +24,6 @@ struct FdtHeader {
     boot_cpuid_phys: u32,
     size_dt_strings: u32,
     size_dt_struct: u32,
-}
-
-struct Fdt {
-    fdt_header: FdtHeader,
-    buffer: Vec<u8>,
-    index: isize,
-    disposition: isize
 }
 
 #[repr(C)]
@@ -51,11 +47,9 @@ fn align_ptr(ptr: *const u8, n: usize) -> *const u8 {
     }
 }
 
-
 // get the FdtHeader struct from the device tree pointer
 // move the pointer to the start of the device tree struct
 fn parse_fdt_header(mut ptr: *mut u8) -> FdtHeader {
-
     let header = FdtHeader {
         magic: unsafe { *(ptr as *const u32) }.swap_bytes(),
         totalsize: unsafe { *(ptr.offset(4) as *const u32) }.swap_bytes(),
@@ -86,7 +80,28 @@ fn get_nullterm_string(ptr: *const u8) -> String {
     s
 }
 
-pub fn get_device_tree_ptr() {
+impl TryFrom<u32> for FdtToken {
+    type Error = &'static str;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0x1 => Ok(FdtToken::BeginNode),
+            0x2 => Ok(FdtToken::EndNode),
+            0x3 => Ok(FdtToken::Prop),
+            0x4 => Ok(FdtToken::Nop),
+            0x9 => Ok(FdtToken::End),
+            _ => Err("Invalid Token"),
+        }
+    }
+}
+
+struct FdtManager {
+    initlized: bool,
+    fdt_header: FdtHeader,
+    fdt_prop_cb: Vec<fn()>,
+}
+
+pub fn get_device_tree_ptr() -> *const u8 {
     let dev_tree_ptr_ptr = unsafe { __dtb as *const u64 };
     let dev_tree_ptr = unsafe { *dev_tree_ptr_ptr as *const u32 };
     println!(
@@ -97,6 +112,12 @@ pub fn get_device_tree_ptr() {
     println!("Device Tree Pointer Value : {:x}", unsafe {
         *dev_tree_ptr as u64
     });
+
+    dev_tree_ptr as *const u8
+}
+
+pub fn fdt_traverse() {
+    let dev_tree_ptr = get_device_tree_ptr();
 
     // init FdtHeader struct with big endian
     let fdt_header = parse_fdt_header(dev_tree_ptr as *mut u8);
@@ -111,27 +132,27 @@ pub fn get_device_tree_ptr() {
     let mut fdt_start = fdt_struct_ptr as *const u8;
     let fdt_end = unsafe { dev_tree_ptr.byte_offset(fdt_header.totalsize as isize) as *const u8 };
     // print all
-    println!("FDT Header : {:x}", fdt_header.magic);
-    println!("magic: {:x}, totalsize: {:x}, off_dt_struct: {:x}, off_dt_strings: {:x}, off_mem_rsvmap: {:x}, version: {:x}, last_comp_version: {:x}, boot_cpuid_phys: {:x}, size_dt_strings: {:x}, size_dt_struct: {:x}", fdt_header.magic, fdt_header.totalsize, fdt_header.off_dt_struct, fdt_header.off_dt_strings, fdt_header.off_mem_rsvmap, fdt_header.version, fdt_header.last_comp_version, fdt_header.boot_cpuid_phys, fdt_header.size_dt_strings, fdt_header.size_dt_struct);
-    println!("FDT Strings Pointer : {:x}", fdt_strings_ptr as u64);
-    println!("FDT Struct Pointer : {:x}", fdt_struct_ptr as u64);
+    // println!("FDT Header : {:x}", fdt_header.magic);
+    // println!("magic: {:x}, totalsize: {:x}, off_dt_struct: {:x}, off_dt_strings: {:x}, off_mem_rsvmap: {:x}, version: {:x}, last_comp_version: {:x}, boot_cpuid_phys: {:x}, size_dt_strings: {:x}, size_dt_struct: {:x}", fdt_header.magic, fdt_header.totalsize, fdt_header.off_dt_struct, fdt_header.off_dt_strings, fdt_header.off_mem_rsvmap, fdt_header.version, fdt_header.last_comp_version, fdt_header.boot_cpuid_phys, fdt_header.size_dt_strings, fdt_header.size_dt_struct);
+    // println!("FDT Strings Pointer : {:x}", fdt_strings_ptr as u64);
+    // println!("FDT Struct Pointer : {:x}", fdt_struct_ptr as u64);
 
     unsafe {
         while fdt_start < fdt_end {
             // evaluate the fdt_str_ptr to u32
             let fdt_struct_ptr = fdt_start as *const u32;
-            let token = (*fdt_struct_ptr).swap_bytes();
+            let token = FdtToken::try_from((*fdt_struct_ptr).swap_bytes()).unwrap();
             fdt_start = fdt_struct_ptr.offset(1) as *mut u8;
 
             match token {
-                FDT_BEGIN_NODE => {
+                FdtToken::BeginNode => {
                     // convert null terminated string to rust string
                     let node_name = get_nullterm_string(fdt_start as *const u8);
                     fdt_start =
                         align_ptr(fdt_start.byte_offset(node_name.len() as isize), 4) as *mut u8;
-                    println!("Begin Node, Name : {} {:x}", node_name, fdt_start as u64);
+                    // println!("Begin Node, Name : {} {:x}", node_name, fdt_start as u64);
                 }
-                FDT_PROP => {
+                FdtToken::Prop => {
                     let mut fdt_prop = FdtProp {
                         len: *(fdt_start as *const u32),
                         nameoff: *(fdt_start.offset(4) as *const u32),
@@ -162,18 +183,18 @@ pub fn get_device_tree_ptr() {
                         align_ptr(fdt_start.byte_offset(fdt_prop.len as isize) as *mut u8, 4)
                             as *mut u8;
                 }
-                FDT_END_NODE => {
-                    println!("End Node");
+
+                FdtToken::EndNode => {
+                    // println!("End Node");
                 }
-                FDT_NOP => {
-                    println!("NOP");
+
+                FdtToken::Nop => {
+                    // println!("NOP");
                 }
-                FDT_END => {
-                    println!("End");
+
+                FdtToken::End => {
+                    // println!("End");
                     break;
-                }
-                _ => {
-                    println!("Unknown Token");
                 }
             }
         }
