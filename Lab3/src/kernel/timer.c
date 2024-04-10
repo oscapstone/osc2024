@@ -91,7 +91,7 @@ int add_timer(void (*callback)(void *), void* data, int after){
                 cur->next = temp;
             }
             // if it is inserted into the timer_head of queue
-            if(cur == timer_head){
+            if(cur == timer_head && temp->deadline < cur->deadline){
                 timer_head = temp;
                 timer_set_flag = 1;
             }
