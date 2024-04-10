@@ -3,7 +3,7 @@ import sys
 import time
 
 FILENAME = "./kernel/kernel8.img"
-BLOCK_SIZE = 1024
+BLOCK_SIZE = 0x1000
 
 def get_file_size(filename):
     return os.stat(filename).st_size

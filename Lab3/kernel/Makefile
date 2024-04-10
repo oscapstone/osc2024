@@ -43,6 +43,7 @@ kernel: $(OBJS) $(LIB_OBJS) $(ASM_OBJS)
 
 run:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd $(CPIO) -display none -serial null -serial stdio -dtb $(DTB)
+
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd $(CPIO) -display none -serial null -serial stdio -s -S
 

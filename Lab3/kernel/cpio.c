@@ -103,19 +103,13 @@ void cpio_exec(){
         if (strncmp(f_name, input_buffer, name_len)){
             no_match = 0;
             char* file_content = (char*)head + file_offset;
+            // print_hex((uint32_t)file_content);
 
-            unsigned int sp_loc = 0x600000;
+            unsigned int sp_loc = 0x60000;
 
-            asm volatile(
-                "mov   x20, 0x3c0;"
-                "msr   spsr_el1, x20;"
-                "msr   elr_el1, %0;"
-                "msr   sp_el0, %1;"
-                "eret;"
-                :: 
-                "r"(file_content),
-                "r"(sp_loc)
-            );           
+            // print_str("\nhere");
+
+            exec_in_el0(file_content, sp_loc);
 
             break;
         }

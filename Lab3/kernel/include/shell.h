@@ -7,13 +7,17 @@
 #include "mailbox.h"
 #include "cpio.h"
 #include "memory.h"
+#include "timer.h"
+#include "mini_uart.h"
+#include "exception.h"
 
 void print_menu();
 void print_rpi_info();
 void reboot();
-void cat();
-void ls();
-void malloc();
+void test_two_sec();
+void test_timer();
+void test_malloc();
+void test_preempt();
 
 void shell();
 

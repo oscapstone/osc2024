@@ -60,6 +60,18 @@ exception_handler:
     load_all
     eret
 
+el1_irq_handler:
+    save_all
+    bl el1_irq_entry
+    load_all
+    eret
+
+el0_irq_handler:
+    save_all
+    bl el0_irq_entry
+    load_all
+    eret
+
 .align 11                   // vector table should be aligned to 0x800
 exception_vector_table:
     b exception_handler     // branch to a handler function.
@@ -73,7 +85,7 @@ exception_vector_table:
 
     b exception_handler
     .align 7
-    b exception_handler
+    b el1_irq_handler
     .align 7
     b exception_handler
     .align 7
@@ -82,7 +94,7 @@ exception_vector_table:
 
     b exception_handler
     .align 7
-    b exception_handler
+    b el0_irq_handler
     .align 7
     b exception_handler
     .align 7
@@ -101,3 +113,4 @@ exception_vector_table:
 set_exception_vector_table:
     adr x0, exception_vector_table
     msr vbar_el1, x0
+    ret

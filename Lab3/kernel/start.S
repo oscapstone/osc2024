@@ -6,19 +6,21 @@ _start:
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
     and     x1, x1, #3
-    cbz     x1, bss_setting
-    bl      from_el2_to_el1
-    mrs     x1, CurrentEL
-    ubfx    x1, x1, #2, #2
-    cmp     x1, #1
-    bne     proc_hang
-
-    # bl      set_exception_vector_table
+    mov     x27, x0
+    cbz     x1, exception_setting
 
     // cpu id > 0, stop
 proc_hang:  
     wfe
     b       proc_hang
+
+exception_setting:
+    bl      from_el2_to_el1
+    mrs     x1, CurrentEL
+    ubfx    x1, x1, #2, #2
+    cmp     x1, #1
+    bne     proc_hang
+    bl      set_exception_vector_table
 
 bss_setting:  // cpu id == 0
     // set top of stack just before our code (stack grows to a lower address per AAPCS64)

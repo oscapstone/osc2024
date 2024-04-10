@@ -29,7 +29,7 @@ bootloader: start.o $(OBJS) $(LIBRARY_OBJS)
 	$(OBJCOPY) -O binary bootloader.elf bootloader.img
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -initrd $(CPIO) -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -initrd $(CPIO) -display none -serial null -serial pty
 
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -initrd $(CPIO) -display none -serial null -serial stdio -s -S

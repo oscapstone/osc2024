@@ -10,13 +10,13 @@ void* simple_alloc(uint32_t size){
         return (char*)0;
     }
 
-    print_str("\nAllocating from 0x");
-    print_hex((uint32_t)heap_head);
-    print_str(" to ");
-    print_hex((uint32_t)heap_head+size);
+    // print_str("\nAllocating from 0x");
+    // print_hex((uint32_t)heap_head);
+    // print_str(" to ");
+    // print_hex((uint32_t)heap_head+size);
 
-    print_str("\nLimit Address: 0x");
-    print_hex((uint32_t)HEAP_LIMIT);
+    // print_str("\nLimit Address: 0x");
+    // print_hex((uint32_t)HEAP_LIMIT);
 
     char* alloc_tail = heap_head;
     heap_head += size;

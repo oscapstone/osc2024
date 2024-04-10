@@ -3,7 +3,8 @@
 void* DEVTREE_ADDRESS = 0;
 
 void fdt_traverse( void (*callback)(char *, char *, struct fdt_prop *) ){
-    asm volatile("mov %0, x20" :  "=r"(DEVTREE_ADDRESS));
+    // asm volatile("mov %0, x27;" :  "=r"(DEVTREE_ADDRESS));  // QEMU version
+    asm volatile("mov %0, x20;" :  "=r"(DEVTREE_ADDRESS));  
 
     // print_hex((uint32_t)DEVTREE_ADDRESS);
     char magic[4] = {0xd0, 0x0d, 0xfe, 0xed};

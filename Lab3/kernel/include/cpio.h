@@ -5,14 +5,15 @@
 #include "io.h" 
 #include "type.h"
 #include "devtree.h"
+// #include "exception.h"
 
 #define CPIO_END "TRAILER!!!"
 #define CPIO_MAGIC "070701"
 #define FIELD_SIZE 8
 #define MAGIC_SIZE 6
 
-#define CPIO_BASE_RPI (uint8_t*)(0x20000000)
-#define CPIO_BASE_QEMU (uint8_t*)(0x8000000)
+#define CPIO_BASE_RPI 0x20000000
+#define CPIO_BASE_QEMU 0x8000000
 
 struct cpio_newc_header {
     char c_magic[6];        // The string 070701 for new ASCII

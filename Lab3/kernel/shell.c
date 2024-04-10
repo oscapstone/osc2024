@@ -7,6 +7,10 @@ void print_menu(){
     print_str("\nreboot     : reboot the device");  
     print_str("\ncat        : cat all files in file system");
     print_str("\nls         : list all files in file system");
+    print_str("\nexec       : execute user program");
+    print_str("\nasync      : async read/write");
+    print_str("\ntimer      : test timer");
+    print_str("\npreempt    : test preemption");
     print_str("\nmalloc     : dynamic allocate memory");
 }
 
@@ -19,19 +23,36 @@ void reboot(){
     reset(200);
 }
 
-void cat(){
-    cpio_cat();
-}
-
-void ls(){
-    cpio_ls();
-}
-
-void exec(){
+void test_exec(){
+    enable_core_timer();
     cpio_exec();
+    disable_core_timer();
 }
 
-void malloc(){
+void test_timer(){
+    enable_core_timer();
+
+    set_timeout("\nthis will print after 6 second", 6);
+    set_timeout("\nthis will print after 4 second", 4);
+    
+    void (*func)();
+    func = print_current_time;
+    sleep(func, 12);
+}
+
+void test_preempt(){
+    enable_uart_interrupt();
+    enable_core_timer();
+
+    add_task(print_current_time, 20);
+    async_uart_puts("\nAfter Time");
+
+    for (int i = 0; i < 100000000; i++) ;
+    pop_task();
+
+}
+
+void test_malloc(){
     print_str("\n----------");
     print_str("\nTesting allocating memory for \"short str\"");
     char* str1 = (char*)simple_alloc(10);
@@ -73,13 +94,20 @@ void shell(){
         print_str("\nRebooting...");
         reboot();
     }else if (strcmp(cmd, "cat")){
-        cat();   
+        cpio_cat();   
     }else if (strcmp(cmd, "ls")){
-        ls();
+        cpio_ls();
     }else if (strcmp(cmd, "malloc")){
-        malloc();
-    }else if (strcmp(cmd, "exectable")){
-        exec();
+        test_malloc();
+    }else if (strcmp(cmd, "exec")){
+        test_exec();
+    }else if (strcmp(cmd, "async")){
+        print_str("\nAsync Enter > ");
+        test_async_uart();
+    }else if (strcmp(cmd, "timer")){
+        test_timer();
+    }else if (strcmp(cmd, "preempt")){
+        test_preempt();
     }else{
         print_str("\nCommand Not Found");
     }
