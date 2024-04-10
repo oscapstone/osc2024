@@ -14,6 +14,7 @@ void main(char* arg){
     traverse_device_tree(dtb_ptr, dtb_callback_initramfs);
 
     uart_init();
+    // uart_sendline("\n");
     // uart_puts("loading dtb from: 0x%x\n", arg);
     uart_interrupt_enable();
     el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
