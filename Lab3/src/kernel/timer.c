@@ -75,11 +75,21 @@ int add_timer(void (*callback)(void *), void* data, int after){
     while(!timer_set_flag){
         // insert into appropiate location based on increase-order
         if(temp->deadline <= cur->deadline){
-            temp->prev = cur->prev;
-            if(cur->prev != 0)
-                cur->prev->next = temp;
-            cur->prev = temp;
-            temp->next = cur;
+            if(temp->deadline < cur->deadline){
+                temp->prev = cur->prev;
+                if(cur->prev != 0)
+                    cur->prev->next = temp;
+                cur->prev = temp;
+                temp->next = cur;
+            }
+            // insert to the back of cur in order not to alter the timer
+            else{
+                temp->prev = cur;
+                temp->next = cur->next;
+                if(cur->next != 0)
+                    cur->next->prev = temp;
+                cur->next = temp;
+            }
             // if it is inserted into the timer_head of queue
             if(cur == timer_head){
                 timer_head = temp;
