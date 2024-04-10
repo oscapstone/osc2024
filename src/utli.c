@@ -148,7 +148,10 @@ void print_el1_sys_reg() {
   asm volatile("mrs %0, ESR_EL1"
                : "=r"(esr_el1));  // esr_el1: holds syndrome information for an
                                   // exception taken to EL1
-  uart_send_string("SPSR_EL1 : ");
+  uart_send_string(
+      "SPSR_EL1 : ");  // bit[31](the N flag) may equal to 1 here, which is the
+                       // nagative condition flag, indicating whether the result
+                       // of an operation is negative or not.
   uart_hex(spsr_el1);
   uart_send_string("\r\n");
   uart_send_string("ELR_EL1 : ");
@@ -175,4 +178,3 @@ void exec_in_el0(void *prog_st_addr) {
   );
   return;
 }
-

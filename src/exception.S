@@ -47,7 +47,7 @@
 .endm
 
 .macro	ventry	label       //  used to create entries in the vector table.
-	.align	7
+	.align	7                 //  ('label' is a macro parameter) 
 	b	\label
 .endm
   

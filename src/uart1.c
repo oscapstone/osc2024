@@ -147,9 +147,9 @@ void disable_uart_interrupt() {
 }
 
 void enable_uart_interrupt() {
-  enable_uart_rx_interrupt();  
-  *ENABLE_IRQS_1 |= 1 << 29;   // Enable mini uart interrupt, connect the
-                               // GPU IRQ to CORE0's IRQ (bit29: AUX INT)
+  enable_uart_rx_interrupt();
+  *ENABLE_IRQS_1 |= 1 << 29;  // Enable mini uart interrupt, connect the
+                              // GPU IRQ to CORE0's IRQ (bit29: AUX INT)
 }
 
 void uart_write_async(unsigned int c) {
@@ -215,13 +215,11 @@ void uart_interrupt_handler() {
   if (*AUX_MU_IIR &
       0x2)  // bit[2:1]=01: Transmit holding register empty (FIFO empty)
   {
-    // uart_puts("uart_tx_interrupt_handler!");
     disable_uart_tx_interrupt();
     add_task(uart_tx_interrupt_handler, UART_INT_PRIORITY);
   } else if (*AUX_MU_IIR & 0x4)  // bit[2:1]=10: Receiver holds valid byte
                                  // (FIFO hold at least 1 symbol)
   {
-    // uart_puts("uart_rx_interrupt_handler!");
     disable_uart_rx_interrupt();
     add_task(uart_rx_interrupt_handler, UART_INT_PRIORITY);
   }

@@ -28,7 +28,6 @@ static void el1_timer_interrupt_handler() {
 void el0_64_sync_interrupt_handler() {
   add_task(print_el1_sys_reg, 20);
   pop_task();
-  // print_el1_sys_reg();
 }
 
 void el0_64_irq_interrupt_handler() {

@@ -239,6 +239,7 @@ void shell_start() {
   enable_interrupt();
   core_timer_enable();
   core0_timer_interrupt_enable();
+
   enum shell_status status = Read;
   char cmd[CMD_LEN];
   while (1) {

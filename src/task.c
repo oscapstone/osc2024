@@ -8,7 +8,6 @@ extern void disable_interrupt();
 
 static unsigned int cur_priority = NO_TASK;
 static task* t_head = (task*)0;
-// static unsigned int task_cnt = 0;
 
 void add_task(task_callback cb, unsigned prio) {
   task* new_task = (task*)simple_malloc(sizeof(task));
@@ -19,11 +18,6 @@ void add_task(task_callback cb, unsigned prio) {
   new_task->func = cb;
   new_task->next = (task*)0;
   new_task->priority = prio;
-
-  // task_cnt++;
-  // uart_send_string("add_task: task count: ");
-  // uart_int(task_cnt);
-  // uart_send_string("\r\n");
 
   disable_interrupt();
   if (!t_head || t_head->priority > new_task->priority) {
