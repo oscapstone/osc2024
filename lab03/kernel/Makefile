@@ -3,7 +3,7 @@ ARMGNU ?= aarch64-linux-gnu
 QEMU=0
 DT=1
 
-COPS = -Wall -ffreestanding -nostdinc -nostdlib -nostartfiles -fno-stack-protector -mgeneral-regs-only -g -Iinclude -DQEMU=$(QEMU) -DDT=$(DT)
+COPS = -Wall -ffreestanding -nostartfiles -nostdlib -g -Iinclude -DQEMU=$(QEMU) -DDT=$(DT)
 ASMOPS = -Iinclude
 
 BUILD_DIR = build

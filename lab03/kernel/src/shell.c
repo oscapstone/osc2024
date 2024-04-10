@@ -15,12 +15,12 @@ static void mailbox(int argc, char *argv[]);
 static void test_malloc(int argc, char *argv[]);
 static void reboot(int argc, char *argv[]);
 static void print_time(int argc, char *argv[]);
+static void set_timeout(int argc, char *argv[]);
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
 extern void cpio_exec(int argc, char *argv[]);
 
-void readcmd(char *x);
 int split_command(char* command, char *argv[]);
 
 cmd cmds[] = 
@@ -33,8 +33,9 @@ cmd cmds[] =
     {.name = "malloc",  .func = &test_malloc,.help_msg = "\nmalloc\t: test malloc function"},
     {.name = "reboot",  .func = &reboot,     .help_msg = "\nreboot\t: reboot the device"},
     {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
-    {.name = "print_time", .func = &print_time, .help_msg = "\nprint_time\t: print the time after booting and set 2 sec timeout"},
-    {.name = "async",   .func = &async_shell, .help_msg = "\nasync\t: enter dummy async shell mode"}
+    // {.name = "print_time", .func = &print_time, .help_msg = "\nprint_time\t: print the time after booting and set 2 sec timeout"},
+    {.name = "async",   .func = &async_shell, .help_msg = "\nasync\t: enter dummy async shell mode"},
+    {.name = "set_timeout", .func = &set_timeout, .help_msg = "\nset_timeout\t: set a new timer"}
 };
 
 
@@ -43,10 +44,11 @@ void shell()
     printf("\nyuchang@raspberrypi3: ~$ ");
     char command[256];
     readcmd(command);
+    
+    if(command[0] == 0)return;
 
     char* argv[16];
     int argc = split_command(command, argv);
-    
     
     for(int i=0; i<sizeof(cmds)/sizeof(cmd); i++)
     {
@@ -68,18 +70,20 @@ void async_shell()
     char command[BUFF_SIZE];
     while(1)
     {
-        async_uart_puts("\n(async) yuchang@raspberrypi3: ~$ ");
+        // async_uart_puts("\r\n(async) yuchang@raspberrypi3: ~$ ");
+        printf("\r\n(async) yuchang@raspberrypi3: ~$ ");
         async_uart_gets(command, BUFF_SIZE);
         async_uart_puts(command);
         if(strcmp(command, "exit") == 0)
         {
-            async_uart_puts("\nExiting async shell...");
+            // async_uart_puts("\r\nExiting async shell...");
+            printf("\r\nExiting async shell...");
             break;
         }
         else if(strcmp(command, "help") == 0)
         {
-            async_uart_puts("\nhelp\t: print this help menu");
-            async_uart_puts("\nexit\t: exit async shell");
+            printf("\r\nhelp\t: print this help menu");
+            printf("\r\nexit\t: exit async shell");
         }
     }
     disable_uart_interrupt();
@@ -133,19 +137,40 @@ static void print_time(int argc, char **argv)
     // set_timer(2);
 }
 
+static void set_timeout(int argc, char *argv[])
+{
+    if(argc != 3){
+        printf("\nUsage: set_timeout <msg> <sec>");
+        return;
+    }
+    // printf("\nSetting timeout...");
+    char* msg = argv[1];
+    // printf(argv[2]);
+    unsigned int sec = atoi(argv[2]);
+    add_timer(print_timeout_msg, msg, sec);
+    core_timer_enable();
+}
+
 static void reboot(int argc, char **argv)
 {
     printf("\nRebooting...\n");
     reset(200);
 }
 
-void readcmd(char *x)
+void readcmd(char x[256])
 {
     char input_char;
     int input_index = 0;
     x[0] = 0;
     while( ((input_char = read_char()) != '\n'))
     {
+        if(input_char == 127){
+            if(input_index > 0){
+                input_index--;
+                printf("\b \b");
+                continue;
+            }
+        }
         x[input_index] = input_char;
         ++input_index;
         printfc(input_char);

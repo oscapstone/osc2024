@@ -35,28 +35,39 @@ uint32_t strtol(const char *sptr, uint32_t base, int size)
     return ret;
 }
 
+int atoi(const char *str)
+{
+    int ret = 0;
+    int i=0;
+    while(str[i] != '\0' && (str[i] >= '0' && str[i] <= '9')){
+        ret = ret * 10 + (str[i] - '0');
+        i++;
+    }
+    return ret;
+}
+
 static char* HEAP_HEADER;
 static char* HEAP_REAR;
 
 void  mem_init()
 {
-    HEAP_HEADER = (char*)&_end;
-    HEAP_HEADER++;
+    HEAP_HEADER = &_end;
+    // HEAP_HEADER++;
     HEAP_REAR = HEAP_HEADER;
 }
 
 void* simple_malloc(uint32_t size)
 {
     if((void*)HEAP_REAR + size > (void*)HEAP_END){
-        printf("\nMemory allocation failed: Out of memory");
+        // printf("\nMemory allocation failed: Out of memory");
         return (char*)0;
     }
-    printf("\nMemory allocation from: ");
-    printf_hex(HEAP_REAR);
-    printf(" to ");
-    printf_hex(((void*)HEAP_REAR + size - 1));
-    printf(", under limit ");
-    printf_hex(HEAP_END);
+    // printf("\nMemory allocation from: ");
+    // printf_hex(HEAP_REAR);
+    // printf(" to ");
+    // printf_hex(((void*)HEAP_REAR + size - 1));
+    // printf(", under limit ");
+    // printf_hex(HEAP_END);
     char* ret = HEAP_REAR;
     HEAP_REAR += size;
     return ret;

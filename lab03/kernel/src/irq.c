@@ -45,13 +45,14 @@ static void gpu_irq_handler()
 
 static void timer_handler()
 {
-    print_time_handler();
+    // print_time_handler();
+    timer_update_handler();
 }
 
 
 void el1_irq_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
 {
-    // disable_irq();
+    disable_irq();
 
     unsigned int irq = *CORE0_IRQ_SOURCE;
     switch(irq)
@@ -68,9 +69,8 @@ void el1_irq_entry(int type, unsigned long spsr, unsigned long elr, unsigned lon
             break;
     }   
 
-    return;
     // show_debug_msg(type, spsr, elr, esr);
-    // enable_irq();
+    enable_irq();
 }
 
 void default_exception_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)

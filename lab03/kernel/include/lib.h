@@ -4,6 +4,7 @@
 #include "type.h"
 
 uint32_t strtol(const char *sptr, uint32_t base, int size);
+int atoi(const char *str);
 
 void  mem_init();
 void* simple_malloc(uint32_t size);

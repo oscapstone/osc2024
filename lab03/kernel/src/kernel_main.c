@@ -10,16 +10,18 @@
 
 int main()
 {
+    time_head_init();
     mem_init();
     uart_init();
-    
-    enable_irq();
+    add_timer(print_time_handler, 0, 2);
     core_timer_enable();
+    enable_irq();
+    // core_timer_disable();
 
 #if DT
     uint32_t* dtb_addr = 0x50000;
-	printf("\nDTB Address (Kernel): ");
-	printf_hex(*dtb_addr);
+	// printf("\nDTB Address (Kernel): ");
+	// printf_hex(*dtb_addr);
     fdt_traverse(initramfs_callback);
 #endif
 

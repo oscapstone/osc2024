@@ -7,7 +7,7 @@ typedef struct cmd {
     char help_msg[100];
 } cmd;
 
-void readcmd(char *x);
+void readcmd(char [256]);
 void shell();
 void async_shell();
 
