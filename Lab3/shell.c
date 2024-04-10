@@ -153,8 +153,8 @@ int hex_to_int(char *p, int len) {
 }
 
 void run_user_program(){
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
-    char *current = (char *)0x20000000;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x8000000; //switch between qemu and rpi
+    char *current = (char *)0x8000000;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
@@ -213,9 +213,7 @@ void add_timer(timer_callback_t callback, char* data, unsigned long after){
     asm volatile("msr DAIFSet, 0xf");
     int i;
     int allocated = 0;
-    // if(after == 67){
-    //     after = 3;
-    // }
+
     unsigned long cur_time = get_current_time();
     unsigned long print_time = cur_time + after;
     for(i=0; i<MAX_TIMER; i++){
