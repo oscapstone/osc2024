@@ -168,8 +168,8 @@ void uart_handle_irq(void)
 char uart_recv_async(void)
 {
     set_rx_interrupt();
-    while (uart_read_head == uart_read_idx)
-        ;
+    if (uart_read_head == uart_read_idx)
+        return '\0';
     char c = uart_read_buffer[uart_read_head++];
     uart_read_head &= (UART_BUFFER_SIZE - 1);
     return c == '\r' ? '\n' : c;
@@ -188,7 +188,6 @@ void uart_send_string_async(const char* str)
             uart_send_async('\r');
         uart_send_async(*str++);
     }
-
     set_tx_interrupt();
 }
 
@@ -199,6 +198,8 @@ void test_uart_async(void)
     int test_idx = 0;
     while (test_idx < 64) {
         char c = uart_recv_async();
+        if (c == '\0')
+            continue;
         if (c == '\n') {
             test_buffer[test_idx] = '\0';
             break;

@@ -18,9 +18,17 @@
     stp x26, x27, [sp, #16 * 13]
     stp x28, x29, [sp, #16 * 14]
     str x30, [sp, #16 * 15]
+
+    mrs x0, spsr_el1
+    mrs x1, elr_el1
+    stp x0, x1, [sp, #16 * 16]
 .endm
 
 .macro load_all
+    ldp x0, x1, [sp, #16 * 16]
+    msr spsr_el1, x0
+    msr elr_el1, x1
+
     ldp x0, x1, [sp, #16 * 0]
     ldp x2, x3, [sp, #16 * 1]
     ldp x4, x5, [sp, #16 * 2]
@@ -123,7 +131,7 @@ sync_invalid_el0_64:
 handle_invalid_entry  SYNC_INVALID_EL0_64
 
 irq_invalid_el0_64:
-handle_invalid_entry  IRQ_INVALID_EL0_64
+handle_irq
 
 fiq_invalid_el0_64:
 handle_invalid_entry  FIQ_INVALID_EL0_64

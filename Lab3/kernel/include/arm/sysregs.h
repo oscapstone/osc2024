@@ -40,7 +40,13 @@
  * SPSR_EL2, Saved Program Status Register (EL2), Page 283 of
  * AArch64-Reference-Manual
  *******************************************************************************/
-#define SPSR_MASK_ALL ((1 << 9) | (7 << 6))
+#define SPSR_MASK_D   (1 << 9)
+#define SPSR_MASK_A   (1 << 8)
+#define SPSR_MASK_I   (1 << 7)
+#define SPSR_MASK_F   (1 << 6)
+
+#define SPSR_MASK_ALL (SPSR_MASK_D | SPSR_MASK_A | SPSR_MASK_I | SPSR_MASK_F)
+
 #define SPSR_EL1h     (5 << 0)
 #define SPSR_EL0t     (0)
 #define SPSR_VALUE    (SPSR_MASK_ALL | SPSR_EL1h)

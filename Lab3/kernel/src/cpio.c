@@ -58,7 +58,8 @@ static inline void cpio_exec_program(char* file_addr, unsigned int file_size)
     for (unsigned int i = 0; i < file_size; i++)
         target[i] = file_addr[i];
 
-    unsigned long spsr_el1 = (SPSR_MASK_ALL | SPSR_EL0t);
+    unsigned long spsr_el1 =
+        (SPSR_MASK_D | SPSR_MASK_A | SPSR_MASK_F | SPSR_EL0t);
     asm volatile("msr spsr_el1, %0" : : "r"(spsr_el1));
     asm volatile("msr elr_el1, %0" : : "r"(PROGRAM_LOAD_ADDR));
     asm volatile("msr sp_el0, %0" : : "r"(PROGRAM_LOAD_ADDR + USTACK_SIZE));

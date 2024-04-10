@@ -1,7 +1,7 @@
 #ifndef ENTRY_H
 #define ENTRY_H
 
-#define S_FRAME_SIZE (32 * 8)
+#define S_FRAME_SIZE (34 * 8)
 
 #define SYNC_INVALID_EL1t  0
 #define IRQ_INVALID_EL1t   1

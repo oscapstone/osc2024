@@ -97,6 +97,7 @@ void show_invalid_entry_message(int type,
             break;
         }
     }
+
     // dump registers
     uart_send_string(":\n, SPSR: 0x");
     uart_send_hex(spsr >> 32);
