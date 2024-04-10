@@ -52,7 +52,7 @@ QEMU_FLAGS 	+= -initrd $(INITFSCPIO)
 
 SRCS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.cpp')
 ASMS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.S')
-OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
+OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%-asm.o)
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
@@ -68,7 +68,7 @@ bootloader:
 
 build: $(KERNEL_BIN)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
+$(BUILD_DIR)/%-asm.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
 	$(CXX) -MMD $(CFLAGS) -c $< -o $@
 
