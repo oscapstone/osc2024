@@ -43,7 +43,7 @@ void uart_write_handler(){
     //uart_puts("hi\n");
     //*AUX_MU_IER &= ~(0x02);
     //asm volatile("msr DAIFSet, 0xf");
-    char ch;
+    char ch = '\0';
     if(write_cur < write_idx){
         *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
         ch = uart_write_buffer[write_cur];
@@ -153,8 +153,8 @@ int hex_to_int(char *p, int len) {
 }
 
 void run_user_program(){
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x8000000 ;
-    char *current = (char *)0x8000000 ;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
+    char *current = (char *)0x20000000;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
@@ -256,7 +256,7 @@ void add_timer(timer_callback_t callback, char* data, unsigned long after){
         set_timer_interrupt(print_time - cur_time);
         //asm volatile ("msr cntp_tval_el0, %0" : : "r" (cntfrq));
     }
-    uart_puts("Seconds to print: ");
+    uart_puts("\rSeconds to print: ");
     uart_int(print_time);
     uart_puts("\n");
     asm volatile("msr DAIFClr, 0xf");
@@ -272,7 +272,7 @@ void setTimeout_callback(char* data) {
 }
 
 void setTimeout_cmd(){
-    uart_puts("MESSAGE: ");
+    uart_puts("\rMESSAGE: ");
     char in_char;
     char message[100];
     int idx = 0;
@@ -289,7 +289,7 @@ void setTimeout_cmd(){
             idx++;
         }
     }
-    uart_puts("SECONDS: ");
+    uart_puts("\rSECONDS: ");
     idx = 0;
     char countDown[100];
     while(1){
@@ -308,7 +308,7 @@ void setTimeout_cmd(){
     unsigned long cur_time, print_time;
     int wait = str2int(countDown);
     if(wait <= 0){
-        uart_puts("INVALID TIME\n");
+        uart_puts("\rINVALID TIME\n");
         return;
     }
     
@@ -333,6 +333,7 @@ int shell(char * cmd){
         run_user_program();
     }
     else if(strcmp(cmd, "async") == 0){
+        uart_send('\r');
         async_uart_io();
     }
     else if(strcmp(cmd, "setTimeout") == 0 || strcmp(cmd, "st") == 0){

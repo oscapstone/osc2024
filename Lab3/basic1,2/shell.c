@@ -42,8 +42,8 @@ int hex_to_int(char *p, int len) {
 }
 
 void run_user_program(){
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x8000000 ;
-    char *current = (char *)0x8000000 ;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
+    char *current = (char *)0x20000000;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
