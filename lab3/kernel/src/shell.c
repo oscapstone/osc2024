@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "dtb.h"
 #include "heap.h"
+#include "timer.h"
 
 #define CLI_MAX_CMD 9
 #define USTACK_SIZE 0x10000
@@ -109,7 +110,7 @@ void cli_print_banner()
     uart_puts("    //     //    ------    //          \r\n");
     uart_puts("   //     //          //  //           \r\n");
     uart_puts("    ------     ------      ------      \r\n");
-    uart_puts("            2024 Lab3 Booting          \r\n");
+    uart_puts("   2024 Lab3 Exception and Interrupt   \r\n");
     uart_puts("=======================================\r\n");
 }
 
@@ -254,12 +255,12 @@ void do_cmd_exec(char* filepath)
             uart_puts("cpio parse error");
             break;
         }
-
+        core_timer_enable(2);
         if(strcmp(c_filepath, filepath)==0)
         {
             //exec c_filedata
             char* ustack = malloc(USTACK_SIZE);
-            asm("mov x1, 0x3c0\n\t"
+            asm("mov x1, 0x0\n\t"
                 "msr spsr_el1, x1\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
                 "msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
                 "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.

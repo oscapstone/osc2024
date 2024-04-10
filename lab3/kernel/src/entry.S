@@ -148,7 +148,7 @@ el0_sync_64:
 el0_irq_64:
     save_all
     mov x0,9
-    bl invalid_exception_router
+    bl el0_irq_64_router
     load_all
     eret
 el0_fiq_invalid_64:
