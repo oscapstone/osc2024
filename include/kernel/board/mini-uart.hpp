@@ -2,6 +2,8 @@
 #include "string.hpp"
 #include "util.hpp"
 
+extern const bool& mini_uart_is_async;
+
 void mini_uart_use_async(bool use);
 
 void mini_uart_handler();

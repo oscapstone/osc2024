@@ -60,6 +60,11 @@ const Cmd cmds[] = {
         .help = "prints msg after secs",
         .fp = cmd_setTimeout,
     },
+    {
+        .name = "uart",
+        .help = "toggle async uart",
+        .fp = cmd_uart,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

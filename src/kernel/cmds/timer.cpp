@@ -10,10 +10,6 @@ int cmd_timer(int argc, char* argv[]) {
     auto c = argv[1][0];
     show_timer = c == 'y' or c == 't' or c == '1';
   }
-  if (show_timer) {
-    mini_uart_puts("show timer interrupt\n");
-  } else {
-    mini_uart_puts("hide timer interrupt\n");
-  }
+  mini_uart_printf("%s timer interrupt\n", show_timer ? "show" : "hide");
   return 0;
 }

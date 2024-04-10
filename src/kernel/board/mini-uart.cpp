@@ -15,6 +15,8 @@ decltype(&mini_uart_putc) mini_uart_putc_fp;
 #define RECEIVE_INT  0
 #define TRANSMIT_INT 1
 
+bool _mini_uart_is_async;
+const bool& mini_uart_is_async = _mini_uart_is_async;
 RingBuffer rbuf, wbuf;
 
 void set_ier_reg(bool enable, int bit) {
@@ -22,6 +24,7 @@ void set_ier_reg(bool enable, int bit) {
 }
 
 void mini_uart_use_async(bool use) {
+  _mini_uart_is_async = use;
   if (use) {
     set_aux_irq(true);
     set_ier_reg(true, RECEIVE_INT);
