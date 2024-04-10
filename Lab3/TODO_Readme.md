@@ -20,6 +20,8 @@ Step1: Basic 1,2 in kernel basic 1, 2
 Step2: Advanced 1, then basic 3, advanced 2 (or use Basic 3 Adv 1, then the kernel with advanced 2)
 可以預備一個沒有task queue的，如果task queue怪怪的改用這個
 
+!!!在async不要連續st兩次 or 改寫st，一次把全部寫完 or 找bug!!!
+
 可以分開de各項目 (先用basic kernel跑 run 跟 timer，再用最後一個kernel跑uart跟advanced)
 先de 3個 timer (順序: 2, 1, 3)
 再de async，證明可以uart，最後 一個短timer配狂按 證明有queue
