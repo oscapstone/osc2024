@@ -7,6 +7,7 @@
 void main()
 {
     init_exception_vectors();
+    init_interrupt();
     uart_init();
 
     fdt_traverse(initramfs_callback);
