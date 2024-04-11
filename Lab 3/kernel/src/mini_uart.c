@@ -239,6 +239,7 @@ mini_uart_handler()
         if (_write_start == _write_end) {
             ier &= ~(0x2);
         } else {
+            delay_cycles(10000);
             uint8_t c = _write_buffer[_write_start++];
             _write_start &= 0xFF;
             mini_uart_putc(c);

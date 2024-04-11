@@ -89,7 +89,7 @@ static void
 _run_task()
 {
     while (_q_head) {
-            uart_line("---- _run_task ----");
+        // uart_line("---- run_task ----");
         _q_head->callback(_q_head->arg);
         // exception_l1_disable();
         _q_head = _q_head->next;
@@ -164,14 +164,13 @@ exception_el1_irq_handler()
     if (uart) {
         uint32ptr_t ier = (uint32ptr_t) malloc(sizeof(uint32_t));
         *ier = *AUX_MU_IER;
-        _add_task(_new_task(mini_uart_interrupt_handler, (byteptr_t) ier, 1));
+        _add_task(_new_task(mini_uart_interrupt_handler, (byteptr_t) ier, 0));
         aux_clr_rx_interrupt();
         aux_clr_tx_interrupt();
     }
     else if (core_timer) {
         uart_line("---- exception_el1_irq_handler ----");
-
-        _add_task(_new_task(core_timer_interrupt_handler, 0, 0));
+        _add_task(_new_task(core_timer_interrupt_handler, 0, 2));
         core_timer_disable();
     }
 
