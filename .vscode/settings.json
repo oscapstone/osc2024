@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "mini_uart.h": "c",
+        "utils.h": "c",
+        "cpio.h": "c",
+        "initramdisk.h": "c",
+        "initializer_list": "c",
+        "c_utils.h": "c"
+    }
+}
