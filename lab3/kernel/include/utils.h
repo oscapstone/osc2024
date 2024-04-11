@@ -13,4 +13,5 @@ char*              memcpy(void *dest, const void *src, unsigned long long len);
 char*              strcpy(char *dest, const char *src);
 
 char* str_SepbySpace(char* head);
+int   atoi(char* str);
 #endif /* _UTILS_H_ */

@@ -29,7 +29,7 @@ void el0_sync_router(){
 }
 
 void el0_irq_64_router(){
-    uart_puts("source : %x\n", *CORE0_INTERRUPT_SOURCE);
+    uart_sendline("source : %x\n", *CORE0_INTERRUPT_SOURCE);
 
     if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer)
     {
@@ -38,6 +38,6 @@ void el0_irq_64_router(){
 }
 
 void invalid_exception_router(unsigned long long x0){
-    //uart_puts("invalid exception : 0x%x\r\n",x0);
+    //uart_sendline("invalid exception : 0x%x\r\n",x0);
     //while(1);
 }

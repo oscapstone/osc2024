@@ -9,7 +9,7 @@
 #include "heap.h"
 #include "timer.h"
 
-#define CLI_MAX_CMD 10
+#define CLI_MAX_CMD 11
 #define USTACK_SIZE 0x10000
 
 extern char* dtb_ptr;
@@ -26,6 +26,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
     {.command="dtb", .help="show device tree"},
     {.command="exec", .help="execute a command, replacing current image with a new image"},
     {.command="setTimeout", .help="setTimeout [MESSAGE] [SECONDS]"},
+    {.command="set2sAlert", .help="set core timer interrupt every 2 second"},
     {.command="reboot", .help="reboot the device"}
 };
 
@@ -98,6 +99,8 @@ void cli_cmd_exec(char* buffer)
     } else if (strcmp(cmd, "setTimeout") == 0) {
         char* sec = str_SepbySpace(argvs);
         do_cmd_setTimeout(argvs, sec);
+    } else if (strcmp(cmd, "set2sAlert") == 0) {
+        do_cmd_set2sAlert();
     } else if (strcmp(cmd, "reboot") == 0) {
         do_cmd_reboot();
     } else if (cmd){
@@ -260,7 +263,7 @@ void do_cmd_exec(char* filepath)
             uart_puts("cpio parse error");
             break;
         }
-        core_timer_enable(2);
+        // core_timer_enable(2);
         if(strcmp(c_filepath, filepath)==0)
         {
             //exec c_filedata
@@ -284,6 +287,11 @@ void do_cmd_exec(char* filepath)
 void do_cmd_setTimeout(char* msg, char* sec)
 {
     add_timer(uart_sendline,atoi(sec),msg);
+}
+
+void do_cmd_set2sAlert()
+{
+    add_timer(timer_set2sAlert,2,"2sAlert");
 }
 
 void do_cmd_reboot()

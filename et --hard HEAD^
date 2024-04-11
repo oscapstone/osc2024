@@ -1,0 +1,135 @@
+[33mcommit 02e94461192af7e1b7e4b1f88197f5ab4f27272c[m[33m ([m[1;36mHEAD -> [m[1;32mM091003[m[33m)[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Apr 10 22:23:06 2024 +0800
+
+    Temp - Advanced Exercise 1 - Timer Multiplexing
+
+[33mcommit 6114351785cafca58c124ba6529d3f7d30b0245d[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Apr 10 21:03:26 2024 +0800
+
+    add uart async send
+
+[33mcommit a4042414c4255919e9ccfbdb577e9ab030a7e73a[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Apr 10 20:09:15 2024 +0800
+
+    Finish Basic Exercise 3 - Rpi3’s Peripheral Interrupt
+
+[33mcommit 452910df933f654184df3579882b5d1e36edeeaf[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Apr 10 14:56:30 2024 +0800
+
+    Finish Basic Exercise 2 - Interrupt
+
+[33mcommit 3638b44dc7eff7a2c0c1368ac95298f72639bd7e[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Tue Apr 9 18:22:29 2024 +0800
+
+    Finish Basic Exercise 1 - Exception
+
+[33mcommit 1a4e7d41d1e795783a202e92d78bc0ea61d55d18[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Mon Apr 8 21:04:49 2024 +0800
+
+    update lab2 - using dtb
+
+[33mcommit 9128d6bffbe35a93a1030f0b66e56e12a8f5165e[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Mon Apr 8 15:22:00 2024 +0800
+
+    copy lab2 to lab3
+
+[33mcommit 4fff90a2f63ec07731b841c9ab6b71fe1797c312[m[33m ([m[1;31morigin/M091003[m[33m)[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Fri Mar 29 15:10:16 2024 +0800
+
+    Lab 2: fix heap_block size
+
+[33mcommit 9822ce403eabf2af6d4a6feb3fae4a375e09222e[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Thu Mar 28 17:40:55 2024 +0800
+
+    Lab2: update python script- device argumet
+
+[33mcommit 2520bd49257f9ee902a0b8b1396f800fd1b89ffd[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Thu Mar 28 15:38:05 2024 +0800
+
+    Lab 2: Booting: Finish  Advanced Exercises
+
+[33mcommit b0a212de5571657d665e5f36c9ead204ea7feb62[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Mar 27 22:55:57 2024 +0800
+
+    Lab 2: Booting: Finish Basic Exercise 3 - Simple Allocator
+
+[33mcommit 865cb130b0bd5a448dd64d2a2041f92f9af437ab[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Mar 27 21:42:38 2024 +0800
+
+    Lab 2: Booting:
+    Finish Basic Exercise 2 - Initial Ramdisk
+    Update Basic Exercise 1 - UART Bootloader makefile & config.txt
+
+[33mcommit a9af6de288754db8f8372531a2d77ea8f32f4164[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Mar 27 17:33:53 2024 +0800
+
+    Update linker script- set location counter
+
+[33mcommit e82d84420f36fe2a8842380d090b44af82266f85[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Mar 27 15:55:34 2024 +0800
+
+    Lab 2: Booting: Finish Basic Exercise 1 - UART Bootloader
+
+[33mcommit a56bbd4cb308f6ae6c610168cfa20e69ab85168a[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Mar 13 15:28:27 2024 +0800
+
+    update uart_2hex() expression
+
+[33mcommit b08c93c8d2be6c826d3b7e4e6c29c242ac605bf7[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Wed Mar 13 00:56:12 2024 +0800
+
+    Lab 1: Hello World
+
+[33mcommit 43a5433c9a010158d715037b570044062bb5e062[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Thu Feb 29 11:40:15 2024 +0800
+
+    Update README.md
+    1. add requirements
+    2. Course Website info
+
+[33mcommit 5ce9a0fa6f47dba483ec6ae680d0017310f4f2e0[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Thu Feb 29 11:34:05 2024 +0800
+
+    Create lab0 directory
+
+[33mcommit 24194ba3a1d0e2338fefcdeab68e8c18c3cd10f6[m
+Author: Ahban08 <ahban@g.ncu.edu.tw>
+Date:   Thu Feb 29 11:27:13 2024 +0800
+
+    Create .gitignore
+
+[33mcommit 8da2fcbdcb783344f295ecd42c89842f26aca903[m
+Author: Ahban08 <135603122+Ahban08@users.noreply.github.com>
+Date:   Thu Feb 29 11:22:22 2024 +0800
+
+    Update README.md
+
+[33mcommit 8fe4093e47d400dddbb4a2072755c3d4572e4db8[m
+Author: Ahban08 <135603122+Ahban08@users.noreply.github.com>
+Date:   Thu Feb 29 11:21:32 2024 +0800
+
+    Create README.md
+
+[33mcommit d812f92e1f6ab40f0fe4c7bd5f6634425afc5618[m
+Author: Marvin Liu <psychicalcoder@gmail.com>
+Date:   Sun Feb 19 13:29:48 2023 +0800
+
+    create an orphan branch
