@@ -64,14 +64,16 @@ void shell_begin(char* fdt)
 
 			uart_irq_send("Test\r\n\0");
 
-			int t = 50000000;
-			while (t --);
+			int t = 10000;
+			while (t --) {
+			}
 
 			char* str = simple_malloc(100);
 			uart_irq_read(str);
 
-			t = 1000;
-			while (t --);
+			t = 150;
+			while (t --) {
+			}
 
 			uart_irq_off();
 			uart_printf("%s, End\n", str);

@@ -237,6 +237,7 @@ void uart_irq_send(char* str) {
 }
 
 void uart_irq_read(char* str) {
+	uart_printf("Reading shits\r\n");
 	int ind = 0;
 	while (recv_ind < recv_tail) {
 		str[ind ++] = recv_buffer[recv_ind ++];
@@ -259,8 +260,10 @@ void recv_handler(){
 	asm volatile("msr DAIFSet, 0xf");
 
 	char c = (char)(*AUX_MU_IO_REG);
-
-    recv_buffer[recv_tail ++] = c;
+	
+	if (c != 0) {
+	    recv_buffer[recv_tail ++] = c;
+	}
 
 	change_read_irq(1);
 
