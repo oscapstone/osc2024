@@ -41,6 +41,8 @@ void mini_uart_use_async(bool use) {
   if (use) {
     set_aux_irq(true);
     set_ier_reg(true, RECEIVE_INT);
+    // clear FIFO
+    set32(AUX_MU_IER_REG, 6);
     mini_uart_getc_raw_fp = mini_uart_getc_raw_async;
     mini_uart_getc_fp = mini_uart_getc_async;
     mini_uart_putc_raw_fp = mini_uart_putc_raw_async;
@@ -157,6 +159,8 @@ char mini_uart_getc_raw_sync() {
 void mini_uart_putc_raw_sync(char c) {
   while ((get32(AUX_MU_LSR_REG) & (1 << 5)) == 0)
     NOP;
+  // clear FIFO
+  set32(AUX_MU_IER_REG, 6);
   set32(AUX_MU_IO_REG, c);
 }
 
