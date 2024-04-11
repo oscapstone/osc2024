@@ -259,7 +259,7 @@ void do_cmd_ls(char* workdir)
 
 void do_cmd_memory_tester()
 {
-/*
+
     char *p1 = kmalloc(0x820);
     char *p2 = kmalloc(0x900);
     char *p3 = kmalloc(0x2000);
@@ -268,50 +268,50 @@ void do_cmd_memory_tester()
     kfree(p4);
     kfree(p1);
     kfree(p2);
-*/
-    char *a = kmalloc(0x10);
-    char *b = kmalloc(0x100);
-    char *c = kmalloc(0x1000);
 
-    kfree(a);
-    kfree(b);
-    kfree(c);
+    // char *a = kmalloc(0x10);        // 16 byte
+    // char *b = kmalloc(0x100);
+    // char *c = kmalloc(0x1000);
 
-    a = kmalloc(32);
-    char *aa = kmalloc(50);
-    b = kmalloc(64);
-    char *bb = kmalloc(64);
-    c = kmalloc(128);
-    char *cc = kmalloc(129);
-    char *d = kmalloc(256);
-    char *dd = kmalloc(256);
-    char *e = kmalloc(512);
-    char *ee = kmalloc(999);
+    // kfree(a);
+    // kfree(b);
+    // kfree(c);
 
-    char *f = kmalloc(0x2000);
-    char *ff = kmalloc(0x2000);
-    char *g = kmalloc(0x2000);
-    char *gg = kmalloc(0x2000);
-    char *h = kmalloc(0x2000);
-    char *hh = kmalloc(0x2000);
+    // a = kmalloc(32);
+    // char *aa = kmalloc(50);
+    // b = kmalloc(64);
+    // char *bb = kmalloc(64);
+    // c = kmalloc(128);
+    // char *cc = kmalloc(129);
+    // char *d = kmalloc(256);
+    // char *dd = kmalloc(256);
+    // char *e = kmalloc(512);
+    // char *ee = kmalloc(999);
 
-    kfree(a);
-    kfree(aa);
-    kfree(b);
-    kfree(bb);
-    kfree(c);
-    kfree(cc);
-    kfree(dd);
-    kfree(d);
-    kfree(e);
-    kfree(ee);
+    // char *f = kmalloc(0x2000);
+    // char *ff = kmalloc(0x2000);
+    // char *g = kmalloc(0x2000);
+    // char *gg = kmalloc(0x2000);
+    // char *h = kmalloc(0x2000);
+    // char *hh = kmalloc(0x2000);
 
-    kfree(f);
-    kfree(ff);
-    kfree(g);
-    kfree(gg);
-    kfree(h);
-    kfree(hh);
+    // kfree(a);
+    // kfree(aa);
+    // kfree(b);
+    // kfree(bb);
+    // kfree(c);
+    // kfree(cc);
+    // kfree(dd);
+    // kfree(d);
+    // kfree(e);
+    // kfree(ee);
+
+    // kfree(f);
+    // kfree(ff);
+    // kfree(g);
+    // kfree(gg);
+    // kfree(h);
+    // kfree(hh);
 }
 
 void do_cmd_setTimeout(char* msg, char* sec)

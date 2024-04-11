@@ -7,11 +7,11 @@
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable(){
-    __asm__ __volatile__("msr daifclr, 0xf"); // umask all DAIF
+    __asm__ __volatile__("msr daifclr, 0xf"); // umask all DAIF, it's column D,A,I,F on the register PASATE 
 }
 
 void el1_interrupt_disable(){
-    __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
+    __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF, it's column D,A,I,F on the register PASATE 
 }
 
 void el1h_irq_router(){
@@ -20,12 +20,14 @@ void el1h_irq_router(){
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
+        // It is for terminal output. (Like printf function in C)
         if (*AUX_MU_IIR_REG & (1 << 1))
         {
             *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
+        // It is for terminal input. (Like scanf function in C)
         else if (*AUX_MU_IIR_REG & (2 << 1))
         {
             *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
@@ -33,6 +35,7 @@ void el1h_irq_router(){
             irqtask_run_preemptive();
         }
     }
+    // It is for timer interrupt.
     else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
         core_timer_disable();
