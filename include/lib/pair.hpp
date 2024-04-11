@@ -1,7 +1,4 @@
 #pragma once
 
-template <typename T, typename U>
-struct pair {
-  T first;
-  U second;
-};
+#include <__utility/pair.h>
+using std::pair;

@@ -13,7 +13,4 @@ AllowShortLoopsOnASingleLine: false
 DerivePointerAlignment: false
 PointerAlignment: Left
 
-# make git diff clean
-AlignEscapedNewlines: DontAlign
-
 AlignConsecutiveMacros: true

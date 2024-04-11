@@ -45,6 +45,31 @@ const Cmd cmds[] = {
         .help = "print device tree",
         .fp = cmd_devtree,
     },
+    {
+        .name = "run",
+        .help = "run user program",
+        .fp = cmd_run,
+    },
+    {
+        .name = "timer",
+        .help = "toggle timer",
+        .fp = cmd_timer,
+    },
+    {
+        .name = "setTimeout",
+        .help = "prints msg after secs",
+        .fp = cmd_setTimeout,
+    },
+    {
+        .name = "uart",
+        .help = "toggle async uart",
+        .fp = cmd_uart,
+    },
+    {
+        .name = "demo",
+        .help = "demo",
+        .fp = cmd_demo,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

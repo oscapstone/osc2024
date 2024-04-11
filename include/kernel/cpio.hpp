@@ -1,9 +1,10 @@
 #pragma once
 
 #include "string.hpp"
+#include "util.hpp"
 
 // ref: https://man.freebsd.org/cgi/man.cgi?query=cpio&sektion=5
-struct cpio_newc_header {
+struct __attribute__((__packed__)) cpio_newc_header {
   char c_magic[6];
   char c_ino[8];
   char c_mode[8];
@@ -35,31 +36,31 @@ struct cpio_newc_header {
   static constexpr char MAGIC[] = "070701";
   // clang-format on
 
-  inline bool valid() const {
+  bool valid() const {
     return !memcmp(c_magic, MAGIC, sizeof(MAGIC) - 1);
   }
-  inline bool isend() const {
+  bool isend() const {
     return !strcmp(name_ptr(), ENDFILE);
   }
 
-  inline int mode() const {
+  int mode() const {
     return strtol(c_mode, nullptr, 16, sizeof(c_mode));
   }
-  inline bool isdir() const {
+  bool isdir() const {
     return (mode() & F_MASK) == F_DIR;
   }
 
-  inline int namesize() const {
+  int namesize() const {
     return strtol(c_namesize, nullptr, 16, sizeof(c_namesize));
   }
-  inline int filesize() const {
+  int filesize() const {
     return strtol(c_filesize, nullptr, 16, sizeof(c_filesize));
   }
-  inline const char* name_ptr() const {
+  const char* name_ptr() const {
     return _name_ptr;
   }
-  inline const char* file_ptr() const {
-    return name_ptr() + namesize() + 2;
+  const char* file_ptr() const {
+    return align<4>(name_ptr() + namesize());
   }
   string_view name() const {
     return {name_ptr(), namesize() - 1};
@@ -67,7 +68,13 @@ struct cpio_newc_header {
   string_view file() const {
     return {file_ptr(), filesize()};
   }
-  const cpio_newc_header* next() const;
+  const cpio_newc_header* next() const {
+    const char* nxt = align<4>(file().end());
+    auto hdr = (const cpio_newc_header*)nxt;
+    if (hdr->valid() and not hdr->isend())
+      return hdr;
+    return nullptr;
+  }
 };
 
 class CPIO {
@@ -75,19 +82,19 @@ class CPIO {
   class iterator {
    public:
     iterator(const char* header) : hedaer_((const cpio_newc_header*)header) {}
-    inline iterator& operator++() {
+    iterator& operator++() {
       hedaer_ = hedaer_->next();
       return *this;
     }
-    inline iterator operator++(int) {
+    iterator operator++(int) {
       iterator copy = *this;
       ++*this;
       return copy;
     }
-    inline const cpio_newc_header* operator*() const {
+    const cpio_newc_header* operator*() const {
       return hedaer_;
     }
-    inline const cpio_newc_header* operator->() const {
+    const cpio_newc_header* operator->() const {
       return hedaer_;
     }
     bool operator==(const iterator& other) const {
@@ -105,8 +112,11 @@ class CPIO {
   char* cpio_addr_ = nullptr;
 
  public:
-  void init(char* cpio_addr) {
+  bool init(char* cpio_addr) {
     cpio_addr_ = cpio_addr;
+    if (!begin()->valid())
+      return false;
+    return true;
   }
   iterator begin() const {
     return cpio_addr_;
@@ -114,5 +124,11 @@ class CPIO {
   iterator end() const {
     return nullptr;
   }
-  const cpio_newc_header* find(const char* name) const;
+  const cpio_newc_header* find(const char* name) const {
+    for (auto it = begin(); it != end(); it++) {
+      if (it->name() == name)
+        return *it;
+    }
+    return nullptr;
+  }
 };

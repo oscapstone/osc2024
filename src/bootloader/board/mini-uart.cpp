@@ -72,38 +72,6 @@ void mini_uart_puts(const char* s) {
     mini_uart_putc(c);
 }
 
-int mini_uart_getline_echo(char* buffer, int length) {
-  if (length <= 0)
-    return -1;
-  int r = 0;
-  for (char c; r < length;) {
-    c = mini_uart_getc();
-    if (c == '\n') {
-      mini_uart_putc_raw('\r');
-      mini_uart_putc_raw('\n');
-      break;
-    }
-    if (r + 1 == length)
-      continue;
-    switch (c) {
-      case 8:     // ^H
-      case 0x7f:  // backspace
-        if (r > 0) {
-          buffer[r--] = 0;
-          mini_uart_puts("\b \b");
-        }
-        break;
-      case '\t':  // skip \t
-        break;
-      default:
-        buffer[r++] = c;
-        mini_uart_putc_raw(c);
-    }
-  }
-  buffer[r] = '\0';
-  return r;
-}
-
 void mini_uart_npf_putc(int c, void* /* ctx */) {
   mini_uart_putc(c);
 }
@@ -114,25 +82,4 @@ int mini_uart_printf(const char* format, ...) {
   int size = npf_vpprintf(&mini_uart_npf_putc, NULL, format, args);
   va_end(args);
   return size;
-}
-
-void mini_uart_print_hex(string_view view) {
-  for (auto c : view)
-    mini_uart_printf("%02x", c);
-}
-void mini_uart_print_str(string_view view) {
-  for (auto c : view)
-    mini_uart_putc(c);
-}
-
-void mini_uart_print(string_view view) {
-  bool printable = true;
-  for (int i = 0; i < view.size(); i++) {
-    auto c = view[i];
-    printable &= (0x20 <= c and c <= 0x7e) or (i + 1 == view.size() and c == 0);
-  }
-  if (printable)
-    mini_uart_print_str(view);
-  else
-    mini_uart_print_hex(view);
 }

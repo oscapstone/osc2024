@@ -8,17 +8,21 @@ SERIAL 		= /dev/cu.usbserial-0001
 BUILD_DIR 	= build
 SRC_DIR  	= src
 DISK_DIR 	= disk
+FS_DIR 		= rootfs
 
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
-			  -mcpu=cortex-a53 \
+			  -mcpu=cortex-a53 -mgeneral-regs-only \
 			  --target=aarch64-unknown-none-elf \
 			  -D_LIBCPP_HAS_NO_THREADS \
 			  -D_LIBCPP_DISABLE_AVAILABILITY \
+			  -D_LIBCPP_CSTDLIB \
+			  -fno-exceptions \
 			  -std=c++20 \
 			  -nostdlib -Os -fPIE
 QEMU_FLAGS 	= -display none -smp cpus=4 \
-			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb
+			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb \
+			  $(QEMU_EXT_FLAGS)
 
 ifeq ($(TARGET),)
 	TARGET = kernel
@@ -27,10 +31,6 @@ endif
 ifneq ($(DEBUG),)
 	CFLAGS 		+= -g
 	QEMU_FLAGS 	+= -s -S
-endif
-
-ifneq ($(QEMU_ASM),)
-	QEMU_FLAGS 	+= -d in_asm
 endif
 
 ifeq ($(QEMU_PTY_SERIAL),)
@@ -54,7 +54,7 @@ QEMU_FLAGS 	+= -initrd $(INITFSCPIO)
 
 SRCS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.cpp')
 ASMS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.S')
-OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
+OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%-asm.o)
 DEPS = $(OBJ_FILES:%.o=%.d)
 -include $(DEP_FILES)
 
@@ -70,7 +70,7 @@ bootloader:
 
 build: $(KERNEL_BIN)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
+$(BUILD_DIR)/%-asm.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
 	$(CXX) -MMD $(CFLAGS) -c $< -o $@
 
@@ -86,8 +86,9 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 
 fs: $(INITFSCPIO)
 
-$(INITFSCPIO): rootfs/*
-	cd rootfs && find . | cpio -o -H newc > ../$@
+$(INITFSCPIO): $(shell find $(FS_DIR))
+	$(MAKE) -C $(FS_DIR)
+	cd $(FS_DIR) && find . | grep -v '.DS_Store' | cpio -o -H newc > ../$@
 
 clean:
 	$(RM) -r $(BUILD_DIR)

@@ -10,6 +10,11 @@ int cmd_ls(int, char*[]);
 int cmd_cat(int, char*[]);
 int cmd_alloc(int, char*[]);
 int cmd_devtree(int, char*[]);
+int cmd_run(int, char*[]);
+int cmd_timer(int, char*[]);
+int cmd_setTimeout(int, char*[]);
+int cmd_uart(int, char*[]);
+int cmd_demo(int, char*[]);
 
 using cmd_fp = int (*)(int, char*[]);
 
