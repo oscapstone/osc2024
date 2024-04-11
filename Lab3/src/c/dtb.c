@@ -1,7 +1,8 @@
-#include "header/dtb.h"
-#include "header/uart.h"
-#include "header/utils.h"
-#define UNUSED(x) (void)(x) // compiler will warn if there is any variable not used
+#include "dtb.h"
+#include "uart.h"
+#include "utils.h"
+//#include "printf.h"
+#define UNUSED(x) (void)(x)
 
 char *cpio_addr;
 int space = 0;
@@ -12,8 +13,6 @@ int space = 0;
 uint32_t fdt_u32_le2be(const void *addr)
 {
 	const uint8_t *bytes = (const uint8_t *)addr;
-	// uart_hex((unsigned int )(*bytes));
-	// uart_send_char('\n');
 	uint32_t ret = (uint32_t)bytes[0] << 24 | (uint32_t)bytes[1] << 16 | (uint32_t)bytes[2] << 8 | (uint32_t)bytes[3];
 	return ret;
 }
@@ -21,24 +20,17 @@ uint32_t fdt_u32_le2be(const void *addr)
 void send_space(int n)
 {
 	while (n--)
-		uart_send_string(" ");
+		uart_puts(" ");
 }
 
-// cur_ptr = struct_ptr
 int parse_struct(fdt_callback cb, uintptr_t cur_ptr, uintptr_t strings_ptr, uint32_t totalsize)
 {
 	uintptr_t end_ptr = cur_ptr + totalsize;
 
 	while (cur_ptr < end_ptr)
 	{
-		// uart_send_string("\ncur_ptr: \n");
-		// uart_hex((unsigned int *)(cur_ptr));
-		//The Device Tree Blob (DTB) is represented in big-endian byte order. 
-		//However, many systems (including the ARM architecture used in many embedded systems) use little-endian order.
-		uint32_t token = fdt_u32_le2be((char *)cur_ptr); // be => le
-		// uart_send_string("\ntoken: \n");
-		// uart_hex(token);
-		// uart_send_char('\n');
+
+		uint32_t token = fdt_u32_le2be((char *)cur_ptr);
 		cur_ptr += 4;
 
 		switch (token)
@@ -48,17 +40,15 @@ int parse_struct(fdt_callback cb, uintptr_t cur_ptr, uintptr_t strings_ptr, uint
 			Token type (4 bytes): Indicates that it's an FDT_BEGIN_NODE token.
 			Node name (variable length, NULL-terminated): Specifies the name of the node being opened.
 			*/
-			// uart_send_string("In FDT_BEGIN_NODE\n");
+			// printf("In FDT_BEGIN_NODE\n");
 			cb(token, (char *)cur_ptr, NULL, 0);
-			// go to next token
-			//padding node name
 			cur_ptr += utils_align_up(utils_strlen((char *)cur_ptr), 4);
 			break;
 		case FDT_END_NODE:
 			/*
 			Token type (4 bytes): Indicates that it's an FDT_END_NODE token.
 			*/
-			// uart_send_string("In FDT_END_NODE;\n");
+			// printf("In FDT_END_NODE;\n");
 			cb(token, NULL, NULL, 0);
 			break;
 
@@ -71,7 +61,7 @@ int parse_struct(fdt_callback cb, uintptr_t cur_ptr, uintptr_t strings_ptr, uint
 			Name offset (4 bytes): Provides the offset of the property name within the strings block (nameoff).
 			Property data (variable length): Contains the property data itself, the size of which is determined by len.
 			*/
-			// uart_send_string("In FDT_PROP \n");
+			// printf("In FDT_PROP \n");
 			uint32_t len = fdt_u32_le2be((char *)cur_ptr);
 			cur_ptr += 4;
 			uint32_t nameoff = fdt_u32_le2be((char *)cur_ptr);
@@ -82,12 +72,12 @@ int parse_struct(fdt_callback cb, uintptr_t cur_ptr, uintptr_t strings_ptr, uint
 			break;
 		}
 		case FDT_NOP:
-			// uart_send_string("In FDT_NOP\n");
+			// printf("In FDT_NOP\n");
 			cb(token, NULL, NULL, 0);
 			break;
 
 		case FDT_END:
-			// uart_send_string("In FDT_END\n");
+			// printf("In FDT_END\n");
 			cb(token, NULL, NULL, 0);
 			return 0;
 		default:;
@@ -101,20 +91,19 @@ int parse_struct(fdt_callback cb, uintptr_t cur_ptr, uintptr_t strings_ptr, uint
 int fdt_traverse(fdt_callback cb, void *_dtb)
 {
 	uintptr_t dtb_ptr = (uintptr_t)_dtb;
-	uart_send_string("\ndtb loading at: ");
+	//printf("\ndtb loading at: 0x%x\n", dtb_ptr);
+	uart_puts("\ndtb loading at: ");
 	uart_hex(dtb_ptr);
-	uart_send_char('\n');
+	uart_puts("\n");
 
 	struct fdt_header *header = (struct fdt_header *)dtb_ptr;
-	
-	// Big to little endian
-	uint32_t magic = fdt_u32_le2be(&(header->magic)); // header應為big endian
-	uart_hex(header->magic);
-	uart_send_char('\n');
-	if (magic != 0xd00dfeed)
-	{ // This field shall contain the value 0xd00dfeed (big-endian).
 
-		uart_send_string("The header magic is wrong\n");
+	uint32_t magic = fdt_u32_le2be(&(header->magic));
+	
+	if (magic != 0xd00dfeed)
+	{
+
+		uart_puts("The header magic is wrong\n");
 		return -1;
 	}
 
@@ -138,18 +127,16 @@ int fdt_traverse(fdt_callback cb, void *_dtb)
 }
 
 // 5. Implement the initramfs_callback function:
-// cb(token, (char*)cur_ptr,NULL,0);
-// cb(token,(char*)(strings_ptr + nameoff),(void*)cur_ptr,len);
 void get_cpio_addr(int token, const char *name, const void *data, uint32_t size)
 {
 	UNUSED(size);
-	// property的开始位置 if node is initramfs
 	if (token == FDT_PROP && utils_string_compare((char *)name, "linux,initrd-start"))
 	{
-		cpio_addr = (char *)(uintptr_t)fdt_u32_le2be(data); // cur_ptr
-		uart_send_string("cpio address is at: ");
-		uart_hex((uintptr_t)fdt_u32_le2be(data));
-		uart_send_char('\n');
+		cpio_addr = (char *)(uintptr_t)fdt_u32_le2be(data);
+		//printf("cpio address is at: 0x%x\n", (unsigned long int)fdt_u32_le2be(data));
+		uart_puts("cpio address is at: ");
+		uart_hex((unsigned long int)fdt_u32_le2be(data));
+		uart_puts("\n");
 	}
 }
 
@@ -163,24 +150,24 @@ void print_dtb(int token, const char *name, const void *data, uint32_t size)
 	switch (token)
 	{
 	case FDT_BEGIN_NODE:
-		uart_send_string("\n");
+		uart_puts("\n");
 		send_space(space);
-		uart_send_string((char *)name);
-		uart_send_string("{\n ");
+		uart_puts((char *)name);
+		uart_puts("{\n ");
 		space++;
 		break;
 	case FDT_END_NODE:
-		uart_send_string("\n");
+		uart_puts("\n");
 		space--;
 		if (space > 0)
 			send_space(space);
-		uart_send_string("}\n");
+		uart_puts("}\n");
 		break;
 	case FDT_NOP:
 		break;
 	case FDT_PROP:
 		send_space(space);
-		uart_send_string((char *)name);
+		uart_puts((char *)name);
 		break;
 	case FDT_END:
 		break;

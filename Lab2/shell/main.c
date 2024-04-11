@@ -9,7 +9,7 @@ void main()
 
     // set up serial console
     uart_init();
-	
+	uart_hex(_dtb_ptr);
     // say hello
 	fdt_traverse(get_cpio_addr,_dtb_ptr);
     uart_send_string("Type in `help` to get instruction menu!\n");
