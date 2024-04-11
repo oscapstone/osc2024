@@ -15,7 +15,7 @@ unsigned int vsprintf(char *dst, char* fmt, __builtin_va_list args)
     // main loop
     arg = 0;
     while(*fmt) {
-        if(dst-orig > VSPRINT_MAX_BUF_SIZE-0x10)
+        if(dst - orig > VSPRINT_MAX_BUF_SIZE-0x10)
         {
             return -1;
         }
@@ -39,58 +39,67 @@ unsigned int vsprintf(char *dst, char* fmt, __builtin_va_list args)
             }
             // character
             if(*fmt=='c') {
-                arg = __builtin_va_arg(args, int);
-                *dst++ = (char)arg;
+                arg = __builtin_va_arg(args, int); // get the character ASCII code
+                *dst++ = (char)arg; // convert AScii code to character and store it
                 fmt++;
                 continue;
             } else
             // decimal number
             if(*fmt=='d') {
-                arg = __builtin_va_arg(args, int);
+                arg = __builtin_va_arg(args, int); // get the number
+
                 // check input
                 sign=0;
+                // if negative
                 if((int)arg<0) {
                     arg*=-1;
                     sign++;
                 }
+                // if too big
                 if(arg>99999999999999999L) {
                     arg=99999999999999999L;
                 }
-                // convert to string
+
+
+                // convert number to string
                 i=18;
                 tmpstr[i]=0;
                 do {
-                    tmpstr[--i]='0'+(arg%10);
-                    arg/=10;
-                } while(arg!=0 && i>0);
+                    tmpstr[--i] = '0' + (arg % 10);
+                    arg /= 10;
+                } while(arg != 0 && i > 0);
+                
                 if(sign) {
-                    tmpstr[--i]='-';
+                    tmpstr[--i] = '-';
                 }
-                if(len>0 && len<18) {
-                    while(i>18-len) {
-                        tmpstr[--i]=' ';
+                // add leading spaces
+                if(len > 0 && len < 18) {
+                    while(i > 18 - len) {
+                        tmpstr[--i] = ' ';
                     }
                 }
-                p=&tmpstr[i];
+                p =& tmpstr[i];
                 goto copystring;
             } else
+            // Unsigned hexadecimal integer	
             if(*fmt=='x') {
                 arg = __builtin_va_arg(args, long int);
                 i=16;
                 tmpstr[i]=0;
                 do {
-                    char n=arg & 0xf;
-                    tmpstr[--i]=n+(n>9?0x37:0x30);
-                    arg>>=4;
-                } while(arg!=0 && i>0);
-                if(len>0 && len<=16) {
-                    while(i>16-len) {
+                    char n = arg & 0xf;
+                    tmpstr[--i] = n + (n>9 ? 0x37 : 0x30);
+                    arg >>= 4;
+                } while(arg != 0 && i > 0);
+                if(len > 0 && len <= 16) {
+                    while(i > 16 - len) {
                         tmpstr[--i]='0';
                     }
                 }
-                p=&tmpstr[i];
+                p =& tmpstr[i];
                 goto copystring;
             } else
+            // string    
             if(*fmt=='s') {
                 p = __builtin_va_arg(args, char*);
 copystring:     if(p==(void*)0) {
@@ -105,10 +114,14 @@ put:        *dst++ = *fmt;
         }
         fmt++;
     }
-    *dst=0;
-    return dst-orig;
+    *dst = 0;
+    return dst - orig;
 }
 
+/*
+    Example usage:
+    sprintf("%d %d", a, b);
+*/
 unsigned int sprintf(char *dst, char* fmt, ...)
 {
     __builtin_va_list args;
@@ -192,6 +205,7 @@ char* strcpy (char *dest, const char *src)
     return memcpy (dest, src, strlen (src) + 1);
 }
 
+// This function is used to separate a string by space
 char* str_SepbySpace(char* head)
 {
     char* end;

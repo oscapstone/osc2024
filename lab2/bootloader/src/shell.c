@@ -1,19 +1,31 @@
+#include <stddef.h>
+
 #include "shell.h"
 #include "uart1.h"
 #include "power.h"
 #include "u_string.h"
 
 #define SHIFT_ADDR 0x100000
+#define CLI_MAX_CMD 4
 
-extern char* _dtb;
-extern char _start[];
+extern char* _dtb; // it is defined in main.c
+extern char _start[]; // it is defined in the linker script
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
 {
-    {.command="loadimg", .help="load image via uart1"},
-    {.command="help", .help="print all available commands"},
-    {.command="reboot", .help="reboot the device"}
+    {.command="loadimg",    .func = do_cmd_loadimg,             .help="load image via uart1"},
+    {.command="help",       .func = do_cmd_help,                .help="print all available commands"},
+    {.command="reboot",     .func = do_cmd_reboot,              .help="reboot the device"},
+    {.command="c",          .func = do_cmd_cancel_reboot,       .help="cancel reboot the device"},
 };
+
+void cli_cmd_init()
+{
+    cmd_list[0].func = do_cmd_loadimg;
+    cmd_list[1].func = do_cmd_help;
+    cmd_list[2].func = do_cmd_reboot;
+    cmd_list[3].func = do_cmd_cancel_reboot;
+}
 
 void cli_cmd_clear(char* buffer, int length)
 {
@@ -83,16 +95,29 @@ void cli_cmd_read(char* buffer)
 
 void cli_cmd_exec(char* buffer)
 {
-    if (strcmp(buffer, "loadimg") == 0) {
-        do_cmd_loadimg();
-    } else if (strcmp(buffer, "help") == 0) {
-        do_cmd_help();
-    } else if (strcmp(buffer, "reboot") == 0) {
-        do_cmd_reboot();
-    } else if (*buffer){
+    for (int i = 0; i < CLI_MAX_CMD; i++)
+    {
+        if (strcmp(buffer, cmd_list[i].command) == 0)
+        {
+            cmd_list[i].func(0, NULL);
+            return;            
+        }
+    }
+    if (*buffer != '\0')
+    {
         uart_puts(buffer);
         uart_puts(": command not found\r\n");
     }
+    // if (strcmp(buffer, "loadimg") == 0) {
+    //     do_cmd_loadimg();
+    // } else if (strcmp(buffer, "help") == 0) {
+    //     do_cmd_help();
+    // } else if (strcmp(buffer, "reboot") == 0) {
+    //     do_cmd_reboot();
+    // } else if (*buffer){
+    //     uart_puts(buffer);
+    //     uart_puts(": command not found\r\n");
+    // }
 }
 
 void cli_print_banner()
@@ -103,26 +128,29 @@ void cli_print_banner()
     uart_puts("=======================================\r\n");
 }
 
-void do_cmd_help()
+DO_CMD_FUNC(do_cmd_help)
 {
-    for(int i = 0; i < CLI_MAX_CMD; i++)
+   for(int i = 0; i < CLI_MAX_CMD; i++)
     {
         uart_puts(cmd_list[i].command);
         uart_puts("\t\t: ");
         uart_puts(cmd_list[i].help);
         uart_puts("\r\n");
     }
+
+    return 0;
 }
 
 /* Overwrite image file into _start,
    Please make sure this current code has been relocated. */
-void do_cmd_loadimg()
+DO_CMD_FUNC(do_cmd_loadimg)
+// void do_cmd_loadimg()
 {
     char* bak_dtb = _dtb;
     char c;
     unsigned long long kernel_size = 0;
     char* kernel_start = (char*) (&_start);
-    uart_puts("Please upload the image file.\r\n");
+    uart_puts("kernel start: 0x%x\r\n", kernel_start);
 
     // to get the kernel size for each row data
     for (int i=0; i<8; i++)
@@ -130,6 +158,8 @@ void do_cmd_loadimg()
         c = uart_getc();
         kernel_size += c<<(i*8);
     }
+    uart_puts("Kernel size: %d\r\n", kernel_size);
+    uart_puts("Downloading image file ...\r\n");
 
     // get the kernel data
     for (int i=0; i<kernel_size; i++)
@@ -140,15 +170,29 @@ void do_cmd_loadimg()
     uart_puts("Image file downloaded successfully.\r\n");
     uart_puts("Point to new kernel ...\r\n");
 
-    ((void (*)(char*))kernel_start)(bak_dtb);
+     ((void (*)(char*))kernel_start)(bak_dtb);
+    return 0;
 }
 
-void do_cmd_reboot()
+DO_CMD_FUNC(do_cmd_reboot)
 {
     uart_puts("Reboot in 5 seconds ...\r\n\r\n");
     volatile unsigned int* rst_addr = (unsigned int*)PM_RSTC;
     *rst_addr = PM_PASSWORD | 0x20;
+
+    unsigned long long expired_tick = 10 * 10000;
+
     volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
-    *wdg_addr = PM_PASSWORD | 5;
+    *wdg_addr = (unsigned long long)PM_PASSWORD | expired_tick;
+    return 0;
 }
 
+DO_CMD_FUNC(do_cmd_cancel_reboot)
+{
+    uart_puts("Cancel Reboot \r\n\r\n");
+    volatile unsigned int* rst_addr = (unsigned int*)PM_RSTC;
+    *rst_addr = PM_PASSWORD | 0x0;
+    volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
+    *wdg_addr = PM_PASSWORD | 0;
+    return 0;
+}

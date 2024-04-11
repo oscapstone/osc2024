@@ -71,6 +71,7 @@ void cli_cmd_read(char* buffer)
             continue;
         }
 
+
         // some ascii blacklist
         if ( c > 16 && c < 32 ) continue;
         if ( c > 127 ) continue;

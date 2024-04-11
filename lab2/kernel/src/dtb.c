@@ -3,7 +3,7 @@
 #include "u_string.h"
 #include "cpio.h"
 
-extern void* CPIO_DEFAULT_PLACE;
+extern void* CPIO_DEFAULT_PLACE; // it's from shell.c
 char* dtb_ptr;
 
 //stored as big endian
@@ -82,6 +82,7 @@ void traverse_device_tree(void *dtb_ptr, dtb_callback callback)
 void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t name_size)
 {
     static int level = 0;
+    // get the node name
     if(node_type==FDT_BEGIN_NODE)
     {
         for(int i=0;i<level;i++)uart_puts("   ");
@@ -99,11 +100,13 @@ void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t
     }
 }
 
+// this function is for finding the start address of initramfs 'CPIO_DEFAULT_PLACE'
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size) {
     // https://github.com/stweil/raspberrypi-documentation/blob/master/configuration/device-tree.md
     // linux,initrd-start will be assigned by start.elf based on config.txt
     if(node_type==FDT_PROP && strcmp(name,"linux,initrd-start")==0)
     {
         CPIO_DEFAULT_PLACE = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t*)value);
+        uart_puts("initramfs start at 0x%x\n", CPIO_DEFAULT_PLACE);
     }
 }

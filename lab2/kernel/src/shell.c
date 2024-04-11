@@ -8,21 +8,22 @@
 #include "dtb.h"
 #include "heap.h"
 
-#define CLI_MAX_CMD 8
+#define CLI_MAX_CMD 9
 
-extern char* dtb_ptr;
-void* CPIO_DEFAULT_PLACE;
+extern char* dtb_ptr; // it's the address of dtb and it declared in dtb.c
+void* CPIO_DEFAULT_PLACE; // it's the address of cpio
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
 {
-    {.command="cat", .help="concatenate files and print on the standard output"},
-    {.command="dtb", .help="show device tree"},
-    {.command="hello", .help="print Hello World!"},
-    {.command="help", .help="print all available commands"},
-    {.command="malloc", .help="simple allocator in heap session"},
-    {.command="info", .help="get device information via mailbox"},
-    {.command="ls", .help="list directory contents"},
-    {.command="reboot", .help="reboot the device"}
+    {.command="cat",    .func=do_cmd_cat,           .help="concatenate files and print on the standard output"},
+    {.command="dtb",    .func=do_cmd_dtb,           .help="show device tree"},
+    {.command="help",   .func=do_cmd_help,          .help="print all available commands"},
+    {.command="info",   .func=do_cmd_info,          .help="get device information via mailbox"},
+    {.command="malloc", .func=do_cmd_malloc,        .help="simple allocator in heap session"},
+    {.command="ls",     .func=do_cmd_ls,            .help="list directory contents"},
+    {.command="hello",  .func=do_cmd_hello,         .help="print Hello World!"},
+    {.command="reboot", .func=do_cmd_reboot,        .help="reboot the device"},
+    {.command="c",      .func=do_cmd_cancel_reboot, .help="cancel reboot the device"}
 };
 
 void cli_cmd_clear(char* buffer, int length)
@@ -96,40 +97,33 @@ void cli_cmd_exec(char* buffer)
     if (!buffer) return;
 
     char* cmd = buffer;
-    char* argvs;
+    char* argvs[1] = {NULL};
 
     while(1){
         if(*buffer == '\0')
         {
-            argvs = buffer;
+            argvs[0] = buffer;
             break;
         }
         if(*buffer == ' ')
         {
             *buffer = '\0';
-            argvs = buffer + 1;
+            argvs[0] = buffer + 1;
             break;
         }
         buffer++;
     }
-
-    if (strcmp(cmd, "cat") == 0) {
-        do_cmd_cat(argvs);
-    } else if (strcmp(cmd, "dtb") == 0){
-        do_cmd_dtb();
-    } else if (strcmp(cmd, "hello") == 0) {
-        do_cmd_hello();
-    } else if (strcmp(cmd, "help") == 0) {
-        do_cmd_help();
-    } else if (strcmp(cmd, "info") == 0) {
-        do_cmd_info();
-    } else if (strcmp(cmd, "malloc") == 0) {
-        do_cmd_malloc();
-    } else if (strcmp(cmd, "ls") == 0) {
-        do_cmd_ls(argvs);
-    } else if (strcmp(cmd, "reboot") == 0) {
-        do_cmd_reboot();
-    } else if (*cmd != '\0'){
+    for (int i = 0; i < CLI_MAX_CMD; i++)
+    {
+        if (strcmp(cmd, cmd_list[i].command) == 0)
+        {
+            // cmd_list[i].func(argvs, 1);
+            cmd_list[i].func(1, argvs);
+            return;            
+        }
+    }
+    if (*cmd != '\0')
+    {
         uart_puts(cmd);
         uart_puts(": command not found\r\n");
     }
@@ -143,8 +137,9 @@ void cli_print_banner()
     uart_puts("=======================================\r\n");
 }
 
-void do_cmd_cat(char* filepath)
+DO_CMD_FUNC(do_cmd_cat)
 {
+    char* filepath = argv[0];
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
@@ -169,14 +164,16 @@ void do_cmd_cat(char* filepath)
         //if this is TRAILER!!! (last of file)
         if(header_ptr==0) uart_puts("cat: %s: No such file or directory\n", filepath);
     }
+    return 0;
 }
 
-void do_cmd_dtb()
+DO_CMD_FUNC(do_cmd_dtb)
 {
     traverse_device_tree(dtb_ptr, dtb_callback_show_tree);
+    return 0;
 }
 
-void do_cmd_help()
+DO_CMD_FUNC(do_cmd_help)
 {
     for(int i = 0; i < CLI_MAX_CMD; i++)
     {
@@ -185,14 +182,16 @@ void do_cmd_help()
         uart_puts(cmd_list[i].help);
         uart_puts("\r\n");
     }
+    return 0;
 }
 
-void do_cmd_hello()
+DO_CMD_FUNC(do_cmd_hello)
 {
     uart_puts("Hello World!\r\n");
+    return 0;
 }
 
-void do_cmd_info()
+DO_CMD_FUNC(do_cmd_info)
 {
     // print hw revision
     pt[0] = 8 * 4;
@@ -205,10 +204,7 @@ void do_cmd_info()
     pt[7] = MBOX_TAG_LAST_BYTE;
 
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
-        uart_puts("Hardware Revision\t: 0x");
-        uart_2hex(pt[6]);
-        uart_2hex(pt[5]);
-        uart_puts("\r\n");
+        uart_puts("Hardware Revision\t: 0x%x\r\n", pt[5]);
     }
     // print arm memory
     pt[0] = 8 * 4;
@@ -221,16 +217,13 @@ void do_cmd_info()
     pt[7] = MBOX_TAG_LAST_BYTE;
 
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
-        uart_puts("ARM Memory Base Address\t: 0x");
-        uart_2hex(pt[5]);
-        uart_puts("\r\n");
-        uart_puts("ARM Memory Size\t\t: 0x");
-        uart_2hex(pt[6]);
-        uart_puts("\r\n");
+        uart_puts("ARM Memory Base Address\t: 0x%x\r\n", pt[5]);
+        uart_puts("ARM Memory Size\t\t: %d bytes\r\n", pt[6]);
     }
+    return 0;
 }
 
-void do_cmd_malloc()
+DO_CMD_FUNC(do_cmd_malloc)
 {
     //test malloc
     char* test1 = malloc(0x18);
@@ -244,10 +237,12 @@ void do_cmd_malloc()
     char* test3 = malloc(0x28);
     memcpy(test3,"test malloc3",sizeof("test malloc3"));
     uart_puts("%s: address: 0x%x, size: %ld bytes\n",test3, test3, *(test3-0x8));
+    return 0;
 }
 
-void do_cmd_ls(char* workdir)
+DO_CMD_FUNC(do_cmd_ls)
 {
+    // char* workdir = argv;
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
@@ -264,17 +259,33 @@ void do_cmd_ls(char* workdir)
         }
 
         //if this is not TRAILER!!! (last of file)
-        if(header_ptr!=0) uart_puts("%s\n", c_filepath);
+        if(header_ptr!=0) {
+            uart_puts("%s\n", c_filepath);
+        }
     }
+    return 0;
 }
 
-
-void do_cmd_reboot()
+DO_CMD_FUNC(do_cmd_reboot)
 {
     uart_puts("Reboot in 5 seconds ...\r\n\r\n");
     volatile unsigned int* rst_addr = (unsigned int*)PM_RSTC;
     *rst_addr = PM_PASSWORD | 0x20;
+
+    unsigned long long expired_tick = 10 * 10000;
+
     volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
-    *wdg_addr = PM_PASSWORD | 5;
+    *wdg_addr = (unsigned long long)PM_PASSWORD | expired_tick;
+    return 0;
+}
+
+DO_CMD_FUNC(do_cmd_cancel_reboot)
+{
+    uart_puts("Cancel Reboot \r\n\r\n");
+    volatile unsigned int* rst_addr = (unsigned int*)PM_RSTC;
+    *rst_addr = PM_PASSWORD | 0x0;
+    volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
+    *wdg_addr = PM_PASSWORD | 0;
+    return 0;
 }
 

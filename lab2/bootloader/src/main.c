@@ -1,9 +1,12 @@
 #include "uart1.h"
 #include "shell.h"
 
+// These thress variables are defined in the linker script
 extern char* _bootloader_relocated_addr;
 extern unsigned long long __code_size;
 extern unsigned long long _start;
+
+
 char* _dtb;
 
 int relocated_flag = 1;
@@ -18,15 +21,9 @@ void code_relocate(char* addr)
         addr[i] = start[i];
     }
 
-    /*
-        It is a function pointer to call the section '_start' again, 
-        but this time with the dtb address as an argument saving in the register x0.
-    */ 
     ((void (*)(char*))addr)(_dtb);
 }
 
-/* x0-x7 are argument registers.
-   x0 is now used for dtb */
 void main(char* arg){
     _dtb = arg;
     char* relocated_ptr = (char*)&_bootloader_relocated_addr;
@@ -41,6 +38,7 @@ void main(char* arg){
     char input_buffer[CMD_MAX_LEN];
 
     uart_init();
+    cli_cmd_init();
     cli_print_banner();
 
     while(1){
