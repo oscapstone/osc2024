@@ -7,6 +7,13 @@
 #include "shell.hpp"
 #include "timer.hpp"
 
+void print_2s_timer(void* context) {
+  if (show_timer)
+    mini_uart_printf("[" PRTval "] 2s timer interrupt\n",
+                     FTval(get_current_time()));
+  add_timer({2, 0}, (void*)context, (Timer::fp)context);
+}
+
 extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   mini_uart_puts("Hello Kernel!\n");
@@ -16,19 +23,13 @@ extern "C" void kernel_main(void* dtb_addr) {
   fdt.init(dtb_addr);
   initramfs_init();
 
-  core_timer_enable();
+  timer_init();
   enable_interrupt();
   mini_uart_printf("freq_of_timer: %ld\n", freq_of_timer);
   mini_uart_printf("boot time    : " PRTval "s\n",
                    FTval(tick2timeval(boot_timer_tick)));
 
-  Timer::fp callback = +[](void* callback) {
-    if (show_timer)
-      mini_uart_printf("[" PRTval "] 2s timer interrupt\n",
-                       FTval(get_current_time()));
-    add_timer({2, 0}, (void*)callback, (Timer::fp)callback);
-  };
-  add_timer({2, 0}, (void*)callback, callback);
+  add_timer({2, 0}, (void*)print_2s_timer, print_2s_timer);
 
   mini_uart_use_async(true);
 
