@@ -21,7 +21,8 @@ const char* ExceptionType[] = {
 
 void print_exception(ExceptionContext* context, int type) {
   disable_interrupt();
-  mini_uart_printf_sync("%s: %s\n", ExceptionType[type % 4],
+  mini_uart_use_async(false);
+  mini_uart_printf_sync("(%d) %s: %s\n", type, ExceptionType[type % 4],
                         ExceptionFrom[type / 4]);
   mini_uart_printf_sync("SPSR_EL1: %032lb\n", context->spsr_el1);
   mini_uart_printf_sync("ELR_EL1 : %032lb\n", context->elr_el1);
