@@ -201,7 +201,7 @@ void initrd_exec_prog(char* target) {
     
     unsigned long spsr_el1 = 0x3c0;
     unsigned long elr_el1 = 0x20000;
-    unsigned long sp = (unsigned long)simple_malloc(4096);
+    unsigned long sp = (unsigned long)simple_malloc(4096) + 4096;
 
     // "r": Any general-purpose register, except sp.
     asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));

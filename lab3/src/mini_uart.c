@@ -59,6 +59,15 @@ void irq_uart_rx_exception() {
 void irq_uart_tx_exception() {
 	if (uart_write_index != uart_write_head) {
 		put32(AUX_MU_IO_REG, uart_write_buffer[uart_write_index++]);
+		// uart_send_string("before delayed\n");
+		// for(unsigned int i=0;i<100000000;i++){
+		// 	asm volatile("nop");
+		// 	asm volatile("nop");
+		// 	asm volatile("nop");
+		// }
+		// uart_send_string("after delayed\n");
+
+		// uart_send_string("delayed finished\n");
 		if (uart_write_index >= BUFFER_SIZE) {
 			uart_write_index = 0;
 		}
@@ -82,13 +91,13 @@ void uart_irq_handler() {
 	// check if it's a receive interrupt
 	if ((iir & 0x06) == 0x04) {
 		// uart_send_string("Receive interrupt\n");	
-		create_task(irq_uart_rx_exception, 1);
+		create_task(irq_uart_rx_exception, 2);
 		execute_tasks_preemptive();
 	} 
 	// check if it's a transmit interrupt
 	if ((iir & 0x06) == 0x02) {
 		// uart_send_string("Transmit interrupt\n");
-		create_task(irq_uart_tx_exception, 2);
+		create_task(irq_uart_tx_exception, 1);
 		execute_tasks_preemptive();
 	}
 }
