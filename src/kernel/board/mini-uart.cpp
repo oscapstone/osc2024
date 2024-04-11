@@ -65,7 +65,8 @@ void mini_uart_handler(void* iir_) {
 
   if (iir & (1 << 1)) {
     // Transmit holding register empty
-    set32(AUX_MU_IO_REG, wbuf.pop(false));
+    if (not wbuf.empty())
+      set32(AUX_MU_IO_REG, wbuf.pop(false));
   } else if (iir & (1 << 2)) {
     // Receiver holds valid byte
     rbuf.push(get32(AUX_MU_IO_REG) & MASK(8), false);
@@ -77,7 +78,9 @@ void mini_uart_handler(void* iir_) {
 }
 
 char mini_uart_getc_raw_async() {
-  return rbuf.pop(true);
+  auto c = rbuf.pop(true);
+  set_ier_reg(true, RECEIVE_INT);
+  return c;
 }
 
 void mini_uart_putc_raw_async(char c) {

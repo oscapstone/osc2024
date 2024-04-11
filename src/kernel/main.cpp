@@ -4,6 +4,7 @@
 #include "heap.hpp"
 #include "initramfs.hpp"
 #include "interrupt.hpp"
+#include "irq.hpp"
 #include "shell.hpp"
 #include "timer.hpp"
 
@@ -24,6 +25,7 @@ extern "C" void kernel_main(void* dtb_addr) {
   initramfs_init();
 
   timer_init();
+  irq_init();
   enable_interrupt();
   mini_uart_printf("freq_of_timer: %ld\n", freq_of_timer);
   mini_uart_printf("boot time    : " PRTval "s\n",
