@@ -26,13 +26,8 @@ wfe
 .section ".text.boot"
 
 .global _start
-.extern relocated_flag
 
 _start:
-    ldr     x1, =relocated_flag
-    ldr     w1, [x1]
-    cbz     w1, setup_new_stack
-
 setup_stack:
     ldr     x1, =_stack_top
     mov     sp, x1
@@ -46,13 +41,10 @@ init_bss:
     str     xzr, [x1], #8
     sub     w2, w2, #1
     cbnz    w2, init_bss
-    b       run_main
-
-setup_new_stack:
-    ldr     x1, =_relocated_stack_top
-    mov     sp, x1
 
 run_main:
+    ldr     x1, =_dtb
+    str     x0, [x1], #8
     bl      main
 
 proc_hang:

@@ -1,4 +1,5 @@
 _heap_stack_size = 1M;
+_bootloader_size = 64K;
 
 SECTIONS
 {
@@ -24,8 +25,8 @@ SECTIONS
     _end = .;
 
     . = 0x3000000;
-    _bootloader_relocated_addr = .;
-    _relocated_stack_top = _bootloader_relocated_addr + (_end - _start);
+    _bootloader_relocated_addr = 0x3000000;
+    . = . + _bootloader_size;
 }
 
 __code_size = (_end - _start);
