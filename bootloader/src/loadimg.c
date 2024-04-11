@@ -1,20 +1,22 @@
-#include "uart0.h"
+#include "uart1.h"
 #include "utli.h"
 
 void loadimg() {
   uart_init();
   uart_flush();
-  uart_printf("Bootloader...\n");
+  uart_send_string("\rBootloader...\r\n");
   wait_usec(2000000);
-  uart_printf("Send image via UART now!\n");
+  uart_send_string("Send image via UART now!\r\n");
 
   int img_size = 0, i;
   for (i = 0; i < 4; i++) {
     img_size <<= 8;
     img_size |= (int)uart_read_raw();
   }
-  uart_printf("Sucessfully get img_size!\n");
-  uart_printf("img_size: %d\n", img_size);
+  uart_send_string("Sucessfully get img_size!\r\n");
+  uart_send_string("img_size: ");
+  uart_int(img_size);
+  uart_send_string("\r\n");
 
   char *kernel = (char *)0x80000;
 
@@ -25,7 +27,7 @@ void loadimg() {
     //     uart_printf("\rreceived byte#: %d", i);
   }
 
-  uart_printf("All received\n");
+  uart_send_string("All received\r\n");
   asm volatile(
       "mov x30, 0x80000;"
       "ret;");

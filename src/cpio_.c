@@ -1,13 +1,13 @@
 #include "cpio_.h"
 
-#include "my_string.h"
-#include "uart0.h"
+#include "string.h"
+#include "uart1.h"
 #include "utli.h"
 
 // char *cpio_addr = (char *)0x20000000;
 char *cpio_addr;
 
-static unsigned int atoi(const char *s, int char_size) {
+static unsigned int cpio_atoi(const char *s, int char_size) {
   unsigned int num = 0;
   for (int i = 0; i < char_size; i++) {
     num = num * 16;
@@ -28,13 +28,14 @@ void cpio_ls() {
   while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     cpio_header *header = (cpio_header *)addr;
     unsigned int filename_size =
-        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
     unsigned int file_size =
-        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
-    uart_printf("%s\n", addr + sizeof(cpio_header));
+    uart_send_string(addr + sizeof(cpio_header));
+    uart_send_string("\r\n");
     addr += (headerPathname_size + file_size);
   }
 }
@@ -47,9 +48,9 @@ char *findFile(const char *name) {
     }
     cpio_header *header = (cpio_header *)addr;
     unsigned int pathname_size =
-        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     unsigned int file_size =
-        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     unsigned int headerPathname_size = sizeof(cpio_header) + pathname_size;
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
@@ -63,17 +64,38 @@ void cpio_cat(const char *filename) {
   if (file) {
     cpio_header *header = (cpio_header *)file;
     unsigned int filename_size =
-        atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
     unsigned int file_size =
-        atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     char *file_content = (char *)header + headerPathname_size;
     for (unsigned int i = 0; i < file_size; i++) {
       uart_write(file_content[i]);
     }
+    uart_send_string("\r\n");
   } else {
-    uart_printf("File \"%s\" not found\n", filename);
+    uart_send_string(filename);
+    uart_puts(" not found");
   }
+}
+
+char *cpio_get_file_content_st_addr(const char *filename) {
+  char *file = findFile(filename);
+  if (file) {
+    cpio_header *header = (cpio_header *)file;
+    unsigned int filename_size =
+        cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
+    unsigned int headerPathname_size = sizeof(cpio_header) + filename_size;
+    unsigned int file_size =
+        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+    align_inplace(&headerPathname_size, 4);
+    align_inplace(&file_size, 4);
+    char *file_content = (char *)header + headerPathname_size;
+    return file_content;
+  }
+  uart_send_string(filename);
+  uart_puts(" not found");
+  return (char *)0;
 }

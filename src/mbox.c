@@ -1,6 +1,6 @@
 #include "peripherals/mbox.h"
 
-#include "uart0.h"
+#include "uart1.h"
 #include "utli.h"
 
 /* mailbox message buffer */
@@ -11,23 +11,23 @@ int mbox_call(unsigned char ch) {
   /* wait until we can write to the mailbox */
   do {
     asm volatile("nop");
-  } while (get(MBOX_STATUS) & MBOX_FULL);
+  } while (*MBOX_STATUS & MBOX_FULL);
   /* write the address of our message to the mailbox with channel identifier */
 
-  set(MBOX_WRITE, r);
+  *MBOX_WRITE = r;
   /* now wait for the response */
 
   do {
     asm volatile("nop");
-  } while (get(MBOX_STATUS) & MBOX_EMPTY);
+  } while (*MBOX_STATUS & MBOX_EMPTY);
 
   while (1) {
     /* is there a response? */
     do {
       asm volatile("nop");
-    } while (get(MBOX_STATUS) & MBOX_EMPTY);
+    } while (*MBOX_STATUS & MBOX_EMPTY);
     /* is it a response to our message? */
-    if (r == get(MBOX_READ)) /* is it a valid successful response? */
+    if (r == *MBOX_READ) /* is it a valid successful response? */
       return (mbox[1] == MBOX_CODE_BUF_RES_SUCC);
   }
   return 0;
@@ -46,10 +46,16 @@ void get_arm_base_memory_sz() {
   mbox[7] = MBOX_TAG_LAST;
 
   if (mbox_call(MBOX_CH_PROP)) {
-    uart_printf("ARM memory base address: 0x%x\n", mbox[5]);
-    uart_printf("ARM memory size: 0x%x bytes\n", mbox[6]);
+    uart_send_string("ARM memory base address: 0x");
+    uart_hex(mbox[5]);
+    uart_send_string("\r\n");
+
+    uart_send_string("ARM memory size: 0x");
+    uart_hex(mbox[6]);
+    uart_send_string("\r\n");
+
   } else {
-    uart_printf("Unable to query arm memory and size..\n");
+    uart_puts("Unable to query arm memory and size..");
   }
 }
 
@@ -67,9 +73,12 @@ void get_board_serial() {
   mbox[7] = MBOX_TAG_LAST;
 
   if (mbox_call(MBOX_CH_PROP)) {
-    uart_printf("Borad serial number: 0x%x%x\n", mbox[6], mbox[5]);
+    uart_send_string("Borad serial number: 0x");
+    uart_hex(mbox[6]);
+    uart_hex(mbox[5]);
+    uart_send_string("\r\n");
   } else {
-    uart_printf("Unable to query serial number..\n");
+    uart_puts("Unable to query serial number..");
   }
 }
 
@@ -85,9 +94,11 @@ void get_board_revision() {
   mbox[6] = MBOX_TAG_LAST;  // tags end
 
   if (mbox_call(MBOX_CH_PROP)) {
-    uart_printf("Board revision: 0x%x\n",
-                mbox[5]);  // it should be 0xa020d3 for rpi3 b+
+    uart_send_string(
+        "Board revision: 0x");  // it should be 0xa020d3 for rpi3 b+
+    uart_hex(mbox[5]);
+    uart_send_string("\r\n");
   } else {
-    uart_printf("Unable to query board revision..\n");
+    uart_puts("Unable to query board revision..");
   }
 }

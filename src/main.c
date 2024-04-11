@@ -1,29 +1,17 @@
 #include "dtb.h"
-#include "fb.h"
 #include "shell.h"
+#include "utli.h"
+extern void *_dtb_ptr;
 
-#define CMD_LEN 128
-
-enum shell_status { Read, Parse };
-
-int main() {
+void kernel_init(void *arg) {
+  _dtb_ptr = arg;
   shell_init();
-  // lfb_init();
   fdt_traverse(get_cpio_addr);
+  print_cur_el();
+  print_cur_sp();
+}
 
-  enum shell_status status = Read;
-  while (1) {
-    char cmd[CMD_LEN];
-    switch (status) {
-      case Read:
-        shell_input(cmd);
-        status = Parse;
-        break;
-
-      case Parse:
-        shell_controller(cmd);
-        status = Read;
-        break;
-    }
-  }
+void main(void *arg) {
+  kernel_init(arg);
+  shell_start();
 }

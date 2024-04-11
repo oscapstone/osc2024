@@ -1,7 +1,7 @@
-#include "uart0.h"
+#include "alloc.h"
+
 #include "utli.h"
 
-#define SIMPLE_MALLOC_BUFFER_SIZE 8192
 static unsigned char simple_malloc_buffer[SIMPLE_MALLOC_BUFFER_SIZE];
 static unsigned long simple_malloc_offset = 0;
 

@@ -7,10 +7,10 @@ SRC_DIR = src
 BUILD_DIR = build
 
 LINKER_FILE = $(SRC_DIR)/linker.ld
-ENTRY = $(SRC_DIR)/start.s
-ENTRY_OBJS = $(BUILD_DIR)/start.o
 SRCS = $(wildcard $(SRC_DIR)/*.c)
+ASMS = $(wildcard $(SRC_DIR)/*.S)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+OBJS += $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%.o)
 
 $(info SRCS: $(SRCS))
 $(info OBJS: $(OBJS))
@@ -27,11 +27,11 @@ dirs:
 cpio:
 	cd rootfs; find . | cpio -o -H newc > ../initramfs.cpio; cd ..
 	
-kernel8.img: $(OBJS) $(ENTRY_OBJS)
-	$(LD) $(ENTRY_OBJS) $(OBJS) -T $(LINKER_FILE) -o kernel8.elf
+kernel8.img: $(OBJS) 
+	$(LD) $(OBJS) -T $(LINKER_FILE) -o kernel8.elf
 	$(OBJCPY) -O binary kernel8.elf kernel8.img
 
-$(ENTRY_OBJS): $(ENTRY)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
@@ -41,10 +41,7 @@ asm: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
-
-display: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 debug: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb

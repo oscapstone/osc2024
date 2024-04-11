@@ -1,6 +1,5 @@
 #include "peripherals/mbox.h"
 
-#include "uart0.h"
 #include "utli.h"
 
 /* mailbox message buffer */
