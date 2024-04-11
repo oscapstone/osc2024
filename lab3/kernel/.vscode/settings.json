@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "allocator.h": "c",
+        "exception.h": "c",
+        "timer.h": "c",
+        "cpio.h": "c",
+        "uart.h": "c",
+        "dtb_parser.h": "c",
+        "mailbox.h": "c",
+        "shell.h": "c",
+        "timer_heap.h": "c",
+        "gpio.h": "c",
+        "utils.h": "c",
+        "task.h": "c",
+        "task_heap.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}
