@@ -40,5 +40,8 @@ void mini_uart_puts(const char* s) {
 int main() {
   mini_uart_puts("Hello from EL0.\n");
 
+  for (;;)
+    ;
+
   return 0;
 }

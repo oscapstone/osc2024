@@ -91,7 +91,7 @@ exception_vector_table:
     .org 0x400
     CALL_WITH_CONTEXT 8 print_exception
     .org 0x480
-    CALL_WITH_CONTEXT 9 print_exception
+    CALL_WITH_CONTEXT 9 irq_handler
     .org 0x500
     CALL_WITH_CONTEXT 10 print_exception
     .org 0x580
