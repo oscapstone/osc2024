@@ -1,1 +1,7 @@
-/target
+target/
+.DS_Store
+*.img
+*/obj.txt
+*.cpio
+rootfs/
+*/table.txt
