@@ -4,11 +4,20 @@ pub mod macros;
 use driver::uart;
 
 fn send(c: u8) {
-    uart::send(c);
+    // uart::send(c);
+    uart::send_async(c);
+}
+
+fn _recv() -> u8 {
+    loop {
+        if let Some(c) = uart::recv_async() {
+            return c;
+        }
+    }
 }
 
 fn recv() -> u8 {
-    let c = uart::recv();
+    let c = _recv();
     match c {
         b'\r' | b'\n' => {
             write(b"\r\n");

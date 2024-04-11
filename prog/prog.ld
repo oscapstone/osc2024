@@ -1,10 +1,10 @@
 ENTRY(_start)
 
 SECTIONS {
-    . = 0x80000;
+    . = 0x30010000;
     .text : {
-        KEEP(*(.text._start_kernel))
-    } 
+        KEEP(*(.text._start))
+    }
     .rodata : {
         *(.rodata*)
     }

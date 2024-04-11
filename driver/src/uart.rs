@@ -1,6 +1,7 @@
 use crate::mmio::regs::AuxReg::*;
 use crate::mmio::regs::GpioReg::*;
-use crate::mmio::regs::MmioReg::{Aux, Gpio};
+use crate::mmio::regs::IrqReg::*;
+use crate::mmio::regs::MmioReg::{Aux, Gpio, Irq};
 use crate::mmio::Mmio;
 
 pub fn init() {
@@ -11,7 +12,9 @@ pub fn init() {
     Mmio::write_reg(Aux(MuCntl), 0);
 
     // Configure UART
-    Mmio::write_reg(Aux(MuIer), 0);
+    Mmio::write_reg(Aux(MuIer), 3);
+    Mmio::write_reg(Irq(S1), 1 << 29);
+
     Mmio::write_reg(Aux(MuLcr), 3); // Set the data size to 8 bit
     Mmio::write_reg(Aux(MuMcr), 0); // No auto flow control
     Mmio::write_reg(Aux(MuBaud), 270); // Set baud rate for 115200
@@ -32,6 +35,11 @@ pub fn init() {
 
     // Enable the transmitter and receiver
     Mmio::write_reg(Aux(MuCntl), 3);
+    unsafe {
+        SND_IDX = 0;
+        RCV_HEAD = 0;
+        RCV_TAIL = 0;
+    }
 }
 
 pub fn send(c: u8) {
@@ -60,4 +68,52 @@ pub fn recv_nb() -> Option<u8> {
     }
     // Read the character from the buffer
     Some((Mmio::read_reg(Aux(MuIo)) & 0xFF) as u8)
+}
+
+const BUFFER_SIZE: usize = 0x1000;
+static mut SND_BUFFER: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
+static mut RCV_BUFFER: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
+static mut SND_IDX: usize = 0;
+static mut RCV_HEAD: usize = 0;
+static mut RCV_TAIL: usize = 0;
+
+pub fn recv_async() -> Option<u8> {
+    unsafe {
+        if RCV_HEAD == RCV_TAIL {
+            None
+        } else {
+            let c = RCV_BUFFER[RCV_HEAD];
+            RCV_HEAD = (RCV_HEAD + 1) % BUFFER_SIZE;
+            Some(c)
+        }
+    }
+}
+
+pub fn send_async(c: u8) {
+    unsafe {
+        SND_BUFFER[SND_IDX] = c;
+        SND_IDX = SND_IDX + 1;
+        while SND_IDX == BUFFER_SIZE {}
+        Mmio::write_reg(Aux(MuIer), 0b11);
+    }
+}
+
+pub fn handle_irq() {
+    unsafe {
+        for i in 0..SND_IDX {
+            send(SND_BUFFER[i]);
+        }
+        SND_IDX = 0;
+
+        loop {
+            match recv_nb() {
+                Some(c) => {
+                    RCV_BUFFER[RCV_TAIL] = c;
+                    RCV_TAIL = (RCV_TAIL + 1) % BUFFER_SIZE;
+                }
+                None => break,
+            }
+        }
+        Mmio::write_reg(Aux(MuIer), 1);
+    }
 }
