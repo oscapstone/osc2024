@@ -40,7 +40,6 @@ void add_timer(uint64_t tick, void* context, Timer::fp callback, int prio) {
   if (++timer_cnt == 1)
     enable_timer();
 
-  enable_interrupt();
   restore_DAIF();
 }
 

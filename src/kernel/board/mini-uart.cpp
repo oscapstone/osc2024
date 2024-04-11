@@ -48,7 +48,6 @@ void mini_uart_use_async(bool use) {
     mini_uart_putc_fp = mini_uart_putc_sync;
   }
 
-  enable_interrupt();
   restore_DAIF();
 }
 
