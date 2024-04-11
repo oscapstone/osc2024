@@ -2,6 +2,9 @@
 #include "mini_uart.h"
 #include "utils.h"
 #include "peripherals/irq.h"
+#include "timer.h"
+
+extern timer_t *timer_head;
 
 void el1_interrupt_enable(){
     asm volatile ("msr daifclr, 0xf"); // umask all DAIF
@@ -52,24 +55,57 @@ void irq_exception_handler_c(){
         // uart_send_string("UART interrupt\n");
         uart_irq_handler();
     } else if(interrupt_source & INTERRUPT_SOURCE_CNTPNSIRQ) {
-        uart_send_string("Timer interrupt\n");
+        uart_send_string("\nTimer interrupt\n");
+        put32(CORE0_TIMER_IRQ_CTRL, 0);
         irq_timer_exception();
     }
 }
 
 void irq_timer_exception(){
-    unsigned long long cntpct_el0 = 0;
-    asm volatile("mrs %0, cntpct_el0":"=r"(cntpct_el0));
+    // // enable timer iterrupt
+    put32(CORE0_TIMER_IRQ_CTRL, 2);
 
-    unsigned long long cntfrq_el0 = 0;
-    asm volatile("mrs %0, cntfrq_el0":"=r"(cntfrq_el0));
+    // disable timer interrupt before entering critical section
+    asm volatile("msr cntp_ctl_el0,%0"::"r"(0));
+    el1_interrupt_disable();
 
-    unsigned long long sec = cntpct_el0 / cntfrq_el0;
-    uart_send_string("sec:");
-    uart_hex(sec);
-    uart_send_string("\n");
+   
+    while(timer_head){
+        unsigned long long current_time;
+        asm volatile("mrs %0, cntpct_el0":"=r"(current_time));
+        if(timer_head -> timeout <= current_time) {
+            timer_t *timer = timer_head;
+            timer -> callback(timer -> data);
+            timer_head = timer_head -> next;
+            if(timer_head){
+                timer_head -> prev = 0;
+            }
+        } else {
+            break;
+        }
 
-    unsigned long long wait = cntfrq_el0 * 2;// wait 2 seconds
-    asm volatile ("msr cntp_tval_el0, %0"::"r"(wait));
+        if(timer_head){
+            asm volatile("msr cntp_cval_el0, %0"::"r"(timer_head -> timeout));
+            asm volatile("msr cntp_ctl_el0, %0"::"r"(1));
+        } else {
+            asm volatile("msr cntp_ctl_el0, %0"::"r"(0));
+        }
+        el1_interrupt_enable();
+    }
+    
+
+    // unsigned long long cntpct_el0 = 0;
+    // asm volatile("mrs %0, cntpct_el0":"=r"(cntpct_el0));
+
+    // unsigned long long cntfrq_el0 = 0;
+    // asm volatile("mrs %0, cntfrq_el0":"=r"(cntfrq_el0));
+
+    // unsigned long long sec = cntpct_el0 / cntfrq_el0;
+    // uart_send_string("sec:");
+    // uart_hex(sec);
+    // uart_send_string("\n");
+
+    // unsigned long long wait = cntfrq_el0 * 2;// wait 2 seconds
+    // asm volatile ("msr cntp_tval_el0, %0"::"r"(wait));
 
 }

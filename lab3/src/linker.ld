@@ -16,5 +16,9 @@ SECTIONS
       *(.bss)
       bss_end = .;
   }
+  .heap : {
+      . = ALIGN(0x8);
+      __heap_top = .;
+  }
 }
 __bss_size = (bss_end - bss_begin)>>3;

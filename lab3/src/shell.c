@@ -4,14 +4,15 @@
 #include "c_utils.h"
 #include "string.h"
 #include "initrd.h"
+#include "timer.h"
 
 void shell(){
     uart_async_send_string("Welcome to OSC2024 shell!\n");
     while(1){
-        uart_send_string("# ");
+        uart_async_send_string("# ");
         char str[100];
         uart_recv_command(str);
-        uart_send_string("\n");
+        uart_async_send_string("\n");
         if(!strcmp(str, "hello")){
             uart_async_send_string("Hello World!\n");
         } else if(!strcmp(str, "mailbox")){
@@ -34,15 +35,49 @@ void shell(){
             initrd_exec_prog(file_name);
         } else if (!strcmp(str, "count2s")){
             uart_async_send_string("Triggering timer interrupt...\n");
-            asm volatile(
-                "mov x20, 1;"
-                "msr cntp_ctl_el0, x20;"
-                "mrs x20, cntfrq_el0;"
-                "msr cntp_tval_el0, x20;"
-                "mov x20, 2;"
-                "ldr x1, =0x40000040;"
-                "str w20, [x1];"
-            );
+            // asm volatile(
+            //     "mov x20, 1;"
+            //     "msr cntp_ctl_el0, x20;"
+            //     "mrs x20, cntfrq_el0;"
+            //     "msr cntp_tval_el0, x20;"
+            //     "mov x20, 2;"
+            //     "ldr x1, =0x40000040;"
+            //     "str w20, [x1];"
+            // );
+        } else if (!strncmp(str, "setTimeout", 10)){
+            // str = setTimeout MESSAGE SECONDS
+            // split the message and seconds into two char*
+            // without using lib
+
+            // find the first space
+            int i = 0;
+            while(str[i] != ' '){
+                i++;
+            }
+            // find the second space
+            int j = i + 1;
+            while(str[j] != ' '){
+                j++;
+            }
+            // copy the message
+            char message[100];
+            for(int k = i + 1; k < j; k++){
+                message[k - i - 1] = str[k];
+            }
+            message[j - i - 1] = '\0';
+            // copy the seconds
+            char seconds[100];
+            for(int k = j + 1; k < strlen(str); k++){
+                seconds[k - j - 1] = str[k];
+            }
+            seconds[strlen(str) - j - 1] = '\0';
+            // convert seconds to int
+            unsigned int timeout = atoi(seconds);
+            uart_async_send_string(message);
+            uart_async_send_string(" will be printed in ");
+            uart_async_send_string(seconds);
+            uart_async_send_string(" seconds\n");
+            set_timeout(message, timeout);
         } else if (!strcmp(str, "reboot")){
             uart_async_send_string("Rebooting...\n");
             reset(200);
@@ -56,6 +91,7 @@ void shell(){
             uart_async_send_string("reboot\t: reboot this device\n");
             uart_async_send_string("exec\t: execute program from initramfs\n");
             uart_async_send_string("count2s\t: trigger timer interrupt\n");
+            uart_async_send_string("setTimeout\t: setTimeout MESSAGE SECONDS\n");
         }
     }
 }
