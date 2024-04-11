@@ -14,6 +14,9 @@ unsafe fn exception_handler() {
     match read_volatile(0x4000_0060 as *const u32) {
         0x2 => {
             println!("Timer interrupt");
+            let el: u64;
+            asm!("mrs {el}, CurrentEL", el = out(reg) el);
+            println!("Current EL: {}", el >> 2);
 
             let spsr_el1: u64;
             let elr_el1: u64;
