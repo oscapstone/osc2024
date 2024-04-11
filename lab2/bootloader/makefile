@@ -1,4 +1,8 @@
-ARMGNU ?= aarch64-elf
+# This bootloader can load image linked by linux-gnu or aarch64-elf
+# But bootloader image should ONLY build in linux environment for successfully working at rspi3
+# If linked from aarch64-elf, it can run at mac QEMU but not raspi3
+ARMGNU ?= aarch64-linux-gnu
+# ARMGNU ?= aarch64-elf
 
 CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
 ASMFLAGS = -Iinclude
