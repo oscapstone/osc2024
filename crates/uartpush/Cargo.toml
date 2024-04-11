@@ -1,0 +1,14 @@
+[package]
+name = "uartpush"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+color-eyre = "0.6.3"
+indicatif = "0.17.8"
+serial2 = { version = "0.2.20", features = ["unix"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }

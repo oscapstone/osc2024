@@ -17,6 +17,9 @@ pub trait Write {
 
     /// Write a Rust format string.
     fn write_fmt(&self, args: core::fmt::Arguments) -> core::fmt::Result;
+
+    /// Block until all characters have been physically put on the output.
+    fn flush(&self);
 }
 
 /// Console read functions.
@@ -25,6 +28,9 @@ pub trait Read {
     fn read_char(&self) -> char {
         ' '
     }
+
+    /// Clear RX buffers, if any.
+    fn clear_rx(&self);
 }
 
 /// Trait alias for a full-fledged console.

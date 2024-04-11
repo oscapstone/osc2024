@@ -1,9 +1,8 @@
-PAGE_SIZE = 4096;
-
-__rpi_phys_dram_start_addr = 0;
-
-/* The physical address at which the kernel binary will be loaded by the Raspberry's firmware */
+/* The physical address at which the uartload binary will be loaded by the Raspberry's firmware */
 __rpi_phys_binary_load_addr = 0x80000;
+
+/* The physical address at which the uartload binary is linked to and will be relocated to */
+__uarload_phys_binary_link_addr = 0x60000;
 
 ENTRY(__rpi_phys_binary_load_addr);
 
@@ -12,12 +11,11 @@ PHDRS
     segment_boot_core_stack PT_LOAD FLAGS(/* RW */ 6);
     segment_code            PT_LOAD FLAGS(/* RX */ 5);
     segment_data            PT_LOAD FLAGS(/* RW */ 6);
-    segment_heap            PT_LOAD FLAGS(/* RW */ 6);
 }
 
 SECTIONS
 {
-    . = __rpi_phys_dram_start_addr;
+    . = __uarload_phys_binary_link_addr;
 
     .boot_core_stack (NOLOAD) :
     {
@@ -28,6 +26,7 @@ SECTIONS
         __boot_core_stack_end_exclusive = .;    /*   |             */
     } :segment_boot_core_stack
 
+    __binary_nonzero_start = .;
     .text :
     {
         KEEP(*(.text._start))
@@ -46,6 +45,12 @@ SECTIONS
         *(.data*)
     } :segment_data
 
+    /* Fill up to 8 byte, because relocating the binary is done in 8 byte chunks */
+    /* We do not need to relocate BSS because we zeroed it directly at the relocated address in [crates/uartload/src/boot.s]:28 */
+    . = ALIGN(8);
+    __binary_nonzero_end_exclusive = .;
+
+    /* BSS section is zeroed in pair of 8 byte chunks. Align start and end to 16 bytes. */
     .bss (NOLOAD) : ALIGN(16)
     {
         __bss_start = .;
@@ -53,13 +58,6 @@ SECTIONS
         . = ALIGN(16);
         __bss_end_exclusive = .;
     } :segment_data
-
-    .heap (NOLOAD) : ALIGN(PAGE_SIZE)
-    {
-        _heap_start = .;
-        . += 16 * 1024 * 1024; /* 16 MB */
-        _heap_end_exclusive = .;
-    } :segment_heap
 
     .got :
     {

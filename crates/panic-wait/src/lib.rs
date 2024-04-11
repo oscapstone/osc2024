@@ -1,35 +1,30 @@
 //! A panic handler that infinitely waits.
 
+#![feature(panic_info_message)]
 #![no_std]
 
+mod utils;
 use core::panic::PanicInfo;
 use small_std::println;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    panic_prevent_reenter();
+    utils::panic_prevent_reenter();
 
-    println!("{}", info);
+    let (location, line, column) = match info.location() {
+        Some(location) => (location.file(), location.line(), location.column()),
+        None => ("<unknown>", 0, 0),
+    };
 
-    cpu::wait_forever();
-}
-
-/// Stop immediately if called a second time.
-fn panic_prevent_reenter() {
-    // Using atoms can save us from needing `unsafe` here.
-    use core::sync::atomic::{AtomicBool, Ordering};
-
-    #[cfg(not(target_arch = "aarch64"))]
-    compile_error!(
-        "Add the target_arch to the check above if atomic bools' load/store are safe to use"
+    println!(
+        "Kernel panicked!\n\n\
+        Panic location: {}:{}:{}\n\n\
+        {}",
+        location,
+        line,
+        column,
+        info.message().unwrap()
     );
 
-    static PANIC_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
-
-    if !PANIC_IN_PROGRESS.load(Ordering::Relaxed) {
-        PANIC_IN_PROGRESS.store(true, Ordering::Relaxed);
-        return;
-    }
-
-    cpu::wait_forever();
+    utils::wait_forever();
 }

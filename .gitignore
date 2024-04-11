@@ -1,1 +1,5 @@
 target/
+
+rootfs/
+*.cpio
+*.dtb
