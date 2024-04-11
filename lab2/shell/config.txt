@@ -1,0 +1,5 @@
+kernel=shell_kernel.img
+arm_64bit=1
+initramfs initramfs.cpio 0x20000000
+device_tree = 
+device_tree_addr = 0x2eff7600

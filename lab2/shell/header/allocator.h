@@ -1,0 +1,1 @@
+void* mem_alloc(unsigned long size);
