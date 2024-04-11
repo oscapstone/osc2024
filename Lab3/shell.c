@@ -29,6 +29,13 @@ unsigned int write_cur = 0;
 
 char async_cmd[BUFFER_SIZE];
 
+static char *cpio_base;
+
+void initramfs_callback(char *address)
+{
+    cpio_base = address;
+}
+
 void strcpy(char *s1, char *s2){
     while(*s1){
         *s2 = *s1;
@@ -115,9 +122,9 @@ int strcmp(char *s1, char *s2) {
     return (*(unsigned char *)s1) - (*(unsigned char *)s2);
 }
 
-int str2int(char* s) {
-    int result = 0;
-    int sign = 1; // This is to handle negative numbers
+long str2int(char* s) {
+    long result = 0;
+    long sign = 1; // This is to handle negative numbers
 
     // Check for negative number
     if (*s == '-') {
@@ -153,8 +160,8 @@ int hex_to_int(char *p, int len) {
 }
 
 void run_user_program(){
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x8000000; //switch between qemu and rpi
-    char *current = (char *)0x8000000;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base; //switch between qemu and rpi
+    char *current = (char *)cpio_base;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
@@ -304,7 +311,7 @@ void setTimeout_cmd(){
         }
     }
     unsigned long cur_time, print_time;
-    int wait = str2int(countDown);
+    unsigned long wait = str2int(countDown);
     if(wait <= 0){
         uart_puts("\rINVALID TIME\n");
         return;
@@ -313,8 +320,68 @@ void setTimeout_cmd(){
     add_timer(setTimeout_callback, message, wait);
 }
 
+int parse_cmd(char * cmd){
+    char * run = cmd;
+    char name[100];
+    char msg[100];
+    char time[100];
+    int idx = 0;
+    while(*run){
+        if(*run == ' '){
+            name[idx] = '\0';
+            run++;
+            break;
+        }
+        name[idx] = *run;
+        run++;
+        idx++;
+    }
+
+    if(!*run)
+        return -1;
+    
+    if(strcmp(name, "st") == 0 || strcmp(name, "setTimeout") == 0){
+    }
+    else
+        return -1;
+    
+    idx = 0;
+    while(*run){
+        if(*run == ' '){
+            msg[idx] = '\0';
+            run++;
+            break;
+        }
+        msg[idx] = *run;
+        run++;
+        idx++;
+    }
+    
+    if(!*run)
+        return -1;
+
+    idx = 0;
+    while(*run){
+        time[idx] = *run;
+        run++;
+        idx++;
+    }
+    time[idx] = '\0';
+
+    unsigned long wait = str2int(time);
+    if(wait <= 0){
+        uart_puts("\rINVALID TIME\n");
+        return 1;
+    }
+    
+    add_timer(setTimeout_callback, msg, wait);
+    return 1;
+}
 
 int shell(char * cmd){
+    if(parse_cmd(cmd) == 1){
+        return 1;
+    }
     if(strcmp(cmd, "help") == 0){
         uart_send('\r');
         uart_puts("Lab3 Exception and Interrupt\n");

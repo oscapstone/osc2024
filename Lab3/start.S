@@ -5,6 +5,7 @@
 
 _start:  
     // read cpu id, stop slave cores
+    mov x28, x0
     bl      from_el2_to_el1
     //bl      core_timer_enable
     bl      set_exception_vector_table
@@ -33,7 +34,8 @@ _start:
     cbnz    w2, 3b //if not zero go back
 
     // jump to C code, should not return
-4:  bl      main
+4:  mov x0, x28
+    bl      main
     // for failsafe, halt this core too
     b       1b
 

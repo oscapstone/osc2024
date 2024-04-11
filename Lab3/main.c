@@ -1,7 +1,8 @@
 #include "uart.h"
 #include "shell.h"
+#include "dtb.h"
 
-void main()
+void main(void* dtb)
 {
     unsigned long el;
     // set up serial console
@@ -14,6 +15,7 @@ void main()
     uart_puts("Booted! Current EL: ");
     uart_send('0' + el);
     uart_puts("\n");
+    fdt_tranverse(dtb, "linux,initrd-start", initramfs_callback);
     //core_timer_enable();
     int idx = 0;
     char in_char;
