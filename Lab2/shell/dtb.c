@@ -106,10 +106,11 @@ int fdt_traverse(fdt_callback cb, void *_dtb)
 	uart_send_char('\n');
 
 	struct fdt_header *header = (struct fdt_header *)dtb_ptr;
-
+	
 	// Big to little endian
 	uint32_t magic = fdt_u32_le2be(&(header->magic)); // header應為big endian
-
+	uart_hex(header->magic);
+	uart_send_char('\n');
 	if (magic != 0xd00dfeed)
 	{ // This field shall contain the value 0xd00dfeed (big-endian).
 

@@ -11,7 +11,7 @@ void load_img(){
         size_char = uart_get_char();
 
         // stop sending
-        if (size_char == '\n')
+        if (size_char == '\r')
             break;
         // throw away junk bits in the buffer
         //not 0 ~ 9
