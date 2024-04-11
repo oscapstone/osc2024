@@ -71,8 +71,6 @@ void irq_entry()
 
     enable_interrupt(); // Leave the critical section
 
-    // FIXME: Save the registers for nested interrupts
-
     while (head != 0) { // Preemption: run the task with the highest priority
         disable_interrupt();
         irq_task_t *task = head;

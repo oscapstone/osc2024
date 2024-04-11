@@ -144,7 +144,6 @@ void demo()
     read_user_input(select);
     switch (atoi(select)) {
     case 1:
-        // FIXME: This somehow doesn't work on QEMU but works fine on the rpi3
         uart_async_write("[INFO] Test the UART async write function\n");
         break;
     case 2:
