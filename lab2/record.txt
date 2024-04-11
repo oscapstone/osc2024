@@ -7,9 +7,21 @@ sudo chmod 777 create_cpio.sh
 sudo chmod 777 send_image_to_bootloader.py
 
 sudo apt install screen
+sudo apt install gdb-multiarch
 
 sudo screen /dev/ttyUSB0 115200
 sudo lsof /dev/ttyUSB0
 sudo kill [pid]
 sudo pip3 install pwntools
 sudo ./send_image_to_bootloader.py
+
+gdb-multiarch
+target remote :1234
+file build/bootloader.elf
+break _start
+break main
+break code_relocate
+continue
+s
+print $sp
+info register
