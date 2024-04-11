@@ -22,18 +22,12 @@ unsigned long long int lock_counter = 0;
 void lock()
 {
     el1_interrupt_disable();
-    // char buf[VSPRINT_MAX_BUF_SIZE];
-    // sprintf(buf, "lock: lock_counter: %d\r\n", lock_counter);
-    // uart_puts(buf);
     lock_counter++;
 }
 
 void unlock()
 {
     lock_counter--;
-    // char buf[VSPRINT_MAX_BUF_SIZE];
-    // sprintf(buf, "unlock: lock_counter: %d\r\n", lock_counter);
-    // uart_puts(buf);
     if (lock_counter < 0)
     {
         uart_puts("lock counter error\r\n");
@@ -104,10 +98,6 @@ void el0_irq_64_router()
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
-    // while (1)
-    // {
-    //     uart_puts("Hello World el0 64 router!\r\n");
-    // }
     // if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     // {
     //     if (*AUX_MU_IIR_REG & (0b01 << 1))
@@ -166,7 +156,7 @@ void irqtask_add(void *task_function, unsigned long long priority)
     // manually copy the device's buffer
     the_task->priority = priority;
     the_task->task_function = task_function;
-    INIT_LIST_HEAD(&the_task->listhead);
+    INIT_LIST_HEAD(&(the_task->listhead));
 
     // add the timer_event into timer_event_list (sorted)
     // if the priorities are the same -> FIFO
@@ -177,14 +167,14 @@ void irqtask_add(void *task_function, unsigned long long priority)
     {
         if (((irqtask_t *)curr)->priority > the_task->priority)
         {
-            list_add(&the_task->listhead, curr->prev);
+            list_add(&(the_task->listhead), curr->prev);
             break;
         }
     }
     // if the priority is lowest
     if (list_is_head(curr, task_list))
     {
-        list_add_tail(&the_task->listhead, task_list);
+        list_add_tail(&(the_task->listhead), task_list);
     }
 }
 
@@ -205,6 +195,8 @@ void irqtask_run_preemptive()
         list_del_entry((struct list_head *)the_task);
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
+        // if (the_task->task_function == uart_r_irq_handler)
+        //     uart_puts("\r\nirqtask_run_preemptive uart_r_irq_handler\r\n");
         unlock();
 
         irqtask_run(the_task);

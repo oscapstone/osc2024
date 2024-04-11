@@ -65,11 +65,14 @@ void timer_set2sAlert(char* str)
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
-    puts("[Interrupt][el1_irq][");
-	puts(str);
-	puts("] ");
-	put_int(cntpct_el0/cntfrq_el0);
-	puts(" seconds after booting\n");
+    uart_puts("\r\n[Start Alert]\r\n");
+    for(int i=0;i<10000000;i++)
+    {
+        // do nothing
+    }
+    char buf[VSPRINT_MAX_BUF_SIZE];
+    sprintf(buf, "[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
+    uart_puts(buf);
     add_timer(timer_set2sAlert,2,"2sAlert");
 }
 

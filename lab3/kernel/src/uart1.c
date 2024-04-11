@@ -110,7 +110,7 @@ void uart_async_send(char c)
     // if buffer full, wait for uart_w_irq_handler
     while ((uart_tx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_ridx)
     {
-        uart_puts("buffer full\r\n");
+        // uart_puts("buffer full\r\n");
         *AUX_MU_IER_REG |= 2; // enable write interrupt
     }
     lock();
