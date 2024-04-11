@@ -15,7 +15,7 @@ void print_message(void *data) {
 
     unsigned int sec = current_time / cntfrq;
 
-    uart_send_string("Timeout message: ");
+    uart_send_string("\nTimeout message: ");
     uart_send_string(message);
     uart_send_string(" at ");
     uart_hex(sec);

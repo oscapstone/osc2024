@@ -13,8 +13,6 @@ typedef struct timer {
     unsigned long long timeout;
 } timer_t;
 
-
-
 void set_timeout(char* message, unsigned long long timeout);
 void print_message(void *data);
 void create_timer(

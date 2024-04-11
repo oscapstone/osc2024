@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "peripherals/irq.h"
 #include "timer.h"
+#include "tasklist.h"
 
 extern timer_t *timer_head;
 
@@ -47,7 +48,7 @@ void exception_handler_c() {
 
 void irq_exception_handler_c(){
     // uart_send_string("IRQ Exception Occurs!\n");
-
+    // el1_interrupt_disable();
     unsigned int irq = get32(IRQ_PENDING_1);
     unsigned int interrupt_source = get32(CORE0_INTERRUPT_SOURCE);
 
@@ -55,10 +56,15 @@ void irq_exception_handler_c(){
         // uart_send_string("UART interrupt\n");
         uart_irq_handler();
     } else if(interrupt_source & INTERRUPT_SOURCE_CNTPNSIRQ) {
-        uart_send_string("\nTimer interrupt\n");
+        // uart_send_string("\nTimer interrupt\n");
         put32(CORE0_TIMER_IRQ_CTRL, 0);
-        irq_timer_exception();
+        create_task(irq_timer_exception, 0);
+        execute_tasks_preemptive();
+        // put32(CORE0_TIMER_IRQ_CTRL, 2);
+        // irq_timer_exception();
     }
+    // execute_tasks();
+    // el1_interrupt_enable();
 }
 
 void irq_timer_exception(){
@@ -66,10 +72,8 @@ void irq_timer_exception(){
     put32(CORE0_TIMER_IRQ_CTRL, 2);
 
     // disable timer interrupt before entering critical section
-    asm volatile("msr cntp_ctl_el0,%0"::"r"(0));
-    el1_interrupt_disable();
+    // asm volatile("msr cntp_ctl_el0,%0"::"r"(0));
 
-   
     while(timer_head){
         unsigned long long current_time;
         asm volatile("mrs %0, cntpct_el0":"=r"(current_time));
@@ -90,7 +94,6 @@ void irq_timer_exception(){
         } else {
             asm volatile("msr cntp_ctl_el0, %0"::"r"(0));
         }
-        el1_interrupt_enable();
     }
     
 

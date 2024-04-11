@@ -15,5 +15,7 @@ void exception_handler_c();
 void irq_exception_handler_c();
 
 void irq_timer_exception();
+void irq_uart_rx_exception();
+void irq_uart_tx_exception();
 
 #endif

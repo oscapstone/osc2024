@@ -4,6 +4,7 @@
 #include "peripherals/p_mini_uart.h"
 #include "peripherals/gpio.h"
 #include "peripherals/irq.h"
+#include "tasklist.h"
 
 char uart_read_buffer[BUFFER_SIZE];
 char uart_write_buffer[BUFFER_SIZE];
@@ -39,44 +40,56 @@ void uart_send_string(const char* str)
 	}
 }
 
+void irq_uart_rx_exception() {
+	if((uart_read_index + 1) % BUFFER_SIZE == uart_read_head) {
+		// buffer is full, discard the data
+		unsigned int ier = get32(AUX_MU_IER_REG);
+		// only enable receiver interrupt for now
+		ier &= ~0x01;
+		put32(AUX_MU_IER_REG, ier);
+		return;
+	}
+	char c = get32(AUX_MU_IO_REG)&0xFF;
+	uart_read_buffer[uart_read_index++] = c;
+	if (uart_read_index >= BUFFER_SIZE) {
+		uart_read_index = 0;
+	}
+}
+
+void irq_uart_tx_exception() {
+	if (uart_write_index != uart_write_head) {
+		put32(AUX_MU_IO_REG, uart_write_buffer[uart_write_index++]);
+		if (uart_write_index >= BUFFER_SIZE) {
+			uart_write_index = 0;
+		}
+		unsigned int ier = get32(AUX_MU_IER_REG);
+		ier |= 0x02;
+		put32(AUX_MU_IER_REG, ier);
+	} else {
+		// no more data to send, disable transmit interrupt
+		unsigned int ier = get32(AUX_MU_IER_REG);
+		ier &= ~0x02;
+		put32(AUX_MU_IER_REG, ier);
+	}
+}
+
 void uart_irq_handler() {
 	unsigned int iir = get32(AUX_MU_IIR_REG);
-
-	// check interrupt type
-
+	unsigned int ier = get32(AUX_MU_IER_REG);
+	ier &= ~0x02;
+	ier &= ~0x01;
+	put32(AUX_MU_IER_REG, ier);
 	// check if it's a receive interrupt
 	if ((iir & 0x06) == 0x04) {
-		if((uart_read_index + 1) % BUFFER_SIZE == uart_read_head) {
-			// buffer is full, discard the data
-			unsigned int ier = get32(AUX_MU_IER_REG);
-	// only enable receiver interrupt for now
-			ier &= ~0x01;
-			put32(AUX_MU_IER_REG, ier);
-			return;
-		}
-		char c = get32(AUX_MU_IO_REG)&0xFF;
-		uart_read_buffer[uart_read_index++] = c;
-		if (uart_read_index >= BUFFER_SIZE) {
-			uart_read_index = 0;
-		}
+		// uart_send_string("Receive interrupt\n");	
+		create_task(irq_uart_rx_exception, 1);
+		execute_tasks_preemptive();
 	} 
 	// check if it's a transmit interrupt
 	if ((iir & 0x06) == 0x02) {
 		// uart_send_string("Transmit interrupt\n");
-		if (uart_write_index != uart_write_head) {
-			put32(AUX_MU_IO_REG, uart_write_buffer[uart_write_index++]);
-			if (uart_write_index >= BUFFER_SIZE) {
-				uart_write_index = 0;
-			}
-			unsigned int ier = get32(AUX_MU_IER_REG);
-			ier |= 0x02;
-			put32(AUX_MU_IER_REG, ier);
-		} else {
-			// no more data to send, disable transmit interrupt
-			unsigned int ier = get32(AUX_MU_IER_REG);
-			ier &= ~0x02;
-			put32(AUX_MU_IER_REG, ier);
-		}
+		create_task(irq_uart_tx_exception, 2);
+		execute_tasks_preemptive();
 	}
 }
 
