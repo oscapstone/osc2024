@@ -29,21 +29,8 @@ void *CPIO_DEFAULT_PLACE;
 
 int start_shell()
 {
-    // for (int i = 0; i < 10; i++)
-    // {
-    //     uart_puts("booting");
-    //     for (int j = 0; j < (i / 1) % 4; j++)
-    //     {
-    //         uart_puts(".");
-    //     }
-    //     for (int j = 0; j < 4 - ((i / 1) % 4); j++)
-    //     {
-    //         uart_puts(" ");
-    //     }
-    //     uart_puts("\r");
-    // }
     char input_buffer[CMD_MAX_LEN] = {0};
-    // cli_print_banner();
+    cli_print_banner();
     while (1)
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
@@ -168,15 +155,6 @@ void cli_cmd_exec(char *buffer)
 
 void cli_print_banner()
 {
-    // puts("            ,.  ,.                                                 \r\n");
-    // puts("            ||  ||        _____     _ _ _____         _            \r\n");
-    // puts("           ,''--''.      |   __|___| | |     |___ ___| |___        \r\n");
-    // puts("          : (.)(.) :     |   __| .'| | | | | | .'| . | | -_|       \r\n");
-    // puts("         ,'        `.    |__|  |__,|_|_|_|_|_|__,|  _|_|___|       \r\n");
-    // puts("         :          :                            |_|               \r\n");
-    // puts("         :          :                                              \r\n");
-    // puts("   -ctr- `._m____m_,'         https://github.com/HiFallMaple       \r\n");
-    // puts("                                                                   \r\n");
     puts("                                                      \r\n");
     puts("                   _oo0oo_                            \r\n");
     puts("                  o8888888o                           \r\n");
@@ -186,10 +164,10 @@ void cli_print_banner()
     puts("                ___/`---'\\___                        \r\n");
     puts("              .' \\\\|     |// '.                _____     _ _ _____         _                  \r\n");
     puts("             / \\\\|||  :  |||// \\              |   __|___| | |     |___ ___| |___             \r\n");
-    puts("            / _||||| -:- |||||- \\             |   __| .'| | | | | | .'| . | | -_|            \r\n");
+    puts("            / _||||| -:- |||||- \\             |   __| .'| | | | | | .'| . | | -_|              \r\n");
     puts("           |   | \\\\\\  -  /// |   |            |__|  |__,|_|_|_|_|_|__,|  _|_|___|            \r\n");
-    puts("           | \\_|  ''\\---/''  |_/ |                  \r\n");
-    puts("           \\  .-\\__  '-'  ___/-. /            https://github.com/HiFallMaple       \r\n");
+    puts("           | \\_|  ''\\---/''  |_/ |                                    |_|                     \r\n");
+    puts("           \\  .-\\__  '-'  ___/-. /            https://github.com/HiFallMaple                  \r\n");
     puts("         ___'. .'  /--.--\\  `. .'___                 \r\n");
     puts("      .\"\" '<  `.___\\_<|>_/___.' >' \"\".           \r\n");
     puts("     | | :  `- \\`.;`\\ _ /`;.`/ - ` : | |            \r\n");

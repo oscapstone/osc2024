@@ -54,6 +54,15 @@ void uart_init()
     *AUX_MU_CNTL_REG = 3; // enable TX/RX
 }
 
+uart_flush_FIFO()
+{
+    // https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf Pg.13
+    // On write:
+    //  Writing with bit 1 set will clear the receive FIFO
+    //  Writing with bit 2 set will clear the transmit FIFOF
+    *AUX_MU_IIR_REG |= 6;
+}
+
 char uart_recv()
 {
     char r;

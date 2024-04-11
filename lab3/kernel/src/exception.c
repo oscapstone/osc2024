@@ -26,10 +26,6 @@ void el1h_irq_router()
     {
         if (*AUX_MU_IIR_REG & (1 << 1))
         {
-            // while (1)
-            // {
-            //     uart_puts("Hello World el1 64 router UART write interrupt!\r\n");
-            // }
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive(); // run the queued task before returning to the program.
@@ -38,19 +34,11 @@ void el1h_irq_router()
         {
             *AUX_MU_IER_REG &= ~(1); // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-            // while (1)
-            // {
-            //     uart_puts("Hello World el1 64 router UART read interrupt!\r\n");
-            // }
             irqtask_run_preemptive();
         }
     }
     else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
-        // while (1)
-        // {
-        //     uart_puts("Hello World el1 64 router timer interrupt!\r\n");
-        // }
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         irqtask_run_preemptive();
@@ -113,16 +101,9 @@ void el0_irq_64_router()
 
 void invalid_exception_router(unsigned long long x0)
 {
-    // puts("invalid exception : 0x");
-    // put_hex(x0);
-    // puts("\r\n");
-    // while(1);
-    // while (1)
-    // {
     uart_puts("invalid exception router: ");
     uart_send('0' + x0);
     uart_puts("\r\n");
-    // }
 }
 
 // ------------------------------------------------------------------------------------------
@@ -160,10 +141,6 @@ void irqtask_add(void *task_function, unsigned long long priority)
     // mask the device's interrupt line
     el1_interrupt_disable();
 
-    // while (1)
-    // {
-    //     uart_puts("Hello World el1 64 router UART read interrupt, run add!\r\n");
-    // }
     // enqueue the processing task to the event queue with sorting.
     list_for_each(curr, task_list)
     {
