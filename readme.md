@@ -44,3 +44,5 @@ Lab8: Non-volatile Storage
  git commit -m "some message"  
  git push  
 
+## Disassembly command:  
+llvm-objdump -d file.o
