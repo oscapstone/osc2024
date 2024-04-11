@@ -1,6 +1,7 @@
 #include "irq.hpp"
 
 #include "board/mini-uart.hpp"
+#include "interrupt.hpp"
 #include "timer.hpp"
 
 void irq_handler(ExceptionContext* context, int type) {
@@ -22,9 +23,11 @@ void irq_add_task(int prio, Task::fp callback, void* context) {
 }
 
 void irq_run() {
-  if (irq_tasks.empty())
-    return;
-  auto head = irq_tasks.begin();
-  irq_tasks.erase(head);
-  head->call();
+  while (not irq_tasks.empty()) {
+    auto head = irq_tasks.begin();
+    irq_tasks.erase(head);
+    enable_interrupt();
+    head->call();
+    disable_interrupt();
+  }
 }
