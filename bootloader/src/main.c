@@ -1,4 +1,5 @@
 #include "lib/uart.h"
+#include "lib/utils.h"
 
 typedef void (*kernel_main)(char *dbt);
 
@@ -25,6 +26,9 @@ void main(void *dtb) {
 
   uart_println("Start Bootloading...");
   load_img();
+
+  /* wait for uploader to consume messages */
+  wait_cycles(1000);
 
   kernel_main kernel = (kernel_main)0x80000;
   kernel(dtb);
