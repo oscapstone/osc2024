@@ -57,7 +57,8 @@ void help(void)
         "  print_dtb - print device tree blob\n"
         "  logo      - print raspberry pi logo\n"
         "  exec      - execute a program\n"
-        "  timer_irq - set core timer interrupt\n");
+        "  async    - test uart async\n"
+        "  setTimeout - set timeout\n");
 }
 
 void hello(void)
@@ -125,30 +126,27 @@ void parse_command(char* cmd)
                 return;
             }
             exec(file_name);
-    } else if (!str_cmp(cmd_name, "timer_irq")) {
-        char* time = str_tok(NULL, " ");
-        if (!time) {
-            uart_send_string("Usage: timer_irq <seconds>\n");
-            return;
         }
-        int seconds = decstr2int(time);
-        if (seconds < 0) {
-            uart_send_string("Invalid time\n");
-            return;
+        else if (!str_cmp(cmd_name, "async")) {
+            test_uart_async();
+        } else if (!str_cmp(cmd_name, "setTimeout")) {
+            char* msg = str_tok(NULL, " ");
+            char* duration = str_tok(NULL, " ");
+            if (!msg || !duration) {
+                uart_send_string("Usage: setTimeout <message> <seconds>\n");
+                return;
+            }
+            int seconds = decstr2int(duration);
+            if (seconds < 0) {
+                uart_send_string("Invalid time\n");
+                return;
+            }
+            set_timeout(msg, seconds);
+        } else {
+            uart_send_string("Command '");
+            uart_send_string(cmd);
+            uart_send_string("' not found\n");
         }
-        set_seconds(seconds);
-        enable_core0_timer();
-        set_core_timer_timeout();
-    } else if (!str_cmp(cmd_name, "fuck")) {
-        disable_irq();
-        disable_core0_timer();
-        uart_send_string("No more fucking timer_irq !!!\n");
-        enable_irq();
-    } else {
-        uart_send_string("Command '");
-        uart_send_string(cmd);
-        uart_send_string("' not found\n");
-    }
 }
 
 void shell(void)

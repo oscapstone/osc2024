@@ -196,15 +196,15 @@ void test_uart_async(void)
     uart_enable_interrupt();
     char test_buffer[64];
     int test_idx = 0;
-    while (test_idx < 64) {
+    while (test_idx < 63) {
         char c = uart_recv_async();
         if (c == '\0')
             continue;
+        test_buffer[test_idx++] = c;
         if (c == '\n') {
             test_buffer[test_idx] = '\0';
             break;
         }
-        test_buffer[test_idx++] = c;
     }
     uart_send_string_async(test_buffer);
     uart_disable_interrupt();

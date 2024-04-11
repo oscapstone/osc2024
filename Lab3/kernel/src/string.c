@@ -99,6 +99,15 @@ char* str_cpy(char* dest, const char* src)
     return dest;
 }
 
+char* str_n_cpy(char* dest, const char* src, unsigned int n)
+{
+    unsigned int i = 0;
+    for (i = 0; i < str_len(src) && i < n; i++)
+        dest[i] = src[i];
+    dest[i] = '\0';
+    return dest;
+}
+
 static inline int decchar2int(unsigned char in)
 {
     if (in < '0' || in > '9')
