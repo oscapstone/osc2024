@@ -1,5 +1,6 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
+#include "exec.hpp"
 #include "initramfs.hpp"
 
 extern char __user_text[];
@@ -26,15 +27,7 @@ int cmd_run(int argc, char* argv[]) {
   auto file = hdr->file();
   memcpy(__user_text, file.data(), file.size());
 
-  asm volatile(
-      "mov x0, 0x3c0\n"
-      "msr SPSR_EL1, x0\n"
-      "mov x0, %[s]\n"
-      "msr SP_EL0, x0\n"
-      "mov x0, %[t]\n"
-      "msr ELR_EL1, x0\n"
-      "eret\n" ::[s] "r"(__user_stack),
-      [t] "r"(__user_text));
+  exec_user_prog(__user_text, __user_stack);
 
   return 0;
 }
