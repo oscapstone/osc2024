@@ -9,6 +9,7 @@ int memcmp(const void* s1, const void* s2, int n);
 int strlen(const char* s);
 int strcmp(const char* s1, const char* s2);
 int strncmp(const char* s1, const char* s2, int n);
+const char* strchr(const char* s, char c);
 long strtol(const char* s, const char** endptr = nullptr, int base = 0,
             int n = 0);
 

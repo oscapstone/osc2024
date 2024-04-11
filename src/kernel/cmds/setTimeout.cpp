@@ -23,13 +23,13 @@ void print_message(void* context) {
 int cmd_setTimeout(int argc, char* argv[]) {
   if (argc <= 2) {
     mini_uart_puts("setTimeout: require at least two argument\n");
-    mini_uart_puts("usage: message second [usec]\n");
+    mini_uart_puts("usage: message second [prio]\n");
     return -1;
   }
   auto msg = argv[1];
-  timeval tval{(uint32_t)strtol(argv[2]),
-               argc >= 4 ? (uint32_t)strtol(argv[3]) : 0};
+  auto tval = parseTval(argv[2]);
   auto ctx = new Ctx{msg, get_current_tick()};
-  add_timer(tval, (void*)ctx, print_message);
+  auto prio = argc >= 4 ? strtol(argv[3]) : 0;
+  add_timer(tval, (void*)ctx, print_message, prio);
   return 0;
 }
