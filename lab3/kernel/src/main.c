@@ -1,6 +1,7 @@
 #include "uart.h"
 #include "shell.h"
 #include "mailbox.h"
+#include "exception.h"
 
 int get_hardware_info();
 
@@ -17,7 +18,7 @@ void main()
     uart_puts("Current exception level: ");
     uart_hex(currentEL >> 2);
     uart_puts("\n");
-
+    enable_interrupt();
     while(1) {
         shell();
     }

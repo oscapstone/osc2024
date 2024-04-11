@@ -16,7 +16,9 @@
 
 
 void exception_entry();
+void enable_interrupt();
 void disable_interrupt();
 void el0_irq_entry();
+void el1h_irq_entry();
 
 #endif

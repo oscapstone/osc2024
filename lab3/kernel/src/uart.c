@@ -1,4 +1,7 @@
 #include "gpio.h"
+#include "uart.h"
+#include "types.h"
+#include "exception.h"
 
 /* Auxilary mini UART registers */
 #define AUXENB              ((volatile unsigned int*)(MMIO_BASE+0x00215004))
@@ -94,4 +97,99 @@ void uart_hex(unsigned int d) {
         n+=n>9?0x57:0x30;
         uart_send(n);
     }
+}
+
+#define BUFSIZE 256
+char read_buf[BUFSIZE];
+char write_buf[BUFSIZE];
+uint32_t read_head = 0, read_end = 0;
+uint32_t write_head = 0, write_end = 0;
+
+void enable_uart_interrupt() {
+    enable_read_interrupt();
+    *ENABLE_IRQS_1 = (1 << 29); //interrupt controller’s Enable IRQs1(0x3f00b210)’s bit29.
+                                //BCM2837 SPEC P112 table
+                                //0x210 enable IRQs1
+}
+
+void disable_uart_interrupt() {
+    disable_write_interrupt();
+    *DISABLE_IRQS_1 = (1 << 29);
+                                //BCM2837 SPEC P112 table
+                                //0x21C disable IRQs1
+}
+
+//AUX_MU_IER_REG  bit 0 => set for read  RX
+//                bit 1 => set for write  TX
+
+void enable_read_interrupt() {
+    *AUX_MU_IER_REG |= 0x01;
+}
+
+void disable_read_interrupt() {
+    *AUX_MU_IER_REG &= ~0x01;
+}
+
+void enable_write_interrupt() {
+    *AUX_MU_IER_REG |= 0x02;
+}
+
+void disable_write_interrupt() {
+    *AUX_MU_IER_REG &= ~0x02;
+}
+
+void async_uart_handler() {
+    disable_uart_interrupt();
+    //The AUX_MU_IIR_REG register shows the interrupt status. 
+    if (*AUX_MU_IIR_REG & 0x04) { // 100 //read mode   Receiver holds valid byte 
+        char c = *AUX_MU_IO_REG&0xFF;
+        read_buf[read_end++] = c;
+        if(read_end==BUFSIZE) read_end=0;
+    } else if (*AUX_MU_IIR_REG & 0x02) { //010  //send mode // check write enabled // Transmit holding register empty
+        while (*AUX_MU_LSR_REG & 0x20) { //0010 0000 //Both bits [7:6] always read as 1 as the FIFOs are always enabled 
+            if (write_head == write_end) {             
+                    enable_read_interrupt(); 
+                    break;
+                }
+            char c = write_buf[write_head];
+            write_head++;
+            *AUX_MU_IO_REG = c;
+            if(write_head==BUFSIZE)write_head=0;
+        }
+    }
+    enable_uart_interrupt();
+}
+
+uint32_t async_uart_gets(char *input, uint32_t size) {
+    int len=0;
+    for (len = 0; len < size - 1; len++) {
+        while (read_head == read_end) asm volatile("nop");
+        
+
+        if (read_buf[read_head] == '\r' || read_buf[read_head] == '\n') {
+            read_head++;
+            if(read_head >= BUFSIZE -1 ) read_head -= BUFSIZE;
+            break;
+        }
+
+        input[len] = read_buf[read_head];
+        read_head++;
+        if(read_head==BUFSIZE)read_head=0;
+    }
+
+    input[len] = '\0';
+
+    return len;
+}
+
+void async_uart_puts(const char *s) {
+    while (*s != '\0') {
+        write_buf[write_end++] = *s++;
+        if(write_end==BUFSIZE)write_end=0;
+    }
+    enable_write_interrupt();
+}
+
+void delay(int time) {
+    while (time--);
 }

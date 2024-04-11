@@ -6,12 +6,30 @@ void disable_interrupt(void) { //ok
     asm volatile("msr DAIFSet, 0xf\r\n");
 }
 
-void el0_irq_entry() { //ok
+void enable_interrupt(void) { //ok
+    asm volatile("msr DAIFClr, 0xf\r\n");
+}
+
+void el0_irq_entry(void) { //ok
     print_boot_time();
     //In the basic part, you only need to enable interrupt in EL0
 }
 
-void exception_entry(void) {
+void el1h_irq_entry(void) {
+    disable_interrupt();
+    //IRQ_PENDING_1 掌握了中斷的狀態，我們可以利用這個暫存器去檢查 interrupt 是由哪個 timer 產生的
+
+    if ((*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT) && (*CORE0_IRQ_SOURCE & IRQ_SOURCE_GPU)) { //IRQ_SOURCE_GPU => One or more bits set in pending register 1
+        //ensure ( interrupt and aux )  and ( gpu interrupt )  // bit [8][9] meansThere are some interrupts pending which you don't know about. They are in pending register 1 /2." 
+        async_uart_handler();
+    } else if (*CORE0_IRQ_SOURCE & IRQ_SOURCE_CNTPNSIRQ) {
+        remove_core_timer();
+    }
+
+    enable_interrupt();
+}
+
+void exception_entry(void) { //ok
     disable_interrupt();
 
     unsigned long elr, esr, spsr;
@@ -34,7 +52,5 @@ void exception_entry(void) {
 
     uart_puts("\r\n");
 
-    // enable_interrupt
-    asm volatile("msr DAIFCLr, 0xf\r\n");
-
+   enable_interrupt();
 }

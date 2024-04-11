@@ -18,10 +18,11 @@ set_stack:
     // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     
     bl      from_el2_to_el1             // switch to EL1 
+    bl      set_exception_vector_table  // set up exception vector table 
     ldr     x1, =_start // get address of this code
     mov     sp, x1  // set stack pointer
 
-    bl      set_exception_vector_table  // set up exception vector table 
+    
 
     // clear bss
     ldr     x1, =__bss_start // get start of bss
@@ -109,7 +110,7 @@ exception_handler:
 
 el1h_irq_handler:
     save_all
-    bl exception_entry
+    bl el1h_irq_entry
     load_all
     eret
 
@@ -119,69 +120,57 @@ el0_irq_handler:
     load_all
     eret
 
-
-.align 11                                /* vector table should be aligned to 0x800 */
-exception_vector_table:   // the blue graph
-        
+.align 11 // vector table should be aligned to 0x800
+.global exception_vector_table
+exception_vector_table:
     b exception_handler // branch to a handler function. /* Synchronous EL1t */
-    .align 7  /* entry size is 0x80, .align will pad 0 */
+    .align 7 // entry size is 0x80, .align will pad 0
     // The exception handler for a synchronous 
     // exception from the current EL (EL1) using SP0.
-
-
-    b exception_handler  /* IRQ EL1t */
+    
+    b exception_handler /* IRQ EL1t */
     .align 7
     // The exception handler for an IRQ exception
     // from the current EL(EL1) using SP0.
 
-    b exception_handler  /* FIQ EL1t */
+    b exception_handler /* FIQ EL1t */
     .align 7
     // The exception handler for an FIQ exception
     // from the current EL using SP0.
-    b exception_handler  /* Error EL1t */
+
+    b exception_handler /* Error EL1t */
     .align 7
     // The exception handler for a System Error 
     // exception from the current EL using SP0.
 
-    //=================================================================================
-
-    b exception_handler  /* Synchronous EL1h */
+    b exception_handler /* Synchronous EL1h */
     .align 7
-    b exception_handler   /* IRQ EL1h */
+    b el1h_irq_handler  /* IRQ EL1h */
     .align 7
-    b exception_handler  /* FIQ EL1h */
+    b exception_handler /* FIQ EL1h */
     .align 7
-    b exception_handler  /* Error EL1h */
+    b exception_handler /* Error EL1h */
     .align 7
 
-//===================================================================
-//exception form  lower EL and all lower ELs  are aaarch 64
-
-
-    b exception_handler  /* Synchronous 64-bit EL0 */
+    b exception_handler /* Synchronous 64-bit EL0 */
     .align 7
-    b el0_irq_handler //In the basic part, you only need to enable interrupt in EL0
-    .align 7              /* IRQ 64-bit EL0 */
-    b exception_handler   /* FIQ 64-bit EL0 */
+    b el0_irq_handler   /* IRQ 64-bit EL0 */
     .align 7
-    b exception_handler   /* Error 64-bit EL0 */
+    b exception_handler /* FIQ 64-bit EL0 */
+    .align 7
+    b exception_handler /* Error 64-bit EL0 */
     .align 7
 
-//===================================================================
-//exception form  lower EL and all lower ELs  are aaarch 32
-
-    b exception_handler   /* Synchronous 32-bit EL0 */
+    b exception_handler /* Synchronous 32-bit EL0 */
     .align 7
-    b exception_handler   /* IRQ 32-bit EL0 */
+    b exception_handler /* IRQ 32-bit EL0 */
     .align 7
-    b exception_handler   /* FIQ 32-bit EL0 */
+    b exception_handler /* FIQ 32-bit EL0 */
     .align 7
-    b exception_handler   /* Error 32-bit EL0 */
+    b exception_handler /* Error 32-bit EL0 */
     .align 7
-
-
 
 set_exception_vector_table:
-    adr    x0, exception_vector_table // distance between pc here and exception_vector_table
-    msr    vbar_el1, x0
+    adr x0, exception_vector_table  // distance between pc here and exception_vector_table
+    msr vbar_el1, x0
     ret

@@ -51,8 +51,10 @@ void cpio_cat(char *buf, char *filename)
         cpio_t *header = (cpio_t*)buf;
         int ns=hex2int(header->c_namesize,8);
         int fs=hex2int(header->c_filesize,8);
+        int offset = sizeof(cpio_t) + ns;
+        if (offset % 4 != 0) offset = 4 * ((offset + 4) / 4);
         if (!memcmp(buf+sizeof(cpio_t),filename,ns)) {
-            char *filedata = buf + sizeof(cpio_t) + ns;
+            char *filedata = buf + offset;
             while(fs--) {
                 uart_send(*filedata++);
             }
@@ -62,10 +64,7 @@ void cpio_cat(char *buf, char *filename)
         // jump to the next file
         if (fs % 4 != 0)
             fs += 4 - fs % 4;
-        if ((sizeof(cpio_t) + ns) % 4 != 0)
-            buf += (sizeof(cpio_t) + ns + (4 - (sizeof(cpio_t) + ns) % 4) + fs);
-        else
-            buf += (sizeof(cpio_t) + ns + fs);
+        buf += (offset + fs);
     }
     uart_puts("No such file\n");
 }
@@ -77,18 +76,18 @@ void cpio_exec(char *buf, char *filename)
         int ns=hex2int(header->c_namesize,8);
         int fs=hex2int(header->c_filesize,8);
         int offset = sizeof(cpio_t) + ns;
-        if(offset % 4 != 0) offset = 4 * ((offset + 4) / 4);
+        if (offset % 4 != 0) offset = 4 * ((offset + 4) / 4);
         if (!memcmp(buf+sizeof(cpio_t),filename,ns)) {
             char *user_program_addr = ((void*) buf) + offset;
             char *sp = user_program_addr + STACKSIZE;
             
-            //from el1 to el0
-            // set spsr_el1 to 0x3c0 
+            // from el1 to el0
+            // set spsr_el1 to 0x3c0
             // and elr_el1 to the program’s start address.
             // elr_el1 -> program start addr
-            asm volatile( "msr     elr_el1, %0" :: "r" (user_program_addr) );
             asm volatile( "mov     x20 ,  0x3c0" );
             asm volatile( "msr     spsr_el1, x20" );
+            asm volatile( "msr     elr_el1, %0" :: "r" (user_program_addr) );
             // set the user program’s stack pointer 
             // to a proper position by setting sp_el0.
             // sp_el0 -> usr prog stack addr
@@ -99,10 +98,7 @@ void cpio_exec(char *buf, char *filename)
         // jump to the next file
         if (fs % 4 != 0)
             fs += 4 - fs % 4;
-        if ((sizeof(cpio_t) + ns) % 4 != 0)
-            buf += (sizeof(cpio_t) + ns + (4 - (sizeof(cpio_t) + ns) % 4) + fs);
-        else
-            buf += (sizeof(cpio_t) + ns + fs);
+        buf += (offset + fs);
     }
     uart_puts("No such file\n");
 }
