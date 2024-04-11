@@ -9,6 +9,10 @@ global_asm!(include_str!("boot.s"));
 pub unsafe fn _start_rust() {
     // crate::os::allocator::ALLOCATOR.init();
     uart::initialize();
+
+    // Enable interrupts
+    asm!("msr DAIFClr, 0xf");
+    
     println!("Starting rust");
     
     // test_allocator();

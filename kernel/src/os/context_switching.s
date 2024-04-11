@@ -40,3 +40,12 @@
     add sp, sp, 32 * 8
 .endm
 
+.global exception_handler
+exception_handler:
+    msr DAIFSet, 0xf
+    save_all
+    mov x0, sp
+    bl exception_handler_rust
+    load_all
+    msr DAIFClr, 0xf
+    eret

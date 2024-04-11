@@ -1,16 +1,33 @@
-use crate::cpu::uart::{send, recv};
+use alloc::string::ToString;
+
+use crate::cpu::uart::{send, recv, send_async, recv_async};
+use core::arch::asm;
 
 pub fn get_line(buf: &mut[u8], len: usize) -> usize {
     for idx in 0..len {
         let inp: u8;
         unsafe {
-            inp = recv();
-            send(inp);
+            loop {
+                asm!("msr DAIFSet, 0xf");
+                let recv = recv_async();
+                asm!("msr DAIFClr, 0xf");
+                match recv {
+                    Some(c) => {
+                        inp = c;
+                        break;
+                    },
+                    None => {
+                        continue;
+                    }
+                };
+            }
+            send_async(inp);
         }
+        
         buf[idx] = inp;
         if inp == b'\r' {
             unsafe {
-                send(b'\n');
+                send_async(b'\n');
             }
             return idx + 1;
         }
@@ -21,20 +38,19 @@ pub fn get_line(buf: &mut[u8], len: usize) -> usize {
 pub fn print(s: &str) {
     for c in s.bytes() {
         unsafe {
-            send(c);
+            // asm!("msr DAIFSet, 0xf");
+            send_async(c);
+            // asm!("msr DAIFClr, 0xf");
         }
     }
 }
 
 pub fn println(s: &str) {
     print(s);
-    unsafe {
-        send(b'\r');
-        send(b'\n');
-    }
+    print("\r\n");
 }
 
-pub fn print_hex(n: u32) {
+fn print_hex(n: u32) {
     for i in 0..8 {
         let shift = (7 - i) * 4;
         let digit = (n >> shift) & 0xF;
@@ -44,13 +60,13 @@ pub fn print_hex(n: u32) {
             b'A' + (digit - 10) as u8
         };
         unsafe {
-            send(ascii);
+            send_async(ascii);
         }
     }
     println("");
 }
 
-pub fn print_dec(n: u32) {
+fn print_dec(n: u32) {
     let mut n = n;
     let mut buf = [0u8; 10];
     let mut idx = 0;
@@ -61,19 +77,19 @@ pub fn print_dec(n: u32) {
     }
     if idx == 0 {
         unsafe {
-            send(b'0');
+            send_async(b'0');
         }
     } else {
         for i in (0..idx).rev() {
             unsafe {
-                send(buf[i]);
+                send_async(buf[i]);
             }
         }
     }
     println("");
 }
 
-pub fn print_hex_u64(n: u64) {
+fn print_hex_u64(n: u64) {
     for i in 0..16 {
         let shift = (15 - i) * 4;
         let digit = (n >> shift) & 0xF;
@@ -83,24 +99,39 @@ pub fn print_hex_u64(n: u64) {
             b'A' + (digit - 10) as u8
         };
         unsafe {
-            send(ascii);
+            send_async(ascii);
         }
     }
     println("");
 }
 
-pub fn print_char(c: u8) {
+fn print_char(c: u8) {
     unsafe {
-        send(c);
+        send_async(c);
     }
 }
 
-pub fn print_char_64(chars: u64) {
+fn print_char_64(chars: u64) {
     for i in (0..8).rev() {
         let c = (chars >> (i * 8)) as u8;
         print_char(c);
     }
     println("");
+}
+
+fn println_async(s: &str) {
+    // println(s);
+    // print_dec(s.len() as u32);
+    for c in s.bytes() {
+        // print_hex(c as u32);
+        unsafe {
+            send_async(c);
+        }
+    }
+    unsafe {
+        send_async(b'\r');
+        send_async(b'\n');
+    }
 }
 
 // format println macro
