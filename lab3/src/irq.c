@@ -6,22 +6,28 @@
 typedef struct __irq_task_t {
     void (*func)();
     int priority;
+    int dirty; // Set to 1 if the task is under processing
+    struct __irq_task_t *prev;
     struct __irq_task_t *next;
 } irq_task_t;
 
 static irq_task_t *head = 0;
 
+// Note: call this function with interrupt disabled!
 void irq_add_task(void (*callback)(), int priority)
 {
-    // Note: call this function with interrupt disabled!
-
     irq_task_t *task = (irq_task_t *)simple_malloc(sizeof(irq_task_t));
     task->func = callback;
     task->priority = priority;
+    task->dirty = 0;
+    task->prev = 0;
     task->next = 0;
 
     if (head == 0 || task->priority < head->priority) {
         task->next = head;
+        task->prev = 0;
+        if (head != 0)
+            head->prev = task;
         head = task;
         return;
     }
@@ -30,7 +36,10 @@ void irq_add_task(void (*callback)(), int priority)
     while (current->next != 0 && current->next->priority <= task->priority)
         current = current->next;
     task->next = current->next;
+    if (current->next != 0)
+        current->next->prev = task;
     current->next = task;
+    task->prev = current;
 }
 
 void enable_interrupt()
@@ -71,11 +80,24 @@ void irq_entry()
 
     enable_interrupt(); // Leave the critical section
 
-    while (head != 0) { // Preemption: run the task with the highest priority
+    // Preemption: run the task with the highest priority
+    while (head != 0 && head->dirty == 0) {
+        // Get a task from queue
         disable_interrupt();
         irq_task_t *task = head;
-        head = head->next;
+        task->dirty = 1; // Flag the task as under processing
         enable_interrupt();
+
         task->func(); // Run the tasks with interrupts enabled
+
+        // Remove the task from queue
+        disable_interrupt();
+        if (task->prev != 0)
+            task->prev->next = task->next;
+        if (task->next != 0)
+            task->next->prev = task->prev;
+        if (task == head)
+            head = task->next;
+        enable_interrupt();
     }
 }
