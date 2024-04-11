@@ -54,21 +54,21 @@ void mini_uart_handler() {
     if (wbuf.empty()) {
       set_ier_reg(false, TRANSMIT_INT);
     } else {
-      set32(AUX_MU_IO_REG, wbuf.pop());
+      set32(AUX_MU_IO_REG, wbuf.pop(false));
     }
   } else if (iir & (1 << 2)) {
     // Receiver holds valid byte
-    rbuf.push(get32(AUX_MU_IO_REG) & MASK(8));
+    rbuf.push(get32(AUX_MU_IO_REG) & MASK(8), false);
   }
 }
 
 char mini_uart_getc_raw_async() {
-  return rbuf.pop();
+  return rbuf.pop(true);
 }
 
 void mini_uart_putc_raw_async(char c) {
   set_ier_reg(true, TRANSMIT_INT);
-  wbuf.push(c);
+  wbuf.push(c, true);
 }
 
 char mini_uart_getc_raw_sync() {

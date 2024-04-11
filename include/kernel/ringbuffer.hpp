@@ -22,6 +22,6 @@ class RingBuffer {
   int size() const {
     return tail - head + (head <= tail ? 0 : capacity);
   }
-  void push(char c);
-  char pop();
+  void push(char c, bool wait);
+  char pop(bool wait);
 };
