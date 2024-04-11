@@ -19,6 +19,7 @@ void add_timer(timeval tval, void* context, Timer::fp callback) {
   add_timer(timeval2tick(tval), context, callback);
 }
 void add_timer(uint64_t tick, void* context, Timer::fp callback) {
+  save_DAIF();
   disable_interrupt();
 
   tick += get_timetick();
@@ -39,6 +40,7 @@ void add_timer(uint64_t tick, void* context, Timer::fp callback) {
     enable_timer();
 
   enable_interrupt();
+  restore_DAIF();
 }
 
 void timer_handler() {

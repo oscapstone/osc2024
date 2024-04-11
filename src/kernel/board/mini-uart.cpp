@@ -3,6 +3,7 @@
 #include "board/gpio.hpp"
 #include "board/mmio.hpp"
 #include "board/peripheral.hpp"
+#include "interrupt.hpp"
 #include "nanoprintf.hpp"
 #include "ringbuffer.hpp"
 #include "util.hpp"
@@ -24,6 +25,9 @@ void set_ier_reg(bool enable, int bit) {
 }
 
 void mini_uart_use_async(bool use) {
+  save_DAIF();
+  disable_interrupt();
+
   _mini_uart_is_async = use;
   if (use) {
     set_aux_irq(true);
@@ -42,6 +46,9 @@ void mini_uart_use_async(bool use) {
     mini_uart_putc_raw_fp = mini_uart_putc_raw_sync;
     mini_uart_putc_fp = mini_uart_putc_sync;
   }
+
+  enable_interrupt();
+  restore_DAIF();
 }
 
 void mini_uart_handler() {
