@@ -47,8 +47,11 @@ inline void disable_timer() {
 
 #define set_timer_tick(tick) write_sysreg(CNTP_TVAL_EL0, tick)
 
+inline uint64_t get_current_tick() {
+  return get_timetick() - boot_timer_tick;
+}
 inline timeval get_current_time() {
-  return tick2timeval(get_timetick() - boot_timer_tick);
+  return tick2timeval(get_current_tick());
 }
 
 void add_timer(timeval tval, void* context, Timer::fp callback);

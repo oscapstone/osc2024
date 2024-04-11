@@ -29,7 +29,7 @@ int cmd_setTimeout(int argc, char* argv[]) {
   auto msg = argv[1];
   timeval tval{(uint32_t)strtol(argv[2]),
                argc >= 4 ? (uint32_t)strtol(argv[3]) : 0};
-  auto ctx = new Ctx{msg, get_timetick()};
+  auto ctx = new Ctx{msg, get_current_tick()};
   add_timer(tval, (void*)ctx, print_message);
   return 0;
 }

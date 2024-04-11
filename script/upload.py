@@ -8,9 +8,9 @@ with open("./disk/kernel.img", "rb") as f:
     size = len(kernel)
 
 with open(SERIAL, "wb", buffering=0) as tty:
-    print("reboot rpi")
-    tty.write(b"reboot\n")
-    time.sleep(3)
+    # print("reboot rpi")
+    # tty.write(b"reboot\n")
+    # time.sleep(3)
 
     print("send command")
     tty.write(b"s")
