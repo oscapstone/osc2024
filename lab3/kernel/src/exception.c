@@ -17,8 +17,38 @@ void el1_interrupt_disable()
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
+unsigned long long int lock_counter = 0;
+
+void lock()
+{
+    el1_interrupt_disable();
+    // char buf[VSPRINT_MAX_BUF_SIZE];
+    // sprintf(buf, "lock: lock_counter: %d\r\n", lock_counter);
+    // uart_puts(buf);
+    lock_counter++;
+}
+
+void unlock()
+{
+    lock_counter--;
+    // char buf[VSPRINT_MAX_BUF_SIZE];
+    // sprintf(buf, "unlock: lock_counter: %d\r\n", lock_counter);
+    // uart_puts(buf);
+    if (lock_counter < 0)
+    {
+        uart_puts("lock counter error\r\n");
+        while (1)
+            ;
+    }
+    else if (lock_counter == 0)
+    {
+        el1_interrupt_enable();
+    }
+}
+
 void el1h_irq_router()
 {
+    lock();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -28,12 +58,14 @@ void el1h_irq_router()
         {
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IIR_REG & (2 << 1))
         {
             *AUX_MU_IER_REG &= ~(1); // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive();
         }
     }
@@ -41,6 +73,7 @@ void el1h_irq_router()
     {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock();
         irqtask_run_preemptive();
         core_timer_enable();
     }
@@ -71,32 +104,32 @@ void el0_irq_64_router()
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
-    while (1)
-    {
-        uart_puts("Hello World el0 64 router!\r\n");
-    }
-    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
-    {
-        if (*AUX_MU_IIR_REG & (0b01 << 1))
-        {
-            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-            irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            irqtask_run_preemptive();
-        }
-        else if (*AUX_MU_IIR_REG & (0b10 << 1))
-        {
-            *AUX_MU_IER_REG &= ~(1); // disable read interrupt
-            irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-            irqtask_run_preemptive();
-        }
-    }
-    else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
-    {
-        core_timer_disable();
-        irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
-        irqtask_run_preemptive();
-        core_timer_enable();
-    }
+    // while (1)
+    // {
+    //     uart_puts("Hello World el0 64 router!\r\n");
+    // }
+    // if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
+    // {
+    //     if (*AUX_MU_IIR_REG & (0b01 << 1))
+    //     {
+    //         *AUX_MU_IER_REG &= ~(2); // disable write interrupt
+    //         irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+    //         irqtask_run_preemptive();
+    //     }
+    //     else if (*AUX_MU_IIR_REG & (0b10 << 1))
+    //     {
+    //         *AUX_MU_IER_REG &= ~(1); // disable read interrupt
+    //         irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+    //         irqtask_run_preemptive();
+    //     }
+    // }
+    // else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
+    // {
+    //     core_timer_disable();
+    //     irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+    //     irqtask_run_preemptive();
+    //     core_timer_enable();
+    // }
 }
 
 void invalid_exception_router(unsigned long long x0)
@@ -139,9 +172,6 @@ void irqtask_add(void *task_function, unsigned long long priority)
     // if the priorities are the same -> FIFO
     struct list_head *curr;
 
-    // mask the device's interrupt line
-    el1_interrupt_disable();
-
     // enqueue the processing task to the event queue with sorting.
     list_for_each(curr, task_list)
     {
@@ -156,40 +186,33 @@ void irqtask_add(void *task_function, unsigned long long priority)
     {
         list_add_tail(&the_task->listhead, task_list);
     }
-    // unmask the interrupt line
-    el1_interrupt_enable();
 }
 
 void irqtask_run_preemptive()
 {
-    // while (1)
-    // {
-    //     uart_puts("Hello World el1 64 router UART read interrupt, run preemtive!\r\n");
-    // }
-    el1_interrupt_enable();
     while (!list_empty(task_list))
     {
         // critical section protects new coming node
-        el1_interrupt_disable();
+        lock();
         irqtask_t *the_task = (irqtask_t *)task_list->next;
         // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
-            el1_interrupt_enable();
+            unlock();
             break;
         }
         // get the scheduled task and run it.
         list_del_entry((struct list_head *)the_task);
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
+        unlock();
 
-        el1_interrupt_enable();
         irqtask_run(the_task);
-        el1_interrupt_disable();
 
+        lock();
         curr_task_priority = prev_task_priority;
-        el1_interrupt_enable();
         free(the_task);
+        unlock();
     }
 }
 
