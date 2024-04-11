@@ -65,6 +65,11 @@ const Cmd cmds[] = {
         .help = "toggle async uart",
         .fp = cmd_uart,
     },
+    {
+        .name = "demo",
+        .help = "demo",
+        .fp = cmd_demo,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

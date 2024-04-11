@@ -14,6 +14,7 @@ int cmd_run(int, char*[]);
 int cmd_timer(int, char*[]);
 int cmd_setTimeout(int, char*[]);
 int cmd_uart(int, char*[]);
+int cmd_demo(int, char*[]);
 
 using cmd_fp = int (*)(int, char*[]);
 
