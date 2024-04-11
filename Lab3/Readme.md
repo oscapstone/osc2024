@@ -27,9 +27,9 @@ After the exception handler finishes, it issues eret to return from the exceptio
 * SError
 
 ### EL2 to EL1
-[hcr_el2](https://blog.csdn.net/heshuangzong/article/details/127695422)
-[spsr_el2](https://developer.arm.com/documentation/ddi0601/2024-03/AArch64-Registers/SPSR-EL2--Saved-Program-Status-Register--EL2-)
-[CurrentEL](https://developer.arm.com/documentation/ddi0595/2021-12/AArch64-Registers/CurrentEL--Current-Exception-Level)
+* [hcr_el2](https://blog.csdn.net/heshuangzong/article/details/127695422)
+* [spsr_el2](https://developer.arm.com/documentation/ddi0601/2024-03/AArch64-Registers/SPSR-EL2--Saved-Program-Status-Register--EL2-)
+* [CurrentEL](https://developer.arm.com/documentation/ddi0595/2021-12/AArch64-Registers/CurrentEL--Current-Exception-Level)
 ```
 //MSR（Move to System Register）
 from_el2_to_el1:
@@ -156,6 +156,7 @@ The address of the program (return address) // cmp x0, 5
 Exception Syndrome Register
 
 EC: Exception Class. Indicates the reason for the exception that this register holds information about.
+
 IL: Instruction Length for synchronous exceptions.
 
 * EC [31:26] -> 010101 (from 56): SVC instruction execution in AArch64 state.
@@ -172,9 +173,9 @@ Exceptions in this lab:
 ## Interrupt (Timer)
 
 [Core0 interrupt register](https://github.com/Tekki/raspberrypi-documentation/blob/master/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf) 
-p7: Register address
-p13: Enable/Disable IRQ
-p16: Source of interrupt: CNTPNSIRQ
+* p7: Register address
+* p13: Enable/Disable IRQ
+* p16: Source of interrupt: CNTPNSIRQ
 NS: Non-Secured
 ```
 cntpct_el0: The timer’s current count.
@@ -213,8 +214,8 @@ void core_timer_handler() {
 https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf
 
 ### Enable UART Interrupt
-p12 enable Tx/Rx
-p113 enable AUX interrupt
+* p12 enable Tx/Rx
+* p113 enable AUX interrupt
 ```
 void uart_init()
 {
@@ -253,7 +254,7 @@ void uart_interrupt(){
 
 ```
 ### Handle UART Interrupt
-p13 IIR bits
+* p13 IIR bits
 ```
 void interrupt_handler_entry(){
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
