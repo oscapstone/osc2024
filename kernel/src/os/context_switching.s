@@ -44,8 +44,26 @@
 exception_handler:
     msr DAIFSet, 0xf
     save_all
-    mov x0, sp
+
+    ldr x0, =0x75000
+    ldr x1, [x0]
+    add x1, x1, 1
+    str x1, [x0]
+
     bl exception_handler_rust
+
+    ldr x0, =0x75000
+    ldr x1, [x0]
+    sub x1, x1, 1
+    str x1, [x0]
+    
+    # branch if x1 not zero
+    cbnz x1, .dont_disable_irq
+    
+.disable_irq:
     load_all
     msr DAIFClr, 0xf
+    eret
+.dont_disable_irq:
+    load_all
     eret

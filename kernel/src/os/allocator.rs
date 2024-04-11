@@ -1,6 +1,7 @@
 use super::stdio::*;
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::{null, null_mut};
+use crate::println;
 
 #[global_allocator]
 pub static ALLOCATOR: Allocator = Allocator;
@@ -19,7 +20,7 @@ impl Allocator {
 
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        static mut count: u32 = 0;
+        static mut count: u32 = 4;
         if layout.size() == 0 {
             println("Warning: Allocating zero size");
             return null_mut();
@@ -32,7 +33,7 @@ unsafe impl GlobalAlloc for Allocator {
         count += (layout.size() + aligned_start) as u32;
 
         if allocated_start as u32 > 0x2000_0000 {
-            print_hex(count);
+            println!("Out of memory: {:x}", allocated_start as u32);
             panic!("Out of memory");
         }
 

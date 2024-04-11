@@ -1,7 +1,8 @@
 use core::arch::asm;
 
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
+use crate::println;
 
 use crate::os::stdio::*;
 
@@ -64,7 +65,7 @@ impl Node {
             print(&prop.name);
             print(": ");
             for c in &prop.value {
-                print_char(*c);
+                print((*c as char).to_string().as_str());
             }
             println("");
         }
@@ -287,8 +288,7 @@ impl DeviceTree {
                     break i;
                 }
                 unknown => {
-                    print("Unknown node type: ");
-                    print_hex(unknown);
+                    println!("Unknown node type: 0x{:X}", unknown);
                     break i;
                 }
             }

@@ -1,6 +1,6 @@
 .section .text._start
 
-_stack_start    = 0x100000
+_stack_start    = 0x70000
 
 .global _start
 .global _bss_start
@@ -18,6 +18,9 @@ _start:
     # Initailize stack pointer
     ldr x0, =_stack_start
     mov sp, x0
+
+    ldr x0, =0x75000
+    str xzr, [x0]
     
     # Initialize bss
    ldr x0, =_bss_start

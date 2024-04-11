@@ -15,10 +15,12 @@ pub unsafe fn _start_rust() {
     
     println!("Starting rust");
     
+    
     // test_allocator();
-
+    
     let dt = super::device_tree::DeviceTree::init();
     println!("Device tree initialized");
+    // loop{}
     let initrd_start = match dt.get("linux,initrd-start") {
         Some(v) => {
             let mut val = 0u32;

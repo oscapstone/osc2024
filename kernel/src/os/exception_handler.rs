@@ -24,6 +24,17 @@ unsafe fn exception_handler_rust() {
         0x2 => {
             println!("Timer interrupt");
 
+            
+
+            // Set the timer to fire again in 2 seconds
+            asm!(
+                "mrs {timer}, cntfrq_el0",
+                "lsl {timer}, {timer}, 1", // 2 seconds
+                "msr cntp_tval_el0, {timer}",
+                timer = out(reg) _,
+            );
+        },
+        0x0 => {
             let spsr_el1: u64;
             let elr_el1: u64;
             let esr_el1: u64;
@@ -34,16 +45,7 @@ unsafe fn exception_handler_rust() {
             println!("spsr_el1: 0x{:x}", spsr_el1);
             println!("elr_el1: 0x{:x}", elr_el1);
             println!("esr_el1: 0x{:x}", esr_el1);
-
-            // Set the timer to fire again in 2 seconds
-            asm!(
-                "mrs {timer}, cntfrq_el0",
-                "lsl {timer}, {timer}, 1", // 2 seconds
-                "msr cntp_tval_el0, {timer}",
-                timer = out(reg) _,
-            );
         },
-        // 0x0 => println!("Not core interrupt: 0x0"),
         // val => println!("Unknown interrupt: 0x{:x}", val),
         _ => (),
     }

@@ -2,6 +2,7 @@ use alloc::string::ToString;
 
 use crate::cpu::uart::{send, recv, send_async, recv_async};
 use core::arch::asm;
+use super::critical_section::{disable_irq, enable_irq};
 
 pub fn get_line(buf: &mut[u8], len: usize) -> usize {
     for idx in 0..len {
@@ -38,9 +39,9 @@ pub fn get_line(buf: &mut[u8], len: usize) -> usize {
 pub fn print(s: &str) {
     for c in s.bytes() {
         unsafe {
-            // asm!("msr DAIFSet, 0xf");
+            disable_irq();
             send_async(c);
-            // asm!("msr DAIFClr, 0xf");
+            enable_irq();
         }
     }
 }

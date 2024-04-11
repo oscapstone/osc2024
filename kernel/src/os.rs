@@ -6,3 +6,4 @@ pub mod shell;
 pub mod panic_wait;
 pub mod allocator;
 pub mod exception_handler;
+pub mod critical_section;
