@@ -47,7 +47,7 @@ void initrd_list()
     while(!memcmp(buf, "070701",6) && memcmp(buf + sizeof(cpio_f),"TRAILER!!",9)) {
         cpio_f *header = (cpio_f*) buf;
         int ns = hex2bin(header->namesize, 8);
-        int fs = hex2bin(header->filesize, 8);
+        int fs = ALIGN(hex2bin(header->filesize, 8), 4);
         // print out meta information
         uart_hex(hex2bin(header->mode, 8));  // mode (access rights + type)
         uart_send(' ');
@@ -62,7 +62,7 @@ void initrd_list()
         uart_puts(buf + sizeof(cpio_f));      // filename
         uart_puts("\n");
         // jump to the next file
-        buf += (sizeof(cpio_f) + ns + fs);
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
 }
 
@@ -77,22 +77,22 @@ void initrd_ls()
     uart_puts(".\n");
 
     // if it's a cpio newc archive. Cpio also has a trailer entry
-    while(!memcmp(buf,"070701",6) && memcmp(buf+sizeof(cpio_f),"TRAILER!!",9)) {
+    while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) {
         cpio_f *header = (cpio_f*) buf;
         int ns = hex2bin(header->namesize, 8);
-        int fs = hex2bin(header->filesize, 8);
+        int fs = ALIGN(hex2bin(header->filesize, 8), 4);
         // print out filename
-        uart_puts(buf+sizeof(cpio_f));      // filename
+        uart_puts(buf + sizeof(cpio_f));      // filename
         uart_puts("\n");
         // jump to the next file
-        buf+=(sizeof(cpio_f) + ns + fs);
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
 }
 
 void initrd_cat()
 {
     char *buf = cpio_base;
-    if (memcmp(buf, "070701", 6))
+    if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
         return;
     char buffer[buf_size];
 
@@ -104,7 +104,7 @@ void initrd_cat()
     while(!memcmp(buf,"070701",6) && memcmp(buf+sizeof(cpio_f),"TRAILER!!",9)) {
         cpio_f *header = (cpio_f*) buf;
         int ns = hex2bin(header->namesize, 8);
-        int fs = hex2bin(header->filesize, 8);
+        int fs = ALIGN(hex2bin(header->filesize, 8), 4);
 
         // check filename with buffer
         if (!strcmp(buffer, buf + sizeof(cpio_f))) {
@@ -120,18 +120,69 @@ void initrd_cat()
         }
 
         // jump to the next file
-        buf+=(sizeof(cpio_f) + ns + fs);
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
+    }
+    uart_puts("File not found\n");
+}
+
+void initrd_usr_prog(char *cmd)
+{
+    char *buf = cpio_base, *prog_addr;
+    int ns, fs;
+    cpio_f *header;
+
+    if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
+        return;
+    
+    // if it's a cpio newc archive. Cpio also has a trailer entry
+    while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) { // check if it's a cpio newc archive and not the last file
+        header = (cpio_f*) buf;
+        ns = hex2bin(header->namesize, 8);
+        fs = ALIGN(hex2bin(header->filesize, 8), 4);
+
+        // check filename with buffer
+        if (!strcmp(cmd, buf + sizeof(cpio_f))) {
+            if (fs == 0) {
+                uart_send('\n');
+                uart_puts("user_program is empty.\n");
+                return;
+            } else {
+                uart_puts("\nInto user_program: ");
+                uart_puts(buf + sizeof(cpio_f));
+                uart_puts("\nAddress: ");
+                uart_hex((unsigned long) buf + ALIGN(sizeof(cpio_f) + ns, 4));
+                uart_send('\n');
+                // get program start address
+                prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
+
+                // jump to el0 and execute user program.
+                asm volatile("mov x1, 0              \n\t"
+                             "msr spsr_el1, x1       \n\t"
+                             "mov x1, %0             \n\t"
+                             "msr elr_el1, x1        \n\t"
+                             "mov x1, 0x60000        \n\t"
+                             "msr sp_el0, x1         \n\t"
+                             "eret                   \n\t"::"r" (prog_addr));
+            }
+        }
+        // jump to the next file
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
     uart_puts("File not found\n");
 }
 
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
 {
+    // uart_puts("==== node_name: ");
+    // uart_puts(node_name);
+    // uart_puts(", property_name: ");
+    // uart_puts(property_name);
+    // uart_send('\n');
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
-        cpio_base = bswap_32(load_addr);
-        uart_puts("cpio_base: ");
-        uart_hex((unsigned int)cpio_base);
+        cpio_base = (char *)((unsigned long)bswap_32(load_addr));
+        uart_puts("==== cpio_base: ");
+        uart_hex((unsigned long)cpio_base);
         uart_send('\n');
     }
 }

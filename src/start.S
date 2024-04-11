@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 bzt (bztsrc@github)
+ * Copyright (C) 2018 bzt (bztsrc//github)
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,8 +25,9 @@
 
 .section ".text.boot"
 
-.global _start
+#define BOOTLOADER
 
+.global _start
 _start:
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
@@ -35,25 +36,34 @@ _start:
     // cpu id > 0, stop
 1:  wfe
     b       1b
-2:  // cpu id == 0
+2:  // cpu id == 0, continue
 
+#ifndef BOOTLOADER
     // get the dtb address
     ldr     x1, =__dtb_address
-    str     x0, [x1]
+    str     x0, [x1] // store the dtb address to the address given by the linker script
+#endif
 
-    // set top of stack just before our code (stack grows to a lower address per AAPCS64)
-    ldr     x1, =_start
-    mov     sp, x1
+    // set exception vector table
+    bl      set_exception_vector_table
+
+    // change exception level to EL1
+    bl      from_el2_to_el1
+    
+    // If we don't set the sp_elx before `eret`, we have to setup the stack pointer manually.
+    //ldr     x1, =_start
+    //mov     sp, x1 // set stack pointer
 
     // clear bss
     ldr     x1, =__bss_start
     ldr     w2, =__bss_size
+
 3:  cbz     w2, 4f
     str     xzr, [x1], #8
     sub     w2, w2, #1
     cbnz    w2, 3b
-
+4:
     // jump to C code, should not return
-4:  bl      main
+    bl      main
     // for failsafe, halt this core too
     b       1b

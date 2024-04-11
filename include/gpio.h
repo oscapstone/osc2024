@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
+
+/* Ref: // https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf */
 #ifndef __GPIO_H__
 #define __GPIO_H__
 
@@ -31,6 +33,12 @@
 #define GPIO_BASE       (MMIO_BASE + 0x00200000)
 #define AUX_BASE        (MMIO_BASE + 0x00215000)
 #define IRQ_BASE        (MMIO_BASE + 0x0000B000)
+#define EMMC_BASE       (MMIO_BASE + 0x00300000)
+
+#define GPIO            ((gpio_t *) (GPIO_BASE))
+#define AUX             ((aux_t *) (AUX_BASE))
+#define IRQ             ((irq_t *) (IRQ_BASE + 0x200))
+#define EMMC            ((emmc_t *) (EMMC_BASE))
 
 typedef struct {
     __IO unsigned int GPFSEL[6];
@@ -59,8 +67,6 @@ typedef struct {
     __IO unsigned int GPPUDCLK[2];
     unsigned int reserved11;
 } gpio_t;
-
-#define GPIO                ((gpio_t *) (GPIO_BASE))
 
 typedef struct {
     __IO unsigned int AUX_IRQ;
@@ -93,8 +99,6 @@ typedef struct {
     __IO unsigned int AUX_SPI1_PEEK_REG;
 } aux_t;
 
-#define AUX                 ((aux_t *) (AUX_BASE))
-
 typedef struct {
     __IO unsigned int IRQ_BASIC_PENDING;
     __IO unsigned int IRQ_PENDING1;
@@ -108,6 +112,34 @@ typedef struct {
     __IO unsigned int DISABLE_BASIC_IRQS;
 } irq_t;
 
-#define IRQ                 ((irq_t *) (IRQ_BASE + 0x200))
+typedef struct {
+    __IO unsigned int ARG2;
+    __IO unsigned int BLOCKSIZECNT;
+    __IO unsigned int ARG1;
+    __IO unsigned int CMDTM;
+    __IO unsigned int RESP0;
+    __IO unsigned int RESP1;
+    __IO unsigned int RESP2;
+    __IO unsigned int RESP3;
+    __IO unsigned int DATA;
+    __IO unsigned int STATUS;
+    __IO unsigned int CONTROL0;
+    __IO unsigned int CONTROL1;
+    __IO unsigned int INTERRUPT;
+    __IO unsigned int IRPT_MASK;
+    __IO unsigned int IRPT_EN;
+    __IO unsigned int CONTROL2;
+    __IO unsigned int FORCE_IRPT;
+    __IO unsigned int BOOT_TIMEOUT;
+    __IO unsigned int DBG_SEL;
+    __IO unsigned int EXRDFIFO_CFG;
+    __IO unsigned int EXRDFIFO_EN;
+    __IO unsigned int TUNE_STEP;
+    __IO unsigned int TUNE_STEPS_STD;
+    __IO unsigned int TUNE_STEPS_DDR;
+    __IO unsigned int SPI_INT_SPT;
+    __IO unsigned int SLOTISR_VER;
+} emmc_t;
+
 
 #endif // __GPIO_H__

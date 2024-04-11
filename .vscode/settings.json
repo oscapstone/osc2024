@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "array": "cpp",
+        "compare": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "system_error": "c",
+        "condition_variable": "c",
+        "future": "c",
+        "uart.h": "c",
+        "exception.h": "c"
+    }
+}

@@ -38,9 +38,10 @@ void initrd_list();
 void initrd_ls();
 void initrd_cat();
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name);
+void initrd_usr_prog(char *cmd);
 
 typedef struct {
-    char magic[6];
+    char magic[6]; // "070701"
     char ino[8];
     char mode[8];
     char uid[8];

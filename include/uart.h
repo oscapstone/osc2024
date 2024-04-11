@@ -25,11 +25,23 @@
 #ifndef UART_H
 #define UART_H
 
+#include "gpio.h"
+
 void uart_init();
 void uart_send(unsigned int c);
 char uart_getc();
-char uart_getb();
 void uart_puts(char *s);
 void uart_hex(unsigned int d);
 
+void printf(char *fmt, ...);
+void uart_dump(void *ptr);
+
+/* For lab 3: Asynchronous read and write. */
+void uart_async_init();
+char uart_async_getc(void);
+void uart_async_puts(char *s);
+void uart_async_send(unsigned int c);
+int uart_async_gets(char *buf);
+
+void uart_tasklet(unsigned long data); // enqueue char c to read buffer.
 #endif

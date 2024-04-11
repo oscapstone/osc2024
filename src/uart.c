@@ -27,7 +27,9 @@
 #include "mbox.h"
 #include "delays.h"
 #include "uart.h"
-// #include "sprintf.h"
+#include "sprintf.h"
+#include "queue.h" // for async uart
+#include "demo.h"
 
 extern unsigned char _end;
 
@@ -43,8 +45,8 @@ void uart_init()
     AUX->AUX_MU_CNTL_REG = 0;       // Disable transmitter and receiver during configuration.
     AUX->AUX_MU_LCR_REG = 3;        // 8 bits
     AUX->AUX_MU_MCR_REG = 0;        // RTS line high
-    AUX->AUX_MU_IER_REG = 0;        // Disable interrupts.
-    AUX->AUX_MU_IIR_REG = 0xc6;     // disable interrupts
+    AUX->AUX_MU_IER_REG = 0;        // Disable transmit/receive interrupts.
+    AUX->AUX_MU_IIR_REG = 0xc6;     // Clear the transmit/receive FIFO.
     AUX->AUX_MU_BAUD_REG = 270;     // 115200 baud
     /* map UART1 to GPIO pins */
     r = GPIO->GPFSEL[1];
@@ -62,12 +64,6 @@ void uart_init()
 
     GPIO->GPPUDCLK[0] = 0;    // flush GPIO setup
     AUX->AUX_MU_CNTL_REG = 3; // enable Tx, Rx
-}
-
-void uart_async_init()
-{
-    AUX->AUX_MU_IER_REG = 0x1; // enable receive interrupt. Send interrupt when receive FIFO is not empty
-    IRQ->ENABLE_IRQS1 = (1 << 29); // set IRQ_ENABLE to enable mini UART receive interrupt (at pending bit 29)
 }
 
 /**
@@ -126,7 +122,115 @@ void uart_hex(unsigned int d)
     }
 }
 
+/**
+ * Display a string
+ */
+void printf(char *fmt, ...)
+{
+    __builtin_va_list args;
+    __builtin_va_start(args, fmt);
+    // we don't have memory allocation yet, so we
+    // simply place our string after our code
+    char *s = (char*)&_end;
+    // use sprintf to format our string
+    vsprintf(s,fmt,args);
+    // print out as usual
+    while(*s) {
+        /* convert newline to carrige return + newline */
+        if(*s=='\n')
+            uart_send('\r');
+        uart_send(*s++);
+    }
+}
 int check_digit(char ch)
 {
     return (ch >= '0') && (ch <= '9');
+}
+
+/**
+ * Dump memory
+ */
+void uart_dump(void *ptr)
+{
+    unsigned long a,b,d;
+    unsigned char c;
+    for(a=(unsigned long)ptr;a<(unsigned long)ptr+512;a+=16) {
+        uart_hex(a); uart_puts(": ");
+        for(b=0;b<16;b++) {
+            c=*((unsigned char*)(a+b));
+            d=(unsigned int)c;d>>=4;d&=0xF;d+=d>9?0x37:0x30;uart_send(d);
+            d=(unsigned int)c;d&=0xF;d+=d>9?0x37:0x30;uart_send(d);
+            uart_send(' ');
+            if(b%4==3)
+                uart_send(' ');
+        }
+        for(b=0;b<16;b++) {
+            c=*((unsigned char*)(a+b));
+            uart_send(c<32||c>=127?'.':c);
+        }
+        uart_send('\r');
+        uart_send('\n');
+    }
+}
+
+/**
+ * Enable both receive and transmit interrupt
+ * Enable mini UART receive interrupt (at pending bit 29)
+ * AUX->AUX_MU_IER_REG: Set bit 0 to enable receive interrupt. Set bit 1 to enable transmit interrupt.
+ * receive interrupt occurs when the receive FIFO has valid data.
+ * transmit interrupt occurs when the transmit FIFO is empty.
+*/
+void uart_async_init()
+{
+    AUX->AUX_MU_IER_REG |= (1 << 0); // enable receive interrupt. transmit interrupt will be enabled when we write data to write_buffer.
+    IRQ->ENABLE_IRQS1 |= (1 << 29); // set IRQ_ENABLE to enable mini UART interrupt (AUX interrupt) which is at pending bit 29.
+}
+
+char uart_async_getc(void)
+{
+    if (is_empty(&read_buffer))
+        return 0;
+    return dequeue_char(&read_buffer);
+}
+
+void uart_async_send(unsigned int c)
+{
+    enqueue_char(&write_buffer, c);
+    AUX->AUX_MU_IER_REG |= (1 << 1); // enable transmit interrupt
+}
+
+void uart_async_puts(char *s)
+{
+    while(*s) {
+        enqueue_char(&write_buffer, *s++);
+    }
+    AUX->AUX_MU_IER_REG |= (1 << 1); // enable transmit interrupt
+}
+
+/**
+ * Get all characters in read_buffer.
+*/
+int uart_async_gets(char *buf)
+{
+    int i = 0;
+    while (!is_empty(&read_buffer))
+        buf[i++] = dequeue_char(&read_buffer);
+    buf[i] = '\0';
+    return i;
+}
+
+/* uart_tasklet: do enqueue read buffer */
+void uart_tasklet(unsigned long data)
+{
+#ifdef DEMO
+    uart_puts("Into uart_tasklet\n");
+#endif
+
+    char c = (char)data;
+    enqueue_char(&read_buffer, c);
+
+#ifdef DEMO
+    wait_cycles(5000000); // For demo nested irq in raspi 3b+, this delay is enough.
+    uart_puts("Exit uart_tasklet\n");
+#endif
 }

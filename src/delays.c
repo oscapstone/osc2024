@@ -31,7 +31,7 @@
 /**
  * Wait N CPU cycles (ARM CPU only)
  */
-void wait_cycles(unsigned int n)
+void wait_cycles(unsigned long n)
 {
     if(n) while(n--) { asm volatile("nop"); }
 }
@@ -50,6 +50,14 @@ void wait_msec(unsigned int n)
     unsigned long i=((f/1000)*n)/1000;
     // loop while counter increase is less than i
     do{asm volatile ("mrs %0, cntpct_el0" : "=r"(r));}while(r-t<i);
+}
+
+/**
+ * Wait N seconds (ARM CPU only)
+*/
+void wait_sec(unsigned int n)
+{
+    wait_msec(n * 1000000);
 }
 
 /**
