@@ -1,9 +1,8 @@
 #include "exception.hpp"
 
 #include "board/mini-uart.hpp"
-#include "board/pm.hpp"
 #include "interrupt.hpp"
-#include "util.hpp"
+#include "shell.hpp"
 
 const char* ExceptionFrom[] = {
     "Current Exception level with SP_EL0.",
@@ -19,13 +18,12 @@ const char* ExceptionType[] = {
 };
 
 void print_exception(ExceptionContext* context, int type) {
-  disable_interrupt();
-  mini_uart_use_async(false);
-  mini_uart_printf_sync("(%d) %s: %s\n", type, ExceptionType[type % 4],
-                        ExceptionFrom[type / 4]);
-  mini_uart_printf_sync("SPSR_EL1: %032lb\n", context->spsr_el1);
-  mini_uart_printf_sync("ELR_EL1 : 0x%lx\n", context->elr_el1);
-  mini_uart_printf_sync("ESR_EL1 : %032lb\n", context->esr_el1);
-  reboot();
-  prog_hang();
+  mini_uart_printf("(%d) %s: %s\n", type, ExceptionType[type % 4],
+                   ExceptionFrom[type / 4]);
+  mini_uart_printf("SPSR_EL1: %032lb\n", context->spsr_el1);
+  mini_uart_printf("ELR_EL1 : 0x%lx\n", context->elr_el1);
+  mini_uart_printf("ESR_EL1 : %032lb\n", context->esr_el1);
+
+  enable_interrupt();
+  shell();
 }
