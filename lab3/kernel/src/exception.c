@@ -121,6 +121,7 @@ int curr_task_priority = 9999; // Small number has higher priority
 struct list_head *task_list;
 void irqtask_list_init()
 {
+    task_list = kmalloc(sizeof(irqtask_t));
     INIT_LIST_HEAD(task_list);
 }
 

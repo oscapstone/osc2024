@@ -9,6 +9,7 @@
 struct list_head* timer_event_list;  // first head has nothing, store timer_event_t after it 
 
 void timer_list_init(){
+    timer_event_list = kmalloc(sizeof(timer_event_t));
     INIT_LIST_HEAD(timer_event_list);
 }
 
