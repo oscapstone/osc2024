@@ -10,15 +10,19 @@ pub trait ShellCommand {
 
 pub struct Shell<'a> {
     buf: String,
-    commands: &'a [&'a dyn ShellCommand],
+    commands: alloc::vec::Vec<&'a dyn ShellCommand>,
 }
 
 impl<'a> Shell<'a> {
-    pub fn new(commands: &'a [&'a dyn ShellCommand]) -> Self {
+    pub fn new() -> Self {
         Self {
             buf: String::new(),
-            commands,
+            commands: Default::default(),
         }
+    }
+
+    pub fn register(&mut self, command: &'a dyn ShellCommand) {
+        self.commands.push(command);
     }
 
     pub fn run_loop(&mut self) -> ! {
@@ -83,7 +87,7 @@ impl<'a> Shell<'a> {
 
     fn help(&self) {
         println!("{: <10}: {}", "help", "print this help menu");
-        for cmd in self.commands {
+        for cmd in self.commands.iter() {
             println!("{: <10}: {}", cmd.name(), cmd.help());
         }
     }

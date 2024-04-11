@@ -15,7 +15,7 @@ mod shell;
 use cpio::CpioArchive;
 use devicetree::DeviceTree;
 use panic_wait as _;
-use shell::ShellCommand;
+use shell::commands;
 use small_std::println;
 
 use crate::devicetree::DeviceTreeEntryValue;
@@ -80,13 +80,13 @@ fn main() -> ! {
     println!("[4] Echoing input now");
 
     let cpio = unsafe { CpioArchive::new(cpio_start_addr) };
-    let commands: &[&dyn ShellCommand] = &[
-        &shell::commands::HelloCommand,
-        &shell::commands::RebootCommand,
-        &shell::commands::InfoCommand,
-        &shell::commands::LsCommand::new(&cpio),
-        &shell::commands::CatCommand::new(&cpio),
-    ];
-    let mut shell = shell::Shell::new(commands);
+    let mut shell = shell::Shell::new();
+    let ls = commands::LsCommand::new(&cpio);
+    let cat = commands::CatCommand::new(&cpio);
+    shell.register(&commands::HelloCommand);
+    shell.register(&commands::RebootCommand);
+    shell.register(&commands::InfoCommand);
+    shell.register(&ls);
+    shell.register(&cat);
     shell.run_loop();
 }
