@@ -17,15 +17,12 @@ void main(char *arg)
         Set_dtb = 1;
     }
     uart_init();
-
     irqtask_list_init();
     timer_list_init();
-    uart_interrupt_enable();
+
     core_timer_enable();
-    for (int i = 0; i < 1; i++)
-    {
-        uart_sendlinek("fk   \n");
-    }
+    uart_interrupt_enable();
+    uart_flush_FIFO();
 
     el1_interrupt_enable(); // enable interrupt in EL1 -> EL1
     start_shell();

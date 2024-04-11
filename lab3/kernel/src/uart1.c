@@ -4,13 +4,11 @@
 #include "uart1.h"
 #include "string.h"
 
-
-
-//implement first in first out buffer with a read index and a write index
-char uart_tx_buffer[VSPRINT_MAX_BUF_SIZE]={};
-unsigned int uart_tx_buffer_widx = 0;  //write index
-unsigned int uart_tx_buffer_ridx = 0;  //read index
-char uart_rx_buffer[VSPRINT_MAX_BUF_SIZE]={};
+// implement first in first out buffer with a read index and a write index
+static char uart_tx_buffer[VSPRINT_MAX_BUF_SIZE];
+unsigned int uart_tx_buffer_widx = 0; // write index
+unsigned int uart_tx_buffer_ridx = 0; // read index
+static char uart_rx_buffer[VSPRINT_MAX_BUF_SIZE];
 unsigned int uart_rx_buffer_widx = 0;
 unsigned int uart_rx_buffer_ridx = 0;
 
@@ -27,7 +25,6 @@ void uart_init()
     *AUX_MU_LCR_REG = 3;    // 8 bit data size
     *AUX_MU_MCR_REG = 0;    // disable flow control
     *AUX_MU_BAUD_REG = 270; // 115200 baud rate
-    *AUX_MU_IIR_REG = 6;    // disable FIFO
 
     /* map UART1 to GPIO pins */
     selector = *GPFSEL1;
@@ -52,7 +49,15 @@ void uart_init()
     }
     *GPPUDCLK0 = 0;
 
-    *AUX_MU_CNTL_REG = 3; // enable TX/RX
+    *AUX_MU_CNTL_REG = 3;
+}
+
+uart_flush_FIFO()
+{
+    *AUX_MU_IIR_REG |= 6;
+    // On write:
+    //  Writing with bit 1 set will clear the receive FIFO
+    //  Writing with bit 2 set will clear the transmit FIFOF
 }
 
 char uart_recv()
@@ -72,19 +77,20 @@ void uart_send(unsigned int c)
 }
 
 // AUX_MU_IER_REG -> BCM2837-ARM-Peripherals.pdf - Pg.12
-void uart_interrupt_enable(){
-    *AUX_MU_IER_REG |= 1;  // enable read interrupt
-    *AUX_MU_IER_REG |= 2;  // enable write interrupt
-    *ENABLE_IRQS_1  |= 1 << 29;    // Pg.112
+void uart_interrupt_enable()
+{
+    *AUX_MU_IER_REG |= 1;      // enable read interrupt
+    *AUX_MU_IER_REG |= 2;      // enable write interrupt
+    *ENABLE_IRQS_1 |= 1 << 29; // Pg.112
 }
 
-void uart_interrupt_disable(){
-    *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
-    *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
+void uart_interrupt_disable()
+{
+    *AUX_MU_IER_REG &= ~(1); // disable read interrupt
+    *AUX_MU_IER_REG &= ~(2); // disable write interrupt
 }
 
-
-//scanf
+// scanf
 void uart_r_irq_handler()
 {
     if ((uart_rx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_rx_buffer_ridx)
@@ -98,7 +104,7 @@ void uart_r_irq_handler()
     *AUX_MU_IER_REG |= 1;
 }
 
-//printf
+// printf
 void uart_w_irq_handler()
 {
     if (uart_tx_buffer_ridx == uart_tx_buffer_widx)
@@ -128,7 +134,6 @@ char uart_async_recv()
     return r;
 }
 
-
 // uart_async_putc writes to buffer
 // uart_w_irq_handler read from buffer then output
 void uart_async_send(char c)
@@ -144,16 +149,18 @@ void uart_async_send(char c)
     *AUX_MU_IER_REG |= 2; // enable write interrupt
 }
 
-int  uart_sendlinek(char* fmt, ...) {
+int uart_sendlinek(char *fmt, ...)
+{
     __builtin_va_list args;
     __builtin_va_start(args, fmt);
     char buf[VSPRINT_MAX_BUF_SIZE];
 
-    char *str = (char*)buf;
-    int count = vsprintf(str,fmt,args);
+    char *str = (char *)buf;
+    int count = vsprintf(str, fmt, args);
 
-    while(*str) {
-        if(*str=='\n')
+    while (*str)
+    {
+        if (*str == '\n')
             uart_send('\r');
         uart_send(*str++);
     }

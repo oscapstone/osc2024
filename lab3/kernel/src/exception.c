@@ -66,31 +66,7 @@ void el0_sync_router()
 
 void el0_irq_64_router()
 {
-    // decouple the handler into irqtask queue
-    // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
-    // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
-    // if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
-    // {
-    //     if (*AUX_MU_IIR_REG & (0b01 << 1))
-    //     {
-    //         *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
-    //         irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-    //         irqtask_run_preemptive();
-    //     }
-    //     else if (*AUX_MU_IIR_REG & (0b10 << 1))
-    //     {
-    //         *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
-    //         irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-    //         irqtask_run_preemptive();
-    //     }
-    // }
-    // else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
-    // {
-    //     core_timer_disable();
-    //     irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
-    //     irqtask_run_preemptive();
-    //     core_timer_enable();
-    // }
+
 }
 
 void invalid_exception_router(unsigned long long x0)
