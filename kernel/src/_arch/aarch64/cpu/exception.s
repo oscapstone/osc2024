@@ -1,4 +1,5 @@
 // save general registers to stack
+
 .macro save_all
     sub sp, sp, 32 * 8
     stp x0, x1, [sp ,16 * 0]
@@ -40,9 +41,10 @@
     add sp, sp, 32 * 8
 .endm
 
+.section .text.exception
 exception_handler:
     save_all
-    bl exception_entry
+    bl rust_exception_handler
     load_all
     eret
 
@@ -85,6 +87,5 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-set_exception_vector_table:
-  adr x0, exception_vector_table
-  msr vbar_el1, x0
+exception_entry:
+  nop

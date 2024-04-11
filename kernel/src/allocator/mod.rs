@@ -1,5 +1,5 @@
-const HEAP_SIZE: usize = 1024 * 1024; // 1 MB
-const HEAP_START: usize = 0x210000;
+const HEAP_SIZE: usize = 1024 * 1024 * 10; // 10 MB
+const HEAP_START: usize = 0x200000;
 
 use core::cell::UnsafeCell;
 
@@ -33,3 +33,4 @@ unsafe impl GlobalAlloc for MyAllocator {
         // Implementation for dealloc
     }
 }
+

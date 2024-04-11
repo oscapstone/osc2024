@@ -70,7 +70,7 @@ kernel_qemu: $(KERNEL_BIN) cpio
 
 kernel_gdb: $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU in background")
-	$(EXEC_QEMU) $(QEMU_DEBUG_ARGS) -dtb $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
+	$(EXEC_QEMU) $(QEMU_DEBUG_ARGS) -initrd $(INITRD_PATH) -dtb $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
 
 bootloader_qemu:$(BOOTLOADER_BIN) $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU")
@@ -81,7 +81,7 @@ bootloader_gdb: $(BOOTLOADER_BIN) $(KERNEL_BIN) cpio
 	$(EXEC_QEMU) $(QEMU_TTY_DEBUG_ARGS) $(QEMU_DTB_PATH) -kernel $(BOOTLOADER_BIN) -initrd $(INITRD_PATH) 
 
 $(USER_PROG_IMG): $(USER_PROG)/src/*
-	make -C userprog all
+	make -C $(USER_PROG) all
 
 cpio: initramfs/* $(USER_PROG_IMG)
 	$(call color_header, "Creating initramfs")

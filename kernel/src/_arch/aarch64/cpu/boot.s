@@ -24,6 +24,10 @@ _start:
 	cmp	x0, x1
 	b.ne	.L_parking_loop
 
+set_exception_vector_table:
+	adr x0, exception_vector_table
+  	msr vbar_el1, x0
+
 	// If execution reaches here, it is the boot core.
 	bl from_el2_to_el1
 

@@ -10,3 +10,4 @@ _start:
     blt 1b
 1:
     b 1b
+    

@@ -7,3 +7,4 @@ rootfs
 initramfs.cpio
 *.dtb
 *.txt
+.idea
