@@ -44,7 +44,9 @@ fn main() -> ! {
     println!("[1] Drivers loaded:");
     device::driver::driver_manager().enumerate();
 
-    println!("[2] Echoing input now");
+    println!("[2] DTB loaded at: {:#x}", unsafe {
+        boot::DEVICETREE_START_ADDR
+    });
 
     let mut cpio_start_addr = 0;
 
@@ -73,6 +75,9 @@ fn main() -> ! {
         println!("No initrd found. Halting...");
         loop {}
     }
+    println!("[3] CPIO loaded at: {:#x}", cpio_start_addr);
+
+    println!("[4] Echoing input now");
 
     let cpio = unsafe { CpioArchive::new(cpio_start_addr) };
     let commands: &[&dyn ShellCommand] = &[

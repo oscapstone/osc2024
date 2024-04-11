@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::Parser;
-use color_eyre::eyre::{eyre, Context, Result};
+use color_eyre::eyre::{eyre, Report, Result, WrapErr};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use serial2::SerialPort;
 
@@ -42,32 +42,33 @@ fn main() -> Result<()> {
         Ok(port) => port,
         Err(e) => {
             tracing::error!(
-                "Failed to open serial device '{}': {}",
-                args.device.display(),
-                e
+                serial = %args.device.display(),
+                error = %e,
+                "Failed to open serial device",
             );
-            return Err(eyre!("Failed to open serial device: {:?}", e));
+            return Err(e.wrap_err("Failed to open serial device"));
         }
     };
-    tracing::info!("Serial connected");
+    tracing::info!(serial = %args.device.display(), "Serial connected");
 
     let image = match File::open(&args.image) {
         Ok(file) => file,
         Err(e) => {
             tracing::error!(
-                "Failed to open kernel image '{}': {}",
-                args.image.display(),
-                e
+                image = %args.image.display(),
+                error = %e,
+                "Failed to open kernel image"
             );
-            return Err(eyre!("Failed to open kernel image: {:?}", e));
+            return Err(Report::new(e).wrap_err("Failed to open kernel image"));
         }
     };
     let image_size = image.metadata()?.len();
     let Ok(image_size) = image_size.try_into() else {
         // Downcast from u64 to u32, the only possible error is if the image is too large
         tracing::error!(
-            "Kernel image '{}' is too large to be pushed",
-            args.image.display()
+            image = %args.image.display(),
+            size = image_size,
+            "Kernel image is too large to be pushed",
         );
         return Err(eyre!("Kernel image size is too large"));
     };
@@ -95,8 +96,8 @@ fn main() -> Result<()> {
                         continue;
                     }
                     _ => {
-                        tracing::error!("Error reading from serial: {}", e);
-                        return Err(eyre!("Error reading from serial: {:?}", e));
+                        tracing::error!(error = %e, "Error reading from serial");
+                        return Err(Report::new(e).wrap_err("Error reading from serial"));
                     }
                 };
             }
@@ -104,9 +105,9 @@ fn main() -> Result<()> {
     }
 
     tracing::info!(
-        "Pushing kernel '{}' of size {} bytes",
-        args.image.display(),
-        image_size
+        kernel = %args.image.display(),
+        size = image_size,
+        "Pushing kernel",
     );
 
     if let Err(e) = send_size(image_size, &mut serial) {
@@ -134,7 +135,7 @@ fn wait_for_serial(serial: &Path) {
         return;
     }
 
-    tracing::info!("Waiting for serial device to be connected...");
+    tracing::warn!(serial = %serial.display(), "Serial does not exist, waiting for serial device to be connected");
     loop {
         std::thread::sleep(Duration::from_secs(1));
         if serial.exists() {
@@ -154,7 +155,7 @@ fn open_serial(serial: &Path, baud_rate: u32) -> Result<SerialPort> {
 }
 
 fn send_size(image_size: u32, serial: &mut SerialPort) -> Result<()> {
-    tracing::info!("Writing kernel size to device");
+    tracing::info!(size = image_size, "Pushing kernel size to device");
     serial
         .write_all(&image_size.to_le_bytes())
         .wrap_err("Failed to write image size")?;
@@ -181,7 +182,7 @@ fn send_size(image_size: u32, serial: &mut SerialPort) -> Result<()> {
 }
 
 fn push_kernel(image_size: u32, mut image: impl Read, serial: &mut SerialPort) -> Result<()> {
-    tracing::info!("Writing kernel to device");
+    tracing::info!("Pushing kernel to device");
     let pb = ProgressBar::new(image_size as u64);
 
     let style = ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
@@ -227,7 +228,7 @@ fn forward_terminal(serial: SerialPort) {
                     match e.kind() {
                         std::io::ErrorKind::TimedOut => continue,
                         _ => {
-                            tracing::error!("Error reading from serial: {}", e);
+                            tracing::error!(error = %e, "Error reading from serial");
                             break;
                         }
                     };
