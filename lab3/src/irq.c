@@ -67,7 +67,6 @@ void irq_entry()
     } else if (*CORE0_INTERRUPT_SOURCE & 0x2) { // Core timer interrupt
         timer_disable_interrupt();
         irq_add_task(timer_irq_handler, 1);
-        timer_enable_interrupt();
     }
 
     enable_interrupt(); // Leave the critical section

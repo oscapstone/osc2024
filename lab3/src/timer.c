@@ -25,7 +25,9 @@ void timer_enable_interrupt()
 
 void timer_disable_interrupt()
 {
-    // TODO: Implement timer_disable_interrupt function
+    asm volatile("mov x0, 0;"
+                 "ldr x1, =0x40000040;"
+                 "str w0, [x1];"); // Mask timer interrupt
 }
 
 void timer_irq_handler()
@@ -39,6 +41,8 @@ void timer_irq_handler()
         head->func(head->arg); // Execute the callback function
         head = head->next;     // Delete the node FIXME: free the node
     }
+
+    timer_enable_interrupt();
 }
 
 uint64_t timer_get_uptime()
