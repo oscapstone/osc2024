@@ -64,7 +64,7 @@ void irq_handler_entry()
 {
     if (*CORE0_INTERRUPT_SOURCE & (1 << 8)) // interrupt is from GPU
     {
-        if ((*AUX_MU_IIR & 0b110) == 0b100) // check if it's receiver interrupt.
+        if (*AUX_MU_IIR & 0b100) // check if it's receiver interrupt.
         {
             disable_uart_rx_interrupt(); // masks the device’s interrupt line
             task t;
@@ -77,7 +77,7 @@ void irq_handler_entry()
 
             do_task();
         }
-        else if ((*AUX_MU_IIR & 0b110) == 0b010) // check if it's transmiter interrupt
+        else if (*AUX_MU_IIR & 0b010) // check if it's transmiter interrupt
         {
             disable_uart_tx_interrupt(); // masks the device’s interrupt line
             task t;
@@ -133,7 +133,7 @@ void tx_task()
 void timer_task()
 {
     timer t = timer_heap_extractMin(timer_hp);
-    if (t.expire == -1) //the timer heap is empty
+    if (t.expire == -1) // the timer heap is empty
         return;
 
     t.callback(t.data, t.executed_time);
