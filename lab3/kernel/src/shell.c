@@ -457,7 +457,7 @@ int do_cmd_setTimeout(int argc, char **argv)
     if(argc==2){
         msg = argv[0];
         sec = atoi(argv[1]);    
-        add_timer(uart_sendlinek,sec,msg);
+        add_timer(puts,sec,msg);
     }
     else{
         puts("setTimeout [MESSAGE] [SECONDS]\r\n");

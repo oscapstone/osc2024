@@ -29,10 +29,14 @@ void irqtask_list_init();
 void el1_interrupt_enable();
 void el1_interrupt_disable();
 
+void lock();
+void unlock();
+
 void el1h_irq_router();
 void el0_sync_router();
 void el0_irq_64_router();
 
-void invalid_exception_router(); // exception_handler.S
+void invalid_exception_router(unsigned long long x0); // exception_handler.S
+
 
 #endif /*_EXCEPTION_H_*/

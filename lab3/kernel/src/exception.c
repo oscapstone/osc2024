@@ -16,8 +16,33 @@ void el1_interrupt_disable()
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
+
+unsigned long long int lock_counter = 0;
+
+void lock()
+{
+    el1_interrupt_disable();
+    lock_counter++;
+}
+
+void unlock()
+{
+    lock_counter--;
+    if (lock_counter < 0)
+    {
+        //uart_puts("lock counter error\r\n");
+        while (1)
+            ;
+    }
+    else if (lock_counter == 0)
+    {
+        el1_interrupt_enable();
+    }
+}
+
 void el1h_irq_router()
 {
+    lock();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -26,20 +51,30 @@ void el1h_irq_router()
         if (*AUX_MU_IIR_REG & (1 << 1))
         {
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
+            // el1_interrupt_disable();
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+            // el1_interrupt_enable();
+            unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IIR_REG & (2 << 1))
         {
             *AUX_MU_IER_REG &= ~(1); // disable read interrupt
+            // el1_interrupt_disable();
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            // el1_interrupt_enable();
+            unlock();
             irqtask_run_preemptive();
         }
     }
-        else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
+    else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
         core_timer_disable();
+
+        // el1_interrupt_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        // el1_interrupt_enable();
+        unlock();
         irqtask_run_preemptive();
         core_timer_enable();
     }
@@ -66,17 +101,14 @@ void el0_sync_router()
 
 void el0_irq_64_router()
 {
-
 }
 
 void invalid_exception_router(unsigned long long x0)
 {
-    while (1)
-    {
-        uart_sendlinek("invalid exception ");
-        uart_send(x0);
-        uart_sendlinek("\n");
-    }
+
+    uart_sendlinek("\n invalid exception  %x \n", x0);
+    while (1);
+
 
     // while(1);
 }
@@ -96,6 +128,7 @@ int curr_task_priority = 9999; // Small number has higher priority
 struct list_head *task_list;
 void irqtask_list_init()
 {
+    task_list = kmalloc(sizeof(list_head_t));
     INIT_LIST_HEAD(task_list);
 }
 
@@ -114,7 +147,7 @@ void irqtask_add(void *task_function, unsigned long long priority)
     struct list_head *curr;
 
     // mask the device's interrupt line
-    el1_interrupt_disable();
+    //el1_interrupt_disable();
     // enqueue the processing task to the event queue with sorting.
     list_for_each(curr, task_list)
     {
@@ -130,35 +163,36 @@ void irqtask_add(void *task_function, unsigned long long priority)
         list_add_tail(&the_task->listhead, task_list);
     }
     // unmask the interrupt line
-    el1_interrupt_enable();
+    //el1_interrupt_enable();
 }
 
 void irqtask_run_preemptive()
 {
-    el1_interrupt_enable();
+    // el1_interrupt_enable();
     while (!list_empty(task_list))
     {
         // critical section protects new coming node
-        el1_interrupt_disable();
+
+        lock();
         irqtask_t *the_task = (irqtask_t *)task_list->next;
         // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
-            el1_interrupt_enable();
+            unlock();
             break;
         }
         // get the scheduled task and run it.
         list_del_entry((struct list_head *)the_task);
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
-
-        el1_interrupt_enable();
+        // uart_sendlinek("preemptive curr_task_priority: %d\r\n", curr_task_priority);
+        unlock();
 
         irqtask_run(the_task);
 
-        el1_interrupt_disable();
+        lock();
         curr_task_priority = prev_task_priority;
-        el1_interrupt_enable();
+        unlock();
         // free(the_task);
     }
 }
