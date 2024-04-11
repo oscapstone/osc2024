@@ -6,12 +6,10 @@
 struct Timer {
   using fp = void (*)(void*);
   uint64_t tick;
+  int prio;
   fp callback;
   void* context;
   Timer* next;
-  void call() {
-    return callback(context);
-  }
 };
 
 extern uint64_t freq_of_timer, boot_timer_tick, us_tick;
@@ -54,7 +52,7 @@ inline timeval get_current_time() {
   return tick2timeval(get_current_tick());
 }
 
-void add_timer(timeval tval, void* context, Timer::fp callback);
-void add_timer(uint64_t tick, void* context, Timer::fp callback);
+void add_timer(timeval tval, void* context, Timer::fp callback, int prio = 0);
+void add_timer(uint64_t tick, void* context, Timer::fp callback, int prio = 0);
 
-void timer_handler();
+void timer_enqueue();

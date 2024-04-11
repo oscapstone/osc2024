@@ -6,7 +6,8 @@ extern const bool& mini_uart_is_async;
 
 void mini_uart_use_async(bool use);
 
-void mini_uart_handler();
+void mini_uart_enqueue();
+void mini_uart_handler(void*);
 
 char mini_uart_getc_raw_async();
 char mini_uart_getc_async();
@@ -31,6 +32,7 @@ int PRINTF_FORMAT(1, 2) mini_uart_printf(const char* format, ...);
 int PRINTF_FORMAT(1, 2) mini_uart_printf_sync(const char* format, ...);
 
 void mini_uart_puts(const char* s);
+void mini_uart_puts_sync(const char* s);
 void mini_uart_print_hex(string_view view);
 void mini_uart_print_str(string_view view);
 void mini_uart_print(string_view view);

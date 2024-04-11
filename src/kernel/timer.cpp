@@ -1,6 +1,7 @@
 #include "timer.hpp"
 
 #include "interrupt.hpp"
+#include "irq.hpp"
 
 uint64_t freq_of_timer, boot_timer_tick, us_tick;
 bool show_timer = true;
@@ -15,10 +16,10 @@ void timer_init() {
   write_sysreg(CNTP_CTL_EL0, 1);
 }
 
-void add_timer(timeval tval, void* context, Timer::fp callback) {
-  add_timer(timeval2tick(tval), context, callback);
+void add_timer(timeval tval, void* context, Timer::fp callback, int prio) {
+  add_timer(timeval2tick(tval), context, callback, prio);
 }
-void add_timer(uint64_t tick, void* context, Timer::fp callback) {
+void add_timer(uint64_t tick, void* context, Timer::fp callback, int prio) {
   save_DAIF();
   disable_interrupt();
 
@@ -33,7 +34,7 @@ void add_timer(uint64_t tick, void* context, Timer::fp callback) {
     } else {
       break;
     }
-  *nptr = new Timer(tick, callback, context, *nptr);
+  *nptr = new Timer(tick, prio, callback, context, *nptr);
   if (is_head)
     set_timer_tick(timer_head->tick - get_timetick());
   if (++timer_cnt == 1)
@@ -43,9 +44,11 @@ void add_timer(uint64_t tick, void* context, Timer::fp callback) {
   restore_DAIF();
 }
 
-void timer_handler() {
-  if (timer_cnt == 0)
+void timer_enqueue() {
+  if (timer_cnt == 0) {
+    disable_timer();
     return;
+  }
 
   timer_pop(it, timer_head);
 
@@ -54,8 +57,6 @@ void timer_handler() {
   else
     set_timer_tick(timer_head->tick - get_timetick());
 
-  enable_interrupt();
-  it->call();
+  irq_add_task(it->prio, it->callback, it->context);
   delete it;
-  disable_interrupt();
 }

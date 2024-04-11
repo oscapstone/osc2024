@@ -4,6 +4,7 @@
 #include "board/mmio.hpp"
 #include "board/peripheral.hpp"
 #include "interrupt.hpp"
+#include "irq.hpp"
 #include "nanoprintf.hpp"
 #include "ringbuffer.hpp"
 #include "util.hpp"
@@ -51,22 +52,29 @@ void mini_uart_use_async(bool use) {
   restore_DAIF();
 }
 
-void mini_uart_handler() {
+void mini_uart_enqueue() {
   auto iir = get32(AUX_MU_IIR_REG);
   if (iir & (1 << 0))
     return;
+  set_ier_reg(false, RECEIVE_INT);
+  set_ier_reg(false, TRANSMIT_INT);
+  irq_add_task(9, mini_uart_handler, (void*)(uint64_t)iir);
+}
+
+void mini_uart_handler(void* iir_) {
+  auto iir = (uint32_t)(uint64_t)iir_;
 
   if (iir & (1 << 1)) {
     // Transmit holding register empty
-    if (wbuf.empty()) {
-      set_ier_reg(false, TRANSMIT_INT);
-    } else {
-      set32(AUX_MU_IO_REG, wbuf.pop(false));
-    }
+    set32(AUX_MU_IO_REG, wbuf.pop(false));
   } else if (iir & (1 << 2)) {
     // Receiver holds valid byte
     rbuf.push(get32(AUX_MU_IO_REG) & MASK(8), false);
   }
+  if (not wbuf.empty())
+    set_ier_reg(true, TRANSMIT_INT);
+  if (not rbuf.full())
+    set_ier_reg(true, RECEIVE_INT);
 }
 
 char mini_uart_getc_raw_async() {
@@ -231,6 +239,11 @@ int mini_uart_printf_sync(const char* format, ...) {
 void mini_uart_puts(const char* s) {
   for (char c; (c = *s); s++)
     mini_uart_putc(c);
+}
+
+void mini_uart_puts_sync(const char* s) {
+  for (char c; (c = *s); s++)
+    mini_uart_putc_sync(c);
 }
 
 void mini_uart_print_hex(string_view view) {
