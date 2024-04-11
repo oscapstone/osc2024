@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc -Iinclude -MMD
+CFLAGS = -Wall -nostdlib -ffreestanding -mgeneral-regs-only -nostdinc -Iinclude/lib -MMD
 TARGET = --target=aarch64-rpi3-elf -mcpu=cortex-a53
 
 SRC = src

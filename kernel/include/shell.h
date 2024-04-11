@@ -1,7 +1,7 @@
 #ifndef _SHELL_H
 #define _SHELL_H
 
-#include "int.h"
+#include "lib/int.h"
 typedef struct cmd_s {
   char *name;
   char *help;

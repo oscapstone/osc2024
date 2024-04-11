@@ -2,7 +2,7 @@
 #define _INITRD_H
 
 #include "fdt.h"
-#include "int.h"
+#include "lib/int.h"
 
 extern char *initrd_base;
 

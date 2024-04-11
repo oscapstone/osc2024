@@ -1,8 +1,8 @@
 #include "command/file.h"
 
 #include "cpio.h"
-#include "string.h"
-#include "uart.h"
+#include "lib/string.h"
+#include "lib/uart.h"
 
 void list_files() {
   for (file_iter_t it = cpio_list(); it.end != 1; file_iter_next(&it)) {

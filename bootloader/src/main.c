@@ -1,4 +1,4 @@
-#include "uart.h"
+#include "lib/uart.h"
 
 typedef void (*kernel_main)(char *dbt);
 

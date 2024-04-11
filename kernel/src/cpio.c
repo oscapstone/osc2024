@@ -1,7 +1,7 @@
 #include "cpio.h"
 
 #include "initrd.h"
-#include "string.h"
+#include "lib/string.h"
 
 void file_iter_next(file_iter_t *cur) {
   cpio_header_t *header = (cpio_header_t *)cur->next_addr;

@@ -44,7 +44,7 @@ int strncmp(const char *str1, const char *str2, size_t size) {
   return 0;
 }
 
-u32_t strnlen(char *s, u32_t n) {
+u32_t strnlen(const char *s, u32_t n) {
   u32_t size = 0;
   while (*s != '\0' && size < n) {
     size++, s++, n++;

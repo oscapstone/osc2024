@@ -3,8 +3,8 @@
 #include "command/file.h"
 #include "command/fireware.h"
 #include "command/other.h"
-#include "string.h"
-#include "uart.h"
+#include "lib/string.h"
+#include "lib/uart.h"
 
 void register_cmd(shell_t *s, cmd_t cmd) { s->cmds[s->n_cmds++] = cmd; }
 

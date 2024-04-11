@@ -1,7 +1,7 @@
 #ifndef _CPIO_H
 #define _CPIO_H
 
-#include <int.h>
+#include "lib/int.h"
 
 typedef struct cpio_new_ascii_header {
   char c_magic[6];  // 070701

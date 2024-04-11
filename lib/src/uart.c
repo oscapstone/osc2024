@@ -2,6 +2,7 @@
 
 #include "gpio.h"
 #include "io.h"
+#include "utils.h"
 
 /* Auxilary mini UART registers */
 #define AUX_ENABLE ((volatile unsigned int *)(MMIO_BASE + 0x00215004))
@@ -16,12 +17,6 @@
 #define AUX_MU_CNTL ((volatile unsigned int *)(MMIO_BASE + 0x00215060))
 #define AUX_MU_STAT ((volatile unsigned int *)(MMIO_BASE + 0x00215064))
 #define AUX_MU_BAUD ((volatile unsigned int *)(MMIO_BASE + 0x00215068))
-
-void wait_for_cycles(int c) {
-  while (c--) {
-    asm volatile("nop");
-  }
-}
 
 void uart_init() {
   // function selector
@@ -41,10 +36,10 @@ void uart_init() {
 
   // enable pins 14 and 15
   *GPPUD = 0;
-  wait_for_cycles(150);
+  wait_cycles(150);
 
   *GPPUDCLK0 = (1 << 14) | (1 << 15);
-  wait_for_cycles(150);
+  wait_cycles(150);
 
   // flush GPIO setup
   *GPPUDCLK0 = 0;

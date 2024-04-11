@@ -1,8 +1,7 @@
 #include "initrd.h"
 
-#include <string.h>
-
-#include "uart.h"
+#include "lib/string.h"
+#include "lib/uart.h"
 
 char *initrd_base;
 

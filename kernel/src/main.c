@@ -1,8 +1,9 @@
 #include "fdt.h"
 #include "initrd.h"
-#include "int.h"
+#include "lib/int.h"
+#include "lib/mem.h"
+#include "lib/uart.h"
 #include "shell.h"
-#include "uart.h"
 #include "utils.h"
 
 void memncpy(void *src, void *dest, size_t n) {
@@ -23,11 +24,15 @@ void kernel_main(char *dtb_ptr) {
     prog_hang();
   }
 
-  /* say hello */
-  uart_println("Hello World from boot");
+  /* say hello (test malloc) */
+  char *hello_str = malloc(64);
+  memcpy(hello_str, "Hello World from boot", 22);
+
+  uart_println(hello_str);
 
   /* register commands */
-  shell_t s;
+  shell_t s = {};
+
   register_cmds(&s);
 
   shell_loop(&s);

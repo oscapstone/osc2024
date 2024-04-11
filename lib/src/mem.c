@@ -17,3 +17,18 @@ void *malloc(size_t size) {
 
   return allocated;
 }
+
+void memset(void *src, int c, size_t n) {
+  char *c_src = (char *)src;
+  for (int i = 0; i < n; i++) {
+    c_src[i] = c;
+  }
+}
+
+void memcpy(void *dest, const void *src, size_t n) {
+  const char *c_src = src;
+  char *c_dest = dest;
+  for (int i = 0; i < n; i++) {
+    c_dest[i] = c_src[i];
+  }
+}

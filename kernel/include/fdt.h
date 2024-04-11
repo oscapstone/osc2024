@@ -1,7 +1,7 @@
 #ifndef _DTB_H
 #define _DTB_H
 
-#include "int.h"
+#include "lib/int.h"
 
 typedef enum fdt_tag_e {
   FDT_BEGIN_NODE = 0x00000001,

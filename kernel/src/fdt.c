@@ -1,8 +1,8 @@
 #include "fdt.h"
 
-#include "int.h"
-#include "string.h"
-#include "uart.h"
+#include "lib/int.h"
+#include "lib/string.h"
+#include "lib/uart.h"
 
 #define FDT_VERSION 17
 #define FDT_MAGIC 0xD00DFEED

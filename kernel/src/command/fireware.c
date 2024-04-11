@@ -1,7 +1,7 @@
 #include "command/fireware.h"
 
+#include "lib/uart.h"
 #include "mbox.h"
-#include "uart.h"
 
 #define PM_PASSWORD 0x5a000000
 #define PM_RSTC 0x3F10001c
