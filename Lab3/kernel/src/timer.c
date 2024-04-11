@@ -10,24 +10,13 @@ typedef struct timeout_event {
     unsigned int duration;
     timer_callback callback;
     char* msg;
+    bool periodic;
     struct list_head list;
 } timeout_event_t;
 
 LIST_HEAD(timeout_event_head);
 
-static unsigned int seconds = 0;
-
-unsigned int get_seconds(void)
-{
-    return seconds;
-}
-
-void set_seconds(unsigned int s)
-{
-    seconds = s;
-}
-
-void set_core_timer_timeout(void)
+void set_core_timer_timeout(unsigned int seconds)
 {
     unsigned long freq = 0;
     asm volatile("mrs %0, cntfrq_el0" : "=r"(freq));
@@ -35,27 +24,14 @@ void set_core_timer_timeout(void)
 }
 
 
-void add_timer(timer_callback cb, char* msg, unsigned int duration)
+static inline void insert_timeout_event(timeout_event_t* new_event)
 {
-    timeout_event_t* new_timeout_event =
-        (timeout_event_t*)mem_alloc(sizeof(timeout_event_t));
+    unsigned int invoke_time = new_event->reg_time + new_event->duration;
 
-    INIT_LIST_HEAD(&new_timeout_event->list);
-    new_timeout_event->reg_time = get_current_time();
-    new_timeout_event->duration = duration;
-    new_timeout_event->callback = cb;
-
-    new_timeout_event->msg = mem_alloc(sizeof(char) * 20);
-    str_n_cpy(new_timeout_event->msg, msg, 20);
-
-
-    unsigned int new_timeout =
-        new_timeout_event->reg_time + new_timeout_event->duration;
-
+    // if the list is empty
     if (list_empty(&timeout_event_head)) {
-        list_add(&new_timeout_event->list, &timeout_event_head);
-        set_seconds(new_timeout_event->duration);
-        set_core_timer_timeout();
+        list_add(&new_event->list, &timeout_event_head);
+        set_core_timer_timeout(new_event->duration);
         enable_core0_timer();
         return;
     }
@@ -63,20 +39,50 @@ void add_timer(timer_callback cb, char* msg, unsigned int duration)
     timeout_event_t* node;
 
     list_for_each_entry (node, &timeout_event_head, list) {
-        if (node->reg_time + node->duration > new_timeout) {
-            list_add_tail(&new_timeout_event->list, &node->list);
+        if (node->reg_time + node->duration > invoke_time) {
+            list_add_tail(&new_event->list, &node->list);
             break;
         }
     }
 
-    if (&node->list == &timeout_event_head)
-        list_add_tail(&new_timeout_event->list, &timeout_event_head);
+    // if insert at the end of the list
+    if (&node->list == &timeout_event_head) {
+        list_add_tail(&new_event->list, &timeout_event_head);
+        return;
+    }
 
-    if (new_timeout_event->list.prev == &timeout_event_head) {
-        set_seconds(new_timeout_event->duration);
-        set_core_timer_timeout();
+    // if insert at the beginning of the list
+    if (new_event->list.prev == &timeout_event_head) {
+        set_core_timer_timeout(new_event->duration);
         enable_core0_timer();
     }
+}
+
+void add_timer(timer_callback cb,
+               char* msg,
+               unsigned int duration,
+               bool periodic)
+{
+    timeout_event_t* new_timeout_event =
+        (timeout_event_t*)mem_alloc(sizeof(timeout_event_t));
+
+    if (!new_timeout_event)
+        return;
+
+    INIT_LIST_HEAD(&new_timeout_event->list);
+    new_timeout_event->reg_time = get_current_time();
+    new_timeout_event->duration = duration;
+    new_timeout_event->callback = cb;
+    new_timeout_event->periodic = periodic;
+
+    new_timeout_event->msg = mem_alloc(sizeof(char) * 20);
+
+    if (!new_timeout_event->msg)
+        return;
+
+    str_n_cpy(new_timeout_event->msg, msg, 20);
+
+    insert_timeout_event(new_timeout_event);
 }
 
 void core_timer_handle_irq(void)
@@ -103,6 +109,12 @@ void core_timer_handle_irq(void)
 
     list_del_init(&first->list);
 
+    /* periodic timer */
+    if (first->periodic) {
+        first->reg_time = current_time;
+        insert_timeout_event(first);
+    }
+
     if (list_empty(&timeout_event_head)) {
         disable_core0_timer();
         return;
@@ -111,9 +123,9 @@ void core_timer_handle_irq(void)
     timeout_event_t* next =
         list_first_entry(&timeout_event_head, timeout_event_t, list);
 
-    set_seconds(next->reg_time + next->duration - get_current_time());
     enable_core0_timer();
-    set_core_timer_timeout();
+    set_core_timer_timeout(next->reg_time + next->duration -
+                           get_current_time());
 }
 
 
@@ -123,8 +135,7 @@ void print_msg(char* msg)
     uart_send_string("\n");
 }
 
-void set_timeout(char* msg, unsigned int duration)
+void set_timeout(char* msg, unsigned int duration, bool periodic)
 {
-    add_timer(print_msg, msg, duration);
+    add_timer(print_msg, msg, duration, periodic);
 }
-

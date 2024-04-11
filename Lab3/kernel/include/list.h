@@ -8,6 +8,10 @@ extern "C" {
 
 // #include <stddef.h>
 
+#ifndef offsetof
+#define offsetof(st, m) __builtin_offsetof(st, m)
+#endif
+
 /* "typeof" is a GNU extension.
  * Reference: https://gcc.gnu.org/onlinedocs/gcc/Typeof.html
  */
@@ -37,8 +41,6 @@ struct list_head {
     struct list_head* next;
 };
 
-
-#define offsetof(st, m) ((unsigned long)(&((st*)0)->m))
 /**
  * container_of() - Calculate address of structure that contains address ptr
  * @ptr: pointer to member variable

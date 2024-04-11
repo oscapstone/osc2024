@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "bool.h"
 #include "cpio.h"
 #include "def.h"
 #include "dtb.h"
@@ -47,18 +48,18 @@ void help(void)
     uart_send_string(
         "Shell for Raspberry Pi 3B+\n"
         "Available commands:\n"
-        "  help      - display this information\n"
-        "  hello     - display hello world\n"
-        "  reboot    - reboot the system\n"
-        "  info      - display system information\n"
-        "  ls        - list files in the initramfs\n"
-        "  cat       - display file content\n"
-        "  malloc    - allocate memory\n"
-        "  print_dtb - print device tree blob\n"
-        "  logo      - print raspberry pi logo\n"
-        "  exec      - execute a program\n"
-        "  async    - test uart async\n"
-        "  setTimeout - set timeout\n");
+        "  help        - display this information\n"
+        "  hello       - display hello world\n"
+        "  reboot      - reboot the system\n"
+        "  info        - display system information\n"
+        "  ls          - list files in the initramfs\n"
+        "  cat         - display file content\n"
+        "  malloc      - allocate memory\n"
+        "  print_dtb   - print device tree blob\n"
+        "  logo        - print raspberry pi logo\n"
+        "  exec        - execute a program\n"
+        "  async       - test uart async\n"
+        "  set_timeout - set core timer timeout\n");
 }
 
 void hello(void)
@@ -129,11 +130,13 @@ void parse_command(char* cmd)
         }
         else if (!str_cmp(cmd_name, "async")) {
             test_uart_async();
-        } else if (!str_cmp(cmd_name, "setTimeout")) {
+        } else if (!str_cmp(cmd_name, "set_timeout")) {
             char* msg = str_tok(NULL, " ");
             char* duration = str_tok(NULL, " ");
-            if (!msg || !duration) {
-                uart_send_string("Usage: setTimeout <message> <seconds>\n");
+            char* repeat = str_tok(NULL, " ");
+            if (!msg || !duration || !repeat) {
+                uart_send_string(
+                    "Usage: set_timeout <message> <seconds> <repeat>\n");
                 return;
             }
             int seconds = decstr2int(duration);
@@ -141,7 +144,10 @@ void parse_command(char* cmd)
                 uart_send_string("Invalid time\n");
                 return;
             }
-            set_timeout(msg, seconds);
+
+            bool periodic = (bool)decstr2int(repeat);
+            set_timeout(msg, seconds, periodic);
+
         } else {
             uart_send_string("Command '");
             uart_send_string(cmd);
