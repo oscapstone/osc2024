@@ -92,7 +92,6 @@ void irq_handler_c()
     else if (*CORE0_INTERRUPT_SOURCE & (1 << 1)) {
         core_timer_interrupt_disable();
         // *CORE0_TIMER_IRQ_CTRL_ = 0;
-
         add_task(TIMER_PRIORITY, core_timer_handler);
         pop_task();
         core_timer_interrupt_enable();

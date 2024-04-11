@@ -13,6 +13,8 @@ void main(char *arg)
 
     // uart_clear_buffers();
     uart_init();
+    // asm volatile("mov x20, (3 << 20)\n\t"
+    //              "msr CPACR_EL1, x20\n\t");
 
     core_timer_enable();
     core_timer_interrupt_enable();

@@ -38,14 +38,13 @@ void add_task(int priority, task_callback_t callback)
         }
     }
     asm volatile("msr DAIFClr, 0xf");
-    uart_puts("pop_task\n");
 }
 
 void pop_task()
 {
-    uart_async_puts("pop_task\n");
+    // uart_puts("pop_task1\n");
     while (!list_empty(&task_list)) {
-        task_node *first = list_entry(&task_list, task_node, list);
+        task_node *first = list_first_entry(&task_list, task_node, list);
         if (first->priority > cur_priority)
             return;
 
@@ -53,13 +52,16 @@ void pop_task()
         list_del(&first->list);
         int tmp_priority = cur_priority;
         cur_priority = first->priority;
-        uart_dec(cur_priority);
+        // uart_dec(cur_priority);
         asm volatile("msr DAIFClr, 0xf");
 
+        // uart_puts("pop_task\n");
         first->callback();
 
         asm volatile("msr DAIFSet, 0xf");
         cur_priority = tmp_priority;
         asm volatile("msr DAIFClr, 0xf");
     }
+
+    // uart_puts("pop_task2\n");
 }

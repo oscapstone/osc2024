@@ -94,7 +94,6 @@ irq_exception_handler:
     load_all
     eret
 
-
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:

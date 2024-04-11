@@ -34,6 +34,7 @@ void set_core_timer_interrupt()
 void set_core_timer_interrupt_permanent()
 {
     unsigned long long sec = 0xFFFFFFFFFFFFFFFF;
+    // unsigned long long sec = 0xFFF;
     asm volatile("msr cntp_cval_el0, %0" ::"r"(sec)); // set expired time
 }
 

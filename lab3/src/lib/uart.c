@@ -219,6 +219,7 @@ void uart_async_handler()
 
 void uart_rx_handler()
 {
+    // uart_puts("UART RX handler\n");
     if ((uart_rx_buffer_head + 1) % BUFFER_SIZE == uart_rx_buffer_tail) {
         uart_rx_interrupt_disable();
         return;
@@ -232,6 +233,7 @@ void uart_rx_handler()
 
 void uart_tx_handler()
 {
+    // uart_puts("UART TX handler\n");
     // uart_tx_interrupt_disable();
     if (uart_tx_buffer_head == uart_tx_buffer_tail) {
         uart_tx_interrupt_disable();
