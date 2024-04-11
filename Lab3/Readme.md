@@ -41,8 +41,9 @@ from_el2_to_el1:
     msr elr_el2, lr //address to go after return, link register is selected here
     eret // return to EL1 (return from exception, check setting of spsr_el2)
 ```
-"mrs %0, CurrentEL"：这是要执行的 ARM 汇编指令，mrs 指令将 CurrentEL 寄存器（当前异常级别寄存器）的值移动到一个输出操作数指定的寄存器（这里用 %0 表示）。
-: "=r" (el)：这部分定义了输出操作数列表。"=r" (el) 表示使用一个通用寄存器（由编译器选择）作为输出操作数，并将该操作数的值赋给 C 变量 el。"=r" 是一个约束，指明了该操作数是用于写入（输出）的，r 表示编译器可以选择任意的通用寄存器。
+* mrs: move from system register 
+* : divide command and operations
+* = -> output to, r -> any register, %0 the first variable -> el
 ```
 // print current el to show the result
 asm volatile ("mrs %0, CurrentEL" : "=r" (el));
@@ -53,14 +54,14 @@ el = el >> 2; [3:2] is el
 ```
 asm volatile ("mov x0, 0x3c0"); // [3:0] select el0
 asm volatile ("msr spsr_el1, x0"); 
-asm volatile ("msr elr_el1, %0": :"r" (current)); //eret to user program
+asm volatile ("msr elr_el1, %0": :"r" (current)); //eret to user program, : output : input (to asm register)
 asm volatile ("mov x0, 0x20000");
 asm volatile ("msr sp_el0, x0"); // place stack pointer for program
 asm volatile ("eret");
 ```
 
 ### EL0 to EL1
-exception發生 -> 進入vector table(EL1) -> 進入 handler -> save -> entry -> load -> eret (back to el0)
+exception occured -> vector table(EL1) -> handler -> save all -> exception handler entry -> load all -> eret (back to el0)
 ```
 set_exception_vector_table:
   adr x0, exception_vector_table
@@ -180,7 +181,7 @@ NS: Non-Secured
 ```
 cntpct_el0: The timer’s current count.
 
-cntp_cval_el0: A compared timer count. If cntpct_el0 >= cntp_cval_el0, interrupt the CPU core.
+cntp_cval_el0: A compared timer count. If cntpct_el0 >= cntp_cval_el0, interrupt the CPU core. 
 
 cntp_tval_el0: (cntp_cval_el0 - cntpct_el0). You can use it to set an expired timer after the current timer count.
 //(Interrupt when become 0)
@@ -193,8 +194,8 @@ core_timer_enable:
     mrs x0, cntfrq_el0
     msr cntp_tval_el0, x0 // set expired time
     mov x0, 2
-    ldr x1, =CORE0_TIMER_IRQ_CTRL
-    str w0, [x1] // unmask timer interrupt
+    ldr x1, =CORE0_TIMER_IRQ_CTRL //second bit enable
+    str w0, [x1] // unmask timer interrupt, only 32 bit
     ret
 ```
 ```
@@ -217,41 +218,14 @@ https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf
 * p12 enable Tx/Rx
 * p113 enable AUX interrupt
 ```
-void uart_init()
-{
-    register unsigned int r;
-
-    /* initialize UART */
-    *AUX_ENABLE |=1;       // enable UART1, AUX mini uart
-    *AUX_MU_CNTL = 0;      // first disable transmit and recieve
-    *AUX_MU_LCR = 3;       // 8 bits
-    *AUX_MU_MCR = 0;       // don't need auto flow ctrl
-    *AUX_MU_IER = 0;       // disable interrupts
-    *AUX_MU_IIR = 0xc6;    // disable interrupts
-    *AUX_MU_BAUD = 270;    // 115200 baud (250M/8x270 = 115200)
-    /* map UART1 to GPIO pins */
-    r=*GPFSEL1;
-    r&=~((7<<12)|(7<<15)); // clear gpio14, gpio15
-    r|=(2<<12)|(2<<15);    // alt5 (set gpio14, gpio15)
-    *GPFSEL1 = r;
-    *GPPUD = 0;            // disable GPIO pull up/down
-    r=150; while(r--) { asm volatile("nop"); } //wait for enable
-    *GPPUDCLK0 = (1<<14)|(1<<15); // apply to GPIO 14, 15
-    r=150; while(r--) { asm volatile("nop"); }
-    *GPPUDCLK0 = 0;        // flush GPIO setup
-    //*IRQS1 |= 1 << 29;
-    *AUX_MU_CNTL = 3;      // enable Tx, Rx
-}
-
 void uart_interrupt(){
     //enable uart tx/rx
-    *AUX_MU_IER = 1; //Mini Uart Interrupt Enable
-    *AUX_MU_IER |= 0x02;
+    *AUX_MU_IER = 1; //Mini Uart Interrupt Enable (RX) 0-bit
+    *AUX_MU_IER |= 0x02; //Tx 1-bit
     
     //enable AUX interrupt
     *IRQS1 |= 1 << 29;
 }
-
 ```
 ### Handle UART Interrupt
 * p13 IIR bits
@@ -259,11 +233,11 @@ void uart_interrupt(){
 void interrupt_handler_entry(){
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR; //Mini Uart Interrupt Identify
-    if (core0_irq & 2){
+    if (core0_irq & 2){ // p16, second bit non-security timer
         core_timer_handler();
     }
     else{ //not timer, IIR bit [0] -> 0: pending
-        if ((iir & 0x06) == 0x04) // bit [2:1] -> 10: recieve
+        if ((iir & 0x06) == 0x04) // bit [2:1] -> 10: recieve (& 110 -> 100 read,  110 -> 010 write p13)
             uart_read_handler();
         else //bit [2:1] -> 01: Transmit
             uart_write_handler();
@@ -302,7 +276,7 @@ void uart_read_handler() {
 void uart_write_handler(){
     char ch;
     if(write_cur < write_idx){
-        *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
+        *AUX_MU_IO=uart_write_buffer[write_cur];
         ch = uart_write_buffer[write_cur];
         write_cur++;
     }
@@ -319,7 +293,7 @@ void uart_write_handler(){
 
 ### EL1 Interrupt
 ```
-mov x0, 0x345 // enable interrupt
+mov x0, 0x345 // enable interrupt (1 is mask)
 msr spsr_el2, x0
 ```
 ### timer
@@ -477,14 +451,15 @@ void interrupt_handler_entry(){
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
-        core_timer_handler();
+        create_task(timer_handler, 3);
+        // timer_handler();
     }
     else{
-        if ((iir & 0x06) == 0x04)
-            uart_read_handler();
-        else
-            uart_write_handler();
+        if ((iir & 0x06) == 0x04){
+            create_task(uart_read_handler,1);
+        }
     }
+    execute_task();
 }
 ```
 Place write task after read (a char once, so need two tasks for newline)

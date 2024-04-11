@@ -184,7 +184,8 @@ void run_user_program(){
             current += (4 - (current - (char *)fs) % 4);
     }
     uart_puts("found user.img\n");
-
+    uart_hex(current);
+    uart_send('\n');
     // current is the file address
     asm volatile ("mov x0, 0x3c0"); 
     asm volatile ("msr spsr_el1, x0"); 
