@@ -3,17 +3,27 @@ use core::{
     ptr::read_volatile,
 };
 
+use driver::mmio::{regs::AuxReg, regs::MmioReg, Mmio};
 use stdio::println;
 
 global_asm!(include_str!("context_switch.S"));
 
 #[no_mangle]
-unsafe fn exception_handler() {
-    disable_inturrupt();
-    asm!("save_all");
-    match read_volatile(0x4000_0060 as *const u32) {
-        0x2 => {
-            println!("Timer interrupt");
+unsafe fn exception_handler(idx: u64) {
+    match idx {
+        0x5 => {
+            if read_volatile(0x4000_0060 as *const u32) == 0x02 {
+                println!("Timer interrupt");
+                asm!("mov {0}, 0", "msr cntp_ctl_el0, {0}", out(reg) _);
+                println!("Timer interrupt disabled");
+            }
+            if Mmio::read_reg(MmioReg::Aux(AuxReg::Irq)) & 0x1 == 0x1 {
+                // println!("irq interrupt");
+                driver::uart::handle_irq();
+            }
+        }
+        0x8 => {
+            println!("SVC call");
             let el: u64;
             asm!("mrs {el}, CurrentEL", el = out(reg) el);
             println!("Current EL: {}", el >> 2);
@@ -28,30 +38,22 @@ unsafe fn exception_handler() {
             println!("spsr_el1: 0x{:x}", spsr_el1);
             println!("elr_el1: 0x{:x}", elr_el1);
             println!("esr_el1: 0x{:x}", esr_el1);
-            // Set the timer to fire again in 2 seconds
-            asm!(
-                "mrs {timer}, cntfrq_el0",
-                "lsl {timer}, {timer}, 1", // 2 seconds
-                "msr cntp_tval_el0, {timer}",
-                timer = out(reg) _,
-            );
-        }
-        0x3 => {
-            println!("Mailbox interrupt");
         }
         _ => {
-            println!("Unknown interrupt");
+            println!("Exception {}", idx);
+            println!("Unknown exception");
         }
     }
-    asm!("load_all");
-    enable_inturrupt();
+    // enable_inturrupt();
 }
 
+#[allow(dead_code)]
 #[inline(always)]
 unsafe fn enable_inturrupt() {
     asm!("msr DAIFClr, 0xf");
 }
 
+#[allow(dead_code)]
 #[inline(always)]
 unsafe fn disable_inturrupt() {
     asm!("msr DAIFSet, 0xf");

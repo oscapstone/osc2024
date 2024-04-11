@@ -76,11 +76,19 @@ pub enum MailboxReg {
 #[repr(u32)]
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
+pub enum IrqReg {
+    S1 = 0x0000_B210,
+}
+
+#[repr(u32)]
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum MmioReg {
     Aux(AuxReg),
     Gpio(GpioReg),
     Pm(PmReg),
     MailboxReg(MailboxReg),
+    Irq(IrqReg),
 }
 
 impl MmioReg {
@@ -90,6 +98,7 @@ impl MmioReg {
             MmioReg::Gpio(reg) => MMIO_BASE + *reg as u32,
             MmioReg::Pm(reg) => MMIO_BASE + *reg as u32,
             MmioReg::MailboxReg(reg) => MMIO_BASE + *reg as u32,
+            MmioReg::Irq(reg) => MMIO_BASE + *reg as u32,
         }
     }
 }

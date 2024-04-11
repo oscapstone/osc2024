@@ -11,7 +11,6 @@ mod panic;
 
 use core::arch::asm;
 
-use driver::uart;
 use driver::watchdog;
 use stdio::{gets, print, println};
 
@@ -20,7 +19,12 @@ const MAX_COMMAND_LEN: usize = 0x400;
 const PROGRAM_ENTRY: *const u8 = 0x30010000 as *const u8;
 
 fn main() -> ! {
-    uart::init();
+    for _ in 0..1000000 {
+        unsafe {
+            asm!("nop");
+        }
+    }
+    // uart::init();
     println!("Hello, world!");
     print_mailbox_info();
 
@@ -54,10 +58,10 @@ fn main() -> ! {
             "mov {0}, 2",
             "ldr {1}, =0x40000040", // CORE0_TIMER_IRQ_CTRL
             "str {0}, [{1}]",
-            "msr DAIFClr, 0xf",
             out(reg) _,
             out(reg) _,
         );
+        asm!("msr DAIFClr, 0xf");
     }
 
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
@@ -116,6 +120,19 @@ fn execute_command(command: &[u8]) {
                 "File not found: {}",
                 core::str::from_utf8(filename).unwrap()
             );
+        }
+    } else if command.starts_with(b"echo") {
+        for c in &command[5..] {
+            driver::uart::send_async(*c);
+        }
+        println!("Echoed: {}", core::str::from_utf8(&command[5..]).unwrap());
+        loop {
+            if let Some(c) = driver::uart::recv_async() {
+                println!("Received: {} (0x{:x})", c as char, c);
+                if c == b'\n' {
+                    break;
+                }
+            }
         }
     } else {
         println!(
