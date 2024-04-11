@@ -123,13 +123,7 @@ void c_general_irq_handler(){
 
 		create_task(core_timer_entry, 5);
 	}
-    asm volatile(
-        "msr daifset, 0xf;"
-    );
 	execute_tasks();
-    asm volatile(
-        "msr daifclr, 0xf;"
-    );
 }
 
 void c_el0_irq_handler(){

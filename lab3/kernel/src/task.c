@@ -36,9 +36,12 @@ void create_task(task_callback callback, int priority) {
 }
 
 void execute_tasks() {
+	irq(1);
     while (task_head -> next != NULL) { 
+		irq(0);
         task_head -> next -> callback();
 		task_head = task_head -> next;
+		irq(1);
     }
 	irq (1);
 }
