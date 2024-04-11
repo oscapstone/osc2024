@@ -9,6 +9,14 @@
 #include "timer.hpp"
 
 void print_2s_timer(void* context) {
+  if (timer_delay > 0) {
+    auto delay = timer_delay;
+    timer_delay = 0;
+    mini_uart_printf_sync("delay timer %ds\n", delay);
+    auto cur = get_current_tick();
+    while (get_current_tick() - cur < delay * freq_of_timer)
+      NOP;
+  }
   if (show_timer)
     mini_uart_printf("[" PRTval "] 2s timer interrupt\n",
                      FTval(get_current_time()));

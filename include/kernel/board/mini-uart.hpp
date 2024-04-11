@@ -3,6 +3,7 @@
 #include "util.hpp"
 
 extern const bool& mini_uart_is_async;
+extern int mini_uart_delay;
 
 void mini_uart_use_async(bool use);
 

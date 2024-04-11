@@ -7,6 +7,7 @@ uint64_t freq_of_timer, boot_timer_tick, us_tick;
 bool show_timer = true;
 int timer_cnt = 0;
 Timer* timer_head = nullptr;
+int timer_delay = 0;
 
 void timer_init() {
   freq_of_timer = read_sysreg(CNTFRQ_EL0);

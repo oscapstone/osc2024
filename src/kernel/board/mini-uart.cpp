@@ -7,6 +7,7 @@
 #include "irq.hpp"
 #include "nanoprintf.hpp"
 #include "ringbuffer.hpp"
+#include "timer.hpp"
 #include "util.hpp"
 
 decltype(&mini_uart_getc_raw) mini_uart_getc_raw_fp;
@@ -20,6 +21,13 @@ decltype(&mini_uart_putc) mini_uart_putc_fp;
 bool _mini_uart_is_async;
 const bool& mini_uart_is_async = _mini_uart_is_async;
 RingBuffer rbuf, wbuf;
+int mini_uart_delay = 0;
+
+namespace getline_echo {
+bool enable = false;
+char* buffer;
+int length, r;
+};  // namespace getline_echo
 
 void set_ier_reg(bool enable, int bit) {
   SET_CLEAR_BIT(enable, AUX_MU_IER_REG, bit);
@@ -71,6 +79,58 @@ void mini_uart_handler(void* iir_) {
     // Receiver holds valid byte
     rbuf.push(get32(AUX_MU_IO_REG) & MASK(8), false);
   }
+
+  if (mini_uart_delay > 0) {
+    int delay = mini_uart_delay;
+    mini_uart_delay = 0;
+    mini_uart_printf_sync("delay uart %ds\n", delay);
+    auto cur = get_current_tick();
+    while (get_current_tick() - cur < delay * freq_of_timer)
+      NOP;
+  }
+
+  if (getline_echo::enable and not rbuf.empty()) {
+    using namespace getline_echo;
+    if (r < length) {
+      auto c = rbuf.pop(true);
+      if (c == '\r')
+        c = '\n';
+      if (c == '\n') {
+        wbuf.push('\r', false);
+        wbuf.push('\n', false);
+        buffer[r] = '\0';
+        enable = false;
+      } else {
+        switch (c) {
+          case 8:     // ^H
+          case 0x7f:  // backspace
+            if (r > 0) {
+              buffer[r--] = 0;
+              wbuf.push('\b', false);
+              wbuf.push(' ', false);
+              wbuf.push('\b', false);
+            }
+            break;
+          case 0x15:  // ^U
+            while (r > 0) {
+              buffer[r--] = 0;
+              wbuf.push('\b', false);
+              wbuf.push(' ', false);
+              wbuf.push('\b', false);
+            }
+            break;
+          case '\t':  // skip \t
+            break;
+          default:
+            if (r + 1 < length) {
+              buffer[r++] = c;
+              wbuf.push(c, false);
+            }
+        }
+      }
+    }
+  }
+
   if (not wbuf.empty())
     set_ier_reg(true, TRANSMIT_INT);
   if (not rbuf.full())
@@ -179,6 +239,17 @@ void mini_uart_putc(char c) {
 int mini_uart_getline_echo(char* buffer, int length) {
   if (length <= 0)
     return -1;
+
+  if (mini_uart_is_async) {
+    getline_echo::enable = true;
+    getline_echo::buffer = buffer;
+    getline_echo::length = length;
+    getline_echo::r = 0;
+    while (getline_echo::enable)
+      NOP;
+    return getline_echo::r;
+  }
+
   int r = 0;
   for (char c; r < length;) {
     c = mini_uart_getc();
