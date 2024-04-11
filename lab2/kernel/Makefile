@@ -12,6 +12,9 @@ all : kernel8.img
 run:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio
 
+run_cpio:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio 
+
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
 

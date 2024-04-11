@@ -2,6 +2,7 @@
 #include "mini_uart.h"
 #include "power.h"
 #include "mbox.h"
+#include "cpio.h"
 
 #define CLI_MAX_CMD 8
 
@@ -137,4 +138,42 @@ void cmd_reboot() {
     *rst_addr = PM_PASSWORD | 0x20;
     volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
     *wdg_addr = PM_PASSWORD | 5;
+}
+
+void cmd_ls() {
+    char* c_filepath;
+    char* c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    uart_puts("ls function");
+
+    while(header_ptr != 0) {
+        uart_puts("while");
+
+        int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        if (err) {
+            uart_puts("CPIO parse error");
+        }
+        if (header_ptr != 0) {
+            uart_puts("hihi"); 
+
+            uart_puts(c_filepath);
+            uart_puts("\r\n"); 
+        } else {
+            uart_puts("nono");
+        }
+    }
+}
+
+void cmd_debug() {
+    // This is debug area 
+    uart_puts("\r\n");
+    uart_puts("===========================================\r\n");
+    uart_puts("| * * * * * * * * * * * * * * * * * * * * |\r\n");
+    uart_puts("| * * (◍•ᴗ•◍) HAPPY DEBUGGGGG (◍•ᴗ•◍) * * |\r\n");
+    uart_puts("| * * * * * * * * * * * * * * * * * * * * |\r\n");
+    uart_puts("===========================================\r\n");                    
+    uart_puts("\r\n");
+    cmd_ls();
+    cmd_hello();
 }
