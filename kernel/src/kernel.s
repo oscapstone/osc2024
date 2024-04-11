@@ -32,133 +32,216 @@ _loop:
 .global exception_vector_table
 exception_vector_table:
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler // branch to a handler function.
-    ldp x30, x31, [sp]
-    add sp, sp, 8
-    eret
-
-    .align 7 // entry size is 0x80, .align will pad 0
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 0
+    bl _loop // branch to a handler function.
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf // entry size is 0x80, .align will pad 0
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 1
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
-    eret
-
-
-    .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 2
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
-    eret
-
-    .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
-    eret
-
-    .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 3
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 4
     bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 5
     bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 6
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 7
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 8
     bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 9
     bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 10
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
 
     .align 7
-    sub sp, sp, 8
-    stp x30, x31, [sp]
-    bl exception_handler
-    ldp x30, x31, [sp]
-    add sp, sp, 8
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 11
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
+    eret
+
+
+    .align 7
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 12
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
+    eret
+
+    .align 7
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 13
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
+    eret
+
+    .align 7
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 14
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
+    eret
+
+    .align 7
+    msr DAIFSet, #0xf
+    sub sp, sp, 16
+    stp x0, x1, [sp]
+    stp x30, x31, [sp, 16]
+    mov x0, 15
+    bl _loop
+    ldp x0, x1, [sp]
+    ldp x30, x31, [sp, 16]
+    add sp, sp, 16
+    msr DAIFClr, #0xf
     eret
     .align 7
+    msr DAIFSet, #0xf
+
+msr DAIFClr, #0xf
