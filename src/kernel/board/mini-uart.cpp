@@ -27,6 +27,45 @@ namespace getline_echo {
 bool enable = false;
 char* buffer;
 int length, r;
+
+void impl(decltype(&mini_uart_putc_raw) putc,
+          decltype(&mini_uart_getc_raw) getc) {
+  auto c = getc();
+  if (c == '\n') {
+    putc('\r');
+    putc('\n');
+    buffer[r] = '\0';
+    enable = false;
+  } else {
+    switch (c) {
+      case 8:     // ^H
+      case 0x7f:  // backspace
+        if (r > 0) {
+          buffer[r--] = 0;
+          putc('\b');
+          putc(' ');
+          putc('\b');
+        }
+        break;
+      case 0x15:  // ^U
+        while (r > 0) {
+          buffer[r--] = 0;
+          putc('\b');
+          putc(' ');
+          putc('\b');
+        }
+        break;
+      case '\t':  // skip \t
+        break;
+      default:
+        if (r + 1 < length) {
+          buffer[r++] = c;
+          putc(c);
+        }
+    }
+  }
+}
+
 };  // namespace getline_echo
 
 void set_ier_reg(bool enable, int bit) {
@@ -76,10 +115,10 @@ void mini_uart_handler(void* iir_) {
   if (iir & (1 << 1)) {
     // Transmit holding register empty
     if (not wbuf.empty())
-      set32(AUX_MU_IO_REG, wbuf.pop(false));
+      set32(AUX_MU_IO_REG, wbuf.pop());
   } else if (iir & (1 << 2)) {
     // Receiver holds valid byte
-    rbuf.push(get32(AUX_MU_IO_REG) & MASK(8), false);
+    rbuf.push(get32(AUX_MU_IO_REG) & MASK(8));
   }
 
   if (mini_uart_delay > 0) {
@@ -93,44 +132,14 @@ void mini_uart_handler(void* iir_) {
 
   if (getline_echo::enable and not rbuf.empty()) {
     using namespace getline_echo;
-    if (r < length) {
+    auto putc = [](char c) { wbuf.push(c); };
+    auto getc = []() {
       auto c = rbuf.pop(true);
       if (c == '\r')
         c = '\n';
-      if (c == '\n') {
-        wbuf.push('\r', false);
-        wbuf.push('\n', false);
-        buffer[r] = '\0';
-        enable = false;
-      } else {
-        switch (c) {
-          case 8:     // ^H
-          case 0x7f:  // backspace
-            if (r > 0) {
-              buffer[r--] = 0;
-              wbuf.push('\b', false);
-              wbuf.push(' ', false);
-              wbuf.push('\b', false);
-            }
-            break;
-          case 0x15:  // ^U
-            while (r > 0) {
-              buffer[r--] = 0;
-              wbuf.push('\b', false);
-              wbuf.push(' ', false);
-              wbuf.push('\b', false);
-            }
-            break;
-          case '\t':  // skip \t
-            break;
-          default:
-            if (r + 1 < length) {
-              buffer[r++] = c;
-              wbuf.push(c, false);
-            }
-        }
-      }
-    }
+      return c;
+    };
+    impl(putc, getc);
   }
 
   if (not wbuf.empty())
@@ -244,49 +253,19 @@ int mini_uart_getline_echo(char* buffer, int length) {
   if (length <= 0)
     return -1;
 
-  if (mini_uart_is_async) {
-    getline_echo::enable = true;
-    getline_echo::buffer = buffer;
-    getline_echo::length = length;
-    getline_echo::r = 0;
+  getline_echo::enable = true;
+  getline_echo::buffer = buffer;
+  getline_echo::length = length;
+  getline_echo::r = 0;
+
+  if (mini_uart_is_async)
     while (getline_echo::enable)
       NOP;
-    return getline_echo::r;
-  }
+  else
+    while (getline_echo::enable)
+      getline_echo::impl(&mini_uart_putc_raw_sync, &mini_uart_getc_raw_sync);
 
-  int r = 0;
-  for (char c; r < length;) {
-    c = mini_uart_getc();
-    if (c == '\n') {
-      mini_uart_putc_raw('\r');
-      mini_uart_putc_raw('\n');
-      break;
-    }
-    switch (c) {
-      case 8:     // ^H
-      case 0x7f:  // backspace
-        if (r > 0) {
-          buffer[r--] = 0;
-          mini_uart_puts("\b \b");
-        }
-        break;
-      case 0x15:  // ^U
-        while (r > 0) {
-          buffer[r--] = 0;
-          mini_uart_puts("\b \b");
-        }
-        break;
-      case '\t':  // skip \t
-        break;
-      default:
-        if (r + 1 < length) {
-          buffer[r++] = c;
-          mini_uart_putc_raw(c);
-        }
-    }
-  }
-  buffer[r] = '\0';
-  return r;
+  return getline_echo::r;
 }
 
 void mini_uart_npf_putc(int c, void* /* ctx */) {
