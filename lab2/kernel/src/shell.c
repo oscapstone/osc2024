@@ -7,7 +7,7 @@
 #define CLI_MAX_CMD 8
 
 extern char* _dtb;
-void* CPIO_DEFAULT_PLACE;
+void* CPIO_DEFAULT_PLACE = (void*)(unsigned long) 0x8000000;;
 
 int cli_strcmp(const char* p1, const char* p2) {
     const unsigned char *s1 = (const unsigned char*) p1;
@@ -90,6 +90,7 @@ void cmd_help() {
     uart_puts("   ls        - list all files in directory\r\n");
     uart_puts("   hello     - print hello message\r\n");
     uart_puts("   hwinfo    - print hardware info\r\n");
+    uart_puts("   hcpio     - print cpio header info\r\n");
     uart_puts("   reboot    - reboot the device\r\n");
 }
 
@@ -146,7 +147,6 @@ void cmd_ls() {
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    CPIO_DEFAULT_PLACE = (void*)(unsigned long) 0x8000000;
     struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
     while(header_ptr != 0) {
