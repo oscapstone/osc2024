@@ -31,7 +31,7 @@ int length, r;
 void impl(decltype(&mini_uart_putc_raw) putc,
           decltype(&mini_uart_getc_raw) getc) {
   auto c = getc();
-  if (c == '\n') {
+  if (c == '\r' or c == '\n') {
     putc('\r');
     putc('\n');
     buffer[r] = '\0';
@@ -81,7 +81,7 @@ void mini_uart_use_async(bool use) {
     set_aux_irq(true);
     set_ier_reg(true, RECEIVE_INT);
     // clear FIFO
-    set32(AUX_MU_IER_REG, 6);
+    set32(AUX_MU_IER_REG, 3 << 1);
     mini_uart_getc_raw_fp = mini_uart_getc_raw_async;
     mini_uart_getc_fp = mini_uart_getc_async;
     mini_uart_putc_raw_fp = mini_uart_putc_raw_async;
@@ -133,12 +133,7 @@ void mini_uart_handler(void* iir_) {
   if (getline_echo::enable and not rbuf.empty()) {
     using namespace getline_echo;
     auto putc = [](char c) { wbuf.push(c); };
-    auto getc = []() {
-      auto c = rbuf.pop(true);
-      if (c == '\r')
-        c = '\n';
-      return c;
-    };
+    auto getc = []() { return rbuf.pop(true); };
     impl(putc, getc);
   }
 
@@ -168,8 +163,10 @@ char mini_uart_getc_raw_sync() {
 void mini_uart_putc_raw_sync(char c) {
   while ((get32(AUX_MU_LSR_REG) & (1 << 5)) == 0)
     NOP;
-  // clear FIFO
-  set32(AUX_MU_IER_REG, 6);
+  if (mini_uart_is_async) {
+    // clear FIFO
+    set32(AUX_MU_IER_REG, 3 << 1);
+  }
   set32(AUX_MU_IO_REG, c);
 }
 
@@ -253,19 +250,21 @@ int mini_uart_getline_echo(char* buffer, int length) {
   if (length <= 0)
     return -1;
 
-  getline_echo::enable = true;
+  using namespace getline_echo;
+
   getline_echo::buffer = buffer;
   getline_echo::length = length;
-  getline_echo::r = 0;
+  enable = true;
+  r = 0;
 
   if (mini_uart_is_async)
-    while (getline_echo::enable)
+    while (enable)
       NOP;
   else
-    while (getline_echo::enable)
-      getline_echo::impl(&mini_uart_putc_raw_sync, &mini_uart_getc_raw_sync);
+    while (enable)
+      impl(&mini_uart_putc_raw_sync, &mini_uart_getc_raw_sync);
 
-  return getline_echo::r;
+  return r;
 }
 
 void mini_uart_npf_putc(int c, void* /* ctx */) {
