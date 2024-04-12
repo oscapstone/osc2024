@@ -35,7 +35,7 @@ void add_timer(uint64_t tick, void* context, Timer::fp callback, int prio) {
     } else {
       break;
     }
-  *nptr = new Timer(tick, prio, callback, context, *nptr);
+  *nptr = new Timer{tick, prio, callback, context, *nptr};
   if (is_head)
     set_timer_tick(timer_head->tick - get_timetick());
   if (++timer_cnt == 1)

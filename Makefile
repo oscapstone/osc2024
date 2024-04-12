@@ -1,5 +1,5 @@
-CXX 		= clang++
-LD 			= clang -fuse-ld=lld
+CLANGXX 	?= clang++
+LD 			= $(CLANGXX) -fuse-ld=lld
 OBJCOPY		= llvm-objcopy
 QEMU		= qemu-system-aarch64
 MINICOM 	= minicom
@@ -20,6 +20,12 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -fno-exceptions \
 			  -std=c++20 \
 			  -nostdlib -Os -fPIE
+
+ifneq ($(shell uname),Darwin)
+CFLAGS 		+= --sysroot=/usr/aarch64-linux-gnu \
+			   -I/usr/aarch64-linux-gnu/include/c++/12/aarch64-linux-gnu/
+endif
+
 QEMU_FLAGS 	= -display none -smp cpus=4 \
 			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb \
 			  $(QEMU_EXT_FLAGS)
@@ -72,11 +78,11 @@ build: $(KERNEL_BIN)
 
 $(BUILD_DIR)/%-asm.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
-	$(CXX) -MMD $(CFLAGS) -c $< -o $@
+	$(CLANGXX) -MMD $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(@D)
-	$(CXX) -MMD $(CFLAGS) -c $< -o $@
+	$(CLANGXX) -MMD $(CFLAGS) -c $< -o $@
 
 $(KERNEL_ELF): $(LINKER) $(OBJS)
 	$(LD) -T $(LINKER) $(CFLAGS) $(OBJS) -o $@
