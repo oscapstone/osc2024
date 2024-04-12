@@ -14,5 +14,6 @@ void cmd_help();
 void cmd_hello();
 void cmd_hwinfo();
 void cmd_reboot();
+void cmd_ls();
 
 #endif  /*_SHELL_H */
