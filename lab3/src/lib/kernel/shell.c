@@ -63,11 +63,12 @@ void shell()
             else
                 uart_puts("Usage: cat <filename>\n");
         }
-        else if (!strcmp(arg[0], "exec") && i == 1)
+        else if (!strcmp(arg[0], "exec") && i == 1) {
+            // asm volatile("msr DAIFSet, 0xf");
             cpio_exec("userprog");
+        }
         else if (!strcmp(arg[0], "async") && i == 1) {
             // uart_interrupt_enable();
-            // uart_puts("Press enter to exit\n");
             uart_puts("async (press enter to exit)>> ");
             char c = 0;
             while (1) {
@@ -76,8 +77,6 @@ void shell()
                     uart_clear_buffers();
                     break;
                 }
-                else if (c > 127)
-                    continue;
                 uart_async_putc(c);
             }
             uart_puts("\n");

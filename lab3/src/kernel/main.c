@@ -13,8 +13,6 @@ void main(char *arg)
 
     // uart_clear_buffers();
     uart_init();
-    // asm volatile("mov x20, (3 << 20)\n\t"
-    //              "msr CPACR_EL1, x20\n\t");
 
     core_timer_enable();
     core_timer_interrupt_enable();
@@ -24,7 +22,7 @@ void main(char *arg)
 
     fdt_traverse(initramfs_callback, arg);
 
-    // uart_puts("\x1b[2J\x1b[H");
+    uart_puts("\x1b[2J\x1b[H");
     uart_puts("Hello, kernel World!\n");
     uart_puts("DTB base: ");
     uart_hex((unsigned long)arg);

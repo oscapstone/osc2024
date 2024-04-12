@@ -225,10 +225,10 @@ void uart_rx_handler()
         return;
     }
 
-    asm volatile("msr DAIFSet, 0xf");
+    // asm volatile("msr DAIFSet, 0xf");
     uart_rx_buffer[uart_rx_buffer_head] = (char)(*AUX_MU_IO);
     uart_rx_buffer_head = (uart_rx_buffer_head + 1) % BUFFER_SIZE;
-    asm volatile("msr DAIFClr, 0xf");
+    // asm volatile("msr DAIFClr, 0xf");
 }
 
 void uart_tx_handler()
@@ -265,8 +265,8 @@ void uart_async_puts(char *s)
     //  uart_tx_buffer[uart_tx_buffer_w_idx++] = '\r';
     while (*s) {
         uart_tx_buffer[uart_tx_buffer_head++] = *s;
-        if (*s == '\r')
-            uart_tx_buffer[uart_tx_buffer_head++] = '\n';
+        // if (*s == '\r')
+        //     uart_tx_buffer[uart_tx_buffer_head++] = '\n';
         s++;
         uart_tx_buffer_head %= BUFFER_SIZE;
     }
@@ -285,6 +285,7 @@ void uart_async_putc(char c)
     // is full
     // send a byte to transmit fifo
     while ((uart_tx_buffer_head + 1) % BUFFER_SIZE == uart_tx_buffer_tail) {
+        // uart_puts("fuck\n");
         uart_tx_interrupt_enable();
     }
 

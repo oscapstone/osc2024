@@ -59,6 +59,13 @@ from_el2_to_el1:
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
     str x30, [sp, 16 * 15]
+
+    // for nested interrupt
+    mrs x0, spsr_el1
+    str x0, [sp, 16 * 16]
+    mrs x0, elr_el1
+    str x0, [sp, 16 * 17]
+    ldp x0, x1, [sp, 16 * 0] // restore x0, x1
 .endm
 
 // load general registers from stack
@@ -79,12 +86,26 @@ from_el2_to_el1:
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
-    add sp, sp, 32 * 8
+
+    // for nested interrupt
+    ldr x0, [sp, 16 * 16]
+    msr spsr_el1, x0
+    ldr x0, [sp, 16 * 17]
+    msr elr_el1, x0
+    ldp x0, x1, [sp, 16 * 0] // restore x0, x1
+
+    add sp, sp, 32 * 8 
 .endm
 
 exception_handler:
     save_all
     bl exception_handler_c
+    load_all
+    eret
+
+invalid_handler:
+    save_all
+    // bl exception_handler_c
     load_all
     eret
 
@@ -97,40 +118,40 @@ irq_exception_handler:
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
-    b exception_handler // branch to a handler function.
+    b invalid_handler // branch to a handler function.
     .align 7 // entry size is 0x80, .align will pad 0
-    b exception_handler
+    b invalid_handler
     .align 7
-    b exception_handler
+    b invalid_handler
     .align 7
-    b exception_handler
+    b invalid_handler
+    .align 7
+
+    b invalid_handler
+    .align 7
+    b irq_exception_handler
+    .align 7
+    b invalid_handler
+    .align 7
+    b invalid_handler
     .align 7
 
     b exception_handler
     .align 7
     b irq_exception_handler
     .align 7
-    b exception_handler
+    b invalid_handler
     .align 7
-    b exception_handler
-    .align 7
-
-    b exception_handler
-    .align 7
-    b irq_exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
+    b invalid_handler
     .align 7
 
-    b exception_handler
+    b invalid_handler
     .align 7
-    b exception_handler
+    b invalid_handler
     .align 7
-    b exception_handler
+    b invalid_handler
     .align 7
-    b exception_handler
+    b invalid_handler
     .align 7
 
 set_exception_vector_table:

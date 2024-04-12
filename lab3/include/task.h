@@ -1,7 +1,10 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
+#include "exception.h"
 #include "list.h"
+#include "timer.h"
+#include "uart.h"
 
 typedef void (*task_callback_t)(void);
 

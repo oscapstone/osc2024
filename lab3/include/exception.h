@@ -12,6 +12,9 @@ void disable_interrupt();
 void enable_interrupt();
 void exception_handler_c();
 void irq_handler_c();
+
+void highp();
+void lowp();
 void test_preemption();
 
 #endif

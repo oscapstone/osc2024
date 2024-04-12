@@ -62,7 +62,20 @@ void irq_handler_c()
 
     // // Part 3 + bonus 1
     // if (*IRQ_PENDING_1 & (1 << 29) && *CORE0_INTERRUPT_SOURCE & (1 << 8)) {
-    //     uart_async_handler();
+    //     if (*AUX_MU_IIR & 0x4) {
+    //         uart_rx_interrupt_disable();
+    //         // add_task(UART_PRIORITY, uart_rx_handler);
+    //         uart_rx_handler();
+    //         // pop_task();
+    //         // uart_puts("pop task1\n");
+    //     }
+    //     else if (*AUX_MU_IIR & 0x2) {
+    //         uart_tx_interrupt_disable();
+    //         // add_task(UART_PRIORITY, uart_tx_handler);
+    //         // pop_task();
+    //         uart_tx_handler();
+    //         // uart_puts("pop task2\n");
+    //     }
     // }
     // else if (*CORE0_INTERRUPT_SOURCE & (1 << 1)) {
     //     core_timer_interrupt_disable();
@@ -73,25 +86,21 @@ void irq_handler_c()
 
     if (*IRQ_PENDING_1 & (1 << 29) && *CORE0_INTERRUPT_SOURCE & (1 << 8)) {
         if (*AUX_MU_IIR & 0x4) {
-            // uart_puts("pop task1\n");
             uart_rx_interrupt_disable();
             add_task(UART_PRIORITY, uart_rx_handler);
             pop_task();
             // uart_puts("pop task1\n");
         }
         else if (*AUX_MU_IIR & 0x2) {
-            // uart_puts("pop task1\n");
             uart_tx_interrupt_disable();
+            // *CORE0_TIMER_IRQ_CTRL_ = 0;
             add_task(UART_PRIORITY, uart_tx_handler);
             pop_task();
             // uart_puts("pop task2\n");
         }
-        else
-            uart_puts("uart interrupt error\n");
     }
     else if (*CORE0_INTERRUPT_SOURCE & (1 << 1)) {
         core_timer_interrupt_disable();
-        // *CORE0_TIMER_IRQ_CTRL_ = 0;
         add_task(TIMER_PRIORITY, core_timer_handler);
         pop_task();
         core_timer_interrupt_enable();
@@ -100,28 +109,25 @@ void irq_handler_c()
 
 void highp()
 {
-    uart_puts("high prior start\n");
-    uart_puts("high prior end\n");
-    // uart_async_printf("high prior start\n");
-    // uart_async_printf("high prior end\n");
+    uart_async_puts("high prior start\n");
+    uart_async_puts("high prior end\n");
 }
 
 void lowp()
 {
-    uart_puts("low prior start\n");
+    uart_async_puts("low prior start\n");
     add_task(0, highp);
     uart_async_putc('\r'); // to trigger pop_task
     for (int i = 0; i < 100000; ++i)
         ;
-    uart_puts("low prior end\n");
+    uart_async_puts("low prior end\n");
     for (int i = 0; i < 100000; ++i)
         ;
 }
 
 void test_preemption()
 {
-    // uart_async_puts("Starting test :\n");
-    uart_puts("Starting test :\n");
+    uart_async_puts("Starting test :\n");
     add_task(9, lowp);
     uart_async_putc('\r'); // to trigger pop_task
 }

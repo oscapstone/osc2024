@@ -1,7 +1,5 @@
 #include "task.h"
 #include "malloc.h"
-#include "timer.h"
-#include "uart.h"
 
 int cur_priority = 10;
 struct list_head task_list;
@@ -38,17 +36,22 @@ void add_task(int priority, task_callback_t callback)
         }
     }
     asm volatile("msr DAIFClr, 0xf");
+    // uart_puts("add_task\n");
 }
 
 void pop_task()
 {
-    // uart_puts("pop_task1\n");
+    // asm volatile("msr DAIFClr, 0xf");
     while (!list_empty(&task_list)) {
-        task_node *first = list_first_entry(&task_list, task_node, list);
-        if (first->priority > cur_priority)
-            return;
-
         asm volatile("msr DAIFSet, 0xf");
+
+        task_node *first = list_first_entry(&task_list, task_node, list);
+        if (first->priority > cur_priority) {
+            // asm volatile("msr DAIFClr, 0xf");
+            return;
+        }
+
+        // asm volatile("msr DAIFSet, 0xf");
         list_del(&first->list);
         int tmp_priority = cur_priority;
         cur_priority = first->priority;
@@ -62,6 +65,5 @@ void pop_task()
         cur_priority = tmp_priority;
         asm volatile("msr DAIFClr, 0xf");
     }
-
     // uart_puts("pop_task2\n");
 }

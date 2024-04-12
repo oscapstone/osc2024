@@ -53,14 +53,14 @@ void add_timer(timer_callback_t callback, void *arg, unsigned long long expired_
         list_add_tail(&entry->list, &timer_list);
     }
     else {
-        add_timer_node(&timer_list, entry);
+        add_node(&timer_list, entry);
     }
     set_core_timer_interrupt();
     asm volatile("msr DAIFClr, 0xf");
     core_timer_interrupt_enable();
 }
 
-void add_timer_node(struct list_head *head, timer_node *entry)
+void add_node(struct list_head *head, timer_node *entry)
 {
     struct list_head *p;
     list_for_each(p, head)

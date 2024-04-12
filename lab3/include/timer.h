@@ -24,9 +24,8 @@ void set_core_timer_interrupt();
 void set_core_timer_interrupt_permanent();
 
 void add_timer(timer_callback_t callback, void *arg, unsigned long long expired_time);
-void add_timer_node(struct list_head *head, timer_node *entry);
+void add_node(struct list_head *head, timer_node *entry);
 void pop_timer();
-// void print_timer();
 void core_timer_handler();
 
 #endif
