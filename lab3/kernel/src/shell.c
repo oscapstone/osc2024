@@ -63,22 +63,23 @@ void cli_cmd_exec(char* buffer)
     if (!buffer) return;
 
     char* cmd = buffer;
-    char* argvs;
+    char* argvs = str_SepbySpace(buffer);
+    // char* argvs;
 
-    while(1){
-        if(*buffer == '\0')
-        {
-            argvs = buffer;
-            break;
-        }
-        if(*buffer == ' ')
-        {
-            *buffer = '\0';
-            argvs = buffer + 1;
-            break;
-        }
-        buffer++;
-    }
+    // while(1){
+    //     if(*buffer == '\0')
+    //     {
+    //         argvs = buffer;
+    //         break;
+    //     }
+    //     if(*buffer == ' ')
+    //     {
+    //         *buffer = '\0';
+    //         argvs = buffer + 1;
+    //         break;
+    //     }
+    //     buffer++;
+    // }
 
     if (strcmp(cmd, "hello") == 0) {
         do_cmd_hello();

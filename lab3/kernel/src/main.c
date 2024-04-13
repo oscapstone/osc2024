@@ -6,7 +6,7 @@
 #include "exception.h"
 #include "timer.h"
 
-extern char* dtb_ptr;
+char* dtb_ptr;
 
 void main(char* arg){
     char input_buffer[CMD_MAX_LEN];
@@ -15,13 +15,14 @@ void main(char* arg){
     traverse_device_tree(dtb_ptr, dtb_callback_initramfs);
 
     uart_init();
-    // uart_sendline("\n");
+    uart_sendline("\n");
     // uart_puts("loading dtb from: 0x%x\n", arg);
+    irqtask_list_init();
+    timer_list_init();
     uart_interrupt_enable();
-    // el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
+    el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
 
     core_timer_enable();
-    timer_list_init();
     cli_print_banner();
 
     while(1){

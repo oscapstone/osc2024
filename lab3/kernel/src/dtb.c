@@ -4,7 +4,7 @@
 #include "cpio.h"
 
 extern void* CPIO_DEFAULT_PLACE;
-char* dtb_ptr;
+extern char* dtb_ptr;
 
 //stored as big endian
 struct fdt_header {

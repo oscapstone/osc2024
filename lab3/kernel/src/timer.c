@@ -14,15 +14,17 @@ void timer_list_init(){
 
 void core_timer_enable( ){
     __asm__ __volatile__(
+        // cntp_ctl_el0[0]: enable, Control register for the EL1 physical timer.
         "mov x1, 1\n\t"
         "msr cntp_ctl_el0, x1\n\t" // enable
 
-        "mrs x1, cntfrq_el0\n\t"
-        "mov x2, 0x100000\n\t"
-        "mul x1, x1, x2\n\t"    //set a big value prevent interrupt immediately
-        // "mul x1, x1, %0\n\t"
-        "msr cntp_tval_el0, x1\n\t" // set expired time
+        // "mrs x1, cntfrq_el0\n\t"
+        // "mov x2, 0x100000\n\t"
+        // "mul x1, x1, x2\n\t"    //set a big value prevent interrupt immediately
+        // // "mul x1, x1, %0\n\t"
+        // "msr cntp_tval_el0, x1\n\t" // set expired time
 
+        // QA7_rev3.4.pdf: Core0 Timer IRQ allows Non-secure physical timer(nCNTPNSIRQ)
         "mov x2, 2\n\t"
         "ldr x1, =" XSTR(CORE0_TIMER_IRQ_CTRL) "\n\t"
         "str w2, [x1]\n\t" // unmask timer interrupt
@@ -40,6 +42,7 @@ void core_timer_disable()
 }
 
 void core_timer_handler(){
+    /*Basic Exercise 2 - Interrupt*/
     // __asm__ __volatile__("mrs x10, cntpct_el0\n\t");
     // register unsigned long long cntpct_el0 asm ("x10");
 
@@ -53,6 +56,11 @@ void core_timer_handler(){
     //     "mov x0, x0, LSL #1\n\t"   //set two second next time
     //     "msr cntp_tval_el0, x0\n\t"
     // );
+    if (list_empty(timer_event_list))
+    {
+        set_core_timer_interrupt(10000); // disable timer interrupt (set a very big value)
+        return;
+    }
     timer_event_callback((timer_event_t *)timer_event_list->next); // do callback and set new interrupt
 }
 
@@ -70,7 +78,7 @@ void timer_event_callback(timer_event_t * timer_event){
     }
     else
     {
-        set_core_timer_interrupt(1<<29);  // disable timer interrupt (set a very big value)
+        set_core_timer_interrupt(10000);  // disable timer interrupt (set a very big value)
     }
 }
 
