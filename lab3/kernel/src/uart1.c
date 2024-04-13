@@ -7,11 +7,11 @@
 
 // implement first in first out buffer with a read index and a write index
 char uart_tx_buffer[VSPRINT_MAX_BUF_SIZE] = {0};
-unsigned int uart_tx_buffer_widx = 0; // write index
-unsigned int uart_tx_buffer_ridx = 0; // read index
+int uart_tx_buffer_widx = 0; // write index
+int uart_tx_buffer_ridx = 0; // read index
 char uart_rx_buffer[VSPRINT_MAX_BUF_SIZE] = {0};
-unsigned int uart_rx_buffer_widx = 0;
-unsigned int uart_rx_buffer_ridx = 0;
+int uart_rx_buffer_widx = 0;
+int uart_rx_buffer_ridx = 0;
 
 void uart_init()
 {
@@ -91,11 +91,13 @@ char uart_async_recv()
 {
     *AUX_MU_IER_REG |= 1; // enable read interrupt
     // do while if buffer empty
+    lock();
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx)
     {
+        unlock();
         *AUX_MU_IER_REG |= 1; // enable read interrupt
+        lock();
     }
-    lock();
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
     if (uart_rx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE)
         uart_rx_buffer_ridx = 0;
@@ -107,18 +109,29 @@ char uart_async_recv()
 // uart_w_irq_handler read from buffer then output
 void uart_async_send(char c)
 {
+    lock();
     // if buffer full, wait for uart_w_irq_handler
     while ((uart_tx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_ridx)
     {
-        // uart_puts("buffer full\r\n");
+        unlock();
         *AUX_MU_IER_REG |= 2; // enable write interrupt
+        lock();
     }
-    lock();
     uart_tx_buffer[uart_tx_buffer_widx++] = c;
     if (uart_tx_buffer_widx >= VSPRINT_MAX_BUF_SIZE)
         uart_tx_buffer_widx = 0; // cycle pointer
     unlock();
     *AUX_MU_IER_REG |= 2; // enable write interrupt
+}
+
+int is_uart_rx_buffer_full()
+{
+    return (uart_rx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_rx_buffer_ridx;
+}
+
+int is_uart_tx_buffer_full()
+{
+    return (uart_tx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_ridx;
 }
 
 // AUX_MU_IER_REG -> BCM2837-ARM-Peripherals.pdf - Pg.12
@@ -137,26 +150,39 @@ void uart_interrupt_disable()
 
 void uart_r_irq_handler()
 {
+    lock();
+    // uart_puts("uart_r_irq_handler\r\n");
     if ((uart_rx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_rx_buffer_ridx)
     {
         *AUX_MU_IER_REG &= ~(1); // disable read interrupt
+        unlock();
         return;
     }
-    uart_rx_buffer[uart_rx_buffer_widx++] = uart_recv();
+    unlock();
+    uart_rx_buffer[uart_rx_buffer_widx] = uart_recv();
+    lock();
+    uart_rx_buffer_widx++;
     if (uart_rx_buffer_widx >= VSPRINT_MAX_BUF_SIZE)
         uart_rx_buffer_widx = 0;
     *AUX_MU_IER_REG |= 1;
+    unlock();
 }
 
 void uart_w_irq_handler()
 {
+    lock();
     if (uart_tx_buffer_ridx == uart_tx_buffer_widx)
     {
         *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-        return;                  // buffer empty
+        unlock();
+        return; // buffer empty
     }
-    uart_send(uart_tx_buffer[uart_tx_buffer_ridx++]);
+    unlock();
+    uart_send(uart_tx_buffer[uart_tx_buffer_ridx]);
+    lock();
+    uart_tx_buffer_ridx++;
     if (uart_tx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE)
         uart_tx_buffer_ridx = 0;
     *AUX_MU_IER_REG |= 2; // enable write interrupt
+    unlock();
 }

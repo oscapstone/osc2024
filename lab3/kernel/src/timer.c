@@ -66,7 +66,8 @@ void timer_set2sAlert(char* str)
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
     uart_puts("\r\n[Start Alert]\r\n");
-    for(int i=0;i<10000000;i++)
+    // for(int i=0;i<10000000;i++) // pi
+    for(int i=0;i<1000000000;i++) // qemu
     {
         // do nothing
     }
