@@ -1,7 +1,7 @@
 SECTIONS
 {
     /* bootloader loaded address in the SD card load address */
-    . = 0x60000;
+    . = 0x80000;
     PROVIDE(__bootloader_start = .);
 	.text : { 
         KEEP(*(.text.boot)) 
