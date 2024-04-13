@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "mini_uart.h"
 #include <stddef.h>
 
 unsigned int vsprintf(char *dst, char* fmt, __builtin_va_list args)
@@ -167,4 +168,41 @@ int strncmp (const char *s1, const char *s2, unsigned long long n)
         n--;
     }
     return c1 - c2;
+}
+
+void str_split(char* str, char delim, char** result, int* count) {
+    *count = 0;
+    while (*str) {
+        while (*str == delim) {
+            *str++ = '\0';
+        }
+        if (*str) {
+            result[(*count)++] = str;
+        }
+        while (*str && *str != delim) {
+            str++;
+        }
+    }
+}
+
+int strstr(const char* str, const char* substring) {
+    const char *a;
+    const char *b;
+    
+    b = substring;
+    if (*b == 0) return 1;
+    
+    while (*str) {
+        if (*str != *b) {
+            str++;
+            continue;
+        }
+        a = str;
+        while (1) {
+            if (*b == 0) return 1;
+            if (*a++ != *b++) break;
+        }
+        str++;
+    }
+    return 0;
 }

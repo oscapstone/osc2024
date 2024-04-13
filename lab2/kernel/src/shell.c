@@ -3,8 +3,11 @@
 #include "power.h"
 #include "mbox.h"
 #include "cpio.h"
+#include "utils.h"
+#include <stddef.h>
 
 #define CLI_MAX_CMD 8
+#define MAX_ARGS 10
 
 extern char* _dtb;
 void* CPIO_DEFAULT_PLACE = (void*)(unsigned long) 0x8000000;;
@@ -52,18 +55,25 @@ void cli_read_cmd(char* buf) {
 }
 
 void cli_exec_cmd(char* buf) {
-    if (cli_strcmp(buf, "help") == 0) {
+    char* argvs[MAX_ARGS];
+    char* cmd = buf;
+    int* count = 0;
+    str_split(cmd, ' ', argvs, count);
+
+    if (cli_strcmp(cmd, "cat") == 0) {
+        cmd_cat(argvs[1]);
+    } else if (cli_strcmp(cmd, "help") == 0) {
         cmd_help();
-    } else if (cli_strcmp(buf, "hello") == 0) {
+    } else if (cli_strcmp(cmd, "hello") == 0) {
         cmd_hello();
-    } else if (cli_strcmp(buf, "hwinfo") == 0) {
+    } else if (cli_strcmp(cmd, "hwinfo") == 0) {
         cmd_hwinfo();
-    } else if (cli_strcmp(buf, "reboot") == 0) {
+    } else if (cli_strcmp(cmd, "reboot") == 0) {
         cmd_reboot();
-    } else if (cli_strcmp(buf, "ls") == 0) {
+    } else if (cli_strcmp(cmd, "ls") == 0) {
         cmd_ls();
-    } else if(*buf) {
-        uart_puts(buf);
+    } else if(*cmd) {
+        uart_puts(cmd);
         uart_puts(": Command not found QQ, type help to get more information.\r\n");
     }
 }
@@ -158,5 +168,26 @@ void cmd_ls() {
             uart_puts(c_filepath);
             uart_puts("\r\n"); 
         }
+    }
+}
+
+void cmd_cat(char* filepath) {
+    char* c_filepath;
+    char* c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+
+    while(header_ptr != 0) {
+        int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        if (err) {
+            uart_puts("CPIO parse error\r\n");
+            break;
+        }
+        if (header_ptr != 0 && strcmp(filepath, c_filepath) == 0) {
+            uart_puts("%s\r\n", c_filedata);
+            break; 
+        }
+        if (header_ptr == 0) 
+            uart_puts("cat: %s: No such file or directory\n", filepath);
     }
 }

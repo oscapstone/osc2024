@@ -10,5 +10,6 @@ unsigned long long strlen(const char *str);
 int                strcmp(const char*, const char*);
 int                strncmp(const char*, const char*, unsigned long long);
 char*              memcpy(void *dest, const void *src, unsigned long long len);
+void               str_split(char* str, char delim, char** result, int* count);
 
 #endif /* _UTILS_H_ */
