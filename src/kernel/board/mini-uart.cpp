@@ -73,8 +73,7 @@ void set_ier_reg(bool enable, int bit) {
 }
 
 void mini_uart_use_async(bool use) {
-  save_DAIF();
-  disable_interrupt();
+  save_DAIF_disable_interrupt();
 
   _mini_uart_is_async = use;
   if (use) {

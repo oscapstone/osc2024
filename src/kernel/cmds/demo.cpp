@@ -9,8 +9,7 @@ int demo_preempt(int argc, char* argv[]) {
     mini_uart_printf("print from task %ld\n", (long)ctx);
   };
 
-  save_DAIF();
-  disable_interrupt();
+  save_DAIF_disable_interrupt();
 
   add_timer(freq_of_timer, (void*)1, print_data, 1);
   add_timer(freq_of_timer, (void*)0, print_data, 0);

@@ -21,8 +21,7 @@ void add_timer(timeval tval, void* context, Timer::fp callback, int prio) {
   add_timer(timeval2tick(tval), context, callback, prio);
 }
 void add_timer(uint64_t tick, void* context, Timer::fp callback, int prio) {
-  save_DAIF();
-  disable_interrupt();
+  save_DAIF_disable_interrupt();
 
   tick += get_timetick();
 
