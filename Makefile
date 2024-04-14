@@ -61,9 +61,7 @@ QEMU_FLAGS 	+= -initrd $(INITFSCPIO)
 SRCS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.cpp')
 ASMS = $(shell find $(TARGET_SRC_DIR) $(LIB_SRC_DIR) -name '*.S')
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o) $(ASMS:$(SRC_DIR)/%.S=$(BUILD_DIR)/%-asm.o)
-DEPS = $(OBJ_FILES:%.o=%.d)
--include $(DEP_FILES)
-
+DEPS = $(OBJS:%.o=%.d)
 .PHONY: all build fs clean run run-debug upload disk disk-format uart
 
 all: build run
@@ -75,6 +73,8 @@ bootloader:
 	$(MAKE) build TARGET=bootloader
 
 build: $(KERNEL_BIN)
+
+-include $(DEPS)
 
 $(BUILD_DIR)/%-asm.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
