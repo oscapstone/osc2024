@@ -13,9 +13,10 @@ struct Timer {
 };
 
 extern uint64_t freq_of_timer, boot_timer_tick, us_tick;
-extern bool show_timer;
 extern int timer_cnt;
 extern Timer* timer_head;
+// cmds/timer.cpp
+extern bool show_timer;
 extern int timer_delay;
 
 #define timer_pop(name, head) \
