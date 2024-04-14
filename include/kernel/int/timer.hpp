@@ -24,8 +24,6 @@ extern int timer_delay;
   head = name->next;          \
   name->next = nullptr
 
-#define get_timetick() read_sysreg(CNTPCT_EL0)
-
 inline timeval tick2timeval(uint64_t tick) {
   uint32_t sec = tick / freq_of_timer;
   uint32_t usec = tick % freq_of_timer / us_tick;
@@ -45,7 +43,13 @@ inline void disable_timer() {
   set_core0_timer_irq_ctrl(false, 1);
 }
 
-#define set_timer_tick(tick) write_sysreg(CNTP_TVAL_EL0, tick)
+inline void set_timer_tick(uint64_t tick) {
+  write_sysreg(CNTP_CVAL_EL0, tick);
+}
+
+inline uint64_t get_timetick() {
+  return read_sysreg(CNTPCT_EL0);
+}
 
 inline uint64_t get_current_tick() {
   return get_timetick() - boot_timer_tick;
