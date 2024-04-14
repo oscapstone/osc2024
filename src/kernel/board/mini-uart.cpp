@@ -149,8 +149,8 @@ char mini_uart_getc_raw_async() {
 }
 
 void mini_uart_putc_raw_async(char c) {
-  set_ier_reg(true, TRANSMIT_INT);
   wbuf.push(c, true);
+  set_ier_reg(true, TRANSMIT_INT);
 }
 
 char mini_uart_getc_raw_sync() {
