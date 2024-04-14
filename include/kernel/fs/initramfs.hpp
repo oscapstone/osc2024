@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cpio.hpp"
+#include "fs/cpio.hpp"
 
 extern CPIO initramfs;
 

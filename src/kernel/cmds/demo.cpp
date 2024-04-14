@@ -1,8 +1,8 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
-#include "interrupt.hpp"
+#include "int/interrupt.hpp"
+#include "int/timer.hpp"
 #include "string.hpp"
-#include "timer.hpp"
 
 bool show_timer = false;
 int timer_delay = 0;

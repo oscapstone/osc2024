@@ -1,4 +1,4 @@
-#include "initramfs.hpp"
+#include "fs/initramfs.hpp"
 
 #include "board/mini-uart.hpp"
 #include "fdt.hpp"

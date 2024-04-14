@@ -1,7 +1,7 @@
-#include "timer.hpp"
+#include "int/timer.hpp"
 
-#include "interrupt.hpp"
-#include "irq.hpp"
+#include "int/interrupt.hpp"
+#include "int/irq.hpp"
 
 uint64_t freq_of_timer, boot_timer_tick, us_tick;
 int timer_cnt = 0;

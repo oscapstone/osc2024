@@ -1,6 +1,6 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
-#include "timer.hpp"
+#include "int/timer.hpp"
 
 struct Ctx {
   char* msg;

@@ -1,7 +1,7 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
 #include "exec.hpp"
-#include "initramfs.hpp"
+#include "fs/initramfs.hpp"
 
 extern char __user_text[];
 extern char __user_stack[];

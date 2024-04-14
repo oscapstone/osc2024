@@ -1,7 +1,7 @@
 #pragma once
 
 #include "board/timer.hpp"
-#include "timeval.hpp"
+#include "ds/timeval.hpp"
 
 struct Timer {
   using fp = void (*)(void*);

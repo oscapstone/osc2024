@@ -1,12 +1,12 @@
 #include "board/mini-uart.hpp"
-#include "exception.hpp"
 #include "fdt.hpp"
-#include "heap.hpp"
-#include "initramfs.hpp"
-#include "interrupt.hpp"
-#include "irq.hpp"
+#include "fs/initramfs.hpp"
+#include "int/exception.hpp"
+#include "int/interrupt.hpp"
+#include "int/irq.hpp"
+#include "int/timer.hpp"
+#include "mm/heap.hpp"
 #include "shell.hpp"
-#include "timer.hpp"
 
 extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_setup();

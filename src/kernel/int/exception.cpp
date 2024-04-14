@@ -1,7 +1,7 @@
-#include "exception.hpp"
+#include "int/exception.hpp"
 
 #include "board/mini-uart.hpp"
-#include "interrupt.hpp"
+#include "int/interrupt.hpp"
 #include "shell.hpp"
 
 const char* ExceptionFrom[] = {

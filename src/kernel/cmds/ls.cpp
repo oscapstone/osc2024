@@ -1,6 +1,6 @@
 #include "board/mini-uart.hpp"
 #include "cmd.hpp"
-#include "initramfs.hpp"
+#include "fs/initramfs.hpp"
 
 int cmd_ls(int /* argc */, char* /* argv */[]) {
   for (auto it : initramfs) {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "exception.hpp"
-#include "list.hpp"
+#include "ds/list.hpp"
+#include "int/exception.hpp"
 
 extern "C" {
 void irq_handler(ExceptionContext* context, int type);

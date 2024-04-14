@@ -1,8 +1,8 @@
-#include "irq.hpp"
+#include "int/irq.hpp"
 
 #include "board/mini-uart.hpp"
-#include "interrupt.hpp"
-#include "timer.hpp"
+#include "int/interrupt.hpp"
+#include "int/timer.hpp"
 
 void irq_handler(ExceptionContext* context, int type) {
   auto irq_source = get32(CORE0_IRQ_SOURCE);

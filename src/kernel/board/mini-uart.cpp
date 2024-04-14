@@ -3,11 +3,11 @@
 #include "board/gpio.hpp"
 #include "board/mmio.hpp"
 #include "board/peripheral.hpp"
-#include "interrupt.hpp"
-#include "irq.hpp"
+#include "ds/ringbuffer.hpp"
+#include "int/interrupt.hpp"
+#include "int/irq.hpp"
+#include "int/timer.hpp"
 #include "nanoprintf.hpp"
-#include "ringbuffer.hpp"
-#include "timer.hpp"
 #include "util.hpp"
 
 decltype(&mini_uart_getc_raw) mini_uart_getc_raw_fp;
