@@ -1,7 +1,6 @@
-#include "mm/heap.hpp"
-
 #include "board/mini-uart.hpp"
-#include "cmd.hpp"
+#include "mm/heap.hpp"
+#include "shell/cmd.hpp"
 #include "string.hpp"
 
 int cmd_heap(int argc, char* argv[]) {

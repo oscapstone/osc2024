@@ -1,5 +1,5 @@
 #include "board/pm.hpp"
-#include "cmd.hpp"
+#include "shell/cmd.hpp"
 
 int cmd_reboot(int /* argc */, char* /* argv */[]) {
   reboot();

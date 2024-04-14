@@ -6,7 +6,7 @@
 #include "int/irq.hpp"
 #include "int/timer.hpp"
 #include "mm/heap.hpp"
-#include "shell.hpp"
+#include "shell/shell.hpp"
 
 extern "C" void kernel_main(void* dtb_addr) {
   mini_uart_setup();

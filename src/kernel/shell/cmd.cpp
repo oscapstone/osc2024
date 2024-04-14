@@ -1,4 +1,4 @@
-#include "cmd.hpp"
+#include "shell/cmd.hpp"
 
 #include "board/mini-uart.hpp"
 #include "reloc.hpp"

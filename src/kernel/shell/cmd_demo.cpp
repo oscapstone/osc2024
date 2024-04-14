@@ -1,7 +1,7 @@
 #include "board/mini-uart.hpp"
-#include "cmd.hpp"
 #include "int/interrupt.hpp"
 #include "int/timer.hpp"
+#include "shell/cmd.hpp"
 #include "string.hpp"
 
 bool show_timer = false;
@@ -23,7 +23,7 @@ void print_2s_timer(void* context) {
   }
 }
 
-int demo_timer(int argc, char* argv[]) {
+int demo_timer(int /*argc*/, char* /*argv*/[]) {
   if (show_timer) {
     show_timer = false;
   } else {
@@ -34,7 +34,7 @@ int demo_timer(int argc, char* argv[]) {
   return 0;
 }
 
-int demo_preempt(int argc, char* argv[]) {
+int demo_preempt(int /*argc*/, char* /*argv*/[]) {
   auto print_data = [](void* ctx) {
     mini_uart_printf("print from task %ld\n", (long)ctx);
   };

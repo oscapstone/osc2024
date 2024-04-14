@@ -1,6 +1,6 @@
 #include "board/mini-uart.hpp"
-#include "cmd.hpp"
 #include "reloc.hpp"
+#include "shell/cmd.hpp"
 
 int cmd_help(int /* argc */, char* /* argv */[]) {
   for (int i = 0; i < *reloc(&ncmd); i++) {

@@ -1,7 +1,7 @@
-#include "shell.hpp"
+#include "shell/shell.hpp"
 
 #include "board/mini-uart.hpp"
-#include "cmd.hpp"
+#include "shell/cmd.hpp"
 #include "string.hpp"
 
 void shell() {

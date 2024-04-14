@@ -1,6 +1,6 @@
 #include "board/mailbox.hpp"
 #include "board/mini-uart.hpp"
-#include "cmd.hpp"
+#include "shell/cmd.hpp"
 
 int cmd_hwinfo(int /* argc */, char* /* argv */[]) {
   // it should be 0xa020d3 for rpi3 b+

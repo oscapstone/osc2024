@@ -1,6 +1,6 @@
 #include "board/mini-uart.hpp"
-#include "cmd.hpp"
 #include "fdt.hpp"
+#include "shell/cmd.hpp"
 
 int cmd_devtree(int argc, char* argv[]) {
   if (argc <= 1) {

@@ -2,7 +2,7 @@
 
 #include "board/mini-uart.hpp"
 #include "int/interrupt.hpp"
-#include "shell.hpp"
+#include "shell/shell.hpp"
 
 const char* ExceptionFrom[] = {
     "Current Exception level with SP_EL0.",

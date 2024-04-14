@@ -1,6 +1,6 @@
 #include "board/mini-uart.hpp"
-#include "cmd.hpp"
 #include "fs/initramfs.hpp"
+#include "shell/cmd.hpp"
 
 int cmd_cat(int argc, char* argv[]) {
   int r = 0;
