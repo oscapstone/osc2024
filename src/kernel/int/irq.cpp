@@ -26,7 +26,7 @@ void irq_add_task(int prio, Task::fp callback, void* context) {
   for (; it != irq_tasks.end(); it++)
     if (prio >= it->prio)
       break;
-  irq_tasks.insert(--it, node);
+  irq_tasks.insert_before(it, node);
 }
 
 void irq_run() {

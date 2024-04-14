@@ -4,14 +4,14 @@
 #include "int/irq.hpp"
 
 uint64_t freq_of_timer, boot_timer_tick, us_tick;
-int timer_cnt = 0;
-Timer* timer_head = nullptr;
+ListHead<Timer> timers;
 
 void timer_init() {
   freq_of_timer = read_sysreg(CNTFRQ_EL0);
   us_tick = freq_of_timer / (int)1e6;
   boot_timer_tick = get_timetick();
   write_sysreg(CNTP_CTL_EL0, 1);
+  timers.init();
 }
 
 void add_timer(timeval tval, void* context, Timer::fp callback, int prio) {
@@ -22,36 +22,33 @@ void add_timer(uint64_t tick, void* context, Timer::fp callback, int prio) {
 
   tick += get_timetick();
 
-  Timer** nptr = &timer_head;
-  bool is_head = true;
-  for (auto it = timer_head; it; it = it->next)
-    if (it->tick <= tick) {
-      nptr = &it->next;
-      is_head = false;
-    } else {
+  auto it = timers.begin();
+  for (; it != timers.end(); ++it)
+    if (it->tick >= tick)
       break;
-    }
-  *nptr = new Timer{tick, prio, callback, context, *nptr};
+  auto is_head = it == timers.begin();
+  timers.insert_before(it, new Timer{tick, prio, callback, context});
   if (is_head)
-    set_timer_tick(timer_head->tick);
-  if (++timer_cnt == 1)
+    set_timer_tick(tick);
+  if (timers.size() == 1)
     enable_timer();
 
   restore_DAIF();
 }
 
 void timer_enqueue() {
-  if (timer_cnt == 0) {
+  if (timers.empty()) {
     disable_timer();
     return;
   }
 
-  timer_pop(it, timer_head);
+  auto it = *timers.begin();
+  timers.erase(timers.begin());
 
-  if (--timer_cnt == 0)
+  if (timers.empty())
     disable_timer();
   else
-    set_timer_tick(timer_head->tick);
+    set_timer_tick(timers.begin()->tick);
 
   irq_add_task(it->prio, it->callback, it->context);
   delete it;

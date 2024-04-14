@@ -22,7 +22,7 @@ inline void unlink(ListItem* it) {
 }
 
 template <std::derived_from<ListItem> T>
-class ListHead : ListItem {
+class ListHead {
  public:
   class iterator {
    public:
@@ -64,11 +64,12 @@ class ListHead : ListItem {
 
  private:
   int size_ = 0;
-  ListItem head_, tail_;
+  ListItem head_{}, tail_{};
 
  public:
   void init() {
     size_ = 0;
+    head_.prev = tail_.next = nullptr;
     link(&head_, &tail_);
   }
 
@@ -76,6 +77,9 @@ class ListHead : ListItem {
     size_++;
     link(node, it->next);
     link(*it, node);
+  }
+  void insert_before(iterator it, T* node) {
+    insert(--it, node);
   }
   void erase(iterator it) {
     size_--;

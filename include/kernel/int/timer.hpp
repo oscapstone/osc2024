@@ -1,28 +1,31 @@
 #pragma once
 
 #include "board/timer.hpp"
+#include "ds/list.hpp"
 #include "ds/timeval.hpp"
 
-struct Timer {
+struct Timer : ListItem {
   using fp = void (*)(void*);
   uint64_t tick;
   int prio;
   fp callback;
   void* context;
-  Timer* next;
+  Timer()
+      : ListItem{}, tick(0), prio(-1), callback(nullptr), context(nullptr) {}
+  Timer(uint64_t tick_, int prio_, fp callback_, void* context_)
+      : ListItem{},
+        tick(tick_),
+        prio(prio_),
+        callback(callback_),
+        context(context_) {}
 };
 
 extern uint64_t freq_of_timer, boot_timer_tick, us_tick;
-extern int timer_cnt;
-extern Timer* timer_head;
+extern ListHead<Timer> timers;
 // cmds/timer.cpp
 extern bool show_timer;
 extern int timer_delay;
 
-#define timer_pop(name, head) \
-  auto name = head;           \
-  head = name->next;          \
-  name->next = nullptr
 
 inline timeval tick2timeval(uint64_t tick) {
   uint32_t sec = tick / freq_of_timer;
