@@ -36,9 +36,9 @@ const Cmd cmds[] = {
         .fp = cmd_cat,
     },
     {
-        .name = "alloc",
+        .name = "heap",
         .help = "memory allocation",
-        .fp = cmd_alloc,
+        .fp = cmd_heap,
     },
     {
         .name = "devtree",
