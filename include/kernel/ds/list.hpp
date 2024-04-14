@@ -22,15 +22,25 @@ inline void unlink(ListItem* it) {
 }
 
 template <std::derived_from<ListItem> T>
-struct ListHead : ListItem {
+class ListHead : ListItem {
+ public:
   class iterator {
    public:
     iterator(T* it) : it_(it) {}
     iterator& operator++() {
-      it_ = it_->next;
+      it_ = (T*)it_->next;
       return *this;
     }
     iterator operator++(int) {
+      iterator copy = *this;
+      ++*this;
+      return copy;
+    }
+    iterator& operator--() {
+      it_ = (T*)it_->prev;
+      return *this;
+    }
+    iterator operator--(int) {
       iterator copy = *this;
       ++*this;
       return copy;
@@ -52,20 +62,37 @@ struct ListHead : ListItem {
     T* it_;
   };
 
-  int size = 0;
+ private:
+  int size_ = 0;
+  ListItem head_, tail_;
+
+ public:
+  void init() {
+    size_ = 0;
+    link(&head_, &tail_);
+  }
+
   void insert(iterator it, T* node) {
-    size++;
+    size_++;
     link(node, it->next);
     link(*it, node);
   }
   void erase(iterator it) {
-    size--;
+    size_--;
     unlink(*it);
   }
+
+  int size() const {
+    return size_;
+  }
+  bool empty() const {
+    return size_ == 0;
+  }
+
   iterator begin() {
-    return (T*)next;
+    return (T*)head_.next;
   }
   iterator end() {
-    return this;
+    return (T*)&tail_;
   }
 };

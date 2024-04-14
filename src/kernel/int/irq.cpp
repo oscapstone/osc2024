@@ -14,23 +14,19 @@ void irq_handler(ExceptionContext* context, int type) {
   irq_run();
 }
 
-TaskHead irq_tasks;
+ListHead<Task> irq_tasks;
 
 void irq_init() {
-  irq_tasks.count = 0;
-  link(&irq_tasks.head, &irq_tasks.tail);
+  irq_tasks.init();
 }
 
 void irq_add_task(int prio, Task::fp callback, void* context) {
   auto node = new Task{prio, callback, context};
   auto it = irq_tasks.begin();
-  while (it != irq_tasks.end()) {
-    if (prio >= it->prio) {
+  for (; it != irq_tasks.end(); it++)
+    if (prio >= it->prio)
       break;
-    }
-    it = it->next;
-  }
-  irq_tasks.insert(it, node);
+  irq_tasks.insert(--it, node);
 }
 
 void irq_run() {

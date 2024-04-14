@@ -7,8 +7,7 @@ extern "C" {
 void irq_handler(ExceptionContext* context, int type);
 }
 
-struct Task {
-  Task *prev, *next;
+struct Task : ListItem {
   bool running;
   int prio;  // high priority task = high number
 
@@ -16,9 +15,15 @@ struct Task {
   fp callback;
   void* context;
 
+  Task()
+      : ListItem{},
+        running{false},
+        prio{-1},
+        callback{nullptr},
+        context{nullptr} {}
+
   Task(int prio_, fp callback_, void* context_)
-      : prev{nullptr},
-        next{nullptr},
+      : ListItem{},
         running{false},
         prio{prio_},
         callback{callback_},
@@ -39,30 +44,7 @@ inline void unlink(Task* it) {
   link(it->prev, it->next);
 }
 
-struct TaskHead {
-  Task head{0, nullptr, nullptr}, tail{0, nullptr, nullptr};
-  int count;
-  void insert(Task* it, Task* node) {
-    count++;
-    link(it->prev, node);
-    link(node, it);
-  }
-  void erase(Task* node) {
-    count--;
-    unlink(node);
-  }
-  bool empty() const {
-    return count == 0;
-  }
-  auto begin() {
-    return head.next;
-  }
-  auto end() {
-    return &tail;
-  }
-};
-
-extern TaskHead irq_tasks;
+extern ListHead<Task> irq_tasks;
 
 void irq_init();
 void irq_add_task(int prio, Task::fp callback, void* context);
