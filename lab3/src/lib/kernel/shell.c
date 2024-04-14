@@ -46,11 +46,19 @@ void shell()
             token = strtok(0, " ");
         }
 
-        if (!strcmp(arg[0], "help") && i == 1)
-            uart_puts(
-                "help\t: print this help menu\nhello\t: print Hello World!\nls\t: list files in current "
-                "directory\ncat\t: print file content\nexec\t: execute user program\nasync\t: test async\ntimeout\t: "
-                "set timeout\nmailbox\t: print mailbox info\nclear\t: clear the screen\nreboot\t: reboot the device\n");
+        if (!strcmp(arg[0], "help") && i == 1) {
+            uart_puts("help\t: print this help menu\n");
+            uart_puts("hello\t: print Hello World!\n");
+            uart_puts("mailbox\t: print mailbox info\n");
+            uart_puts("clear\t: clear the screen\n");
+            uart_puts("reboot\t: reboot the device\n");
+            uart_puts("ls\t: list files in current directory\n");
+            uart_puts("cat\t: print file content\n");
+            uart_puts("exec\t: execute user program\n");
+            uart_puts("async\t: test async\n");
+            uart_puts("timeout\t: set timeout\n");
+            uart_puts("preempt\t: test preemption\n");
+        }
         else if (!strcmp(arg[0], "hello") && i == 1)
             uart_puts("Hello World!\n");
         else if (!strcmp(arg[0], "clear") && i == 1)
@@ -63,12 +71,9 @@ void shell()
             else
                 uart_puts("Usage: cat <filename>\n");
         }
-        else if (!strcmp(arg[0], "exec") && i == 1) {
-            // asm volatile("msr DAIFSet, 0xf");
+        else if (!strcmp(arg[0], "exec") && i == 1)
             cpio_exec("userprog");
-        }
         else if (!strcmp(arg[0], "async") && i == 1) {
-            // uart_interrupt_enable();
             uart_puts("async (press enter to exit)>> ");
             char c = 0;
             while (1) {
@@ -81,7 +86,6 @@ void shell()
             }
             uart_puts("\n");
         }
-        // set timeout
         else if (!strcmp(arg[0], "timeout")) {
             if (i != 3)
                 uart_puts("Usage: timeout <message> <time>\n");

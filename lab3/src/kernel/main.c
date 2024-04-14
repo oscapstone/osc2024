@@ -11,16 +11,14 @@ void main(char *arg)
     register unsigned long long x21 asm("x21");
     arg = (char *)x21;
 
-    // uart_clear_buffers();
     uart_init();
+    fdt_traverse(initramfs_callback, arg);
 
     core_timer_enable();
     core_timer_interrupt_enable();
     set_core_timer_interrupt_permanent();
     uart_interrupt_enable();
-    // asm volatile("msr DAIFClr, 0xf");
-
-    fdt_traverse(initramfs_callback, arg);
+    asm volatile("msr DAIFClr, 0xf");
 
     uart_puts("\x1b[2J\x1b[H");
     uart_puts("Hello, kernel World!\n");

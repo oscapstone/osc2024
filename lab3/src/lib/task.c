@@ -13,9 +13,8 @@ void add_task(int priority, task_callback_t callback)
     INIT_LIST_HEAD(&entry->list);
 
     asm volatile("msr DAIFSet, 0xf");
-    if (list_empty(&task_list)) {
+    if (list_empty(&task_list))
         list_add_tail(&entry->list, &task_list);
-    }
     else {
         task_node *node;
         struct list_head *p;
@@ -31,39 +30,29 @@ void add_task(int priority, task_callback_t callback)
             }
         }
 
-        if (!flag) {
+        if (!flag)
             list_add_tail(&entry->list, &task_list);
-        }
     }
     asm volatile("msr DAIFClr, 0xf");
-    // uart_puts("add_task\n");
 }
 
 void pop_task()
 {
-    // asm volatile("msr DAIFClr, 0xf");
     while (!list_empty(&task_list)) {
         asm volatile("msr DAIFSet, 0xf");
-
         task_node *first = list_first_entry(&task_list, task_node, list);
-        if (first->priority > cur_priority) {
-            // asm volatile("msr DAIFClr, 0xf");
+        if (first->priority > cur_priority)
             return;
-        }
 
-        // asm volatile("msr DAIFSet, 0xf");
         list_del(&first->list);
         int tmp_priority = cur_priority;
         cur_priority = first->priority;
-        // uart_dec(cur_priority);
         asm volatile("msr DAIFClr, 0xf");
 
-        // uart_puts("pop_task\n");
         first->callback();
 
         asm volatile("msr DAIFSet, 0xf");
         cur_priority = tmp_priority;
         asm volatile("msr DAIFClr, 0xf");
     }
-    // uart_puts("pop_task2\n");
 }

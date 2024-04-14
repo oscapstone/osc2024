@@ -17,7 +17,6 @@ void exception_handler_c()
 {
     uart_puts("Exception handle\n");
     asm volatile("msr DAIFSet, 0xf\r\n");
-    // disable_interrupt();
 
     // read spsr_el1
     unsigned long long spsr_el1 = 0;
@@ -89,14 +88,11 @@ void irq_handler_c()
             uart_rx_interrupt_disable();
             add_task(UART_PRIORITY, uart_rx_handler);
             pop_task();
-            // uart_puts("pop task1\n");
         }
         else if (*AUX_MU_IIR & 0x2) {
             uart_tx_interrupt_disable();
-            // *CORE0_TIMER_IRQ_CTRL_ = 0;
             add_task(UART_PRIORITY, uart_tx_handler);
             pop_task();
-            // uart_puts("pop task2\n");
         }
     }
     else if (*CORE0_INTERRUPT_SOURCE & (1 << 1)) {
@@ -110,6 +106,8 @@ void irq_handler_c()
 void highp()
 {
     uart_async_puts("high prior start\n");
+    for (int i = 0; i < 100000; ++i)
+        ;
     uart_async_puts("high prior end\n");
 }
 
@@ -117,7 +115,7 @@ void lowp()
 {
     uart_async_puts("low prior start\n");
     add_task(0, highp);
-    uart_async_putc('\r'); // to trigger pop_task
+    uart_async_putc('\r');
     for (int i = 0; i < 100000; ++i)
         ;
     uart_async_puts("low prior end\n");
@@ -127,7 +125,7 @@ void lowp()
 
 void test_preemption()
 {
-    uart_async_puts("Starting test :\n");
+    uart_async_puts("Start Testing :\n");
     add_task(9, lowp);
-    uart_async_putc('\r'); // to trigger pop_task
+    uart_async_putc('\r');
 }
