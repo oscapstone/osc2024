@@ -17,3 +17,9 @@ void* mem_alloc(unsigned long size)
     heap_ptr += size;
     return ptr;
 }
+
+void mem_free(void* ptr)
+{
+    // TODO
+    return;
+}

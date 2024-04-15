@@ -25,18 +25,22 @@ void kernel_main(uintptr_t x0)
     enable_irq();
 
     /* get dtb addr */
-    // uart_send_string("DTB addr: 0x");
     set_dtb_ptr((uintptr_t)x0);
-    // uart_send_hex(get_dtb_ptr());
-    // uart_send_string("\n");
+
+    unsigned long dtb_ptr = get_dtb_ptr();
+    uart_send_string("DTB addr: 0x");
+    uart_send_hex(dtb_ptr >> 32);
+    uart_send_hex(dtb_ptr);
+    uart_send_string("\n");
 
     /* get cpio addr */
     fdt_traverse(fdt_find_cpio_ptr);
 
-
-    // uart_send_string("CPIO addr: 0x");
-    // uart_send_hex(get_cpio_ptr());
-    // uart_send_string("\n");
+    unsigned long cpio_ptr = get_cpio_ptr();
+    uart_send_string("CPIO addr: 0x");
+    uart_send_hex(cpio_ptr >> 32);
+    uart_send_hex(cpio_ptr);
+    uart_send_string("\n");
 
     shell();
 

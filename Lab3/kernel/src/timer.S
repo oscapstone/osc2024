@@ -26,3 +26,27 @@ get_current_time:
     mrs x1, cntfrq_el0
     udiv x0, x0, x1
     ret
+
+.globl get_current_ticks
+get_current_ticks:
+    mrs x0, cntpct_el0
+    ret
+
+.globl get_freq
+get_freq:
+    mrs x0, cntfrq_el0
+    ret
+
+.globl set_core_timer_timeout_ticks
+set_core_timer_timeout_ticks:
+    msr cntp_tval_el0, x0
+    ret 
+
+.globl set_core_timer_timeout_secs
+set_core_timer_timeout_secs:
+    mrs x1, cntfrq_el0
+    bl get_freq
+    mul x0, x0, x1
+    bl set_core_timer_timeout_ticks
+    ret
+

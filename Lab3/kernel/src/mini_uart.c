@@ -2,15 +2,6 @@
 #include "peripheral/gpio.h"
 #include "utils.h"
 
-#define UART_BUFFER_SIZE 128  // must be power of 2
-
-static char uart_read_buffer[UART_BUFFER_SIZE];
-static char uart_write_buffer[UART_BUFFER_SIZE];
-
-static int uart_read_head, uart_read_idx = 0;
-static int uart_write_head, uart_write_idx = 0;
-
-
 void uart_init(void)
 {
     unsigned int gpfsel1 = get32(GPFSEL1);
@@ -103,82 +94,95 @@ void uart_send_space_level(unsigned int level)
 
 void uart_enable_interrupt(void)
 {
-    put32(ENABLE_IRQs_1, AUX_INT);
+    put32(ENABLE_IRQs_1, IRQ_PENDING_1_AUX_INT);
 }
 
 
 void uart_disable_interrupt(void)
 {
-    put32(DISABLE_IRQs_1, AUX_INT);
+    put32(DISABLE_IRQs_1, IRQ_PENDING_1_AUX_INT);
 }
 
-static void set_tx_interrupt(void)
+void set_tx_interrupt(void)
 {
     unsigned int aux_mu_ier_reg = get32(AUX_MU_IER_REG);
     aux_mu_ier_reg |= ENABLE_TX_INT;
     put32(AUX_MU_IER_REG, aux_mu_ier_reg);
 }
 
-static void clear_tx_interrupt(void)
+void clear_tx_interrupt(void)
 {
     unsigned int aux_mu_ier_reg = get32(AUX_MU_IER_REG);
     aux_mu_ier_reg &= ~ENABLE_TX_INT;
     put32(AUX_MU_IER_REG, aux_mu_ier_reg);
 }
 
-static void set_rx_interrupt(void)
+void set_rx_interrupt(void)
 {
     unsigned int aux_mu_ier_reg = get32(AUX_MU_IER_REG);
     aux_mu_ier_reg |= ENABLE_RX_INT;
     put32(AUX_MU_IER_REG, aux_mu_ier_reg);
 }
 
-static void clear_rx_interrupt(void)
+void clear_rx_interrupt(void)
 {
     unsigned int aux_mu_ier_reg = get32(AUX_MU_IER_REG);
     aux_mu_ier_reg &= ~ENABLE_RX_INT;
     put32(AUX_MU_IER_REG, aux_mu_ier_reg);
 }
 
+#define UART_BUFFER_SIZE 0x100  // must be power of 2
 
-void uart_handle_irq(void)
-{
-    unsigned int iir = get32(AUX_MU_IIR_REG);
-    unsigned int int_id = iir & INT_ID_MASK;
+static char uart_read_buffer[UART_BUFFER_SIZE];
+static char uart_write_buffer[UART_BUFFER_SIZE];
 
-    switch (int_id) {
-    case TX_INT:
-        if (uart_write_head != uart_write_idx) {
-            uart_send(uart_write_buffer[uart_write_head++]);
-            uart_write_head &= (UART_BUFFER_SIZE - 1);
-        } else {
-            clear_tx_interrupt();
-        }
-        break;
-    case RX_INT:
-        char c = uart_recv();
-        uart_read_buffer[uart_read_idx++] = c;
-        uart_read_idx &= (UART_BUFFER_SIZE - 1);
-        break;
-    default:
-        break;
-    }
-}
+static int uart_read_head, uart_read_idx = 0;
+static int uart_write_head, uart_write_idx = 0;
+
+#define write_buffer_empty() (uart_write_head == uart_write_idx)
+#define read_buffer_empty()  (uart_read_head == uart_read_idx)
+
+/* GNU extension - statement expression */
+#define write_buffer_get()                             \
+    ({                                                 \
+        char c = uart_write_buffer[uart_write_head++]; \
+        uart_write_head &= (UART_BUFFER_SIZE - 1);     \
+        c;                                             \
+    })
+#define read_buffer_get()                            \
+    ({                                               \
+        char c = uart_read_buffer[uart_read_head++]; \
+        uart_read_head &= (UART_BUFFER_SIZE - 1);    \
+        c;                                           \
+    })
+
+#define write_buffer_add(c)                       \
+    do {                                          \
+        uart_write_buffer[uart_write_idx++] = c;  \
+        uart_write_idx &= (UART_BUFFER_SIZE - 1); \
+    } while (0);
+
+#define read_buffer_add(c)                       \
+    do {                                         \
+        uart_read_buffer[uart_read_idx++] = c;   \
+        uart_read_idx &= (UART_BUFFER_SIZE - 1); \
+    } while (0);
 
 char uart_recv_async(void)
 {
     set_rx_interrupt();
-    if (uart_read_head == uart_read_idx)
-        return '\0';
-    char c = uart_read_buffer[uart_read_head++];
-    uart_read_head &= (UART_BUFFER_SIZE - 1);
+    while (read_buffer_empty())
+        ;
+    uart_disable_interrupt();
+    char c = read_buffer_get();
+    uart_enable_interrupt();
     return c == '\r' ? '\n' : c;
 }
 
 void uart_send_async(char c)
 {
-    uart_write_buffer[uart_write_idx++] = c;
-    uart_write_idx &= (UART_BUFFER_SIZE - 1);
+    write_buffer_add(c);
+    set_tx_interrupt();
 }
 
 void uart_send_string_async(const char* str)
@@ -188,24 +192,37 @@ void uart_send_string_async(const char* str)
             uart_send_async('\r');
         uart_send_async(*str++);
     }
-    set_tx_interrupt();
+}
+
+void uart_rx_handle_irq(void)
+{
+    read_buffer_add(uart_recv());
+    set_rx_interrupt();
+}
+
+void uart_tx_handle_irq(void)
+{
+    if (write_buffer_empty()) {
+        clear_tx_interrupt();
+        return;
+    }
+    while (!write_buffer_empty()) {
+        delay(1 << 15);
+        char c = write_buffer_get();
+        uart_send(c);
+    }
 }
 
 void test_uart_async(void)
 {
     uart_enable_interrupt();
-    char test_buffer[64];
-    int test_idx = 0;
-    while (test_idx < 63) {
-        char c = uart_recv_async();
-        if (c == '\0')
-            continue;
-        test_buffer[test_idx++] = c;
-        if (c == '\n') {
-            test_buffer[test_idx] = '\0';
-            break;
-        }
+    char c = uart_recv_async();
+    while (c != '\n') {
+        write_buffer_add(c);
+        c = uart_recv_async();
     }
-    uart_send_string_async(test_buffer);
+    write_buffer_add('\r');
+    write_buffer_add(c);
+    set_tx_interrupt();
     uart_disable_interrupt();
 }

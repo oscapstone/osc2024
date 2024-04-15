@@ -146,8 +146,11 @@ void parse_command(char* cmd)
             }
 
             bool periodic = (bool)decstr2int(repeat);
-            set_timeout(msg, seconds, periodic);
+            add_timer(print_msg, msg, seconds, periodic);
 
+        } else if (!str_cmp(cmd_name, "fuck")) {
+            disable_core0_timer();
+            uart_send_string("No more core timer interrupt!!\n");
         } else {
             uart_send_string("Command '");
             uart_send_string(cmd);

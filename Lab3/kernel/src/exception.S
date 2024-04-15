@@ -1,5 +1,7 @@
 #include "entry.h"
 
+#define S_FRAME_SIZE 16 * 17
+
 .macro save_all
     sub sp, sp, #S_FRAME_SIZE
     stp x0, x1, [sp, #16 * 0]
@@ -18,13 +20,18 @@
     stp x26, x27, [sp, #16 * 13]
     stp x28, x29, [sp, #16 * 14]
     str x30, [sp, #16 * 15]
-
+    
+    // push information for nested interrupt
     mrs x0, spsr_el1
     mrs x1, elr_el1
     stp x0, x1, [sp, #16 * 16]
+
+    // restore x0, x1
+    ldp x0, x1, [sp, #16 * 0]
 .endm
 
 .macro load_all
+    // pop information for nested interrupt
     ldp x0, x1, [sp, #16 * 16]
     msr spsr_el1, x0
     msr elr_el1, x1
@@ -45,6 +52,7 @@
     ldp x26, x27, [sp, #16 * 13]
     ldp x28, x29, [sp, #16 * 14]
     ldr x30, [sp, #16 * 15]
+
     add sp, sp, #S_FRAME_SIZE
 .endm
 

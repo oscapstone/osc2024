@@ -1,3 +1,4 @@
+#include "irq.h"
 #include "entry.h"
 #include "mini_uart.h"
 #include "peripheral/mini_uart.h"
@@ -23,6 +24,7 @@ void show_invalid_entry_message(int type,
                                 unsigned long esr,
                                 unsigned long elr)
 {
+    disable_all_exception();
     uart_send_string(entry_error_type[type]);
     uart_send_string(": ");
     // decode exception type (some, not all. See ARM DDI0487B_b chapter
@@ -109,17 +111,30 @@ void show_invalid_entry_message(int type,
     uart_send_hex(elr >> 32);
     uart_send_hex(elr);
     uart_send_string("\n");
+
+    enable_all_exception();
 }
 
 void irq_handler(void)
 {
+    disable_all_exception();
     unsigned int irq_pending_1 = get32(IRQ_PENDING_1);
     unsigned int core_irq_source = get32(CORE0_IRQ_SOURCE);
-    if (irq_pending_1 & AUX_INT) {
-        uart_handle_irq();
+    if (irq_pending_1 & IRQ_PENDING_1_AUX_INT) {
+        unsigned int iir = get32(AUX_MU_IIR_REG);
+        unsigned int int_id = iir & INT_ID_MASK;
+        if (int_id == RX_INT) {
+            clear_rx_interrupt();
+            uart_rx_handle_irq();
+        } else if (int_id == TX_INT) {
+            clear_tx_interrupt();
+            uart_tx_handle_irq();
+        }
     } else if (core_irq_source & CNTPNSIRQ) {
+        disable_core0_timer();
         core_timer_handle_irq();
     } else {
         uart_send_string("Unknown pending interrupt\n");
     }
+    enable_all_exception();
 }

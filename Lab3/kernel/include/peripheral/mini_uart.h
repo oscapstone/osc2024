@@ -31,6 +31,6 @@
 #define IRQ_PENDING_1 (PBASE + 0x0000B204)
 #define IRQ_PENDING_2 (PBASE + 0x0000B208)
 
-#define AUX_INT (1 << 29)
+#define IRQ_PENDING_1_AUX_INT (1 << 29)
 
 #endif /* P_MINI_UART_H */
