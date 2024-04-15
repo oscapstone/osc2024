@@ -13,6 +13,11 @@ void* memcpy(void* dst, const void* src, int n) {
   return dst;
 }
 
+void memset(void* b, int c, int len) {
+  for (char* i = (char*)b; len; len--, i++)
+    *i = c;
+}
+
 int memcmp(const void* s1, const void* s2, int n) {
   auto s1_ = (const unsigned char*)s1, s2_ = (const unsigned char*)s2;
   int d;

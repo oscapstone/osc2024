@@ -4,10 +4,7 @@
 
 struct ListItem {
   ListItem *prev, *next;
-  bool empty() const {
-    return prev == this and this == next;
-  }
-  ListItem() : prev(this), next(this) {}
+  ListItem() : prev(nullptr), next(nullptr) {}
 };
 
 inline void link(ListItem* prev, ListItem* next) {
@@ -27,6 +24,7 @@ class ListHead {
   class iterator {
    public:
     iterator(T* it) : it_(it) {}
+    iterator(ListItem* it) : it_((T*)it) {}
     iterator& operator++() {
       it_ = (T*)it_->next;
       return *this;
@@ -67,6 +65,10 @@ class ListHead {
   ListItem head_{}, tail_{};
 
  public:
+  ListHead() {
+    init();
+  }
+
   void init() {
     size_ = 0;
     head_.prev = tail_.next = nullptr;
@@ -80,6 +82,9 @@ class ListHead {
   }
   void insert_before(iterator it, T* node) {
     insert(--it, node);
+  }
+  void insert_tail(T* node) {
+    insert(tail_.prev, node);
   }
   void erase(iterator it) {
     size_--;
