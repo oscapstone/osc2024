@@ -9,6 +9,7 @@
 struct list_head* timer_event_list;  // first head has nothing, store timer_event_t after it 
 
 void timer_list_init(){
+    timer_event_list = malloc(sizeof(list_head_t));
     INIT_LIST_HEAD(timer_event_list);
 }
 
@@ -88,7 +89,18 @@ void timer_set2sAlert(char* str)
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
+    //Test Preemptive
     uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
+    // int i = 0;
+    // while(1){
+    //     if( i == 999999999){
+    //         // uart_sendline("%d\t", i);
+    //         uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
+    //         break;
+    //     }
+    //     ++i;
+    // }
+
     add_timer(timer_set2sAlert,2,"2sAlert");
 }
 
@@ -101,7 +113,7 @@ void add_timer(void *callback, unsigned long long timeout, char* args){
     the_timer_event->interrupt_time = get_tick_plus_s(timeout);
     the_timer_event->callback = callback;
     INIT_LIST_HEAD(&the_timer_event->listhead);
-
+    // uart_sendline("OKOK");
     // add the timer_event into timer_event_list (sorted)
     struct list_head* curr;
     list_for_each(curr,timer_event_list)

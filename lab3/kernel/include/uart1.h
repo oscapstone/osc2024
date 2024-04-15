@@ -16,5 +16,6 @@ void uart_interrupt_disable();
 // void uart_interrupt_handler();
 void uart_r_irq_handler();
 void uart_w_irq_handler();
+void uart_flush_FIFO();
 
 #endif /*_UART1_H_*/

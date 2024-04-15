@@ -21,7 +21,8 @@ void el1h_irq_router(){
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IIR_REG & (1 << 1))//check if write interrupt
+        // if (*AUX_MU_IIR_REG & (1 << 1))//check if write interrupt
+        if (*AUX_MU_IER_REG & 2)//check if write interrupt
         {
             *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
@@ -29,7 +30,8 @@ void el1h_irq_router(){
             //uart_sendline("\t");
             //(async input) Output on terminal will enter this block.
         }
-        else if (*AUX_MU_IIR_REG & (2 << 1))//check if read interrupt
+        // else if (*AUX_MU_IIR_REG & (2 << 1))//check if read interrupt
+        else if (*AUX_MU_IER_REG & 1)//check if read interrupt
         {
             *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
@@ -56,6 +58,16 @@ void el0_sync_router(){
     unsigned long long esr_el1;
     __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r" (esr_el1));   // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
     uart_sendline("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\n", spsr_el1, elr_el1, esr_el1);
+    // //Test Preemptive
+    // int i = 0;
+    // while(1){
+    //     if( i == 999999999){
+    //         // uart_sendline("%d\t", i);
+    //         uart_sendline("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\n", spsr_el1, elr_el1, esr_el1);
+    //         break;
+    //     }
+    //     ++i;
+    // }
 }
 
 // void el0_irq_64_router(){
@@ -112,6 +124,7 @@ int curr_task_priority = 9999;   // Small number has higher priority
 struct list_head *task_list;
 void irqtask_list_init()
 {
+    task_list = malloc(sizeof(list_head_t));
     INIT_LIST_HEAD(task_list);
 }
 
@@ -136,6 +149,7 @@ void irqtask_add(void *task_function,unsigned long long priority){
     {
         if (((irqtask_t *)curr)->priority > the_task->priority)
         {
+            // uart_sendline("curr->priority : %llu, the_task->priority : %llu\n", ((irqtask_t *)curr)->priority, the_task->priority);
             list_add(&the_task->listhead, curr->prev);
             break;
         }

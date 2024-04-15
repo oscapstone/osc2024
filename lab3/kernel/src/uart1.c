@@ -202,3 +202,7 @@ void uart_w_irq_handler(){
     if(uart_tx_buffer_ridx>=VSPRINT_MAX_BUF_SIZE) uart_tx_buffer_ridx=0;
     *AUX_MU_IER_REG |=2;  // enable write interrupt
 }
+
+void uart_flush_FIFO(){
+    *AUX_MU_IIR_REG |=6;
+}
