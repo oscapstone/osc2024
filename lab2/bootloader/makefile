@@ -1,7 +1,7 @@
 ARMGNU ?= aarch64-linux-gnu
 
-CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only -g
-ASMFLAGS = -Iinclude -g
+CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
+ASMFLAGS = -Iinclude
 
 BUILD_DIR = build
 SRC_DIR = src

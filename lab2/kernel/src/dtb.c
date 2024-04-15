@@ -82,38 +82,22 @@ void traverse_device_tree(void *dtb_ptr, dtb_callback callback)
 void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t name_size)
 {
     static int level = 0;
-    static int command_count = 0; // 用於計數已打印的指令數量
-
-    if(command_count >= 30) { // 檢查是否達到30個指令
-        uart_puts("Press Enter to continue...\n");
-        char c;
-        do {
-            c = uart_recv(); // 使用uart_recv()讀取字符
-        } while (c != '\n'); // 循環直到用戶按下Enter鍵
-        command_count = 0; // 重置計數器
-    }
-
-    if(node_type == FDT_BEGIN_NODE)
+    if(node_type==FDT_BEGIN_NODE)
     {
-        for(int i = 0; i < level; i++) uart_puts("   ");
-        uart_puts("%s{\n", name);
+        for(int i=0;i<level;i++)uart_puts("   ");
+        uart_puts("%s{\n",name);
         level++;
-    }
-    else if(node_type == FDT_END_NODE)
+    }else if(node_type==FDT_END_NODE)
     {
         level--;
-        for(int i = 0; i < level; i++) uart_puts("   ");
+        for(int i=0;i<level;i++)uart_puts("   ");
         uart_puts("}\n");
-    }
-    else if(node_type == FDT_PROP)
+    }else if(node_type==FDT_PROP)
     {
-        for(int i = 0; i < level; i++) uart_puts("   ");
-        uart_puts("%s\n", name);
+        for(int i=0;i<level;i++)uart_puts("   ");
+        uart_puts("%s\n",name);
     }
-
-    command_count++; // 增加計數器的值
 }
-
 
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size) {
     // https://github.com/stweil/raspberrypi-documentation/blob/master/configuration/device-tree.md

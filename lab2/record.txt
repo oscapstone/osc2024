@@ -18,6 +18,8 @@ sudo ./send_image_to_bootloader.py
 gdb-multiarch
 target remote :1234
 file build/bootloader.elf
+
+gdb-multiarch -x debug.gdb
 break _start
 break main
 break code_relocate

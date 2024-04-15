@@ -73,4 +73,3 @@ x/32xb &__bss_start
 info registers
 info registers sp
 info register pc
-C
