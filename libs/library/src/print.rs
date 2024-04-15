@@ -3,7 +3,7 @@ use crate::console;
 use core::fmt::Arguments;
 
 pub fn _print(args: Arguments) {
-    console::console().write_fmt(args).unwrap();
+    console::console().write_fmt_async(args).unwrap();
 }
 
 #[macro_export]

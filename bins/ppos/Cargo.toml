@@ -6,10 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+aarch64-cpu = "9.4.0"
 bsp = { path = "../../libs/bsp" }
 cpio = { path = "../../libs/cpio" }
 cpu = { path = "../../libs/cpu" }
 device = { path = "../../libs/device" }
 devicetree = { path = "../../libs/devicetree" }
 library = { path = "../../libs/library" }
+tock-registers = "0.8.1"
 vfs = { path = "../../libs/vfs" }

@@ -5,7 +5,9 @@ use tock_registers::{
     registers::{ReadOnly, WriteOnly},
 };
 
-use crate::{device_driver::DeviceDriver, mmio_deref_wrapper::MMIODerefWrapper};
+use crate::{
+    common::MMIODerefWrapper, device_driver::DeviceDriver, interrupt_controller::InterruptNumber,
+};
 
 #[repr(u32)]
 enum BufferRequestCode {
@@ -189,4 +191,6 @@ impl Mailbox {
     }
 }
 
-impl DeviceDriver for Mailbox {}
+impl DeviceDriver for Mailbox {
+    type InterruptNumberType = InterruptNumber;
+}

@@ -2,6 +2,7 @@
 #![no_main]
 
 mod driver;
+mod memory;
 mod relocate;
 
 use core::arch::asm;

@@ -22,7 +22,9 @@ impl Relocater {
     fn read_u64(&self) -> u64 {
         let mut n = 0;
         for i in 0..8 {
-            n += (console().read_char() as u64) << (i * 8);
+            let c = console().read_char_async();
+            while c.is_none() {}
+            n += (c.unwrap() as u64) << (i * 8);
         }
         n
     }
@@ -36,7 +38,9 @@ impl Relocater {
     fn relocate_kernel(&self, size: u64) {
         for i in 0..size {
             unsafe {
-                *(BINARY_START_ADDR.add(i as usize)) = console().read_char() as u8;
+                let c = console().read_char_async();
+                while c.is_none() {}
+                *(BINARY_START_ADDR.add(i as usize)) = c.unwrap() as u8;
             }
         }
     }

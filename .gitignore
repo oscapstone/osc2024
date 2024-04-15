@@ -1,5 +1,6 @@
 target
-kernel8.img
+*.img
 .gdb_history
+rootfs
 *.cpio
 *.dtb

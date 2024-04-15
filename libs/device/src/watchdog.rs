@@ -1,7 +1,9 @@
 use library::sync::mutex::Mutex;
 use tock_registers::{interfaces::Writeable, register_structs, registers::ReadWrite};
 
-use crate::{device_driver::DeviceDriver, mmio_deref_wrapper::MMIODerefWrapper};
+use crate::{
+    common::MMIODerefWrapper, device_driver::DeviceDriver, interrupt_controller::InterruptNumber,
+};
 
 const PM_PASSWORD: u32 = 0x5a000000;
 
@@ -46,7 +48,9 @@ pub struct Watchdog {
     inner: Mutex<WatchdogInner>,
 }
 
-impl DeviceDriver for Watchdog {}
+impl DeviceDriver for Watchdog {
+    type InterruptNumberType = InterruptNumber;
+}
 
 impl Watchdog {
     /**

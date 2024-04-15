@@ -1,5 +1,7 @@
+use crate::interrupt_controller::InterruptNumber;
+
+use super::common::MMIODerefWrapper;
 use super::device_driver::DeviceDriver;
-use super::mmio_deref_wrapper::MMIODerefWrapper;
 use cpu::cpu::spin_for_cycle;
 use library::sync::mutex::Mutex;
 use tock_registers::{
@@ -138,4 +140,6 @@ impl GPIO {
     }
 }
 
-impl DeviceDriver for GPIO {}
+impl DeviceDriver for GPIO {
+    type InterruptNumberType = InterruptNumber;
+}

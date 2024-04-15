@@ -1,3 +1,5 @@
+PAGE_SIZE = 4K;
+
 __phys_dram_start_addr = 0;
 __phys_binary_load_addr = 0x80000;
 
@@ -14,6 +16,7 @@ PHDRS
   segment_stack PT_LOAD FLAGS(6);
   segment_code PT_LOAD FLAGS(5);
   segment_data PT_LOAD FLAGS(6);
+  segment_heap PT_LOAD FLAGS(6);
 }
 
 SECTIONS
@@ -39,4 +42,9 @@ SECTIONS
     . = ALIGN(16);
     __bss_end = .;
   } : segment_data
+  __heap_begin = .;
+  .heap (NOLOAD) : ALIGN(PAGE_SIZE) {
+    . += 16 * 1024 * 1024;
+  } : segment_heap
+  __heap_end = .;
 }
