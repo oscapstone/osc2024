@@ -54,6 +54,8 @@ void parse_command(char *buffer)
         cpio_ls();
     } else if (my_strcmp(buffer, "cat") == 0) {
         cpio_cat();
+    } else if (my_strcmp(buffer, "load") == 0) {
+        cpio_load_program();
     } else if (my_strcmp(buffer, "malloc") == 0) {
         /* test malloc */
         char *tmp = malloc(4);
@@ -88,6 +90,7 @@ void help()
     uart_send_string("reboot      reboot the rpi3b+\r\n");
     uart_send_string("ls          show all files in rootfs\r\n");
     uart_send_string("cat         print out the content of specific file\r\n");
+    uart_send_string("load        load user program and execute\r\n");
     uart_send_string("malloc      try to print the content of malloc\r\n");
 }
 
