@@ -1,7 +1,7 @@
-use super::super::{
+use super::{super::{
     cpu::uart,
     os::timer,
-};
+}, stdio::println_now};
 use core::{
     arch::{asm, global_asm},
     ptr::read_volatile,
@@ -14,7 +14,6 @@ unsafe fn exception_handler_rust() {
     // println!("Exception handler");
     let interrupt_source = read_volatile(0x40000060 as *const u32);
 
-    // println!("irq_src: 0x{:x}", interrupt_source);
     if interrupt_source & 0x2 > 0 {
         timer::irq_handler();
     }
