@@ -102,20 +102,20 @@ synchronous_el1_handler:
     load_all
     eret
 
-irq_el0_hadler:
+irq_el0_handler:
     save_all
-    bl except_handler_c
+    bl low_irq_handler_c
     load_all
     eret
 
-irq_el1_hadler:
+irq_el1_handler:
     save_all
-    bl except_handler_c
+    bl low_irq_handler_c
     load_all
     eret
 
 .macro exception_entry label
-    b      /label
+    b      \label
     .align 7    
 .endm
 
@@ -128,7 +128,7 @@ exception_vector_table:
     exception_entry exception_handler
 
     exception_entry synchronous_el1_handler
-    exception_entry irq_el1_handler
+    exception_entry irq_el0_handler                           //irq_el1_handler
     exception_entry exception_handler
     exception_entry exception_handler
 
