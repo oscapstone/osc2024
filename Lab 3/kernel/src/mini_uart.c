@@ -151,8 +151,8 @@ mini_uart_endl()
 }
 
 
-
 #define BUFFER_SIZE 0x100
+#define BUFFER_END  0xFF
 
 static uint8_t _read_buffer[BUFFER_SIZE];
 static uint8_t _write_buffer[BUFFER_SIZE];
@@ -160,108 +160,101 @@ static uint8_t _write_buffer[BUFFER_SIZE];
 static uint32_t _read_start, _read_end;
 static uint32_t _write_start, _write_end;
 
+static void 
+read_buffer_add(uint8_t c)
+{
+    _read_buffer[_read_end++] = c;
+    _read_end &= BUFFER_END;
+}
+
+static uint8_t 
+read_buffer_get()
+{
+    uint8_t c = _read_buffer[_read_start++];
+    _read_start &= BUFFER_END;
+    return c;
+}
+
+static void 
+write_buffer_add(uint8_t c)
+{
+    _write_buffer[_write_end++] = c;
+    _write_end &= BUFFER_END;
+}
+
+static uint8_t 
+write_buffer_get()
+{
+    uint8_t c = _write_buffer[_write_start++];
+    _write_start &= BUFFER_END;
+    return c;
+}
+
+static uint32_t
+write_buffer_empty()
+{
+    return _write_start == _write_end;
+}
+
 
 byte_t
 mini_uart_async_getc()
-{
-    aux_set_rx_interrupt();
+{    
+    aux_set_rx_interrupts();
     while (_read_start == _read_end) {
         asm volatile("nop");
     }
-    uint8_t c = _read_buffer[_read_start++];
-    _read_start &= 0xFF;
+    
+    irq_disable_aux_interrupt();
+    uint8_t c = read_buffer_get();
+    irq_enable_aux_interrupt();
     return c;
 }
+
 
 void
 mini_uart_async_putc(uint8_t c)
 {
-    _write_buffer[_write_end++] = c;
-    _read_end &= 0xFF;
-    aux_set_tx_interrupt();
-}
-
-void
-mini_uart_async_puts(byteptr_t s)
-{   
-    while (*s) {
-        _write_buffer[_write_end++] = *s++;
-        _write_end &= 0xFF;
-    }
-    aux_set_tx_interrupt();
+    write_buffer_add(c);
+    aux_set_tx_interrupts();
 }
 
 
 void
-mini_uart_interrupt_handler(byteptr_t arg)
+mini_uart_rx_handler()
 {
-    irq_disable_aux_interrupt();
-
-    uint32_t tx = *AUX_MU_IIR & 0x2;
-    uint32_t rx = *AUX_MU_IIR & 0x4;
-
-    uint32ptr_t ier = (uint32ptr_t) arg;
-
-    if (rx) {
-        uint8_t c = mini_uart_getc();
-        _read_buffer[_read_end++] = c;
-        _read_end &= 0xFF;
-    }
-    else if (tx) {
-        if (_write_start == _write_end) {
-            *ier &= ~(0x2);
-        } else {
-            uint8_t c = _write_buffer[_write_start++];
-            _write_start &= 0xFF;
-            mini_uart_putc(c);
-        }
-    }
-    *AUX_MU_IER |= *ier;
-    irq_enable_aux_interrupt();
+    read_buffer_add(mini_uart_getc());
+    aux_set_rx_interrupts();
 }
 
 
 void
-mini_uart_handler()
+mini_uart_tx_handler()
 {
-    uint32_t ier = *AUX_MU_IER; 
-    irq_disable_aux_interrupt();
-
-    uint32_t tx = *AUX_MU_IIR & 0x2;
-    uint32_t rx = *AUX_MU_IIR & 0x4;
-
-    if (rx) {
-        uint8_t c = mini_uart_getc();
-        _read_buffer[_read_end++] = c;
-        _read_end &= 0xFF;
+    if (write_buffer_empty()) {
+        aux_clr_tx_interrupts();
+        return;
     }
-    else if (tx) {
-        if (_write_start == _write_end) {
-            ier &= ~(0x2);
-        } else {
-            delay_cycles(10000);
-            uint8_t c = _write_buffer[_write_start++];
-            _write_start &= 0xFF;
-            mini_uart_putc(c);
-        }
+
+    while (!write_buffer_empty()) {
+        delay_cycles(1 << 28);
+        uint8_t c = write_buffer_get();
+        mini_uart_putc(c);
     }
-    *AUX_MU_IER = ier;
-    irq_enable_aux_interrupt();
 }
+
 
 void 
 mini_uart_async_demo()
 {
     irq_enable_aux_interrupt();
-
-    uint8_t c;
-    do {
+    uint8_t c = mini_uart_async_getc();
+    while (c != '\n') 
+    {
+        write_buffer_add(c);
         c = mini_uart_async_getc();
-        _write_buffer[_write_end++] = c;
-        _write_end &= 0xFF;
-    } while (c != '\n');
-    _write_buffer[_write_end] = '\0';
-    aux_set_tx_interrupt();
-
+    }
+    write_buffer_add(c);
+    aux_set_tx_interrupts();
     irq_disable_aux_interrupt();
 }

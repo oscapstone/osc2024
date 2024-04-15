@@ -60,8 +60,9 @@ read_command(byteptr_t buffer)
             uart_put('\n');
             uart_put('\r');
         } 
-        else if (r == 0x7f) {
-            index = (index > 0) ? index - 1 : 0;
+        else if (r == 0x7f && index > 0) 
+        {
+            index--;
             uart_put(0x8);
             uart_put(r);
         } 
@@ -72,6 +73,21 @@ read_command(byteptr_t buffer)
     } while (index < (BUFFER_MAX_SIZE - 1) && r != '\n');
     buffer[index] = '\0';
     return buffer;
+}
+
+
+static byteptr_t 
+next_tok(byteptr_t buffer, byteptr_t message)
+{
+    byteptr_t tok = str_tok(0);
+    if (tok == nullptr) {
+        uart_str(message);
+        while (tok == nullptr) {
+            read_command(buffer);
+            tok = str_tok(buffer);
+        }
+    }
+    return tok;
 }
 
 
@@ -96,14 +112,7 @@ parse_command(byteptr_t buffer)
     }
 
     else if (str_eql(cmd, "cat")) {
-        byteptr_t tok = str_tok(0);
-        if (tok == nullptr) {
-            uart_str("file: ");
-            while (tok == nullptr) {
-                read_command(buffer);
-                tok = str_tok(buffer);
-            }
-        }
+        byteptr_t tok = next_tok(buffer, "file: ");
         initrd_cat(tok);
     }
 
@@ -118,58 +127,23 @@ parse_command(byteptr_t buffer)
     }
 
     else if (str_eql(cmd, "exe")) {
-        byteptr_t tok = str_tok(0);
-        if (tok == nullptr) {
-            uart_str("file: ");
-            while (tok == nullptr) {
-                read_command(buffer);
-                tok = str_tok(buffer);
-            }
-        }
+        byteptr_t tok = next_tok(buffer, "file: ");
         initrd_exec(tok);
     }
-
-    // else if (str_eql(cmd, "alarm")) {
-    //     byteptr_t tok = str_tok(0);
-    //     if (tok == nullptr) {
-    //         uart_str("second: ");
-    //         while (tok == nullptr) {
-    //             read_command(buffer);
-    //             tok = str_tok(buffer);
-    //         }
-    //     }
-    //     uint32_t sec = ascii_dec_to_uint32(tok);
-    //     core_timer_set_alarm(sec);
-    // }
 
     else if (str_eql(cmd, "async")) {
         mini_uart_async_demo();
     }
 
     else if (str_eql(cmd, "timer")) {
-        byteptr_t tok = str_tok(0);
-        if (tok == nullptr) {
-            uart_str("message: ");
-            while (tok == nullptr) {
-                read_command(buffer);
-                tok = str_tok(buffer);
-            }
-        }
-        byte_t msg[32];
-        str_ncpy(msg, tok, 32);
-        tok = str_tok(0);
-        if (tok == nullptr) {
-            uart_str("duration: ");
-            while (tok == nullptr) {
-                read_command(buffer);
-                tok = str_tok(buffer);
-            }
-        }
+        byteptr_t tok = next_tok(buffer, "message: ");
+        byte_t msg[32]; str_ncpy(msg, tok, 32);
+        tok = next_tok(buffer, "duration: ");
         uint32_t duration = ascii_dec_to_uint32(tok);
-        core_timer_set_timeout(msg, duration);
+        core_timer_add_timeout_event(msg, duration);
     }
 
-    else {
+    else if (str_len(buffer) > 0) {
         uart_str("not a command: ");
         uart_line(buffer);
     }

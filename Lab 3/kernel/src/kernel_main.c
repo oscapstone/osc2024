@@ -1,5 +1,6 @@
 #include "kernel.h"
 #include "uart.h"
+#include "irq.h"
 #include "shell.h"
 #include "dtb.h"
 #include "initrd.h"
@@ -17,11 +18,9 @@ _kernel_init(uint64_t x0, void (*ptr)(uint64_t))
 	byteptr_t initrd_ptr = initrd_get_ptr();
 	uint32_t current_el = current_exception_level();
 
-    // uart_interrupt_enable();
-    exception_l1_enable();  // enable EL1 interrupt
-    // core_timer_enable();
-
+    exception_l1_enable();
 	uart_init();
+
 	uart_line("+------------------------------+");
 	uart_line("|       Lab 3 - Kernel         |");
 	uart_line("+------------------------------+");

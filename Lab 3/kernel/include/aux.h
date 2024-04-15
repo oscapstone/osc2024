@@ -32,10 +32,10 @@
 #define AUX_SPI1_PEEK   ((volatile unsigned int*)(AUX_BASE + 0xD4))
 
 
-#define aux_set_rx_interrupt() { *AUX_MU_IER |= 0x1; }
-#define aux_clr_rx_interrupt() { *AUX_MU_IER &= ~(0x1); }
-#define aux_set_tx_interrupt() { *AUX_MU_IER |= 0x2; }
-#define aux_clr_tx_interrupt() { *AUX_MU_IER &= ~(0x2); }
+#define aux_set_rx_interrupts() { *AUX_MU_IER |= 0x1; }
+#define aux_clr_rx_interrupts() { *AUX_MU_IER &= ~(0x1); }
+#define aux_set_tx_interrupts() { *AUX_MU_IER |= 0x2; }
+#define aux_clr_tx_interrupts() { *AUX_MU_IER &= ~(0x2); }
 
 // void aux_set_rx_interrupt()
 // {

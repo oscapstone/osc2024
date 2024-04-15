@@ -20,4 +20,7 @@ void    mini_uart_interrupt_handler(byteptr_t ier);
 void    mini_uart_handler();
 void    mini_uart_async_demo();
 
+void    mini_uart_tx_handler();
+void    mini_uart_rx_handler();
+
 #endif

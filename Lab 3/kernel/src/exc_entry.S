@@ -1,7 +1,7 @@
 // save general registers to stack
 .macro save_all
     // move stack top
-    sub     sp,  sp,  36 * 8 // 8bytes = 64bits
+    sub     sp,  sp,  36 * 8        // 8 bytes = 64 bits
 
     // store pair of registers
     stp     x0,  x1,  [sp ,16 * 0]
@@ -99,7 +99,7 @@ exception_vector_table:
 
 exception_invalid:                          // default exception router
     save_all
-    bl      exception_invalid_handler       // defined in C code
+    bl      exception_invalid_handler       // c code
     load_all
     eret                                    // EL1 -> EL0
 
