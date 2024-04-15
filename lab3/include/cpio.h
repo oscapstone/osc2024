@@ -23,6 +23,7 @@ struct cpio_header {
 
 void cpio_ls();
 void cpio_cat();
+void cpio_load_program();
 char *find_file(char *filename);
 
 #endif

@@ -5,6 +5,8 @@
 #include "../include/mem_utils.h"
 
 extern char *cpio_addr;
+#define KSTACK_SIZE 0x2000
+#define USTACK_SIZE 0x2000
 
 void cpio_ls()
 {
@@ -96,4 +98,63 @@ void cpio_cat()
     if (!flag)
         uart_send_string("Please enter the correct filename. \r\n");
 
+}
+
+void cpio_load_program()
+{
+    /* 1. Get the address of cpio_address, and create a variable to get filesize of target file. */
+    char *addr = (char *)cpio_addr;
+    unsigned int size = 0;
+
+    /* 2. Wait user enter the file name. */
+    char buffer[100];
+    uart_send_string("Enter file name: ");
+    read_command(buffer);
+    // uart_send_string(buffer);
+
+    /* 3. Use while loop to check the pathname of the file is "TRAILER!!!" or not. */
+    while (my_strcmp((addr + sizeof(struct cpio_header)), "TRAILER!!!") != 0) {
+
+        /* 4. Calculate the namesize. */
+        struct cpio_header *header = (struct cpio_header *)addr;
+        unsigned int namesize = hexstr2val((char *)header->c_namesize, 8);
+        // uart_hex(namesize);
+
+        /* 5. Let pointer point to the start of filename. */
+        addr += sizeof(struct cpio_header);
+        // uart_send_string(addr);
+        // uart_send_string("\r\n");
+
+        /* 6. If the file name is the same as user input, flag -> 1. */
+        if (my_strcmp(addr, buffer) == 0) {
+            // uart_send_string(addr);
+            // uart_send_string("\r\n");
+            addr += namesize;
+            addr = mem_align(addr, 4);
+            size = hexstr2val((char *)header->c_filesize, 8);
+            break;
+        }
+
+        /* 7. Align the address to the start of the file. */
+        addr += namesize;
+        addr = mem_align(addr, 4);
+
+        /* 8. Calculate the filesize. */
+        unsigned int filesize = hexstr2val((char *)header->c_filesize, 8);
+        //uart_hex(filesize);
+
+        /* 9. align the address to the start of another file header. */
+        addr += filesize;
+        addr = mem_align(addr, 4);
+    }
+
+    /* 10. Now we have start address of the content of img file, load the content to specific address. */
+    uart_hex(size);
+    uart_send_string("\r\n");
+
+    asm volatile("mov x0, 0x3c0  \n");
+    asm volatile("msr spsr_el1, x0   \n");
+    asm volatile("msr elr_el1, %0    \n" ::"r"(addr));
+    asm volatile("msr sp_el0, %0    \n" ::"r"(addr + USTACK_SIZE));
+    asm volatile("eret   \n");
 }
