@@ -215,18 +215,26 @@ void core_timer_handler() {
 https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf
 
 ### Enable UART Interrupt
+* p9 IRQS1 for hierachicle pending (not sure)
 * p12 enable Tx/Rx
+p18
+* p109 Interrupts
 * p113 enable AUX interrupt
+
+AUX: Auriliary Peripherals
 ```
 void uart_interrupt(){
     //enable uart tx/rx
+    //control uart to generate interrupt
     *AUX_MU_IER = 1; //Mini Uart Interrupt Enable (RX) 0-bit
-    *AUX_MU_IER |= 0x02; //Tx 1-bit
+    //*AUX_MU_IER |= 0x02; //Tx 1-bit
     
     //enable AUX interrupt
+    //let the interrupt from AUX can be sent to the interrupt controller
     *IRQS1 |= 1 << 29;
 }
 ```
+
 ### Handle UART Interrupt
 * p13 IIR bits
 ```
