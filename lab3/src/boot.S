@@ -96,42 +96,48 @@ exception_handler:
     load_all
     eret
 
+synchronous_el1_handler:
+    save_all
+    bl except_handler_c
+    load_all
+    eret
+
+irq_el0_hadler:
+    save_all
+    bl except_handler_c
+    load_all
+    eret
+
+irq_el1_hadler:
+    save_all
+    bl except_handler_c
+    load_all
+    eret
+
+.macro exception_entry label
+    b      /label
+    .align 7    
+.endm
 
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
-  b exception_handler // branch to a handler function.
-  .align 7 // entry size is 0x80, .align will pad 0
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    exception_entry exception_handler
+    exception_entry exception_handler
+    exception_entry exception_handler
+    exception_entry exception_handler
 
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    exception_entry synchronous_el1_handler
+    exception_entry irq_el1_handler
+    exception_entry exception_handler
+    exception_entry exception_handler
 
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    exception_entry exception_handler
+    exception_entry irq_el0_handler
+    exception_entry exception_handler
+    exception_entry exception_handler
 
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
+    exception_entry exception_handler
+    exception_entry exception_handler
+    exception_entry exception_handler
+    exception_entry exception_handler
