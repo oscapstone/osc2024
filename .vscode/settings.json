@@ -6,6 +6,8 @@
         "cpio.h": "c",
         "shell.h": "c",
         "mem_utils.h": "c",
-        "dtb.h": "c"
+        "dtb.h": "c",
+        "timer.h": "c",
+        "*.tcc": "c"
     }
 }
