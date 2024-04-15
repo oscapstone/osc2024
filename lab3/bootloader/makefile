@@ -22,18 +22,20 @@ $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
 $(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
 	$(ARMGNU)-gcc $(ASMFLAGS) -MMD -c $< -o $@
 
-kernel8.img: $(SRC_DIR)/link.ld $(OBJ_FILES)
-	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
-	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
+bootloader.img: $(SRC_DIR)/link.ld $(OBJ_FILES)
+	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/bootloader.elf  $(OBJ_FILES)
+	$(ARMGNU)-objcopy $(BUILD_DIR)/bootloader.elf -O binary bootloader.img
 
-all: kernel8.img
+all: bootloader.img
 
 clean:
 	rm -rf $(BUILD_DIR) *.img
 
-run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+run_std:
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+
+run_pty:
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -serial null -serial pty -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -S -s
-
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -S -s
