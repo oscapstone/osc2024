@@ -1,5 +1,5 @@
 use crate::cpu::{mailbox, uart};
-use crate::os::shell;
+use crate::os::{shell, timer};
 use crate::println;
 use core::arch::{asm, global_asm};
 
@@ -9,18 +9,17 @@ global_asm!(include_str!("boot.s"));
 pub unsafe fn _start_rust() {
     // crate::os::allocator::ALLOCATOR.init();
     uart::initialize();
+    timer::init();
 
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
     
     println!("Starting rust");
     
-    
     // test_allocator();
     
     let dt = super::device_tree::DeviceTree::init();
     println!("Device tree initialized");
-    // loop{}
     let initrd_start = match dt.get("linux,initrd-start") {
         Some(v) => {
             let mut val = 0u32;
@@ -38,26 +37,20 @@ pub unsafe fn _start_rust() {
     };
     // let initrd_start = 0x8000000;
 
-    let a = mailbox::get(mailbox::MailboxTag::GetBoardRevision);
-    println!("Board revision: {:#010X}", a.0);
-
-    let a = mailbox::get(mailbox::MailboxTag::GetArmMemory);
-    println!("Memory base: {:#010X}", a.0);
-    println!("Memory size: {:#010X}", a.1);
-
-    // Get current timer value
-    let mut freq: u64;
-    let mut now: u64;
-    asm!(
-        "mrs {freq}, cntfrq_el0",
-        "mrs {now}, cntpct_el0",
-        freq = out(reg) freq,
-        now = out(reg) now,
-    );
-    println!("Boot time: {} ms", now / (freq / 1000));
+    print_information();
 
     shell::start(initrd_start);
     loop {}
+}
+
+fn print_information() {
+    let board_revision = mailbox::get(mailbox::MailboxTag::GetBoardRevision);
+    println!("Board revision: {:#010X}", board_revision.0);
+
+    let memory = mailbox::get(mailbox::MailboxTag::GetArmMemory);
+    println!("Memory base: {:#010X}", memory.0);
+    println!("Memory size: {:#010X}", memory.1);
+    println!("Boot time: {} ms", timer::get_time_ms());
 }
 
 /*
