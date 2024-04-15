@@ -1,14 +1,10 @@
 #include "mm/page_alloc.hpp"
 
-#include "std.hpp"
-// std.hpp require before new
-#include <new>
-
 #include "board/mini-uart.hpp"
 #include "math.hpp"
 #include "util.hpp"
 
-static_assert(sizeof(PageAlloc::Page) <= PAGE_SIZE);
+static_assert(sizeof(PageAlloc::FreePage) <= PAGE_SIZE);
 
 #define LOG_LEVEL 3
 
@@ -30,16 +26,17 @@ static_assert(sizeof(PageAlloc::Page) <= PAGE_SIZE);
 
 void PageAlloc::info() {
   mini_uart_printf("== PageAlloc ==\n");
-  for (uint64_t i = 0; i < size; i++) {
+  for (uint64_t i = 0; i < length; i++) {
     if (array[i] != FRAME_NOT_HEAD)
       mini_uart_printf("  frame 0x%lx: %d\n", i, array[i]);
   }
-  for (int8_t o = 0; o < order; o++) {
-    mini_uart_printf("  free_list %d: ", o);
-    for (auto p : free_list[o])
-      mini_uart_printf("%p -> ", p);
-    mini_uart_printf("\n");
-  }
+  for (int8_t o = 0; o < total_order; o++)
+    if (not free_list[o].empty()) {
+      mini_uart_printf("  free_list %d: ", o);
+      for (auto p : free_list[o])
+        mini_uart_printf("%p -> ", p);
+      mini_uart_printf("\n");
+    }
   mini_uart_printf("---------------\n");
 }
 
@@ -54,21 +51,56 @@ void PageAlloc::init(uint64_t start_, uint64_t end_) {
     prog_hang();
   }
 
-  size = (end - start) / PAGE_SIZE;
-  order = log2(size);
-  DEBUG("size = 0x%lx order = %x\n", size, order);
-  array = new int8_t[size];
-  memset(array, FRAME_NOT_HEAD, size);
-  free_list = new ListHead<Page>[order];
-  int8_t ord = order - 1;
-  for (uint64_t i = 0; i < size; i += (1ll << ord)) {
-    while (i + (1ll << ord) > size)
-      ord--;
-    array[i] = ord;
-    auto page = new (vpn2addr(i)) Page;
-    free_list[ord].insert_tail(page);
+  length = (end - start) / PAGE_SIZE;
+  total_order = log2c(length + 1);
+  DEBUG("init: length = 0x%lx total_order = %x\n", length, total_order);
+  array = new int8_t[length];
+  memset(array, FRAME_NOT_HEAD, length);
+  free_list = new ListHead<FreePage>[total_order];
+  int8_t order = total_order - 1;
+  for (uint64_t i = 0; i < length; i += (1ll << order)) {
+    while (i + (1ll << order) > length)
+      order--;
+    newFreePage(i, order);
   }
 #if LOG_LEVEL >= 3
   info();
 #endif
+}
+
+PageAlloc::FreePage* PageAlloc::split(FreePage* page, int8_t order) {
+  auto vpn = addr2vpn(page);
+  auto ord = array[vpn];
+  if (ord < order)
+    return nullptr;
+  while (ord > order) {
+    ord--;
+    array[vpn] = ord;
+    DEBUG("split: frame %lu = order %d\n", buddy(vpn), ord);
+    newFreePage(buddy(vpn), ord);
+  }
+  return page;
+}
+
+void* PageAlloc::alloc(uint64_t size) {
+  int8_t order = log2c(size);
+  DEBUG("alloc: size %lu -> order %d\n", size, order);
+  for (int8_t ord = order; ord < total_order; ord++) {
+    auto page = free_list[ord].pop_front();
+    if (page == nullptr)
+      continue;
+    page = split(page, order);
+    if (not page)
+      continue;
+    array[addr2vpn(page)] = FRAME_ALLOCATED;
+    return page;
+  }
+  return nullptr;
+}
+
+void PageAlloc::free(void* ptr) {
+  if (ptr == nullptr)
+    return;
+
+  // TODO
 }

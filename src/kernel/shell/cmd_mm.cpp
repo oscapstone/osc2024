@@ -21,8 +21,18 @@ int cmd_mm(int argc, char* argv[]) {
   } else if (0 == strcmp(argv[1], "page")) {
     if (argc <= 2) {
       page_alloc.info();
+    } else if (0 == strcmp(argv[2], "alloc") and argc >= 4) {
+      auto size = strtol(argv[3]);
+      mini_uart_printf("page: alloc(0x%lx) = %p\n", size,
+                       page_alloc.alloc(size));
+      page_alloc.info();
+    } else if (0 == strcmp(argv[2], "free") and argc >= 4) {
+      auto ptr = (void*)strtol(argv[3]);
+      mini_uart_printf("page: free(%p)\n", ptr);
+      page_alloc.info();
     } else {
-      // TODO
+      mini_uart_printf("mm: page action '%s' not match\n", argv[2]);
+      return -1;
     }
   } else {
     mini_uart_printf("mm: '%s' not found\n", argv[1]);

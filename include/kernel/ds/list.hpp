@@ -91,6 +91,14 @@ class ListHead {
     unlink(*it);
   }
 
+  T* pop_front() {
+    if (empty())
+      return nullptr;
+    auto it = begin();
+    erase(it);
+    return *it;
+  }
+
   int size() const {
     return size_;
   }
