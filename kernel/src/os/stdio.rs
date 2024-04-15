@@ -135,6 +135,18 @@ fn println_async(s: &str) {
     }
 }
 
+pub fn println_now(s: &str) {
+    for c in s.bytes() {
+        unsafe {
+            send(c);
+        }
+    }
+    unsafe {
+        send(b'\r');
+        send(b'\n');
+    }
+}
+
 // format println macro
 #[macro_export]
 macro_rules! println {
