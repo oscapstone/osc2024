@@ -8,7 +8,7 @@ int cmd_hwinfo(int, char*[]);
 int cmd_reboot(int, char*[]);
 int cmd_ls(int, char*[]);
 int cmd_cat(int, char*[]);
-int cmd_heap(int, char*[]);
+int cmd_mm(int, char*[]);
 int cmd_devtree(int, char*[]);
 int cmd_run(int, char*[]);
 int cmd_setTimeout(int, char*[]);

@@ -1,8 +1,15 @@
 #include "mm/heap.hpp"
 
+#include "board/mini-uart.hpp"
 #include "util.hpp"
 
+extern char __heap_start[];
+extern char __heap_end[];
 char* heap_cur = __heap_start;
+
+void heap_info() {
+  mini_uart_printf("heap %p / (%p ~ %p)\n", heap_cur, __heap_start, __heap_end);
+}
 
 void heap_reset() {
   heap_cur = __heap_start;
