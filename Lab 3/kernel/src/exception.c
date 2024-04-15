@@ -64,18 +64,6 @@ irqtask_queue_add(irqtask_ptr_t task)
 }
 
 
-static void 
-show_exception_infomation()
-{
-    uint64_t spsr = asm_read_sysregister(spsr_el1);
-    uint64_t elr  = asm_read_sysregister(elr_el1);
-    uint64_t esr  = asm_read_sysregister(esr_el1);
-    uart_str("spsr_el1: 0x"); uart_hexl(spsr); uart_endl();
-    uart_str("elr_el1:  0x"); uart_hexl(elr); uart_endl();
-    uart_str("esr_el1:  0x"); uart_hexl(esr); uart_endl();
-}
-
-
 static uint32_t
 irqtask_queue_not_running()
 {
@@ -98,6 +86,18 @@ irqtask_queue_run()
         list_del_entry((list_head_ptr_t) first);
         // todo: free(first);
     }
+}
+
+
+static void 
+show_exception_infomation()
+{
+    uint64_t spsr = asm_read_sysregister(spsr_el1);
+    uint64_t elr  = asm_read_sysregister(elr_el1);
+    uint64_t esr  = asm_read_sysregister(esr_el1);
+    uart_str("spsr_el1: 0x"); uart_hexl(spsr); uart_endl();
+    uart_str("elr_el1:  0x"); uart_hexl(elr); uart_endl();
+    uart_str("esr_el1:  0x"); uart_hexl(esr); uart_endl();
 }
 
 

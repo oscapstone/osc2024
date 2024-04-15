@@ -3,6 +3,56 @@
 #include "aux.h"
 #include "delay.h"
 #include "irq.h"
+#include "uart.h"
+
+
+
+#define BUFFER_SIZE 0x100
+#define BUFFER_END  0xFF
+
+static uint8_t _read_buffer[BUFFER_SIZE];
+static uint8_t _write_buffer[BUFFER_SIZE];
+
+static uint32_t _read_start = 0, _read_end = 0;
+static uint32_t _write_start = 0, _write_end = 0;
+
+static void 
+read_buffer_add(uint8_t c)
+{
+    _read_buffer[_read_end++] = c;
+    _read_end &= BUFFER_END;
+}
+
+static uint8_t 
+read_buffer_get()
+{
+    uint8_t c = _read_buffer[_read_start++];
+    _read_start &= BUFFER_END;
+    return c;
+}
+
+static void 
+write_buffer_add(uint8_t c)
+{
+    _write_buffer[_write_end++] = c;
+    _write_end &= BUFFER_END;
+}
+
+static uint8_t 
+write_buffer_get()
+{
+    uint8_t c = _write_buffer[_write_start++];
+    _write_start &= BUFFER_END;
+    return c;
+}
+
+static uint32_t
+write_buffer_empty()
+{
+    return _write_start == _write_end;
+}
+
+
 
 
 /**
@@ -48,6 +98,10 @@ mini_uart_init(void)
     *AUX_MU_BAUD        =   270;                // Set baud rate to 115200
 
     *AUX_MU_CNTL        =   3;                  // Finally, enable transmitter and receiver
+
+
+
+
 }
 
 
@@ -151,52 +205,6 @@ mini_uart_endl()
 }
 
 
-#define BUFFER_SIZE 0x100
-#define BUFFER_END  0xFF
-
-static uint8_t _read_buffer[BUFFER_SIZE];
-static uint8_t _write_buffer[BUFFER_SIZE];
-
-static uint32_t _read_start, _read_end;
-static uint32_t _write_start, _write_end;
-
-static void 
-read_buffer_add(uint8_t c)
-{
-    _read_buffer[_read_end++] = c;
-    _read_end &= BUFFER_END;
-}
-
-static uint8_t 
-read_buffer_get()
-{
-    uint8_t c = _read_buffer[_read_start++];
-    _read_start &= BUFFER_END;
-    return c;
-}
-
-static void 
-write_buffer_add(uint8_t c)
-{
-    _write_buffer[_write_end++] = c;
-    _write_end &= BUFFER_END;
-}
-
-static uint8_t 
-write_buffer_get()
-{
-    uint8_t c = _write_buffer[_write_start++];
-    _write_start &= BUFFER_END;
-    return c;
-}
-
-static uint32_t
-write_buffer_empty()
-{
-    return _write_start == _write_end;
-}
-
-
 byte_t
 mini_uart_async_getc()
 {    
@@ -223,24 +231,25 @@ mini_uart_async_putc(uint8_t c)
 void
 mini_uart_rx_handler()
 {
+    irq_disable_aux_interrupt();
     read_buffer_add(mini_uart_getc());
-    aux_set_rx_interrupts();
+    irq_enable_aux_interrupt();
+    aux_clr_rx_interrupts();
 }
 
 
 void
 mini_uart_tx_handler()
 {
-    if (write_buffer_empty()) {
-        aux_clr_tx_interrupts();
-        return;
-    }
-
+    irq_disable_aux_interrupt();
+    aux_clr_tx_interrupts();
     while (!write_buffer_empty()) {
-        delay_cycles(1 << 28);
+        delay_cycles(1 << 21);      // (1 << 28) for qemu 
         uint8_t c = write_buffer_get();
         mini_uart_putc(c);
     }
+    mini_uart_putc('\n');
+    mini_uart_putc('\r');
 }
 
 
@@ -256,5 +265,4 @@ mini_uart_async_demo()
     }
     write_buffer_add(c);
     aux_set_tx_interrupts();
-    irq_disable_aux_interrupt();
 }

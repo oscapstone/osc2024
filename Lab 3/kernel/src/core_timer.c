@@ -105,7 +105,7 @@ timer_event_queue_add(timer_event_ptr_t event)
 static void
 core_timer_callback_print_message(byteptr_t msg)
 {
-    uart_str("\ntimer message: ");
+    uart_str("\ntimer event message: ");
     uart_line(msg);
 }
 
@@ -136,7 +136,7 @@ core_timer_add_timeout_event(byteptr_t messsage, uint64_t duration)
 void
 core_timer_interrupt_handler()
 {
-    uart_line("core_timer_interrupt_handler");
+    // uart_line("core_timer_interrupt_handler");
 
     timer_event_ptr_t event = (timer_event_ptr_t) (&timer_event_queue)->next;
 
@@ -148,7 +148,7 @@ core_timer_interrupt_handler()
     uart_str("command time: "); uart_line(buffer);
     
     uint32_to_ascii(core_timer_current_time(), buffer);
-    uart_str("current  time: "); uart_line(buffer);
+    uart_str("current time: "); uart_line(buffer);
 
     list_del_entry((list_head_ptr_t) event);
 
