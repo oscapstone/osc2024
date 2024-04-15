@@ -78,11 +78,11 @@ build: $(KERNEL_BIN)
 
 $(BUILD_DIR)/%-asm.o: $(SRC_DIR)/%.S
 	@mkdir -p $(@D)
-	$(CLANGXX) -MMD $(CFLAGS) -c $< -o $@
+	$(CLANGXX) -MMD -MP $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(@D)
-	$(CLANGXX) -MMD $(CFLAGS) -c $< -o $@
+	$(CLANGXX) -MMD -MP $(CFLAGS) -c $< -o $@
 
 $(KERNEL_ELF): $(LINKER) $(OBJS)
 	$(LD) -T $(LINKER) $(CFLAGS) $(OBJS) -o $@
