@@ -4,6 +4,7 @@
 #include "mbox.h"
 #include "cpio.h"
 #include "utils.h"
+#include "heap.h"
 #include <stddef.h>
 
 #define CLI_MAX_CMD 8
@@ -72,6 +73,8 @@ void cli_exec_cmd(char* buf) {
         cmd_reboot();
     } else if (cli_strcmp(cmd, "ls") == 0) {
         cmd_ls();
+    } else if (cli_strcmp(cmd, "malloc") == 0) {
+        cmd_malloc();
     } else if(*cmd) {
         uart_puts(cmd);
         uart_puts(": Command not found QQ, type help to get more information.\r\n");
@@ -97,10 +100,11 @@ void cli_print_welcome_msg() {
 void cmd_help() {
     uart_puts("Example usage:\r\n");
     uart_puts("   help      - list all commands\r\n");
-    uart_puts("   ls        - list all files in directory\r\n");
     uart_puts("   hello     - print hello message\r\n");
     uart_puts("   hwinfo    - print hardware info\r\n");
     uart_puts("   hcpio     - print cpio header info\r\n");
+    uart_puts("   ls        - list all files in directory\r\n");
+    uart_puts("   malloc    - test malloc function\r\n");
     uart_puts("   reboot    - reboot the device\r\n");
 }
 
@@ -190,4 +194,19 @@ void cmd_cat(char* filepath) {
         if (header_ptr == 0) 
             uart_puts("cat: %s: No such file or directory\n", filepath);
     }
+}
+
+void cmd_malloc() {
+    //Test malloc
+    char* test1 = malloc(0x22);
+    strcpy(test1, "test malloc1");
+    uart_puts("%s\r\n", test1);
+
+    char* test2 = malloc(0x10);
+    strcpy(test2, "test malloc2");
+    uart_puts("%s\r\n", test2);
+
+    char* test3 = malloc(0x17);
+    strcpy(test3, "test malloc3");
+    uart_puts("%s\r\n", test3);
 }

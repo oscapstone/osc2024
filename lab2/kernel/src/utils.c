@@ -206,3 +206,11 @@ int strstr(const char* str, const char* substring) {
     }
     return 0;
 }
+
+char* strcpy(char *dest, const char *src) {
+    char *d = dest;
+    const char *s = src;
+    while( (*d++ = *s++));
+        
+    return dest;
+}

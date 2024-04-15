@@ -16,5 +16,6 @@ void cmd_hwinfo();
 void cmd_reboot();
 void cmd_ls();
 void cmd_cat();
+void cmd_malloc();
 
 #endif  /*_SHELL_H */
