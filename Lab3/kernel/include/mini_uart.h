@@ -9,6 +9,8 @@
 #define ENABLE_IRQS_1		((volatile unsigned int*)(MMIO_BASE+0x0000b210))
 #define DISABLE_IRQS_1      ((volatile unsigned int*)(MMIO_BASE+0x0000b21c))
 
+void init_buffer();
+
 void enable_uart_read_interrupt();
 void disable_uart_read_interrupt();
 

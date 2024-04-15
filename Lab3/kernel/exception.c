@@ -49,8 +49,10 @@ void exec_in_el0(char* prog_head, uint32_t sp_loc){
 void el0_irq_entry(){
 
     if (*CORE0_IRQ_SOURCE & IRQ_SOURCE_CNTPNSIRQ){
+        disable_core_timer();
         add_task(two_sec_timer_handler, TIMER_PRIO);
         pop_task();
+        // enable_core_timer();
         // two_sec_timer_handler();
     }
 }

@@ -5,6 +5,13 @@ char async_write_buf[256];
 uint32_t read_head = 0, read_end = 0;
 uint32_t write_head = 0, write_end = 0;
 
+void init_buffer(){
+    for (int i = 0; i < 256; i++){
+        async_read_buf[i] = 0;
+        async_write_buf[i] = 0;
+    }
+}
+
 void enable_uart_read_interrupt(){
     *AUX_MU_IER |= 0x01;
 }
@@ -44,22 +51,27 @@ void rx_interrupt_handler(){
 
 void tx_interrupt_handler(){
 
-    disable_interrupt();
+    // disable_interrupt();
 
     while (*AUX_MU_LSR & 0x20){
         if (write_head == write_end){
             break;
         }
 
+        disable_interrupt();
         char ch = async_write_buf[write_head++];
         *AUX_MU_IO = ch;
+
+        
 
         if (write_head == 256)
             write_head = 0;
 
+        enable_interrupt();
+
     }
 
-    enable_interrupt();
+    // enable_interrupt();
 
 }
 

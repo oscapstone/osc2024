@@ -45,11 +45,10 @@ void test_preempt(){
     enable_core_timer();
 
     add_task(print_current_time, 20);
-    async_uart_puts("\nAfter Time");
+    async_uart_puts("\nAfter");
 
-    for (int i = 0; i < 100000000; i++) ;
     pop_task();
-
+    disable_uart_interrupt();
 }
 
 void test_malloc(){
