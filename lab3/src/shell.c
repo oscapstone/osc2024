@@ -5,6 +5,9 @@
 #include "../include/reboot.h"
 #include "../include/cpio.h"
 #include "../include/mem_utils.h"
+#include "../include/timer.h"
+#include "../include/timer_utils.h"
+#include "../include/exception.h"
 
 #define BUFFER_SIZE 100
 
@@ -56,6 +59,9 @@ void parse_command(char *buffer)
         cpio_cat();
     } else if (my_strcmp(buffer, "load") == 0) {
         cpio_load_program();
+    } else if (my_strcmp(buffer, "time") == 0) {
+        enable_interrupt();
+        enable_timer_interrupt();
     } else if (my_strcmp(buffer, "malloc") == 0) {
         /* test malloc */
         char *tmp = malloc(4);
@@ -91,6 +97,7 @@ void help()
     uart_send_string("ls          show all files in rootfs\r\n");
     uart_send_string("cat         print out the content of specific file\r\n");
     uart_send_string("load        load user program and execute\r\n");
+    uart_send_string("time        enable timer interrupt\r\n");
     uart_send_string("malloc      try to print the content of malloc\r\n");
 }
 
