@@ -61,6 +61,25 @@ void initramfs_callback(void *node, char *propname){
   archive_start = (void *)((uintptr_t)swap32(tmp));
 }
 
+void *fetch_exec(char *filename){
+  char *current = (char*)archive_start;
+  cpio_header* head;
+  
+  while(!memcmp(current,"070701",6) && memcmp(current+sizeof(cpio_header),"TRAILER!!!",10)){
+    head = (cpio_header*)current;
+    int filesize = hstr2int(head->c_filesize,8);
+    int namesize = hstr2int(head->c_namesize,8);
+    int n_padding = (4 - ((namesize+sizeof(cpio_header))%4))%4;
+    int f_padding = (4 - filesize%4)%4;
+
+    if(!strcmp(filename, current+sizeof(cpio_header))){
+      // exec_file = (void *)(current+sizeof(cpio_header)+namesize+n_padding);
+      return (void *)(current+sizeof(cpio_header)+namesize+n_padding);
+    }
+    current += (filesize+namesize+sizeof(cpio_header)+n_padding+f_padding);
+  }
+  return ((void*)0);
+}
 
 int get_initrd(){ 
   return (intptr_t)archive_start;

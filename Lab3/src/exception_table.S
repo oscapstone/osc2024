@@ -20,9 +20,9 @@ exception_vector_table:
   b exception_handler // reserved for SError
 .align 7
 
-  b exception_handler
+  b lower_exception_handler
 .align 7
-  b irq_handler
+  b lower_irq_hadler
 .align 7
   b exception_handler // reserved for FIQ
 .align 7
@@ -46,7 +46,7 @@ set_exception_vector_table:
 
 // save general registers to stack
 .macro save_all
-  sub sp, sp, 32*8
+  sub sp, sp, 32*9
   stp x0, x1, [sp, 16*0]
   stp x2, x3, [sp, 16*1]
   stp x4, x5, [sp, 16*2]
@@ -63,10 +63,16 @@ set_exception_vector_table:
   stp x26, x27, [sp, 16*13]
   stp x28, x29, [sp, 16*14]
   str x30, [sp, 16*15]
+  mrs x0, spsr_el1
+  mrs x1, elr_el1
+  stp x0, x1, [sp, 16*16]
 .endm
 
 // load general registers from stack
 .macro load_all
+  ldp x0, x1, [sp, 16*16]
+  msr spsr_el1, x0
+  msr elr_el1, x1
   ldp x0, x1, [sp, 16*0]
   ldp x2, x3, [sp, 16*1]
   ldp x4, x5, [sp, 16*2]
@@ -83,7 +89,7 @@ set_exception_vector_table:
   ldp x26, x27, [sp, 16*13]
   ldp x28, x29, [sp, 16*14]
   ldr x30, [sp, 16*15]
-  add sp, sp, 32*8
+  add sp, sp, 32*9
 .endm
 
 exception_handler:
@@ -95,5 +101,17 @@ exception_handler:
 irq_handler:
   save_all
   bl irq_entry
+  load_all
+  eret
+
+lower_exception_handler:
+  save_all
+  bl lower_exception_entry
+  load_all
+  eret
+
+lower_irq_hadler:
+  save_all
+  bl lower_irq_entry
   load_all
   eret

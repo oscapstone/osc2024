@@ -4,20 +4,23 @@
 #include "heap.h"
 #include "devicetree.h"
 #include "initrd.h"
+#include "interrupt.h"
+#include "timer.h"
 
+// static char user_input[BUFFER_SIZE];
+
+extern void set_exception_vector_table();
 
 void main(void* dtb_ptr){
     uart_init();
 
-    uart_sends("\nDtb loaded at ");
-    uart_sendh((uint32_t *)dtb_ptr);
+    set_exception_vector_table();
 
-    uart_sends("\nbefore: ");
-    uart_sendh(get_initrd());
+    asm volatile("svc 0");
     fdt_traverse(dtb_ptr, initramfs_callback);
-    uart_sends("\nafter: ");
-    uart_sendh(get_initrd());
-    uart_sends("\n");
-  
+
+    enable_irq();
+    core_timer_enable();
+    
     shell_exec();
 }

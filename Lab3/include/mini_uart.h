@@ -16,11 +16,28 @@
 #define AUX_MU_CNTL_REG (volatile unsigned int*)(MMU_BASE+0x00215060)
 #define AUX_MU_BAUD_REG (volatile unsigned int*)(MMU_BASE+0x00215068)
 
+#define BUFFER_SIZE 256
+extern char uart_rx_buffer[BUFFER_SIZE];
+extern char uart_tx_buffer[BUFFER_SIZE];
+extern int uart_rx_max;
+extern int uart_rx_index;
+extern int uart_tx_max;
+extern int uart_tx_index;
+
 void uart_init();
 char uart_recv();
 void uart_send(unsigned int c);
 void uart_sendc(const char c);
 void uart_sends(const char* s);
 void uart_sendh(unsigned int n);
+void uart_sendl(unsigned long long h);
+void uart_sendi(int num);
+
+char uart_async_recv();
+void uart_async_gets(char *s, int len);
+void uart_async_send(const char c);
+void uart_async_sends(const char *s);
+
+void uart_async_test();
 
 #endif

@@ -1,3 +1,7 @@
+.vscode
 *.o
 *.elf
 *.img
+*.dtb
+*.cpio
+Lab2/rootfs
