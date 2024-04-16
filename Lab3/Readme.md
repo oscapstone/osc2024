@@ -215,9 +215,7 @@ void core_timer_handler() {
 https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf
 
 ### Enable UART Interrupt
-* p9 IRQS1 for hierachicle pending (not sure)
 * p12 enable Tx/Rx
-* p18
 * p109 Interrupts
 * p113 enable AUX interrupt
 
