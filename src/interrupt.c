@@ -26,7 +26,7 @@ static void el1_timer_interrupt_handler() {
 };
 
 void el0_64_sync_interrupt_handler() {
-  add_task(print_el1_sys_reg, 20);
+  add_task(print_el1_sys_reg, SW_INT_PRIORITY);
   pop_task();
 }
 

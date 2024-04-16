@@ -17,6 +17,10 @@ $(info OBJS: $(OBJS))
 
 CFLAGS = -c -Wall -O2 -Iinclude -nostdinc -nostdlib -nostartfiles -ffreestanding -fno-stack-protector
 
+ifeq ($(DEBUG),1)
+CFLAGS += -DDEBUG
+endif
+
 .PHONY: all clean asm run debug dirs
 
 all: dirs kernel8.img

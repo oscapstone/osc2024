@@ -7,8 +7,8 @@
 #include "task.h"
 #include "utli.h"
 
-static unsigned int w_f = 0, w_b = 0;
-static unsigned int r_f = 0, r_b = 0;
+static uint32_t w_f = 0, w_b = 0;
+static uint32_t r_f = 0, r_b = 0;
 char async_uart_read_buf[MAX_BUF_SIZE];
 char async_uart_write_buf[MAX_BUF_SIZE];
 extern void enable_interrupt();
@@ -27,7 +27,7 @@ void uart_init() {
   /* Map UART to GPIO Pins */
 
   // 1. Change GPIO 14, 15 to alternate function
-  register unsigned int r = *GPFSEL1;
+  register uint32_t r = *GPFSEL1;
   r &= ~((7 << 12) | (7 << 15));  // Reset GPIO 14, 15
   r |= (2 << 12) | (2 << 15);     // Set ALT5
   *GPFSEL1 = r;
@@ -65,7 +65,7 @@ char uart_read() {
   return r == '\r' ? '\n' : r;
 }
 
-void uart_write(unsigned int c) {
+void uart_write(uint32_t c) {
   // Check transmitter idle field
   do {
     asm volatile("nop");
@@ -94,27 +94,26 @@ void uart_flush() {
   }
 }
 
-void uart_int(unsigned long long d) {
+void uart_int(uint64_t d) {
   if (d == 0) {
     uart_write('0');
   }
-  unsigned char tmp[10];
-  int total = 0;
+  uint8_t tmp[10];
+  int32_t total = 0;
   while (d > 0) {
     tmp[total] = '0' + (d % 10);
     d /= 10;
     total++;
   }
-  int n;
-  for (n = total - 1; n >= 0; n--) {
+
+  for (int32_t n = total - 1; n >= 0; n--) {
     uart_write(tmp[n]);
   }
 }
 
-void uart_hex(unsigned int d) {
-  unsigned int n;
-  int c;
-  for (c = 28; c >= 0; c -= 4) {
+void uart_hex(uint32_t d) {
+  uint32_t n;
+  for (int32_t c = 28; c >= 0; c -= 4) {
     // get highest tetrad
     n = (d >> c) & 0xF;
     // 0-9 => '0'-'9', 10-15 => 'A'-'F'
@@ -123,10 +122,9 @@ void uart_hex(unsigned int d) {
   }
 }
 
-void uart_hex_64(unsigned long long d) {
-  unsigned long n;
-  int c;
-  for (c = 60; c >= 0; c -= 4) {
+void uart_hex_64(uint64_t d) {
+  uint64_t n;
+  for (int32_t c = 60; c >= 0; c -= 4) {
     n = (d >> c) & 0xF;
     n += (n > 9) ? 0x37 : 0x30;  // 0x30 : 0 , 0x37+10 = 0x41 : A
     uart_write(n);
@@ -152,7 +150,7 @@ void enable_uart_interrupt() {
                               // GPU IRQ to CORE0's IRQ (bit29: AUX INT)
 }
 
-void uart_write_async(unsigned int c) {
+void uart_write_async(uint32_t c) {
   while ((w_b + 1) % MAX_BUF_SIZE == w_f) {  // full buffer -> wait
     asm volatile("nop");
   }
@@ -171,8 +169,8 @@ char uart_read_async() {
   return c;
 }
 
-unsigned int uart_send_string_async(const char *str) {
-  unsigned int i = 0;
+uint32_t uart_send_string_async(const char *str) {
+  uint32_t i = 0;
   while ((w_b + 1) % MAX_BUF_SIZE != w_f &&
          str[i] != '\0') {  // full buffer -> wait
     async_uart_write_buf[w_b++] = str[i++];
@@ -182,8 +180,8 @@ unsigned int uart_send_string_async(const char *str) {
   return i;
 }
 
-unsigned int uart_read_string_async(char *str) {
-  unsigned int i = 0;
+uint32_t uart_read_string_async(char *str) {
+  uint32_t i = 0;
   while (r_f != r_b) {
     str[i++] = async_uart_read_buf[r_f++];
     r_f %= MAX_BUF_SIZE;
@@ -197,7 +195,7 @@ static void uart_tx_interrupt_handler() {
   if (w_b == w_f) {  // the buffer is empty
     return;
   }
-  *AUX_MU_IO = (unsigned int)async_uart_write_buf[w_f++];
+  *AUX_MU_IO = (uint32_t)async_uart_write_buf[w_f++];
   w_f %= MAX_BUF_SIZE;
   enable_uart_tx_interrupt();
 }
