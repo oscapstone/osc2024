@@ -1,6 +1,6 @@
 #include "uart1.h"
 #include "shell.h"
-#include "heap.h"
+#include "memory.h"
 #include "utils.h"
 #include "dtb.h"
 #include "exception.h"

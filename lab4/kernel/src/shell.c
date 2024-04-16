@@ -6,7 +6,7 @@
 #include "cpio.h"
 #include "utils.h"
 #include "dtb.h"
-#include "heap.h"
+#include "memory.h"
 #include "timer.h"
 
 #define CLI_MAX_CMD 11

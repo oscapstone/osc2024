@@ -1,6 +1,6 @@
 #include "timer.h"
 #include "uart1.h"
-#include "heap.h"
+#include "memory.h"
 #include "utils.h"
 
 #define STR(x) #x

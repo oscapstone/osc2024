@@ -3,7 +3,7 @@
 #include "uart1.h"
 #include "exception.h"
 #include "timer.h"
-#include "heap.h"
+#include "memory.h"
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable(){

@@ -1,4 +1,4 @@
-#include "heap.h"
+#include "memory.h"
 
 extern char _heap_top;
 static char* htop_ptr = &_heap_top;
