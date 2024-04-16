@@ -132,6 +132,7 @@ _execute_user_program(byteptr_t content)
     asm volatile("msr   elr_el1,  %0     \n" ::"r"(content));
     asm volatile("msr   sp_el0,   %0     \n" ::"r"(ustack + USTACK_SIZE));
     asm volatile("eret  \n");
+    // todo: free(ustack);
 }
 
 

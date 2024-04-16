@@ -62,7 +62,7 @@ typedef struct timer_event {
     uint64_t            event_time;
     uint64_t            expired_time;
     timer_event_cb      callback;
-    byte_t              message[32];
+    byte_t              message[32];    // todo: pointer to a allocated space
 } timer_event_t;
 
 typedef timer_event_t* timer_event_ptr_t;
@@ -119,9 +119,9 @@ core_timer_add_event(timer_event_cb cb, byteptr_t msg, uint64_t duration)
 
 
 void
-core_timer_add_timeout_event(byteptr_t messsage, uint64_t duration)
+core_timer_add_timeout_event(byteptr_t data, uint64_t duration)
 {
-    core_timer_add_event(core_timer_callback_print_message, messsage, duration);
+    core_timer_add_event(core_timer_callback_print_message, data, duration);
 }
 
 

@@ -37,25 +37,5 @@
 #define aux_set_tx_interrupts() { *AUX_MU_IER |= 0x2; }
 #define aux_clr_tx_interrupts() { *AUX_MU_IER &= ~(0x2); }
 
-// void aux_set_rx_interrupt()
-// {
-//     *AUX_MU_IER |= 0x1;
-// }
-
-// void aux_clr_rx_interrupt()
-// {
-//     *AUX_MU_IER &= ~(0x1);
-// }
-
-// void aux_set_tx_interrupt()
-// {
-//     *AUX_MU_IER |= 0x2;
-// }
-
-// void aux_clr_tx_interrupt()
-// {
-//     *AUX_MU_IER &= ~(0x2);
-// }
-
 
 #endif
