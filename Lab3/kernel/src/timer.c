@@ -29,7 +29,7 @@ static timeout_event_t* create_timeout_event(timer_callback cb,
     if (!new_timeout_event)
         return NULL;
 
-    INIT_LIST_HEAD(&(new_timeout_event->list));
+    INIT_LIST_HEAD(&new_timeout_event->list);
 
     new_timeout_event->reg_time = get_current_ticks();
     new_timeout_event->duration = duration * get_freq();
@@ -48,6 +48,9 @@ static timeout_event_t* create_timeout_event(timer_callback cb,
 
 static void insert_timeout_event(timeout_event_t* new_event)
 {
+    if (!new_event)
+        return;
+
     unsigned long invoke_time = new_event->reg_time + new_event->duration;
 
     timeout_event_t* node = NULL;
@@ -86,21 +89,20 @@ void core_timer_handle_irq(void)
         list_first_entry(&timeout_event_head, timeout_event_t, list);
 
 
+    uart_send_string("\nmessage: ");
     first_event->callback(first_event->msg);
 
-    uart_send_string("current time: ");
+    uart_send_string("\ncurrent time: ");
     uart_send_dec(current_ticks / freq);
-    uart_send_string("\n");
 
-    uart_send_string("command execute time: ");
+    uart_send_string("\ncommand execute time: ");
     uart_send_dec(first_event->reg_time / freq);
-    uart_send_string("\n");
 
-    uart_send_string("command duration time: ");
+    uart_send_string("\ncommand duration time: ");
     uart_send_dec(first_event->duration / freq);
     uart_send_string("\n");
 
-    list_del_init(&(first_event->list));
+    list_del_init(&first_event->list);
 
     /* periodic timer, insert current event back to the list */
     if (first_event->is_periodic) {
@@ -126,5 +128,4 @@ void core_timer_handle_irq(void)
 void print_msg(char* msg)
 {
     uart_send_string(msg);
-    uart_send_string("\n");
 }

@@ -14,4 +14,7 @@ extern void disable_debug(void);
 extern void enable_all_exception(void);
 extern void disable_all_exception(void);
 
+typedef void (*irq_callback)(void);
+
+
 #endif /* IRQ_H */

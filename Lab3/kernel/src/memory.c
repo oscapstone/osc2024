@@ -10,7 +10,7 @@ void* mem_alloc(unsigned long size)
 {
     if (!size)
         return NULL;
-    size = (unsigned long)mem_align((char*)size, 4);
+    size = (unsigned long)mem_align((char*)size, 8);
     if (heap_ptr + size > &heap_end)
         return NULL;
     char* ptr = heap_ptr;

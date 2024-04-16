@@ -171,8 +171,8 @@ static int uart_write_head, uart_write_idx = 0;
 char uart_recv_async(void)
 {
     set_rx_interrupt();
-    while (read_buffer_empty())
-        ;
+    if (read_buffer_empty())
+        return '\0';
     uart_disable_interrupt();
     char c = read_buffer_get();
     uart_enable_interrupt();
@@ -189,9 +189,10 @@ void uart_send_string_async(const char* str)
 {
     while (*str) {
         if (*str == '\n')
-            uart_send_async('\r');
-        uart_send_async(*str++);
+            write_buffer_add('\r');
+        write_buffer_add(*str++);
     }
+    set_tx_interrupt();
 }
 
 void uart_rx_handle_irq(void)
@@ -207,22 +208,50 @@ void uart_tx_handle_irq(void)
         return;
     }
     while (!write_buffer_empty()) {
-        delay(1 << 15);
         char c = write_buffer_get();
         uart_send(c);
     }
 }
 
+// void test_uart_async(void)
+// {
+//     uart_enable_interrupt();
+//     char c = uart_recv_async();
+//     while (c != '\n') {
+//         write_buffer_add(c);
+//         c = uart_recv_async();
+//     }
+//     write_buffer_add('\r');
+//     write_buffer_add(c);
+//     set_tx_interrupt();
+//     uart_disable_interrupt();
+// }
+//
+
 void test_uart_async(void)
 {
     uart_enable_interrupt();
-    char c = uart_recv_async();
-    while (c != '\n') {
-        write_buffer_add(c);
-        c = uart_recv_async();
+    int count = 0;
+    while (1) {
+        delay(1 << 17);
+        uart_send('-');
+        count++;
+
+        if (count >= 100) {
+            count = 0;
+            uart_send_string("\n");
+        }
+
+        char c = uart_recv_async();
+        if (c == '\0')
+            continue;
+
+        uart_send_async(c);
+
+        if (c == '\n') {
+            uart_send_async('\r');
+            break;
+        }
     }
-    write_buffer_add('\r');
-    write_buffer_add(c);
-    set_tx_interrupt();
     uart_disable_interrupt();
 }

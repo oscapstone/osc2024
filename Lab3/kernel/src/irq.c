@@ -1,10 +1,73 @@
 #include "irq.h"
+#include "bool.h"
+#include "def.h"
 #include "entry.h"
+#include "list.h"
+#include "memory.h"
 #include "mini_uart.h"
 #include "peripheral/mini_uart.h"
 #include "peripheral/timer.h"
 #include "timer.h"
 #include "utils.h"
+
+static LIST_HEAD(irq_task_head);
+
+typedef struct irq_task {
+    irq_callback handler;
+    unsigned long priority;
+    bool running;
+    struct list_head list;
+} irq_task_t;
+
+static irq_task_t* create_irq_task(irq_callback handler, unsigned long priority)
+{
+    irq_task_t* new_irq_task = (irq_task_t*)mem_alloc(sizeof(irq_task_t));
+
+    if (!new_irq_task)
+        return NULL;
+
+    INIT_LIST_HEAD(&new_irq_task->list);
+
+    new_irq_task->handler = handler;
+    new_irq_task->running = false;
+    new_irq_task->priority = priority;
+
+    return new_irq_task;
+}
+
+static void insert_irq_task(irq_task_t* new_task)
+{
+    if (!new_task)
+        return;
+
+    irq_task_t* node = NULL;
+    list_for_each_entry (node, &irq_task_head, list) {
+        if (node->priority > new_task->priority)
+            break;
+    }
+
+    list_add_tail(&new_task->list, &node->list);
+}
+
+#define irq_task_not_running(task) !((task)->running)
+
+static void run_irq_task(void)
+{
+    irq_task_t* first_task = NULL;
+    while (!list_empty(&irq_task_head) &&
+           irq_task_not_running(first_task = list_first_entry(
+                                    &irq_task_head, irq_task_t, list))) {
+        enable_all_exception();
+        first_task->running = true;
+        first_task->handler();
+        disable_all_exception();
+
+        list_del_init(&first_task->list);
+        mem_free(first_task);
+    }
+}
+
+
 
 const char* entry_error_type[] = {
     "SYNC_INVALID_EL1t",   "IRQ_INVALID_EL1t",
@@ -118,23 +181,33 @@ void show_invalid_entry_message(int type,
 void irq_handler(void)
 {
     disable_all_exception();
+
+    irq_task_t* task = NULL;
+
     unsigned int irq_pending_1 = get32(IRQ_PENDING_1);
     unsigned int core_irq_source = get32(CORE0_IRQ_SOURCE);
+
     if (irq_pending_1 & IRQ_PENDING_1_AUX_INT) {
         unsigned int iir = get32(AUX_MU_IIR_REG);
         unsigned int int_id = iir & INT_ID_MASK;
+
         if (int_id == RX_INT) {
             clear_rx_interrupt();
-            uart_rx_handle_irq();
+            task = create_irq_task(uart_rx_handle_irq, 3);
         } else if (int_id == TX_INT) {
             clear_tx_interrupt();
-            uart_tx_handle_irq();
+            task = create_irq_task(uart_tx_handle_irq, 3);
         }
+
     } else if (core_irq_source & CNTPNSIRQ) {
         disable_core0_timer();
-        core_timer_handle_irq();
+        task = create_irq_task(core_timer_handle_irq, 1);
     } else {
         uart_send_string("Unknown pending interrupt\n");
     }
+
+    insert_irq_task(task);
+    run_irq_task();
+
     enable_all_exception();
 }

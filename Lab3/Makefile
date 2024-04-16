@@ -24,6 +24,9 @@ send:
 screen:
 	screen $(port) 115200
 
+minicom:
+	minicom --device=$(port) --baudrate=115200
+
 clean:
 	make -C bootloader clean
 	make -C kernel clean
