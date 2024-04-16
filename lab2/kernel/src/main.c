@@ -11,5 +11,6 @@ void main(char *arg)
     traverse_device_tree(dtb_ptr, dtb_callback_initramfs);
 
     uart_init();
+    uart_flush_FIFO();
     start_shell();
 }

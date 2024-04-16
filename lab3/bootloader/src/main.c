@@ -10,5 +10,6 @@ void main(char *arg)
 {
     _dtb = arg;
     uart_init();
+    uart_flush_FIFO();
     start_shell(_dtb);
 }
