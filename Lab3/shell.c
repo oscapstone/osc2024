@@ -56,6 +56,9 @@ void uart_write_handler(){
         ch = uart_write_buffer[write_cur];
         write_cur++;
     }
+    else{
+        *AUX_MU_IER &= ~(0x02);
+    }
     if(ch == '\r'){
         shell(async_cmd);
         write_cur = 0;
@@ -92,8 +95,9 @@ void uart_read_handler() {
         write_idx++;
     }
     *AUX_MU_IER |= 0x01; //start
+    *AUX_MU_IER |= 0x02;
     //asm volatile("msr DAIFClr, 0xf");
-    create_task(uart_write_handler,2);
+    //create_task(uart_write_handler,2);
 }
 
 struct cpio_newc_header {
@@ -451,8 +455,8 @@ void interrupt_handler_entry(){
         if ((iir & 0x06) == 0x04){
             create_task(uart_read_handler,1);
         }
-        // else
-        //     create_task(uart_write_handler,2);
+        else
+            create_task(uart_write_handler,2);
     }
     execute_task();
     //asm volatile("msr DAIFClr, 0xf");
