@@ -22,7 +22,7 @@
     str x0, [sp, 16 * 16]
     mrs x0, elr_el1
     str x0, [sp, 16 * 17]
-    ldp x0, x1, [sp ,16 * 0]  // restore x0 instead of elr_el1
+    //ldp x0, x1, [sp ,16 * 0]  // restore x0 instead of elr_el1
 .endm
 
 // load general registers from stack

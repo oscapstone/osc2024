@@ -269,7 +269,7 @@ void do_cmd_exec(char* filepath)
         {
             //exec c_filedata
             char* ustack = malloc(USTACK_SIZE);
-            asm("mov x1, 0x0\n\t"
+            asm("mov x1, 0x3c0\n\t"
                 "msr spsr_el1, x1\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
                 "msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
                 "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
