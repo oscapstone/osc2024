@@ -31,6 +31,13 @@ read_buffer_get()
     return c;
 }
 
+static uint32_t
+read_buffer_empty()
+{
+    return _read_start == _read_end;
+}
+
+
 static void 
 write_buffer_add(uint8_t c)
 {
@@ -100,8 +107,12 @@ mini_uart_init(void)
     *AUX_MU_CNTL        =   3;                  // Finally, enable transmitter and receiver
 
 
+    /*
+        init asynchronous buffers
+    */
 
-
+    _read_start = _read_end = 0;
+    _write_start = _write_end = 0;
 }
 
 
@@ -209,10 +220,9 @@ byte_t
 mini_uart_async_getc()
 {    
     aux_set_rx_interrupts();
-    while (_read_start == _read_end) {
-        asm volatile("nop");
+    while (read_buffer_empty()) { 
+        asm volatile("nop"); 
     }
-    
     irq_disable_aux_interrupt();
     uint8_t c = read_buffer_get();
     irq_enable_aux_interrupt();
@@ -243,8 +253,9 @@ mini_uart_tx_handler()
 {
     irq_disable_aux_interrupt();
     aux_clr_tx_interrupts();
+    
     while (!write_buffer_empty()) {
-        delay_cycles(1 << 21);      // (1 << 28) for qemu 
+        delay_cycles(1 << 21);      // (1 << 28) for qemu
         uint8_t c = write_buffer_get();
         mini_uart_putc(c);
     }
