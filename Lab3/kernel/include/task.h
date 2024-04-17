@@ -5,8 +5,8 @@
 #include "io.h"
 
 #define LOW_PRIO 0x100
-#define TIMER_PRIO 0x01
-#define UART_PRIO 0x010
+#define TIMER_PRIO 0x010
+#define UART_PRIO 0x001
 
 typedef struct task_struct task_t;
 

@@ -118,8 +118,10 @@ void one_sec_pass(){
             t_queue[i].expire_time--;
 
             if (t_queue[i].expire_time <= 0){
-                print_current_time();
+                // print_current_time();
                 if (t_queue[i].with_arg){
+                    // print_str(t_queue[i].arg);
+                    // async_uart_puts(t_queue[i].arg);
                     t_queue[i].func_arg(t_queue[i].arg);
                 }else{
                     t_queue[i].func();

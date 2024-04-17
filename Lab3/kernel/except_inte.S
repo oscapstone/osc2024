@@ -6,7 +6,7 @@
 
 // save general registers to stack
 .macro save_all
-    sub sp, sp, 32 * 8
+    sub sp, sp, 32 * 12
     stp x0, x1, [sp ,16 * 0]
     stp x2, x3, [sp ,16 * 1]
     stp x4, x5, [sp ,16 * 2]
@@ -23,6 +23,13 @@
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
     str x30, [sp, 16 * 15]
+
+    mrs x0,  spsr_el1
+    str x0,  [sp, 16 * 16]
+    mrs x0,  elr_el1
+    str x0,  [sp, 16 * 17]
+    ldp x0, x1, [sp ,16 * 0]    // restore x0 argument register
+
 .endm
 
 // load general registers from stack
@@ -43,13 +50,22 @@
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
-    add sp, sp, 32 * 8
+    
+    //using for nested interrupt (Advanced exercise 2)
+    ldr x0, [sp, 16 * 16]
+    msr spsr_el1,x0
+    ldr x0,  [sp, 16 * 17]
+    msr elr_el1, x0
+
+    ldp x0, x1, [sp ,16 * 0]  // restore x0 return value register
+    
+    add sp, sp, 32 * 12 // 最後把stack pointer加回去
 .endm
 
 from_el2_to_el1:
     mov x0, (1 << 31)       // EL1 uses aarch64
     msr hcr_el2, x0
-    mov x0, 0x3c5           // EL1h (SPSel = 1) with interrupt disabled
+    mov x0, 0x3c5           // EL1h (SPSel = 1) with interrupt disabled / 0x5 means EL1 with the highest level of exception handling in which the kernel or operating system typically operates
     msr spsr_el2, x0
     msr elr_el2, lr
     eret                    // return to EL1

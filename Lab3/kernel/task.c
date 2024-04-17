@@ -1,6 +1,7 @@
 #include "task.h"
 
 task_t* task_head;
+int cur_prio = LOW_PRIO;
 
 void init_task_queue(){
     task_head = (task_t*)simple_alloc(sizeof(task_t));
@@ -57,9 +58,23 @@ void pop_task(){
     disable_interrupt();
     // print_str("\nPopping task...");
     task_t* exec_task = task_head->next;
+    // print_newline();
+    // print_hex(exec_task->prio);
+
+    if (exec_task->prio >= cur_prio)
+        return;
+
+    int orin_prio = cur_prio;
+
     task_head->next = exec_task->next;
     task_head->next->prev = task_head;
+    cur_prio = exec_task->prio;
     enable_interrupt();
 
+    // print_hex(cur_prio);
     exec_task->callback();
+
+    disable_interrupt();
+    cur_prio = orin_prio;
+    enable_interrupt();
 }

@@ -53,22 +53,18 @@ void tx_interrupt_handler(){
 
     // disable_interrupt();
 
-    while (*AUX_MU_LSR & 0x20){
-        if (write_head == write_end){
-            break;
-        }
+    while (write_head != write_end){
+        while (!(*AUX_MU_LSR & 0x20))
+            asm volatile("nop");
 
         disable_interrupt();
         char ch = async_write_buf[write_head++];
         *AUX_MU_IO = ch;
 
-        
-
         if (write_head == 256)
             write_head = 0;
 
         enable_interrupt();
-
     }
 
     // enable_interrupt();
@@ -82,7 +78,7 @@ void async_uart_handler(){
         // print_str("\nread interrupt");
         disable_uart_read_interrupt();
         rx_interrupt_handler();
-    }else if (*AUX_MU_IIR & 0x2){
+    }else if (*AUX_MU_IIR & 0x02){
         disable_uart_write_interrupt();
         tx_interrupt_handler();
     }
@@ -123,13 +119,17 @@ uint32_t async_uart_gets(char* buffer, uint32_t len){
 
 void async_uart_puts(char* str){
 
+    // print_str("\nhere");
+
     disable_interrupt();
+    
     while (*str != '\0'){
         if (*str == '\n'){
             async_write_buf[write_end++] = '\r';
             
             if (write_end == 256)
                 write_end = 0;
+
         }
 
         async_write_buf[write_end++] = *str++;
@@ -137,6 +137,13 @@ void async_uart_puts(char* str){
         if (write_end == 256)
             write_end = 0;
     }
+
+    // async_write_buf[write_end++] = '\0';
+
+    // print_newline();
+    // print_hex(write_end);
+    // print_str(async_write_buf);
+
     enable_interrupt();
 
     enable_uart_write_interrupt();

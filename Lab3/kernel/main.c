@@ -11,6 +11,8 @@ int main(){
     uart_init();
     fdt_traverse(initramfs_callback);
     enable_interrupt();
+    enable_uart_interrupt();
+    enable_core_timer();
     init_time_queue();
     init_task_queue();
     init_buffer();

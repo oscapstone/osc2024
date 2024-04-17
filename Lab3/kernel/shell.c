@@ -24,13 +24,10 @@ void reboot(){
 }
 
 void test_exec(){
-    enable_core_timer();
     cpio_exec();
-    disable_core_timer();
 }
 
 void test_timer(){
-    enable_core_timer();
 
     set_timeout("\nthis will print after 6 second", 6);
     set_timeout("\nthis will print after 4 second", 4);
@@ -41,14 +38,10 @@ void test_timer(){
 }
 
 void test_preempt(){
-    enable_uart_interrupt();
-    enable_core_timer();
-
     add_task(print_current_time, 20);
-    async_uart_puts("\nAfter");
+    async_uart_puts("\nAfter Current Time");
 
     pop_task();
-    disable_uart_interrupt();
 }
 
 void test_malloc(){
