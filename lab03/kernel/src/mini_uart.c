@@ -2,6 +2,7 @@
 #include "mini_uart.h"
 #include "string.h"
 #include "irq.h"
+#include "io.h"
 
 void uart_init()
 {
@@ -35,9 +36,7 @@ void uart_init()
 
 char uart_recv()
 {
-    // char r;
-    // bit 0 == 1, if receiver holds valid byte
-    // do{asm volatile("nop");}while(!(*AUX_MU_LSR_REG & 0x01));
+
     char r;
     // bit 0 == 1, if receiver holds valid byte
     do{asm volatile("nop");}while(!(*AUX_MU_LSR_REG & 0x01));
@@ -72,6 +71,12 @@ char write_buff[BUFF_SIZE];
 int read_front = 0, read_rear = 0;
 int write_front = 0, write_rear = 0;
 
+void uart_buff_init()
+{
+    read_front = read_rear = 0;
+    write_front = write_rear = 0;
+}
+
 void enable_uart_interrupt()
 {
     enable_uart_recv_interrupt();
@@ -105,33 +110,30 @@ void disable_uart_trans_interrupt()
 }
 
 
-void async_uart_handler()
+void async_uart_read_handler()
 {
-    disable_uart_interrupt();
+    char c = (char)(*AUX_MU_IO_REG);
+    read_buff[read_rear++] = c;
+    read_rear %= BUFF_SIZE;
+    enable_uart_recv_interrupt();
+}
 
-    unsigned int status = *AUX_MU_IIR_REG;
+void async_uart_write_handler()
+{
+    // long long unsigned delay = 5000000000; // for qemu
+    // long long unsigned delay = 50000000; // for rpi3
 
-    if(status & AUX_MU_IIR_REG_READ) // read
+    while(1)
     {
-        char c = (char)(*AUX_MU_IO_REG);
-        read_buff[read_rear++] = c;
-        read_rear %= BUFF_SIZE;       
-    }
-    else if(status & AUX_MU_IIR_REG_WRITE) // write
-    {
-        while(*AUX_MU_LSR_REG & 0x20) // 0010_0000 (bit 5 == 1) if FIFO can accept at least 1 byte
+        if(write_front == write_rear)
         {
-            if(write_front == write_rear)
-            {
-                enable_uart_recv_interrupt();
-                break;
-            }
-            char c = write_buff[write_front++];
-            *AUX_MU_IO_REG = c;
-            write_front %= BUFF_SIZE;
+            // enable_uart_recv_interrupt();
+            return;
         }
+        char c = write_buff[write_front++];
+        *AUX_MU_IO_REG = c;
+        write_front %= BUFF_SIZE;
     }
-    enable_uart_interrupt();
 }
 
 int async_uart_gets(char* buff, int size)   // get the string from the buffer

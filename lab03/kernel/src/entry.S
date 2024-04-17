@@ -7,7 +7,7 @@
 
 // save general registers to stack
 .macro save_all
-    sub sp, sp, 32 * 8
+    sub sp, sp, 32 * 9
     stp x0, x1, [sp ,16 * 0]    // storing the contents of x0 and x1 to the address pointed by the stack pointer sp with an offset of 16 bytes
     stp x2, x3, [sp ,16 * 1]    // stp: Store Pair and it's used to store a pair of 64-bit (8-byte) registers to memory
     stp x4, x5, [sp ,16 * 2]
@@ -24,10 +24,16 @@
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
     str x30, [sp, 16 * 15]
+    mrs x28, spsr_el1
+    mrs x29, elr_el1
+    stp x28, x29, [sp, 16 * 16]
 .endm
 
 // load general registers from stack
 .macro load_all
+    ldp x28, x29, [sp, 16 * 16]
+    msr spsr_el1, x28
+    msr elr_el1, x29
     ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
     ldp x4, x5, [sp ,16 * 2]
@@ -44,7 +50,7 @@
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
-    add sp, sp, 32 * 8
+    add sp, sp, 32 * 9
 .endm
 
 .macro ventry label
@@ -115,7 +121,7 @@ handler_warpper     el1_irq_handler     el1_irq_entry               IRQ_INVALID_
 handler_warpper     FIQ_EL1H            default_exception_entry     FIQ_INVALID_EL1h
 handler_warpper     SERROR_EL1H         default_exception_entry     ERROR_INVALID_EL1h
         
-handler_warpper     SYNC_64_EL0T        default_exception_entry     SYNC_INVALID_EL0_64
+handler_warpper     SYNC_64_EL0T        svc_exception_entry         SYNC_INVALID_EL0_64
 handler_warpper     el0_irq_handler     el0_irq_entry               IRQ_INVALID_EL0_64
 handler_warpper     FIQ_64_EL0T         default_exception_entry     FIQ_INVALID_EL0_64
 handler_warpper     SERROR_64_EL0T      default_exception_entry     ERROR_INVALID_EL0_64

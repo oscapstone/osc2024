@@ -28,4 +28,11 @@
 extern void enable_irq();
 extern void disable_irq();
 
+struct task_struct;
+void task_head_init();
+void test_func();
+
+#define EL1_IRQ_TIMER_PRIORITY          0x1
+#define EL1_IRQ_UART_PRIORITY           0x2 
+
 #endif

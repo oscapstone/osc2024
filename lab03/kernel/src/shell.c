@@ -70,10 +70,9 @@ void async_shell()
     char command[BUFF_SIZE];
     while(1)
     {
-        // async_uart_puts("\r\n(async) yuchang@raspberrypi3: ~$ ");
         printf("\r\n(async) yuchang@raspberrypi3: ~$ ");
         async_uart_gets(command, BUFF_SIZE);
-        async_uart_puts(command);
+        async_uart_puts(command);        
         if(strcmp(command, "exit") == 0)
         {
             // async_uart_puts("\r\nExiting async shell...");

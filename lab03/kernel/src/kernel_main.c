@@ -13,6 +13,8 @@ int main()
     time_head_init();
     mem_init();
     uart_init();
+    task_head_init();
+    uart_buff_init();
     add_timer(print_time_handler, 0, 2);
     core_timer_enable();
     enable_irq();

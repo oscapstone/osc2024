@@ -21,6 +21,9 @@ void print_time_handler(char* arg)
 
 void timer_update_handler()
 {
+    // long long unsigned delay = 5000000000; // for qemu
+    // long long unsigned delay = 50000000; // for rpi3
+    // while(delay-- > 0);
     time_head->callback_func(time_head->arg);
     time_head = time_head->next;
     if(!time_head)
@@ -31,6 +34,7 @@ void timer_update_handler()
     {
         uint64_t cpu_current_cycles = get_cpu_cycles();
         set_timer((time_head->timeout - cpu_current_cycles) / get_cpu_freq());
+        core_timer_enable();
     }
 
 }
@@ -67,14 +71,9 @@ void add_timer(void(*callback_func)(void*), void* args, uint32_t sec)
     
     new_timer->timeout = sec * get_cpu_freq() + get_cpu_cycles();
     new_timer->callback_func = callback_func;
-    // new_timer->arg = args;
     strcpy(new_timer->arg, (char*)args);
     new_timer->next = (void*)0;
-    // printf("\r\nnext: ");
-    // printf_hex((uint64_t)new_timer->next);
     int update = 0;
-    // printf("\r\ntime_head: ");
-    // printf_hex((uint64_t)time_head);
     if(time_head == 0)
     {
         time_head = new_timer;
@@ -104,7 +103,6 @@ void add_timer(void(*callback_func)(void*), void* args, uint32_t sec)
     }
     if(update)
     {
-        // printf("\r\nset");
         set_timer(sec);
     }
     printf("\r\n");
@@ -121,4 +119,5 @@ void print_timeout_msg(void* msg)
     printf("[ TIMEOUT ] ");
     printf("Message: ");
     printf((char*)msg);
+    printf(" ");
 }

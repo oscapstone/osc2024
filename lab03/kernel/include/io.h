@@ -9,4 +9,6 @@ void printf_hex(unsigned int d);
 void printf_int(int d);
 char read_char();
 
+#define debug() printf("\r\n [DEBUG] : "); printf(__FILE__); printf(" : "); printf_int(__LINE__)
+
 #endif

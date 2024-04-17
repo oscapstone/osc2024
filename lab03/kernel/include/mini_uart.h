@@ -38,9 +38,12 @@ void disable_uart_recv_interrupt();
 void enable_uart_trans_interrupt();
 void disable_uart_trans_interrupt();
 
+void uart_buff_init();
+
 void async_uart_puts(char* buff);
 int async_uart_gets(char* buff, int size);
 
-void async_uart_handler();
+void async_uart_read_handler();
+void async_uart_write_handler();
 
 #endif
