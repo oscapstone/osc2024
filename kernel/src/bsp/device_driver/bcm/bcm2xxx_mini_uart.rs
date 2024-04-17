@@ -285,12 +285,12 @@ impl MiniUartInner {
         }
 
         // Read one character.
-        let mut ret = self.registers.AUX_MU_IO_REG.get() as u8 as char;
+        let ret = self.registers.AUX_MU_IO_REG.get() as u8 as char;
 
         // Convert carrige return to newline.
-        if ret == '\r' {
-            ret = '\n'
-        }
+        // if ret == '\r' {
+        //     ret = '\n'
+        // }
 
         // Update statistics.
         self.chars_read += 1;
