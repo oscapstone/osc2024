@@ -1,14 +1,10 @@
 #include "timer.h"
 
 #include "alloc.h"
+#include "interrupt.h"
 #include "string.h"
 #include "uart1.h"
 #include "utli.h"
-
-extern void set_core_timer_int(uint64_t s);
-extern void set_core_timer_int_sec(uint32_t s);
-extern void core0_timer_interrupt_enable();
-extern void core0_timer_interrupt_disable();
 
 static timer_event* te_head = (timer_event*)0;
 

@@ -178,3 +178,18 @@ void exec_in_el0(void *prog_st_addr) {
   );
   return;
 }
+
+void enable_EL0VCTEN() {
+  uint64_t tmp;
+  // cntkctl_el1: controls the generation of an event stream from the virtual
+  // counter, and access from EL0 to the physical counter, virtual counter, EL1
+  // physical timers, and the virtual timer.
+  asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+  tmp |= 1;  // EL0VCTEN(bit[1]):  Controls whether the virtual counter,
+             // CNTVCT_EL0, and the frequency register CNTFRQ_EL0, are
+             // accessible from EL0 modes.
+             // CNTVCT_EL0 (Counter-timer Virtual Count register): holds the
+             // 64-bit virtual count value. CNTFRQ_EL0 (Counter-timer Frequency
+             // register): holds the clock frequency of the system timer.
+  asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+}

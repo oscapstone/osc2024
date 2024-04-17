@@ -1,22 +1,21 @@
 #include "task.h"
 
 #include "alloc.h"
+#include "interrupt.h"
 #include "uart1.h"
 
-extern void enable_interrupt();
-extern void disable_interrupt();
-
-static uint32_t cur_priority = NO_TASK;
-static task* t_head = (task*)0;
+static uint8_t cur_priority = NO_TASK;
+static handler_task_t* t_head = (handler_task_t*)0;
 
 void add_task(task_callback cb, uint32_t prio) {
-  task* new_task = (task*)simple_malloc(sizeof(task));
+  handler_task_t* new_task =
+      (handler_task_t*)simple_malloc(sizeof(handler_task_t));
   if (!new_task) {
     uart_puts("add_task: new_task memory allocation fail");
     return;
   }
   new_task->func = cb;
-  new_task->next = (task*)0;
+  new_task->next = (handler_task_t*)0;
   new_task->priority = prio;
 
   disable_interrupt();
@@ -24,7 +23,7 @@ void add_task(task_callback cb, uint32_t prio) {
     new_task->next = t_head;
     t_head = new_task;
   } else {
-    task* cur = t_head;
+    handler_task_t* cur = t_head;
     while (1) {
       if (!cur->next || cur->next->priority >= new_task->priority) {
         new_task->next = cur->next;

@@ -2,6 +2,7 @@
 #define _INTERRUPT_H
 
 #include "peripherals/mmio.h"
+#include "types.h"
 
 #define CORE0_INT_SRC     \
   ((volatile unsigned int \
@@ -24,4 +25,13 @@ void el0_64_sync_interrupt_handler();
 void el0_64_irq_interrupt_handler();
 void el1h_irq_interrupt_handler();
 void fake_long_handler();
+extern void enable_interrupt();
+extern void disable_interrupt();
+extern void core_timer_enable();
+extern void core_timer_disable();
+extern void core0_timer_interrupt_enable();
+extern void core0_timer_interrupt_disable();
+extern void set_core_timer_int(uint64_t s);
+extern void set_core_timer_int_sec(uint32_t s);
+
 #endif

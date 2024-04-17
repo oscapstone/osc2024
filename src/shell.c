@@ -12,14 +12,6 @@
 #include "uart1.h"
 #include "utli.h"
 
-extern void enable_interrupt();
-extern void disable_interrupt();
-extern void core_timer_enable();
-extern void core0_timer_interrupt_enable();
-extern void core0_timer_interrupt_disable();
-extern void set_core_timer_int(uint64_t s);
-extern void set_core_timer_int_sec(uint32_t s);
-
 static void *ptr_buf[30];
 
 enum shell_status { Read, Parse };
@@ -249,11 +241,6 @@ void shell_controller(char *cmd) {
 }
 
 void shell_start() {
-  enable_interrupt();
-  core_timer_enable();
-  set_core_timer_int_sec(1);
-  core0_timer_interrupt_enable();
-
   enum shell_status status = Read;
   char cmd[CMD_LEN];
   while (1) {

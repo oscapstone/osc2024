@@ -11,8 +11,6 @@ static uint32_t w_f = 0, w_b = 0;
 static uint32_t r_f = 0, r_b = 0;
 char async_uart_read_buf[MAX_BUF_SIZE];
 char async_uart_write_buf[MAX_BUF_SIZE];
-extern void enable_interrupt();
-extern void disable_interrupt();
 
 void uart_init() {
   /* Initialize UART */

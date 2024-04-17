@@ -87,7 +87,7 @@ static int32_t get_alloc_chunk_size(uint32_t n) {
 }
 
 static void init_frames() {
-  uart_send_string("frame_cnt: ");
+  uart_send_string("total frames: ");
   uart_int(FRAME_CNT);
   uart_send_string("\r\n");
 
@@ -105,16 +105,6 @@ static void init_frames() {
     free_frame_lists[i]->prev = free_frame_lists[i]->next = (frame_node*)0;
     free_frame_lists[i]->addr = (void*)0;
   }
-
-  // for (int i = 1; i < FRAME_CNT; i++) {
-  //   frame_entry_arr[i].order = BUDDY;
-  // }
-  // for (int i = 0; i <= MAX_ORDER; i++) {
-  //   free_frame_lists[i] = (frame_node*)simple_malloc(sizeof(frame_node));
-  //   free_frame_lists[i]->prev = free_frame_lists[i]->next = (frame_node*)0;
-  //   free_frame_lists[i]->addr = (void*)0;
-  // }
-  // add_free_frame(0, MAX_ORDER);
 }
 
 static void init_chunks() {

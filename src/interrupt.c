@@ -6,10 +6,7 @@
 #include "utli.h"
 
 static unsigned int el0_timer_trigger_cnt = 0;
-extern void set_core_timer_int(unsigned long long s);
-extern void set_core_timer_int_sec(unsigned int s);
-extern void core0_timer_interrupt_disable();
-extern void core0_timer_interrupt_enable();
+
 void invaild_exception_handler() { uart_puts("invaild exception handler!"); }
 
 static void el0_timer_interrupt_handler() {
@@ -37,6 +34,7 @@ void el0_64_irq_interrupt_handler() {
     el0_timer_trigger_cnt++;
     if (el0_timer_trigger_cnt == 5) {
       el0_timer_trigger_cnt = 0;
+      enable_interrupt();
       asm volatile(
           "mov	x1, 0x0;"
           "mov  sp, 0x40000;"
