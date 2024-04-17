@@ -8,6 +8,8 @@
         "mem_utils.h": "c",
         "dtb.h": "c",
         "timer.h": "c",
-        "*.tcc": "c"
+        "*.tcc": "c",
+        "gpio.h": "c",
+        "exception.h": "c"
     }
 }

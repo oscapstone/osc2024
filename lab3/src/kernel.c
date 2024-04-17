@@ -3,6 +3,7 @@
 #include "../include/string_utils.h"
 #include "../include/mem_utils.h"
 #include "../include/dtb.h"
+#include "../include/exception.h"
 
 extern char *cpio_addr;
 
@@ -27,5 +28,6 @@ void kernel_main(uint64_t x0)
 	uart_hex((uint64_t)cpio_addr);
 	uart_send_string("\r\n");
 	
+	enable_interrupt();
 	shell();
 }

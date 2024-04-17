@@ -2,42 +2,45 @@
 #include "../include/timer.h"
 #include "../include/timer_utils.h"
 #include "../include/exception.h"
+#include "../include/peripherals/mini_uart.h"
 
 void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
 
-void except_handler_c() 
+
+static void show_exception_info()
 {
-	uart_send_string("In default handle\n");
-
-	//read spsr_el1
-	unsigned long long spsr_el1 = 0;
-	asm volatile("mrs %0, spsr_el1":"=r"(spsr_el1));
-	uart_send_string("spsr_el1: ");
-	uart_hex(spsr_el1);
-	uart_send_string("\n");
-
-	//read elr_el1
-	unsigned long long elr_el1 = 0;
-	asm volatile("mrs %0, elr_el1":"=r"(elr_el1));
-	uart_send_string("elr_el1: ");
-	uart_hex(elr_el1);
-	uart_send_string("\n");
-	
-	//esr_el1
-	unsigned long long esr_el1 = 0;
-	asm volatile("mrs %0, esr_el1":"=r"(esr_el1));
-	uart_hex(esr_el1);
-	uart_send_string("\n");
-
-	//ec
-	unsigned ec = (esr_el1 >> 26) & 0x3F; //0x3F = 0b111111(6)
-	uart_send_string("ec: ");
-	uart_hex(ec);
-	uart_send_string("\n");
+	uint64_t spsr = read_sysreg(spsr_el1);
+	uint64_t elr  = read_sysreg(elr_el1);
+	uint64_t esr  = read_sysreg(esr_el1);
+	uart_send_string("spsr_el1: 0x");
+	uart_hex(spsr);
+	uart_send_string("\r\n");
+	uart_send_string("elr_el1: 0x");
+	uart_hex(elr);
+	uart_send_string("\r\n");
+	uart_send_string("esr_el1: 0x");
+	uart_hex(esr);
+	uart_send_string("\r\n");
 }
 
-void low_irq_handler_c()
+void exception_invalid_handler()
+{
+	disable_interrupt();
+	uart_send_string("---In exception_invalid_handler---\r\n");
+	show_exception_info();
+	enable_interrupt();
+}
+
+void except_handler_c() 
+{
+	disable_interrupt();
+	uart_send_string("---In exception_el0_sync_handler---\r\n");
+	show_exception_info();
+	enable_interrupt();
+}
+
+void timer_handler()
 {
 	disable_interrupt();
 	uart_send_string("In timer handle\n");
@@ -49,4 +52,20 @@ void low_irq_handler_c()
 	enable_interrupt();
 }
 
-	
+void exception_el1_irq_handler()
+{
+	disable_interrupt();
+	if (*CORE0_INTERRUPT_SOURCE & 0x2) {
+		// disable_timer_interrupt();
+		timer_handler();
+	}
+	else if (*AUX_MU_IIR_REG & 0x4) {
+		// clr_rx_interrupts();
+		uart_rx_handler();
+	}
+	else if (*AUX_MU_IIR_REG & 0x2) {
+		clr_tx_interrupts();
+		uart_tx_handler();
+	}
+	enable_interrupt();
+}

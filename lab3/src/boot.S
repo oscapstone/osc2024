@@ -90,30 +90,6 @@ from_el2_to_el1:
     add sp, sp, 32 * 8
 .endm
 
-exception_handler:
-    save_all
-    bl except_handler_c
-    load_all
-    eret
-
-synchronous_el1_handler:
-    save_all
-    bl except_handler_c
-    load_all
-    eret
-
-irq_el0_handler:
-    save_all
-    bl low_irq_handler_c
-    load_all
-    eret
-
-irq_el1_handler:
-    save_all
-    bl low_irq_handler_c
-    load_all
-    eret
-
 .macro exception_entry label
     b      \label
     .align 7    
@@ -122,22 +98,56 @@ irq_el1_handler:
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
-    exception_entry exception_handler
-    exception_entry exception_handler
-    exception_entry exception_handler
-    exception_entry exception_handler
+    // Exception from the current EL while using SP_EL0
+    exception_entry exception_invalid
+    exception_entry exception_invalid      
+    exception_entry exception_invalid
+    exception_entry exception_invalid
 
-    exception_entry synchronous_el1_handler
-    exception_entry irq_el0_handler                           //irq_el1_handler
-    exception_entry exception_handler
-    exception_entry exception_handler
+    // Exception from the current EL while using SP_ELx
+    exception_entry el1_sync
+    exception_entry el1_irq                
+    exception_entry exception_invalid
+    exception_entry exception_invalid
 
-    exception_entry exception_handler
-    exception_entry irq_el0_handler
-    exception_entry exception_handler
-    exception_entry exception_handler
+    // Exception from a lower EL and at least one lower EL is AArch64
+    exception_entry el0_sync
+    exception_entry el0_irq
+    exception_entry exception_invalid
+    exception_entry exception_invalid
 
-    exception_entry exception_handler
-    exception_entry exception_handler
-    exception_entry exception_handler
-    exception_entry exception_handler
+    // Exception from a lower EL and all lower EL are AArch32
+    exception_entry exception_invalid
+    exception_entry exception_invalid
+    exception_entry exception_invalid
+    exception_entry exception_invalid
+
+exception_invalid:
+    save_all
+    bl exception_invalid_handler
+    load_all
+    eret
+
+el0_sync:
+    save_all
+    bl except_handler_c
+    load_all
+    eret
+
+el1_sync:
+    save_all
+    bl except_handler_c
+    load_all
+    eret
+
+el0_irq:
+    save_all
+    bl exception_el1_irq_handler
+    load_all
+    eret
+
+el1_irq:
+    save_all
+    bl exception_el1_irq_handler
+    load_all
+    eret

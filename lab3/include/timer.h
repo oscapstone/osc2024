@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-#define CORE0_TIMER_IRQ_CTRL ((volatile unsigned long *)(0x40000040))
+#define CORE0_TIMER_IRQ_CTRL ((volatile unsigned int *)(0x40000040))
+#define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)(0x40000060))
 
 void enable_timer_interrupt();
 void disable_timer_interrupt();
