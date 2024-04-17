@@ -69,7 +69,7 @@ run: all
 		-serial null -serial pty \
 		-kernel $(BOOTLOADER_IMG) \
 		-initrd $(INITRAMFS_CPIO) \
-		-dtb $(DTB) 
+		-dtb $(DTB)
 
 debug: all size
 	$(OBJDUMP) -d $(KERNEL_ELF) > $(BUILD_DIR)/kernel.S

@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 pub trait Callback: Send + Sync {
     fn call(&self);
 }
+
 impl<F> Callback for F
 where
     F: Fn() + 'static,
@@ -44,7 +45,7 @@ impl Eq for Timer {}
 
 impl PartialOrd for Timer {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.cmp(other))
+        Some(self.cmp(other).reverse())
     }
 }
 

@@ -10,8 +10,9 @@ mod kernel;
 mod panic;
 mod timer;
 
+use alloc::boxed::Box;
 use core::arch::asm;
-
+use core::time::Duration;
 use driver::watchdog;
 use stdio::{gets, print, println};
 
@@ -50,21 +51,18 @@ fn main() -> ! {
         println!("Boot time: {} ms", now / (freq / 1000));
     }
 
-    unsafe {
-        asm!(
-            "mov {0}, 1",
-            "msr cntp_ctl_el0, {0}", // Enable the timer
-            "mrs {0}, cntfrq_el0",
-            "msr cntp_tval_el0, {0}",
-            "mov {0}, 2",
-            "ldr {1}, =0x40000040", // CORE0_TIMER_IRQ_CTRL
-            "str {0}, [{1}]",
-            out(reg) _,
-            out(reg) _,
-        );
-        asm!("msr DAIFClr, 0xf");
-    }
     timer::manager::initialize_timers();
+    unsafe {
+        exception::enable_inturrupt();
+    }
+    if let Some(ref mut tm) = *timer::manager::get_timer_manager().lock() {
+        tm.add_timer(
+            Duration::from_secs(2),
+            Box::new(|| {
+                println!("First boot timer expired!");
+            }),
+        );
+    }
 
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
@@ -140,18 +138,20 @@ fn execute_command(command: &[u8]) {
     } else if command.starts_with(b"test") {
         let tm = timer::manager::get_timer_manager();
         if let Some(ref mut tm) = *tm.lock() {
-            tm.add_timer(timer::timer::Timer::new(1000, || {
-                println!("Timer expired");
-            }));
-            let func = tm.pop_timer().unwrap();
-            func.trigger();
-            let msg = "Hello, world!";
+            tm.add_timer(
+                Duration::from_secs(1),
+                Box::new(|| {
+                    println!("This is the first timmer.");
+                }),
+            );
 
-            tm.add_timer(timer::timer::Timer::new(2000, move || {
-                println!("{}", msg);
-            }));
-            let func = tm.pop_timer().unwrap();
-            func.trigger();
+            let msg = "Hello, world!";
+            tm.add_timer(
+                Duration::from_secs(6),
+                Box::new(move || {
+                    println!("{}", msg);
+                }),
+            );
         } else {
             println!("Timer manager is not initialized");
         }

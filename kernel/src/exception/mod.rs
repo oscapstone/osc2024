@@ -3,8 +3,9 @@ use core::{
     ptr::read_volatile,
 };
 
+use crate::timer::manager::get_timer_manager;
 use driver::mmio::{regs::AuxReg, regs::MmioReg, Mmio};
-use stdio::println;
+use stdio::{debug, println};
 
 global_asm!(include_str!("context_switch.S"));
 
@@ -13,9 +14,11 @@ unsafe fn exception_handler(idx: u64) {
     match idx {
         0x5 => {
             if read_volatile(0x4000_0060 as *const u32) == 0x02 {
-                println!("Timer interrupt");
-                asm!("mov {0}, 0", "msr cntp_ctl_el0, {0}", out(reg) _);
-                println!("Timer interrupt disabled");
+                if let Some(timer_manager) = get_timer_manager().lock().as_mut() {
+                    timer_manager.handle_inturrupt();
+                } else {
+                    debug!("timer manager is none");
+                }
             }
             if Mmio::read_reg(MmioReg::Aux(AuxReg::Irq)) & 0x1 == 0x1 {
                 // println!("irq interrupt");
@@ -40,8 +43,8 @@ unsafe fn exception_handler(idx: u64) {
             println!("esr_el1: 0x{:x}", esr_el1);
         }
         _ => {
-            println!("Exception {}", idx);
-            println!("Unknown exception");
+            debug!("Exception {}", idx);
+            debug!("Unknown exception");
         }
     }
     // enable_inturrupt();
@@ -49,12 +52,12 @@ unsafe fn exception_handler(idx: u64) {
 
 #[allow(dead_code)]
 #[inline(always)]
-unsafe fn enable_inturrupt() {
+pub unsafe fn enable_inturrupt() {
     asm!("msr DAIFClr, 0xf");
 }
 
 #[allow(dead_code)]
 #[inline(always)]
-unsafe fn disable_inturrupt() {
+pub unsafe fn disable_inturrupt() {
     asm!("msr DAIFSet, 0xf");
 }

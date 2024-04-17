@@ -23,3 +23,12 @@ macro_rules! println {
         stdio::print!("\r\n");
     });
 }
+
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => ({
+        stdio::print!("[{}:{}] ", file!(), line!());
+        stdio::print!($($arg)*);
+        stdio::print!("\r\n");
+    });
+}
