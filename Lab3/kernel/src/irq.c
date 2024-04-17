@@ -13,10 +13,10 @@
 static LIST_HEAD(irq_task_head);
 
 typedef struct irq_task {
-    irq_callback handler;
-    unsigned long priority;
-    bool running;
-    struct list_head list;
+    irq_callback handler;    // irq task handler
+    unsigned long priority;  // lower value means higher priority
+    bool is_running;         // is task running
+    struct list_head list;   // list node
 } irq_task_t;
 
 static irq_task_t* create_irq_task(irq_callback handler, unsigned long priority)
@@ -29,7 +29,7 @@ static irq_task_t* create_irq_task(irq_callback handler, unsigned long priority)
     INIT_LIST_HEAD(&new_irq_task->list);
 
     new_irq_task->handler = handler;
-    new_irq_task->running = false;
+    new_irq_task->is_running = false;
     new_irq_task->priority = priority;
 
     return new_irq_task;
@@ -49,7 +49,7 @@ static void insert_irq_task(irq_task_t* new_task)
     list_add_tail(&new_task->list, &node->list);
 }
 
-#define irq_task_not_running(task) !((task)->running)
+#define irq_task_not_running(task) !((task)->is_running)
 
 static void run_irq_task(void)
 {
@@ -58,7 +58,7 @@ static void run_irq_task(void)
            irq_task_not_running(first_task = list_first_entry(
                                     &irq_task_head, irq_task_t, list))) {
         enable_all_exception();
-        first_task->running = true;
+        first_task->is_running = true;
         first_task->handler();
         disable_all_exception();
 
