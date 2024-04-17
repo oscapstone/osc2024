@@ -8,6 +8,7 @@ mod dtb;
 mod exception;
 mod kernel;
 mod panic;
+mod timer;
 
 use core::arch::asm;
 
@@ -63,6 +64,7 @@ fn main() -> ! {
         );
         asm!("msr DAIFClr, 0xf");
     }
+    timer::manager::initialize_timers();
 
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
@@ -82,6 +84,7 @@ fn execute_command(command: &[u8]) {
         println!("hello\t: print this help menu");
         println!("help\t: print Hello World!");
         println!("reboot\t: reboot the Raspberry Pi");
+        println!("setTimeout: set a timer to reboot the Raspberry Pi");
     } else if command.starts_with(b"reboot") {
         watchdog::reset(100);
     } else if command.starts_with(b"ls") {
@@ -133,6 +136,24 @@ fn execute_command(command: &[u8]) {
                     break;
                 }
             }
+        }
+    } else if command.starts_with(b"test") {
+        let tm = timer::manager::get_timer_manager();
+        if let Some(ref mut tm) = *tm.lock() {
+            tm.add_timer(timer::timer::Timer::new(1000, || {
+                println!("Timer expired");
+            }));
+            let func = tm.pop_timer().unwrap();
+            func.trigger();
+            let msg = "Hello, world!";
+
+            tm.add_timer(timer::timer::Timer::new(2000, move || {
+                println!("{}", msg);
+            }));
+            let func = tm.pop_timer().unwrap();
+            func.trigger();
+        } else {
+            println!("Timer manager is not initialized");
         }
     } else {
         println!(

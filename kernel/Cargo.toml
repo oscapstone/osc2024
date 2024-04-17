@@ -7,3 +7,4 @@ edition = "2021"
 driver = { path = "../driver" }
 stdio = { path = "../stdio" }
 filesystem = { path = "../filesystem" }
+spin = "0.9"
