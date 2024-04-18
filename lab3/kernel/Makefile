@@ -21,7 +21,11 @@ obj/%.o: %.c
 	mkdir -p $(dir $@)
 	$(C)-gcc $(CFLAGS) -c $< -o $@
 
-obj/start.o: start.S
+obj/start.o: $(BSP_PATH)/start.S
+	mkdir -p $(dir $@)
+	$(C)-gcc $(CFLAGS) -c $< -o $@
+
+obj/entry.o: $(BSP_PATH)/entry.S
 	mkdir -p $(dir $@)
 	$(C)-gcc $(CFLAGS) -c $< -o $@
 
