@@ -5,13 +5,16 @@
 #include "cpio.h"
 #include "utils.h"
 #include "heap.h"
+#include "dtb.h"
 #include <stddef.h>
 
 #define CLI_MAX_CMD 8
 #define MAX_ARGS 10
 
-extern char* _dtb;
-void* CPIO_DEFAULT_PLACE = (void*)(unsigned long) 0x8000000;;
+extern char* dtb_ptr;
+void* CPIO_DEFAULT_PLACE;
+// If don't use dtb, we manually assign default place
+// void* CPIO_DEFAULT_PLACE = (void*)(unsigned long) 0x8000000;
 
 int cli_strcmp(const char* p1, const char* p2) {
     const unsigned char *s1 = (const unsigned char*) p1;
@@ -63,6 +66,8 @@ void cli_exec_cmd(char* buf) {
 
     if (cli_strcmp(cmd, "cat") == 0) {
         cmd_cat(argvs[1]);
+    } else if (cli_strcmp(cmd, "dtb") == 0) {
+        cmd_dtb();
     } else if (cli_strcmp(cmd, "help") == 0) {
         cmd_help();
     } else if (cli_strcmp(cmd, "hello") == 0) {
@@ -104,6 +109,7 @@ void cmd_help() {
     uart_puts("   hwinfo    - print hardware info\r\n");
     uart_puts("   hcpio     - print cpio header info\r\n");
     uart_puts("   ls        - list all files in directory\r\n");
+    uart_puts("   dtb       - show device tree\r\n");
     uart_puts("   malloc    - test malloc function\r\n");
     uart_puts("   reboot    - reboot the device\r\n");
 }
@@ -209,4 +215,8 @@ void cmd_malloc() {
     char* test3 = malloc(0x17);
     strcpy(test3, "test malloc3");
     uart_puts("%s\r\n", test3);
+}
+
+void cmd_dtb() {
+    parse_dtb_tree(dtb_ptr, dtb_callback_show_tree);
 }

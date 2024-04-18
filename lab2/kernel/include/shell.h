@@ -17,5 +17,6 @@ void cmd_reboot();
 void cmd_ls();
 void cmd_cat();
 void cmd_malloc();
+void cmd_dtb();
 
 #endif  /*_SHELL_H */
