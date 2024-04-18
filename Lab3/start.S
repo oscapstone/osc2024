@@ -6,9 +6,10 @@
 _start:  
     // read cpu id, stop slave cores
     mov x28, x0
+    bl      set_exception_vector_table
     bl      from_el2_to_el1
     //bl      core_timer_enable
-    bl      set_exception_vector_table
+    
 
     mrs     x1, mpidr_el1 //get cpu num
     and     x1, x1, #3 //see if cpu num is 0
