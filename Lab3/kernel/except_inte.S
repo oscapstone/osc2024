@@ -6,7 +6,7 @@
 
 // save general registers to stack
 .macro save_all
-    sub sp, sp, 32 * 12
+    sub sp, sp, 32 * 10
     stp x0, x1, [sp ,16 * 0]
     stp x2, x3, [sp ,16 * 1]
     stp x4, x5, [sp ,16 * 2]
@@ -28,7 +28,7 @@
     str x0,  [sp, 16 * 16]
     mrs x0,  elr_el1
     str x0,  [sp, 16 * 17]
-    ldp x0, x1, [sp ,16 * 0]    // restore x0 argument register
+    ldp x0, x1, [sp ,16 * 0]    
 
 .endm
 
@@ -51,17 +51,17 @@
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
     
-    //using for nested interrupt (Advanced exercise 2)
     ldr x0, [sp, 16 * 16]
     msr spsr_el1,x0
     ldr x0,  [sp, 16 * 17]
     msr elr_el1, x0
 
-    ldp x0, x1, [sp ,16 * 0]  // restore x0 return value register
+    ldp x0, x1, [sp ,16 * 0] 
     
-    add sp, sp, 32 * 12 // 最後把stack pointer加回去
+    add sp, sp, 32 * 10
 .endm
 
+// disable interrupt -> level2 might have its own interrupt handler
 from_el2_to_el1:
     mov x0, (1 << 31)       // EL1 uses aarch64
     msr hcr_el2, x0
