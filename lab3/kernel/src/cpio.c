@@ -1,6 +1,8 @@
 #include "string.h"
 #include "cpio.h"
 
+void *CPIO_DEFAULT_PLACE;
+
 /* Parse an ASCII hex string into an integer. (big endian)*/
 static unsigned int parse_hex_str(char *s, unsigned int max_len)
 {
@@ -30,13 +32,13 @@ static unsigned int parse_hex_str(char *s, unsigned int max_len)
 }
 
 /* write pathname, data, next header into corresponding parameter */
-/* if no next header, next_header_pointer = 0 */
+/* if no next header, next_header_pointer = 0, return 1 */
 /* return -1 if parse error*/
 int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **pathname, unsigned int *filesize, char **data, struct cpio_newc_header **next_header_pointer)
 {
     /* Ensure magic header exists. */
     if (strncmp(this_header_pointer->c_magic, CPIO_NEWC_HEADER_MAGIC, sizeof(this_header_pointer->c_magic)) != 0)
-        return -1;
+        return ERROR;
 
     // transfer big endian 8 byte hex string to unsigned int and store into *filesize
     *filesize = parse_hex_str(this_header_pointer->c_filesize, 8);
@@ -66,11 +68,28 @@ int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **
     if (strncmp(*pathname, "TRAILER!!!", sizeof("TRAILER!!!")) == 0)
     {
         *next_header_pointer = 0;
+        return TRAILER;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-unsigned int padding_4byte(unsigned int size){
+unsigned int padding_4byte(unsigned int size)
+{
     return size + (4 - size % 4) % 4;
+}
+
+/* Get filesize and filedata by filepath */
+int cpio_get_file(char *filepath, unsigned int *c_filesize, char **c_filedata)
+{
+    char *c_filepath;
+    int error;
+
+    CPIO_FOR_EACH(&c_filepath, c_filesize, c_filedata, error, {
+        if (strcmp(c_filepath, filepath) == 0)
+        {
+            return SUCCESS;
+        }
+    });
+    return error;
 }
