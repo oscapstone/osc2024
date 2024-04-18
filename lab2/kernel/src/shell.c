@@ -259,12 +259,6 @@ int do_cmd_ls(int argc, char **argv)
     }
     int error;
     CPIO_FOR_EACH(&c_filepath, &c_filesize, &c_filedata, error, {
-        if (error == ERROR)
-        {
-            puts("cpio parse error");
-            return -1;
-        }
-
         // if this is not TRAILER!!! (last of file)
         if (error != TRAILER)
         {
@@ -272,6 +266,11 @@ int do_cmd_ls(int argc, char **argv)
             puts("\r\n");
         }
     });
+    if (error == ERROR)
+    {
+        puts("cpio parse error");
+        return -1;
+    }
     return 0;
 }
 

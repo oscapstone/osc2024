@@ -24,17 +24,24 @@
  * @something_to_run_in_loop: code block that will be executed in every loop
  */
 #define CPIO_FOR_EACH(c_filepath, c_filesize, c_filedata, error, something_to_run_in_loop) \
-    struct cpio_newc_header *pos = CPIO_DEFAULT_PLACE;                                     \
-    while (1)                                                                              \
+    do                                                                                     \
     {                                                                                      \
-        error = cpio_newc_parse_header(pos, c_filepath, c_filesize, c_filedata, &pos);     \
-        if (pos == 0)                                                                      \
+        struct cpio_newc_header *pos = CPIO_DEFAULT_PLACE;                                 \
+        while (1)                                                                          \
         {                                                                                  \
-            error = TRAILER;                                                               \
-            break; /*if this is TRAILER!!! (last of file)*/                                \
+            error = cpio_newc_parse_header(pos, c_filepath, c_filesize, c_filedata, &pos); \
+            if (error == ERROR)                                                            \
+            {                                                                              \
+                break;                                                                     \
+            }                                                                              \
+            else if (pos == 0)                                                             \
+            {                                                                              \
+                error = TRAILER;                                                           \
+                break; /*if this is TRAILER!!! (last of file)*/                            \
+            }                                                                              \
+            something_to_run_in_loop                                                       \
         }                                                                                  \
-        something_to_run_in_loop                                                           \
-    }
+    } while (0)
 
 // Using newc archive format
 struct cpio_newc_header
