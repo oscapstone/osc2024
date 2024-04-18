@@ -22,8 +22,8 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "malloc", .help = "test malloc", .func = do_cmd_malloc},
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
     {.command = "exec", .help = "execute user programs ", .func = do_cmd_exec},
-    {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS] ", .func = do_cmd_setTimeout},
-    {.command = "set2sAlert", .help = "set core timer interrupt every 2 second ", .func = do_cmd_set2sAlert}
+    {.command = "setTime", .help = "setTime [MESSAGE] [SECONDS] ", .func = do_cmd_setTimeout},
+    {.command = "2sAlert", .help = "set core timer interrupt every 2 second ", .func = do_cmd_set2sAlert}
 };
 
 extern char *dtb_ptr;

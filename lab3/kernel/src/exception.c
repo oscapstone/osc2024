@@ -48,21 +48,17 @@ void el1h_irq_router()
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IIR_REG & (1 << 1))
+        if (*AUX_MU_IER_REG & 2)
         {
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-            // el1_interrupt_disable();
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            // el1_interrupt_enable();
             unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
-        else if (*AUX_MU_IIR_REG & (2 << 1))
+        else if (*AUX_MU_IER_REG & 1)
         {
             *AUX_MU_IER_REG &= ~(1); // disable read interrupt
-            // el1_interrupt_disable();
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-            // el1_interrupt_enable();
             unlock();
             irqtask_run_preemptive();
         }
@@ -70,10 +66,7 @@ void el1h_irq_router()
     else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
         core_timer_disable();
-
-        // el1_interrupt_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
-        // el1_interrupt_enable();
         unlock();
         irqtask_run_preemptive();
         core_timer_enable();
@@ -88,14 +81,7 @@ void el0_sync_router()
     __asm__ __volatile__("mrs %0, ELR_EL1\n\t" : "=r"(elr_el1)); // ELR_EL1 holds the address if return to EL1
     unsigned long long esr_el1;
     __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r"(esr_el1)); // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
-
-    // puts("[Exception][el0_sync] spsr_el1 : ");
-    // put_hex(spsr_el1);
-    // puts(", elr_el1 : ");
-    // put_hex(elr_el1);
-    // puts(", esr_el1 : ");
-    // put_hex(esr_el1);
-    // puts("\r\n");
+    
     uart_sendlinek("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\n", spsr_el1, elr_el1, esr_el1);
 }
 
