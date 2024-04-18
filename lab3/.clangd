@@ -1,0 +1,7 @@
+CompileFlags:
+  Compiler: /usr/homebrew/bin/aarch64-linux-gnu-gcc
+  Add: [
+    "-Wall", "-ffreestanding", "-nostdinc", "-nostdlib", "-nostartfiles", "-fno-stack-protector", "-g", "-mgeneral-regs-only",
+    "-I/Users/yjack/GitHub/osc2024/lab2"
+  ]
+
