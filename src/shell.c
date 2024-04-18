@@ -6,13 +6,12 @@
 #include "math_.h"
 #include "mbox.h"
 #include "mem.h"
+#include "multitask.h"
 #include "string.h"
 #include "task.h"
 #include "timer.h"
 #include "uart1.h"
 #include "utli.h"
-
-static void *ptr_buf[30];
 
 enum shell_status { Read, Parse };
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
@@ -43,7 +42,6 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
   uart_init();
   uart_flush();
-  // uart_send_string("\nInit UART done\r\n");
 }
 
 void shell_input(char *cmd) {
@@ -119,7 +117,6 @@ void shell_controller(char *cmd) {
     uart_puts(
         "cat <file name>: display the content of the speficied file included "
         "in cpio archive");
-    uart_puts("malloc: get a continuous memory space");
     uart_puts("timestamp: get current timestamp");
     uart_puts("reboot: reboot the device");
     uart_puts("poweroff: turn off the device");
@@ -132,33 +129,14 @@ void shell_controller(char *cmd) {
         "set_timeout <MESSAGE> <SECONDS>: print the message after given "
         "seconds");
     uart_puts("demo_preempt: for the demo of the preemption mechanism");
-    uart_puts("demo_malloc: for the demo of the memory allocator - malloc");
-    uart_puts("demo_free: for the demo of the memory allocator - free");
+    uart_puts(
+        "demo_multi_threads: for the demo of the multiple threads execution");
   } else if (!strcmp(cmd, "hello")) {
     uart_puts("Hello World!");
   } else if (!strcmp(cmd, "ls")) {
     cpio_ls();
   } else if (!strncmp(cmd, "cat", 3)) {
     cpio_cat(args[0]);
-  } else if (!strcmp(cmd, "malloc")) {
-    char *m1 = (char *)simple_malloc(8);
-    if (!m1) {
-      uart_puts("memory allocation fail!");
-      return;
-    }
-
-    char *m2 = (char *)simple_malloc(8);
-    if (!m2) {
-      uart_puts("memory allocation fail!");
-      return;
-    }
-
-    char *m3 = (char *)simple_malloc(1111);
-    if (!m3) {
-      uart_puts("memory allocation fail!");
-      return;
-    }
-
   } else if (!strcmp(cmd, "reboot")) {
     uart_puts("Rebooting...");
     reset(1000);
@@ -221,19 +199,9 @@ void shell_controller(char *cmd) {
     wait_usec(100000);
     disable_uart_interrupt();
     uart_send_string("\r\n");
-  } else if (!strcmp(cmd, "demo_malloc")) {
-    for (int i = 0; i < 20; i++) {
-      ptr_buf[i] = malloc(FRAME_SIZE);
-      wait_usec(2000000);
-    }
-    for (int i = 20; i < 30; i++) {
-      ptr_buf[i] = malloc(i * 10);
-      wait_usec(2000000);
-    }
-  } else if (!strcmp(cmd, "demo_free")) {
-    for (int i = 0; i < 30; i++) {
-      free(ptr_buf[i]);
-      wait_usec(2000000);
+  } else if (!strcmp(cmd, "demo_multi_threads")) {
+    for (int i = 0; i < 3; ++i) {  // N should > 2
+      thread_create(foo);
     }
   } else {
     uart_puts("shell: unvaild command");

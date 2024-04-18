@@ -1,6 +1,7 @@
 #include "dtb.h"
 #include "interrupt.h"
 #include "mem.h"
+#include "multitask.h"
 #include "shell.h"
 #include "utli.h"
 extern void *_dtb_ptr_start;
@@ -13,10 +14,9 @@ void kernel_init(void *arg) {
   enable_EL0VCTEN();
   enable_interrupt();
   core_timer_enable();
-  set_core_timer_int_sec(1);
+  set_core_timer_int(1);
   core0_timer_interrupt_enable();
-  // print_cur_el();
-  // print_cur_sp();
+  init_sched_thread();
 }
 
 void main(void *arg) {

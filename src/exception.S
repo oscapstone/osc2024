@@ -1,4 +1,4 @@
-.macro save_all_general_regs				// save general registers to stack
+.macro save_all			// save general registers to stack
   sub sp, sp, 16 * 17
   stp x0, x1, [sp ,16 * 0]		      //store pair of registers to sp+16*0
   stp x2, x3, [sp ,16 * 1]
@@ -15,34 +15,36 @@
   stp x24, x25, [sp ,16 * 12]
   stp x26, x27, [sp ,16 * 13]
   stp x28, x29, [sp ,16 * 14]
-  str x30, [sp, 16 * 15]
+  mrs x29, sp_el0
+  stp x30, x29, [sp, 16 * 15]
   // for nested interrupt
 	mrs x28, SPSR_EL1
 	mrs x29, ELR_EL1
 	stp x28, x29, [sp, 16 * 16]
 .endm								             // end of macro
 
-.macro load_all_general_regs
+.macro load_all
   // for nested interrupt
   ldp x0, x1, [sp, 16 * 16]
   msr SPSR_EL1, x0
 	msr ELR_EL1,  x1
-  ldp x0, x1, [sp ,16 * 0]		      //store pair of registers to sp+16*0
-  ldp x2, x3, [sp ,16 * 1]
-  ldp x4, x5, [sp ,16 * 2]
-  ldp x6, x7, [sp ,16 * 3]
-  ldp x8, x9, [sp ,16 * 4]
-  ldp x10, x11, [sp ,16 * 5]
-  ldp x12, x13, [sp ,16 * 6]
-  ldp x14, x15, [sp ,16 * 7]
-  ldp x16, x17, [sp ,16 * 8]
-  ldp x18, x19, [sp ,16 * 9]
-  ldp x20, x21, [sp ,16 * 10]
-  ldp x22, x23, [sp ,16 * 11]
-  ldp x24, x25, [sp ,16 * 12]
-  ldp x26, x27, [sp ,16 * 13]
+  ldp x30, x29, [sp, 16 * 15]
+  msr sp_el0, x29
   ldp x28, x29, [sp ,16 * 14]
-  ldr x30, [sp, 16 * 15]
+  ldp x26, x27, [sp ,16 * 13]
+  ldp x24, x25, [sp ,16 * 12]
+  ldp x22, x23, [sp ,16 * 11]
+  ldp x20, x21, [sp ,16 * 10]
+  ldp x18, x19, [sp ,16 * 9]
+  ldp x16, x17, [sp ,16 * 8]
+  ldp x14, x15, [sp ,16 * 7]
+  ldp x12, x13, [sp ,16 * 6]
+  ldp x10, x11, [sp ,16 * 5]
+  ldp x8, x9, [sp ,16 * 4]
+  ldp x6, x7, [sp ,16 * 3]
+  ldp x4, x5, [sp ,16 * 2]
+  ldp x2, x3, [sp ,16 * 1]
+  ldp x0, x1, [sp ,16 * 0]		      //store pair of registers to sp+16*0
   add sp, sp, 16 * 17
 .endm
 
@@ -100,91 +102,91 @@ exception_vector_table:
 
 
 sync_el1t:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 irq_el1t:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 
 fiq_el1t:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 
 error_el1t:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 
 sync_el1h:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 
 irq_el1h:
-  save_all_general_regs
+  save_all
   bl  el1h_irq_interrupt_handler
-  load_all_general_regs
+  load_all
   eret
 
 fiq_el1h:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 
 error_el1h:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 
 sync_el0_64:	
-  save_all_general_regs
+  save_all
   bl  el0_64_sync_interrupt_handler
-  load_all_general_regs
+  load_all
   eret
 irq_el0_64:
-  save_all_general_regs
+  save_all
   bl  el0_64_irq_interrupt_handler
-  load_all_general_regs
+  load_all
   eret
 fiq_el0_64:
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret			
 error_el0_64:		
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 sync_el0_32:			
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 irq_el0_32:			
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 fiq_el0_32:		
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 error_el0_32:		
-  save_all_general_regs
+  save_all
   bl  invaild_exception_handler
-  load_all_general_regs
+  load_all
   eret
 
 

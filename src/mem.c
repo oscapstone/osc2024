@@ -121,13 +121,6 @@ static void init_chunks() {
 static void mem_reserve(void* start, void* end) {
   uint32_t st_frame_idx = address2idx(start);
   uint32_t end_frame_idx = address2idx((void*)((uint64_t)end - 1));
-#ifdef DEBUG
-  uart_send_string("memory reserve: frame index from ");
-  uart_int(st_frame_idx);
-  uart_send_string(" to ");
-  uart_int(end_frame_idx);
-  uart_send_string("\r\n");
-#endif
   for (int i = st_frame_idx; i <= end_frame_idx; i++) {
     frame_entry_arr[i].status = ALLOCATED;
   }
@@ -160,13 +153,6 @@ static void merge_initial_frames() {
 
   for (int i = 0; i < FRAME_CNT; i++) {
     if (frame_entry_arr[i].status == FREE && frame_entry_arr[i].order >= 0) {
-#ifdef DEBUG
-      uart_send_string("add frame index ");
-      uart_int(i);
-      uart_send_string(" to the free frame list (order");
-      uart_int(frame_entry_arr[i].order);
-      uart_puts(")");
-#endif
       add_free_frame(i, frame_entry_arr[i].order);
     }
   }
@@ -212,19 +198,6 @@ static void* alloc_frame(uint32_t frame_num) {
     real_alloc_order++;
   }
 
-#ifdef DEBUG
-  uart_puts("alloc_frame: ");
-  uart_send_string("frame_num: ");
-  uart_int(frame_num);
-  uart_send_string("\r\n");
-  uart_send_string("least_alloc_order: ");
-  uart_int(least_alloc_order);
-  uart_send_string("\r\n");
-  uart_send_string("real_alloc_order: ");
-  uart_int(real_alloc_order);
-  uart_send_string("\r\n");
-#endif
-
   if (real_alloc_order > MAX_ORDER) {
     uart_puts("No available frame!");
     return (void*)0;
@@ -234,35 +207,15 @@ static void* alloc_frame(uint32_t frame_num) {
   free_frame_lists[real_alloc_order] = n->next;
   uint32_t frame_idx = address2idx(n->addr);
 
-#ifdef DEBUG
-  uart_send_string("allocated frame index: ");
-  uart_int(frame_idx);
-  uart_send_string("\r\n");
-  uart_puts("Release redundant memory block: ");
-#endif
-
   // release redundant memory block
   while (real_alloc_order > least_alloc_order) {
     real_alloc_order--;
     uint32_t buddy_idx = frame_idx ^ (1 << real_alloc_order);
-#ifdef DEBUG
-
-    uart_send_string("order: ");
-    uart_int(real_alloc_order);
-    uart_send_string(", buddy_idx: ");
-    uart_int(buddy_idx);
-    uart_send_string("\r\n");
-#endif
     add_free_frame(buddy_idx, real_alloc_order);
   }
 
   frame_entry_arr[frame_idx].status = ALLOCATED;
   frame_entry_arr[frame_idx].order = real_alloc_order;
-#ifdef DEBUG
-  uart_send_string("real_alloc_order after relase: ");
-  uart_int(real_alloc_order);
-  uart_send_string("\r\n\n");
-#endif
 
   return idx2address(frame_idx);
 }
@@ -275,15 +228,6 @@ static void* alloc_chunk(uint32_t size) {
     uart_puts("alloc_chunk error: invaild size");
     return (void*)0;
   }
-
-#ifdef DEBUG
-  uart_puts("alloc_chunk: ");
-  uart_send_string("alloc_idx: ");
-  uart_int(alloc_idx);
-  uart_send_string(", alloc_size: ");
-  uart_int(alloc_size);
-  uart_send_string("\r\n\n");
-#endif
 
   if (!free_chunk_lists[alloc_idx]) {
     void* frame_addr = alloc_frame(1);
@@ -308,11 +252,6 @@ void* malloc(uint32_t size) {
   if (size == 0) {
     return (void*)0;
   }
-#ifdef DEBUG
-  uart_send_string("malloc ");
-  uart_int(size);
-  uart_puts(" bytes");
-#endif
 
   if (size <= MAX_CHUNK_SIZE) {
     return alloc_chunk(size);
@@ -337,22 +276,10 @@ static void free_chunk(void* addr) {
 
   chunk_entry_arr[frame_idx].free_chunk_cnt++;
 
-#ifdef DEBUG
-  uart_puts("free chunk:");
-  uart_send_string("chunk size: ");
-  uart_int(chunk_entry_arr[frame_idx].size);
-  uart_send_string(", # of chunks in mem pool after free: ");
-  uart_int(chunk_entry_arr[frame_idx].free_chunk_cnt);
-  uart_send_string("\r\n");
-#endif
-
   if (chunk_entry_arr[frame_idx].free_chunk_cnt ==
       FRAME_SIZE / chunk_entry_arr[frame_idx].size) {
     chunk_entry_arr[frame_idx].is_mem_pool = 0;
     free_chunk_lists[alloc_idx] = (chunk_node*)0;
-#ifdef DEBUG
-    uart_puts("free the memory pool\n");
-#endif
   } else {
     add_free_chunk(addr, alloc_idx);
   }
@@ -366,27 +293,12 @@ static void free_frame(void* addr) {
   }
 
   uint32_t buddy_idx = frame_idx ^ (1 << frame_entry_arr[frame_idx].order);
-#ifdef DEBUG
-  uart_puts("free frame:");
-  uart_send_string("frame_idx: ");
-  uart_int(frame_idx);
-  uart_send_string(", order: ");
-  uart_int(frame_entry_arr[frame_idx].order);
-  uart_send_string("\r\n");
-  uart_puts("found buddy to merge:");
-#endif
+
   // coalesce blocks
   while (
       frame_entry_arr[frame_idx].order < MAX_ORDER &&
       (frame_entry_arr[frame_idx].order == frame_entry_arr[buddy_idx].order) &&
       frame_entry_arr[buddy_idx].status == FREE) {
-#ifdef DEBUG
-    uart_send_string("order: ");
-    uart_int(frame_entry_arr[frame_idx].order);
-    uart_send_string(", buddy_idx: ");
-    uart_int(buddy_idx);
-    uart_send_string("\r\n");
-#endif
     del_free_frame(buddy_idx);
     frame_entry_arr[frame_idx].order++;
 
@@ -400,15 +312,12 @@ static void free_frame(void* addr) {
   }
 
   add_free_frame(frame_idx, frame_entry_arr[frame_idx].order);
-
-#ifdef DEBUG
-  uart_send_string("final order after merge: ");
-  uart_int(frame_entry_arr[frame_idx].order);
-  uart_send_string("\r\n\n");
-#endif
 }
 
 void free(void* addr) {
+  if (!addr) {
+    return;
+  }
   free_chunk(addr);
   free_frame(addr);
 }

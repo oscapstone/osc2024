@@ -1,7 +1,7 @@
 #include "timer.h"
 
-#include "alloc.h"
 #include "interrupt.h"
+#include "mem.h"
 #include "string.h"
 #include "uart1.h"
 #include "utli.h"
@@ -16,7 +16,7 @@ void print_message(char* msg) {
 }
 
 void add_timer(timer_callback cb, char* msg, uint32_t sec) {
-  timer_event* new_event = (timer_event*)simple_malloc(sizeof(timer_event));
+  timer_event* new_event = (timer_event*)malloc(sizeof(timer_event));
 
   if (!new_event) {
     uart_puts("add_timer: fail due to memory allocation fail");
@@ -26,7 +26,7 @@ void add_timer(timer_callback cb, char* msg, uint32_t sec) {
   new_event->next = (timer_event*)0;
   new_event->func = cb;
   new_event->expire_time = get_timestamp() + sec;
-  new_event->message = (char*)simple_malloc(strlen(msg) + 1);
+  new_event->message = (char*)malloc(strlen(msg) + 1);
   memcpy(new_event->message, msg, strlen(msg) + 1);
 
   core0_timer_interrupt_disable();
@@ -55,6 +55,8 @@ void timer_event_pop() {
 
   timer_event* te = te_head;
   te->func(te->message);
+  free(te->message);
+  free(te);
   te_head = te_head->next;
 
   if (te_head) {

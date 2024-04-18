@@ -10,7 +10,7 @@ proc_hang:
     wfe                     
     b       proc_hang
 setting:                      // if cpu_id == 0
-   // mov     x27, x0
+    mov     x27, x0
     bl      set_exception_vector_table
     ldr     x1, =_start       // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     mov     sp, x1
@@ -24,7 +24,6 @@ clear_bss:
 
 setup_el1:
     bl      from_el2_to_el1
-    //mov		sp, #0x40000		//put EL1 stack start from 0x40000	
 
 master:  
     mov     x0, x27

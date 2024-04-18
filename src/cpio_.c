@@ -35,7 +35,9 @@ void cpio_ls() {
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     uart_send_string(addr + sizeof(cpio_header));
-    uart_send_string("\r\n");
+    uart_send_string("  ");
+    uart_int(file_size);
+    uart_puts("B");
     addr += (headerPathname_size + file_size);
   }
 }
