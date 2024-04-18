@@ -79,6 +79,10 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
+  - list_for_each
+  - list_for_each_safe
+  - list_for_each_entry
+  - list_for_each_entry_safe
 IfMacros:
   - KJ_IF_MAYBE
 IncludeBlocks:   Preserve
