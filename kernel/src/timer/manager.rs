@@ -2,21 +2,21 @@ use super::timer::Timer;
 use alloc::boxed::Box;
 use alloc::collections::BinaryHeap;
 use core::{arch::asm, time::Duration};
-use spin::Mutex;
 use stdio::println;
-
 pub struct TimerManager {
     pq: BinaryHeap<Timer>,
 }
 
-static TIMER_MANAGER: Mutex<Option<TimerManager>> = Mutex::new(None);
+pub static mut TIMER_MANAGER: Option<TimerManager> = None;
 
-pub fn initialize_timers() {
-    *TIMER_MANAGER.lock() = Some(TimerManager::new());
+pub fn init_timer_manager() {
+    unsafe {
+        TIMER_MANAGER = Some(TimerManager::new());
+    }
 }
 
-pub fn get_timer_manager() -> &'static Mutex<Option<TimerManager>> {
-    &TIMER_MANAGER
+pub fn get_timer_manager() -> &'static mut TimerManager {
+    unsafe { TIMER_MANAGER.as_mut().unwrap() }
 }
 
 unsafe fn enable_timmer_irq() {
@@ -45,10 +45,11 @@ unsafe fn disable_timmer_irq() {
 }
 
 impl TimerManager {
-    pub fn new() -> TimerManager {
-        TimerManager {
+    pub fn new() -> Self {
+        let ret = TimerManager {
             pq: BinaryHeap::new(),
-        }
+        };
+        return ret;
     }
 
     pub fn add_timer(&mut self, duration: Duration, callback: Box<dyn Fn() + Send + Sync>) {
@@ -64,7 +65,7 @@ impl TimerManager {
     }
 
     pub fn handle_inturrupt(&mut self) {
-        if let Some(timer) = self.pop_timer() {
+        if let Some(timer) = self.pq.pop() {
             assert!(timer.expiry <= self.get_current());
             timer.trigger();
             if self.pq.len() > 0 {
@@ -79,10 +80,6 @@ impl TimerManager {
                 disable_timmer_irq();
             }
         }
-    }
-
-    fn pop_timer(&mut self) -> Option<Timer> {
-        self.pq.pop()
     }
 
     fn set_timer(&self) {

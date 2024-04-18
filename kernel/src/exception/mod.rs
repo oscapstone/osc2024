@@ -4,6 +4,7 @@ use core::{
 };
 
 use crate::timer::manager::get_timer_manager;
+
 use driver::mmio::{regs::AuxReg, regs::MmioReg, Mmio};
 use stdio::{debug, println};
 
@@ -14,10 +15,9 @@ unsafe fn exception_handler(idx: u64) {
     match idx {
         0x5 => {
             if read_volatile(0x4000_0060 as *const u32) == 0x02 {
-                if let Some(timer_manager) = get_timer_manager().lock().as_mut() {
-                    timer_manager.handle_inturrupt();
-                } else {
-                    debug!("timer manager is none");
+                {
+                    let tm = get_timer_manager();
+                    tm.handle_inturrupt();
                 }
             }
             if Mmio::read_reg(MmioReg::Aux(AuxReg::Irq)) & 0x1 == 0x1 {
@@ -45,6 +45,9 @@ unsafe fn exception_handler(idx: u64) {
         _ => {
             debug!("Exception {}", idx);
             debug!("Unknown exception");
+            for _ in 0..100000000 {
+                asm!("nop");
+            }
         }
     }
     // enable_inturrupt();

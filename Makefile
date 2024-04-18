@@ -48,11 +48,11 @@ $(SENTINEL_FILE): FORCE
 	$(CARGO) build $(CARGO_FLAGS)
 	@touch $(SENTINEL_FILE)
 
-$(KERNEL_IMG): $(KERNEL_ELF)
+$(KERNEL_IMG): $(KERNEL_ELF) FORCE
 	$(dir_guard)
 	$(OBJCOPY) -O binary $< $@
 
-$(BOOTLOADER_IMG): $(BOOTLOADER_ELF)
+$(BOOTLOADER_IMG): $(BOOTLOADER_ELF) FORCE
 	$(dir_guard)
 	$(OBJCOPY) -O binary $< $@
 
@@ -69,7 +69,7 @@ run: all
 		-serial null -serial pty \
 		-kernel $(BOOTLOADER_IMG) \
 		-initrd $(INITRAMFS_CPIO) \
-		-dtb $(DTB)
+		-dtb $(DTB) --daemonize
 
 debug: all size
 	$(OBJDUMP) -d $(KERNEL_ELF) > $(BUILD_DIR)/kernel.S

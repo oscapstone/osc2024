@@ -51,11 +51,13 @@ fn main() -> ! {
         println!("Boot time: {} ms", now / (freq / 1000));
     }
 
-    timer::manager::initialize_timers();
+    timer::manager::init_timer_manager();
+
     unsafe {
         exception::enable_inturrupt();
     }
-    if let Some(ref mut tm) = *timer::manager::get_timer_manager().lock() {
+    {
+        let tm = timer::manager::get_timer_manager();
         tm.add_timer(
             Duration::from_secs(2),
             Box::new(|| {
@@ -137,24 +139,20 @@ fn execute_command(command: &[u8]) {
         }
     } else if command.starts_with(b"test") {
         let tm = timer::manager::get_timer_manager();
-        if let Some(ref mut tm) = *tm.lock() {
-            tm.add_timer(
-                Duration::from_secs(1),
-                Box::new(|| {
-                    println!("This is the first timmer.");
-                }),
-            );
+        tm.add_timer(
+            Duration::from_secs(1),
+            Box::new(|| {
+                println!("This is the first timmer.");
+            }),
+        );
 
-            let msg = "Hello, world!";
-            tm.add_timer(
-                Duration::from_secs(6),
-                Box::new(move || {
-                    println!("{}", msg);
-                }),
-            );
-        } else {
-            println!("Timer manager is not initialized");
-        }
+        let msg = "Hello, world!";
+        tm.add_timer(
+            Duration::from_secs(6),
+            Box::new(move || {
+                println!("{}", msg);
+            }),
+        );
     } else {
         println!(
             "Unknown command: {}",
