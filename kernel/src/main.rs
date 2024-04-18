@@ -11,6 +11,7 @@ mod panic;
 mod timer;
 
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::arch::asm;
 use core::time::Duration;
 use driver::watchdog;
@@ -81,10 +82,23 @@ fn execute_command(command: &[u8]) {
     } else if command.starts_with(b"hello") {
         println!("Hello, world!");
     } else if command.starts_with(b"help") {
-        println!("hello\t: print this help menu");
-        println!("help\t: print Hello World!");
-        println!("reboot\t: reboot the Raspberry Pi");
-        println!("setTimeout: set a timer to reboot the Raspberry Pi");
+        let width = 12;
+        println!("{:width$}: {}", "help", "print this help menu");
+        println!("{:width$}: {}", "hello", "print Hello, world!");
+        println!("{:width$}: {}", "reboot", "reboot the Raspberry Pi");
+        println!("{:width$}: {}", "ls", "list files in the initramfs");
+        println!(
+            "{:width$}: {}",
+            "cat", "print the content of a file in the initramfs"
+        );
+        println!(
+            "{:width$}: {}",
+            "exec", "execute a program in the initramfs"
+        );
+        println!(
+            "{:width$}: {}",
+            "setTimeOut", "print a message after some time"
+        );
     } else if command.starts_with(b"reboot") {
         watchdog::reset(100);
     } else if command.starts_with(b"ls") {
@@ -137,20 +151,34 @@ fn execute_command(command: &[u8]) {
                 }
             }
         }
-    } else if command.starts_with(b"test") {
+    } else if command.starts_with(b"setTimeOut") {
+        let mut args = match core::str::from_utf8(&command[10..]) {
+            Ok(s) => s.split_whitespace(),
+            Err(_) => {
+                println!("Usage: setTimeOut <delay> <message>");
+                return;
+            }
+        };
+        let delay = match args.next() {
+            Some(s) => match s.parse::<u64>() {
+                Ok(n) => n,
+                Err(_) => {
+                    println!("Usage: setTimeOut <delay> <message>");
+                    return;
+                }
+            },
+            None => {
+                println!("Usage: setTimeOut <delay> <message>");
+                return;
+            }
+        };
+        let message = args.collect::<Vec<&str>>().join(" ");
+
         let tm = timer::manager::get_timer_manager();
         tm.add_timer(
-            Duration::from_secs(1),
-            Box::new(|| {
-                println!("This is the first timmer.");
-            }),
-        );
-
-        let msg = "Hello, world!";
-        tm.add_timer(
-            Duration::from_secs(6),
+            Duration::from_secs(delay),
             Box::new(move || {
-                println!("{}", msg);
+                println!("{}", message);
             }),
         );
     } else {
