@@ -35,13 +35,12 @@ class PageAlloc {
   Frame* array;
   ListHead<FreePage>* free_list;
 
-  FreePage* release(AllocatedPage apage);
-  AllocatedPage alloc(FreePage* fpage);
+  void release(AllocatedPage apage);
+  AllocatedPage alloc(FreePage* fpage, bool head);
   AllocatedPage split(AllocatedPage apage);
   void truncate(AllocatedPage apage, int8_t order);
+  void merge(FreePage* fpage);
 
- public:
-  void init(uint64_t start, uint64_t end);
   void* vpn2addr(uint64_t vpn) {
     return (void*)(start + vpn * PAGE_SIZE);
   }
@@ -51,6 +50,18 @@ class PageAlloc {
   uint64_t buddy(uint64_t vpn) {
     return vpn ^ (1 << array[vpn].order);
   }
+  FreePage* vpn2freepage(uint64_t vpn) {
+    auto addr = vpn2addr(vpn);
+    if (array[vpn].allocated) {
+      array[vpn].allocated = false;
+      return new (addr) FreePage;
+    } else {
+      return (FreePage*)addr;
+    }
+  }
+
+ public:
+  void init(uint64_t start, uint64_t end);
   void info();
   void* alloc(uint64_t size);
   void free(void* ptr);

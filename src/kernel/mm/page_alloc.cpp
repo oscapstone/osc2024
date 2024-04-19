@@ -64,8 +64,8 @@ void PageAlloc::init(uint64_t start_, uint64_t end_) {
   for (uint64_t i = 0; i < length; i += (1ll << order)) {
     while (i + (1ll << order) > length)
       order--;
-    array[i].order = order;
-    auto page = new (vpn2addr(i)) FreePage;
+    array[i] = {.allocated = true, .order = order};
+    auto page = vpn2freepage(i);
     free_list[order].insert_tail(page);
   }
 #if LOG_LEVEL >= 3
@@ -73,24 +73,29 @@ void PageAlloc::init(uint64_t start_, uint64_t end_) {
 #endif
 }
 
-PageAlloc::FreePage* PageAlloc::release(PageAlloc::AllocatedPage apage) {
+void PageAlloc::release(PageAlloc::AllocatedPage apage) {
   auto vpn = addr2vpn(apage);
   auto order = array[vpn].order;
   INFO("release: page %p order %d\n", apage, order);
-  array[vpn].allocated = false;
-  auto fpage = new (vpn2addr(vpn)) FreePage;
+  auto fpage = vpn2freepage(vpn);
   free_list[order].insert_tail(fpage);
-  return fpage;
+  merge(fpage);
 }
 
-PageAlloc::AllocatedPage PageAlloc::alloc(PageAlloc::FreePage* fpage) {
+PageAlloc::AllocatedPage PageAlloc::alloc(PageAlloc::FreePage* fpage,
+                                          bool head) {
   auto vpn = addr2vpn(fpage);
   auto order = array[vpn].order;
-  INFO("alloc: page %p order %d\n", fpage, order);
-  array[vpn].allocated = true;
   free_list[order].erase(fpage);
-  auto apage = AllocatedPage(fpage);
-  return apage;
+  if (head) {
+    INFO("alloc: page %p order %d\n", fpage, order);
+    array[vpn].allocated = true;
+    auto apage = AllocatedPage(fpage);
+    return apage;
+  } else {
+    array[vpn].value = FRAME_NOT_HEAD;
+    return nullptr;
+  }
 }
 
 PageAlloc::AllocatedPage PageAlloc::split(AllocatedPage apage) {
@@ -111,6 +116,24 @@ void PageAlloc::truncate(AllocatedPage apage, int8_t order) {
   }
 }
 
+void PageAlloc::merge(FreePage* apage) {
+  auto avpn = addr2vpn(apage);
+  while (array[avpn].order + 1 < total_order) {
+    auto bvpn = buddy(avpn);
+    if (buddy(bvpn) != avpn or array[avpn].allocated or array[bvpn].allocated)
+      break;
+    auto bpage = vpn2freepage(bvpn);
+    if (avpn > bvpn) {
+      std::swap(avpn, bvpn);
+      std::swap(apage, bpage);
+    }
+    INFO("merge: %p + %p\n", apage, bpage);
+    auto o = array[avpn].order;
+    alloc(bpage, false);
+    array[avpn].order++;
+  }
+}
+
 void* PageAlloc::alloc(uint64_t size) {
   int8_t order = log2c(size);
   DEBUG("alloc: size %lu -> order %d\n", size, order);
@@ -118,7 +141,7 @@ void* PageAlloc::alloc(uint64_t size) {
     auto fpage = free_list[ord].front();
     if (fpage == nullptr)
       continue;
-    auto apage = alloc(fpage);
+    auto apage = alloc(fpage, true);
     truncate(apage, order);
     DEBUG("alloc: -> page %p\n", apage);
     return apage;
@@ -128,8 +151,10 @@ void* PageAlloc::alloc(uint64_t size) {
 }
 
 void PageAlloc::free(void* ptr) {
-  if (ptr == nullptr)
+  DEBUG("free: page %p\n", ptr);
+  if (ptr == nullptr or ((uint64_t)ptr % PAGE_SIZE))
     return;
 
-  // TODO
+  auto apage = AllocatedPage(ptr);
+  release(apage);
 }

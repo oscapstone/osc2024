@@ -23,12 +23,13 @@ int cmd_mm(int argc, char* argv[]) {
       page_alloc.info();
     } else if (0 == strcmp(argv[2], "alloc") and argc >= 4) {
       auto size = strtol(argv[3]);
-      mini_uart_printf("page: alloc(0x%lx) = %p\n", size,
-                       page_alloc.alloc(size));
+      auto ptr = page_alloc.alloc(size);
+      mini_uart_printf("page: alloc(0x%lx) = %p\n", size, ptr);
       page_alloc.info();
     } else if (0 == strcmp(argv[2], "free") and argc >= 4) {
       auto ptr = (void*)strtol(argv[3]);
       mini_uart_printf("page: free(%p)\n", ptr);
+      page_alloc.free(ptr);
       page_alloc.info();
     } else {
       mini_uart_printf("mm: page action '%s' not match\n", argv[2]);
