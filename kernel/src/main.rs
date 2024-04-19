@@ -16,7 +16,9 @@ mod mbox;
 mod power;
 mod shell;
 mod arrsting;
+mod memory;
 
+use crate::bsp::memory::map::sdram;
 
 /// Early init code.
 ///
@@ -33,6 +35,9 @@ unsafe fn kernel_init() -> ! {
     // Initialize all device drivers.
     driver::driver_manager().init_drivers();
     // println! is usable from here on.
+
+    // Initialize real memory
+    memory::ALLOCATOR.init(sdram::RAM_START,sdram::RAM_END);
 
     // Transition from unsafe to safe.
     kernel_main()
