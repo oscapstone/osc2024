@@ -1,6 +1,8 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+#define TIMER_IRQ_PRIORITY 1
+
 #include "bool.h"
 
 extern void enable_core0_timer(void);

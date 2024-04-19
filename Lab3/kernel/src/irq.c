@@ -49,7 +49,7 @@ static void insert_irq_task(irq_task_t* new_task)
     list_add_tail(&new_task->list, &node->list);
 }
 
-#define irq_task_not_running(task) !((task)->is_running)
+#define irq_task_not_running(task) (!((task)->is_running))
 
 static void run_irq_task(void)
 {
@@ -88,6 +88,7 @@ void show_invalid_entry_message(int type,
                                 unsigned long elr)
 {
     disable_all_exception();
+
     uart_send_string(entry_error_type[type]);
     uart_send_string(": ");
     // decode exception type (some, not all. See ARM DDI0487B_b chapter
@@ -193,15 +194,15 @@ void irq_handler(void)
 
         if (int_id == RX_INT) {
             clear_rx_interrupt();
-            task = create_irq_task(uart_rx_handle_irq, 3);
+            task = create_irq_task(uart_rx_handle_irq, UART_IRQ_PRIORITY);
         } else if (int_id == TX_INT) {
             clear_tx_interrupt();
-            task = create_irq_task(uart_tx_handle_irq, 3);
+            task = create_irq_task(uart_tx_handle_irq, UART_IRQ_PRIORITY);
         }
 
     } else if (core_irq_source & CNTPNSIRQ) {
         disable_core0_timer();
-        task = create_irq_task(core_timer_handle_irq, 1);
+        task = create_irq_task(core_timer_handle_irq, TIMER_IRQ_PRIORITY);
     } else {
         uart_send_string("Unknown pending interrupt\n");
     }
