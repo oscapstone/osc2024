@@ -57,7 +57,7 @@ void merge_free(int print){ // print is to show log
         merge_free(print);
 }
 
-void free_page(void * address){//give a memory
+void free_page(void * address){
     /* 
     1. find index of the memory
     2. set the memory and its buddy to be not allocated
