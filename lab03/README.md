@@ -18,5 +18,5 @@ make
 ## Test With QEMU
 
 ```
-cd kernel && make DT=0 QEMU=1
+make QEMU
 ```
