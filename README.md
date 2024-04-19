@@ -7,8 +7,10 @@
 
 ## Labs
 
-| Description       ||
-|-------------------|------|
-|Environment setup  | Lab00|
-|Hello World        | Lab01|
-|Bootloader         | Lab02|
+| Description           |      |
+|-----------------------|------|
+|Environment setup      | Lab00|
+|Hello World            | Lab01|
+|Bootloader             | Lab02|
+|Exception & Interrupt  | Lab03|
+|Allocation             | Lab04|
