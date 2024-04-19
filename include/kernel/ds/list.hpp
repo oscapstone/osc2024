@@ -99,6 +99,12 @@ class ListHead {
     return *it;
   }
 
+  T* front() {
+    if (empty())
+      return nullptr;
+    return *begin();
+  }
+
   int size() const {
     return size_;
   }

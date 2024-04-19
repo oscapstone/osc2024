@@ -12,24 +12,33 @@ constexpr uint64_t PAGE_SIZE = 0x1000;
 class PageAlloc {
  public:
   constexpr static int8_t FRAME_NOT_HEAD = -1;
-  constexpr static int8_t FRAME_ALLOCATED = -2;
+  struct Frame {
+    union {
+      struct __attribute__((__packed__)) {
+        bool allocated : 1;
+        int order : 7;
+      };
+      int8_t value;
+    };
+    bool head() const {
+      return value != FRAME_NOT_HEAD;
+    }
+  };
 
   struct FreePage : ListItem {};
+  using AllocatedPage = void*;
 
  private:
   uint64_t start, end;
   uint64_t length;
   uint8_t total_order;
-  int8_t* array;
+  Frame* array;
   ListHead<FreePage>* free_list;
 
-  FreePage* split(FreePage* page, int8_t order);
-  FreePage* newFreePage(uint64_t vpn, int8_t order) {
-    array[vpn] = order;
-    auto page = new (vpn2addr(vpn)) FreePage;
-    free_list[order].insert_tail(page);
-    return page;
-  }
+  FreePage* release(AllocatedPage apage);
+  AllocatedPage alloc(FreePage* fpage);
+  AllocatedPage split(AllocatedPage apage);
+  void truncate(AllocatedPage apage, int8_t order);
 
  public:
   void init(uint64_t start, uint64_t end);
@@ -40,7 +49,7 @@ class PageAlloc {
     return ((uint64_t)addr - start) / PAGE_SIZE;
   }
   uint64_t buddy(uint64_t vpn) {
-    return vpn ^ (1 << array[vpn]);
+    return vpn ^ (1 << array[vpn].order);
   }
   void info();
   void* alloc(uint64_t size);
