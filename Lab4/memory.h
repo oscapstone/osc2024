@@ -13,4 +13,7 @@ typedef struct frame {
 } frame_t;
 
 void frames_init();
-void merge_free(int print);
+void merge_free(unsigned long print);
+void* allocate_page(unsigned long size);
+void print_frame_status(int len);
+void demo_page_alloc();

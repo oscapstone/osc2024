@@ -28,6 +28,7 @@ void main(void *dtb)
     frames_init();
     char in_char;
     int idx = 0;
+    demo_page_alloc();
     // echo everything back
     while(1) {
         char buffer[1024];
