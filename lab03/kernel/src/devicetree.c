@@ -1,24 +1,25 @@
 #include "devicetree.h"
 #include "string.h"
 #include "io.h"
+#include "type.h"
 
 void fdt_traverse(void(*callback_func)(char*, char*, fdt_prop*))
 {
     fdt_header *dt_header = (fdt_header*)(*DTB_ADDR);
     printf("\nDTB Address (Function): ");
-    printf_hex(dt_header);
+    printf_hex((uint64_t)(void*)(dt_header));
 
     uint32_t dt_struct_off = endian_swap(dt_header->off_dt_struct);
     uint32_t dt_string_off = endian_swap(dt_header->off_dt_strings);
     
-    void* dt_struct_addr = *DTB_ADDR + dt_struct_off;
-    char* dt_string_addr = *DTB_ADDR + dt_string_off;
+    void* dt_struct_addr = (void*)*DTB_ADDR + dt_struct_off;
+    char* dt_string_addr = (void*)*DTB_ADDR + dt_string_off;
 
 
     printf("\nDT String Address: ");
-    printf_hex(dt_string_addr);
+    printf_hex((uint64_t)(void*)dt_string_addr);
     printf("\nDT Struct Address: ");
-    printf_hex(dt_struct_addr);
+    printf_hex((uint64_t)(void*)dt_struct_addr);
 
     printf("\nMagic: ");
     printf_hex(endian_swap(dt_header->magic));

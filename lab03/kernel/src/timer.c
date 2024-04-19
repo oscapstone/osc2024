@@ -1,7 +1,7 @@
 #include "timer.h"
 #include "io.h"
 #include "type.h"
-#include "lib.h"
+#include "alloc.h"
 #include "string.h"
 
 

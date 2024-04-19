@@ -1,9 +1,6 @@
 ARMGNU ?= aarch64-linux-gnu
 
-QEMU=0
-DT=1
-
-COPS = -Wall -ffreestanding -nostartfiles -nostdlib -g -Iinclude -DQEMU=$(QEMU) -DDT=$(DT)
+COPS = -Wall -ffreestanding -nostartfiles -nostdlib -g -Iinclude 
 ASMOPS = -Iinclude
 
 BUILD_DIR = build
@@ -36,7 +33,7 @@ kernel8.img: $(OBJ_FILES) $(SRC_DIR)/linker.ld
 	$(ARMGNU)-ld -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel8.elf $(OBJ_FILES)
 	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
 
-.PHONY: run debug
+.PHONY: run debug QEMU
 run: kernel8.img
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd ../initramfs.cpio
 
@@ -45,3 +42,6 @@ dump: kernel8.img
 
 debug: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -S -s
+
+QEMU: COPS += -DQEMU
+QEMU: run

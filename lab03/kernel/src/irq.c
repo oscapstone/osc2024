@@ -2,7 +2,7 @@
 #include "io.h"
 #include "timer.h"
 #include "mini_uart.h"
-#include "lib.h"
+#include "alloc.h"
 
 struct task_struct{
     int priority;
@@ -79,7 +79,7 @@ void run_task()
 
 // ==============================================================
 
-const char *entry_error_messages[] = {
+static char *entry_error_messages[] = {
 	"SYNC_INVALID_EL1t",
 	"IRQ_INVALID_EL1t",		
 	"FIQ_INVALID_EL1t",		
@@ -135,7 +135,6 @@ static void gpu_irq_handler()
 
 static void timer_handler()
 {
-    // print_time_handler();
     timer_update_handler();
 }
 
@@ -162,7 +161,6 @@ void el1_irq_entry(int type, unsigned long spsr, unsigned long elr, unsigned lon
     enable_irq();
 
     run_task();
-    // show_debug_msg(type, spsr, elr, esr);
 }
 
 void default_exception_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)

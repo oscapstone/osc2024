@@ -5,16 +5,18 @@
 #include "type.h"
 #include "mem.h"
 
-#if DT
+extern void from_el1_to_el0(uint64_t, uint64_t);
+
+#ifndef QEMU
 uint32_t CPIO_ADDR_FROM_DT = 0;
 #endif
 
 void cpio_list(int argc, char **argv)
 {   
-#if DT
-    cpio_newc_header* head = (cpio_newc_header*)CPIO_ADDR_FROM_DT;
+#ifndef QEMU
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR_FROM_DT;
 #else
-    cpio_newc_header* head = (cpio_newc_header*)CPIO_ADDR;
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR;
 #endif
 
     uint32_t head_size = sizeof(cpio_newc_header);
@@ -73,10 +75,10 @@ void cpio_cat(int argc, char **argv)
     }
     char *input_filename = argv[1];
 
-#if DT
-    cpio_newc_header* head = (cpio_newc_header*)CPIO_ADDR_FROM_DT;
+#ifndef QEMU
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR_FROM_DT;
 #else
-    cpio_newc_header* head = (cpio_newc_header*)CPIO_ADDR;
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR;
 #endif
 
     uint32_t head_size = sizeof(cpio_newc_header);
@@ -120,10 +122,10 @@ void cpio_exec(int argc, char **argv)
 
     char *input_filename = argv[1];
 
-#if DT
-    cpio_newc_header* head = (cpio_newc_header*)CPIO_ADDR_FROM_DT;
+#ifndef QEMU
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR_FROM_DT;
 #else
-    cpio_newc_header* head = (cpio_newc_header*)CPIO_ADDR;
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR;
 #endif
 
     uint32_t head_size = sizeof(cpio_newc_header);
@@ -144,7 +146,7 @@ void cpio_exec(int argc, char **argv)
         else if(strcmp(filename, input_filename) == 0){
             /* The filedata is appended after filename */
             char *filedata = (void*)head + offset;
-            char *user_program_addr = USER_START_ADDR;
+            char *user_program_addr = (void*)(uint64_t)USER_START_ADDR;
             for(int i=0; i<filesize; i++){
                 *user_program_addr = filedata[i];
                 user_program_addr++;
@@ -159,7 +161,7 @@ void cpio_exec(int argc, char **argv)
 
 }
 
-#if DT
+#ifndef QEMU
 void initramfs_callback(char* node_name, char* property_name, fdt_prop* prop)
 {
     // reference: https://stackoverflow.com/questions/73974443/how-does-the-linux-kernel-know-about-the-initrd-when-booting-with-a-device-tree

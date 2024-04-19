@@ -3,7 +3,7 @@
 
 #include "devicetree.h"
 
-#if QEMU 
+#ifdef QEMU 
     #define CPIO_ADDR 0x8000000
 #else
     #define CPIO_ADDR 0x20000000
@@ -30,7 +30,7 @@ void cpio_list(int argc, char **argv);
 void cpio_cat(int argc, char **argv);
 void cpio_exec(int argc, char **argv);
 
-#if DT
+#ifndef QEMU
 void initramfs_callback(char* node_name, char* property_name, fdt_prop* prop);
 #endif
 

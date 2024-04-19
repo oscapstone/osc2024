@@ -7,30 +7,35 @@
 #include "cpio.h"
 #include "irq.h"
 #include "timer.h"
+#include "alloc.h"
+
+static void multiple_init();
 
 int main()
+{
+    multiple_init();
+    add_timer((void*)print_time_handler, 0, 2);
+    core_timer_enable();
+    enable_irq();
+
+#ifndef QEMU
+    fdt_traverse(initramfs_callback);
+#endif
+
+    printf("\nWelcome to Yuchang's Raspberry Pi 3!\n");
+
+    while(1)
+    {
+        shell();
+    }
+    return 0;
+}
+
+static void multiple_init()
 {
     time_head_init();
     mem_init();
     uart_init();
     task_head_init();
     uart_buff_init();
-    add_timer(print_time_handler, 0, 2);
-    core_timer_enable();
-    enable_irq();
-    // core_timer_disable();
-
-#if DT
-    uint32_t* dtb_addr = 0x50000;
-	// printf("\nDTB Address (Kernel): ");
-	// printf_hex(*dtb_addr);
-    fdt_traverse(initramfs_callback);
-#endif
-
-    uart_send_string("\nWelcome to Yuchang's Raspberry Pi 3!\n");
-    while(1)
-    {
-        shell();
-    }
-    return 0;
 }
