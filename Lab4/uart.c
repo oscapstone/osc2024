@@ -124,3 +124,7 @@ void uart_int(int d) {
         }
     }
 }
+
+void hi(){
+    uart_puts("hi\n\r");
+}

@@ -2,6 +2,12 @@
 OSC2024 LAB4
 Author: jerryyyyy708
 Starts from: 2024/04/19
+
+frame list is a list to map index into page frame memory, 
+there is only index in struct frame_t, the actual address can be calculated by (void*)(MEMORY_START + i * PAGE_SIZE)
+
+On the other hand, memorypool_t places the actual address into start, and a bitmap to monitor the chunks are in use or not.
+The index(slot) of memory can be lookup by first check which pool is the address in, then (address - pool -> start) / pool -> slot_size;
 */
 #include "uart.h"
 
@@ -13,16 +19,29 @@ Starts from: 2024/04/19
 #define MIN_BLOCK_SIZE PAGE_SIZE  // Minimum block size is the size of one page
 
 typedef struct frame {
-    /* 
-    save order and status for convinence to maintain, 
-    use convert_val_and_print to convert to the actual entry var.
-    */
+    //save order and status for convinence to maintain, use convert_val_and_print() to convert to the actual entry var.
     int index;
     int order;
     int status;
+    struct frame *next;
+    struct frame *prev;
 } frame_t;
 
 frame_t frames[FRAME_COUNT];
+
+/*
+1. during init, complete all merge and then place all into freelist (or simply put all into freelist and merge) V
+2. allocate handle: if there is cut frame, put cut frames into freelist, then move itself out of freelist
+3. free handle: put idx back to free list, and merge (handle by merge)
+4. merge handle: move itself to another order and buddy out of free list V
+*/
+
+typedef struct freelist {
+    frame_t * head;
+} freelist_t;
+
+freelist_t fl[MAX_ORDER + 1];
+
 
 void status_instruction(){
     uart_puts("Buddy system value definition\n\r");
@@ -30,6 +49,32 @@ void status_instruction(){
     uart_puts("val = -1: free but belongs to a larger contiguous memory block\n\r");
     uart_puts("val = -2: allocated block\n\r");
 }
+
+void print_freelist(int head){
+    uart_puts("Printing free lists:\n");
+    for(int i = 0; i <= MAX_ORDER; i++){
+        uart_puts("Order ");
+        uart_int(i);
+        uart_puts(": ");
+        frame_t *temp = fl[i].head;
+        if (!temp) uart_puts("empty\n");
+        int count = 0;
+        while(temp){
+            if(count == head && head != 0)
+                break;
+            uart_int(temp->index);
+            uart_puts(" -> ");
+            temp = temp->next;
+            count++;
+        }
+
+        if(head != 0)
+            uart_puts("... \n\r");
+        else
+            uart_puts("NULL\n\r");
+    }
+}
+
 
 void frames_init(){
     status_instruction();
@@ -39,41 +84,81 @@ void frames_init(){
         frames[i].index = i;
         frames[i].order = 0;
         frames[i].status = -1; // not allocated
+        frames[i].next = 0;
+    }
+    fl[0].head = frames;
+    frame_t * temp = fl[0].head;
+    for(int i=1; i<FRAME_COUNT; i++){
+        temp -> next = &frames[i];
+        temp -> next -> prev = temp;
+        temp = temp -> next;
     }
     merge_free(0);
+    print_freelist(5);
 }
 
-void merge_free(int print){ // print is to show log
+void remove_from_freelist(frame_t *frame) {
+    if (frame->prev) {
+        frame->prev->next = frame->next;
+    }
+    if (frame->next) {
+        frame->next->prev = frame->prev;
+    }
+    if (fl[frame->order].head == frame) {
+        fl[frame->order].head = frame->next;
+    }
+    frame->next = frame->prev = 0;
+}
+
+void insert_into_freelist(frame_t *frame, int order) {
+    frame->next = fl[order].head;
+    if (fl[order].head) {
+        fl[order].head->prev = frame;
+    }
+    frame->prev = 0;
+    fl[order].head = frame;
+}
+
+void merge_free(int print) {
     int merged = 0;
-    for(int i=0; i<FRAME_COUNT; i++){
-        if(frames[i].status == -1){// not allocated and not a buddy
-            int bud = i ^ (1 << frames[i].order);
-            if(bud < FRAME_COUNT && bud >= 0){
-                if(frames[bud].status == -1 && frames[bud].order == frames[i].order && frames[i].order < MAX_ORDER){
-                    int min_index = (i < bud) ? i : bud;
-                    int max_index = (i > bud) ? i : bud;
-                    frames[min_index].order += 1;
-                    frames[max_index].order = -1;
-                    //frames[max_index].order += 1;
-                    frames[max_index].status = 0; // a part of a large memory
-                    if(print){
-                        uart_puts("Merged index ");
-                        uart_int(i);
-                        uart_puts(" and ");
-                        uart_int(bud);
-                        uart_puts(" in order ");
-                        uart_int(frames[i].order);
-                        uart_puts("\n");
-                        uart_send('\r');
-                    }
-                    merged = 1;
+    for (int i = 0; i < FRAME_COUNT; i++) {
+        if (frames[i].status == -1 && frames[i].order < MAX_ORDER) {  // Check only non-allocated frames
+            int bud = i ^ (1 << frames[i].order);  // Calculate buddy index
+            if (bud < FRAME_COUNT && frames[bud].status == -1 && frames[bud].order == frames[i].order) {
+                int min_index = (i < bud) ? i : bud;
+                int max_index = (i > bud) ? i : bud;
+
+                // Remove both frames from their current free list
+                remove_from_freelist(&frames[min_index]);
+                remove_from_freelist(&frames[max_index]);
+
+                // Update the order of the minimum index frame
+                frames[min_index].order++;
+                frames[max_index].status = 0;  // Mark the max index frame as part of a larger block
+                
+                // Insert the merged frame into the next order's free list
+                insert_into_freelist(&frames[min_index], frames[min_index].order);
+
+                if (print) {
+                    uart_puts("Merged index ");
+                    uart_int(min_index);
+                    uart_puts(" and ");
+                    uart_int(max_index);
+                    uart_puts(" into order ");
+                    uart_int(frames[min_index].order);
+                    uart_puts("\n");
+                    uart_send('\r');
                 }
+                merged = 1;  // Flag that a merge occurred
+                //break;  // Break to restart from the beginning due to list modification
             }
         }
     }
-    if(merged)
-        merge_free(print);
+    if (merged) {
+        merge_free(print);  // Only recurse if a merge occurred
+    }
 }
+
 
 void free_page(unsigned long address){
     /* 
@@ -282,7 +367,7 @@ void free(void* ptr) {
         memory_pool_t * pool = &pools[i];
         while(pool){
             unsigned long offset = PAGE_SIZE;
-            if(pool -> total_slots != PAGE_SIZE/pool -> slot_size) //not the first page
+            if(pool -> total_slots != PAGE_SIZE/pool -> slot_size) //not the first page, the header is also placed in page frame
                 offset -= sizeof(memory_pool_t);
             unsigned long address = (unsigned long) ptr;
             if (address >= pool -> start && address < pool -> start + offset) {

@@ -24,12 +24,14 @@ void main(void *dtb)
     uart_init();
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_callback);
     // say hello
+    
+    frames_init();
+
     uart_puts("Demo page alloc, press anytihng to continue!\n\r");
     uart_getc();
-    frames_init();
     demo_page_alloc();
 
-    uart_puts("Init memory, press anytihng to continue!\n\r");
+    uart_puts("Init memory, press anything to continue!\n\r");
     uart_getc();
     init_memory();
 
