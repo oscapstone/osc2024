@@ -22,27 +22,39 @@ void main(void *dtb)
 {
     // set up serial console
     uart_init();
-
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_callback);
     // say hello
+    uart_puts("Demo page alloc, press anytihng to continue!\n\r");
+    uart_getc();
     frames_init();
     demo_page_alloc();
+
+    uart_puts("Init memory, press anytihng to continue!\n\r");
+    uart_getc();
     init_memory();
 
     uart_puts("Start testing malloc and free.\n\r");
-    char * test = malloc(5);
+    uart_getc();
+    int i = 500;
+    while(i--){ // testing the linked list
+        char * test2 = malloc(1);
+    }
+        
+    char * test = malloc(14);
     uart_hex(test);
     test[0] = 'i';
     test[1] = 'a';
     test[2] = 'm';
     test[3] = 'j';
     test[4] = '\0';
-    uart_puts("\n");
-    uart_hex(test);
-    uart_puts("\n");
+    uart_puts("\n\r");
     uart_puts(test);
-    uart_puts("\n");
+    uart_puts("\n\r");
     free(test);
+    char* test3 = malloc(14);
+    test3 = malloc(14);
+    test3 = malloc(14);
+    test3 = malloc(80);
 
     char in_char;
     int idx = 0;

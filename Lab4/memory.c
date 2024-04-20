@@ -1,3 +1,8 @@
+/*
+OSC2024 LAB4
+Author: jerryyyyy708
+Starts from: 2024/04/19
+*/
 #include "uart.h"
 
 #define MAX_ORDER 5
@@ -169,6 +174,7 @@ typedef struct memory_pool {
     int bitmap[PAGE_SIZE/16]; // Bitmap for free/allocated slots
     int slot_size;         // Size of each slot in bytes
     int total_slots;       // Total slots in the pool
+    struct memory_pool *next;
 } memory_pool_t;
 
 memory_pool_t pools[NUM_POOLS];
@@ -178,6 +184,7 @@ void init_memory(){
         pools[i].start = (unsigned long) allocate_page(PAGE_SIZE);
         pools[i].slot_size = pool_sizes[i];
         pools[i].total_slots = PAGE_SIZE/pool_sizes[i];
+        pools[i].next = 0;
     }
 }
 
@@ -185,44 +192,69 @@ void * malloc(unsigned long size){
     for(int i=0; i<NUM_POOLS; i++){
         if(pools[i].slot_size > size){
             // allocate a chunck
-            for(int j = 0; j < pools[i].total_slots; j++){
-                if(pools[i].bitmap[j] == 0){// the chunk is free
-                    uart_puts("Memory allocated in chunck size ");
-                    uart_int(pools[i].slot_size);
-                    uart_puts(" in block ");
-                    uart_int(j);
-                    uart_puts(", physical address: ");
-                    uart_hex(pools[i].start + j * pools[i].slot_size);
-                    uart_puts("\n\r");
-                    pools[i].bitmap[j] = 1;
-                    return (void*)(pools[i].start + j * pools[i].slot_size);
+            memory_pool_t * pool = &pools[i];
+            while(1){
+                for(int j = 0; j < pool -> total_slots; j++){
+                    if(pool -> bitmap[j] == 0){// the chunk is free
+                        uart_puts("Memory allocated in chunck size ");
+                        uart_int(pool -> slot_size);
+                        uart_puts(" in block ");
+                        uart_int(j);
+                        uart_puts(", physical address: ");
+                        uart_hex(pool -> start + j * pool -> slot_size);
+                        uart_puts("\n\r");
+                        pool -> bitmap[j] = 1;
+                        return (void*)(pool -> start + j * pool -> slot_size);
+                    }
                 }
+                if(pool -> next)
+                    pool = pool -> next;
+                else
+                    break;
             }
-            uart_puts("No more slots, should allocate new page");
-            return 0;
+            uart_puts("No more slots, start allocating new page\n");
+            //start allocate
+            memory_pool_t *new_pool = (memory_pool_t *) allocate_page(sizeof(memory_pool_t));
+            new_pool -> start = new_pool + sizeof(memory_pool_t);
+            new_pool -> slot_size = pool -> slot_size;
+            for(int k =0; k < (PAGE_SIZE/16); k++){
+                new_pool -> bitmap[k] = 0;
+            }
+            new_pool -> total_slots = (PAGE_SIZE - sizeof(memory_pool_t)) / new_pool -> slot_size;
+            new_pool -> next = 0;
+            pool -> next = new_pool;
+            return malloc(size); // dangerous, can try to modify
         }
         else{
             continue;
         }
     }
-    uart_puts("The input size is too large!\n");
-    return 0;
+    uart_puts("The input size is too large for malloc, assign page instead!\n\r");
+    return allocate_page(size);
 }
 
 void free(void* ptr) {
     for (int i = 0; i < NUM_POOLS; i++) {
-        unsigned long address = (unsigned long) ptr;
-        if (address >= pools[i].start && address < pools[i].start + PAGE_SIZE) {
-            int slot = (address - pools[i].start) / pools[i].slot_size;
-            pools[i].bitmap[i] = 0;
-            uart_puts("Free memory with chunck size ");
-            uart_int(pools[i].slot_size);
-            uart_puts(" in block ");
-            uart_int(slot);
-            uart_puts(", physical address: ");
-            uart_hex(address);
-            uart_puts("\n\r");
-            return;
+        memory_pool_t * pool = &pools[i];
+        while(pool){
+            unsigned long offset = PAGE_SIZE;
+            if(pool -> total_slots != PAGE_SIZE/pool -> slot_size) //not the first page
+                offset -= sizeof(memory_pool_t);
+            unsigned long address = (unsigned long) ptr;
+            if (address >= pool -> start && address < pool -> start + offset) {
+                int slot = (address - pool -> start) / pool -> slot_size;
+                pool -> bitmap[slot] = 0;
+                uart_puts("Free memory with chunck size ");
+                uart_int(pool -> slot_size);
+                uart_puts(" in block ");
+                uart_int(slot);
+                uart_puts(", physical address: ");
+                uart_hex(address);
+                uart_puts("\n\r");
+                return;
+            }
+            pool = pool -> next;
         }
     }
+    uart_puts("Invalid address!\n\r");
 }
