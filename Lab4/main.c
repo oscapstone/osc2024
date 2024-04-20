@@ -26,9 +26,27 @@ void main(void *dtb)
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_callback);
     // say hello
     frames_init();
+    demo_page_alloc();
+    init_memory();
+
+    uart_puts("Start testing malloc and free.\n\r");
+    char * test = malloc(5);
+    uart_hex(test);
+    test[0] = 'i';
+    test[1] = 'a';
+    test[2] = 'm';
+    test[3] = 'j';
+    test[4] = '\0';
+    uart_puts("\n");
+    uart_hex(test);
+    uart_puts("\n");
+    uart_puts(test);
+    uart_puts("\n");
+    free(test);
+
     char in_char;
     int idx = 0;
-    demo_page_alloc();
+
     // echo everything back
     while(1) {
         char buffer[1024];

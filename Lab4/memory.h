@@ -17,3 +17,13 @@ void merge_free(unsigned long print);
 void* allocate_page(unsigned long size);
 void print_frame_status(int len);
 void demo_page_alloc();
+
+typedef struct memory_pool {
+    unsigned long start;   // Starting address of the pool
+    int bitmap[PAGE_SIZE/16]; // Bitmap for free/allocated slots
+    int slot_size;         // Size of each slot in bytes
+    int total_slots;       // Total slots in the pool
+} memory_pool_t;
+void init_memory();
+void * malloc(unsigned long size);
+void free(void* ptr);
