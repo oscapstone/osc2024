@@ -1,5 +1,5 @@
 port=/dev/ttyUSB0
-image=/home/eric/Desktop/osc2024/Lab2/kernel/kernel8.img
+image=kernel/kernel8.img
 ver=release
 
 .PHONY: all rootfs emu send screen clean
