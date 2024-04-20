@@ -13,6 +13,10 @@ Starts from: 2024/04/19
 #define MIN_BLOCK_SIZE PAGE_SIZE  // Minimum block size is the size of one page
 
 typedef struct frame {
+    /* 
+    save order and status for convinence to maintain, 
+    use convert_val_and_print to convert to the actual entry var.
+    */
     int index;
     int order;
     int status;
@@ -20,7 +24,15 @@ typedef struct frame {
 
 frame_t frames[FRAME_COUNT];
 
+void status_instruction(){
+    uart_puts("Buddy system value definition\n\r");
+    uart_puts("val >= 0: allocable contiguous memory starts from the idx with order val\n\r");
+    uart_puts("val = -1: free but belongs to a larger contiguous memory block\n\r");
+    uart_puts("val = -2: allocated block\n\r");
+}
+
 void frames_init(){
+    status_instruction();
     uart_int(FRAME_COUNT);
     uart_puts("\n");
     for(int i=0; i<FRAME_COUNT; i++){
@@ -38,10 +50,10 @@ void merge_free(int print){ // print is to show log
             int bud = i ^ (1 << frames[i].order);
             if(bud < FRAME_COUNT && bud >= 0){
                 if(frames[bud].status == -1 && frames[bud].order == frames[i].order && frames[i].order < MAX_ORDER){
-                    
                     int min_index = (i < bud) ? i : bud;
                     int max_index = (i > bud) ? i : bud;
                     frames[min_index].order += 1;
+                    frames[max_index].order = -1;
                     //frames[max_index].order += 1;
                     frames[max_index].status = 0; // a part of a large memory
                     if(print){
@@ -133,7 +145,38 @@ void* allocate_page(unsigned long size) {
     return 0;
 }
 
-void print_frame_status(int len){
+void convert_val_and_print(int len){//convert into val
+    int prev = 99;
+    for(int i=0;i<len;i++){
+        if(frames[i].status == 1){ //allocated for sure, -2
+            uart_int(-2);
+            prev = -2;
+            uart_puts(" ");
+        }
+        else if(frames[i].status == 0){// might be free but belongs or allocated
+            if(prev >= 0 || prev != -2){ // free but belongs
+                prev = -1;
+                uart_int(-1);
+                uart_puts(" ");
+            }
+            else{ // allocated
+                uart_int(-2);
+                prev = -2;
+                uart_puts(" ");
+            }
+        }
+        else{
+            uart_int(frames[i].order); // free for sure 
+            uart_puts(" ");
+            prev = frames[i].order;
+        }
+    }
+    uart_puts("\n");
+    uart_send('\r');
+}
+
+/*
+void convert_val_and_print(int len){
     for(int i=0;i<len;i++){
         uart_int(frames[i].status);
         uart_puts(" ");
@@ -141,14 +184,15 @@ void print_frame_status(int len){
     uart_puts("\n");
     uart_send('\r');
 }
+*/
 
 void demo_page_alloc(){
     void * page0 = allocate_page(4000);
-    print_frame_status(65);
+    convert_val_and_print(65);
     void * page1 = allocate_page(8000);
-    print_frame_status(65);
+    convert_val_and_print(65);
     void * page2 = allocate_page(12000);
-    print_frame_status(65);
+    convert_val_and_print(65);
     uart_hex(page0);
     uart_puts("\n");
     uart_send('\r');
@@ -159,11 +203,11 @@ void demo_page_alloc(){
     uart_puts("\n");
     uart_send('\r');
     free_page(page0);
-    print_frame_status(65);
+    convert_val_and_print(65);
     free_page(page1);
-    print_frame_status(65);
+    convert_val_and_print(65);
     void * page3 = allocate_page(4096 * 2 * 2 * 2 * 2 + 1);
-    print_frame_status(65);
+    convert_val_and_print(65);
 }
 
 int pool_sizes[] = {16, 32, 48, 96};
