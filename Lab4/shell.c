@@ -1,12 +1,5 @@
 #include "uart.h"
-
-static char *cpio_base;
-
-void initramfs_callback(char *address)
-{
-    cpio_base = address;
-}
-
+#include "dtb.h"
 
 struct cpio_newc_header {
     //file metadata

@@ -3,28 +3,13 @@
 #include "dtb.h"
 #include "memory.h"
 
-#define MEMORY_POOL_SIZE 1024
-
-static char memory_pool[MEMORY_POOL_SIZE];
-static char *next_free = memory_pool;
-
-void *simple_alloc(int size) {
-    if (next_free + size - memory_pool > MEMORY_POOL_SIZE) {
-        return 0; 
-    }
-    void *allocated = next_free; 
-    next_free += size; 
-    return allocated; 
-}
-
-
 void main(void *dtb)
 {
     // set up serial console
     uart_init();
-    fdt_tranverse(dtb, "linux,initrd-start", initramfs_callback);
+    fdt_tranverse(dtb, "linux,initrd-start", initramfs_start_callback);
+    fdt_tranverse(dtb, "linux,initrd-end", initramfs_end_callback);
     // say hello
-    
     frames_init();
 
     uart_puts("Demo page alloc, press anytihng to continue!\n\r");
@@ -44,10 +29,10 @@ void main(void *dtb)
         
     char * test = malloc(14);
     uart_hex(test);
-    test[0] = 'i';
-    test[1] = 'a';
-    test[2] = 'm';
-    test[3] = 'j';
+    test[0] = 't';
+    test[1] = 'e';
+    test[2] = 's';
+    test[3] = 't';
     test[4] = '\0';
     uart_puts("\n\r");
     uart_puts(test);

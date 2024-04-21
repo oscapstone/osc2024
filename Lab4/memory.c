@@ -10,11 +10,14 @@ On the other hand, memorypool_t places the actual address into start, and a bitm
 The index(slot) of memory can be lookup by first check which pool is the address in, then (address - pool -> start) / pool -> slot_size;
 */
 #include "uart.h"
+#include "dtb.h"
+
+extern char _end;
 
 #define MAX_ORDER 5
 #define PAGE_SIZE 4096  // Assuming a page size of 4KB
-#define MEMORY_START 0x10000000
-#define MEMORY_SIZE 0x10000000  // Managing 256MB of memory
+#define MEMORY_START 0x00 //0x10000000
+#define MEMORY_SIZE 0x3C000000 //0x10000000 
 #define FRAME_COUNT (MEMORY_SIZE / PAGE_SIZE)
 #define MIN_BLOCK_SIZE PAGE_SIZE  // Minimum block size is the size of one page
 
@@ -29,10 +32,17 @@ typedef struct frame {
 
 frame_t frames[FRAME_COUNT];
 
+//startup allocation
+void *simple_alloc(void **cur, int size) {
+    void *allocated = *cur;
+    *cur = (char *)(*cur) + size; 
+    return allocated;
+}
+
 /*
 1. during init, complete all merge and then place all into freelist (or simply put all into freelist and merge) V
-2. allocate handle: if there is cut frame, put cut frames into freelist, then move itself out of freelist
-3. free handle: put idx back to free list, and merge (handle by merge)
+2. allocate handle: if there is cut frame, put cut frames into freelist, then move itself out of freelist V
+3. free handle: put idx back to free list, and merge (handle by merge) V
 4. merge handle: move itself to another order and buddy out of free list V
 */
 
@@ -41,61 +51,6 @@ typedef struct freelist {
 } freelist_t;
 
 freelist_t fl[MAX_ORDER + 1];
-
-
-void status_instruction(){
-    uart_puts("Buddy system value definition\n\r");
-    uart_puts("val >= 0: allocable contiguous memory starts from the idx with order val\n\r");
-    uart_puts("val = -1: free but belongs to a larger contiguous memory block\n\r");
-    uart_puts("val = -2: allocated block\n\r");
-}
-
-void print_freelist(int head){
-    uart_puts("Printing free lists:\n");
-    for(int i = 0; i <= MAX_ORDER; i++){
-        uart_puts("Order ");
-        uart_int(i);
-        uart_puts(": ");
-        frame_t *temp = fl[i].head;
-        if (!temp) uart_puts("empty\n");
-        int count = 0;
-        while(temp){
-            if(count == head && head != 0)
-                break;
-            uart_int(temp->index);
-            uart_puts(" -> ");
-            temp = temp->next;
-            count++;
-        }
-
-        if(head != 0)
-            uart_puts("... \n\r");
-        else
-            uart_puts("NULL\n\r");
-    }
-}
-
-
-void frames_init(){
-    status_instruction();
-    uart_int(FRAME_COUNT);
-    uart_puts("\n");
-    for(int i=0; i<FRAME_COUNT; i++){
-        frames[i].index = i;
-        frames[i].order = 0;
-        frames[i].status = -1; // not allocated
-        frames[i].next = 0;
-    }
-    fl[0].head = frames;
-    frame_t * temp = fl[0].head;
-    for(int i=1; i<FRAME_COUNT; i++){
-        temp -> next = &frames[i];
-        temp -> next -> prev = temp;
-        temp = temp -> next;
-    }
-    merge_free(0);
-    print_freelist(5);
-}
 
 void remove_from_freelist(frame_t *frame) {
     if (frame->prev) {
@@ -117,6 +72,97 @@ void insert_into_freelist(frame_t *frame, int order) {
     }
     frame->prev = 0;
     fl[order].head = frame;
+}
+
+
+void status_instruction(){
+    uart_puts("Buddy system value definition\n\r");
+    uart_puts("val >= 0: allocable contiguous memory starts from the idx with order val\n\r");
+    uart_puts("val = -1: free but belongs to a larger contiguous memory block\n\r");
+    uart_puts("val = -2: allocated block\n\r");
+}
+
+void print_freelist(int head){
+    uart_puts("Printing free lists:\n");
+    for(int i = 0; i <= MAX_ORDER; i++){
+        uart_puts("Order ");
+        uart_int(i);
+        uart_puts(": ");
+        frame_t *temp = fl[i].head;
+        int count = 0;
+        while(temp){
+            if(count == head && head != 0)
+                break;
+            uart_int(temp->index);
+            uart_puts(" -> ");
+            temp = temp->next;
+            count++;
+        }
+
+        if(temp)
+            uart_puts("... \n\r");
+        else
+            uart_puts("NULL\n\r");
+    }
+}
+
+/*
+Reserve memories:
+1. Spin tables for multicore boot (0x0000 - 0x1000) -> hardcode V
+2. Kernel image in the physical memory -> address of _end V
+3. Initramfs -> use dtb V
+4. Devicetree (Optional, if you have implement it) -> dtb_base + totalsize V
+5. Your simple allocator (startup allocator) -> 
+*/
+void memory_reserve(unsigned long start, unsigned long end) {
+    unsigned long start_index = (start - MEMORY_START) / PAGE_SIZE;
+    unsigned long end_index = (end - MEMORY_START) / PAGE_SIZE;
+    if((end - MEMORY_START) % PAGE_SIZE != 0)
+        end_index++;
+
+    for (unsigned long i = start_index; i <= end_index && i < FRAME_COUNT; i++) {
+        if (frames[i].status == -1) {
+            frames[i].status = 1;
+            remove_from_freelist(&frames[i]);
+        }
+        else{
+            uart_puts("Warning, there might be a bug!");
+        }
+    }
+    uart_puts("Reserved from frame ");
+    uart_int(start_index);
+    uart_puts(" to frame ");
+    uart_int(end_index);
+    uart_puts(".\n\r");
+}
+
+void frames_init(){
+    status_instruction();
+    uart_int(FRAME_COUNT);
+    uart_puts("\n");
+    for(int i=0; i<FRAME_COUNT; i++){
+        frames[i].index = i;
+        frames[i].order = 0;
+        frames[i].status = -1; // not allocated
+        frames[i].next = 0;
+        frames[i].prev = 0;
+    }
+    fl[0].head = frames;
+    frame_t * temp = fl[0].head;
+    for(int i=1; i<FRAME_COUNT; i++){
+        temp -> next = &frames[i];
+        temp -> next -> prev = temp;
+        temp = temp -> next;
+    }
+    //handle reserve here, remove reserved from freelist and set status to allocated
+    memory_reserve(0x0000, 0x1000);
+    memory_reserve(cpio_base, cpio_end);
+    memory_reserve(0x80000, &_end);
+    memory_reserve(dtb_start, dtb_end);
+    uart_getc();
+    //After init all frame, merge them
+    merge_free(0);
+    print_freelist(3);
 }
 
 void merge_free(int print) {
@@ -150,7 +196,6 @@ void merge_free(int print) {
                     uart_send('\r');
                 }
                 merged = 1;  // Flag that a merge occurred
-                //break;  // Break to restart from the beginning due to list modification
             }
         }
     }
@@ -172,7 +217,9 @@ void free_page(unsigned long address){
     uart_puts(" in freepage\n");
     if(frames[i].status == 1){
         frames[i].status = -1;
+        insert_into_freelist(&frames[i], frames[i].order);
         merge_free(1);
+        print_freelist(3);
     }
     else{
         uart_puts("invalid frame\n");
@@ -195,34 +242,36 @@ int get_order(unsigned long size) {
 
 void* allocate_page(unsigned long size) {
     int order = get_order(size);
-
     if (order > MAX_ORDER) {
         uart_puts("Requested size too large\n");
         return 0;
     }
 
-    // Find the first free block with at least the required order
-    for (int i = 0; i < FRAME_COUNT; i++) {
-        if (frames[i].status == -1 && frames[i].order >= order) {
-            // Allocate this frame
-            frames[i].status = 1;  // Mark as allocated
+    // Check free list from the requested order upwards
+    for (int current_order = order; current_order <= MAX_ORDER; current_order++) {
+        frame_t *frame = fl[current_order].head;
+        if (frame != 0) { // Found a free frame at this order
+            // Remove the frame from the free list
+            remove_from_freelist(frame);
+            frame->status = 1; // Mark as allocated
 
-            // Split if necessary
-            while (frames[i].order > order) {
-                frames[i].order--;
-                int buddy_index = i + (1 << frames[i].order);
-                frames[buddy_index].order = frames[i].order;
-                frames[buddy_index].status = -1;  // Buddy is free
+            // Split the frame if its order is higher than needed
+            while (frame->order > order) {
+                frame->order--;
+                int buddy_index = frame->index + (1 << frame->order);
+                frames[buddy_index].order = frame->order;
+                frames[buddy_index].status = -1; // Buddy is now free
+                insert_into_freelist(&frames[buddy_index], frame->order); // Add buddy to the free list
             }
 
             uart_puts("Allocated at index ");
-            uart_int(i);
+            uart_int(frame->index);
             uart_puts(" of order ");
-            uart_int(frames[i].order);
+            uart_int(frame->order);
             uart_puts("\n");
             uart_send('\r');
 
-            return (void*)(MEMORY_START + i * PAGE_SIZE);
+            return (void*)(MEMORY_START + frame->index * PAGE_SIZE);
         }
     }
 
@@ -230,9 +279,10 @@ void* allocate_page(unsigned long size) {
     return 0;
 }
 
-void convert_val_and_print(int len){//convert into val
+
+void convert_val_and_print(int start, int len){//convert into val
     int prev = 99;
-    for(int i=0;i<len;i++){
+    for(int i=start;i<start+len;i++){
         if(frames[i].status == 1){ //allocated for sure, -2
             uart_int(-2);
             prev = -2;
@@ -273,11 +323,17 @@ void convert_val_and_print(int len){
 
 void demo_page_alloc(){
     void * page0 = allocate_page(4000);
-    convert_val_and_print(65);
+    convert_val_and_print(65504, 32);
+    print_freelist(3);
+    uart_getc();
     void * page1 = allocate_page(8000);
-    convert_val_and_print(65);
+    convert_val_and_print(65504, 32);
+    print_freelist(3);
+    uart_getc();
     void * page2 = allocate_page(12000);
-    convert_val_and_print(65);
+    convert_val_and_print(65504, 32);
+    print_freelist(3);
+    uart_getc();
     uart_hex(page0);
     uart_puts("\n");
     uart_send('\r');
@@ -287,12 +343,20 @@ void demo_page_alloc(){
     uart_hex(page2);
     uart_puts("\n");
     uart_send('\r');
+    uart_puts("Page Allocated, press anything to continue (next: free page)!\n\r");
+    uart_getc();
+
     free_page(page0);
-    convert_val_and_print(65);
+    convert_val_and_print(65504, 32);
+    uart_getc();
+
     free_page(page1);
-    convert_val_and_print(65);
+    convert_val_and_print(65504, 32);
+    uart_getc();
+
     void * page3 = allocate_page(4096 * 2 * 2 * 2 * 2 + 1);
-    convert_val_and_print(65);
+    convert_val_and_print(65504, 32);
+    uart_getc();
 }
 
 int pool_sizes[] = {16, 32, 48, 96};
@@ -319,7 +383,7 @@ void init_memory(){
 
 void * malloc(unsigned long size){
     for(int i=0; i<NUM_POOLS; i++){
-        if(pools[i].slot_size > size){
+        if(pools[i].slot_size >= size){
             // allocate a chunck
             memory_pool_t * pool = &pools[i];
             while(1){

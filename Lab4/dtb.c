@@ -2,6 +2,22 @@
 #include "uart.h"
 #include "shell.h"
 
+char* cpio_base;
+char* cpio_end;
+char* dtb_start;
+char* dtb_end;
+
+void initramfs_start_callback(char *address)
+{
+    cpio_base = address;
+}
+
+void initramfs_end_callback(char *address)
+{
+    cpio_end = address;
+}
+
+
 struct fdt_header {
     // big endian default
     unsigned int magic;             // Magic word, signifies the start of the FDT blob
@@ -49,6 +65,13 @@ void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char
     {
         uart_puts("Invalid device tree\n");
         return;
+    }
+
+    unsigned int totalsize = big_to_little_endian(header -> totalsize);
+
+    if(dtb_start == 0){
+        dtb_start = dtb_base;
+        dtb_end = dtb_start + totalsize;
     }
 
     //value in dtb is big endian
@@ -99,7 +122,9 @@ void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char
                 /* The /chosen node does not represent a real device in the system but describes parameters chosen or specified by 
                 the system firmware at run time. It shall be a child of the root node. */
                 callback((char *)big_to_little_endian_add(newAddress));
-                uart_puts("found initrd in ");
+                uart_puts("found ");
+                uart_puts(target_property);
+                uart_puts(" in ");
                 uart_hex((unsigned int)newAddress);
                 uart_puts("\n");
                 uart_send('\r');

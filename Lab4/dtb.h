@@ -5,6 +5,14 @@
 #define FDT_PROP_TOKEN 0x00000003
 #define FDT_END_TOKEN 0x00000009
 
+extern char* cpio_base;
+extern char* cpio_end;
+extern char* dtb_start;
+extern char* dtb_end;
+
+void initramfs_start_callback(char *address);
+void initramfs_end_callback(char *address);
+
 /*
 FDT_BEGIN_NODE (0x00000001)
 The FDT_BEGIN_NODE token marks the beginning of a node’s representation. It shall be followed by the node’s
