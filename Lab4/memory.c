@@ -19,7 +19,6 @@ extern char _end;
 #define MEMORY_START 0x00 //0x10000000
 #define MEMORY_SIZE 0x3C000000 //0x10000000 
 #define FRAME_COUNT (MEMORY_SIZE / PAGE_SIZE)
-#define MIN_BLOCK_SIZE PAGE_SIZE  // Minimum block size is the size of one page
 
 typedef struct frame {
     //save order and status for convinence to maintain, use convert_val_and_print() to convert to the actual entry var.
@@ -183,11 +182,44 @@ void frames_init(){
     memory_reserve(dtb_start, dtb_end);
     uart_getc();
     //After init all frame, merge them
-    merge_free(0);
+    merge_all(0);
     print_freelist(3);
 }
 
-void merge_free(int print) {
+void merge_free(frame_t *frame, int print) {
+    int index = frame->index;
+    int order = frame->order;
+    int buddy_index = index ^ (1 << order);
+
+    // check buddy status
+    if (buddy_index < FRAME_COUNT && frames[buddy_index].status == -1 && frames[buddy_index].order == order) {
+        // start merging
+        remove_from_freelist(frame);
+        remove_from_freelist(&frames[buddy_index]);
+
+        int min_index = (index < buddy_index) ? index : buddy_index;
+
+        frames[min_index].order++;
+        frames[min_index].status = -1;
+
+        insert_into_freelist(&frames[min_index], frames[min_index].order);
+
+        if (print) {
+            uart_puts("Merged index ");
+            uart_int(index);
+            uart_puts(" and ");
+            uart_int(buddy_index);
+            uart_puts(" into order ");
+            uart_int(frames[min_index].order);
+            uart_puts("\n");
+            uart_send('\r');
+        }
+
+        merge_free(&frames[min_index], print);
+    }
+}
+
+void merge_all(int print) {
     int merged = 0;
     for (int i = 0; i < FRAME_COUNT; i++) {
         if (frames[i].status == -1 && frames[i].order < MAX_ORDER) {  // Check only non-allocated frames
@@ -222,7 +254,7 @@ void merge_free(int print) {
         }
     }
     if (merged) {
-        merge_free(print);  // Only recurse if a merge occurred
+        merge_all(print);  // Only recurse if a merge occurred
     }
 }
 
@@ -240,7 +272,8 @@ void free_page(unsigned long address){
     if(frames[i].status == 1){
         frames[i].status = -1;
         insert_into_freelist(&frames[i], frames[i].order);
-        merge_free(1);
+        //merge_all(1);
+        merge_free(&frames[i], 1);
         print_freelist(3);
     }
     else{
@@ -279,11 +312,17 @@ void* allocate_page(unsigned long size) {
 
             // Split the frame if its order is higher than needed
             while (frame->order > order) {
+                uart_puts("Split frame from order ");
+                uart_int(frame -> order);
                 frame->order--;
+                uart_puts(" to ");
+                uart_int(frame -> order);
+                uart_puts("\n\r");
                 int buddy_index = frame->index + (1 << frame->order);
                 frames[buddy_index].order = frame->order;
                 frames[buddy_index].status = -1; // Buddy is now free
                 insert_into_freelist(&frames[buddy_index], frame->order); // Add buddy to the free list
+                //merge_free(&frames[buddy_index], 1);
             }
 
             uart_puts("Allocated at index ");
@@ -292,11 +331,10 @@ void* allocate_page(unsigned long size) {
             uart_int(frame->order);
             uart_puts("\n");
             uart_send('\r');
-
             return (void*)(MEMORY_START + frame->index * PAGE_SIZE);
         }
     }
-
+    
     uart_puts("No suitable block found\n");
     return 0;
 }
@@ -343,15 +381,15 @@ void print_status(int len){
 
 void demo_page_alloc(){
     void * page0 = allocate_page(4000);
-    convert_val_and_print(65504, 32);
+    convert_val_and_print(32769, 32);
     print_freelist(3);
     uart_getc();
     void * page1 = allocate_page(8000);
-    convert_val_and_print(65504, 32);
+    convert_val_and_print(32769, 32);
     print_freelist(3);
     uart_getc();
     void * page2 = allocate_page(12000);
-    convert_val_and_print(65504, 32);
+    convert_val_and_print(32769, 32);
     print_freelist(3);
     uart_getc();
     uart_hex(page0);
@@ -367,15 +405,15 @@ void demo_page_alloc(){
     uart_getc();
 
     free_page(page0);
-    convert_val_and_print(65504, 32);
+    convert_val_and_print(32769, 32);
     uart_getc();
 
     free_page(page1);
-    convert_val_and_print(65504, 32);
+    convert_val_and_print(32769, 32);
     uart_getc();
 
     void * page3 = allocate_page(4096 * 2 * 2 * 2 * 2 + 1);
-    convert_val_and_print(65504, 32);
+    convert_val_and_print(32769, 32);
 }
 
 void init_memory(){

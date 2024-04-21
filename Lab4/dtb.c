@@ -52,9 +52,6 @@ unsigned int big_to_little_endian_add(const char *address) {
 
 void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char *))
 {
-    uart_hex((unsigned int) dtb_base);
-    uart_puts("\n\r");
-
     struct fdt_header * header = (struct fdt_header *) dtb_base;
     
     unsigned int temp, offset_struct, offset_strings, magic;

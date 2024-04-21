@@ -9,6 +9,7 @@ void main(void *dtb)
     uart_init();
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_start_callback);
     fdt_tranverse(dtb, "linux,initrd-end", initramfs_end_callback);
+
     // say hello
     frames_init();
 
@@ -65,6 +66,5 @@ void main(void *dtb)
                 idx++;
             }
         }
-
     }
 }
