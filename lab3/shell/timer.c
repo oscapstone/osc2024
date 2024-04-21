@@ -123,10 +123,9 @@ void setTimeout(char *message,uint64_t seconds) {
 void timer_set2sAlert(char* str)
 {
     unsigned long long cntpct_el0;
-    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
+    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0));
     unsigned long long cntfrq_el0;
-    __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
+    __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0));
     uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
     add_timer(timer_set2sAlert,2,"2sAlert");
 }
-
