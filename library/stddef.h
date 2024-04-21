@@ -1,6 +1,13 @@
-#ifndef STDDEF_H
-#define STDDEF_H
+#ifndef __STDDEF_H__
+#define __STDDEF_H__
 
-#define NULL ((void *) 0)
+#ifndef __NULL__
+#define NULL        ((void *) 0)
+#define __NULL__
+#endif // __NULL__
 
-#endif
+
+/* For some unknown reason, size_t can't define in stddef.h */
+
+
+#endif // __STDDEF_H__

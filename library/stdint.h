@@ -20,6 +20,17 @@ typedef unsigned long long int       uint64_t;
 #define __uint64_t_defined
 #endif
 
+#ifndef __u64_defined
+typedef unsigned long long int       u64;
+#define __u64_defined
+#endif
+
+#ifndef __u32_defined
+typedef unsigned int                 u32;
+#define __u64_defined
+#endif
+
+#define ULLONG_MAX	(~0ULL)
 
 
 

@@ -6,6 +6,7 @@
 #include "exception.h"
 #include "interrupt.h"
 #include "timer.h"
+#include "mm.h"
 
 
 void demo_task1()
@@ -144,4 +145,60 @@ void demo_bh_irq(void)
         do_tasklet();
         // wait_cycles(1000000000);
     }
+}
+
+/* Lab4: Demo buddy system and slab */
+void demo_memory_allocator(void)
+{
+    char *addr[10];
+    get_buddy_info();
+
+    uart_puts("Get order 0 page\n");
+    addr[0] = (char *) kmalloc(4096);
+    uart_puts("addr: ");
+    uart_hex((unsigned int) addr[0]);
+    uart_send('\n');
+
+    get_buddy_info();
+    uart_puts("Get order 2 page for 3 times\n");
+    for (int i = 0; i < 3; i++) {
+        addr[i] = (char *) kmalloc(4096 << 2);
+        uart_puts("addr: ");
+        uart_hex((unsigned int) addr[i]);
+        uart_send('\n');
+        get_buddy_info();
+    }
+
+    uart_puts("Get 8 bytes memory\n");
+    addr[0] = (char *) kmalloc(8);
+    uart_puts("addr: ");
+    uart_hex((unsigned int) addr[0]);
+    uart_send('\n');
+
+    uart_puts("Get 8 bytes memory\n");
+    addr[0] = (char *) kmalloc(8);
+    uart_puts("addr: ");
+    uart_hex((unsigned int) addr[0]);
+    uart_send('\n');
+    
+    uart_puts("Get 16 bytes memory\n");
+    addr[1] = (char *) kmalloc(16);
+    uart_puts("addr: ");
+    uart_hex((unsigned int) addr[1]);
+    uart_send('\n');
+
+    uart_puts("Get 16 bytes memory\n");
+    addr[2] = (char *) kmalloc(16);
+    uart_puts("addr: ");
+    uart_hex((unsigned int) addr[2]);
+    uart_send('\n');
+
+    uart_puts("Free the previous 16 bytes\n");
+    kfree(addr[1]);
+
+    uart_puts("Get 16 bytes memory\n");
+    addr[1] = (char *) kmalloc(16);
+    uart_puts("addr: ");
+    uart_hex((unsigned int) addr[1]);
+    uart_send('\n');
 }
