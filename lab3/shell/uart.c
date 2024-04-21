@@ -13,9 +13,7 @@ int uart_read_index = 0;
 int uart_write_index = 0;
 int uart_write_head = 0;
 
-/**
- * Set baud rate and characteristics (115200 8N1) and map to GPIO
- */
+/*Set baud rate and characteristics (115200 8N1) and map to GPIO*/
 void uart_init()
 {
     register unsigned int r;
@@ -81,9 +79,7 @@ void uart_init()
 }    
     
 
-/**
- * Send a character
- */
+/*Send a character*/
 void uart_send_char(unsigned int c) {
     /* wait until we can send */
     // P.15 AUX_MU_LSR register shows the data(line) status
@@ -99,9 +95,7 @@ void uart_send_char(unsigned int c) {
     *AUX_MU_IO=c;
 }
 
-/**
- * Display a string
- */
+/*Display a string*/
 void uart_send_string(char* s) {
     while(*s) {
         /* convert newline to carriage return + newline */
@@ -111,9 +105,7 @@ void uart_send_string(char* s) {
     }
 }
 
-/**
- * Receive a character
- */
+/*Receive a character*/
 char uart_get_char() {
     char r;
     /* wait until something is in the buffer */
@@ -143,7 +135,7 @@ void uart_hex(unsigned long long d) {
 }
 
 
-//Basic3
+
 //Enable mini UART’s Interrupt.
 //set AUX_MU_IER_REG(0x3f215044) and
 //the second level interrupt controller’s Enable IRQs1(0x3f00b210)’s bit29.
@@ -179,6 +171,8 @@ void uart_disable_interrupt() {
 	mmio_write(DISABLE_IRQS_1,disable_irqs1);
 }
 
+
+//Basic3
 int uart_async_read(char *buffer) {
     if (uart_read_head == uart_read_index) {
         // No characters available
@@ -191,6 +185,7 @@ int uart_async_read(char *buffer) {
         return 1;
     }
 }
+//Basic3
 void uart_async_write(const char *buffer, int length) {
     for (int i = 0; i < length; i++) {
         uart_write_buffer[uart_write_head++] = buffer[i];
@@ -206,5 +201,4 @@ void uart_async_send(const char *str) {
     int length = utils_strlen(str);
     uart_async_write(str, length);
 }
-
 
