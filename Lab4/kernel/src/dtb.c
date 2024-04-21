@@ -49,6 +49,35 @@ struct fdt_header {
     uint32_t size_dt_struct;
 };
 
+
+static uintptr_t _dtb_start;
+static uintptr_t _dtb_end;
+
+static uintptr_t struct_ptr;
+static uintptr_t string_ptr;
+static uint32_t struct_size;
+static uint32_t total_size;
+
+uintptr_t get_dtb_start(void)
+{
+    return _dtb_start;
+}
+
+void set_dtb_start(uintptr_t ptr)
+{
+    _dtb_start = ptr;
+}
+
+uintptr_t get_dtb_end(void)
+{
+    return _dtb_end;
+}
+
+void set_dtb_end(uintptr_t ptr)
+{
+    _dtb_end = ptr;
+}
+
 static uint32_t dtb_uint32_be2le(const void* addr)
 {
     const uint8_t* bytes = (const uint8_t*)addr;
@@ -63,6 +92,28 @@ static uint64_t dtb_uint64_be2le(const void* addr)
            (uint64_t)bytes[2] << 40 | (uint64_t)bytes[3] << 32 |
            (uint64_t)bytes[4] << 24 | (uint64_t)bytes[5] << 16 |
            (uint64_t)bytes[6] << 8 | (uint64_t)bytes[7];
+}
+
+int fdt_init(uintptr_t dtb_start)
+{
+    set_dtb_start(dtb_start);
+
+    char* dtb_ptr = (char*)get_dtb_start();
+    struct fdt_header* header = (struct fdt_header*)dtb_ptr;
+
+    if (dtb_uint32_be2le(&(header->magic)) != FDT_HEADER_MAGIC)
+        return FDT_HEADER_MAGIC_ERROR;
+
+    struct_ptr =
+        (uintptr_t)(dtb_ptr + dtb_uint32_be2le(&(header->off_dt_struct)));
+    string_ptr =
+        (uintptr_t)(dtb_ptr + dtb_uint32_be2le(&(header->off_dt_strings)));
+
+    struct_size = dtb_uint32_be2le(&(header->size_dt_struct));
+    total_size = dtb_uint32_be2le(&(header->totalsize));
+    set_dtb_end(dtb_start + total_size);
+
+    return 0;
 }
 
 /*
@@ -93,13 +144,11 @@ static uint64_t dtb_uint64_be2le(const void* addr)
  *  There shall be only one and it shall be the last token in the block.
  */
 
-static int fdt_struct_parse(fdt_callback cb,
-                            char* struct_ptr,
-                            char* string_ptr,
-                            uint32_t struct_size)
+static int fdt_struct_parse(fdt_callback cb)
 {
-    char* cur_ptr = struct_ptr;
+    char* cur_ptr = (char*)struct_ptr;
     char* end_ptr = cur_ptr + struct_size;
+    char* str_ptr = (char*)string_ptr;
 
     while (cur_ptr < end_ptr) {
         uint32_t token = dtb_uint32_be2le(cur_ptr);
@@ -114,7 +163,7 @@ static int fdt_struct_parse(fdt_callback cb,
             uint32_t len = dtb_uint32_be2le(cur_ptr + 4);
             uint32_t name_off = dtb_uint32_be2le(cur_ptr + 8);
             char* data_ptr = cur_ptr + 12;
-            cb(token, string_ptr + name_off, data_ptr, len);
+            cb(token, str_ptr + name_off, data_ptr, len);
             cur_ptr = mem_align(data_ptr + len, 4);
             break;
 
@@ -136,33 +185,9 @@ static int fdt_struct_parse(fdt_callback cb,
     return FDT_TRAVERSE_ERROR;
 }
 
-
-static uintptr_t _dtb_ptr;
-
-uintptr_t get_dtb_ptr(void)
-{
-    return _dtb_ptr;
-}
-
-void set_dtb_ptr(uintptr_t ptr)
-{
-    _dtb_ptr = ptr;
-}
-
-
 uint32_t fdt_traverse(fdt_callback cb)
 {
-    char* dtb_ptr = (char*)get_dtb_ptr();
-    struct fdt_header* header = (struct fdt_header*)dtb_ptr;
-
-    if (dtb_uint32_be2le(&(header->magic)) != FDT_HEADER_MAGIC)
-        return FDT_HEADER_MAGIC_ERROR;
-
-    char* struct_ptr = dtb_ptr + dtb_uint32_be2le(&(header->off_dt_struct));
-    char* string_ptr = dtb_ptr + dtb_uint32_be2le(&(header->off_dt_strings));
-    uint32_t struct_size = dtb_uint32_be2le(&(header->size_dt_struct));
-
-    return fdt_struct_parse(cb, struct_ptr, string_ptr, struct_size);
+    return fdt_struct_parse(cb);
 }
 
 
@@ -171,8 +196,17 @@ void fdt_find_cpio_ptr(uint32_t token,
                        const void* data,
                        uint32_t UNUSED(size))
 {
-    if (token == FDT_PROP && !str_cmp(name, "linux,initrd-start"))
-        set_cpio_ptr((uint64_t)dtb_uint32_be2le(data));
+    switch (token) {
+    case FDT_PROP:
+        if (!str_cmp(name, "linux,initrd-start"))
+            set_cpio_start((uintptr_t)dtb_uint32_be2le(data));
+        else if (!str_cmp(name, "linux, initrd-end"))
+            set_cpio_end((uintptr_t)dtb_uint32_be2le(data));
+        break;
+
+    default:
+        break;
+    }
 }
 
 
@@ -255,17 +289,17 @@ void fdt_find_root_node(uint32_t token,
 /* find usable memory region */
 /* only support one memory node for now */
 static bool found_memory_node = false;
-static uintptr_t start_addr;  // start address of usable memory region
-static uintptr_t length;      // length of usable memory region
+static uintptr_t usable_start_addr;  // start address of usable memory region
+static uintptr_t usable_length;      // length of usable memory region
 
-uintptr_t get_start_addr(void)
+uintptr_t get_usable_mem_start(void)
 {
-    return start_addr;
+    return usable_start_addr;
 }
 
-uintptr_t get_length(void)
+uintptr_t get_usable_mem_length(void)
 {
-    return length;
+    return usable_length;
 }
 
 void fdt_find_memory_node(uint32_t token,
@@ -286,10 +320,10 @@ void fdt_find_memory_node(uint32_t token,
         if (!str_cmp(name, "reg")) {
             switch (reg_addr_cells) {
             case 2:  // 64-bit address
-                start_addr = dtb_uint64_be2le(data);
+                usable_start_addr = dtb_uint64_be2le(data);
                 break;
             case 1:  // 32-bit address
-                start_addr = dtb_uint32_be2le(data);
+                usable_start_addr = dtb_uint32_be2le(data);
                 break;
             default:
                 break;
@@ -297,10 +331,10 @@ void fdt_find_memory_node(uint32_t token,
 
             switch (reg_size_cells) {
             case 2:  // 64-bit size
-                length = dtb_uint64_be2le(data + reg_addr_cells * 4);
+                usable_length = dtb_uint64_be2le(data + reg_addr_cells * 4);
                 break;
             case 1:  // 32-bit size
-                length = dtb_uint32_be2le(data + reg_addr_cells * 4);
+                usable_length = dtb_uint32_be2le(data + reg_addr_cells * 4);
                 break;
             default:
                 break;

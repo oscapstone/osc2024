@@ -1,6 +1,9 @@
 SECTIONS
 {
     . = 0x80000;
+
+    PROVIDE(kernel_start = .);
+
     .text.boot : { *(.text.boot)  }
     .text : { *(.text) }
     .rodata : { *(.rodata) }
@@ -18,4 +21,6 @@ SECTIONS
         heap_begin = .;    
         heap_end = heap_begin + 0x100000;
     }
+
+    PROVIDE(kernel_end = .);
 }

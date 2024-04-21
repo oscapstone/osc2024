@@ -14,7 +14,12 @@ void ls(void);
 void cat(char*);
 void exec(char*);
 
-uintptr_t get_cpio_ptr(void);
-void set_cpio_ptr(uintptr_t);
+uintptr_t get_cpio_start(void);
+void set_cpio_start(uintptr_t);
+
+uintptr_t get_cpio_end(void);
+void set_cpio_end(uintptr_t);
+
+int cpio_init(void);
 
 #endif /* CPIO_H */

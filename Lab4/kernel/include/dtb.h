@@ -29,8 +29,13 @@ typedef void (*fdt_callback)(uint32_t token,
                              const void* data,
                              uint32_t size);
 
-uintptr_t get_dtb_ptr(void);
-void set_dtb_ptr(uintptr_t);
+uintptr_t get_dtb_start(void);
+void set_dtb_start(uintptr_t);
+
+uintptr_t get_dtb_end(void);
+void set_dtb_end(uintptr_t);
+
+int fdt_init(uintptr_t);
 
 uint32_t fdt_traverse(fdt_callback cb);
 
@@ -49,8 +54,8 @@ void fdt_find_root_node(uint32_t token,
                         const void* data,
                         uint32_t UNUSED(size));
 
-uintptr_t get_start_addr(void);
-uintptr_t get_length(void);
+uintptr_t get_usable_mem_start(void);
+uintptr_t get_usable_mem_length(void);
 
 void fdt_find_memory_node(uint32_t token,
                           const char* name,

@@ -24,34 +24,42 @@ void kernel_main(uintptr_t x0)
 
     enable_irq();
 
+    int cond;
     /* get dtb addr */
-    set_dtb_ptr((uintptr_t)x0);
+    cond = fdt_init((uintptr_t)x0);
+    if (cond)
+        goto inf_loop;
 
-    unsigned long dtb_ptr = get_dtb_ptr();
+    uintptr_t dtb_start = get_dtb_start();
     uart_send_string("DTB addr: 0x");
-    uart_send_hex(dtb_ptr >> 32);
-    uart_send_hex(dtb_ptr);
+    uart_send_hex(dtb_start >> 32);
+    uart_send_hex(dtb_start);
     uart_send_string("\n");
 
     /* get cpio addr */
-    fdt_traverse(fdt_find_cpio_ptr);
+    cond = cpio_init();
+    if (cond)
+        goto inf_loop;
 
-    unsigned long cpio_ptr = get_cpio_ptr();
+    uintptr_t cpio_start = get_cpio_start();
     uart_send_string("CPIO addr: 0x");
-    uart_send_hex(cpio_ptr >> 32);
-    uart_send_hex(cpio_ptr);
+    uart_send_hex(cpio_start >> 32);
+    uart_send_hex(cpio_start);
     uart_send_string("\n");
 
     /* get root node (for the size of reg propery of the children node)*/
-    fdt_traverse(fdt_find_root_node);
+    cond = fdt_traverse(fdt_find_root_node);
+    if (cond)
+        goto inf_loop;
 
     /* get usable memory */
-    fdt_traverse(fdt_find_memory_node);
-    uintptr_t usable_mem_start = get_start_addr();
-    uintptr_t usable_mem_length = get_length();
+    cond = fdt_traverse(fdt_find_memory_node);
+    if (cond)
+        goto inf_loop;
 
     shell();
 
+inf_loop:
     while (1)
         ;
 }

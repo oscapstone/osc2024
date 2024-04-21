@@ -1,6 +1,7 @@
 #include "cpio.h"
 #include "arm/sysregs.h"
 #include "def.h"
+#include "dtb.h"
 #include "memory.h"
 #include "mini_uart.h"
 #include "string.h"
@@ -93,21 +94,37 @@ static inline void cpio_exec_program(char* file_addr, unsigned int file_size)
  * +--------------------------+
  */
 
-static uintptr_t _cpio_ptr;
+static uintptr_t _cpio_start;
+static uintptr_t _cpio_end;
 
-uintptr_t get_cpio_ptr(void)
+uintptr_t get_cpio_start(void)
 {
-    return _cpio_ptr;
+    return _cpio_start;
 }
 
-void set_cpio_ptr(uintptr_t ptr)
+void set_cpio_start(uintptr_t ptr)
 {
-    _cpio_ptr = ptr;
+    _cpio_start = ptr;
+}
+
+uintptr_t get_cpio_end(void)
+{
+    return _cpio_end;
+}
+
+void set_cpio_end(uintptr_t ptr)
+{
+    _cpio_end = ptr;
+}
+
+int cpio_init(void)
+{
+    return fdt_traverse(fdt_find_cpio_ptr);
 }
 
 static int cpio_parse(enum cpio_mode mode, char* file_name)
 {
-    char* cpio = (char*)_cpio_ptr;
+    char* cpio = (char*)_cpio_start;
     struct cpio_newc_header* header = (struct cpio_newc_header*)cpio;
 
     while (!str_n_cmp(header->c_magic, CPIO_MAGIC, str_len(CPIO_MAGIC))) {
