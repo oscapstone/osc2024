@@ -1,4 +1,5 @@
-ARMGNU ?= aarch64-linux-gnu
+# ARMGNU ?= aarch64-linux-gnu
+ARMGNU ?= aarch64-elf
 
 BUILD_DIR = build
 #---------------------------------------------------------------------------------------
