@@ -13,6 +13,7 @@ void kernel_main(char* arg) {
 
 	uart_init();
 	cli_print_welcome_msg();
+	uart_puts("[DTB loaded from: 0x%x]\r\n\r\n", arg);
 
 	while (1) {
 		cli_clear_cmd(input_buf, MAX_CMD_LEN);

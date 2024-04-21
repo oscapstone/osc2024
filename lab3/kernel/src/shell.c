@@ -6,15 +6,15 @@
 #include "utils.h"
 #include "heap.h"
 #include "dtb.h"
+#include "exception.h"
 #include <stddef.h>
 
 #define CLI_MAX_CMD 8
 #define MAX_ARGS 10
+#define USER_STACK_SIZE 0x10000
 
 extern char* dtb_ptr;
 void* CPIO_DEFAULT_PLACE;
-// If don't use dtb, we manually assign default place
-// void* CPIO_DEFAULT_PLACE = (void*)(unsigned long) 0x8000000;
 
 int cli_strcmp(const char* p1, const char* p2) {
     const unsigned char *s1 = (const unsigned char*) p1;
@@ -68,6 +68,8 @@ void cli_exec_cmd(char* buf) {
         cmd_cat(argvs[1]);
     } else if (cli_strcmp(cmd, "dtb") == 0) {
         cmd_dtb();
+    }else if (cli_strcmp(cmd, "currel") == 0) {
+        cmd_currentEL();
     } else if (cli_strcmp(cmd, "help") == 0) {
         cmd_help();
     } else if (cli_strcmp(cmd, "hello") == 0) {
@@ -107,6 +109,7 @@ void cmd_help() {
     uart_puts("   help      - list all commands\r\n");
     uart_puts("   hello     - print hello message\r\n");
     uart_puts("   hwinfo    - print hardware info\r\n");
+    uart_puts("   currel    - print current EL\r\n");
     uart_puts("   ls        - list all files in directory\r\n");
     uart_puts("   dtb       - show device tree\r\n");
     uart_puts("   malloc    - test malloc function\r\n");
@@ -218,4 +221,36 @@ void cmd_malloc() {
 
 void cmd_dtb() {
     parse_dtb_tree(dtb_ptr, dtb_callback_show_tree);
+}
+
+void cmd_exec_program(char* filepath){
+    char* c_filepath;
+    char* c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+
+    while(header_ptr != 0) {
+        int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        if (err) {
+            uart_puts("CPIO parse error\r\n");
+            break;
+        }
+        if (header_ptr != 0 && strcmp(filepath, c_filepath) == 0) {
+            char* user_stack = malloc(USER_STACK_SIZE);
+            // asm(
+            //     "mov x1, (1 << 31)"             
+            //     "msr hcr_el2, x1"                
+            //     "mov x1, 0x3c0"                  
+            //     "msr spsr_el2, x1"               
+            //     "msr elr_el2, lr"      
+            //     "eret"   
+            // );
+        }
+        if (header_ptr == 0) 
+            uart_puts("cat: %s: No such file or directory\n", filepath);
+    }
+}
+
+void cmd_currentEL() {
+    print_currentEL();
 }

@@ -18,5 +18,6 @@ void cmd_ls();
 void cmd_cat();
 void cmd_malloc();
 void cmd_dtb();
+void cmd_currentEL();
 
 #endif  /*_SHELL_H */

@@ -6,7 +6,7 @@ _start:
     bl from_el2_to_el1
 
 set_exception_vector_table:
-    adr x1, exception_vector_table  // vbar_el1: EL1 Vector Base Address Register
+    adr x1, exception_vector_table      // vbar_el1: EL1 Vector Base Address Register
     msr vbar_el1, x1
 
 setup_stack:
@@ -33,9 +33,9 @@ proc_hang:
     b       proc_hang
 
 from_el2_to_el1:
-    mov x1, (1 << 31)              // set HCR_EL2（Hypervisor Configuration Register EL2）
-    msr hcr_el2, x1                // HCR_EL2 RW[31]=1 : The processor execution environment for EL1 is AArch64
-    mov x1, 0x3c5                  // Set exception level to EL1h
-    msr spsr_el2, x1               // spsr_el2 holds PSTATE reg
-    msr elr_el2, lr                // lr (stored return address) -> elr_el2
-    eret                           // Perform an exception return. EL2 -> EL1
+    mov     x1, (1 << 31)              // set HCR_EL2（Hypervisor Configuration Register EL2）
+    msr     hcr_el2, x1                // HCR_EL2 RW[31]=1 : The processor execution environment for EL1 is AArch64
+    mov     x1, 0x3c5                  // Set exception level to EL1h
+    msr     spsr_el2, x1               // spsr_el2 holds PSTATE reg
+    msr     elr_el2, lr                // lr (stored return address) -> elr_el2
+    eret                               // Perform an exception return. EL2 -> EL1

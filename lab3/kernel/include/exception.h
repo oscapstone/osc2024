@@ -1,6 +1,7 @@
 #ifndef	_EXCEPTION_H_
 #define	_EXCEPTION_H_
 
+void print_currentEL();
 void invalid_exception_router(); // exception_handler.S
 
 void el1h_irq_router();
