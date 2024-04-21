@@ -158,28 +158,28 @@ el0_error_invalid_64:
     load_all
     eret
 
-el0_sync_compat_32:
+el0_sync_invalid_32:
     save_all
     mov x0,12
     bl invalid_exception_router
     load_all
     eret
 
-el0_irq_compat_32:
+el0_irq_invalid_32:
     save_all
     mov x0,13
     bl invalid_exception_router
     load_all
     eret
 
-el0_fiq_invalid_compat_32:
+el0_fiq_invalid_32:
     save_all
     mov x0,14
     bl invalid_exception_router
     load_all
     eret
 
-el0_error_compat_32:
+el0_error_invalid_32:
     save_all
     mov x0,15
     bl invalid_exception_router
