@@ -30,12 +30,17 @@ typedef struct frame {
     struct frame *prev;
 } frame_t;
 
-frame_t frames[FRAME_COUNT];
+frame_t *frames;//[FRAME_COUNT];
 
 //startup allocation
 void *simple_alloc(void **cur, int size) {
     void *allocated = *cur;
-    *cur = (char *)(*cur) + size; 
+    *cur = (char *)(*cur) + size; //convert for operator calculation
+    //memset 0
+    char *p = allocated;
+    for (int i = 0; i < size; i++) {
+        p[i] = 0;
+    }
     return allocated;
 }
 
@@ -50,7 +55,20 @@ typedef struct freelist {
     frame_t * head;
 } freelist_t;
 
-freelist_t fl[MAX_ORDER + 1];
+freelist_t * fl; //[MAX_ORDER + 1];
+
+int pool_sizes[] = {16, 32, 48, 96};
+#define NUM_POOLS 4
+
+typedef struct memory_pool {
+    unsigned long start;   // Starting address of the pool
+    int bitmap[PAGE_SIZE/16]; // Bitmap for free/allocated slots
+    int slot_size;         // Size of each slot in bytes
+    int total_slots;       // Total slots in the pool
+    struct memory_pool *next;
+} memory_pool_t;
+
+memory_pool_t *pools; //[NUM_POOLS];
 
 void remove_from_freelist(frame_t *frame) {
     if (frame->prev) {
@@ -138,6 +156,10 @@ void memory_reserve(unsigned long start, unsigned long end) {
 
 void frames_init(){
     status_instruction();
+    void * base = (void *) &_end;
+    frames = simple_alloc(&base ,(int) sizeof(frame_t) * FRAME_COUNT);
+    fl = simple_alloc(&base, (int) sizeof(freelist_t) * (MAX_ORDER + 1));
+    pools = simple_alloc(&base, (int) sizeof(memory_pool_t) * NUM_POOLS);
     uart_int(FRAME_COUNT);
     uart_puts("\n");
     for(int i=0; i<FRAME_COUNT; i++){
@@ -157,7 +179,7 @@ void frames_init(){
     //handle reserve here, remove reserved from freelist and set status to allocated
     memory_reserve(0x0000, 0x1000);
     memory_reserve(cpio_base, cpio_end);
-    memory_reserve(0x80000, &_end);
+    memory_reserve(0x80000, base);
     memory_reserve(dtb_start, dtb_end);
     uart_getc();
     //After init all frame, merge them
@@ -310,8 +332,7 @@ void convert_val_and_print(int start, int len){//convert into val
     uart_send('\r');
 }
 
-/*
-void convert_val_and_print(int len){
+void print_status(int len){
     for(int i=0;i<len;i++){
         uart_int(frames[i].status);
         uart_puts(" ");
@@ -319,7 +340,6 @@ void convert_val_and_print(int len){
     uart_puts("\n");
     uart_send('\r');
 }
-*/
 
 void demo_page_alloc(){
     void * page0 = allocate_page(4000);
@@ -356,21 +376,7 @@ void demo_page_alloc(){
 
     void * page3 = allocate_page(4096 * 2 * 2 * 2 * 2 + 1);
     convert_val_and_print(65504, 32);
-    uart_getc();
 }
-
-int pool_sizes[] = {16, 32, 48, 96};
-#define NUM_POOLS 4
-
-typedef struct memory_pool {
-    unsigned long start;   // Starting address of the pool
-    int bitmap[PAGE_SIZE/16]; // Bitmap for free/allocated slots
-    int slot_size;         // Size of each slot in bytes
-    int total_slots;       // Total slots in the pool
-    struct memory_pool *next;
-} memory_pool_t;
-
-memory_pool_t pools[NUM_POOLS];
 
 void init_memory(){
     for(int i=0; i<NUM_POOLS; i++){
