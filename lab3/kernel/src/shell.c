@@ -68,8 +68,10 @@ void cli_exec_cmd(char* buf) {
         cmd_cat(argvs[1]);
     } else if (cli_strcmp(cmd, "dtb") == 0) {
         cmd_dtb();
-    }else if (cli_strcmp(cmd, "currel") == 0) {
+    } else if (cli_strcmp(cmd, "currel") == 0) {
         cmd_currentEL();
+    } else if (cli_strcmp(cmd, "exec") == 0) {
+        cmd_exec_program(argvs[1]);
     } else if (cli_strcmp(cmd, "help") == 0) {
         cmd_help();
     } else if (cli_strcmp(cmd, "hello") == 0) {
@@ -106,14 +108,16 @@ void cli_print_welcome_msg() {
 
 void cmd_help() {
     uart_puts("Example usage:\r\n");
-    uart_puts("   help      - list all commands\r\n");
-    uart_puts("   hello     - print hello message\r\n");
-    uart_puts("   hwinfo    - print hardware info\r\n");
-    uart_puts("   currel    - print current EL\r\n");
-    uart_puts("   ls        - list all files in directory\r\n");
-    uart_puts("   dtb       - show device tree\r\n");
-    uart_puts("   malloc    - test malloc function\r\n");
-    uart_puts("   reboot    - reboot the device\r\n");
+    uart_puts("   help              - list all commands.\r\n");
+    uart_puts("   hello             - print hello message.\r\n");
+    uart_puts("   hwinfo            - print hardware info.\r\n");
+    uart_puts("   currel            - print current EL.\r\n");
+    uart_puts("   cat  [filePath]   - get content from a file.\r\n");
+    uart_puts("   exec [filePath]   - execute a img program.\r\n");
+    uart_puts("   ls                - list all files in directory.\r\n");
+    uart_puts("   dtb               - show device tree.\r\n");
+    uart_puts("   malloc            - test malloc function.\r\n");
+    uart_puts("   reboot            - reboot the device.\r\n");
 }
 
 void cmd_hello() {
@@ -237,14 +241,20 @@ void cmd_exec_program(char* filepath){
         }
         if (header_ptr != 0 && strcmp(filepath, c_filepath) == 0) {
             char* user_stack = malloc(USER_STACK_SIZE);
-            // asm(
-            //     "mov x1, (1 << 31)"             
-            //     "msr hcr_el2, x1"                
-            //     "mov x1, 0x3c0"                  
-            //     "msr spsr_el2, x1"               
-            //     "msr elr_el2, lr"      
-            //     "eret"   
-            // );
+            /*
+            set spsr_el1 to 0x3c0 and elr_el1 to the program’s start address.
+            set the user program’s stack pointer to a proper position by setting sp_el0.
+            issue eret to return to the user code. 
+            */
+            asm(
+                "mov    x10,        0x3c0\n\t"
+                "msr    spsr_el1,   x10\n\t"
+                "msr    elr_el1,    %0\n\t"
+                "msr    sp_el0,     %1\n\t"
+                "eret   \n\t"
+                :: "r"(c_filedata), "r"(user_stack + USER_STACK_SIZE)
+            );
+            break;
         }
         if (header_ptr == 0) 
             uart_puts("cat: %s: No such file or directory\n", filepath);

@@ -1,5 +1,6 @@
 #include "exception.h"
 #include "mini_uart.h"
+#include "utils.h"
 
 void print_currentEL(){
     unsigned long long currentEL;
@@ -29,7 +30,17 @@ void el1h_irq_router(){
 }
 
 void el0_sync_router(){
-    uart_puts("el0_sync_router\r\n");
+    // Print the content of spsr_el1, elr_el1, and esr_el1 in the exception handler.
+    unsigned long long spsr_el1;
+    unsigned long long elr_el1;
+    unsigned long long esr_el1;
+    __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r"(spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
+    __asm__ __volatile__("mrs %0, ELR_EL1\n\t"  : "=r"(elr_el1)); // ELR_EL1 holds the address if return to EL1
+    __asm__ __volatile__("mrs %0, ESR_EL1\n\t"  : "=r"(esr_el1)); // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
+
+    char buf[VSPRINT_MAX_BUF_SIZE];
+    sprintf(buf, "[Exception][el0_sync] spsr_el1: 0x%x | elr_el1: 0x%x | esr_el1 : 0x%x\r\n", spsr_el1, elr_el1, esr_el1);
+    uart_puts(buf);
 }
 
 void el0_irq_64_router(){
