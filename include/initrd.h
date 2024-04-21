@@ -40,6 +40,8 @@ void initrd_cat();
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name);
 void initrd_usr_prog(char *cmd);
 
+void initrd_reserve_memory(void);
+
 typedef struct {
     char magic[6]; // "070701"
     char ino[8];

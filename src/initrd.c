@@ -28,6 +28,7 @@
 #include "file.h"
 #include "initrd.h"
 #include "stdint.h"
+#include "memblock.h"
 
 #define buf_size 128
 
@@ -173,11 +174,6 @@ void initrd_usr_prog(char *cmd)
 
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
 {
-    // uart_puts("==== node_name: ");
-    // uart_puts(node_name);
-    // uart_puts(", property_name: ");
-    // uart_puts(property_name);
-    // uart_send('\n');
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
         cpio_base = (char *)((unsigned long)bswap_32(load_addr));
@@ -185,4 +181,27 @@ void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
         uart_hex((unsigned long)cpio_base);
         uart_send('\n');
     }
+}
+
+void initrd_reserve_memory(void)
+{
+    cpio_f *header;
+    char *buf = cpio_base;
+    int ns, fs;
+
+    if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
+        return;
+
+    // if it's a cpio newc archive. Cpio also has a trailer entry
+    while(memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) {
+        header = (cpio_f*) buf;
+        ns = hex2bin(header->namesize, 8);
+        fs = ALIGN(hex2bin(header->filesize, 8), 4);
+
+        // jump to the next file
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
+    }
+    // reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns
+    buf += ALIGN(sizeof(cpio_f) + 10, 4);
+    memblock_reserve((unsigned long) cpio_base, ALIGN(buf - cpio_base, 8));
 }

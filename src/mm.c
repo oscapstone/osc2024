@@ -323,8 +323,6 @@ void kfree(void *obj)
     unsigned long pfn = page_to_pfn(page);
     unsigned int order = buddy_order(page);
 
-    // TODO: Check whether the page is from the slab or buddy system by checking the flags.
-
     if (page->flags == PG_slab) {
         /* Free the object to slab cache. */
         free_object(obj);
@@ -332,12 +330,4 @@ void kfree(void *obj)
         /* Free the page to buddy system. */
         free_one_page(page, pfn, order);
     }
-
-    // if (order == 0) {
-    //     /* Use slab allocator to free memory. */
-    //     free_object(obj);
-    // } else {
-    //     /* Free the page to buddy system. */
-    //     free_one_page(page, pfn, order);
-    // }
 }

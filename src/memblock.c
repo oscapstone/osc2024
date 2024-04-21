@@ -2,6 +2,8 @@
 #include "kernel.h"
 #include "uart.h"
 #include "mbox.h"
+#include "dtb.h"
+#include "initrd.h"
 
 #define INIT_MEMLBOCK_REGIONS	(128)
 
@@ -273,10 +275,13 @@ void memblock_init(void)
     memblock_add_range(&memblock.memory, base, size);
 
     /* Reserve the kernel memory */
-    memblock_reserve(0, (unsigned long)&_end - 0);
+    memblock_reserve(0, (unsigned long) &_end - 0);
 
-    // TODO: reserve the initrd memory
-    // TODO: reserve the device tree memory
+    /* Reserve the initrd memory (cpio). */
+    initrd_reserve_memory();
+
+    /* Reserve the device tree memory. */
+    fdt_reserve_memory();
 }
 
 void print_memblock_info(void)
