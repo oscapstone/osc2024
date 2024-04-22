@@ -107,6 +107,7 @@ void cmd_help() {
     uart_puts("   help      - list all commands\r\n");
     uart_puts("   hello     - print hello message\r\n");
     uart_puts("   hwinfo    - print hardware info\r\n");
+    uart_puts("   cat  [filePath]   - get content from a file.\r\n");
     uart_puts("   ls        - list all files in directory\r\n");
     uart_puts("   dtb       - show device tree\r\n");
     uart_puts("   malloc    - test malloc function\r\n");
