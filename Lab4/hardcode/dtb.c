@@ -6,8 +6,6 @@ char* cpio_base;
 char* cpio_end;
 char* dtb_start;
 char* dtb_end;
-unsigned long memory_start;
-unsigned long memory_end;
 
 void initramfs_start_callback(char *address)
 {
@@ -217,15 +215,20 @@ void get_memory(void * dtb_base)
 
                 uart_puts("Memory regions:\n");
                 // Assuming each address and size is 4 bytes for simplicity:
-                memory_start = big_to_little_endian_add(newAddress);
-                newAddress += 4;
-                memory_end = big_to_little_endian_add(newAddress);
-                newAddress += 4;
-                uart_puts("Start = ");
-                uart_hex(memory_start);
-                uart_puts(", End = ");
-                uart_hex(memory_end);
-                uart_puts("\n");
+                int num_regions = len / 8;
+                uart_puts("The length of current reg node")
+                uart_int(len);
+                for (int i = 0; i < num_regions; i++) {
+                    unsigned int addr = big_to_little_endian_add(newAddress);
+                    newAddress += 4;
+                    unsigned int size = big_to_little_endian_add(newAddress);
+                    newAddress += 4;
+                    uart_puts("Range = ");
+                    uart_hex(addr);
+                    uart_puts(", Size = ");
+                    uart_hex(size);
+                    uart_puts("\n");
+                }
                 lookfor = 0;
             }
 
