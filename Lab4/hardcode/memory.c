@@ -178,9 +178,10 @@ void frames_init(){
         temp = temp -> next;
     }
     //handle reserve here, remove reserved from freelist and set status to allocated
-    memory_reserve(0x0000, 0x1000);
+    // memory_reserve(0x0000, 0x1000);
+    // memory_reserve(0x80000, base);
+    memory_reserve(0x0000, base);
     memory_reserve(cpio_base, cpio_end);
-    memory_reserve(0x80000, base);
     memory_reserve(dtb_start, dtb_end);
     uart_getc();
     //After init all frame, merge them

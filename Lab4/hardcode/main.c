@@ -24,6 +24,8 @@ void main(void *dtb)
     uart_puts("Start testing malloc and free.\n\r");
     uart_getc();
     int i = 500;
+    // uart_hex(&i);
+    // uart_puts("\n");
     while(i--){ // testing the linked list
         char * test2 = malloc(1);
     }

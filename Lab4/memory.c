@@ -22,7 +22,7 @@ extern char _end;
 
 typedef struct frame {
     //save order and status for convinence to maintain, use convert_val_and_print() to convert to the actual entry var.
-    int index;
+    int index; //just lazy to calculate
     int order;
     int status;
     struct frame *next;
@@ -174,15 +174,16 @@ void frames_init(){
     }
     fl[0].head = frames;
     frame_t * temp = fl[0].head;
-    for(int i=1; i<frame_count; i++){
+    for(int i=1; i<frame_count; i++){ //when init, small is in front
         temp -> next = &frames[i];
         temp -> next -> prev = temp;
         temp = temp -> next;
     }
     //handle reserve here, remove reserved from freelist and set status to allocated
-    memory_reserve(0x0000, 0x1000);
+    // memory_reserve(0x0000, 0x1000);
+    // memory_reserve(0x80000, base);
+    memory_reserve(0x0000, base); //to save the stack from being allocated
     memory_reserve(cpio_base, cpio_end);
-    memory_reserve(0x80000, base);
     memory_reserve(dtb_start, dtb_end);
     uart_getc();
     //After init all frame, merge them

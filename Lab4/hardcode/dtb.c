@@ -215,20 +215,15 @@ void get_memory(void * dtb_base)
 
                 uart_puts("Memory regions:\n");
                 // Assuming each address and size is 4 bytes for simplicity:
-                int num_regions = len / 8;
-                uart_puts("The length of current reg node")
-                uart_int(len);
-                for (int i = 0; i < num_regions; i++) {
-                    unsigned int addr = big_to_little_endian_add(newAddress);
-                    newAddress += 4;
-                    unsigned int size = big_to_little_endian_add(newAddress);
-                    newAddress += 4;
-                    uart_puts("Range = ");
-                    uart_hex(addr);
-                    uart_puts(", Size = ");
-                    uart_hex(size);
-                    uart_puts("\n");
-                }
+                unsigned int addr = big_to_little_endian_add(newAddress);
+                newAddress += 4;
+                unsigned int size = big_to_little_endian_add(newAddress);
+                newAddress += 4;
+                uart_puts("Start = ");
+                uart_hex(addr);
+                uart_puts(", End = ");
+                uart_hex(size);
+                uart_puts("\n\r");
                 lookfor = 0;
             }
 
