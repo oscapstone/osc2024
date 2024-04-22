@@ -1,21 +1,21 @@
 #include "board/mini-uart.hpp"
-#include "mm/heap.hpp"
 #include "mm/page_alloc.hpp"
+#include "mm/startup.hpp"
 #include "shell/cmd.hpp"
 #include "string.hpp"
 
 int cmd_mm(int argc, char* argv[]) {
   if (argc <= 1) {
-    heap_info();
+    startup_alloc_info();
     page_alloc.info();
-  } else if (0 == strcmp(argv[1], "heap")) {
+  } else if (0 == strcmp(argv[1], "startup")) {
     if (argc <= 2) {
-      heap_info();
+      startup_alloc_info();
     } else {
       for (int i = 2; i < argc; i++) {
         int size = strtol(argv[i]);
-        auto addr = heap_malloc(size);
-        mini_uart_printf("heap_malloc(%d) = %p\n", size, addr);
+        auto addr = startup_malloc(size);
+        mini_uart_printf("startup_malloc(%d) = %p\n", size, addr);
       }
     }
   } else if (0 == strcmp(argv[1], "page")) {
