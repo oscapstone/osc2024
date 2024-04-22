@@ -42,6 +42,8 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
   uart_init();
   uart_flush();
+  uart_send_string(
+      "\r\n======================= Kernel starts =======================\r\n");
 }
 
 void shell_input(char *cmd) {
@@ -123,7 +125,6 @@ void shell_controller(char *cmd) {
     uart_puts("brn: get rpi3’s board revision number");
     uart_puts("bsn: get rpi3’s board serial number");
     uart_puts("arm_mem: get ARM memory base address and size");
-    uart_puts("exec: run a user program in EL0");
     uart_puts("async_uart: activate async uart I/O");
     uart_puts(
         "set_timeout <MESSAGE> <SECONDS>: print the message after given "
@@ -153,8 +154,6 @@ void shell_controller(char *cmd) {
     get_arm_base_memory_sz();
   } else if (!strcmp(cmd, "timestamp")) {
     print_timestamp();
-  } else if (!strcmp(cmd, "exec")) {
-    exec_in_el0(cpio_get_file_content_st_addr("user_prog.img"));
   } else if (!strcmp(cmd, "async_uart")) {
     enable_uart_interrupt();
 
@@ -194,11 +193,16 @@ void shell_controller(char *cmd) {
     enable_uart_interrupt();
     add_task(fake_long_handler, 99);
     pop_task();
-    uart_read_string_async(buf);
-    uart_send_string_async(buf);
-    wait_usec(100000);
+    uint32_t n = uart_read_string_async(buf);
+    uart_int(n);
+    uart_send_string(" bytes received: ");
+    uart_puts(buf);
+    n = uart_send_string_async(buf);
+    wait_usec(1000000);
     disable_uart_interrupt();
-    uart_send_string("\r\n");
+    uart_send_string(", ");
+    uart_int(n);
+    uart_puts(" bytes sent");
   } else if (!strcmp(cmd, "demo_multi_threads")) {
     for (int i = 0; i < 3; ++i) {  // N should > 2
       thread_create(foo);

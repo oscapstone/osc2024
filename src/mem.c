@@ -87,10 +87,6 @@ static int32_t get_alloc_chunk_size(uint32_t n) {
 }
 
 static void init_frames() {
-  uart_send_string("total frames: ");
-  uart_int(FRAME_CNT);
-  uart_send_string("\r\n");
-
   frame_entry_arr =
       (frame_entry*)simple_malloc(sizeof(frame_entry) * FRAME_CNT);
 
@@ -159,22 +155,34 @@ static void merge_initial_frames() {
 }
 
 void init_mem() {
-  uart_send_string("kernel start address: 0x");
+  uart_send_string("SPIN_TABLE_START: ");
+  uart_hex_64((uint64_t)SPIN_TABLE_START);
+  uart_send_string("\r\n");
+  uart_send_string("SPIN_TABLE_end: ");
+  uart_hex_64((uint64_t)SPIN_TABLE_END);
+  uart_send_string("\r\n");
+  uart_send_string("kernel start address: ");
   uart_hex_64((uint64_t)&__kernel_start);
   uart_send_string("\r\n");
-  uart_send_string("kernel end address: 0x");
+  uart_send_string("kernel end address: ");
   uart_hex_64((uint64_t)&__kernel_end);
   uart_send_string("\r\n");
-  uart_send_string("cpio_start_addr: 0x");
+  uart_send_string("dtb start address: ");
+  uart_hex_64((uint64_t)_dtb_ptr_start);
+  uart_send_string("\r\n");
+  uart_send_string("dtb end address: ");
+  uart_hex_64((uint64_t)_dtb_ptr_end);
+  uart_send_string("\r\n");
+  uart_send_string("cpio_start_addr: ");
   uart_hex_64((uint64_t)cpio_start_addr);
   uart_send_string("\r\n");
-  uart_send_string("cpio_end_addr: 0x");
+  uart_send_string("cpio_end_addr: ");
   uart_hex_64((uint64_t)cpio_end_addr);
   uart_send_string("\r\n");
-  uart_send_string("startup_alloc_start: 0x");
+  uart_send_string("startup_alloc_start: ");
   uart_hex_64((uint64_t)startup_alloc_start);
   uart_send_string("\r\n");
-  uart_send_string("startup_alloc_end: 0x");
+  uart_send_string("startup_alloc_end: ");
   uart_hex_64((uint64_t)startup_alloc_end);
   uart_send_string("\r\n");
 

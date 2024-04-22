@@ -5,6 +5,8 @@
 #define USR_STK_SZ (1 << 12)  // 4 KB
 #define KER_STK_SZ (1 << 12)  // 4 KB
 
+#define PROC_NUM 1024
+
 typedef void (*start_routine_t)(void);
 
 typedef struct cpu_context_t {
@@ -30,15 +32,16 @@ typedef struct cpu_context_t {
 } cpu_context_t;
 
 typedef enum task_state_t {
-  READY,
-  DEAD,
+  THREAD_FREE,
+  THREAD_READY,
+  THREAD_DEAD,
 } task_state_t;
 
 typedef struct task_struct {
   uint64_t pid;
   cpu_context_t cpu_context;
   task_state_t status;
-  struct task_struct* next;
+  struct task_struct *prev, *next;
   void* usr_stk;
   void* ker_stk;
   void* data;
@@ -61,6 +64,9 @@ extern void set_current_thread(cpu_context_t* cpu_context);
 void foo();
 void schedule();
 void init_sched_thread();
+task_struct* get_free_thread();
 task_struct* thread_create(start_routine_t start_routine);
-
+void startup_thread_exec(char* file);
+void thread_exec_func(start_routine_t start_routine);
+void task_exit();
 #endif

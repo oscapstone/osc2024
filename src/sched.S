@@ -19,7 +19,8 @@ switch_to:
     mov sp,  x9
     msr tpidr_el1, x1           // TPIDR_EL1: thread pointer/ID register for EL1, which provides a location where software executing at
                                 // EL1 can store thread identifying information for OS management purposes.
-    ret                         
+    msr DAIFClr, 0xf            // enable interrupt after ctxsw                
+    ret  
 
 .global get_current_thread
 get_current_thread:

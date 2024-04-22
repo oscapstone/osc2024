@@ -1,6 +1,7 @@
 #ifndef _CPIO_H
 #define _CPIO_H
 
+#include "types.h"
 typedef struct cpio_newc_header {
   char c_magic[6];  // The integer value octal 070701. Determine whether this
                     // archive is written with little-endian or big-endian
@@ -25,5 +26,5 @@ typedef struct cpio_newc_header {
 void cpio_ls();
 char *findFile(const char *name);
 void cpio_cat(const char *filename);
-char *cpio_get_file_content_st_addr(const char *filename);
+char *cpio_load(const char *filename, uint32_t *file_sz);
 #endif

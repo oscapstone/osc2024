@@ -1,6 +1,6 @@
-.macro save_all			// save general registers to stack
+.macro save_all			              // save general registers to stack
   sub sp, sp, 16 * 17
-  stp x0, x1, [sp ,16 * 0]		      //store pair of registers to sp+16*0
+  stp x0, x1, [sp ,16 * 0]		    // store pair of registers to sp+16*0
   stp x2, x3, [sp ,16 * 1]
   stp x4, x5, [sp ,16 * 2]
   stp x6, x7, [sp ,16 * 3]
@@ -15,13 +15,13 @@
   stp x24, x25, [sp ,16 * 12]
   stp x26, x27, [sp ,16 * 13]
   stp x28, x29, [sp ,16 * 14]
-  mrs x29, sp_el0
+  mrs x29, sp_el0                // sp_el0: user stack pointer for EL0
   stp x30, x29, [sp, 16 * 15]
   // for nested interrupt
 	mrs x28, SPSR_EL1
 	mrs x29, ELR_EL1
 	stp x28, x29, [sp, 16 * 16]
-.endm								             // end of macro
+.endm								            
 
 .macro load_all
   // for nested interrupt
@@ -132,7 +132,7 @@ sync_el1h:
 
 irq_el1h:
   save_all
-  bl  el1h_irq_interrupt_handler
+  bl  irq_interrupt_handler
   load_all
   eret
 
@@ -150,12 +150,13 @@ error_el1h:
 
 sync_el0_64:	
   save_all
+  mov x0, sp // for trapframe
   bl  el0_64_sync_interrupt_handler
   load_all
   eret
 irq_el0_64:
   save_all
-  bl  el0_64_irq_interrupt_handler
+  bl  irq_interrupt_handler
   load_all
   eret
 fiq_el0_64:

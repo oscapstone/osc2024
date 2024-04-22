@@ -54,10 +54,10 @@ void timer_event_pop() {
   }
 
   timer_event* te = te_head;
+  te_head = te_head->next;
   te->func(te->message);
   free(te->message);
   free(te);
-  te_head = te_head->next;
 
   if (te_head) {
     set_core_timer_int_sec(te_head->expire_time - get_timestamp());

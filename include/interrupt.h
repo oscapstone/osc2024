@@ -21,16 +21,8 @@
                              0x0000B210))  // Set to enable IRQ source 31:0 (IRQ
                                            // table in the BCM2837 document)
 
-typedef struct trapframe_t {
-  uint64_t x[31];  // general registers from x0 ~ x30
-  uint64_t sp_el0;
-  uint64_t elr_el1;
-  uint64_t spsr_el1;
-} trapframe_t;
-
 void el0_64_sync_interrupt_handler();
-void el0_64_irq_interrupt_handler();
-void el1h_irq_interrupt_handler();
+void irq_interrupt_handler();
 void fake_long_handler();
 void OS_enter_critical();
 void OS_exit_critical();

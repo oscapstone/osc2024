@@ -129,11 +129,17 @@ void print_cur_el() {
   uart_send_string("\r\n");
 }
 
+void *get_cur_sp() {
+  uint64_t sp_val;
+  asm volatile("mov %0, sp" : "=r"(sp_val));
+  return (void *)sp_val;
+}
+
 void print_cur_sp() {
   uint64_t sp_val;
   asm volatile("mov %0, sp" : "=r"(sp_val));
-  uart_send_string("current sp: 0x");
-  uart_hex(sp_val);
+  uart_send_string("current sp: ");
+  uart_hex_64(sp_val);
   uart_send_string("\r\n");
 }
 
@@ -167,15 +173,12 @@ void print_el1_sys_reg() {
 
 void exec_in_el0(void *prog_st_addr) {
   asm volatile(
-      "mov	x1, 0x0;"       // open interrupt for 2sec time_interrupt, 0000:
-                                // EL0t(jump to EL0)
-      "msr	spsr_el1, x1;"  // saved process state when an exception is
-                                // taken to EL1
-      "msr	elr_el1,  x0;"  // put program_start -> ELR_EL1
-      "mov	x1, #0x20000;"  // set sp on 0x20000
-      "msr	sp_el0, x1;"    // set EL0 stack pointer
-      "ERET"                    // exception return
-  );
+      "msr	spsr_el1, xzr\n\t"  // 0000: EL0t(jump to EL0); saved process
+                                    // state when an exception is taken to EL1
+      "msr	elr_el1,  x0\n\t"   // put program_start -> ELR_EL1
+      "mov	x1, #0x20000\n\t"   // set sp on 0x20000
+      "msr	sp_el0, x1\n\t"     // set EL0 stack pointer
+      "ERET");
   return;
 }
 
@@ -192,4 +195,12 @@ void enable_EL0VCTEN() {
              // 64-bit virtual count value. CNTFRQ_EL0 (Counter-timer Frequency
              // register): holds the clock frequency of the system timer.
   asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+}
+
+void check_DAIF() {
+  uint64_t tmp;
+  asm volatile("mrs %0, daif" : "=r"(tmp));
+  uart_send_string("DAIF reg: ");
+  uart_hex_64(tmp);
+  uart_send_string("\r\n");
 }
