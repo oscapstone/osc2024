@@ -1,8 +1,9 @@
 #include "uart1.h"
 #include "shell.h"
-#include "heap.h"
+#include "memory.h"
 #include "dtb.h"
 #include "timer.h"
+#include "memory.h"
 #include "exception.h"
 
 extern char *dtb_ptr;
@@ -16,8 +17,11 @@ void main(char *arg)
     irqtask_list_init();
     timer_list_init();
 
-    uart_interrupt_enable();
+    // uart_interrupt_enable();
     uart_flush_FIFO();
+    memory_init();
+    while (1)
+        ;
     core_timer_enable();
 
     el1_interrupt_enable(); // enable interrupt in EL1 -> EL1

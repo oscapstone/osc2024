@@ -14,11 +14,15 @@
  * https://elixir.bootlin.com/linux/latest/source/scripts/kconfig/list.h#L24
  */
 
-typedef struct list_head {
+typedef struct list_head
+{
 	struct list_head *next, *prev;
-}list_head_t;
+} list_head_t;
 
-#define LIST_HEAD_INIT(name) { &(name), &(name) }
+#define LIST_HEAD_INIT(name) \
+	{                        \
+		&(name), &(name)     \
+	}
 
 #define LIST_HEAD(name) \
 	struct list_head name = LIST_HEAD_INIT(name)
@@ -37,8 +41,8 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
 }
 
 static inline void __list_add(struct list_head *new,
-			      struct list_head *prev,
-			      struct list_head *next)
+							  struct list_head *prev,
+							  struct list_head *next)
 {
 	next->prev = new;
 	new->next = next;
@@ -79,17 +83,18 @@ static inline void list_add_tail(struct list_head *new, struct list_head *head)
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
-static inline void __list_del(struct list_head * prev, struct list_head * next)
+static inline void __list_del(struct list_head *prev, struct list_head *curr, struct list_head *next)
 {
 	next->prev = prev;
 	prev->next = next;
+	curr->next = curr;
+	curr->prev = curr;
 }
 
 static inline void list_del_entry(struct list_head *entry)
 {
-	__list_del(entry->prev, entry->next);
+	__list_del(entry->prev, entry, entry->next);
 }
-
 
 /**
  * list_is_head - tests whether @list is the list @head
@@ -100,7 +105,6 @@ static inline int list_is_head(const struct list_head *list, const struct list_h
 {
 	return list == head;
 }
-
 
 /**
  * list_empty - tests whether a list is empty

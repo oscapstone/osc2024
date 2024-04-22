@@ -1,5 +1,5 @@
 
-#define VSPRINT_MAX_BUF_SIZE 128
+#define VSPRINT_MAX_BUF_SIZE 1024
 
 
 char getchar();

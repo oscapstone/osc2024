@@ -20,4 +20,3 @@ int mbox_call( mbox_channel_type channel, unsigned int value )
     }
     return 0;
 }
-

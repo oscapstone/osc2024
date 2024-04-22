@@ -3,7 +3,7 @@
 #include "uart1.h"
 #include "exception.h"
 #include "timer.h"
-#include "heap.h"
+#include "memory.h"
 #include "stdio.h"
 
 // DAIF, Interrupt Mask Bits
@@ -125,6 +125,8 @@ void invalid_exception_router(unsigned long long x0)
     uart_puts("invalid exception router: ");
     uart_send('0' + x0);
     uart_puts("\r\n");
+    while (1)
+        ;
 }
 
 // ------------------------------------------------------------------------------------------
@@ -182,7 +184,7 @@ void irqtask_run_preemptive()
     {
         lock();
         irqtask_t *the_task = (irqtask_t *)task_list->next;
-        struct list_head *curr;
+        // struct list_head *curr;
         // uart_puts("---------------------- list for each ----------------------\r\n");
         // list_for_each(curr, task_list)
         // {
@@ -203,15 +205,15 @@ void irqtask_run_preemptive()
         list_del_entry((struct list_head *)the_task);
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
-        
+
         unlock();
-        
+
         irqtask_run(the_task);
-        
+
         lock();
 
         curr_task_priority = prev_task_priority;
-        free(the_task);
+        kfree(the_task);
         unlock();
     }
 }

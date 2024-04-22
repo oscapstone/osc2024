@@ -4,7 +4,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "cpio.h"
-#include "heap.h"
+#include "memory.h"
 #include "dtb.h"
 #include "timer.h"
 #include "uart1.h"
@@ -391,7 +391,7 @@ int do_cmd_exec(int argc, char **argv)
         "eret\n\t"              // Perform exception return. EL1 -> EL0
         ::"r"(c_filedata),
         "r"(ustack + USTACK_SIZE));
-    free(ustack);
+    kfree(ustack);
     // if this is TRAILER!!! (last of file)
     return 0;
 }
