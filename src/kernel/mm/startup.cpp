@@ -12,7 +12,7 @@ void startup_alloc_info() {
   mini_uart_printf("heap %p / (%p ~ %p)\n", heap_cur, __heap_start, __heap_end);
 }
 
-void startup_alloc_reset() {
+void startup_alloc_init() {
   heap_cur = __heap_start;
   set_new_delete_handler(startup_malloc, startup_free);
 }
