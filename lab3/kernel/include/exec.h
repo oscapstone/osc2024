@@ -1,6 +1,0 @@
-
-
-
-
-void exec(char *program);
-

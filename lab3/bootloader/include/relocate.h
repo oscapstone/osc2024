@@ -1,1 +1,0 @@
-void relocate(char *arg);
