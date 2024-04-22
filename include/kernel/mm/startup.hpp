@@ -2,5 +2,6 @@
 
 void startup_alloc_info();
 void startup_alloc_reset();
-void* startup_malloc(int size, int align = 1);
-bool startup_free(int size);
+void* startup_malloc(unsigned long size, unsigned long align = 1);
+void startup_free(void* ptr);
+bool startup_free(unsigned long size);

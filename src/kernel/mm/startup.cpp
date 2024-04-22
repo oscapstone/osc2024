@@ -1,6 +1,7 @@
 #include "mm/startup.hpp"
 
 #include "board/mini-uart.hpp"
+#include "mm/new.hpp"
 #include "util.hpp"
 
 extern char __heap_start[];
@@ -13,9 +14,10 @@ void startup_alloc_info() {
 
 void startup_alloc_reset() {
   heap_cur = __heap_start;
+  set_new_delete_handler(startup_malloc, startup_free);
 }
 
-void* startup_malloc(int size, int al) {
+void* startup_malloc(unsigned long size, unsigned long al) {
   heap_cur = align(heap_cur, al);
   if (!startup_free(size))
     return nullptr;
@@ -24,6 +26,8 @@ void* startup_malloc(int size, int al) {
   return tmp;
 }
 
-bool startup_free(int size) {
+void startup_free(void*) {}
+
+bool startup_free(unsigned long size) {
   return heap_cur + size <= __heap_end;
 }
