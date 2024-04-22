@@ -51,7 +51,8 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
   uart_init();
   uart_flush();
-  // uart_send_string("\nInit UART done\r\n");
+  uart_send_string(
+      "\r\n======================= Kernel starts =======================\r\n");
 }
 
 void shell_input(char *cmd) {
@@ -224,20 +225,47 @@ void shell_controller(char *cmd) {
     enable_uart_interrupt();
     add_task(fake_long_handler, 99);
     pop_task();
-    uart_read_string_async(buf);
-    uart_send_string_async(buf);
+
+    uint32_t n = uart_read_string_async(buf);
+    uart_int(n);
+    uart_send_string(" bytes received: ");
+    uart_puts(buf);
+
+    n = uart_send_string_async(buf);
+    wait_usec(100000);
+    uart_send_string(", ");
+    uart_int(n);
+    uart_puts(" bytes sent");
+
     wait_usec(100000);
     disable_uart_interrupt();
     uart_send_string("\r\n");
   } else if (!strcmp(cmd, "demo_malloc")) {
-    for (int i = 0; i < 20; i++) {
+    int i;
+    for (i = 0; i < 20; i++) {
       ptr_buf[i] = malloc(FRAME_SIZE);
       wait_usec(2000000);
     }
-    for (int i = 20; i < 30; i++) {
-      ptr_buf[i] = malloc(i * 10);
-      wait_usec(2000000);
-    }
+    ptr_buf[i++] = malloc(16);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(16);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(32);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(32);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(64);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(64);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(128);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(128);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(256);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(256);
+    wait_usec(2000000);
   } else if (!strcmp(cmd, "demo_free")) {
     for (int i = 0; i < 30; i++) {
       free(ptr_buf[i]);

@@ -6,7 +6,6 @@
 extern void enable_interrupt();
 extern void disable_interrupt();
 
-static uint32_t cur_priority = NO_TASK;
 static task* t_head = (task*)0;
 
 void add_task(task_callback cb, uint32_t prio) {
@@ -18,8 +17,6 @@ void add_task(task_callback cb, uint32_t prio) {
   new_task->func = cb;
   new_task->next = (task*)0;
   new_task->priority = prio;
-
-  disable_interrupt();
   if (!t_head || t_head->priority > new_task->priority) {
     new_task->next = t_head;
     t_head = new_task;
@@ -38,17 +35,13 @@ void add_task(task_callback cb, uint32_t prio) {
 }
 
 void pop_task() {
-  uint32_t ori_priority = cur_priority;
-  while (t_head && t_head->priority != ori_priority) {
+  task* h_t;
+  while (t_head) {
     disable_interrupt();
-    cur_priority = t_head->priority;
-    enable_interrupt();
-
-    t_head->func();
-
-    disable_interrupt();
+    h_t = t_head;
     t_head = t_head->next;
     enable_interrupt();
+
+    h_t->func();
   }
-  cur_priority = ori_priority;
 }

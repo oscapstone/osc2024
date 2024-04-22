@@ -9,8 +9,6 @@ void kernel_init(void *arg) {
   shell_init();
   fdt_traverse(get_cpio_addr);
   init_mem();
-  // print_cur_el();
-  // print_cur_sp();
 }
 
 void main(void *arg) {

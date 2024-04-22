@@ -132,7 +132,7 @@ void print_cur_el() {
 void print_cur_sp() {
   uint64_t sp_val;
   asm volatile("mov %0, sp" : "=r"(sp_val));
-  uart_send_string("current sp: 0x");
+  uart_send_string("current sp: ");
   uart_hex(sp_val);
   uart_send_string("\r\n");
 }

@@ -6,7 +6,6 @@
 #define UART_INT_PRIORITY 5
 #define TIMER_INT_PRIORITY 8
 #define SW_INT_PRIORITY 90
-#define NO_TASK 101
 
 typedef void (*task_callback)(void);
 

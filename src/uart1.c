@@ -65,7 +65,7 @@ char uart_read() {
   return r == '\r' ? '\n' : r;
 }
 
-void uart_write(uint32_t c) {
+void uart_write(char c) {
   // Check transmitter idle field
   do {
     asm volatile("nop");
@@ -112,6 +112,7 @@ void uart_int(uint64_t d) {
 }
 
 void uart_hex(uint32_t d) {
+  uart_send_string("0x");
   uint32_t n;
   for (int32_t c = 28; c >= 0; c -= 4) {
     // get highest tetrad
@@ -123,6 +124,7 @@ void uart_hex(uint32_t d) {
 }
 
 void uart_hex_64(uint64_t d) {
+  uart_send_string("0x");
   uint64_t n;
   for (int32_t c = 60; c >= 0; c -= 4) {
     n = (d >> c) & 0xF;
@@ -150,7 +152,7 @@ void enable_uart_interrupt() {
                               // GPU IRQ to CORE0's IRQ (bit29: AUX INT)
 }
 
-void uart_write_async(uint32_t c) {
+void uart_write_async(char c) {
   while ((w_b + 1) % MAX_BUF_SIZE == w_f) {  // full buffer -> wait
     asm volatile("nop");
   }

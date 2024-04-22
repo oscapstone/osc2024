@@ -50,7 +50,6 @@ static void del_free_frame(uint32_t frame_idx) {
   frame_node* n = frame_entry_arr[frame_idx].node;
   uint32_t order = frame_entry_arr[frame_idx].order;
   frame_entry_arr[frame_idx].order = BUDDY;
-  frame_entry_arr[frame_idx].node = (frame_node*)0;
 
   if (n == free_frame_lists[order]) {
     free_frame_lists[order] = free_frame_lists[order]->next;
@@ -87,10 +86,6 @@ static int32_t get_alloc_chunk_size(uint32_t n) {
 }
 
 static void init_frames() {
-  uart_send_string("frame_cnt: ");
-  uart_int(FRAME_CNT);
-  uart_send_string("\r\n");
-
   frame_entry_arr =
       (frame_entry*)simple_malloc(sizeof(frame_entry) * FRAME_CNT);
 
@@ -105,16 +100,6 @@ static void init_frames() {
     free_frame_lists[i]->prev = free_frame_lists[i]->next = (frame_node*)0;
     free_frame_lists[i]->addr = (void*)0;
   }
-
-  // for (int i = 1; i < FRAME_CNT; i++) {
-  //   frame_entry_arr[i].order = BUDDY;
-  // }
-  // for (int i = 0; i <= MAX_ORDER; i++) {
-  //   free_frame_lists[i] = (frame_node*)simple_malloc(sizeof(frame_node));
-  //   free_frame_lists[i]->prev = free_frame_lists[i]->next = (frame_node*)0;
-  //   free_frame_lists[i]->addr = (void*)0;
-  // }
-  // add_free_frame(0, MAX_ORDER);
 }
 
 static void init_chunks() {
@@ -170,35 +155,40 @@ static void merge_initial_frames() {
 
   for (int i = 0; i < FRAME_CNT; i++) {
     if (frame_entry_arr[i].status == FREE && frame_entry_arr[i].order >= 0) {
-#ifdef DEBUG
-      uart_send_string("add frame index ");
-      uart_int(i);
-      uart_send_string(" to the free frame list (order");
-      uart_int(frame_entry_arr[i].order);
-      uart_puts(")");
-#endif
       add_free_frame(i, frame_entry_arr[i].order);
     }
   }
 }
 
 void init_mem() {
-  uart_send_string("kernel start address: 0x");
+  uart_send_string("SPIN_TABLE_START: ");
+  uart_hex_64((uint64_t)SPIN_TABLE_START);
+  uart_send_string("\r\n");
+  uart_send_string("SPIN_TABLE_end: ");
+  uart_hex_64((uint64_t)SPIN_TABLE_END);
+  uart_send_string("\r\n");
+  uart_send_string("kernel start address: ");
   uart_hex_64((uint64_t)&__kernel_start);
   uart_send_string("\r\n");
-  uart_send_string("kernel end address: 0x");
+  uart_send_string("kernel end address: ");
   uart_hex_64((uint64_t)&__kernel_end);
   uart_send_string("\r\n");
-  uart_send_string("cpio_start_addr: 0x");
+  uart_send_string("dtb start address: ");
+  uart_hex_64((uint64_t)_dtb_ptr_start);
+  uart_send_string("\r\n");
+  uart_send_string("dtb end address: ");
+  uart_hex_64((uint64_t)_dtb_ptr_end);
+  uart_send_string("\r\n");
+  uart_send_string("cpio_start_addr: ");
   uart_hex_64((uint64_t)cpio_start_addr);
   uart_send_string("\r\n");
-  uart_send_string("cpio_end_addr: 0x");
+  uart_send_string("cpio_end_addr: ");
   uart_hex_64((uint64_t)cpio_end_addr);
   uart_send_string("\r\n");
-  uart_send_string("startup_alloc_start: 0x");
+  uart_send_string("startup_alloc_start: ");
   uart_hex_64((uint64_t)startup_alloc_start);
   uart_send_string("\r\n");
-  uart_send_string("startup_alloc_end: 0x");
+  uart_send_string("startup_alloc_end: ");
   uart_hex_64((uint64_t)startup_alloc_end);
   uart_send_string("\r\n");
 
@@ -207,8 +197,8 @@ void init_mem() {
 
   mem_reserve(SPIN_TABLE_START, SPIN_TABLE_END);
   mem_reserve((void*)&__kernel_start, (void*)&__kernel_end);
-  mem_reserve(cpio_start_addr, cpio_end_addr);
   mem_reserve(_dtb_ptr_start, _dtb_ptr_end);
+  mem_reserve(cpio_start_addr, cpio_end_addr);
   mem_reserve(startup_alloc_start, startup_alloc_end);
 
   merge_initial_frames();
@@ -221,20 +211,6 @@ static void* alloc_frame(uint32_t frame_num) {
          !(free_frame_lists[real_alloc_order]->addr)) {
     real_alloc_order++;
   }
-
-#ifdef DEBUG
-  uart_puts("alloc_frame: ");
-  uart_send_string("frame_num: ");
-  uart_int(frame_num);
-  uart_send_string("\r\n");
-  uart_send_string("least_alloc_order: ");
-  uart_int(least_alloc_order);
-  uart_send_string("\r\n");
-  uart_send_string("real_alloc_order: ");
-  uart_int(real_alloc_order);
-  uart_send_string("\r\n");
-#endif
-
   if (real_alloc_order > MAX_ORDER) {
     uart_puts("No available frame!");
     return (void*)0;
@@ -245,10 +221,18 @@ static void* alloc_frame(uint32_t frame_num) {
   uint32_t frame_idx = address2idx(n->addr);
 
 #ifdef DEBUG
+  uart_send_string("#alloc_frames: ");
+  uart_int(frame_num);
+  uart_send_string(", least_alloc_order: ");
+  uart_int(least_alloc_order);
+  uart_send_string(", real_alloc_order: ");
+  uart_int(real_alloc_order);
+  uart_send_string("\r\n");
   uart_send_string("allocated frame index: ");
   uart_int(frame_idx);
+  uart_send_string(", mem_addr: ");
+  uart_hex_64((uint64_t)n->addr);
   uart_send_string("\r\n");
-  uart_puts("Release redundant memory block: ");
 #endif
 
   // release redundant memory block
@@ -256,11 +240,18 @@ static void* alloc_frame(uint32_t frame_num) {
     real_alloc_order--;
     uint32_t buddy_idx = frame_idx ^ (1 << real_alloc_order);
 #ifdef DEBUG
-
-    uart_send_string("order: ");
-    uart_int(real_alloc_order);
-    uart_send_string(", buddy_idx: ");
-    uart_int(buddy_idx);
+    uart_send_string("split ");
+    uart_hex_64((uint64_t)n->addr);
+    uart_send_string(" ~ ");
+    uart_hex_64((uint64_t)n->addr + pow(2, real_alloc_order + 1) * 4096);
+    uart_puts(" to ");
+    uart_hex_64((uint64_t)n->addr);
+    uart_send_string(" ~ ");
+    uart_hex_64((uint64_t)n->addr + pow(2, real_alloc_order) * 4096);
+    uart_send_string(" and ");
+    uart_hex_64((uint64_t)n->addr + pow(2, real_alloc_order) * 4096);
+    uart_send_string(" ~ ");
+    uart_hex_64((uint64_t)n->addr + 2 * pow(2, real_alloc_order) * 4096);
     uart_send_string("\r\n");
 #endif
     add_free_frame(buddy_idx, real_alloc_order);
@@ -268,11 +259,6 @@ static void* alloc_frame(uint32_t frame_num) {
 
   frame_entry_arr[frame_idx].status = ALLOCATED;
   frame_entry_arr[frame_idx].order = real_alloc_order;
-#ifdef DEBUG
-  uart_send_string("real_alloc_order after relase: ");
-  uart_int(real_alloc_order);
-  uart_send_string("\r\n\n");
-#endif
 
   return idx2address(frame_idx);
 }
@@ -287,12 +273,10 @@ static void* alloc_chunk(uint32_t size) {
   }
 
 #ifdef DEBUG
-  uart_puts("alloc_chunk: ");
-  uart_send_string("alloc_idx: ");
-  uart_int(alloc_idx);
-  uart_send_string(", alloc_size: ");
+  uart_send_string("alloc_chunk: ");
+  uart_send_string(" alloc_size=");
   uart_int(alloc_size);
-  uart_send_string("\r\n\n");
+  uart_send_string("\r\n");
 #endif
 
   if (!free_chunk_lists[alloc_idx]) {
@@ -319,7 +303,7 @@ void* malloc(uint32_t size) {
     return (void*)0;
   }
 #ifdef DEBUG
-  uart_send_string("malloc ");
+  uart_send_string("\r\nmalloc ");
   uart_int(size);
   uart_puts(" bytes");
 #endif
@@ -351,7 +335,7 @@ static void free_chunk(void* addr) {
   uart_puts("free chunk:");
   uart_send_string("chunk size: ");
   uart_int(chunk_entry_arr[frame_idx].size);
-  uart_send_string(", # of chunks in mem pool after free: ");
+  uart_send_string(", #chunks in mem pool after free: ");
   uart_int(chunk_entry_arr[frame_idx].free_chunk_cnt);
   uart_send_string("\r\n");
 #endif
@@ -361,7 +345,7 @@ static void free_chunk(void* addr) {
     chunk_entry_arr[frame_idx].is_mem_pool = 0;
     free_chunk_lists[alloc_idx] = (chunk_node*)0;
 #ifdef DEBUG
-    uart_puts("free the memory pool\n");
+    uart_puts("free the memory pool");
 #endif
   } else {
     add_free_chunk(addr, alloc_idx);
@@ -375,37 +359,42 @@ static void free_frame(void* addr) {
     return;
   }
 
-  uint32_t buddy_idx = frame_idx ^ (1 << frame_entry_arr[frame_idx].order);
 #ifdef DEBUG
-  uart_puts("free frame:");
-  uart_send_string("frame_idx: ");
+  uart_send_string("free frame: ");
+  uart_send_string("idx= ");
   uart_int(frame_idx);
-  uart_send_string(", order: ");
+  uart_send_string(", mem_addr= ");
+  uart_hex_64((uint64_t)addr);
+  uart_send_string(", order= ");
   uart_int(frame_entry_arr[frame_idx].order);
   uart_send_string("\r\n");
-  uart_puts("found buddy to merge:");
+
 #endif
+
+  uint32_t buddy_idx = frame_idx ^ (1 << frame_entry_arr[frame_idx].order);
+
   // coalesce blocks
   while (
       frame_entry_arr[frame_idx].order < MAX_ORDER &&
       (frame_entry_arr[frame_idx].order == frame_entry_arr[buddy_idx].order) &&
       frame_entry_arr[buddy_idx].status == FREE) {
 #ifdef DEBUG
-    uart_send_string("order: ");
-    uart_int(frame_entry_arr[frame_idx].order);
-    uart_send_string(", buddy_idx: ");
+    uart_send_string("merge frame");
+    uart_int(frame_idx);
+    uart_send_string(" with frame");
     uart_int(buddy_idx);
+    uart_send_string(" - order: ");
+    uart_int(frame_entry_arr[frame_idx].order);
     uart_send_string("\r\n");
 #endif
+
     del_free_frame(buddy_idx);
     frame_entry_arr[frame_idx].order++;
-
     if (buddy_idx < frame_idx) {
       frame_entry_arr[buddy_idx].order = frame_entry_arr[frame_idx].order;
       frame_entry_arr[frame_idx].order = BUDDY;
       frame_idx = buddy_idx;
     }
-
     buddy_idx = frame_idx ^ (1 << frame_entry_arr[frame_idx].order);
   }
 
@@ -414,11 +403,14 @@ static void free_frame(void* addr) {
 #ifdef DEBUG
   uart_send_string("final order after merge: ");
   uart_int(frame_entry_arr[frame_idx].order);
-  uart_send_string("\r\n\n");
+  uart_send_string("\r\n");
 #endif
 }
 
 void free(void* addr) {
   free_chunk(addr);
   free_frame(addr);
+#ifdef DEBUG
+  uart_send_string("\r\n");
+#endif
 }
