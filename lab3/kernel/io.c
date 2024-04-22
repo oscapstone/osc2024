@@ -24,7 +24,14 @@ void read_s(char *s) {
 
     s[input_index] = 0;
 }
-void print_char(char c) { return uart_send(c); }
-void print_string(char *s) { return uart_puts(s); }
 
-void print_h(int x) { uart_hex(x); }
+void print_char(const char c) { return uart_send(c); }
+void print_string(const char *s) { return uart_puts(s); }
+void print_h(const int x) { uart_hex(x); }
+
+void print_d(const int x) {
+    char buffer[10];
+
+    itoa(x, buffer, 10);
+    print_string(buffer);
+}

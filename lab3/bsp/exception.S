@@ -1,5 +1,3 @@
-#include "exception.h"
-
 .section ".text"
 
 .global set_exception_vector_table
@@ -69,63 +67,52 @@
     eret
 .endm
 
-
-.align 11 // vector table should be aligned to 0x800 (2^11 = 0x1000_0000_0000 = 0x800)
+.align 11 // aligned to 0x800 (2^11 = 0x1000_0000_0000 = 0x800)
 exception_vector_table:
-
-    //==========================================================
     // Exception from the current EL while using SP_EL0 (exception level not changed)
-
     ventry SYNC_EL1T        /* Synchronous EL1t */
     ventry IRQ_EL1T         /* IRQ or vIRQ EL1t */
     ventry FIQ_EL1T         /* FIQ or vFIQ EL1t */
     ventry SERROR_EL1T      /* SError or vSError EL1t */
     
-
-    //==========================================================
     // Exception from the current EL while using SP_ELx (exception level not changed)
-
     ventry SYNC_EL1H        /* Synchronous EL1h */
-    ventry el1_irq_handler  /* IRQ or vIRQ EL1h */
+    ventry IRQ_EL1H         /* IRQ or vIRQ EL1h */
     ventry FIQ_EL1H         /* FIQ or vFIQ EL1h */
     ventry SERROR_EL1H      /* SError or vSError EL1h */
 
-    //==========================================================
     // Exception from a lower EL and all lower ELs are AArch64 (Moves to higher exception level)
-
     ventry SYNC_64_EL0T     /* Synchronous EL0t */
-    ventry el0_irq_handler  /* IRQ or vIRQ EL0t */
+    ventry IRQ_64_EL0T      /* IRQ or vIRQ EL0t */
     ventry FIQ_64_EL0T      /* FIQ or vFIQ EL0t */
     ventry SERROR_64_EL0T   /* SError or vSError EL0t */
-    //==========================================================
+
     // Exception from a lower EL and all lower ELs are AArch32 Moves to higher exception level
-
-
     ventry SYNC_32_EL0T     /* Synchronous 32-bit EL0t */
     ventry IRQ_32_EL0T      /* IRQ or vIRQ 32-bit EL0t */
     ventry FIQ_32_EL0T      /* FIQ or vFIQ 32-bit EL0t */
     ventry SERROR_32_EL0T   /* SError or vSError 32-bit EL0t */
 
 // using wrapper to define the handler
-handler_warpper     SYNC_EL1T           default_exception_entry     SYNC_INVALID_EL1t
-handler_warpper     IRQ_EL1T            default_exception_entry     IRQ_INVALID_EL1t
-handler_warpper     FIQ_EL1T            default_exception_entry     FIQ_INVALID_EL1t
-handler_warpper     SERROR_EL1T         default_exception_entry     ERROR_INVALID_EL1t
+handler_warpper     SYNC_EL1T           default_exception_entry     0
+handler_warpper     IRQ_EL1T            default_exception_entry     1
+handler_warpper     FIQ_EL1T            default_exception_entry     2
+handler_warpper     SERROR_EL1T         default_exception_entry     3
         
-handler_warpper     SYNC_EL1H           default_exception_entry     SYNC_INVALID_EL1h
-handler_warpper     el1_irq_handler     el1_irq_entry               IRQ_INVALID_EL1h
-handler_warpper     FIQ_EL1H            default_exception_entry     FIQ_INVALID_EL1h
-handler_warpper     SERROR_EL1H         default_exception_entry     ERROR_INVALID_EL1h
+handler_warpper     SYNC_EL1H           default_exception_entry     4
+handler_warpper     IRQ_EL1H            el1_irq_entry               5
+handler_warpper     FIQ_EL1H            default_exception_entry     6
+handler_warpper     SERROR_EL1H         default_exception_entry     7
         
-handler_warpper     SYNC_64_EL0T        svc_exception_entry         SYNC_INVALID_EL0_64
-handler_warpper     el0_irq_handler     el0_irq_entry               IRQ_INVALID_EL0_64
-handler_warpper     FIQ_64_EL0T         default_exception_entry     FIQ_INVALID_EL0_64
-handler_warpper     SERROR_64_EL0T      default_exception_entry     ERROR_INVALID_EL0_64
+handler_warpper     SYNC_64_EL0T        svc_exception_entry         8
+handler_warpper     IRQ_64_EL0T         el0_irq_entry               9
+handler_warpper     FIQ_64_EL0T         default_exception_entry     10
+handler_warpper     SERROR_64_EL0T      default_exception_entry     11
         
-handler_warpper     SYNC_32_EL0T        default_exception_entry     SYNC_INVALID_EL0_32
-handler_warpper     IRQ_32_EL0T         default_exception_entry     IRQ_INVALID_EL0_32
-handler_warpper     FIQ_32_EL0T         default_exception_entry     FIQ_INVALID_EL0_32
-handler_warpper     SERROR_32_EL0T      default_exception_entry     ERROR_INVALID_EL0_32
+handler_warpper     SYNC_32_EL0T        default_exception_entry     12
+handler_warpper     IRQ_32_EL0T         default_exception_entry     13
+handler_warpper     FIQ_32_EL0T         default_exception_entry     14
+handler_warpper     SERROR_32_EL0T      default_exception_entry     15
 
 set_exception_vector_table:
     adr x0, exception_vector_table  // get the base address of the exception vector table
@@ -166,3 +153,4 @@ from_el1_to_el0:
     msr sp_el0, x1      // pass the stack pointer address from arg
     msr elr_el1, x0     // pass the program's start address from arg
     eret
+

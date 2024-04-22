@@ -25,14 +25,15 @@ void fdt_traverse(void (*callback)(void *)) {
     uint8_t *ptr = structure;  // Point to the beginning of structure block
     while (ptr < strings + totalsize) {
         uint32_t token = be2le((char *)ptr);
-#ifdef DEBUG
-        print_string("\nptr / strings + totalsize: ");
-        print_h((uint32_t)ptr);
-        print_string(" / ");
-        print_h((uint32_t)(strings + totalsize));
-        print_string(" / ");
-        print_h(token);
-#endif
+// #ifdef DEBUG
+//         print_string("\n[fdt_traverse] ");
+//         print_string("\nptr / strings + totalsize: ");
+//         print_h((uint32_t)ptr);
+//         print_string(" / ");
+//         print_h((uint32_t)(strings + totalsize));
+//         print_string(" / ");
+//         print_h(token);
+// #endif
         ptr += 4;  // Token takes 4 bytes
 
         switch (token) {
@@ -48,7 +49,7 @@ void fdt_traverse(void (*callback)(void *)) {
                 uint32_t nameoff = be2le((char *)ptr);
                 ptr += 4;
 #if DEBUG
-                print_string("\n");
+                print_string("\n[fdt_traverse] ");
                 print_string((char *)strings + nameoff);
 #endif
                 if (strcmp((char *)(strings + nameoff), "linux,initrd-start") ==

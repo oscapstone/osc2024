@@ -1,7 +1,8 @@
 #ifndef _RAMFS_H
 #define _RAMFS_H
 
-#include "../../lib/utils.h"
+#include "lib/stdlib.h"
+#include "lib/utils.h"
 
 typedef struct cpio_newc_header {
     char c_magic[6];  // The string 070701 for new ASCII
@@ -32,8 +33,7 @@ typedef struct {
 void init_ramfs_callback(void *base_addr);
 FileList *ramfs_get_file_list();
 char *ramfs_get_file_contents(char *file_name);
-// Convert hexadecimal string to int
-// @param s: hexadecimal string
-// @param n: string length
+uint32_t ramfs_get_file_size(char *file_name);
+void ramfs_execute_file(char *file_name);
 
 #endif

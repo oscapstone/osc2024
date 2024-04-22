@@ -1,15 +1,16 @@
 #include "memory.h"
 
+#include "io.h"
 #include "lib/stdlib.h"
 
-extern int __bss_end;
-#define HEAP_MAX (&__bss_end) + 0x100
+extern int _end;
+#define HEAP_MAX (&_end) + 0x10000
 
 static char *heap_top;
 
 void init_memory() {
-    heap_top = (&__bss_end);
-    heap_top++;
+    heap_top = (&_end);
+    // heap_top++;
 }
 
 void *simple_malloc(unsigned int size) {
@@ -17,6 +18,7 @@ void *simple_malloc(unsigned int size) {
         return NULL;
     }
     if(heap_top + size >= HEAP_MAX) {
+        print_string("Out of memory\n");
         return NULL;
     }
     void *ret = heap_top;

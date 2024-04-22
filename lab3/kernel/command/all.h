@@ -13,5 +13,8 @@ extern struct Command reboot_command;
 extern struct Command ls_command;
 extern struct Command cat_command;
 extern struct Command test_malloc_command;
+extern struct Command async_io_demo_command;
+extern struct Command exec_command;
+extern struct Command set_timeout_command;
 
 #endif

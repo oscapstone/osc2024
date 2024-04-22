@@ -10,8 +10,14 @@ bootloader:
 kernel:
 	$(MAKE) -C kernel LIB_PATH=$(CURDIR)/lib BSP_PATH=$(CURDIR)/bsp
 
+debug-kernel:
+	$(MAKE) -C kernel DEBUG=1 LIB_PATH=$(CURDIR)/lib BSP_PATH=$(CURDIR)/bsp
+
 run-kernel:
 	$(MAKE) -C kernel run QEMU_OPTS="$(QEMU_OPTS)"
+
+run-debug-kernel:
+	$(MAKE) -C kernel run DEBUG=1 QEMU_OPTS="$(QEMU_OPTS)"
 
 run-bootloader:
 	$(MAKE) -C bootloader run QEMU_OPTS="$(QEMU_OPTS)"
