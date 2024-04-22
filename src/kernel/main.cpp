@@ -1,3 +1,5 @@
+#include "main.hpp"
+
 #include "board/mini-uart.hpp"
 #include "fdt.hpp"
 #include "fs/initramfs.hpp"
@@ -9,9 +11,11 @@
 #include "mm/startup.hpp"
 #include "shell/shell.hpp"
 
-extern "C" void kernel_main(void* dtb_addr) {
+void kernel_main(void* dtb_addr, uint32_t kernel_size) {
   mini_uart_setup();
   mini_uart_puts("Hello Kernel!\n");
+  mini_uart_printf("Kernel size: %u\n", kernel_size);
+  mini_uart_printf("Kernel start: %p\n", _start);
   mini_uart_printf("Exception level: %d\n", get_el());
 
   startup_alloc_init();

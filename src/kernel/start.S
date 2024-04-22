@@ -6,6 +6,8 @@
 _start:
     // save dtb addr
     mov     x19, x0
+    // save kernel size
+    mov     x20, x1
 
     mrs     x0, MPIDR_EL1
     and     x0, x0, #0x3
@@ -42,6 +44,8 @@ primary_cpu_el1:
 
     // restore dtb addr
     mov     x0, x19
+    // restore kernel size
+    mov     x1, x20
     bl      kernel_main
 
     b       prog_hang

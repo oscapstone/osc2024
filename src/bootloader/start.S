@@ -29,7 +29,7 @@ primary_cpu:
 
     // restore dtb addr
     mov     x0, x19
-    bl      kernel_main
+    bl      bootloader_main
 
     b       prog_hang
 
