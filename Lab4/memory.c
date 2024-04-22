@@ -17,7 +17,7 @@ extern char _end;
 #define MAX_ORDER 5
 #define PAGE_SIZE 4096  // Assuming a page size of 4KB
 #define MEMORY_START 0x00 //0x10000000
-#define MEMORY_SIZE 0x3C000000 //0x10000000 
+#define MEMORY_SIZE 0x3C000000 //simply hardcode, get 0x3B400000 in the device tree
 #define FRAME_COUNT (MEMORY_SIZE / PAGE_SIZE)
 
 typedef struct frame {
@@ -154,6 +154,7 @@ void memory_reserve(unsigned long start, unsigned long end) {
 }
 
 void frames_init(){
+    get_memory(dtb_start);
     status_instruction();
     void * base = (void *) &_end;
     frames = simple_alloc(&base ,(int) sizeof(frame_t) * FRAME_COUNT);

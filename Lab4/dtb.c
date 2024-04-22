@@ -138,3 +138,108 @@ void fdt_tranverse(void * dtb_base, char *target_property, void (*callback)(char
             break;
     }
 }
+
+void get_memory(void * dtb_base)
+{
+    int lookfor = 0;
+    struct fdt_header * header = (struct fdt_header *) dtb_base;
+    
+    unsigned int temp, offset_struct, offset_strings, magic;
+
+    magic = big_to_little_endian(header -> magic);
+
+    if (magic != FDT_MAGIC_NUMBER) //0xD00DFEED
+    {
+        uart_puts("Invalid device tree\n");
+        return;
+    }
+
+    unsigned int totalsize = big_to_little_endian(header -> totalsize);
+
+    if(dtb_start == 0){
+        dtb_start = dtb_base;
+        dtb_end = dtb_start + totalsize;
+    }
+
+    //value in dtb is big endian
+    offset_struct = big_to_little_endian(header -> off_dt_struct); //the offset to get the structure block
+    offset_strings = big_to_little_endian(header -> off_dt_strings); //the offset to get the property name
+
+    char *newAddress = dtb_base + offset_struct;
+    char *string_address = dtb_base + offset_strings;
+    
+
+    // parse nodes
+    while (1)
+    {
+        unsigned int token = big_to_little_endian_add(newAddress);
+        newAddress += 4; //skip token
+        //parse_new_node(newAddress, dtb_base + offset_strings, target_property, callback);
+
+        if (token == FDT_BEGIN_NODE_TOKEN){
+            int cnt = 0;
+            while(*newAddress != NULL){
+                cnt++;
+                newAddress++;
+            }
+
+            int align = (4 -  cnt % 4);            
+            if(align != 4)
+                newAddress += align;
+
+        }
+        else if(token == FDT_PROP_TOKEN){
+            
+            /*
+            struct {
+                uint32_t len;
+                uint32_t nameoff;
+            }*/
+
+            // get the length of attribute
+            int len = big_to_little_endian_add(newAddress);
+            newAddress += 4;
+            
+            // get the length to find the target attribute
+            int temp = big_to_little_endian_add(newAddress);
+            newAddress += 4;
+
+            if (strcmp(string_address + temp, "device_type") == 0)
+            {
+                if(strcmp(newAddress, "memory") == 0){
+                    lookfor = 1;
+                }
+            }
+
+            if(strcmp(string_address + temp, "reg") == 0 && lookfor){
+
+                uart_puts("Memory regions:\n");
+                // Assuming each address and size is 4 bytes for simplicity:
+                int num_regions = len / 8;
+                uart_puts("The length of current reg node")
+                uart_int(len);
+                for (int i = 0; i < num_regions; i++) {
+                    unsigned int addr = big_to_little_endian_add(newAddress);
+                    newAddress += 4;
+                    unsigned int size = big_to_little_endian_add(newAddress);
+                    newAddress += 4;
+                    uart_puts("Range = ");
+                    uart_hex(addr);
+                    uart_puts(", Size = ");
+                    uart_hex(size);
+                    uart_puts("\n");
+                }
+                lookfor = 0;
+            }
+
+            // jump the value of the attribute
+            newAddress += len;
+            int align = (4 -  len % 4);            
+            if(align != 4)
+                newAddress += align;
+
+        }
+        else if(token == FDT_END_TOKEN)
+            break;
+    }
+}
