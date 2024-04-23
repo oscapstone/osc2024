@@ -36,7 +36,7 @@ void set_timer_interrupt(unsigned long second){//and set next
 
 void add_timer(timer_callback_t callback, char* data, unsigned long after){
     //uart_int(after);
-    asm volatile("msr DAIFSet, 0xf");
+    //asm volatile("msr DAIFSet, 0xf");
     int i;
     int allocated = 0;
 
@@ -83,7 +83,7 @@ void add_timer(timer_callback_t callback, char* data, unsigned long after){
     uart_puts("\rSeconds to print: ");
     uart_int(print_time);
     uart_puts("\n");
-    asm volatile("msr DAIFClr, 0xf");
+    //asm volatile("msr DAIFClr, 0xf");
 }
 
 
@@ -156,7 +156,7 @@ void disable_core_timer() {
 }
 
 void timer_handler() {
-    asm volatile("msr DAIFSet, 0xf");
+    //asm volatile("msr DAIFSet, 0xf");
     unsigned long cur_time = get_current_time();
     unsigned long next = 9999;
     for(int i=0;i<MAX_TIMER;i++){
@@ -177,5 +177,5 @@ void timer_handler() {
         set_timer_interrupt(next - cur_time);
         //uart_puts("resetted another timer\n");
     }
-    asm volatile("msr DAIFClr, 0xf");
+    //asm volatile("msr DAIFClr, 0xf");
 }

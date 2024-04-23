@@ -46,6 +46,8 @@ void create_task(task_func_t callback, unsigned int priority){
     //asm volatile("msr DAIFClr, 0xf");
 }
 
+// asm volatile("msr DAIFSet, 0xf");
+// asm volatile("msr DAIFClr, 0xf");
 void execute_task(){
     while(task_queue.task_count != 0){
         int next_min = 999;

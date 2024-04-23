@@ -48,6 +48,7 @@ void uart_write_handler(){
     else{
         *AUX_MU_IER &= ~(0x02);
     }
+    
     if(ch == '\r'){
         shell(async_cmd);
         write_cur = 0;
