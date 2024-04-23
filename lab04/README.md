@@ -20,3 +20,8 @@ make
 ```
 make QEMU
 ```
+
+```
+## debug for qemu
+make DEBUG
+```
