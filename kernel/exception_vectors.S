@@ -77,8 +77,8 @@ exception_vector_table:
     b default_handler
     .align 7
 
-    /* exception from lower EL */
-    b exception_handler
+    /* exception from current EL */
+    b default_handler
     .align 7
     b default_handler
     .align 7
@@ -87,8 +87,8 @@ exception_vector_table:
     b default_handler
     .align 7
 
-    /* exception from current EL */
-    b exception_handler     // TODO: why here? and still other program raise exception
+    /* exception from lower EL */
+    b exception_handler
     .align 7
     b interrupt_handler   // interrupt
     .align 7

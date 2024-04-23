@@ -17,16 +17,15 @@ void _init_core_timer(void)
 {
     // enable timer
     asm("mov x0, 1");
-    asm("msr cntp_ctl_el0, x0");
+    asm("msr cntp_ctl_el0, x0");    // enable timer interrupt (timer control)
 
     // set expired time
-    asm("mov x0, %0" : : "r"(EXPIRE_PERIOD));
+    asm("mrs x0, cntfrq_el0");  // interrupt in 1 sec (as the lab website)
     asm("msr cntp_tval_el0, x0");
 
     // unmask timer interrupt
     asm("mov x0, 2");
-    // asm("ldr x1, =%0" : : "r"(CORE0_TIMER_IRQ_CTRL));
-    asm("ldr x1, =0x40000040");
+    asm("ldr x1, =%0" : : "i"(CORE0_TIMER_IRQ_CTRL));
     asm("str x0, [x1]");
 }
 
@@ -67,17 +66,18 @@ void handle_interrupt(void)
     uart_puts(" seconds after booting...\n");
 
     // set next timeout
-    asm("mov x0, 0xfffffff");
+    asm("mov x0, %0" : : "r"(freq * 1));
     asm("msr cntp_tval_el0, x0");
 }
 
 void el2_to_el1(void)
 {
-    asm("mov x0, (1 << 31)");
+    // Ref: https://developer.arm.com/documentation/den0024/a/ARMv8-Registers/Processor-state
+    asm("mov x0, (1 << 31)");   // EL1 uses aarch64
     asm("msr hcr_el2, x0");
-    asm("mov x0, 0x3c5");
+    asm("mov x0, 0x3c5");       // EL1h with interrupt disabled
     asm("msr spsr_el2, x0");
-    asm("msr elr_el2, lr");
+    asm("msr elr_el2, lr");     // link register (subroutine return addr)
     asm("eret");
 }
 
@@ -87,7 +87,8 @@ void el1_to_el0(void)
     // Output/Input Operands
     uart_puts("EL1 to EL0\n");
 
-    asm("mov x0, 0");   // enable interrupt in EL0
+    // enable irq: 0x000, disable irq: 0x3c0
+    asm("mov x0, 0x000");
     asm("msr spsr_el1, x0");                                // state
     asm("msr elr_el1, %0" : : "r" (&__userspace_start));    // return address
     asm("msr sp_el0, %0" : : "r" (&__userspace_end));       // stack pointer

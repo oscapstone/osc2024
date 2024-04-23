@@ -13,6 +13,7 @@ void _init_core_timer(void);
 
 void handle_exception(void);
 void handle_interrupt(void);
+void _handle_timer(void);
 
 // exception level
 void el2_to_el1(void);
