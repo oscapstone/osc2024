@@ -5,14 +5,14 @@
 timer_heap *create_timer_heap(int capacity)
 {
     // Allocating memory to heap h
-    timer_heap *h = (timer_heap *)simple_malloc(sizeof(timer_heap));
+    timer_heap *h = (timer_heap *)kmalloc(sizeof(timer_heap));
 
     // set the values to size and capacity
     h->size = 0;
     h->capacity = capacity;
 
     // Allocating memory to array
-    h->arr = (timer *)simple_malloc(capacity * sizeof(timer));
+    h->arr = (timer *)kmalloc(capacity * sizeof(timer));
 
     return h;
 }

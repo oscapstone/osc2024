@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "allocator.h"
 #include "timer.h"
 
 #define MAX_TIMER_HEAP_SIZE 256
@@ -61,6 +62,8 @@ void print_message(void *data, int executed_time)
     uart_puts("s\ncurrent time: ");
     uart_dec(cntpct_el0 / cntfrq_el0);
     uart_puts("s\n");
+
+    kfree(message);
 }
 
 void periodic_timer(void *data, int executed_time)

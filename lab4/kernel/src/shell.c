@@ -81,7 +81,7 @@ void shell_cmd(char *cmd)
             message_end++;
 
         int size = message_end - message_start + 1;
-        char *message = simple_malloc(sizeof(char) * size); // malloc for message
+        char *message = kmalloc(sizeof(char) * size); // malloc for message
         for (int i = 0; i < size; i++)
             message[i] = message_start[i];
         message[size - 1] = '\0';
@@ -89,13 +89,34 @@ void shell_cmd(char *cmd)
         int second = atoi(message_end + 1);
         setTimeout(message, second);
     }
-    else if (my_strcmp(cmd, "test") == 0)
+    else if (my_strcmp(cmd, "test preemption") == 0)
     {
         uart_puts("\n");
         test_preemption();
         int count = 100000; // wait for interrupt
         while (count--)
             asm volatile("nop\n");
+    }
+    else if (my_strcmp(cmd, "test block") == 0)
+    {
+        uart_puts("\n");
+        print_free_area();
+        char *ptr = kmalloc(5000);
+        kfree(ptr);
+    }
+    else if (my_strcmp(cmd, "test object") == 0)
+    {
+        uart_puts("\n");
+        print_free_object();
+        char *ptr_arr[64];
+
+        for (int i = 0; i < 65; i++)
+            ptr_arr[i] = kmalloc(64);
+
+        uart_puts("-----------------------------------------------------\n");
+        uart_puts("-----------------------------------------------------\n");
+        
+        kfree(ptr_arr[0]);
     }
     else
         uart_puts("\n");

@@ -5,14 +5,14 @@
 task_heap *create_task_heap(int capacity)
 {
     // Allocating memory to heap h
-    task_heap *h = (task_heap *)simple_malloc(sizeof(task_heap));
+    task_heap *h = (task_heap *)kmalloc(sizeof(task_heap));
 
     // set the values to size and capacity
     h->size = 0;
     h->capacity = capacity;
 
     // Allocating memory to array
-    h->arr = (task *)simple_malloc(capacity * sizeof(task));
+    h->arr = (task *)kmalloc(capacity * sizeof(task));
 
     return h;
 }
