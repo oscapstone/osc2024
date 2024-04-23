@@ -16,13 +16,13 @@ extern char _end;
 
 #define MAX_ORDER 5
 #define PAGE_SIZE 4096  // Assuming a page size of 4KB
-//#define MEMORY_START 0x00 //0x10000000
-//#define MEMORY_SIZE 0x3C000000 //simply hardcode, get 0x3B400000 in the device tree
-//#define FRAME_COUNT (MEMORY_SIZE / PAGE_SIZE)
+#define MEMORY_START 0x00 //0x10000000
+#define MEMORY_SIZE 0x3C000000 //simply hardcode, get 0x3B400000 in the device tree
+#define FRAME_COUNT (MEMORY_SIZE / PAGE_SIZE)
 
 typedef struct frame {
     //save order and status for convinence to maintain, use convert_val_and_print() to convert to the actual entry var.
-    int index; //just lazy to calculate
+    int index;
     int order;
     int status;
     struct frame *next;
@@ -30,7 +30,6 @@ typedef struct frame {
 } frame_t;
 
 frame_t *frames;//[FRAME_COUNT];
-int frame_count;
 
 //startup allocation
 void *simple_alloc(void **cur, int size) {
@@ -134,12 +133,12 @@ Reserve memories:
 */
 
 void memory_reserve(unsigned long start, unsigned long end) {
-    unsigned long start_index = (start - memory_start) / PAGE_SIZE;
-    unsigned long end_index = (end - memory_start) / PAGE_SIZE;
-    if((end - memory_start) % PAGE_SIZE != 0)
+    unsigned long start_index = (start - MEMORY_START) / PAGE_SIZE;
+    unsigned long end_index = (end - MEMORY_START) / PAGE_SIZE;
+    if((end - MEMORY_START) % PAGE_SIZE != 0)
         end_index++;
 
-    for (unsigned long i = start_index; i <= end_index && i < frame_count; i++) {
+    for (unsigned long i = start_index; i <= end_index && i < FRAME_COUNT; i++) {
         if (frames[i].status == -1) {
             frames[i].status = 1;
             remove_from_freelist(&frames[i]);
@@ -157,15 +156,14 @@ void memory_reserve(unsigned long start, unsigned long end) {
 
 void frames_init(){
     get_memory(dtb_start);
-    frame_count = (memory_end - memory_start) / PAGE_SIZE;
     status_instruction();
     void * base = (void *) &_end;
-    frames = simple_alloc(&base ,(int) sizeof(frame_t) * frame_count);
+    frames = simple_alloc(&base ,(int) sizeof(frame_t) * FRAME_COUNT);
     fl = simple_alloc(&base, (int) sizeof(freelist_t) * (MAX_ORDER + 1));
     pools = simple_alloc(&base, (int) sizeof(memory_pool_t) * NUM_POOLS);
-    uart_int(frame_count);
-    uart_puts("\n\r");
-    for(int i=0; i<frame_count; i++){
+    uart_int(FRAME_COUNT);
+    uart_puts("\n");
+    for(int i=0; i<FRAME_COUNT; i++){
         frames[i].index = i;
         frames[i].order = 0;
         frames[i].status = -1; // not allocated
@@ -174,7 +172,7 @@ void frames_init(){
     }
     fl[0].head = frames;
     frame_t * temp = fl[0].head;
-    for(int i=1; i<frame_count; i++){ //when init, small is in front
+    for(int i=1; i<FRAME_COUNT; i++){
         temp -> next = &frames[i];
         temp -> next -> prev = temp;
         temp = temp -> next;
@@ -182,7 +180,7 @@ void frames_init(){
     //handle reserve here, remove reserved from freelist and set status to allocated
     // memory_reserve(0x0000, 0x1000);
     // memory_reserve(0x80000, base);
-    memory_reserve(0x0000, base); //to save the stack from being allocated
+    memory_reserve(0x0000, base);
     memory_reserve(cpio_base, cpio_end);
     memory_reserve(dtb_start, dtb_end);
     uart_getc();
@@ -197,7 +195,7 @@ void merge_free(frame_t *frame, int print) {
     int buddy_index = index ^ (1 << order);
 
     // check buddy status
-    if (buddy_index < frame_count && frames[buddy_index].status == -1 && frames[buddy_index].order == order) {
+    if (buddy_index < FRAME_COUNT && frames[buddy_index].status == -1 && frames[buddy_index].order == order) {
         // start merging
         remove_from_freelist(frame);
         remove_from_freelist(&frames[buddy_index]);
@@ -226,10 +224,10 @@ void merge_free(frame_t *frame, int print) {
 
 void merge_all(int print) {
     int merged = 0;
-    for (int i = 0; i < frame_count; i++) {
+    for (int i = 0; i < FRAME_COUNT; i++) {
         if (frames[i].status == -1 && frames[i].order < MAX_ORDER) {  // Check only non-allocated frames
             int bud = i ^ (1 << frames[i].order);  // Calculate buddy index
-            if (bud < frame_count && frames[bud].status == -1 && frames[bud].order == frames[i].order) {
+            if (bud < FRAME_COUNT && frames[bud].status == -1 && frames[bud].order == frames[i].order) {
                 int min_index = (i < bud) ? i : bud;
                 int max_index = (i > bud) ? i : bud;
 
@@ -271,7 +269,7 @@ void free_page(unsigned long address){
     3. merge pages
     */
     
-    int i = (address - memory_start)/PAGE_SIZE;
+    int i = (address - MEMORY_START)/PAGE_SIZE;
     uart_int(i);
     uart_puts(" in freepage\n");
     if(frames[i].status == 1){
@@ -336,7 +334,7 @@ void* allocate_page(unsigned long size) {
             uart_int(frame->order);
             uart_puts("\n");
             uart_send('\r');
-            return (void*)(memory_start + frame->index * PAGE_SIZE);
+            return (void*)(MEMORY_START + frame->index * PAGE_SIZE);
         }
     }
     

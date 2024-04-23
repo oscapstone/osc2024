@@ -9,8 +9,6 @@ extern char* cpio_base;
 extern char* cpio_end;
 extern char* dtb_start;
 extern char* dtb_end;
-extern unsigned long memory_start;
-extern unsigned long memory_end;
 
 void initramfs_start_callback(char *address);
 void initramfs_end_callback(char *address);
