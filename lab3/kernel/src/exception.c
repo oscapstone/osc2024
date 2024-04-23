@@ -38,24 +38,28 @@ void el1_interrupt_disable() {
 }
 
 void el1h_irq_router() {
+    // lock();
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) {
         if (*AUX_MU_IER_REG & 2) {
-            uart_puts("Write\r\n");
-            // *AUX_MU_IER_REG &= ~(2); // disable write interrupt
+            uart_puts("[el1h][irq][uart] Write Exception\r\n");
+            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             // irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             // unlock();
             // irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IER_REG & 1) {
-            uart_puts("Read\r\n");
-            // *AUX_MU_IER_REG &= ~(1); // disable read interrupt
+            uart_puts("[el1h][irq][uart] Read Exception\r\n");
+            *AUX_MU_IER_REG &= ~(1);
+             // disable read interrupt
+            // unlock();
             // irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             // unlock();
             // irqtask_run_preemptive();
         }
     }
     else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) {
-        set_timer_interrupt(10000);
+        uart_puts("[el1h][irq][timer] Exception\r\n");
+        set_timer_interrupt(100000);
     }   
     else {
         uart_puts("UNKNOWN el1h_irq_router\r\n");

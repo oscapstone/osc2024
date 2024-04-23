@@ -1,9 +1,19 @@
 #include "timer.h"
 #include "mini_uart.h"
 #include "utils.h"
+#include "list.h"
+#include "heap.h"
 
 #define XSTR(s) STR(s)
 #define STR(s) #s
+
+/* Empty head -> timer -> timer .... */
+struct list_head* timer_list; 
+
+void timer_list_init() {
+    timer_list = kmalloc(sizeof(timer_event_t));
+    INIT_LIST_HEAD(timer_event_list);
+}
 
 void core_timer_enable() {
     __asm__ __volatile__(
@@ -55,7 +65,6 @@ unsigned long long get_cpu_tick_plus_s(unsigned long long seconds){
     return (cntpct_el0 + cntfrq_el0*seconds);
 }
 
-
 void set_alert_2S(char* str) {
     unsigned long long cntpct_el0;
     unsigned long long cntfrq_el0;
@@ -75,10 +84,27 @@ void set_alert_2S(char* str) {
     // Add timer
 }
 
-void timer_interrupt_handler() {
-    // // 這裡插入你希望在時間到時執行的代碼
-    // uart_puts("Timer interrupt triggered!\r\n");
+add_timer(void *callback, unsigned long long timeout, char* args) {
+    timer_event_t* e = kmalloc(sizeof(timer_event_t));
 
-    // // 重設計時器（例如每2秒）
-    // set_time_out(2);
+    e->interrupt_time = get_cpu_tick_plus_s(timeout);
+    e->callback = callback;
+    e->args = malloc(strlen(args) + 1);
+    strcpy(e->args, args);
+
+    INIT_LIST_HEAD(&e->listhead);
+
+    /* Add timer to the timer_list */
+    list_head* ptr;
+    list_for_each(ptr, e->listhead) {
+        if (ptr->list_head->interrupt_time > e->interrupt_time) {
+            // Insert the event just before the event with bigger time
+            list_add(&e->listhead, ptr->prev);
+            break;
+        }
+    }
+
+
+
+
 }

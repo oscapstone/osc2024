@@ -14,8 +14,9 @@ void kernel_main(char* arg) {
     parse_dtb_tree(dtb_ptr, dtb_callback_initramfs);
 
 	uart_init();
-	uart_interrupt_enable();
 	uart_flush_FIFO();
+	uart_interrupt_enable();
+
 	core_timer_enable();
 	el1_interrupt_enable();
 	
