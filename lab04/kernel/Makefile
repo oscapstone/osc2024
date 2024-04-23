@@ -40,8 +40,10 @@ run: kernel8.img
 dump: kernel8.img
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
 
-debug: all
+gdb: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -S -s
 
 QEMU: COPS += -DQEMU
 QEMU: run
+DEBUG: COPS += -DDEBUG -DQEMU
+DEBUG: run

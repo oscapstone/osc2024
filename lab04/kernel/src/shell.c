@@ -8,17 +8,24 @@
 #include "lib.h"
 #include "timer.h"
 #include "irq.h"
+#include "alloc.h"
 
 static void hello(int argc, char *argv[]);
 static void help(int argc, char *argv[]);
+static void clear(int argc, char *argv[]);
 static void mailbox(int argc, char *argv[]);
 static void test_malloc(int argc, char *argv[]);
 static void reboot(int argc, char *argv[]);
 static void set_timeout(int argc, char *argv[]);
+static void test_balloc(int argc, char *argv[]);
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
 extern void cpio_exec(int argc, char *argv[]);
+extern void print_flist(int argc, char *argv[]);
+extern void print_allocated(int argc, char *argv[]);
+extern void bfree_wrapper(int argc, char* argv[]);
+
 
 int split_command(char* command, char *argv[]);
 
@@ -29,11 +36,16 @@ cmd cmds[] =
     {.name = "mailbox", .func = &mailbox,    .help_msg = "\nmailbox\t: print mailbox info"},
     {.name = "ls",      .func = &cpio_list,  .help_msg = "\nls\t: list files in the cpio archive"},
     {.name = "cat",     .func = &cpio_cat,   .help_msg = "\ncat\t: print file content in the cpio archive"},
-    {.name = "malloc",  .func = &test_malloc,.help_msg = "\nmalloc\t: test malloc function"},
+    {.name = "clear",   .func = &clear,      .help_msg = "\nclear\t: clear the screen"},
+    {.name = "s_malloc",  .func = &test_malloc,.help_msg = "\nmalloc\t: test malloc function"},
     {.name = "reboot",  .func = &reboot,     .help_msg = "\nreboot\t: reboot the device"},
     {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
     {.name = "async",   .func = &async_shell, .help_msg = "\nasync\t: enter dummy async shell mode"},
-    {.name = "set_timeout", .func = &set_timeout, .help_msg = "\nset_timeout\t: set a new timer"}
+    {.name = "set_timeout", .func = &set_timeout, .help_msg = "\nset_timeout\t: set a new timer"},
+    {.name = "print_flist", .func = &print_flist, .help_msg = "\nprint_flist\t: print free list"},
+    {.name = "print_allocated", .func = &print_allocated, .help_msg = "\nprint_allocated\t: print allocated frames"},
+    {.name = "balloc", .func = &test_balloc, .help_msg = "\nb_malloc\t: test buddy system allocation"},
+    {.name = "bfree", .func = &bfree_wrapper, .help_msg = "\bfree\t: test buddy system free"}
 };
 
 
@@ -101,6 +113,11 @@ static void help(int argc, char **argv)
     }
 }
 
+static void clear(int argc, char **argv)
+{
+    printf("\033[H\033[J");
+}
+
 static void mailbox(int argc, char **argv)
 {
     printf("\nMailbox info:");
@@ -144,6 +161,26 @@ static void reboot(int argc, char **argv)
 {
     printf("\nRebooting...\n");
     reset(200);
+}
+
+// static void* alloc_queue[10] = {0};
+// static uint32_t alloc_queue_front = 0;
+// static uint32_t alloc_queue_rear = 0;
+
+static void test_balloc(int argc, char **argv)
+{
+    if(argc != 2){
+        printf("\nUsage: test_balloc <size>");
+        return;
+    }
+    uint64_t size = atoi(argv[1]);
+    void* pt = balloc(size);
+    if(pt == 0){
+        printf("\nAllocation failed");
+        return;
+    }
+    printf("\nAllocated at: "); printf_hex((uint64_t)pt);
+    printf("\n===============================");
 }
 
 void readcmd(char x[256])
