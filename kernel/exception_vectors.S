@@ -56,6 +56,12 @@ interrupt_handler:
     load_all
     eret
 
+cur_el_irq_handler:
+    save_all
+    bl handle_current_el_irq
+    load_all
+    eret
+
 // FIXME: infinite loop now
 exception_handler:
     save_all
@@ -80,7 +86,7 @@ exception_vector_table:
     /* exception from current EL */
     b default_handler
     .align 7
-    b interrupt_handler   // TODO: mini uart interrupt is from the same EL
+    b cur_el_irq_handler   // TODO: mini uart interrupt is from the same EL
     .align 7
     b default_handler
     .align 7

@@ -1,4 +1,5 @@
 #include "exception.h"
+#include "timer.h"
 #include "uart.h"
 
 void init_exception_vectors(void)
@@ -58,7 +59,24 @@ void handle_interrupt(void)
     if (*CORE0_TIMER_IRQ_SRC & 0b10) {   // TODO: where's doc
         _handle_timer();
     }
+}
 
+void handle_current_el_irq(void)
+{
+    if (*CORE0_TIMER_IRQ_SRC & 0b10) {   // TODO: where's doc
+        // seconds after booting
+        long count;
+        long freq; //62500000 (62.5 MHz)
+
+        asm("mrs %0, cntpct_el0" : "=r"((long) count));
+        asm("mrs %0, cntfrq_el0" : "=r"((long) freq));
+
+        update_timers();
+
+        // set next timeout
+        asm("mov x0, %0" : : "r"(freq * 1));
+        asm("msr cntp_tval_el0, x0");
+    }
 }
 
 // https://developer.arm.com/documentation/ddi0601/2022-03/External-Registers/CNTP-TVAL--Counter-timer-Physical-Timer-TimerValue

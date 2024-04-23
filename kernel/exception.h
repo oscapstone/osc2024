@@ -14,6 +14,7 @@ void _init_core_timer(void);
 
 void handle_exception(void);
 void handle_interrupt(void);
+void handle_current_el_irq(void);
 void _handle_timer(void);
 
 // exception level

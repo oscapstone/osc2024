@@ -4,6 +4,7 @@
 #include "malloc.h"
 #include "shell.h"
 #include "string.h"
+#include "timer.h"
 #include "uart.h"
 
 void shell_start()
@@ -25,7 +26,8 @@ static cmt_t command_funcs[] = {
     get_arm_memory,
     list_initramfs,
     cat_initramfs,
-    cmd_execute
+    cmd_execute,
+    add_timer,
 };
 static char* commands[] = {
     "help",
@@ -35,7 +37,8 @@ static char* commands[] = {
     "arm",
     "ls",
     "cat",
-    "exec"
+    "exec",
+    "setTimeout",
 };
 static char* command_descriptions[] = {
     "print this help menu",
@@ -45,7 +48,8 @@ static char* command_descriptions[] = {
     "print arm memory info",
     "list initramfs",
     "cat a file",
-    "execute a program in userspace (EL0)"
+    "execute a program in userspace (EL0)",
+    "set timeout",
 };
 
 void do_cmd(const char* line)

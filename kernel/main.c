@@ -10,6 +10,8 @@ void main()
     init_interrupt();
     uart_init();
 
+    enable_interrupt();
+
     fdt_traverse(initramfs_callback);
 
     uart_puts("\nWelcome to kernel!\n");
