@@ -21,6 +21,6 @@ void cmd_malloc();
 void cmd_dtb();
 void cmd_currentEL();
 void cmd_enable_timer();
-void cmd_set_timeout(int time);
+void cmd_set_alert_2s(char* str);
 
 #endif  /*_SHELL_H */

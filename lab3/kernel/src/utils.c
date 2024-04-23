@@ -244,3 +244,12 @@ int atoi(const char* str) {
 
     return sign * result;
 }
+
+char async_getchar() {
+    char c = uart_async_getc();
+    return c == '\r' ? '\n' : c;
+}
+
+void async_putchar(char c) {
+    uart_async_send(c);
+}

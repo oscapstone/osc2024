@@ -1,6 +1,9 @@
+#include "peripherals/rpi_irq.h"
+#include "peripherals/mini_uart.h"
 #include "exception.h"
 #include "mini_uart.h"
 #include "utils.h"
+#include "timer.h"
 
 void print_currentEL(){
     unsigned long long currentEL;
@@ -25,11 +28,41 @@ void print_currentEL(){
     }
 }
 
-void el1h_irq_router(){
-    uart_puts("el1h_irq_router\r\n");
+// DAIF, Interrupt Mask Bits
+void el1_interrupt_enable() {
+    __asm__ __volatile__("msr daifclr, 0xf"); // umask all DAIF
 }
 
-void el0_sync_router(){
+void el1_interrupt_disable() {
+    __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
+}
+
+void el1h_irq_router() {
+    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) {
+        if (*AUX_MU_IER_REG & 2) {
+            uart_puts("Write\r\n");
+            // *AUX_MU_IER_REG &= ~(2); // disable write interrupt
+            // irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+            // unlock();
+            // irqtask_run_preemptive(); // run the queued task before returning to the program.
+        }
+        else if (*AUX_MU_IER_REG & 1) {
+            uart_puts("Read\r\n");
+            // *AUX_MU_IER_REG &= ~(1); // disable read interrupt
+            // irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            // unlock();
+            // irqtask_run_preemptive();
+        }
+    }
+    else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) {
+        set_timer_interrupt(10000);
+    }   
+    else {
+        uart_puts("UNKNOWN el1h_irq_router\r\n");
+    }
+}
+
+void el0_sync_router() {
     // Print the content of spsr_el1, elr_el1, and esr_el1 in the exception handler.
     unsigned long long spsr_el1;
     unsigned long long elr_el1;
@@ -43,10 +76,18 @@ void el0_sync_router(){
     uart_puts(buf);
 }
 
-void el0_irq_64_router(){
+void el0_irq_64_router() {
     uart_puts("el0_irq_64_router\r\n");
 }
 
-void invalid_exception_router(unsigned long long x0){
+void invalid_exception_router(unsigned long long x0) {
     uart_puts("Invalid exception : 0x%x\r\n",x0);
+}
+
+void lock() {
+    el1_interrupt_disable();
+}
+
+void unlock() {
+    el1_interrupt_enable();
 }

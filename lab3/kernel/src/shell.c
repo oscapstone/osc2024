@@ -40,7 +40,7 @@ void cli_read_cmd(char* buf) {
             uart_puts("Exceed the command length limit.");
             break;
         }
-        c = uart_recv();
+        c = async_getchar();
         if (c == '\n') {
             uart_puts("\r\n");
             break;
@@ -55,7 +55,7 @@ void cli_read_cmd(char* buf) {
         if ( c > 16 && c < 32 ) continue;
         if ( c > 127 ) continue;
         buf[idx++] = c;
-        uart_send(c);
+        async_putchar(c);
     }
 }
 
@@ -69,8 +69,8 @@ void cli_exec_cmd(char* buf) {
         cmd_cat(argvs[1]);
     } else if (cli_strcmp(cmd, "settimer") == 0) {
         cmd_enable_timer();
-    } else if (cli_strcmp(cmd, "sleep") == 0) {
-        cmd_set_timeout(atoi(argvs[1]));
+    } else if (cli_strcmp(cmd, "setalert2s") == 0) {
+        cmd_set_alert_2s(argvs[1]);
     } else if (cli_strcmp(cmd, "dtb") == 0) {
         cmd_dtb();
     } else if (cli_strcmp(cmd, "currel") == 0) {
@@ -113,18 +113,18 @@ void cli_print_welcome_msg() {
 
 void cmd_help() {
     uart_puts("Example usage:\r\n");
-    uart_puts("   help              - list all commands.\r\n");
-    uart_puts("   hello             - print hello message.\r\n");
-    uart_puts("   hwinfo            - print hardware info.\r\n");
-    uart_puts("   currel            - print current EL.\r\n");
-    uart_puts("   cat  [filePath]   - get content from a file.\r\n");
-    uart_puts("   exec [filePath]   - execute a img program.\r\n");
-    uart_puts("   ls                - list all files in directory.\r\n");
-    uart_puts("   dtb               - show device tree.\r\n");
-    uart_puts("   settimer          - enable timer.\r\n");
-    uart_puts("   sleep [sec]       - set time out.\r\n");
-    uart_puts("   malloc            - test malloc function.\r\n");
-    uart_puts("   reboot            - reboot the device.\r\n");
+    uart_puts("   help                          - list all commands.\r\n");
+    uart_puts("   hello                         - print hello message.\r\n");
+    uart_puts("   hwinfo                        - print hardware info.\r\n");
+    uart_puts("   currel                        - print current EL.\r\n");
+    uart_puts("   cat           [filePath]      - get content from a file.\r\n");
+    uart_puts("   exec          [filePath]      - execute a img program.\r\n");
+    uart_puts("   ls                            - list all files in directory.\r\n");
+    uart_puts("   dtb                           - show device tree.\r\n");
+    uart_puts("   settimer                      - enable timer.\r\n");
+    uart_puts("   setalert2s    [msg]           - set 2s alert with message.\r\n");
+    uart_puts("   malloc                        - test malloc function.\r\n");
+    uart_puts("   reboot                        - reboot the device.\r\n");
 }
 
 void cmd_hello() {
@@ -276,6 +276,6 @@ void cmd_enable_timer() {
     core_timer_enable();
 }
 
-void cmd_set_timeout(int time) {
-    set_time_out(time);
+void cmd_set_alert_2s(char* str) {
+    set_alert_2S(str);
 }

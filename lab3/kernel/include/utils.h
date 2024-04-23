@@ -13,5 +13,7 @@ char*               memcpy(void *dest, const void *src, unsigned long long len);
 void                str_split(char* str, char delim, char** result, int* count);
 char*               strcpy(char *dest, const char *src);
 int                 atoi(const char* str);
+char                async_getchar();
+void                async_putchar(char c);
 
 #endif /* _UTILS_H_ */

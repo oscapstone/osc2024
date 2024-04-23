@@ -2,6 +2,16 @@
 #include "mini_uart.h"
 #include "peripherals/mini_uart.h"
 #include "peripherals/gpio.h"
+#include "peripherals/rpi_irq.h"
+
+// Define uart TX/RX buffer
+char    uart_tx_buffer[VSPRINT_MAX_BUF_SIZE] = {0};
+int     uart_tx_buffer_r_idx = 0;
+int     uart_tx_buffer_w_idx = 0;
+
+char    uart_rx_buffer[VSPRINT_MAX_BUF_SIZE] = {0};
+int     uart_rx_buffer_r_idx = 0;
+int     uart_rx_buffer_w_idx = 0;
 
 void uart_send(unsigned int c) {
     while(!(*AUX_MU_LSR_REG & 0x20)){};
@@ -39,6 +49,80 @@ int uart_puts(char *fmt, ...) {
     return count;
 }
 
+char uart_async_getc() {
+    *AUX_MU_IER_REG |= 1;
+    lock();
+    // Stuck if nothing to read
+    while (uart_rx_buffer_isEmpty()) {}
+    char r = uart_rx_buffer[uart_rx_buffer_r_idx++];
+    if (uart_rx_buffer_r_idx >= VSPRINT_MAX_BUF_SIZE)
+        uart_rx_buffer_r_idx = 0;
+    unlock();
+    
+    return r;
+}
+
+void uart_async_send(char c) {
+    lock();
+    // Stuck if buffer is full
+    while (uart_tx_buffer_isFull()) {}
+    uart_tx_buffer[uart_tx_buffer_w_idx++] = c;
+    if (uart_tx_buffer_w_idx >= VSPRINT_MAX_BUF_SIZE)
+        uart_tx_buffer_w_idx = 0;
+    unlock();
+    *AUX_MU_IER_REG |= 2;           // enable write interrupt
+}
+
+int uart_rx_buffer_isEmpty() {
+    return uart_rx_buffer_r_idx == uart_rx_buffer_w_idx;
+}
+
+int uart_tx_buffer_isEmpty() {
+    return uart_tx_buffer_r_idx == uart_tx_buffer_w_idx;
+}
+
+int uart_rx_buffer_isFull() {
+    return (uart_rx_buffer_w_idx + 1) % VSPRINT_MAX_BUF_SIZE == uart_rx_buffer_r_idx;
+}
+
+int uart_tx_buffer_isFull() {
+    return (uart_tx_buffer_w_idx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_r_idx;
+}
+
+void uart_write_irq_handler() {
+    lock();
+    if (uart_tx_buffer_isEmpty()) { // buffer empty
+        *AUX_MU_IER_REG &= ~(2);    // disable write interrupt
+        unlock();
+        return;
+    }
+    unlock();
+    uart_send(uart_tx_buffer[uart_tx_buffer_r_idx]);
+    lock();
+    uart_tx_buffer_r_idx++;
+    if (uart_tx_buffer_r_idx >= VSPRINT_MAX_BUF_SIZE)
+        uart_tx_buffer_r_idx = 0;
+    *AUX_MU_IER_REG |= 2;           // enable write interrupt
+    unlock();
+}
+
+void uart_read_irq_handler() {
+    lock();
+    if (uart_rx_buffer_isFull()) {  // buffer full
+        *AUX_MU_IER_REG &= ~(1);    // disable read interrupt
+        unlock();
+        return;
+    }
+    unlock();
+    uart_rx_buffer[uart_rx_buffer_w_idx] = uart_recv();
+    lock();
+    uart_rx_buffer_w_idx++;
+    if (uart_rx_buffer_w_idx >= VSPRINT_MAX_BUF_SIZE)
+        uart_rx_buffer_w_idx = 0;
+    *AUX_MU_IER_REG |= 1;
+    unlock();
+}
+
 void uart_2hex(unsigned int d) {
     unsigned int n;
     int c;
@@ -49,8 +133,27 @@ void uart_2hex(unsigned int d) {
     }
 }
 
-void uart_init()
-{
+void uart_flush_FIFO() {
+    // https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf Pg.13
+    // On write:
+    //  Writing with bit 1 set will clear the receive FIFO
+    //  Writing with bit 2 set will clear the transmit FIFOF
+    *AUX_MU_IIR_REG |= 6;
+}
+
+// AUX_MU_IER_REG: BCM2837-ARM-Peripherals.pdf - Pg.12
+void uart_interrupt_enable() {
+    *AUX_MU_IER_REG |= 1;       // enable read interrupt
+    *AUX_MU_IER_REG |= 2;       // enable write interrupt
+    *ENABLE_IRQS_1 |= 1 << 29;  // Pg.112
+}
+
+void uart_interrupt_disable() {
+    *AUX_MU_IER_REG &= ~(1);    // disable read interrupt
+    *AUX_MU_IER_REG &= ~(2);    // disable write interrupt
+}
+
+void uart_init() {
     register unsigned int r;
 
     /* initialize UART */
