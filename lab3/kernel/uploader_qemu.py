@@ -7,12 +7,13 @@ def read_line(s):
     received_string = ""
     for i in range(13):
         c = s.read().decode()
+        print(c)
         received_string += c
     return received_string
 
 if __name__ == '__main__':
 
-    s = serial.Serial("COM3", baudrate=115200)
+    s = serial.Serial("/dev/pts/2", baudrate=115200)
 
     kernel_filePath = "kernel.img"
 
@@ -32,7 +33,6 @@ if __name__ == '__main__':
     for i in range(4):
         dat = s.read(1)
         sizeData += dat
-        print(int.from_bytes(dat))
 
     receiveSize = int.from_bytes(sizeData, 'little')
     print('Return size: ', receiveSize)
@@ -50,8 +50,4 @@ if __name__ == '__main__':
     print('data send')
     print('receiving result...')
     received_content = read_line(s)
-    if received_content == "kernel loaded":
-        print('success!')
-    else:
-        print('loaded failed.')
     print(received_content)

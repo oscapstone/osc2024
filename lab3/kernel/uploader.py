@@ -7,6 +7,7 @@ def read_line(s):
     received_string = ""
     for i in range(13):
         c = s.read().decode()
+        print(c)
         received_string += c
     return received_string
 
