@@ -44,9 +44,12 @@ void uart_write_handler(){
         *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
         ch = uart_write_buffer[write_cur];
         write_cur++;
+        *AUX_MU_IER |= (0x01);
+        *AUX_MU_IER |= (0x02);
     }
     else{
-        *AUX_MU_IER &= ~(0x02);
+        *AUX_MU_IER |= (0x01);
+        //*AUX_MU_IER &= ~(0x02);
     }
     
     if(ch == '\r'){
@@ -61,7 +64,7 @@ void uart_write_handler(){
 
 void uart_read_handler() {
     //asm volatile("msr DAIFSet, 0xf");
-    *AUX_MU_IER &= ~(0x01); //stop read interrupt
+    //*AUX_MU_IER &= ~(0x01); //stop read interrupt
     char ch = (char)(*AUX_MU_IO);
     if(ch == '\r'){ //command
         //uart_send('\n');
@@ -86,6 +89,7 @@ void uart_read_handler() {
     }
     *AUX_MU_IER |= 0x01; //start
     *AUX_MU_IER |= 0x02;
+    
     //asm volatile("msr DAIFClr, 0xf");
     //create_task(uart_write_handler,2);
 }
@@ -210,7 +214,6 @@ void async_uart_io(){
     while(1){}
 }
 
-
 int parse_cmd(char * cmd){
     char * run = cmd;
     char name[100];
@@ -305,20 +308,25 @@ int shell(char * cmd){
 
 void interrupt_handler_entry(){
     //asm volatile("msr DAIFSet, 0xf"); add here will boom, check how to add
-
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
         create_task(timer_handler, 3);
+        execute_task();
         // timer_handler();
     }
     else{
+        *AUX_MU_IER &= ~(0x01);
+        *AUX_MU_IER &= ~(0x02);
         if ((iir & 0x06) == 0x04){
             create_task(uart_read_handler,1);
+            execute_task();
         }
-        else
+        else{
             create_task(uart_write_handler,2);
+            execute_task();
+        }
     }
-    execute_task();
+    
     //asm volatile("msr DAIFClr, 0xf");
 }

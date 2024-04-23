@@ -26,7 +26,6 @@ typedef struct {
 task_queue_t task_queue;
 
 void create_task(task_func_t callback, unsigned int priority){
-    //asm volatile("msr DAIFSet, 0xf");
     //uart_puts("task created!\n");
     int i;
     in_buffer[in_idx] = priority + '0';
@@ -43,7 +42,6 @@ void create_task(task_func_t callback, unsigned int priority){
             break;
         }
     }
-    //asm volatile("msr DAIFClr, 0xf");
 }
 
 // asm volatile("msr DAIFSet, 0xf");

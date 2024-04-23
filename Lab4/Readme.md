@@ -18,3 +18,11 @@ Author: jerryyyyy708 (just to make sure my code is not copied by anyone)
 ## TODO
 1. Check the usable memory by dtb
 2. Replace Memory Start, Total and Frame_count by dtb and dynamic allocate it instead of hardcode.
+
+## Demo問
+* Lab3 Task Queue，只要加了 
+```
+msr DAIFClr, 0xf
+msr DAIFSet, 0xf
+```
+interrupt就會完全跑不了，我的寫法是 async 時開啟 uart_interrupt，之後就都用 async uart。
