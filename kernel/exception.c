@@ -55,6 +55,16 @@ void handle_exception(void)
 
 void handle_interrupt(void)
 {
+    if (*CORE0_TIMER_IRQ_SRC & 0b10) {   // TODO: where's doc
+        _handle_timer();
+    }
+
+}
+
+// https://developer.arm.com/documentation/ddi0601/2022-03/External-Registers/CNTP-TVAL--Counter-timer-Physical-Timer-TimerValue
+// https://developer.arm.com/documentation/ddi0601/2022-03/External-Registers/CNTP-CVAL--Counter-timer-Physical-Timer-CompareValue
+void _handle_timer()
+{
     // seconds after booting
     long count;
     long freq; //62500000 (62.5 MHz)
@@ -93,4 +103,14 @@ void el1_to_el0(void)
     asm("msr elr_el1, %0" : : "r" (&__userspace_start));    // return address
     asm("msr sp_el0, %0" : : "r" (&__userspace_end));       // stack pointer
     asm("eret");
+}
+
+void enable_interrupt(void)
+{
+    asm("msr DAIFClr, 0xf");
+}
+
+void disable_interrupt(void)
+{
+    asm("msr DAIFSet, 0xf");
 }

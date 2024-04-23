@@ -5,7 +5,7 @@ void uart_init()
     // initialize auxiliary registers
     *UART_AUXENB = 1;
     *UART_AUX_MU_CNTL_REG = 0;
-    *UART_AUX_MU_IER_REG = 0;
+    *UART_AUX_MU_IER_REG = 0;   // disable interrupt
     *UART_AUX_MU_LCR_REG = 3;
     *UART_AUX_MU_MCR_REG = 0;
     *UART_AUX_MU_BAUD = 270;    // baud rate would be 115200
@@ -24,7 +24,7 @@ void uart_init()
     while (r--) {
         asm volatile("nop");
     }
-    *UART_GPPUDCLK0 = ((1<<15)|(1<<14));
+    *UART_GPPUDCLK0 = ((1<<15)|(1<<14));    // disable pull up/down on PIN 14/15
 
     // wait 150 cycles for GPPUD
     r = 150;
@@ -33,7 +33,7 @@ void uart_init()
     }
     *UART_GPPUDCLK0 = 0;
 
-    *UART_AUX_MU_CNTL_REG = 3;
+    *UART_AUX_MU_CNTL_REG = 3;  // enable Tx/Rx
 }
 
 void uart_send(unsigned int c) {

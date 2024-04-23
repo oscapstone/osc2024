@@ -80,7 +80,7 @@ exception_vector_table:
     /* exception from current EL */
     b default_handler
     .align 7
-    b default_handler
+    b interrupt_handler   // TODO: mini uart interrupt is from the same EL
     .align 7
     b default_handler
     .align 7
