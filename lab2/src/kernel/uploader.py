@@ -32,7 +32,6 @@ if __name__ == '__main__':
     for i in range(4):
         dat = s.read(1)
         sizeData += dat
-        print(int.from_bytes(dat))
 
     receiveSize = int.from_bytes(sizeData, 'little')
     print('Return size: ', receiveSize)

@@ -87,4 +87,31 @@ void uart_send_nstring(unsigned int length, const char* s)
     }
 }
 
+/**
+ * Display a binary value in hexadecimal
+ */
+void uart_binary_to_hex(unsigned int d) {
+    unsigned int n;
+    int c;
+    for(c=28;c>=0;c-=4) {
+        // get highest tetrad
+        n=(d>>c)&0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n+=n>9?0x37:0x30;
+        uart_send_char(n);
+    }
+}
+
+void uart_hex64(U64 value) {
+    unsigned int n;
+    for(int c = 60; c >= 0;c -= 4) {
+        // get highest tetrad
+        n=(value >> c)&0xF;
+        // 0-9 => '0'-'9', 10-15 => 'A'-'F'
+        n += n > 9 ? 0x37 : 0x30;
+        uart_send_char(n);
+    }
+}
+
+
 

@@ -6,6 +6,7 @@
         "trash_malloc.h": "c",
         "dtb.h": "c",
         "mailbox.h": "c",
-        "base.h": "c"
+        "base.h": "c",
+        "shell.h": "c"
     }
 }

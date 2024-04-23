@@ -12,13 +12,13 @@ SECTIONS
     /* read only data section */
     .rodata :
     {
-        *(.rodata)
+        *(.rodata .rodata.*)
     }
     /* data section */
     .data :
     {
         . = ALIGN(16);
-        *(.data)
+        *(.data .data.*)
     }
     /* bss section is to store the global variable */
     .bss :
@@ -28,6 +28,8 @@ SECTIONS
         *(.bss)
         PROVIDE(__bss_end__ = .);
     }
+    
+   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
 
 /* 8 bytes(64bits) for register size to move */

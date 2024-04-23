@@ -9,7 +9,10 @@ BIN_DIR = bin
 OBJ_DIR = bin-int
 
 # object files
-OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/io/uart.o src/main.o src/utils/utils.o src/shell/shell.o)
+OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
+				src/io/uart.o src/io/mailbox.o src/io/dtb.o src/io/reboot.o\
+				src/utils/utils.o src/shell/shell.o src/fs/cpio.o \
+				)
 
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
