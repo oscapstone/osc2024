@@ -6,3 +6,5 @@ void uart_hex(unsigned int d);
 void uart_puts2(char *s);
 void uart_int(int d);
 void hi();
+void split_line();
+void newline();

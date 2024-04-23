@@ -128,3 +128,11 @@ void uart_int(int d) {
 void hi(){
     uart_puts("hi\n\r");
 }
+
+void split_line(){
+    uart_puts("-----------------------------------------------------------------------------\n\r");
+}
+
+void newline(){
+    uart_puts("\n\r");
+}

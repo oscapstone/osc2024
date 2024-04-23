@@ -93,7 +93,7 @@ void insert_into_freelist(frame_t *frame, int order) {
 
 
 void status_instruction(){
-    uart_puts("Buddy system value definition\n\r");
+    uart_puts("Initializing buddy system, value definition\n\r");
     uart_puts("val >= 0: allocable contiguous memory starts from the idx with order val\n\r");
     uart_puts("val = -1: free but belongs to a larger contiguous memory block\n\r");
     uart_puts("val = -2: allocated block\n\r");
@@ -156,13 +156,20 @@ void memory_reserve(unsigned long start, unsigned long end) {
 
 void frames_init(){
     get_memory(dtb_start);
+    
+    split_line();
     status_instruction();
     void * base = (void *) &_end;
     frames = simple_alloc(&base ,(int) sizeof(frame_t) * FRAME_COUNT);
     fl = simple_alloc(&base, (int) sizeof(freelist_t) * (MAX_ORDER + 1));
     pools = simple_alloc(&base, (int) sizeof(memory_pool_t) * NUM_POOLS);
+    split_line();
+    uart_getc();
+
     uart_int(FRAME_COUNT);
     uart_puts("\n");
+
+    split_line();
     for(int i=0; i<FRAME_COUNT; i++){
         frames[i].index = i;
         frames[i].order = 0;
@@ -183,10 +190,12 @@ void frames_init(){
     memory_reserve(0x0000, base);
     memory_reserve(cpio_base, cpio_end);
     memory_reserve(dtb_start, dtb_end);
+    split_line();
     uart_getc();
     //After init all frame, merge them
     merge_all(0);
     print_freelist(3);
+    split_line();
 }
 
 void merge_free(frame_t *frame, int print) {
@@ -195,15 +204,17 @@ void merge_free(frame_t *frame, int print) {
     int buddy_index = index ^ (1 << order);
 
     // check buddy status
-    if (buddy_index < FRAME_COUNT && frames[buddy_index].status == -1 && frames[buddy_index].order == order) {
+    if (buddy_index < FRAME_COUNT && frames[buddy_index].status == -1 && frames[buddy_index].order == order && order < MAX_ORDER) {
         // start merging
         remove_from_freelist(frame);
         remove_from_freelist(&frames[buddy_index]);
-
+        
         int min_index = (index < buddy_index) ? index : buddy_index;
+        int max_index = (index > buddy_index) ? index : buddy_index;
 
         frames[min_index].order++;
         frames[min_index].status = -1;
+        frames[max_index].status = 0;
 
         insert_into_freelist(&frames[min_index], frames[min_index].order);
 
@@ -277,7 +288,7 @@ void free_page(unsigned long address){
         insert_into_freelist(&frames[i], frames[i].order);
         //merge_all(1);
         merge_free(&frames[i], 1);
-        print_freelist(3);
+        //print_freelist(3);
     }
     else{
         uart_puts("invalid frame\n");
@@ -320,10 +331,14 @@ void* allocate_page(unsigned long size) {
                 frame->order--;
                 uart_puts(" to ");
                 uart_int(frame -> order);
-                uart_puts("\n\r");
+                uart_puts("\n\rFrame index: ");
+                uart_int(frame -> index);
+                uart_puts(" and ");
                 int buddy_index = frame->index + (1 << frame->order);
                 frames[buddy_index].order = frame->order;
                 frames[buddy_index].status = -1; // Buddy is now free
+                uart_int(buddy_index);
+                uart_puts("\n\r");
                 insert_into_freelist(&frames[buddy_index], frame->order); // Add buddy to the free list
                 //merge_free(&frames[buddy_index], 1);
             }
@@ -345,6 +360,9 @@ void* allocate_page(unsigned long size) {
 
 void convert_val_and_print(int start, int len){//convert into val
     int prev = 99;
+    uart_puts("Frame status from ");
+    uart_int(start);
+    uart_puts(": ");
     for(int i=start;i<start+len;i++){
         if(frames[i].status == 1){ //allocated for sure, -2
             uart_int(-2);
@@ -383,40 +401,45 @@ void print_status(int len){
 }
 
 void demo_page_alloc(){
+    split_line();
+    uart_puts("Allocate all page with order lower than 5.\n\r");
     void * page0 = allocate_page(4000);
-    convert_val_and_print(32769, 32);
+    void * page1 = allocate_page(4000);
+    void * page2 = allocate_page(8000);
+    void * page3 = allocate_page(8000);
+    void * page4 = allocate_page(4096 * 2 * 2);
+    void * page5 = allocate_page(4096 * 2 * 2 * 2);
+    void * page6 = allocate_page(4096 * 2 * 2 * 2);
+    void * page7 = allocate_page(4096 * 2 * 2 * 2);
+    void * page8 = allocate_page(4096 * 2 * 2 * 2 * 2);
+    void * page9 = allocate_page(4096 * 2 * 2 * 2 * 2);
+    split_line();
+    uart_puts("Now there is only free page with order 5\n\r");
+    uart_getc();
     print_freelist(3);
+    convert_val_and_print(FRAME_COUNT - 32, 32);
+    split_line();
+    uart_puts("Show releasing redundant memory block by allocating order 0 page\n\r");
     uart_getc();
-    void * page1 = allocate_page(8000);
-    convert_val_and_print(32769, 32);
+    void * page10 = allocate_page(4000);
+    uart_getc();
+    split_line();
     print_freelist(3);
+    convert_val_and_print(FRAME_COUNT - 32, 32);
+    split_line();
     uart_getc();
-    void * page2 = allocate_page(12000);
-    convert_val_and_print(32769, 32);
     print_freelist(3);
+    convert_val_and_print(FRAME_COUNT - 32, 32);
+    split_line();
+    uart_puts("Page Allocated, (next: free page)!\n\r");
+    uart_puts("Free the order 0 page to show merging iteratively\n\r");
     uart_getc();
-    uart_hex(page0);
-    uart_puts("\n");
-    uart_send('\r');
-    uart_hex(page1);
-    uart_puts("\n");
-    uart_send('\r');
-    uart_hex(page2);
-    uart_puts("\n");
-    uart_send('\r');
-    uart_puts("Page Allocated, press anything to continue (next: free page)!\n\r");
+    free_page(page10);
+    split_line();
     uart_getc();
-
-    free_page(page0);
-    convert_val_and_print(32769, 32);
-    uart_getc();
-
-    free_page(page1);
-    convert_val_and_print(32769, 32);
-    uart_getc();
-
-    void * page3 = allocate_page(4096 * 2 * 2 * 2 * 2 + 1);
-    convert_val_and_print(32769, 32);
+    print_freelist(3);
+    convert_val_and_print(FRAME_COUNT - 32, 32);
+    split_line();
 }
 
 void init_memory(){

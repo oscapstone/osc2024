@@ -16,8 +16,14 @@ Author: jerryyyyy708 (just to make sure my code is not copied by anyone)
 * Startup allocator is placed in kernel, which is already reserved. The buddy system is placed right after the kernel, can be reserved together.
 
 ## TODO
-1. Check the usable memory by dtb
-2. Replace Memory Start, Total and Frame_count by dtb and dynamic allocate it instead of hardcode.
+1. Check the usable memory by dtb V
+2. Replace Memory Start, Total and Frame_count by dtb and dynamic allocate it instead of hardcode. V
+
+1. Add hardcode version to the vm
+2. check why is the free list like that (%32 = 19 = 16 + 2 + 1)
+3. why xor ... demo things
+ 
+
 
 ## Demo問
 * Lab3 Task Queue，只要加了 
