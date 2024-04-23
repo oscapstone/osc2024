@@ -7,7 +7,7 @@ _start:
     // read cpu id, stop slave cores
     // mrs: read system register to the general register
 	mrs     x1, mpidr_el1
-	and		x1, x1, #3
+	and		x1, x1, #0xff
 	cbz		x1, init		// branch to init if x1 == 0
 	
 	// cpu id > 0, stop

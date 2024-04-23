@@ -1,15 +1,6 @@
 
 #include "utils/utils.h"
 
-void utils_delay(unsigned long cycle) {
-    register unsigned long r = cycle;
-    
-    while (r--) {
-        asm volatile("nop");
-    }
-    return;
-}
-
 unsigned long utils_atoi(const char *s, int char_size) {
     unsigned long num = 0;
     for (int i = 0; i < char_size; i++) {

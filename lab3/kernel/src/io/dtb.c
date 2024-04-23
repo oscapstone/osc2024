@@ -11,9 +11,22 @@ extern void* _dtb_ptr;
 
 int parse_struct(fdt_callback cb, struct fdt_header* header) {
     
+#ifdef NS_DEBUG
+    uart_send_string("reading information ...\r\n");
+#endif
     UPTR structPtr = (UPTR)_dtb_ptr + (UPTR)utils_transferEndian(header->off_dt_struct);
     UPTR stringsPtr = (UPTR)_dtb_ptr + (UPTR)utils_transferEndian(header->off_dt_strings);
     U32 totalSize = utils_transferEndian(header->totalsize);
+
+#ifdef NS_DEBUG
+    uart_send_string("struct pointer: ");
+    uart_hex64(structPtr);
+    uart_send_string("\r\nstrings pointer: ");
+    uart_hex64(stringsPtr);
+    uart_send_string("\r\nDTB total size: ");
+    uart_hex64((U64)totalSize);
+    uart_send_string("\r\n");
+#endif
 
     //uart_send_string("Total Size: 0x");
     //uart_binary_to_hex(totalSize);
@@ -21,6 +34,9 @@ int parse_struct(fdt_callback cb, struct fdt_header* header) {
 
     UPTR endPtr = (UPTR)header + totalSize;
 
+#ifdef NS_DEBUG
+    uart_send_string("Parsing token...\r\n");
+#endif
     while (structPtr < endPtr) {
         U32 token = utils_transferEndian(*((int*)structPtr));
         structPtr += 4;
@@ -88,6 +104,9 @@ int fdt_traverse(fdt_callback cb) {
         uart_send_string("DTB magic not correct");
         return -1;
     }
+#ifdef NS_DEBUG
+    uart_send_string("DTB magic correct\r\n");
+#endif
     parse_struct(cb, header);
 
     return 1;

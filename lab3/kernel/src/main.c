@@ -28,9 +28,13 @@ void main() {
     // initialze UART
     uart_init();
 
+	uart_send_string("try getting cpio address...\r\n");
     // get the cpio address from dtb
-    fdt_traverse(get_cpio_addr);
+    
+	// TODO: bugge here fix some day
+	//fdt_traverse(get_cpio_addr);
 
+	uart_send_string("starting shell ...\r\n");
     shell();
 
 }

@@ -13,7 +13,7 @@ def read_line(s):
 
 if __name__ == '__main__':
 
-    s = serial.Serial("/dev/pts/2", baudrate=115200)
+    s = serial.Serial("/dev/pts/3", baudrate=115200)
 
     kernel_filePath = "kernel.img"
 
@@ -50,4 +50,9 @@ if __name__ == '__main__':
     print('data send')
     print('receiving result...')
     received_content = read_line(s)
-    print(received_content)
+    if received_content != "kernel loaded":
+        print('loaded failed.')
+        exit(-1)
+
+    print('success!')
+

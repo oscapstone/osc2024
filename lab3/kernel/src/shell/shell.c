@@ -3,11 +3,15 @@
 #include "io/uart.h"
 #include "io/dtb.h"
 #include "io/reboot.h"
-#include "io/mailbox.h"
+//#include "io/mailbox.h"
+#include "fs/cpio.h"
 #include "utils/utils.h"
 
 extern char* _dtb_ptr;
 extern char* cpio_addr;
+
+// in main.c
+void get_cpio_addr(int token, const char* name, const void *data, unsigned int size);
 
 void shell() {
 
@@ -37,14 +41,15 @@ void shell() {
             uart_send_string("NS shell ver 0.02\n");
             uart_send_string("help   : print this help menu\n");
 			uart_send_string("hello  : print Hello World!\n");
-			uart_send_string("info   : show board info\n");
+			//uart_send_string("info   : show board info\n");
 			uart_send_string("reboot : reboot the device\n");
 			uart_send_string("ls     : List all CPIO files\n");
 			uart_send_string("cat    : Show file content\n");
 			uart_send_string("dtb    : Load DTB data\n");
         } else if (utils_strncmp(cmd_space, "hello", 4) == 0) {
 			uart_send_string("Hello World!\n");
-        }else if (utils_strncmp(cmd_space,"info", 4) == 0) {
+        }
+		/*else if (utils_strncmp(cmd_space,"info", 4) == 0) {
 			get_board_revision();
 			if (mailbox_call()) {
 				uart_send_string("Revision: ");
@@ -77,7 +82,8 @@ void shell() {
 			} else {
 				uart_send_string("Unable to query serial!\n");
 			}
-		} else if (utils_strncmp(cmd_space, "ls", 2) == 0) {
+		}*/
+		 else if (utils_strncmp(cmd_space, "ls", 2) == 0) {
 			cpio_ls();
 		} else if (utils_strncmp(cmd_space, "cat", 3) == 0) {
 			char fileName[32];
@@ -97,7 +103,7 @@ void shell() {
 			uart_hex64(dtbPtr);
 			uart_send_string("\n");
 			//fdt_traverse(print_dtb);
-			//fdt_traverse(get_cpio_addr);
+			fdt_traverse(get_cpio_addr);
 		} else if (utils_strncmp(cmd_space, "reboot", 6) == 0) {
 			uart_send_string("Rebooting....\n");
 			reset(1000);
