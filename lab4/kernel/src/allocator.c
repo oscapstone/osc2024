@@ -68,25 +68,6 @@ void allocator_init()
 
         object_size += 16;
     }
-
-    /*for (int i = 0; i < MAX_OBJECT_ORDER; i++)
-    {
-        uart_puts("nr_free of free_object_arr[");
-        uart_dec(i);
-        uart_puts("]: ");
-        uart_dec(free_object_arr[i].nr_free);
-        uart_puts("\n");
-
-        int count = 0;
-        for (object *cur = free_object_arr[i].free_list; cur != NULL; cur = cur->right)
-        {
-            uart_puts("count: ");
-            uart_dec(count++);
-            uart_puts(" address: ");
-            uart_hex_lower_case(cur->address);
-            uart_puts("\n");
-        }
-    }*/
 }
 
 void block_list_push(int order, page *new_block)
@@ -97,24 +78,21 @@ void block_list_push(int order, page *new_block)
 
     if (free_area_arr[order].free_list == NULL) // if the list is empty, let the head pointer to the new block.
         free_area_arr[order].free_list = new_block;
-    else // if the list isn't empty, push the new block to the tail of it.
+    else
     {
-        page *block_tail = free_area_arr[order].free_list;
-        while (block_tail->next_block != NULL)
-            block_tail = block_tail->next_block;
-
-        block_tail->next_block = new_block;
-        new_block->pre_block = block_tail;
+        new_block->next_block = free_area_arr[order].free_list;
+        free_area_arr[order].free_list->pre_block = new_block;
+        free_area_arr[order].free_list = new_block;
     }
     free_area_arr[order].nr_free++;
 
-    #ifdef DEBUG
+#ifdef DEBUG
     uart_puts("Insert the block that the order is ");
     uart_dec(order);
     uart_puts(" at 0x");
     uart_hex_lower_case((unsigned long long)(new_block->address));
     uart_puts(" to the free list.\n");
-    #endif
+#endif
 }
 
 page *block_list_pop(int order)
@@ -129,13 +107,13 @@ page *block_list_pop(int order)
         free_area_arr[order].free_list->pre_block = NULL;
     free_area_arr[order].nr_free--;
 
-    #ifdef DEBUG
+#ifdef DEBUG
     uart_puts("Remove the block that the order is ");
     uart_dec(order);
     uart_puts(" at 0x");
     uart_hex_lower_case((unsigned long long)block_head->address);
     uart_puts(" from the free list.\n");
-    #endif
+#endif
 
     return block_head;
 }
@@ -151,15 +129,11 @@ void block_list_remove(int order, page *remove_block)
     }
     else
     {
-        page *del = free_area_arr[order].free_list;
-        while (del != remove_block) // find the block that want to delete
-            del = del->next_block;
+        if (remove_block->next_block != NULL)
+            remove_block->next_block->pre_block = remove_block->pre_block;
 
-        if (del->next_block != NULL)
-            del->next_block->pre_block = del->pre_block;
-
-        if (del->pre_block != NULL)
-            del->pre_block->next_block = del->next_block;
+        if (remove_block->pre_block != NULL)
+            remove_block->pre_block->next_block = remove_block->next_block;
         free_area_arr[order].nr_free--;
     }
 }
@@ -189,7 +163,7 @@ void *allocate_block(int need_order)
         {
             unsigned long long page_num = power(2, order);
 
-            #ifdef DEBUG
+#ifdef DEBUG
             uart_puts("Split the blocks that the order is ");
             uart_dec(order);
             uart_puts(" at 0x");
@@ -199,7 +173,7 @@ void *allocate_block(int need_order)
             uart_puts(" and ");
             uart_hex_lower_case((unsigned long long)((block_head + page_num / 2)->address));
             uart_puts("\n");
-            #endif
+#endif
 
             block_list_push(order - 1, block_head + page_num / 2);
             order--;
@@ -231,7 +205,7 @@ void merge_free_block(int order, page *free_block_head)
         {
             block_list_remove(page_arr[buddy_idx].val, &page_arr[buddy_idx]); // remove buddy block from free list
 
-            #ifdef DEBUG
+#ifdef DEBUG
             uart_puts("Merge twe blocks that the order are ");
             uart_dec(free_block_head->val);
             uart_puts(" at 0x");
@@ -239,7 +213,7 @@ void merge_free_block(int order, page *free_block_head)
             uart_puts(" and at 0x");
             uart_hex_lower_case((unsigned long long)page_arr[buddy_idx].address);
             uart_puts("\n");
-            #endif
+#endif
 
             if (buddy_idx < free_block_head->idx) // the buddy block is at front of the free block.
             {
@@ -287,13 +261,13 @@ void object_list_push(unsigned char *address)
     }
     free_object_arr[object_order].nr_free++;
 
-    #ifdef DEBUG
+#ifdef DEBUG
     uart_puts("Insert the object that the order is ");
     uart_dec(object_order);
     uart_puts(" at 0x");
     uart_hex_lower_case((unsigned long long)(new_object->address));
     uart_puts(" to the free list.\n");
-    #endif
+#endif
 }
 
 object *object_list_pop(int order)
@@ -336,13 +310,13 @@ object *object_list_pop(int order)
         free_object_arr[order].nr_free--;
     }
 
-    #ifdef DEBUG
+#ifdef DEBUG
     uart_puts("Remove the object that the order is ");
     uart_dec(order);
     uart_puts(" at 0x");
     uart_hex_lower_case((unsigned long long)object_head->address);
     uart_puts(" from the free list.\n");
-    #endif
+#endif
 
     return object_head;
 }
@@ -370,10 +344,9 @@ void *kmalloc(unsigned long long size)
 
         void *return_ptr = allocate_block(need_order);
 
-        #ifdef DEBUG
+#ifdef DEBUG
         print_free_area();
-        #endif
-
+#endif
         return return_ptr;
     }
     else
@@ -381,10 +354,9 @@ void *kmalloc(unsigned long long size)
         int need_order = (size % 16 == 0) ? size / 16 - 1 : size / 16;
         object *object_ptr = object_list_pop(need_order);
 
-        #ifdef DEBUG
+#ifdef DEBUG
         print_free_object();
-        #endif
-
+#endif
         return object_ptr->address;
     }
 }
@@ -397,17 +369,17 @@ void kfree(void *ptr)
     {
         merge_free_block(page_arr[block_head_idx].allocated_order, &page_arr[block_head_idx]);
 
-        #ifdef DEBUG
+#ifdef DEBUG
         print_free_area();
-        #endif
+#endif
     }
     else
     {
         object_list_push((unsigned char *)ptr);
 
-        #ifdef DEBUG
+#ifdef DEBUG
         print_free_object();
-        #endif
+#endif
     }
 }
 
