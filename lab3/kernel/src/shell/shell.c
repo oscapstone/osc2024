@@ -43,7 +43,10 @@ void shell() {
         uart_send_nstring(2, "# ");
         
         while (TRUE) {
-            char c = uart_get_char();
+			while (uart_async_empty()) {
+				asm volatile("nop");
+			}
+            char c = uart_async_get_char();
             *input_ptr++ = c;
             if (c == '\n' || c == '\r') {
                 uart_send_nstring(2, "\r\n");

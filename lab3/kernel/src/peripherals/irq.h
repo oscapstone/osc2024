@@ -5,7 +5,8 @@
 
 // BCM2837 pg.113
 enum vc_irqs {
-    AUX_IRQ = (1 << 29)
+    SYS_TIMER_1     = (1 << 1),
+    AUX_IRQ         = (1 << 29)
 };
 
 // BCM2837 pg.112

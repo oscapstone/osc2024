@@ -7,6 +7,7 @@
 #include "utils/printf.h"
 #include "peripherals/irq.h"
 #include "io/exception.h"
+#include "peripherals/timer.h"
 
 void putc(void *p, char c) {
 	if (c == '\n') {
@@ -25,6 +26,8 @@ void main() {
 	set_exception_vector_table();
 	enable_interrupt_controller();
 	irq_enable();
+
+	timer_init();
 
 	// TODO: bugge here 
 	//fdt_traverse(get_cpio_addr);

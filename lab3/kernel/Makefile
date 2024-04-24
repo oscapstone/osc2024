@@ -9,6 +9,7 @@ OBJCOPY	= aarch64-linux-gnu-objcopy
 CFLAGS	= -Wall -ffreestanding \
 		  -nostdlib -nostartfiles \
 		  -mgeneral-regs-only\
+		  -O0\
 		  -I src\
 		  -D NS_DEBUG
 
@@ -19,10 +20,10 @@ OBJ_DIR = bin-int
 # object files
 OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/io/uart.o src/io/dtb.o src/io/reboot.o src/io/exception.o\
-				src/utils/utils.o src/utils/utilsASM.o src/utils/printf.o\
+				src/utils/utils.o src/utils/utilsASM.o src/utils/printf.o src/utils/fifo_buffer.o\
 				src/shell/shell.o \
 				src/fs/cpio.o \
-				src/peripherals/gpio.o src/peripherals/irq.o\
+				src/peripherals/gpio.o src/peripherals/irq.o src/peripherals/timer.o\
 				)
 
 # the directories of the output files

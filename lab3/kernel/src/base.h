@@ -14,4 +14,7 @@ typedef volatile U32                REG32;
 
 typedef unsigned long long          UPTR;
 
+
+typedef char                        BOOL;
+
 #endif

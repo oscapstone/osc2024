@@ -1,13 +1,22 @@
 
+#include "base.h"
 #include "uart.h"
 #include "peripherals/gpio.h"
 #include "peripherals/aux.h"
 #include "utils/utils.h"
+#include "utils/fifo_buffer.h"
 
 #define TXD 14
 #define RXD 15
 
+#define UART_BUFFER_SIZE 256
+struct FIFO_BUFFER uart_fifo;
+U8 uart_buffer[UART_BUFFER_SIZE];
+
 void uart_init() {
+
+    // initialize the buffer
+    fifo_init(&uart_fifo, UART_BUFFER_SIZE, uart_buffer);
 
     gpio_set_func(TXD, GFAlt5);
     gpio_set_func(RXD, GFAlt5);
@@ -109,26 +118,18 @@ void uart_hex64(U64 value) {
     }
 }
 
-void uart_printU32(U32 value) {
-    unsigned char s[10];
-    U32 i = 0;
-    uart_send_string("coverting int ...\r\n");
-    do {
-        uart_send_string("test\r\n");
-        char remainder = (char)(value % 10);
-        uart_send_string("test\r\n");
-        s[i++] = (char)(remainder + 0x37);
-        uart_send_string("test\r\n");
-        value = value / 10;
-        if (i == 10)
-            break;
-        uart_send_string("test\r\n");
-    } while (value != 0);
-    uart_send_string("printing int ...\r\n");
-    for (U32 j = 0; j < i ;j++) {
-        uart_send_char(s[i - j]);
+void uart_handle_int() {
+    if (fifo_put(&uart_fifo, uart_get_char())) {
+        uart_send_string("UART overflow");
     }
 }
 
+BOOL uart_async_empty() {
+    return (fifo_status(&uart_fifo) == 0);
+}
+
+U8 uart_async_get_char() {
+    return fifo_get(&uart_fifo);
+}
 
 
