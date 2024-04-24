@@ -1,9 +1,12 @@
 use super::file_system::cpio;
 use super::stdio::{get_line, print};
+use crate::os::stdio::println_now;
 use crate::os::timer;
 use crate::println;
 use core::arch::asm;
 use core::time;
+use alloc::string::{String, ToString};
+use alloc::boxed::Box;
 
 fn print_time(time: u64) {
     let sec = time / 1000;
@@ -14,7 +17,7 @@ fn print_time(time: u64) {
 
 fn set_next_timer() {
     // println!("Timer expired");
-    timer::add_timer_ms(2000, || set_next_timer());
+    timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
     // for c in b"Timer expired -- Function\n" {
     //     unsafe {
     //         crate::cpu::uart::send(*c);
@@ -28,7 +31,7 @@ pub fn start(initrd_start: u32) {
 
     loop {
         print("> ".into());
-        let _len = get_line(&mut inp_buf, 256);
+        let len = get_line(&mut inp_buf, 256);
         let initramfs = cpio::CpioArchive::load(initrd_start as *const u8);
 
         if inp_buf.starts_with(b"help") {
@@ -65,21 +68,9 @@ pub fn start(initrd_start: u32) {
                 }
             }
 
-            timer::add_timer_ms(2000, || set_next_timer());
+            timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
 
             unsafe {
-                asm!(
-                    "mov {tmp}, 1",
-                    "msr cntp_ctl_el0, {tmp}", // Enable the timer
-                    // "mrs {tmp}, cntfrq_el0",
-                    // "msr cntp_tval_el0, {tmp}",
-                    "mov {tmp}, 2",
-                    "ldr {tmp2}, =0x40000040", // CORE0_TIMER_IRQ_CTRL
-                    "str {tmp}, [{tmp2}]",
-                    tmp = out(reg) _,
-                    tmp2 = out(reg) _,
-                );
-
                 asm!(
                     "mov {tmp}, 0x200",
                     "msr spsr_el1, {tmp}",
@@ -95,6 +86,24 @@ pub fn start(initrd_start: u32) {
             }
         } else if inp_buf.starts_with(b"M3") {
             println!("香的發糕");
+
+        } else if inp_buf.starts_with(b"setTimeout") {
+            let inp_buf = &inp_buf[..len - 1];
+            let mut iter = inp_buf.split(|c| c.clone() == b' ');
+            assert_eq!(iter.next().unwrap(), b"setTimeout");
+            let message = core::str::from_utf8(iter.next().unwrap()).unwrap().to_string();
+            let time = core::str::from_utf8(iter.next().unwrap()).unwrap();
+            match time.parse::<u64>() {
+                Ok(time) => {
+                    timer::add_timer_ms(time, move || println!("{}", message));
+                }
+                Err(_) => {
+                    println!("Invalid time: {}", time.len());
+                }
+            }
+            
+            // timer::add_timer_ms(time, move || println!("{}", message));
+        
         } else {
             println!(
                 "Unknown command {}",
