@@ -1,3 +1,4 @@
+import argparse
 import os
 import subprocess
 import time
@@ -19,6 +20,7 @@ class Kernel:
 
     def upload(self, device: str):
         stat = self.stat()
+        print("start upload...")
         with open(device, "wb", buffering=0) as tty:
             print("Wait 5 seconds")
             time.sleep(5)
@@ -29,7 +31,7 @@ class Kernel:
             #     print(i+1, hdr[i: i+1])
             #     tty.write(hdr[i: i+1])
             #     time.sleep(0.01)
-            tty.write(f"C{stat.st_size}CMe".encode())   # qemu: prepend "M"
+            tty.write(f"MC{stat.st_size}CMe".encode())   # qemu: prepend "M"
             # TODO: check written number correct
 
             print("Header written")
@@ -57,10 +59,23 @@ class Kernel:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-build", action='store_true', help="Skip kernel build")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--rpi3", action='store_true', help="Run on rpi3b+")
+    group.add_argument("--qemu", help="Run on qemu")
+
+    args = parser.parse_args()
+    print(args)
+
     kernel = Kernel()
-    kernel.build()
-    kernel.upload(device="/dev/ttyUSB0")
-    # kernel.upload(device="/dev/pts/7")
+    if not args.no_build:
+        kernel.build()
+
+    if args.rpi3:
+        kernel.upload(device="/dev/ttyUSB0")
+    if args.qemu is not None:
+        kernel.upload(device=args.qemu)
 
 
 if __name__ == "__main__":
