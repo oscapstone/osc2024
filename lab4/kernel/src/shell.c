@@ -102,6 +102,8 @@ void shell_cmd(char *cmd)
         uart_puts("\n");
         print_free_area();
         char *ptr = kmalloc(5000);
+        uart_puts("-----------------------------------------------------\n");
+        uart_puts("-----------------------------------------------------\n");
         kfree(ptr);
     }
     else if (my_strcmp(cmd, "test object") == 0)
@@ -111,11 +113,12 @@ void shell_cmd(char *cmd)
         char *ptr_arr[64];
 
         for (int i = 0; i < 65; i++)
-            ptr_arr[i] = kmalloc(64);
+            ptr_arr[i] = kmalloc(60);
 
         uart_puts("-----------------------------------------------------\n");
         uart_puts("-----------------------------------------------------\n");
         
+        kfree(ptr_arr[50]);
         kfree(ptr_arr[0]);
     }
     else

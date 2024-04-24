@@ -1,24 +1,27 @@
 #ifndef __ALLOCATOR_H
 #define __ALLOCATOR_H
 
+#define PAGE_BASE (void *)0x00
+#define PAGE_END (void *)0x3c000000
+
 #define MAX_ORDER 11
-#define PAGE_NUM 1024
 #define MAX_OBJECT_ORDER 4
-#define OBJECT_NUM 1024
 #define PAGE_SIZE 4096
 
 #define BUDDY -1
 #define ALLOCATED -2
+#define FREE -3
 
 #define NULL 0
 
 typedef struct page
 {
     unsigned char *address;
-    int idx, val; // idx-> page index, val->page state
-    int allocated_order; // if the page is allocated, allocated_order is the block order, otherwise, its value is 0.
-    int object_order; // if the page is object pool, object_oder is the object order, otherwise, its value is -1.
+    int idx, val;        // idx-> page index, val->page state
+    int order_before_allocate; // if the page is allocated, the value is the block order, otherwise, its value is 0.
+    int object_order;    // if the page is object pool, object_oder is the object order, otherwise, its value is -1.
     struct page *pre_block, *next_block;
+    struct object* object_address; // if the page is object pool, the value is the address of the first object in object array in object pool.
 } page;
 
 typedef struct free_area
@@ -40,7 +43,16 @@ typedef struct free_object
     unsigned long nr_free; // the number of the free object
 } free_object;
 
-void allocator_init();
+extern unsigned long long cpio_start;
+extern unsigned long long cpio_end;
+
+void startup_allocate();
+void page_array_init(void *start, void *end);
+void object_array_init();
+void page_allocator_init();
+void object_allocator_init();
+
+void memory_reserve(void *start, void *end);
 
 void block_list_push(int order, page *new_block);
 page *block_list_pop(int order);

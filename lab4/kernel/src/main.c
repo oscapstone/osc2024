@@ -14,7 +14,7 @@ int main()
 	uart_init();
 	fdt_traverse(initramfs_callback);
 	build_file_arr();
-	allocator_init();
+	startup_allocate();
 	task_heap_init();
 	timer_heap_init();
 	uart_puts("\n");

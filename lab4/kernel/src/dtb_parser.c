@@ -1,10 +1,13 @@
 #include "uart.h"
 #include "utils.h"
 #include "cpio.h"
+#include "allocator.h"
 #include "dtb_parser.h"
 
 char *dtb_ptr;
 extern unsigned long long cpio_address;
+extern unsigned long long cpio_start;
+extern unsigned long long cpio_end;
 
 void fdt_traverse(FuncPtr fun_ptr)
 {
@@ -79,9 +82,15 @@ void initramfs_callback(uint32_t token, char *name, char *prop)
     if (my_strcmp(name, "linux,initrd-start") == 0)
     {
         cpio_address = fdt_u32_le2be(prop);
+        cpio_start = cpio_address;
         uart_puts("initrd-start: ");
         uart_hex_lower_case((unsigned int)cpio_address);
         uart_puts("\n");
+    }
+
+    if (my_strcmp(name, "linux,initrd-end") == 0)
+    {
+        cpio_end = fdt_u32_le2be(prop);
     }
 }
 

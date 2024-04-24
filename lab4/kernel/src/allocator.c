@@ -5,44 +5,102 @@
 #define DEBUG 0
 
 volatile unsigned char *heap_head = ((volatile unsigned char *)(0x10000000));
+
+int page_start_idx = 0;
+int page_end_idx = 0;
+int page_num = 0;
 int total_object_num = 0;
 
-page page_arr[PAGE_NUM];
+unsigned long long cpio_start = 0;
+unsigned long long cpio_end = 0;
+
+page *page_arr = NULL;
+object *object_arr = NULL;
+
 free_area free_area_arr[MAX_ORDER];
-object object_arr[OBJECT_NUM];
 free_object free_object_arr[MAX_OBJECT_ORDER];
 
-void allocator_init()
+void startup_allocate()
 {
-    unsigned char *cur = (unsigned char *)heap_head;
+    void *startup_start = (void *)heap_head;
+    page_array_init(PAGE_BASE, PAGE_END);
+    object_array_init();
+
+    memory_reserve((void *)0, (void *)0x1000);            // Spin tables for multicore boot (0x0000 - 0x1000)
+    memory_reserve((void *)0x80000, (void *)0x100000);    // Kernel image in the physical memory
+    memory_reserve((void *)cpio_start, (void *)cpio_end); // Initramfs
+    memory_reserve(startup_start, (void *)heap_head);     // startup allocator
+
+    page_allocator_init();
+    object_allocator_init();
+}
+
+void page_array_init(void *start, void *end)
+{
+    page_num = (end - start) / PAGE_SIZE;
+    page_arr = simple_malloc(page_num * sizeof(page)); // malloc page array
+
+    unsigned char *cur = (unsigned char *)start;
     // initialize the page array
-    for (int i = 0; i < PAGE_NUM; i++)
+    for (int i = 0; i < page_num; i++)
     {
         page_arr[i].address = cur;
-        page_arr[i].idx = i;
-        page_arr[i].val = (i == 0 ? 0 : BUDDY);
-        page_arr[i].allocated_order = 0;
+        page_arr[i].val = FREE;
+        page_arr[i].order_before_allocate = 0;
         page_arr[i].object_order = -1;
+        page_arr[i].pre_block = NULL;
+        page_arr[i].next_block = NULL;
+        page_arr[i].object_address = NULL;
         cur += PAGE_SIZE;
     }
-    page_arr[0].pre_block = NULL;
-    page_arr[0].next_block = NULL;
+}
+
+void object_array_init()
+{
+    object_arr = simple_malloc(page_num * sizeof(object)); // malloc same number of page array
+    for (int i = 0; i < page_num; i++)
+    {
+        object_arr[i].left = NULL;
+        object_arr[i].right = NULL;
+    }
+}
+
+void page_allocator_init()
+{
+    // move heap_head to the frame that hasn't used yet.
+    heap_head = (volatile unsigned char *)(((unsigned long long)heap_head / 4096 + 1) * 4096);
+
+    page_start_idx = (unsigned long long)heap_head / PAGE_SIZE;
+    page_end_idx = page_start_idx + 1024;
+
+    // initialize the page array
+    for (int i = page_start_idx; i < page_end_idx; i++)
+    {
+        page_arr[i].idx = i - page_start_idx;
+        page_arr[i].val = (i == page_start_idx ? 10 : BUDDY);
+    }
+    page_arr[page_start_idx].pre_block = NULL;
+    page_arr[page_start_idx].next_block = NULL;
 
     // initialize the free area array
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < MAX_ORDER; i++)
     {
         free_area_arr[i].free_list = NULL;
         free_area_arr[i].nr_free = 0;
     }
-    free_area_arr[10].free_list = &page_arr[0];
+    free_area_arr[10].free_list = &page_arr[page_start_idx];
     free_area_arr[10].nr_free = 1;
+}
 
+void object_allocator_init()
+{
     int object_size = 16;
     int cur_idx = 0;
     for (int i = 0; i < MAX_OBJECT_ORDER; i++)
     {
-        void *ptr = kmalloc(PAGE_SIZE); // allocate page to object
-        page_arr[(ptr - (void *)heap_head) / PAGE_SIZE].object_order = i;
+        void *ptr = kmalloc(PAGE_SIZE); // allocate one page to object
+        page_arr[(ptr - PAGE_BASE) / PAGE_SIZE].object_order = i;
+        page_arr[(ptr - PAGE_BASE) / PAGE_SIZE].object_address = object_arr + cur_idx;
         int init_idx = cur_idx;
         total_object_num += PAGE_SIZE / object_size;
 
@@ -51,12 +109,11 @@ void allocator_init()
         {
             object_arr[cur_idx].address = ptr;
             object_arr[cur_idx].object_size = object_size;
-            object_arr[cur_idx].left = NULL;
-            object_arr[cur_idx].right = NULL;
             ptr = ptr + object_size;
         }
 
         // initialize object array
+        object_arr[init_idx].left = NULL;
         object_arr[init_idx].right = &object_arr[init_idx + 1];
         free_object_arr[i].free_list = &object_arr[init_idx];
         free_object_arr[i].nr_free = PAGE_SIZE / object_size;
@@ -70,6 +127,14 @@ void allocator_init()
     }
 }
 
+void memory_reserve(void *start, void *end)
+{
+    int start_idx = (start - PAGE_BASE) / PAGE_SIZE;
+    int end_idx = (end - PAGE_BASE) / PAGE_SIZE;
+    for (int i = start_idx; i <= end_idx; i++)
+        page_arr[i].val = ALLOCATED;
+}
+
 void block_list_push(int order, page *new_block)
 {
     new_block->val = order;
@@ -78,7 +143,7 @@ void block_list_push(int order, page *new_block)
 
     if (free_area_arr[order].free_list == NULL) // if the list is empty, let the head pointer to the new block.
         free_area_arr[order].free_list = new_block;
-    else
+    else // if the list isn't empty, insert it to the front of the list.
     {
         new_block->next_block = free_area_arr[order].free_list;
         free_area_arr[order].free_list->pre_block = new_block;
@@ -120,7 +185,7 @@ page *block_list_pop(int order)
 
 void block_list_remove(int order, page *remove_block)
 {
-    if (free_area_arr[order].free_list == remove_block) // the remove block is the first node of the free list
+    if (free_area_arr[order].free_list == remove_block) // the remove block is the front of the free list
     {
         free_area_arr[order].free_list = free_area_arr[order].free_list->next_block;
         if (free_area_arr[order].free_list != NULL)
@@ -151,7 +216,8 @@ void *allocate_block(int need_order)
         unsigned long long page_num = power(2, order);
         for (unsigned long long i = 0; i < page_num; i++) // set all the pages in this blcok to ALLOCATED.
             (block_head + i)->val = ALLOCATED;
-        block_head->allocated_order = order;
+
+        block_head->order_before_allocate = order;
 
         return block_head->address;
     }
@@ -182,7 +248,8 @@ void *allocate_block(int need_order)
         unsigned long long page_num = power(2, order);
         for (unsigned long long i = 0; i < page_num; i++) // set all the pages in this blcok to ALLOCATED.
             (block_head + i)->val = ALLOCATED;
-        block_head->allocated_order = order;
+
+        block_head->order_before_allocate = order;
 
         return block_head->address;
     }
@@ -192,14 +259,15 @@ void merge_free_block(int order, page *free_block_head)
 {
     // restore the block state.
     free_block_head->val = order;
-    free_block_head->allocated_order = 0;
+    free_block_head->order_before_allocate = 0;
+
     unsigned long long page_num = power(2, order);
     for (unsigned long long i = 1; i < page_num; i++)
         (free_block_head + i)->val = BUDDY;
 
     while (1)
     {
-        int buddy_idx = free_block_head->idx ^ (1 << free_block_head->val); // find the buddy.
+        int buddy_idx = page_start_idx + (free_block_head->idx ^ (1 << free_block_head->val)); // find the buddy.
 
         if (page_arr[buddy_idx].val == free_block_head->val) // the buddy block is free and block size is equal to the free block.
         {
@@ -235,13 +303,11 @@ void merge_free_block(int order, page *free_block_head)
 
 void object_list_push(unsigned char *address)
 {
-    int object_idx = 0;
-    for (int i = 0; i < total_object_num; i++) // find the object idx in object array
-        if (object_arr[i].address == address)
-        {
-            object_idx = i;
-            break;
-        }
+    int page_idx = (address - (unsigned char *)PAGE_BASE) / PAGE_SIZE; // find the page index of object pool
+    int object_idx = (page_arr[page_idx].object_address - object_arr) / sizeof(object); // find the index of first object in object array in object pool
+    while (object_arr[object_idx].address != address)
+        object_idx++;
+
     int object_order = object_arr[object_idx].object_size / 16 - 1;
 
     object *new_object = &object_arr[object_idx];
@@ -250,14 +316,11 @@ void object_list_push(unsigned char *address)
 
     if (free_object_arr[object_order].free_list == NULL) // if the list is empty, then move head to the new object
         free_object_arr[object_order].free_list = new_object;
-    else // if the list isn't empty, insert the object after the tail of it.
+    else // if the list isn't empty, insert the object before the front of it.
     {
-        object *object_tail = free_object_arr[object_order].free_list;
-        while (object_tail->right != NULL)
-            object_tail = object_tail->right;
-
-        object_tail->right = new_object;
-        new_object->left = object_tail;
+        new_object->right = free_object_arr[object_order].free_list;
+        free_object_arr[object_order].free_list->left = new_object;
+        free_object_arr[object_order].free_list = new_object;
     }
     free_object_arr[object_order].nr_free++;
 
@@ -273,13 +336,15 @@ void object_list_push(unsigned char *address)
 object *object_list_pop(int order)
 {
     object *object_head = free_object_arr[order].free_list;
-    int object_size = 16 * (order + 1);
+
     if (object_head == NULL) // If pool is empty, allocate a new page frame from the page allocator.
     {
-        void *ptr = kmalloc(PAGE_SIZE); // allocate page to object
-        page_arr[(ptr - (void *)heap_head) / PAGE_SIZE].object_order = order;
         int cur_idx = total_object_num;
         int init_idx = cur_idx;
+        int object_size = 16 * (order + 1);
+        void *ptr = kmalloc(PAGE_SIZE); // allocate page to object
+        page_arr[(ptr - PAGE_BASE) / PAGE_SIZE].object_order = order;
+        page_arr[(ptr - PAGE_BASE) / PAGE_SIZE].object_address = object_arr + cur_idx;
         total_object_num += PAGE_SIZE / object_size;
 
         // initialize object
@@ -301,14 +366,14 @@ object *object_list_pop(int order)
             object_arr[j].left = &object_arr[j - 1];
             object_arr[j].right = j + 1 < total_object_num ? &object_arr[j + 1] : NULL;
         }
+
+        object_head = free_object_arr[order].free_list;
     }
-    else
-    {
-        free_object_arr[order].free_list = free_object_arr[order].free_list->right;
-        if (free_object_arr[order].free_list != NULL)
-            free_object_arr[order].free_list->left = NULL;
-        free_object_arr[order].nr_free--;
-    }
+
+    free_object_arr[order].free_list = free_object_arr[order].free_list->right;
+    if (free_object_arr[order].free_list != NULL)
+        free_object_arr[order].free_list->left = NULL;
+    free_object_arr[order].nr_free--;
 
 #ifdef DEBUG
     uart_puts("Remove the object that the order is ");
@@ -363,11 +428,11 @@ void *kmalloc(unsigned long long size)
 
 void kfree(void *ptr)
 {
-    int block_head_idx = (ptr - (void *)heap_head) / PAGE_SIZE;
+    int block_head_idx = (ptr - PAGE_BASE) / PAGE_SIZE;
 
     if (page_arr[block_head_idx].object_order == -1) // the page is not object pool.
     {
-        merge_free_block(page_arr[block_head_idx].allocated_order, &page_arr[block_head_idx]);
+        merge_free_block(page_arr[block_head_idx].order_before_allocate, &page_arr[block_head_idx]);
 
 #ifdef DEBUG
         print_free_area();
