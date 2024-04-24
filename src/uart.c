@@ -136,9 +136,14 @@ void uart_putlong(long d)
 void uart_async_puts(char *s)
 {
     while (*s) {
-        if(*s == '\n')
+        if(*s == '\n') {
+            if (!rb_full(&tx_buf)) {
             rb_write(&tx_buf, '\r');
+            }
+        }
+        if (!rb_full(&tx_buf)) {
         rb_write(&tx_buf, *s++);
+        }
     }
     uart_enable_tx_interrupt();
 }
