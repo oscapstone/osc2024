@@ -8,6 +8,7 @@
 #include "slab.h"
 #include "memblock.h"
 #include "stddef.h"
+#include "demo.h"
 
 #ifndef MMIO_BASE
 #define MMIO_BASE               (0x3F000000)
@@ -16,6 +17,10 @@
 #ifndef PAGE_SIZE
 #define PAGE_SIZE               (1 << 12) // 4KB
 #endif // PAGE_SIZE
+
+#ifdef DEMO
+int isDemo = 0;
+#endif
 
 /* page frame: to map the physical memory */
 // static struct page pages[NR_PAGES] = {0}; // Not sure whether we should initialize it or not. (.bss problem)
@@ -117,6 +122,18 @@ static inline void __free_one_page(struct page *page, unsigned long pfn, unsigne
             break;
         /* Remove the buddy from the free list. */
         del_page_from_free_area(buddy, order);
+
+#ifdef DEMO
+        if (isDemo) {
+            uart_puts("[Free one page] Page found buddy. page: ");
+            uart_hex(pfn);
+            uart_puts(" order: ");
+            uart_hex(order);
+            uart_puts(" buddy: ");
+            uart_hex(buddy_pfn);
+            uart_send('\n');
+        }
+#endif
         /* Compute the combined pfn (combine the page and buddy) */
         combined_pfn = buddy_pfn & pfn;
         page = page + (combined_pfn - pfn);
@@ -126,6 +143,17 @@ static inline void __free_one_page(struct page *page, unsigned long pfn, unsigne
     }
     /* Set page order and `PG_buddy`. */
     set_buddy_order(page, order);
+
+#ifdef DEMO
+    if (isDemo) {
+        uart_puts("[Free one page] Insert page: ");
+        uart_hex(pfn);
+        uart_puts(" order: ");
+        uart_hex(order);
+        uart_puts(" into buddy system\n");
+    }
+#endif
+
     /* Insert the final block into zone->free_area[order]. */
     add_to_free_area(page, order);
 }
@@ -156,8 +184,11 @@ static inline void page_frame_init(void)
             continue;
         mem_map[i].flags = PG_AVAIL;
         INIT_LIST_HEAD(&(mem_map[i].buddy_list));
-        __free_one_page(&(mem_map[i]), i, 0);
+        __free_one_page(&(mem_map[i]), i, 0); // Treat each page as a free page and insert it into the free list.
     }
+#ifdef DEMO
+    isDemo = 1;
+#endif
 }
 
 /* Init the buddy system list_head structure */
@@ -183,9 +214,20 @@ static inline void expand(struct page *page, unsigned int low_order, unsigned in
 {
     unsigned long size = 1 << high_order; // indicate the size of the page, then we need to split it and put it into the free list.
 
-    uart_puts("Current page order: ");
-    uart_hex(high_order);
-    uart_send('\n');
+    if (low_order == high_order)
+        return;
+
+#ifdef DEMO
+    if (isDemo) {
+        uart_puts("[expand] page: ");
+        uart_hex(page_to_phys(page));
+        uart_puts(" order: ");
+        uart_hex(high_order);
+        uart_puts(" ,target order: ");
+        uart_hex(low_order);
+        uart_puts(" , so split the page\n");
+    }
+#endif
 
     /**
      * e.g. page = [0, 1, 2, 3, 4, 5, 6, 7], then we need to split it into [0, 1, 2, 3] and [4, 5, 6, 7].
@@ -196,6 +238,16 @@ static inline void expand(struct page *page, unsigned int low_order, unsigned in
         size >>= 1;
 
         /* In linux kernel, there's a procedure named `set_page_guard()`. But I don't understand its purpose (seems like debug information), skip it for now.*/
+
+#ifdef DEMO
+        if (isDemo) {
+            uart_puts("[expand] insert page: ");
+            uart_hex(page_to_phys(&(page[size])));
+            uart_puts(" order: ");
+            uart_hex(high_order);
+            uart_puts(" into buddy system\n");
+        }
+#endif
 
         /* Setup order and `PG_buddy` */
         set_buddy_order(&(page[size]), high_order);
@@ -210,6 +262,14 @@ static inline struct page *__rmqueue_smallest(unsigned int order)
     struct page *page = NULL;
     struct free_area *area;
     unsigned int current_order;
+
+#ifdef DEMO
+    if (isDemo) {
+        uart_puts("[rmqueue smallest] order: ");
+        uart_hex(order);
+        uart_send('\n');
+    }
+#endif
 
     for (current_order = order; current_order < MAX_ORDER; current_order++) {
         area = &(zone.free_area[current_order]);
