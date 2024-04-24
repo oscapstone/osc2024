@@ -27,14 +27,17 @@ bool enable = false;
 char* buffer;
 int length, r;
 
-void impl(decltype(&mini_uart_putc_raw) putc,
+bool impl(decltype(&mini_uart_putc_raw) putc,
           decltype(&mini_uart_getc_raw) getc) {
   auto c = getc();
+  if (c == -1)
+    return false;
   if (c == '\r' or c == '\n') {
     putc('\r');
     putc('\n');
     buffer[r] = '\0';
     enable = false;
+    return false;
   } else {
     switch (c) {
       case 8:     // ^H
@@ -62,6 +65,7 @@ void impl(decltype(&mini_uart_putc_raw) putc,
           putc(c);
         }
     }
+    return true;
   }
 }
 
@@ -219,17 +223,26 @@ int mini_uart_getline_echo(char* buffer, int length) {
 
   using namespace getline_echo;
 
+  if (enable)
+    return -1;
+
+  save_DAIF_disable_interrupt();
   getline_echo::buffer = buffer;
   getline_echo::length = length;
   enable = true;
   r = 0;
+  restore_DAIF();
 
-  if (mini_uart_is_async)
+  if (mini_uart_is_async) {
+    while (enable and not rbuf.empty())
+      impl(&mini_uart_putc_raw_async, &mini_uart_getc_raw_async);
     while (enable)
       NOP;
-  else
+  } else {
     while (enable)
-      impl(&mini_uart_putc_raw_sync, &mini_uart_getc_raw_sync);
+      while (impl(&mini_uart_putc_raw_sync, &mini_uart_getc_raw_sync))
+        ;
+  }
 
   return r;
 }

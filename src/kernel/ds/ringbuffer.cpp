@@ -13,7 +13,7 @@ void RingBuffer::push(char c, bool wait) {
 
 char RingBuffer::pop(bool wait) {
   if (not wait and empty())
-    return 0;
+    return -1;
   while (empty())
     NOP;
   auto c = buf[head];
