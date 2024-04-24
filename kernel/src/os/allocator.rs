@@ -38,7 +38,7 @@ unsafe impl GlobalAlloc for SimpleAllocator {
 
         count += (layout.size() + aligned_start) as u32;
 
-        if allocated_start as u32 > 0x2000_0000 {
+        if allocated_start as u32 > 0x1000_0000 {
             println!("Out of memory: {:x}", allocated_start as u32);
             panic!("Out of memory");
         }
@@ -61,7 +61,5 @@ unsafe impl Allocator for SimpleAllocator {
         }
     }
 
-    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-        // Custom deallocation logic here
-    }
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {}
 }

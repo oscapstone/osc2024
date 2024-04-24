@@ -18,7 +18,10 @@ pub unsafe fn _start_rust() {
     allocator::reserve(0x0008_0000 as *mut u8, 0x0001_0000); // Code
     allocator::reserve(0x0800_0000 as *mut u8, 0x0100_0000); // Initramfs
     allocator::reserve(DeviceTree::get_device_tree_address(), 0x0100_0000); // Device Tree
-    
+    allocator::reserve(0x0910_0000 as *mut u8, 0x06F0_0000); // Simple Allocator
+
+    //println_now("Finished");
+    //loop{}
 
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
