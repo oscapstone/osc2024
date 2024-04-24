@@ -1,7 +1,7 @@
 #include "fifo_buffer.h"
 
 
-void fifo_init(struct FIFO_BUFFER* fifo, U32 size, void* buffer) {
+void fifo_init(struct FIFO_BUFFER* fifo, U32 size, char* buffer) {
     fifo->size = size;
     fifo->buffer = buffer;
     fifo->free = size;

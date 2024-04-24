@@ -6,12 +6,12 @@
 #define FIFO_UNDERFLOW  0x0010
 
 struct FIFO_BUFFER {
-    unsigned char* buffer;
+    char* buffer;
     U32 p, q, size, free, flags;
 };
 
 // assign buffer to the fifo buffer struct
-void fifo_init(struct FIFO_BUFFER* fifo, U32 size, void* buffer);
+void fifo_init(struct FIFO_BUFFER* fifo, U32 size, char* buffer);
 
 int fifo_put(struct FIFO_BUFFER* fifo, unsigned char data);
 U8 fifo_get(struct FIFO_BUFFER* fifo);

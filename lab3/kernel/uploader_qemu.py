@@ -13,7 +13,14 @@ def read_line(s):
 
 if __name__ == '__main__':
 
-    s = serial.Serial("/dev/pts/0", baudrate=115200)
+
+
+    if len(sys.argv) >= 2:
+        deviceName = sys.argv[1]
+    else:
+        deviceName = "/dev/pts/2"
+
+    s = serial.Serial(deviceName, baudrate=115200)
 
     kernel_filePath = "kernel.img"
 
@@ -45,7 +52,9 @@ if __name__ == '__main__':
 
     print('Sending data...')
     with open(kernel_filePath,"rb") as f:
-        s.write(f.read())
+        fileContent = f.read()
+        print('0x46c: ', hex(fileContent[1132]), hex(fileContent[1133]), hex(fileContent[1134]), hex(fileContent[1135]))
+        s.write(fileContent)
 
     print('data send')
     print('receiving result...')

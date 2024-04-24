@@ -18,7 +18,7 @@ void handle_timer_1() {
     current_value_1 += interval_1;
     REGS_TIMER->compare[1] = current_value_1;
     REGS_TIMER->control_status |= SYS_TIMER_1;
-    printf("Timer 1 received\n");
+    //printf("Timer 1 received\n");
 }
 
 U64 timer_get_ticks() {

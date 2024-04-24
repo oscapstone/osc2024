@@ -28,7 +28,7 @@ relocate:
 
     // initialize the stack pointer, after moving the code
     // the code start at 0x60000
-    mov     sp, 0x60000
+    mov     x1, 0x60000
     mov     sp, x1
 
     // clearing the bss section 

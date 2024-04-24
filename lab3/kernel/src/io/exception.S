@@ -49,8 +49,9 @@
     mrs     x2, elr_el1
     mrs     x3, spsr_el1
     bl      show_invalid_entry_message
-    bl      err_hang
-    //load_all
+    //bl      err_hang
+    load_all
+    eret
 .endm
 
 .macro  ventry      label

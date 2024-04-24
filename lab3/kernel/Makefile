@@ -6,10 +6,11 @@ OBJCOPY	= aarch64-linux-gnu-objcopy
 # NS_DEBUG: enable debug output 
 
 # nostdlib: No standard library
-CFLAGS	= -Wall -ffreestanding \
+CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding \
 		  -nostdlib -nostartfiles \
 		  -mgeneral-regs-only\
-		  -O2\
+		  -fno-stack-protector\
+		  -O0\
 		  -I src\
 		  -D NS_DEBUG
 
@@ -29,10 +30,16 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
+QEMU_DEVICE = /dev/pts/2
+
 all : kernel.img
 
 gdb-run :
 	gdb-multiarch -ex 'set architecture aarch64' -ex 'file bin/kernel.elf' -ex 'target remote localhost:1234'
+
+upload : all
+	python3 uploader_qemu.py $(QEMU_DEVICE)
+	sudo screen $(QEMU_DEVICE) 115200
 
 kernel.img : $(OBJ_FILES) linker.ld $(BIN_DIR)
 	$(LD) --verbose $(OBJ_FILES) -T linker.ld -o $(BIN_DIR)/kernel.elf

@@ -6,6 +6,8 @@
         "uart.h": "c",
         "exception.h": "c",
         "timer.h": "c",
-        "auxregs.h": "c"
+        "auxregs.h": "c",
+        "base.h": "c",
+        "fifo_buffer.h": "c"
     }
 }

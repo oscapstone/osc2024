@@ -40,13 +40,13 @@ void shell() {
 
     while (TRUE) {
 
-        uart_send_nstring(2, "# ");
+        printf("# ");
         
         while (TRUE) {
 			while (uart_async_empty()) {
 				asm volatile("nop");
 			}
-            char c = uart_async_get_char();
+            char c = uart_a_get_char();
             *input_ptr++ = c;
             if (c == '\n' || c == '\r') {
                 uart_send_nstring(2, "\r\n");

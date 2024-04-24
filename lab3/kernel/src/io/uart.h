@@ -3,6 +3,11 @@
 
 #include "base.h"
 
+#define TXD 14
+#define RXD 15
+
+#define UART_BUFFER_SIZE 256
+
 void uart_init();
 void uart_send_char(unsigned int c);
 char uart_get_char();
@@ -15,6 +20,6 @@ void uart_hex64(U64 value);
 void uart_handle_int();
 
 BOOL uart_async_empty();
-U8 uart_async_get_char();
+char uart_a_get_char();
 
 #endif

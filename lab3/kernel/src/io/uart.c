@@ -4,14 +4,11 @@
 #include "peripherals/gpio.h"
 #include "peripherals/auxRegs.h"
 #include "utils/utils.h"
+#include "utils/printf.h"
 #include "utils/fifo_buffer.h"
 
-#define TXD 14
-#define RXD 15
-
-#define UART_BUFFER_SIZE 256
-struct FIFO_BUFFER uart_fifo;
-U8 uart_buffer[UART_BUFFER_SIZE];
+static struct FIFO_BUFFER uart_fifo;
+static char uart_buffer[UART_BUFFER_SIZE];
 
 void uart_init() {
 
@@ -119,6 +116,8 @@ void uart_hex64(U64 value) {
 }
 
 void uart_handle_int() {
+    //uart_send_char(uart_get_char());
+    
     if (fifo_put(&uart_fifo, uart_get_char())) {
         uart_send_string("UART overflow");
     }
@@ -128,8 +127,10 @@ BOOL uart_async_empty() {
     return (fifo_status(&uart_fifo) == 0);
 }
 
-U8 uart_async_get_char() {
-    return fifo_get(&uart_fifo);
+char uart_a_get_char() {
+    char data = fifo_get(&uart_fifo);
+
+    return data;
 }
 
 

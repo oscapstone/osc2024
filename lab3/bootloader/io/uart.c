@@ -65,11 +65,12 @@ void uart_send_char(unsigned int c) {
  * Receive a character
  */
 char uart_get_char() {
-    /* wait until something is in the buffer */
-    //bit 0 is set if the receive FIFO holds at least 1 symbol.
-    do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));
     
-    return (*AUX_MU_IO);
+    do{
+        asm volatile("nop");
+    } while(!(*AUX_MU_LSR & 0x01));
+    
+    return (char)(*AUX_MU_IO);
 }
 
 /**

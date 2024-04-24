@@ -7,23 +7,23 @@ SECTIONS
     {
         /* keep the boot to the first section of text segment */
         KEEP(*(.text.boot))
-        *(.text .text.*)
+        *(.text .text.*  .gnu.linkonce.t*)
     }
     /* read only data section */
     .rodata :
     {
-        *(.rodata .rodata.*)
+        *(.rodata .rodata.* .gnu.linkonce.r*)
     }
     /* data section */
     .data :
     {
-        . = ALIGN(16);
-        *(.data .data.*)
+        . = ALIGN(8);
+        *(.data .data.* .gnu.linkonce.d*)
     }
     /* bss section is to store the global variable */
     .bss :
     {
-        . = ALIGN(16);
+        . = ALIGN(8);
         PROVIDE(__bss_start__ = .);
         *(.bss)
         PROVIDE(__bss_end__ = .);
