@@ -5,6 +5,7 @@
         "aux.h": "c",
         "uart.h": "c",
         "exception.h": "c",
-        "timer.h": "c"
+        "timer.h": "c",
+        "auxregs.h": "c"
     }
 }

@@ -2,7 +2,7 @@
 #include "base.h"
 #include "uart.h"
 #include "peripherals/gpio.h"
-#include "peripherals/aux.h"
+#include "peripherals/auxRegs.h"
 #include "utils/utils.h"
 #include "utils/fifo_buffer.h"
 

@@ -9,7 +9,7 @@ OBJCOPY	= aarch64-linux-gnu-objcopy
 CFLAGS	= -Wall -ffreestanding \
 		  -nostdlib -nostartfiles \
 		  -mgeneral-regs-only\
-		  -O0\
+		  -O2\
 		  -I src\
 		  -D NS_DEBUG
 

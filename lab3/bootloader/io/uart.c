@@ -69,7 +69,7 @@ char uart_get_char() {
     //bit 0 is set if the receive FIFO holds at least 1 symbol.
     do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));
     
-    return (*AUX_MU_IO & 0xff);
+    return (*AUX_MU_IO);
 }
 
 /**

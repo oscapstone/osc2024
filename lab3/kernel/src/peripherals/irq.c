@@ -1,7 +1,7 @@
 
 #include "base.h"
 #include "irq.h"
-#include "aux.h"
+#include "auxRegs.h"
 #include "utils/printf.h"
 #include "io/uart.h"
 #include "peripherals/timer.h"
