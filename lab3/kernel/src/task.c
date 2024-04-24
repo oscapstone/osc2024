@@ -16,7 +16,7 @@ void push_task(task *t) {
 	}
 	
 	task* cur = task_head;
-	while (cur -> next != NULL && cur -> next -> p < t -> p) {
+	while (cur -> next != NULL && cur -> next -> p > t -> p) {
 		cur = cur -> next;
 	}
 
@@ -31,17 +31,20 @@ void create_task(task_callback callback, int priority) {
 
 	t -> callback = callback;
 	t -> p = priority;
+	uart_printf("created a task with priority %d\n", t -> p);
+	t -> started = 0;
 		
 	push_task(t);
 }
 
 void execute_tasks() {
-	irq(1);
-    while (task_head -> next != NULL) { 
+    while (task_head -> next != NULL && !task_head -> next -> started) {
 		irq(0);
+		task_head -> next -> started = 1;
+		irq(1); 
+		uart_printf("Task with priority %d started\r\n", task_head -> next -> p);
         task_head -> next -> callback();
+		uart_printf("Task with priority %d ended\r\n", task_head -> next -> p);
 		task_head = task_head -> next;
-		irq(1);
     }
-	irq (1);
 }

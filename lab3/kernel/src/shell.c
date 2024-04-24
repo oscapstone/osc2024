@@ -8,9 +8,9 @@
 #include "alloc.h"
 #include "fdt.h"
 #include "timer.h"
+#include "exception.h"
 
 char buf[1024];
-
 
 void help() {
 	uart_printf("help         : print this help menu\r\n");
@@ -20,16 +20,40 @@ void help() {
 	uart_printf("memory       : get the ARM memory info\r\n");
 	uart_printf("ls           : ls the initial ramdisk\r\n");
 	uart_printf("cat          : cat the initial ramdisk\r\n");
-	uart_printf("test alloc   : test the allocator\r\n");
-	uart_printf("get initramd : use devicetree to get initial ramdisk\r\n");
+	uart_printf("initramd     : use devicetree to get initial ramdisk\r\n");
 	uart_printf("dtb          : output the device tree\r\n");
-	uart_printf("uart irq test: test for async uart\r\n");
-	uart_printf("set timeout  : set timeout (ms)\r\n");
+	uart_printf("async        : test for async uart\r\n");
+	uart_printf("timeout      : set timeout (ms)\r\n");
 }
 
-int flag;
+void handle_timeout() {
+	uart_printf("Input time(ms): ");
+	uart_recv_string(buf);
+	unsigned long t = stoi(buf);
+	uart_printf("\n");
+	uart_printf("Input data to output: ");
+	uart_recv_string(buf);
+	uart_printf("\n");
+	set_timeout(t, buf);
+}
 
-extern void to_el0_with_timer();
+void async_test() {
+	uart_irq_on();
+
+	uart_irq_send("Test\r\n\0");
+
+	int t = 100000000;
+	while (t --); 
+
+	char* str = simple_malloc(100);
+	uart_irq_read(str);
+
+	t = 10000000;
+	while (t --);
+	
+	uart_irq_off();
+	uart_printf("%s, End\n", str);
+}
 
 void shell_begin(char* fdt)
 {
@@ -40,45 +64,27 @@ void shell_begin(char* fdt)
 		if (same(buf, "hello")) {
 			uart_printf("Hello World!\n");
 		}
-		else if (same(buf, "set timeout")) {
-			uart_printf("Input time(ms): ");
+		else if (same(buf, "tt")) {
+			uart_printf("Input:\r\n");
 			uart_recv_string(buf);
+			uart_printf("\r\n");
 			unsigned long t = stoi(buf);
-			uart_printf("\n");
-			uart_printf("Input data to output: ");
-			uart_recv_string(buf);
-			uart_printf("\n");
-			set_timeout(t, buf);
+			uart_printf("started countind from %d\r\n", t);
+			while (t--) {
+				
+			}
+			uart_printf("end\r\n");
+		}
+		else if (same(buf, "timeout")) {
+			handle_timeout();
 		}
 		else if (same(buf, "help")) {
 			help();
 		}
-		else if (same(buf, "el0 timer")) {
-			to_el0_with_timer();
-			uart_printf("In el0 timer...\n");
-			while(1);
-		}
 		else if (same(buf, "async")) {
-			// uart_printf("started testing\n");
-			uart_irq_on();
-
-			uart_irq_send("Test\r\n\0");
-
-			int t = 10000;
-			while (t --) {
-			}
-
-			char* str = simple_malloc(100);
-			uart_irq_read(str);
-
-			t = 150;
-			while (t --) {
-			}
-
-			uart_irq_off();
-			uart_printf("%s, End\n", str);
+			async_test();
 		}
-		else if(same(buf, "get initramd")) {
+		else if(same(buf, "initramd")) {
 			fdt_traverse(get_initramfs_addr, fdt);
 		}
 		else if (same(buf, "ls")) {

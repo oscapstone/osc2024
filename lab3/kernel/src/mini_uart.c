@@ -237,7 +237,6 @@ void uart_irq_send(char* str) {
 }
 
 void uart_irq_read(char* str) {
-	uart_printf("Reading shits\r\n");
 	int ind = 0;
 	while (recv_ind < recv_tail) {
 		str[ind ++] = recv_buffer[recv_ind ++];
@@ -245,27 +244,25 @@ void uart_irq_read(char* str) {
 }
 
 void write_handler(){
-	asm volatile("msr DAIFSet, 0xf");
+	irq(0);	
 
     while(write_ind != write_tail){
 		char c = write_buffer[write_ind++];
 		*AUX_MU_IO_REG = (unsigned int)c;
 	}
 
-	asm volatile("msr DAIFClr, 0xf");
+	irq(1);	
 }
 
 void recv_handler(){
 
-	asm volatile("msr DAIFSet, 0xf");
+	irq(0);	
 
 	char c = (char)(*AUX_MU_IO_REG);
-	
 	if (c != 0) {
 	    recv_buffer[recv_tail ++] = c;
 	}
-
 	change_read_irq(1);
 
-	asm volatile("msr DAIFClr, 0xf");
+	irq(1);	
 }

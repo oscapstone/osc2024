@@ -76,6 +76,7 @@ from_el1_to_el0:
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
     str x30, [sp, 16 * 15]
+	// empty 8 bytes
 
 	mrs x0, SPSR_EL1
 	mrs x1, ELR_EL1
@@ -86,7 +87,11 @@ from_el1_to_el0:
 
 // load general registers from stack
 .macro load_all
-    ldp x0, x1, [sp ,16 * 0]
+	ldp x0, x1,  [sp, 16 * 16]
+	msr SPSR_EL1, x0
+	msr ELR_EL1,  x1
+    
+	ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
     ldp x4, x5, [sp ,16 * 2]
     ldp x6, x7, [sp ,16 * 3]
@@ -102,10 +107,6 @@ from_el1_to_el0:
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
-	
-	ldp x0,	 x1,  [sp, 16 * 16]
-	msr SPSR_EL1, x0
-	msr ELR_EL1,  x1
 
     add sp, sp, 32 * 9 
 .endm
@@ -140,50 +141,46 @@ general_irq_handler:
   load_all
   eret
 
-el0_irq_handler:
-	save_all
-	bl c_el0_irq_handler
-	load_all
-	eret
+undefined_exception:
+	bl c_undefined_exception
 
-
-.align 11 // vector table should be aligned to 0x800
+.align 11
 .global exception_vector_table
 exception_vector_table:
-  b exception_handler// branch to a handler function.
-  .align 7 // entry size is 0x80, .align will pad 0
-  b exception_handler 
+  b undefined_exception 
   .align 7
-  b exception_handler 
+  b undefined_exception 
   .align 7
-  b exception_handler 
+  b undefined_exception
+  .align 7
+  b undefined_exception
   .align 7
 
-  b exception_handler 
+  b undefined_exception
   .align 7
   b general_irq_handler 
   .align 7
-  b exception_handler 
+  b undefined_exception
   .align 7
-  b exception_handler 
-  .align 7
-
-  b exception_handler 
-  .align 7
-  b el0_irq_handler 
-  .align 7
-  b exception_handler 
-  .align 7
-  b exception_handler 
+  b undefined_exception
   .align 7
 
   b exception_handler 
   .align 7
-  b exception_handler 
+  b undefined_exception
   .align 7
-  b exception_handler
+  b undefined_exception
   .align 7
-  b exception_handler 
+  b undefined_exception
+  .align 7
+
+  b undefined_exception
+  .align 7
+  b undefined_exception
+  .align 7
+  b undefined_exception
+  .align 7
+  b undefined_exception
   .align 7
 
 set_exception_vector_table:

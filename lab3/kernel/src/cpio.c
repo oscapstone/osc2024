@@ -114,7 +114,7 @@ void cpio_ls() {
 	uart_printf("There're %d files:\n", fs.n);
 	for(int i = 0; i < fs.n; i ++) {
 		substr(buff, fs.names, fs.names_pos[i], fs.names_pos[i + 1] - 1);
-		uart_printf("%s\n", buff);
+		uart_printf("%s\r\n", buff);
 	}
 }
 
@@ -135,15 +135,12 @@ void cpio_load(char* str) {
 		substr(buff, fs.names, fs.names_pos[i], fs.names_pos[i + 1] - 1);
 		if (same(buff, str)) {
 			void* pos = &fs.datas[fs.datas_pos[i]]; 
-			for (int j = fs.datas_pos[i]; j < fs.datas_pos[i + 1]; j ++) {
-				uart_send((char)*((char*)pos + j));
-			}
-			uart_printf("running code from %x...\n", pos);
+			uart_printf("Running code from %x...\n", pos);
 			asm volatile(
-                "mov x1, 0x340;"
+                "mov x1, 0x3c0;"
                 "msr spsr_el1, x1;"
                 "mov x1, %[var1];"
-                "ldr x2, =0x100000;"
+                "ldr x2, =0x1000000;"
                 "msr elr_el1, x1;"
                 "msr sp_el0, x2;"
                 "eret"

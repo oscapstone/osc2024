@@ -6,7 +6,7 @@ typedef void(*task_callback)(void);
 typedef struct task {
     struct task *next;
     task_callback callback;
-    int p;
+    int p, started;
 } task;
 
 void execute_tasks();
