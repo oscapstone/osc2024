@@ -1,10 +1,20 @@
+use self::buddy_system::BuddyAllocator;
+
 use super::stdio::*;
-use core::alloc::{GlobalAlloc, Layout};
-use core::ptr::{null, null_mut};
 use crate::println;
+use core::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
+use core::ptr::{null_mut, NonNull};
+
+mod buddy_system;
 
 #[global_allocator]
-pub static ALLOCATOR: Allocator = Allocator;
+pub static mut ALLOCATOR: BuddyAllocator = BuddyAllocator {};
+
+pub static mut SIMPLE_ALLOCATOR: SimpleAllocator = SimpleAllocator {};
+
+pub unsafe fn init() {
+    buddy_system::init();
+}
 
 struct Header {
     size: usize,
@@ -12,13 +22,11 @@ struct Header {
     next: *mut Header,
 }
 
-pub struct Allocator;
+pub struct SimpleAllocator;
 
-impl Allocator {
-}
+impl SimpleAllocator {}
 
-
-unsafe impl GlobalAlloc for Allocator {
+unsafe impl GlobalAlloc for SimpleAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         static mut count: u32 = 4;
         if layout.size() == 0 {
@@ -37,49 +45,25 @@ unsafe impl GlobalAlloc for Allocator {
             panic!("Out of memory");
         }
 
+        //println_now("SA: allocated");
+
         allocated_start
-
-        // start.add(count as usize) as *mut u8
-        // let mut current = 0x3001_0000 as *mut Header;
-        // loop {
-        //     println("Looping...");
-        //     if (*current).next.is_null() {
-        //         println("End of list");
-        //         // At the end of the list
-        //         (*current).next = (*current).start.add((*current).size + 10) as *mut Header;
-        //         println("Moving to next");
-        //         current = (*current).next;
-        //         println("Setting header");
-        //         (*current).size = layout.size();
-        //         (*current).start = current.add(2) as *mut u8;
-        //         (*current).next = null_mut();
-        //         println("check alignment");
-        //         // check alignment
-        //         let offset = (*current).start.align_offset(layout.align());
-        //         (*current).start = (*current).start.add(offset);
-
-        //         break;
-
-        //     // TODO: Find the block that fits the layout
-        //     // } else if (*current).start.add((*current).size).add(layout.size()) < (*current).next. {
-        //     //     let start = (*current).start.add((*current).size);
-        //     //     (*current).size += layout.size();
-        //     //     return start;
-        //     } else {
-        //         println("Not end of list");
-        //         current = (*current).next;
-        //     }
-        // }
-
-        // assert_ne!(current, null_mut());
-        // print("Allocating ");
-        // print_hex((*current).start as u32);
-        // (*current).start
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        // Implement deallocation logic here
-        // println("Deallocating memory");
-        // null();
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {}
+}
+
+unsafe impl Allocator for SimpleAllocator {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        unsafe {
+            let ptr = self.alloc(layout);
+            NonNull::new(ptr)
+                .map(|p| NonNull::slice_from_raw_parts(p, layout.size()))
+                .ok_or(AllocError)
+        }
+    }
+
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        // Custom deallocation logic here
     }
 }
