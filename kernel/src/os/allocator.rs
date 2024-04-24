@@ -16,10 +16,8 @@ pub unsafe fn init() {
     buddy_system::init();
 }
 
-struct Header {
-    size: usize,
-    start: *mut u8,
-    next: *mut Header,
+pub fn reserve(ptr: *mut u8, size: usize) {
+    buddy_system::reserve(ptr, size);
 }
 
 pub struct SimpleAllocator;

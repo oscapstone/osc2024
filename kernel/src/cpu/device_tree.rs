@@ -122,6 +122,10 @@ impl DeviceTree {
         self.tree_root.get(name)
     }
 
+    pub fn get_device_tree_address() -> *mut u8 {
+        unsafe {*(DeviceTree::DEVICE_TREE_ADDRESS) as *mut u8}
+    }
+
     pub fn init() -> DeviceTree {
         let mut ret = DeviceTree {
             device_tree_ptr: unsafe { *(DeviceTree::DEVICE_TREE_ADDRESS) } as *const u8,

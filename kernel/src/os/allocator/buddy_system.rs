@@ -1,4 +1,5 @@
-use super::{print_hex_now, SimpleAllocator, SIMPLE_ALLOCATOR};
+use super::super::stdio::{print_hex_now, println_now};
+use super::{SimpleAllocator, SIMPLE_ALLOCATOR};
 use crate::println;
 use alloc::boxed::Box;
 use core::{
@@ -6,8 +7,6 @@ use core::{
     ops::Deref,
     ptr::null_mut,
 };
-
-use super::println_now;
 
 static mut FRAME_ROOT: Option<Box<BuddyNode, &SimpleAllocator>> = None;
 
@@ -24,15 +23,14 @@ struct BuddyNode<'a> {
 pub unsafe fn init() {
     FRAME_ROOT = Some(Box::new_in(
         BuddyNode {
-            start_address: 0x2000_0000 as *mut u8,
-            size: 0x1000_0000,
+            start_address: 0x0000_0000 as *mut u8,
+            size: 0x3C00_0000,
             left_child: None,
             right_child: None,
             allocated: false,
         },
         &SIMPLE_ALLOCATOR,
     ));
-    println_now("Allocated");
 }
 
 enum NodeStatus<T> {
@@ -41,7 +39,7 @@ enum NodeStatus<T> {
     success(T),
 }
 
-unsafe fn find_node_recursive(
+unsafe fn alloc_recursive(
     current: &mut Box<BuddyNode, &SimpleAllocator>,
     layout: &Layout,
 ) -> NodeStatus<*mut u8> {
@@ -55,7 +53,7 @@ unsafe fn find_node_recursive(
     let mut right_child_status = NodeStatus::too_small;
     let child_size = current_node.size / 2;
 
-    if child_size >= layout.size() && child_size >= 1024 {
+    if child_size >= layout.size() && child_size >= 1024 * 4 {
         // Left child fisrt
         if current_node.left_child.is_none() {
             current_node.left_child = Some(Box::new_in(
@@ -70,7 +68,7 @@ unsafe fn find_node_recursive(
             ));
         }
 
-        left_child_status = find_node_recursive(current_node.left_child.as_mut().unwrap(), layout);
+        left_child_status = alloc_recursive(current_node.left_child.as_mut().unwrap(), layout);
 
         if let NodeStatus::success(ret) = left_child_status {
             return left_child_status;
@@ -90,23 +88,21 @@ unsafe fn find_node_recursive(
             ));
         }
 
-        right_child_status =
-            find_node_recursive(current_node.right_child.as_mut().unwrap(), layout);
+        right_child_status = alloc_recursive(current_node.right_child.as_mut().unwrap(), layout);
 
         if let NodeStatus::success(ret) = right_child_status {
             return right_child_status;
         }
     } else {
         if current_node.left_child.is_some() {
-            left_child_status =
-                find_node_recursive(current_node.left_child.as_mut().unwrap(), layout);
+            left_child_status = alloc_recursive(current_node.left_child.as_mut().unwrap(), layout);
         }
         if let NodeStatus::success(ret) = left_child_status {
             return left_child_status;
         }
         if current_node.right_child.is_some() {
             right_child_status =
-                find_node_recursive(current_node.right_child.as_mut().unwrap(), layout);
+                alloc_recursive(current_node.right_child.as_mut().unwrap(), layout);
         }
         if let NodeStatus::success(ret) = right_child_status {
             return right_child_status;
@@ -169,6 +165,89 @@ unsafe fn dealloc_recursive(
     }
 }
 
+unsafe fn reserve_recursive(
+    current: &mut Box<BuddyNode, &SimpleAllocator>,
+    ptr: *mut u8,
+    size: usize,
+) -> NodeStatus<*mut u8> {
+    let current_node = current.as_mut();
+
+    if current_node.start_address <= ptr
+        && current_node.start_address.add(current_node.size) >= ptr.add(size)
+    {
+        let child_size = current_node.size / 2;
+        let mut left_child_status = NodeStatus::too_small;
+        let mut right_child_status = NodeStatus::too_small;
+
+        // In left child range
+        if current_node.start_address <= ptr
+            && current_node.start_address.add(child_size) >= ptr.add(size)
+        {
+            if current_node.left_child.is_none() {
+                current_node.left_child = Some(Box::new_in(
+                    BuddyNode {
+                        start_address: current_node.start_address,
+                        size: child_size,
+                        left_child: None,
+                        right_child: None,
+                        allocated: false,
+                    },
+                    &SIMPLE_ALLOCATOR,
+                ));
+            }
+            left_child_status =
+                reserve_recursive(current_node.left_child.as_mut().unwrap(), ptr, size);
+
+            if let NodeStatus::success(ptr) = left_child_status {
+                return NodeStatus::success(ptr);
+            }
+
+        // In right child range
+        } else if current_node.start_address.add(child_size) <= ptr
+            && current_node.start_address.add(current_node.size) >= ptr.add(size)
+        {
+            if current_node.right_child.is_none() {
+                current_node.right_child = Some(Box::new_in(
+                    BuddyNode {
+                        start_address: current_node.start_address.add(child_size),
+                        size: child_size,
+                        left_child: None,
+                        right_child: None,
+                        allocated: false,
+                    },
+                    &SIMPLE_ALLOCATOR,
+                ));
+            }
+            right_child_status =
+                reserve_recursive(current_node.right_child.as_mut().unwrap(), ptr, size);
+
+            if let NodeStatus::success(ptr) = right_child_status {
+                return NodeStatus::success(ptr);
+            }
+        }
+
+        if matches!(left_child_status, NodeStatus::too_small)
+            && matches!(right_child_status, NodeStatus::too_small)
+        {
+            current_node.allocated = true;
+            return NodeStatus::success(ptr);
+        }
+    }
+
+    NodeStatus::too_small
+}
+
+pub fn reserve(ptr: *mut u8, size: usize) {
+    unsafe {
+        match reserve_recursive(FRAME_ROOT.as_mut().unwrap(), ptr, size) {
+            NodeStatus::success(_) => (),
+            _ => {
+                panic!("Cannot reserve this memory");
+            }
+        }
+    }
+}
+
 unsafe impl GlobalAlloc for BuddyAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if layout.size() == 0 {
@@ -176,7 +255,7 @@ unsafe impl GlobalAlloc for BuddyAllocator {
             return null_mut();
         }
 
-        let allocate_status = find_node_recursive(FRAME_ROOT.as_mut().unwrap(), &layout);
+        let allocate_status = alloc_recursive(FRAME_ROOT.as_mut().unwrap(), &layout);
 
         match allocate_status {
             NodeStatus::success(ret) => {
