@@ -36,6 +36,12 @@ void uart_init()
     *UART_AUX_MU_CNTL_REG = 3;  // enable Tx/Rx
 }
 
+void uart_init_buffer(void)
+{
+    rb_init(&tx_buf, RBUFFER_SIZE);
+    rb_init(&rx_buf, RBUFFER_SIZE);
+}
+
 void uart_send(unsigned int c) {
     while (!((*UART_AUX_MU_LSR_REG) & 32)) {
         asm volatile("nop");
@@ -124,6 +130,23 @@ void uart_putlong(long d)
     }
     while (idx > 0) {
         uart_send(buffer[--idx]);
+    }
+}
+
+void uart_async_puts(char *s)
+{
+    while (*s) {
+        if(*s == '\n')
+            rb_write(&tx_buf, '\r');
+        rb_write(&tx_buf, *s++);
+    }
+    uart_enable_tx_interrupt();
+}
+
+void uart_tx_handler(void)
+{
+    while (!rb_empty(&tx_buf)) {
+        uart_send(rb_read(&tx_buf));
     }
 }
 

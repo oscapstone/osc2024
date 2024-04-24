@@ -72,8 +72,8 @@ void handle_current_el_irq(void)
             uart_puts("uart Rx irq\n");
             uart_disable_rx_interrupt();
         } else if (uart_src == (1 << 1)) {  // Tx (transmit register empty)
-            uart_puts("uart Tx irq\n");
             uart_disable_tx_interrupt();
+            uart_tx_handler();
         }
     } else if (*CORE0_TIMER_IRQ_SRC & 0b10) {
         // seconds after booting
