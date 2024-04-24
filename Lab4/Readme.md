@@ -1,34 +1,100 @@
 # OSC2024 Lab4
 Author: jerryyyyy708 (just to make sure my code is not copied by anyone)
+## Buddy System
+Page frame allocation algorithm to seperate address into 2^i * 4096.
+* physical address: index * 4096 + base
+* size: 4096 * 2 ^ order
 
-## Note
-* lab4-kernel8-basic+adv1: more clear to show page allocate/merge/free
-* lab4-kernel8-no_reserve: for demo without reserve memory -> to show allocate split and free merge
-* lab4-kernel8-all: with memory allocation and reserve
+### Page Frame Allocator
+For virtual memory mapping (running user program in user space), need a lot of 4KB memory blocks since it is the unit of mapping. 
 
-## Difference with startup allocation
-* without startup allocation, the buddy system is placed in bss
-* with startup allocation, the buddy system is placed in the memory allocated by simple_alloc
+Regular dynamic memory allocator uses size header before memory block -> additional space. (can't be use as page frame, not aligned)
 
-要在runtime才會知道總共有多少memory可以用，所以會需要動態分配如frame array等等的大小(不像現在寫的時候是一開始就把可以用的空間定義在程式裡，所以可以直接在global裡面給定array大小)
+Page frame allocator can allocate contiguous page frame for large buffers.
 
-## Memory Reserve
-* Startup allocator is placed in kernel, which is already reserved. The buddy system is placed right after the kernel, can be reserved together.
+If only run in kernel space, the process and the memory usage can be predicted(usually) thus in this case dynamic memory allocator might be enough.
+
+### Why 4KB
+* 4KB is a page frame size for many operating system for mapping virtual memory and alignment.
+* Tradeoff
+    * smaller frame size: less internal fragment problem, but has a larger page table which requires more memory and tranverse time for virtual memory.
+    * larger frame size: more internal fragment problem but smaller page table.
+
+### Find buddy
+use index xor 2^order to find buddy.
+```
+int bud = i ^ (1 << frames[i].order); //shift order bits, every shift means * 2
+```
+xor: no change if meet 0, change if meet 1 -> the xor simply change the bit of the order i, which means +-2^order.
+
+### Freelist
+Keep a list of free pages in each order for efficient allocation in O(logn).
+
+## Dynamic Memory Allocator
+Translate page to smaller memory for small memory allocation.
+
+## Memory Reserve 
+Make sure some in use memory are not allocated.
+* Spin table 0x0000~0x1000: A table for multicore to spin and wait for start.
+* Kernel image: 0x80000 to _end (and stack, buddy system)
+* Startup allocator (also in kernel, bss)
+* iniramfs: get info by dtb
+* Devicetree: start address in x0 and end address by header
+
+## Startup Allocator
+The physical address is determined in runtime, so we cannot know how large frame array we need. Therefore, we need a startup allocator to allocate appropriate memory for the frame array instead of hardcode them in bss.
+
+## Demo Note
+1. Get memory location
+2. Show status instruction and start startup allocation
+3. Show frame count
+4. Show memory reserve
+5. Startup merging and show freelist
+6. Allocate all page with order lower than 6
+7. Show freelist
+8. Show releasing redundant memory block
+9. Show freelist
+10. Free the order 0 page to show merging iteratively
+11. Print freelist 
+12. Show dynamic allocator and free by allocating 500 16byte chunck, show content and free, then malloc again
+
+## Implementation Index
+```
+//structures
+typedef struct frame
+typedef struct freelist
+typedef struct memory_pool
+
+//startup allocator
+void *simple_alloc
+
+//freelist
+void remove_from_freelist
+void insert_into_freelist
+
+//demo utils
+void status_instruction()
+void print_freelist(int head)
+void convert_val_and_print(int start, int len)
+void allocate_all()
+void demo_page_alloc()
+
+//reserve memory
+void memory_reserve(unsigned long start, unsigned long end)
+
+//page frame allocator
+void frames_init()
+void merge_free(frame_t *frame, int print)
+void merge_all(int print)
+void free_page(unsigned long address)
+int get_order(unsigned long size)
+void* allocate_page(unsigned long size)
+
+//dynamic memory allocator
+void init_memory()
+void * malloc(unsigned long size)
+void free(void* ptr) 
+```
 
 ## TODO
-1. Check the usable memory by dtb V
-2. Replace Memory Start, Total and Frame_count by dtb and dynamic allocate it instead of hardcode. V
-
-1. Add hardcode version to the vm
-2. check why is the free list like that (%32 = 19 = 16 + 2 + 1)
-3. why xor ... demo things
- 
-
-
-## Demo問
-* Lab3 Task Queue，只要加了 
-```
-msr DAIFClr, 0xf
-msr DAIFSet, 0xf
-```
-interrupt就會完全跑不了，我的寫法是 async 時開啟 uart_interrupt，之後就都用 async uart。
+1. Add hardcode version to the vm 

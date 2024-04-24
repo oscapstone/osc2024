@@ -14,7 +14,3 @@ Author: jerryyyyy708 (just to make sure my code is not copied by anyone)
 
 ## Memory Reserve
 * Startup allocator is placed in kernel, which is already reserved. The buddy system is placed right after the kernel, can be reserved together.
-
-## TODO
-1. Check the usable memory by dtb
-2. Replace Memory Start, Total and Frame_count by dtb and dynamic allocate it instead of hardcode.

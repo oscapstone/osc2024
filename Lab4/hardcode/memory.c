@@ -14,7 +14,7 @@ The index(slot) of memory can be lookup by first check which pool is the address
 
 extern char _end;
 
-#define MAX_ORDER 5
+#define MAX_ORDER 6
 #define PAGE_SIZE 4096  // Assuming a page size of 4KB
 #define MEMORY_START 0x00 //0x10000000
 #define MEMORY_SIZE 0x3C000000 //simply hardcode, get 0x3B400000 in the device tree
@@ -400,24 +400,28 @@ void print_status(int len){
     uart_send('\r');
 }
 
+void allocate_all(){
+    int times = 1;
+    int base = 4096;
+    void * temp;
+    for(int i=0; i<MAX_ORDER; i++){
+        frame_t * cur = fl[i].head;
+        while(cur){
+            cur = cur -> next;
+            temp = allocate_page(base * times);
+        }
+        times *= 2;
+    }
+}
+
 void demo_page_alloc(){
     split_line();
-    uart_puts("Allocate all page with order lower than 5.\n\r");
-    void * page0 = allocate_page(4000);
-    void * page1 = allocate_page(4000);
-    void * page2 = allocate_page(8000);
-    void * page3 = allocate_page(8000);
-    void * page4 = allocate_page(4096 * 2 * 2);
-    void * page5 = allocate_page(4096 * 2 * 2 * 2);
-    void * page6 = allocate_page(4096 * 2 * 2 * 2);
-    void * page7 = allocate_page(4096 * 2 * 2 * 2);
-    void * page8 = allocate_page(4096 * 2 * 2 * 2 * 2);
-    void * page9 = allocate_page(4096 * 2 * 2 * 2 * 2);
-    split_line();
-    uart_puts("Now there is only free page with order 5\n\r");
+    uart_puts("Allocate all page with order lower than 6.\n\r");
+    allocate_all();
+    uart_puts("Now there is only free page with order 6\n\r");
     uart_getc();
     print_freelist(3);
-    convert_val_and_print(FRAME_COUNT - 32, 32);
+    convert_val_and_print(FRAME_COUNT - 64, 64);
     split_line();
     uart_puts("Show releasing redundant memory block by allocating order 0 page\n\r");
     uart_getc();
@@ -425,12 +429,12 @@ void demo_page_alloc(){
     uart_getc();
     split_line();
     print_freelist(3);
-    convert_val_and_print(FRAME_COUNT - 32, 32);
+    convert_val_and_print(FRAME_COUNT - 64, 64);
     split_line();
-    uart_getc();
-    print_freelist(3);
-    convert_val_and_print(FRAME_COUNT - 32, 32);
-    split_line();
+    // uart_getc();
+    // print_freelist(3);
+    // convert_val_and_print(FRAME_COUNT - 64, 64);
+    // split_line();
     uart_puts("Page Allocated, (next: free page)!\n\r");
     uart_puts("Free the order 0 page to show merging iteratively\n\r");
     uart_getc();
@@ -438,7 +442,7 @@ void demo_page_alloc(){
     split_line();
     uart_getc();
     print_freelist(3);
-    convert_val_and_print(FRAME_COUNT - 32, 32);
+    convert_val_and_print(FRAME_COUNT - 64, 64);
     split_line();
 }
 
