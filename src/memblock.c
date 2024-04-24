@@ -70,18 +70,18 @@ void __next_mem_range(u64 *idx, struct memblock_type *type_a,
             phys_addr_t r_end;
 
             r = &type_b->regions[idx_b];
-            r_start = idx_b ? r[-1].base + r[-1].size : 0;
-            r_end = idx_b < type_b->cnt ? r->base : phys_addr_max;
+            r_start = idx_b ? r[-1].base + r[-1].size : 0; // r[-1].base + r[-1].size is the end of the previous region
+            r_end = idx_b < type_b->cnt ? r->base : phys_addr_max; // r->base is the start of the current region
 
             if (r_start >= m_end)
                 break;
             
-            if (m_start < r_end) {
+            if (m_start < r_end) { // overlap
                 if (out_start)
-                    *out_start = max(m_start, r_start);
+                    *out_start = max(m_start, r_start); // max(m_start, r_start) is the start of the overlap region
                 if (out_end)
-                    *out_end = min(m_end, r_end);
-                if (m_end <= r_end)
+                    *out_end = min(m_end, r_end); // min(m_end, r_end) is the end of the overlap region
+                if (m_end <= r_end) // m is covered by r
                     idx_a++;
                 else
                     idx_b++;
