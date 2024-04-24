@@ -15,5 +15,8 @@ char*               strcpy(char *dest, const char *src);
 int                 atoi(const char* str);
 char                async_getchar();
 void                async_putchar(char c);
+void                puts(char *s);
+void                put_int(int num);
+void                put_hex(unsigned int num);
 
 #endif /* _UTILS_H_ */

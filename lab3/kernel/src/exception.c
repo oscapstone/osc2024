@@ -42,20 +42,16 @@ void el1_interrupt_disable() {
 }
 
 void el1h_irq_router() {
-    // lock();
+    lock();
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) {
         if (*AUX_MU_IER_REG & 2) {
-            // uart_puts("[el1h][irq][uart] Write Exception\r\n");
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_write_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IER_REG & 1) {
-            // uart_puts("[el1h][irq][uart] Read Exception\r\n");
             *AUX_MU_IER_REG &= ~(1);
-            // disable read interrupt
-            unlock();
             irqtask_add(uart_read_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive();

@@ -57,14 +57,12 @@ char uart_async_getc() {
     // Stuck if nothing to read
     while (uart_rx_buffer_isEmpty()) {
         unlock();
-        // *AUX_MU_IER_REG |= 1;       // enable read interrupt
         lock();
     }
     char r = uart_rx_buffer[uart_rx_buffer_r_idx++];
     if (uart_rx_buffer_r_idx >= VSPRINT_MAX_BUF_SIZE)
         uart_rx_buffer_r_idx = 0;
     unlock();
-    uart_puts("%c", r);
     return r;
 }
 

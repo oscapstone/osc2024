@@ -253,3 +253,51 @@ char async_getchar() {
 void async_putchar(char c) {
     uart_async_send(c);
 }
+
+void puts(char *s) {
+    while(*s) 
+        async_putchar(*s++);
+}
+
+void put_int(int num) {
+    // Handle the case when the number is 0
+    if (num == 0) {
+        uart_async_send('0');
+        return;
+    }
+
+    // Temporary array to store the reversed digits as characters
+    char temp[12]; // Assuming int can have at most 10 digits
+    int idx = 0;
+
+    // Handle negative numbers
+    if (num < 0) {
+        uart_async_send('-');
+        num = -num;
+    }
+
+    // Convert the number to characters and store in the temporary array in reverse order
+    while (num > 0)
+    {
+        temp[idx++] = (char)(num % 10 + '0');
+        num /= 10;
+    }
+
+    // Reverse output the character digits
+    while (idx > 0) {
+        uart_async_send(temp[--idx]);
+    }
+}
+
+void put_hex(unsigned int num) {
+    unsigned int hex;
+    int index = 28;
+    
+    puts("0x");
+    while (index >= 0) {
+        hex = (num >> index) & 0xF;
+        hex += hex > 9 ? 0x37 : 0x30;
+        uart_async_send(hex);
+        index -= 4;
+    }
+}

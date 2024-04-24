@@ -87,11 +87,12 @@ void set_alert_2S(char* str) {
 
 void add_timer(void *callback, unsigned long long timeout, char* args) {
     timer_event_t* e = malloc(sizeof(timer_event_t));
+    
+    e->args = malloc(strlen(args) + 1);
+    strcpy(e->args, args);
 
     e->interrupt_time = get_cpu_tick_plus_s(timeout);
     e->callback = callback;
-    e->args = malloc(strlen(args) + 1);
-    strcpy(e->args, args);
 
     INIT_LIST_HEAD(&e->listhead);
 
@@ -109,7 +110,7 @@ void add_timer(void *callback, unsigned long long timeout, char* args) {
         list_add_tail(&e->listhead, timer_list);
     }
 
-    set_timer_interrupt_by_tick(((timer_event_t*)ptr)->interrupt_time);
+    set_timer_interrupt_by_tick(((timer_event_t*)timer_list->next)->interrupt_time);
 }
 
 void core_timer_handler() {

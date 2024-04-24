@@ -62,17 +62,19 @@ void cli_read_cmd(char* buf) {
 void cli_exec_cmd(char* buf) {
     char* argvs[MAX_ARGS];
     char* cmd = buf;
-    int* count = 0;
-    str_split(cmd, ' ', argvs, count);
+    int argc = 0;
 
+    str_split(cmd, ' ', argvs, &argc);
+    argc -= 1; // First command part
+    
     if (cli_strcmp(cmd, "cat") == 0) {
         cmd_cat(argvs[1]);
     } else if (cli_strcmp(cmd, "settimer") == 0) {
         cmd_enable_timer();
     } else if (cli_strcmp(cmd, "sleep") == 0) {
-        cmd_sleep(argvs[1]);
+        cmd_sleep(argvs, argc);
     } else if (cli_strcmp(cmd, "setalert2s") == 0) {
-        cmd_set_alert_2s(argvs[1]);
+        cmd_set_alert_2s(argvs, argc);
     } else if (cli_strcmp(cmd, "dtb") == 0) {
         cmd_dtb();
     } else if (cli_strcmp(cmd, "currel") == 0) {
@@ -279,10 +281,25 @@ void cmd_enable_timer() {
     core_timer_enable();
 }
 
-void cmd_set_alert_2s(char* str) {
-    set_alert_2S(str);
+void cmd_set_alert_2s(char**argvs, int argc) {
+    char *message;
+    if (argc == 1) {
+        message = argvs[1];
+    } else {
+        puts("Invalid arg number.\r\n");
+        return;
+    }
+    set_alert_2S(message);
 }
 
-void cmd_sleep(char* timeout) {
-    add_timer(uart_puts, atoi(timeout), "sleep\r\n");
+void cmd_sleep(char** argvs, int argc) {
+    char *message, *timeout;
+    if (argc == 2) {
+        message = argvs[1];
+        timeout = argvs[2];
+    } else {
+        puts("Invalid arg number.\r\n");
+        return;
+    }
+    add_timer(puts, atoi(timeout), message);
 }
