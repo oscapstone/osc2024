@@ -92,7 +92,9 @@ void __next_mem_range(u64 *idx, struct memblock_type *type_a,
     }
 }
 
-/* return address will be aligned with `align` */
+/**
+ * Return address will be aligned with `align`.
+ * ref: `__memblock_find_range_bottom_up()` in linux */
 static phys_addr_t memblock_find_in_range(phys_addr_t size,
                     phys_addr_t align, phys_addr_t start, phys_addr_t end)
 {
@@ -100,10 +102,11 @@ static phys_addr_t memblock_find_in_range(phys_addr_t size,
     u64 i;
 
     for_each_free_mem_range(i, &this_start, &this_end) {
+        /* clamp(val, lo, hi): 全部轉型成 typeof(val), 然後 min(val, lo)，在跟 max 做 min。基本上就是限制 val 一定要在 lo 跟 hi 之間 */
         this_start = clamp(this_start, start, end);
         this_end = clamp(this_end, start, end);
         cand = ALIGN(this_start, align);
-        if (cand)
+        if (cand < this_end && this_end - cand >= size)
             return cand;
     }
     return 0;

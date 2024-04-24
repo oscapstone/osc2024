@@ -7,7 +7,7 @@
 #include "interrupt.h"
 #include "timer.h"
 #include "mm.h"
-
+#include "memblock.h"
 
 void demo_task1()
 {
@@ -152,15 +152,26 @@ void demo_memory_allocator(void)
 {
     char *addr[10];
     int tmp = 6;
-
-    get_buddy_info();
-
-    // uart_puts("Get order 0 page\n");
-    // addr[0] = (char *) kmalloc(4096);
+    
+    /* Test memblock allocation */
+    // uart_puts("\n==Test memblock, allocate 16 bytes for 3 times.==\n");
+    // addr[0] = (char *) memblock_phys_alloc(16);
     // uart_puts("addr: ");
     // uart_hex((unsigned int) addr[0]);
-    // uart_send('\n');
+    // uart_puts("\n\n");
+    // addr[1] = (char *) memblock_phys_alloc(16);
+    // uart_puts("addr: ");
+    // uart_hex((unsigned int) addr[1]);
+    // uart_puts("\n\n");
+    // addr[2] = (char *) memblock_phys_alloc(16);
+    // uart_puts("addr: ");
+    // uart_hex((unsigned int) addr[2]);
+    // uart_puts("\n\n");
 
+    /* Print the reservation information (printf has bugs, so print in qemu for now) */
+    // print_memblock_info();
+
+    get_buddy_info();
     uart_puts("==Get order 2 page for 6 times==\n\n");
     for (int i = 0; i < tmp; i++) {
         addr[i] = (char *) kmalloc(4096 << 2);
