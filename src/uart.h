@@ -41,9 +41,13 @@ void uart_hex(unsigned int);
 void uart_putints(int);
 void uart_putuints(unsigned int);
 void uart_putlong(long);
+
+void uart_async_send(unsigned int);
 void uart_async_puts(char *);
+char uart_async_getc();
 
 void uart_tx_handler(void);
+void uart_rx_handler(void);
 
 void uart_disable_rx_interrupt(void);
 void uart_disable_tx_interrupt(void);

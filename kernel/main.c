@@ -16,6 +16,11 @@ void main()
     fdt_traverse(initramfs_callback);
 
     uart_async_puts("hello async!!\n");
+    // char c;
+    // while (1) {
+    //     c = uart_async_getc();
+    //     uart_async_send(c);
+    // }
 
     uart_puts("\nWelcome to kernel!\n");
     shell_start();

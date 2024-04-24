@@ -69,8 +69,8 @@ void handle_current_el_irq(void)
         unsigned int uart_src = (*UART_AUX_MU_IIR_REG) & ((1 << 2) | (1 << 1));  // bit 1 and bit 2 (p.13)
 
         if (uart_src == (1 << 2)) {     // Rx (receiver holds valid byte)
-            uart_puts("uart Rx irq\n");
             uart_disable_rx_interrupt();
+            uart_rx_handler();
         } else if (uart_src == (1 << 1)) {  // Tx (transmit register empty)
             uart_disable_tx_interrupt();
             uart_tx_handler();

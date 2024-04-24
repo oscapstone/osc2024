@@ -133,25 +133,48 @@ void uart_putlong(long d)
     }
 }
 
+void uart_async_send(unsigned int c)
+{
+    if (!rb_full(&tx_buf)) {
+        rb_write(&tx_buf, c);
+    }
+    uart_enable_tx_interrupt();
+}
+
 void uart_async_puts(char *s)
 {
     while (*s) {
         if(*s == '\n') {
-            if (!rb_full(&tx_buf)) {
-            rb_write(&tx_buf, '\r');
-            }
+            uart_async_send('\r');
         }
-        if (!rb_full(&tx_buf)) {
-        rb_write(&tx_buf, *s++);
-        }
+        uart_async_send(*s++);
     }
     uart_enable_tx_interrupt();
+}
+
+char uart_async_getc()
+{
+    uart_enable_rx_interrupt();
+    if (!rb_empty(&rx_buf)) {
+        return rb_read(&rx_buf);
+    }
+    // TODO: what if empty?
 }
 
 void uart_tx_handler(void)
 {
     while (!rb_empty(&tx_buf)) {
         uart_send(rb_read(&tx_buf));
+    }
+}
+
+void uart_rx_handler(void)
+{
+    char c;
+    c = uart_getc();
+
+    if (!rb_full(&rx_buf)) {
+        rb_write(&rx_buf, c);
     }
 }
 
