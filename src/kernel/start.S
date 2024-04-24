@@ -1,13 +1,17 @@
 #include "arm.hpp"
 
+// - https://sourceware.org/binutils/docs-2.36/as/AArch64_002dRelocations.html
+.macro ADR_REL register, symbol
+	adrp	\register, \symbol
+	add	\register, \register, #:lo12:\symbol
+.endm
+
 .section ".text._start"
 
 .global _start
 _start:
     // save dtb addr
     mov     x19, x0
-    // save kernel size
-    mov     x20, x1
 
     mrs     x0, MPIDR_EL1
     and     x0, x0, #0x3
@@ -28,24 +32,22 @@ primary_cpu:
     msr     HCR_EL2, x0
     mov     x0, SPSR_VALUE
     msr     SPSR_EL2, x0
-    adr     x0, primary_cpu_el1
+    ADR_REL x0, primary_cpu_el1
     msr     ELR_EL2, x0
     eret
 
 primary_cpu_el1:
-    adr     x0, __boot_core_stack_end
+    ADR_REL x0, __stack_end
     mov     sp, x0
 
     bl      set_exception_vector_table
 
-    adr     x0, __bss_start
-    adr     x1, __bss_end
+    ADR_REL x0, __bss_start
+    ADR_REL x1, __bss_end
     bl      memzero
 
     // restore dtb addr
     mov     x0, x19
-    // restore kernel size
-    mov     x1, x20
     bl      kernel_main
 
     b       prog_hang

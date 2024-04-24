@@ -11,15 +11,11 @@
 #include "mm/mm.hpp"
 #include "shell/shell.hpp"
 
-void kernel_main(void* dtb_addr, uint32_t kernel_size) {
+void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   timer_init();
 
-  if (kernel_size == 0)
-    kernel_size = 0x8000;
-
   klog("Hello Kernel!\n");
-  klog("Kernel size    : 0x%x\n", kernel_size);
   klog("Kernel start   : %p\n", _start);
   klog("Exception level: %d\n", get_el());
   klog("freq_of_timer  : %ld\n", freq_of_timer);
@@ -30,8 +26,8 @@ void kernel_main(void* dtb_addr, uint32_t kernel_size) {
 
   mm_preinit();
 
-  // 0x0000 ~ 0x1000 ~ heap ~ stack ~ kernel
-  mm_reserve(0x0000, (char*)&_start + kernel_size);
+  mm_reserve(0x0000, 0x1000);
+  mm_reserve(_start, __stack_end);
   mm_reserve(initramfs.startp(), initramfs.endp());
   mm_reserve(fdt.startp(), fdt.endp());
 

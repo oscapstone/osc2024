@@ -6,7 +6,6 @@
 
 extern char __kernel[];
 char* kernel_addr = __kernel;
-uint32_t kernel_size;
 
 const char usage[] =
     "\n"
@@ -21,8 +20,7 @@ void read_kernel() {
   };
   for (int i = 0; i < 4; i++)
     buf[i] = mini_uart_getc_raw();
-  kernel_size = size;
-  mini_uart_printf("[b] Kernel Size: %u\n", kernel_size);
+  mini_uart_printf("[b] Kernel Size: %u\n", size);
   for (uint32_t i = 0; i < size; i++)
     kernel_addr[i] = mini_uart_getc_raw();
   mini_uart_printf("[b] Kernel loaded @ %p\n", kernel_addr);
@@ -47,7 +45,7 @@ void bootloader_main(void* dtb_addr) {
       case 'j': {
         mini_uart_printf("[b] Jump to kernel @ %p\n", kernel_addr);
         wait_cycle(0x1000);
-        (decltype (&kernel_main)(kernel_addr))(dtb_addr, kernel_size);
+        (decltype (&kernel_main)(kernel_addr))(dtb_addr);
         break;
       }
       default:
