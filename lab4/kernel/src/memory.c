@@ -34,8 +34,8 @@ static list_head_t      cache_list[CACHE_MAX_IDX];      // store available block
 
 void allocator_init() {   
 
-    // uart_puts("\r\n  ---------- | Buddy System | Startup Allocation | ----------\r\n");
-    // uart_puts("\r\n  memory size: 0x%x, max pages: %d, frame size: %d\r\n", memory_size, MAX_PAGE_COUNT, sizeof(frame_t));
+    uart_puts("\r\n  ---------- | Buddy System | Startup Allocation | ----------\r\n");
+    uart_puts("\r\n  memory size: 0x%x, max pages: %d, frame size: %d\r\n", memory_size, MAX_PAGE_COUNT, sizeof(frame_t));
 
     frame_array = malloc(MAX_PAGE_COUNT * sizeof(frame_t));
 
@@ -60,9 +60,10 @@ void allocator_init() {
     }
 
     for (int i=0; i < MAX_PAGE_COUNT; i++) {
-        uart_puts("%d", frame_array[i].val);
+        // uart_puts("%d", frame_array[i].val);
         INIT_LIST_HEAD(&(frame_array[i].listhead));
-
+        frame_array[i].idx = i;
+        frame_array[i].order = CACHE_NONE;
 
 
         if (i % (1 << FRAME_IDX_FINAL) == 0) {
@@ -70,8 +71,7 @@ void allocator_init() {
         }
     }
 
-    // uart_puts("\r\n  -----------------------------------------------------------\r\n");
-    return;
+    uart_puts("\r\n  -----------------------------------------------------------\r\n");
 }
 
 
