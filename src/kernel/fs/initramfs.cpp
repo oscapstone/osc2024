@@ -4,17 +4,22 @@
 #include "io.hpp"
 
 CPIO initramfs;
-const char initrd_path[] = "/chosen/linux,initrd-start";
 
 void initramfs_init() {
-  auto [found, view] = fdt.find(initrd_path);
-  if (!found) {
-    klog("initramfs: device %s not found\n", initrd_path);
-    prog_hang();
-  }
-  auto addr = (char*)(uint64_t)fdt_ld32(view.data());
-  klog("initramfs: %p\n", addr);
-  if (not initramfs.init(addr)) {
+  auto find32 = [](auto path) {
+    auto [found, view] = fdt.find(path);
+    if (!found) {
+      klog("initramfs: device %s not found\n", path);
+      prog_hang();
+    }
+    auto addr = (char*)(uint64_t)fdt_ld32(view.data());
+    return addr;
+  };
+  auto start = find32("/chosen/linux,initrd-start");
+  auto end = find32("/chosen/linux,initrd-end");
+
+  klog("initramfs      : %p ~ %p\n", start, end);
+  if (not initramfs.init(start, end)) {
     klog("initramfs: init failed\n");
   }
 }

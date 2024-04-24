@@ -38,16 +38,15 @@ void FDT::print() {
 void FDT::init(void* addr, bool debug) {
   base = (char*)addr;
 
-  if (debug)
-    kprintf("DTB ADDR: %p\n", base);
+  klog("DTB ADDR       : %p\n", base);
 
   if (fdt_magic(base) != FDT_MAGIC) {
-    kprintf("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base), FDT_MAGIC);
+    klog("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base), FDT_MAGIC);
     prog_hang();
   }
   if (fdt_last_comp_version(base) > LAST_COMP_VERSION) {
-    kprintf("Unsupport dtb v%d > v%d\n", fdt_last_comp_version(base),
-            LAST_COMP_VERSION);
+    klog("Unsupport dtb v%d > v%d\n", fdt_last_comp_version(base),
+         LAST_COMP_VERSION);
     prog_hang();
   }
 
@@ -135,7 +134,8 @@ static string_view view;
 static FDT::fp list_fp;
 static bool match(const char* name) {
   int sz = nxt_idx - cur_idx;
-  return not strncmp(path + cur_idx, name, sz) and name[sz] == '\0';
+  return not strncmp(path + cur_idx, name, sz) and
+         (name[sz] == '\0' or name[sz] == '@');
 }
 static bool find_path(uint32_t tag, int level, const char* node_name,
                       const char* prop_name, uint32_t len,

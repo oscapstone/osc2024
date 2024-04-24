@@ -109,17 +109,24 @@ class CPIO {
   };
 
  private:
-  char* cpio_addr_ = nullptr;
+  char *cpio_start_ = nullptr, *cpio_end_ = nullptr;
 
  public:
-  bool init(char* cpio_addr) {
-    cpio_addr_ = cpio_addr;
+  bool init(char* cpio_start, char* cpio_end) {
+    cpio_start_ = cpio_start;
+    cpio_end_ = cpio_end;
     if (!begin()->valid())
       return false;
     return true;
   }
+  char* startp() const {
+    return cpio_start_;
+  }
+  char* endp() const {
+    return cpio_end_;
+  }
   iterator begin() const {
-    return cpio_addr_;
+    return cpio_start_;
   }
   iterator end() const {
     return nullptr;

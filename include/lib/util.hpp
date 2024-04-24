@@ -1,6 +1,6 @@
 #pragma once
 
-#define MASK(bits) ((1 << bits) - 1)
+#define MASK(bits) ((1ll << bits) - 1)
 #define NOP        asm volatile("nop")
 
 // ref: https://github.com/v8/v8/blob/12.5.71/src/base/compiler-specific.h#L26
@@ -14,9 +14,9 @@
 #include <cstdint>
 using addr_t = volatile char*;
 
-template <uint64_t sz, typename T>
+template <uint64_t sz, bool up = true, typename T>
 inline T align(T p) {
-  return (T)(((uint64_t)p + sz - 1) & ~(sz - 1));
+  return (T)(((uint64_t)p + (up ? sz - 1 : 0)) & ~(sz - 1));
 }
 template <typename T>
 inline T align(T p, uint64_t sz) {

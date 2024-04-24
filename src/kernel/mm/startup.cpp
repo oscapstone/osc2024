@@ -4,8 +4,6 @@
 #include "mm/new.hpp"
 #include "util.hpp"
 
-extern char __heap_start[];
-extern char __heap_end[];
 char* heap_cur = __heap_start;
 
 void startup_alloc_info() {
@@ -20,8 +18,12 @@ void startup_alloc_init() {
 
 void* startup_malloc(uint64_t size, uint64_t al) {
   heap_cur = align(heap_cur, al);
-  if (!startup_free(size))
+  if (!startup_free(size)) {
+    klog("[startup alloc] oom require 0x%lx / %p / (%p ~ %p)\n", size, heap_cur,
+         __heap_start, __heap_end);
+    prog_hang();
     return nullptr;
+  }
   void* tmp = heap_cur;
   heap_cur += size;
   return tmp;

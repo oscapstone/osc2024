@@ -12,10 +12,20 @@ PageAlloc page_alloc;
 
 void PageAlloc::info() {
   kprintf("== PageAlloc ==\n");
-  for (uint64_t i = 0; i < length_; i++) {
-    if (array_[i].head())
-      kprintf("  frame 0x%lx: %d %s\n", i, array_[i].order,
-              array_[i].allocated ? "allocated" : "free");
+  bool reserved = false;
+  for (uint64_t i = 0, r; i < length_; i++) {
+    if (array_[i].type == FRAME_TYPE::RESERVED) {
+      if (not reserved)
+        r = i, reserved = true;
+    } else if (array_[i].head()) {
+      if (reserved) {
+        kprintf("  frame %p ~ %p: %s\n", vpn2addr(r), vpn2addr(i),
+                str(FRAME_TYPE::RESERVED));
+        reserved = false;
+      }
+      kprintf("  frame %p ~ %p: %s\n", vpn2addr(i), vpn2end(i),
+              str(array_[i].type));
+    }
   }
   for (int8_t o = 0; o < total_order_; o++)
     if (not free_list_[o].empty()) {
@@ -27,7 +37,7 @@ void PageAlloc::info() {
   kprintf("---------------\n");
 }
 
-void PageAlloc::init(uint64_t p_start, uint64_t p_end) {
+void PageAlloc::preinit(uint64_t p_start, uint64_t p_end) {
   start_ = p_start, end_ = p_end;
   if (start_ % PAGE_SIZE or end_ % PAGE_SIZE) {
     klog("%s: start 0x%lx or end 0x%lx not align with PAGE_SIZE 0x%lx\n",
@@ -35,26 +45,37 @@ void PageAlloc::init(uint64_t p_start, uint64_t p_end) {
     prog_hang();
   }
 
-  MM_INFO("page_alloc", "init: 0x%lx ~ 0x%lx\n", start_, end_);
+  MM_INFO("page_alloc", "%s: 0x%lx ~ 0x%lx\n", __func__, start_, end_);
 
   length_ = (end_ - start_) / PAGE_SIZE;
   total_order_ = log2c(length_ + 1);
-  MM_DEBUG("page_alloc", "init: length = 0x%lx total_order = %x\n", length_,
-           total_order_);
+  MM_DEBUG("page_alloc", "%s: length = 0x%lx total_order = %x\n", __func__,
+           length_, total_order_);
   array_ = new Frame[length_];
-
   for (uint64_t i = 0; i < length_; i++)
-    array_[i].value = FRAME_NOT_HEAD;
+    array_[i] = {.type = FRAME_TYPE::ALLOCATED, .order = 0};
   free_list_ = new ListHead<FreePage>[total_order_];
-  int8_t order = total_order_ - 1;
-  for (uint64_t i = 0; i < length_; i += (1ll << order)) {
-    while (i + (1ll << order) > length_)
-      order--;
-    array_[i] = {.allocated = true, .order = order};
-    auto page = vpn2freepage(i);
-    free_list_[order].insert_back(page);
+}
+
+void PageAlloc::reserve(void* p_start, void* p_end) {
+  MM_INFO("page_alloc", "reserve: %p ~ %p\n", p_start, p_end);
+  auto start = align<PAGE_SIZE, false>(p_start);
+  auto end = align<PAGE_SIZE>(p_end);
+  auto vs = addr2vpn_safe(start);
+  auto ve = addr2vpn_safe(end);
+  for (uint64_t i = vs; i < ve; i++)
+    if (0 <= i and i < length_)
+      array_[i] = {.type = FRAME_TYPE::RESERVED};
+}
+
+void PageAlloc::init() {
+  log = false;
+  for (uint64_t i = 0; i < length_; i++) {
+    if (array_[i].allocated())
+      release(vpn2addr(i));
   }
-#if LOG_LEVEL >= 3
+  log = true;
+#if MM_LOG_LEVEL >= 3
   info();
 #endif
 }
@@ -62,7 +83,8 @@ void PageAlloc::init(uint64_t p_start, uint64_t p_end) {
 void PageAlloc::release(PageAlloc::AllocatedPage apage) {
   auto vpn = addr2vpn(apage);
   auto order = array_[vpn].order;
-  MM_INFO("page_alloc", "release: page %p order %d\n", apage, order);
+  if (log)
+    MM_INFO("page_alloc", "release: page %p order %d\n", apage, order);
   auto fpage = vpn2freepage(vpn);
   free_list_[order].insert_back(fpage);
   merge(fpage);
@@ -74,12 +96,13 @@ PageAlloc::AllocatedPage PageAlloc::alloc(PageAlloc::FreePage* fpage,
   auto order = array_[vpn].order;
   free_list_[order].erase(fpage);
   if (head) {
-    MM_INFO("page_alloc", "alloc: page %p order %d\n", fpage, order);
-    array_[vpn].allocated = true;
+    if (log)
+      MM_INFO("page_alloc", "alloc(+): page %p order %d\n", fpage, order);
+    array_[vpn].type = FRAME_TYPE::ALLOCATED;
     auto apage = AllocatedPage(fpage);
     return apage;
   } else {
-    array_[vpn].value = FRAME_NOT_HEAD;
+    array_[vpn].type = FRAME_TYPE::NOT_HEAD;
     return nullptr;
   }
 }
@@ -88,7 +111,7 @@ PageAlloc::AllocatedPage PageAlloc::split(AllocatedPage apage) {
   auto vpn = addr2vpn(apage);
   auto o = --array_[vpn].order;
   auto bvpn = buddy(vpn);
-  array_[bvpn] = {.allocated = true, .order = o};
+  array_[bvpn] = {.type = FRAME_TYPE::ALLOCATED, .order = o};
   auto bpage = vpn2addr(bvpn);
   MM_DEBUG("page_alloc", "split: %p + %p\n", apage, bpage);
   return bpage;
@@ -106,16 +129,21 @@ void PageAlloc::merge(FreePage* apage) {
   auto avpn = addr2vpn(apage);
   while (array_[avpn].order + 1 < total_order_) {
     auto bvpn = buddy(avpn);
-    if (buddy(bvpn) != avpn or array_[avpn].allocated or array_[bvpn].allocated)
+    if (buddy(bvpn) != avpn or not array_[avpn].free() or
+        not array_[bvpn].free())
       break;
     auto bpage = vpn2freepage<true>(bvpn);
     if (avpn > bvpn) {
       std::swap(avpn, bvpn);
       std::swap(apage, bpage);
     }
-    MM_INFO("page_alloc", "merge: %p + %p\n", apage, bpage);
+    if (log)
+      MM_INFO("page_alloc", "merge: %p + %p\n", apage, bpage);
     alloc(bpage, false);
-    array_[avpn].order++;
+    auto o = array_[avpn].order;
+    free_list_[o].erase(apage);
+    array_[avpn].order = ++o;
+    free_list_[o].insert_back(apage);
   }
 }
 
