@@ -15,7 +15,7 @@ Page frame allocator can allocate contiguous page frame for large buffers.
 If only run in kernel space, the process and the memory usage can be predicted(usually) thus in this case dynamic memory allocator might be enough.
 
 ### Why 4KB
-* 4KB is a page frame size for many operating system for mapping virtual memory and alignment.
+* 4KB is a page frame size for many operating system for mapping virtual memory and alignment. (MMU: this size often coincides with the page table entry size used by the processor's Memory Management Unit (MMU). This alignment helps optimize the efficiency of hardware memory access.)
 * Tradeoff
     * smaller frame size: less internal fragment problem, but has a larger page table which requires more memory and tranverse time for virtual memory.
     * larger frame size: more internal fragment problem but smaller page table.
@@ -35,7 +35,7 @@ Translate page to smaller memory for small memory allocation.
 
 ## Memory Reserve 
 Make sure some in use memory are not allocated.
-* Spin table 0x0000~0x1000: A table for multicore to spin and wait for start.
+* Spin table 0x0000~0x1000: A table for multicore to spin and wait for start. The spin table from 0x0000 to 0x1000 serves as a crucial component for the synchronized startup of multicore processors. Each processor core consults this table to decide when to initiate operations, ensuring all cores start in a coordinated manner
 * Kernel image: 0x80000 to _end (and stack, buddy system)
 * Startup allocator (also in kernel, bss)
 * iniramfs: get info by dtb
