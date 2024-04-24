@@ -1,18 +1,19 @@
 use core::arch::asm;
+use core::u32;
 use core::{
     ptr::{read_volatile, write_volatile},
     usize,
 };
 
-const AUXENB: u32 = 0x3F215004;
-const AUX_MU_CNTL_REG: u32 = 0x3F215060;
-const AUX_MU_IER_REG: u32 = 0x3F215044;
-const AUX_MU_LCR_REG: u32 = 0x3F21504C;
-const AUX_MU_MCR_REG: u32 = 0x3F215050;
-const AUX_MU_BAUD_REG: u32 = 0x3F215068;
-const AUX_MU_IIR_REG: u32 = 0x3F215048;
-const AUX_MU_IO_REG: u32 = 0x3F215040;
-const AUX_MU_LSR_REG: u32 = 0x3F215054;
+pub const AUXENB: u32 = 0x3F215004;
+pub const AUX_MU_CNTL_REG: u32 = 0x3F215060;
+pub const AUX_MU_IER_REG: u32 = 0x3F215044;
+pub const AUX_MU_LCR_REG: u32 = 0x3F21504C;
+pub const AUX_MU_MCR_REG: u32 = 0x3F215050;
+pub const AUX_MU_BAUD_REG: u32 = 0x3F215068;
+pub const AUX_MU_IIR_REG: u32 = 0x3F215048;
+pub const AUX_MU_IO_REG: u32 = 0x3F215040;
+pub const AUX_MU_LSR_REG: u32 = 0x3F215054;
 
 const GPFSEL_BASE: u32 = 0x3F200000;
 const GPFSEL0: u32 = 0x3F200000;
@@ -22,10 +23,154 @@ const GPPUD: u32 = 0x3F200094;
 const GPPUDCLK0: u32 = 0x3F200098;
 const GPPUDCLK1: u32 = 0x3F20009C;
 
+struct RingBuffer {
+    buffer: [u8; 1024],
+    head: usize,
+    tail: usize,
+}
+
+impl RingBuffer{
+    pub fn new() -> RingBuffer {
+        RingBuffer {
+            buffer: [0; 1024],
+            head: 0,
+            tail: 0,
+        }
+    }
+
+    pub fn write(&mut self, c: u8) {
+        self.buffer[self.head] = c;
+        self.head = (self.head + 1) % 1024;
+    }
+
+    pub fn read(&mut self) -> Option<u8> {
+        if self.head == self.tail {
+            None
+        } else {
+            let c = self.buffer[self.tail];
+            self.tail = (self.tail + 1) % 1024;
+            Some(c)
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.head == self.tail
+    }
+
+    pub fn is_full(&self) -> bool {
+        (self.head + 1) % 1024 == self.tail
+    }
+}
+
+static mut READ_RING_BUFFER: RingBuffer = RingBuffer {
+    buffer: [0; 1024],
+    head: 0,
+    tail: 0,
+};
+
+static mut WRITE_RING_BUFFER: RingBuffer = RingBuffer {
+    buffer: [0; 1024],
+    head: 0,
+    tail: 0,
+};
+
+#[no_mangle]
+#[inline(never)]
+pub fn push_read_buf(c: u8){
+    unsafe {
+        READ_RING_BUFFER.write(c);
+    }
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn pop_read_buf() -> Option<u8> {
+    unsafe {
+        READ_RING_BUFFER.read()
+    }
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn pop_write_buf() -> Option<u8> {
+    unsafe {
+        WRITE_RING_BUFFER.read()
+    }
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn push_write_buf(c: u8){
+    unsafe {
+        WRITE_RING_BUFFER.write(c);
+    }
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn async_getline(s: &mut [u8; 128], is_echo: bool) -> &str {
+    let mut ptr: usize = 0;
+    unsafe {
+        loop {
+            if let Some(i) = pop_read_buf() {
+                if is_echo {
+                    write_u8_buf(i as u8);
+                    flush();
+                }
+                if i == 13 {
+                    write_u8_buf(10);
+                    break;
+                }
+                s[ptr] = i as u8;
+                ptr = ptr + 1;
+            }
+        }
+    }
+    core::str::from_utf8(&s[0..ptr]).unwrap()
+}
+
+pub fn flush() {
+    write_int(true);
+}
+
+pub fn write_u8_buf(c: u8) {
+    unsafe {
+        WRITE_RING_BUFFER.write(c);
+    }
+}
+
+
+#[no_mangle]
+#[inline(never)]
+pub fn write_int(enable: bool) {
+    unsafe {
+        // enable interrupt
+        if enable {
+            write_volatile(AUX_MU_IER_REG as *mut u32, 0b11);
+        }
+        else {
+            write_volatile(AUX_MU_IER_REG as *mut u32, 0b01);
+        }
+    }
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn send_write_buf() {
+    loop {
+        if let Some(s) = pop_write_buf() {
+            unsafe {write_u8(s)};
+        }
+        else {
+            break;
+        }
+    }
+    write_int(false);
+} 
 // Initialize the UART
 #[no_mangle]
 #[inline(never)]
-pub fn init_uart() {
+pub fn init_uart(int: bool) {
     unsafe {
         // configure GPFSEL1 register to set FSEL14 FSEL15 to ALT5
         let fsel = read_volatile(GPFSEL1 as *mut u32);
@@ -59,8 +204,21 @@ pub fn init_uart() {
 
         // Set AUX_MU_CNTL_REG to 0
         write_volatile(AUX_MU_CNTL_REG as *mut u32, 0);
-        // Set AUX_MU_IER_REG to 0
-        write_volatile(AUX_MU_IER_REG as *mut u32, 0);
+        if int {
+            // Set AUX_MU_IER_REG to 1 (enable receive interrupt)
+            write_volatile(AUX_MU_IER_REG as *mut u32, 0b1);
+            const IRQS1_ADDR: *mut u32 = 0x3f00b210 as *mut u32;
+            const IRQS2_ADDR: *mut u32 = 0x3f00b214 as *mut u32;
+            // Set IRQs1 register to enable mini UART interrupt
+            write_volatile(IRQS1_ADDR, 1 << 29);
+            // write_volatile(IRQS2_ADDR, 1 << 25);
+
+
+        } else {
+            // Set AUX_MU_IER_REG to 0 (disable interrupts)
+            write_volatile(AUX_MU_IER_REG as *mut u32, 0);
+        }
+
         // Set AUX_MU_LCR_REG to 3
         write_volatile(AUX_MU_LCR_REG as *mut u32, 3);
         // Set AUX_MU_MCR_REG to 0
@@ -71,6 +229,10 @@ pub fn init_uart() {
         write_volatile(AUX_MU_IIR_REG as *mut u32, 6);
         // Set AUX_MU_CNTL_REG to 3
         write_volatile(AUX_MU_CNTL_REG as *mut u32, 3);
+        READ_RING_BUFFER.head = 0;
+        READ_RING_BUFFER.tail = 0;
+        WRITE_RING_BUFFER.head = 0;
+        WRITE_RING_BUFFER.tail = 0;
     }
 }
 pub struct Uart;
@@ -85,8 +247,9 @@ impl Write for UartWriter {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         unsafe {
             for i in s.bytes() {
-                write_u8(i);
+                write_u8_buf(i);
             }
+            write_int(true);
         }
         Ok(())
     }

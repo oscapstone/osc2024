@@ -22,7 +22,6 @@ path = "src/main.rs"
 driver = { path = "../driver" }
 fdt = "0.1.5"
 
-
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = {version = "9.x.x"}

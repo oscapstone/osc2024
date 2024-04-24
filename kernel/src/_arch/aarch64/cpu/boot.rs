@@ -7,7 +7,7 @@ global_asm!(
 );
 
 global_asm!(
-    include_str!("exception.s")
+    include_str!("interrupt.s")
 );
 
 // mod uart;

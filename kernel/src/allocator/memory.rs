@@ -1,5 +1,3 @@
-
-
 use core::alloc::Layout;
 
 pub struct HeapMemory {

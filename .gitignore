@@ -8,3 +8,4 @@ initramfs.cpio
 *.dtb
 *.txt
 .idea
+initramfs/prog

@@ -80,7 +80,7 @@ bootloader_gdb: $(BOOTLOADER_BIN) $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU in background")
 	$(EXEC_QEMU) $(QEMU_TTY_DEBUG_ARGS) $(QEMU_DTB_PATH) -kernel $(BOOTLOADER_BIN) -initrd $(INITRD_PATH) 
 
-$(USER_PROG_IMG): $(USER_PROG)/src/*
+$(USER_PROG_IMG): 
 	make -C $(USER_PROG) all
 
 cpio: initramfs/* $(USER_PROG_IMG)

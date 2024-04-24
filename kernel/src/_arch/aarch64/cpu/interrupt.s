@@ -42,49 +42,77 @@
 .endm
 
 .section .text.exception
-exception_handler:
+
+serr_handler:
     save_all
-    bl rust_exception_handler
+    bl rust_serr_handler
     load_all
     eret
+
+irq_handler:
+    save_all
+    bl rust_irq_handler
+    load_all
+    eret
+
+frq_handler:
+  save_all
+  bl rust_frq_handler
+  load_all
+  eret
+
+core_timer_handler:
+  save_all
+  bl rust_core_timer_handler
+  load_all
+  mrs x0, cntfrq_el0
+  lsl x0, x0, #1
+  msr cntp_tval_el0, x0
+  eret
+
+sync_handler:
+  save_all
+  bl rust_sync_handler
+  load_all
+  eret
 
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
 exception_vector_table:
-  b exception_handler // branch to a handler function.
-  .align 7 // entry size is 0x80, .align will pad 0
-  b exception_handler
+  b sync_handler
   .align 7
-  b exception_handler
+  b irq_handler
   .align 7
-  b exception_handler
+  b frq_handler
   .align 7
-
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
-  .align 7
-  b exception_handler
+  b serr_handler
   .align 7
 
-  b exception_handler
+  b sync_handler
   .align 7
-  b exception_handler
+  b irq_handler
   .align 7
-  b exception_handler
+  b frq_handler
   .align 7
-  b exception_handler
+  b serr_handler
   .align 7
 
-  b exception_handler
+  b sync_handler
   .align 7
-  b exception_handler
+  b irq_handler
   .align 7
-  b exception_handler
+  b frq_handler
   .align 7
-  b exception_handler
+  b serr_handler
+  .align 7
+
+  b sync_handler
+  .align 7
+  b irq_handler
+  .align 7
+  b frq_handler
+  .align 7
+  b serr_handler
   .align 7
 
 exception_entry:

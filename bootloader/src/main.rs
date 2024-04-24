@@ -20,7 +20,7 @@ const KERNEL_LOAD_ADDR: u64 = 0x80000;
 #[no_mangle]
 unsafe fn bootloader(){
     // initialize uart
-    uart::init_uart();
+    uart::init_uart(false);
     uart::uart_write_str("Bootloader started\r\n");
     
     // print current pc value
