@@ -3,6 +3,7 @@
 #include "int/interrupt.hpp"
 #include "io.hpp"
 #include "math.hpp"
+#include "mm/log.hpp"
 #include "util.hpp"
 
 static_assert(sizeof(PageAlloc::FreePage) <= PAGE_SIZE);

@@ -4,12 +4,8 @@
 
 #include "ds/list.hpp"
 #include "int/interrupt.hpp"
-#include "mm/new.hpp"
+#include "mm/log.hpp"
 #include "mm/page_alloc.hpp"
-
-constexpr uint32_t chunk_size[] = {
-    0x10, 0x30, 0x50, 0xf0, 0x110, 0x330, 0x550,
-};
 
 inline int chunk_idx(uint64_t size) {
   if (size <= 0x10)
@@ -28,9 +24,6 @@ inline int chunk_idx(uint64_t size) {
     return 6;
   return -1;
 }
-
-constexpr int chunk_class = sizeof(chunk_size) / sizeof(uint32_t);
-constexpr uint32_t max_chunk_size = chunk_size[chunk_class - 1];
 
 static_assert(max_chunk_size <= PAGE_SIZE);
 
@@ -108,16 +101,11 @@ void heap_info() {
 }
 
 void heap_init() {
-  set_new_delete_handler(heap_malloc, heap_free);
   for (int i = 0; i < chunk_class; i++)
     new (&info[i]) Info(i);
 }
 
-// TODO: handle alignment
-void* heap_malloc(uint64_t req_size, uint64_t align) {
-  if (req_size > max_chunk_size)
-    return page_alloc.alloc(req_size);
-
+void* heap_malloc(uint64_t req_size) {
   save_DAIF_disable_interrupt();
 
   auto idx = chunk_idx(req_size);
@@ -130,8 +118,6 @@ void* heap_malloc(uint64_t req_size, uint64_t align) {
 }
 
 void heap_free(void* ptr) {
-  if (isPageAlign(ptr))
-    return page_alloc.free(ptr);
   save_DAIF_disable_interrupt();
 
   auto hdr = (PageHeader*)getPage(ptr);
