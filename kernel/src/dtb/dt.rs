@@ -94,7 +94,7 @@ impl Lexical {
             0x3 => Lexical::Prop,
             0x4 => Lexical::Nop,
             0x9 => Lexical::End,
-            _ => panic!("Invalid lexical value"),
+            _ => panic!("Invalid lexical value {}", value),
         }
     }
 }
@@ -115,6 +115,7 @@ fn read_string(addr: u32) -> String {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum PropValue {
     Integer(u32),
     String(String),

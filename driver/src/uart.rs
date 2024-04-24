@@ -12,6 +12,7 @@ pub fn init() {
     Mmio::write_reg(Aux(MuCntl), 0);
 
     // Configure UART
+    // Mmio::write_reg(Aux(MuIer), 0);
     Mmio::write_reg(Aux(MuIer), 3);
     Mmio::write_reg(Irq(S1), 1 << 29);
 
@@ -28,9 +29,9 @@ pub fn init() {
 
     // Disable pull-up/down for pins 14 and 15
     Mmio::write_reg(Gpio(Gppud), 0);
-    Mmio::delay(150);
+    Mmio::delay(300);
     Mmio::write_reg(Gpio(GppudClk0), (1 << 14) | (1 << 15));
-    Mmio::delay(150);
+    Mmio::delay(300);
     Mmio::write_reg(Gpio(GppudClk0), 0);
 
     // Enable the transmitter and receiver

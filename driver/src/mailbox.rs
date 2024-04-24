@@ -42,15 +42,15 @@ fn mailbox_call(mailbox: &mut [u32]) -> bool {
             );
         }
     }
-
     if mailbox_ptr & 0xF != 0 {
-        return false;
+        panic!("Mailbox call failed");
     }
+    debug_assert!(mailbox_ptr & 0xF == 0, "Mailbox call failed");
 
     mailbox_write(CHANNEL_GPU, mailbox_ptr);
 
     if mailbox_read(CHANNEL_GPU) != mailbox_ptr | CHANNEL_GPU {
-        return false;
+        panic!("Mailbox call failed");
     }
 
     for i in 0..mailbox.len() {
@@ -61,7 +61,6 @@ fn mailbox_call(mailbox: &mut [u32]) -> bool {
             );
         }
     }
-
     true
 }
 
@@ -77,7 +76,7 @@ pub fn get_board_revision() -> u32 {
         0x0000_0000, // End tag
     ];
     if !mailbox_call(&mut mailbox) {
-        return 0;
+        panic!("Failed to get board revision");
     }
     mailbox[5]
 }

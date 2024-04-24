@@ -1,0 +1,6 @@
+[build]
+target = "aarch64-unknown-none-softfloat"
+
+[unstable]
+build-std = ["core", "alloc"]
+
