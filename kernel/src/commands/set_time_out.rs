@@ -1,7 +1,6 @@
 use crate::timer;
 use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::string::ToString;
 use alloc::vec::Vec;
 use core::time::Duration;
 use stdio::debug;
@@ -42,7 +41,6 @@ pub fn exec(command: &[u8]) {
 
 #[inline(never)]
 fn add_timer(duration: Duration, message: String) {
-    // loop {}
     let tm = timer::manager::get_timer_manager();
     tm.add_timer(
         duration,
