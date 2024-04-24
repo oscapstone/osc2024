@@ -56,14 +56,26 @@ void handle_exception(void)
 
 void handle_interrupt(void)
 {
-    if (*CORE0_TIMER_IRQ_SRC & 0b10) {   // TODO: where's doc
+    if (*CORE0_TIMER_IRQ_SRC & 0b10) {   // Ref (p.16): https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf
         _handle_timer();
     }
 }
 
 void handle_current_el_irq(void)
 {
-    if (*CORE0_TIMER_IRQ_SRC & 0b10) {   // TODO: where's doc
+    mask_interrupt();
+
+    if (*UART_IRQs1_PENDING & (1 << 29)) {  // bit 29 (AUX int) on ARM PIC's peding register
+        unsigned int uart_src = (*UART_AUX_MU_IIR_REG) & ((1 << 2) | (1 << 1));  // bit 1 and bit 2 (p.13)
+
+        if (uart_src == (1 << 2)) {     // Rx (receiver holds valid byte)
+            uart_puts("uart Rx irq\n");
+            uart_disable_rx_interrupt();
+        } else if (uart_src == (1 << 1)) {  // Tx (transmit register empty)
+            uart_puts("uart Tx irq\n");
+            uart_disable_tx_interrupt();
+        }
+    } else if (*CORE0_TIMER_IRQ_SRC & 0b10) {
         // seconds after booting
         long count;
         long freq; //62500000 (62.5 MHz)
@@ -76,7 +88,11 @@ void handle_current_el_irq(void)
         // set next timeout
         asm("mov x0, %0" : : "r"(freq * 1));
         asm("msr cntp_tval_el0, x0");
+    } else {
+        uart_puts("Unknown pending interrupt\n");
     }
+
+    unmask_interrupt();
 }
 
 // https://developer.arm.com/documentation/ddi0601/2022-03/External-Registers/CNTP-TVAL--Counter-timer-Physical-Timer-TimerValue
@@ -103,7 +119,7 @@ void el2_to_el1(void)
     // Ref: https://developer.arm.com/documentation/den0024/a/ARMv8-Registers/Processor-state
     asm("mov x0, (1 << 31)");   // EL1 uses aarch64
     asm("msr hcr_el2, x0");
-    asm("mov x0, 0x3c5");       // EL1h with interrupt disabled
+    asm("mov x0, 0x5");       // EL1h with interrupt enabled
     asm("msr spsr_el2, x0");
     asm("msr elr_el2, lr");     // link register (subroutine return addr)
     asm("eret");
@@ -123,12 +139,12 @@ void el1_to_el0(void)
     asm("eret");
 }
 
-void enable_interrupt(void)
+void unmask_interrupt(void)
 {
     asm("msr DAIFClr, 0xf");
 }
 
-void disable_interrupt(void)
+void mask_interrupt(void)
 {
     asm("msr DAIFSet, 0xf");
 }

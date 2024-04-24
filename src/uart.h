@@ -41,5 +41,10 @@ void uart_putints(int);
 void uart_putuints(unsigned int);
 void uart_putlong(long);
 
+void uart_disable_rx_interrupt(void);
+void uart_disable_tx_interrupt(void);
+
+void uart_enable_rx_interrupt(void);
+void uart_enable_tx_interrupt(void);
 
 #endif

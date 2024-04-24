@@ -2,7 +2,7 @@
 #define _DEF_EXCEPTION
 
 #define CORE0_TIMER_IRQ_CTRL 0x40000040
-#define CORE0_TIMER_IRQ_SRC  (unsigned int *) 0x40000060
+#define CORE0_TIMER_IRQ_SRC  (unsigned int *) 0x40000060    // Ref (p.16): https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf
 
 
 extern int __userspace_start;
@@ -21,7 +21,7 @@ void _handle_timer(void);
 void el2_to_el1(void);
 void el1_to_el0(void);
 
-void enable_interrupt(void);
-void disable_interrupt(void);
+void unmask_interrupt(void);
+void mask_interrupt(void);
 
 #endif

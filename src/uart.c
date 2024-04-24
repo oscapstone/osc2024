@@ -126,3 +126,23 @@ void uart_putlong(long d)
         uart_send(buffer[--idx]);
     }
 }
+
+void uart_disable_rx_interrupt(void)
+{
+    *UART_AUX_MU_IER_REG &= ~(1);
+}
+
+void uart_disable_tx_interrupt(void)
+{
+    *UART_AUX_MU_IER_REG &= ~(2);
+}
+
+void uart_enable_rx_interrupt(void)
+{
+    *UART_AUX_MU_IER_REG |= (1);
+}
+
+void uart_enable_tx_interrupt(void)
+{
+    *UART_AUX_MU_IER_REG |= (2);
+}
