@@ -11,13 +11,10 @@ enum BuddyState {
 }
 
 const MEMORY_START: u32 = 0x1000_0000;
-// const MEMORY_END: u32 = 0x2000_0000;
-const MEMORY_END: u32 = 0x1fff_ffff;
+const MEMORY_END: u32 = 0x1080_0000;
 const FRAME_SIZE: usize = 0x1000;
 
-const fn frame_count() -> usize {
-    (MEMORY_END - MEMORY_START) as usize / FRAME_SIZE
-}
+const NFRAME: usize = (MEMORY_END - MEMORY_START) as usize / FRAME_SIZE;
 
 #[derive(Clone, Copy)]
 struct Frame {
@@ -27,7 +24,7 @@ struct Frame {
 const LAYER_COUNT: usize = 12;
 
 pub struct BuddyAllocator {
-    frames: [Frame; frame_count()],
+    frames: [Frame; NFRAME],
     free_list: [BTreeSet<usize, bump::BumpAllocator>; LAYER_COUNT],
 }
 
@@ -37,25 +34,25 @@ impl BuddyAllocator {
         Self {
             frames: [Frame {
                 state: BuddyState::Allocated,
-            }; frame_count()],
+            }; NFRAME],
             free_list: [EMPTY; LAYER_COUNT],
         }
     }
     pub unsafe fn init(&mut self) {
         println!("Initializing buddy allocator");
-        println!("Frame count: {}", frame_count());
+        println!("Frame count: {}", NFRAME);
         assert!(
             MEMORY_START % (1 << LAYER_COUNT) as u32 == 0,
             "Memory start 0x{:x} must be aligned to layer count {}",
             MEMORY_START,
             LAYER_COUNT
         );
-        for idx in 0..frame_count() {
+        for idx in 0..NFRAME {
             if let BuddyState::Owned(_) = BUDDY_SYSTEM.frames[idx].state {
                 continue;
             }
             for layer in (0..LAYER_COUNT).rev() {
-                if idx % (1 << layer) == 0 && (idx + (1 << layer) <= frame_count()) {
+                if idx % (1 << layer) == 0 && (idx + (1 << layer) <= NFRAME) {
                     BUDDY_SYSTEM.frames[idx].state = BuddyState::Head(layer);
                     BUDDY_SYSTEM.free_list[layer].insert(idx);
                     for i in 0..(1 << layer) {
@@ -84,7 +81,14 @@ impl BuddyAllocator {
     }
 
     pub unsafe fn get_by_layout(&mut self, size: usize, align: usize) -> Option<usize> {
-        let mut layer = align.trailing_zeros() as usize;
+        let mut layer = 0;
+        if align < FRAME_SIZE {
+            layer = 0;
+        } else {
+            while (1 << layer) < align {
+                layer += 1;
+            }
+        }
         while (1 << layer) * FRAME_SIZE < size {
             layer += 1;
         }
@@ -136,7 +140,7 @@ impl BuddyAllocator {
         let mut layer = 0;
         loop {
             let buddy = idx ^ (1 << layer);
-            if buddy >= frame_count() {
+            if buddy >= NFRAME {
                 println!("Buddy out of range");
                 break;
             }
