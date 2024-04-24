@@ -2,7 +2,7 @@
 
 #include "mm/startup.hpp"
 
-void* default_malloc(unsigned long, unsigned long) {
+void* default_malloc(uint64_t, uint64_t) {
   return nullptr;
 }
 void default_free(void*) {}

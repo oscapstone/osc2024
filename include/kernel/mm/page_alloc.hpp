@@ -1,13 +1,19 @@
 #pragma once
 
-#include <_abort.hpp>
 #include <cstdint>
-#include <new>
+#include <new.hpp>
 
 #include "ds/list.hpp"
 #include "util.hpp"
 
 constexpr uint64_t PAGE_SIZE = 0x1000;
+
+inline bool isPageAlign(void* ptr) {
+  return 0 == (uint64_t)ptr % PAGE_SIZE;
+}
+inline void* getPage(void* ptr) {
+  return (void*)((uint64_t)ptr & (~(PAGE_SIZE - 1)));
+}
 
 class PageAlloc {
  public:
@@ -50,13 +56,14 @@ class PageAlloc {
   uint64_t buddy(uint64_t vpn) {
     return vpn ^ (1 << array_[vpn].order);
   }
+  template <bool assume = false>
   FreePage* vpn2freepage(uint64_t vpn) {
     auto addr = vpn2addr(vpn);
-    if (array_[vpn].allocated) {
+    if (assume or not array_[vpn].allocated) {
+      return (FreePage*)addr;
+    } else {
       array_[vpn].allocated = false;
       return new (addr) FreePage;
-    } else {
-      return (FreePage*)addr;
     }
   }
 
@@ -65,6 +72,13 @@ class PageAlloc {
   void info();
   void* alloc(uint64_t size);
   void free(void* ptr);
+
+  uint64_t start() const {
+    return start_;
+  }
+  uint64_t end() const {
+    return end_;
+  }
 };
 
 extern PageAlloc page_alloc;

@@ -121,7 +121,7 @@ void PageAlloc::merge(FreePage* apage) {
     auto bvpn = buddy(avpn);
     if (buddy(bvpn) != avpn or array_[avpn].allocated or array_[bvpn].allocated)
       break;
-    auto bpage = vpn2freepage(bvpn);
+    auto bpage = vpn2freepage<true>(bvpn);
     if (avpn > bvpn) {
       std::swap(avpn, bvpn);
       std::swap(apage, bpage);
@@ -133,8 +133,8 @@ void PageAlloc::merge(FreePage* apage) {
 }
 
 void* PageAlloc::alloc(uint64_t size) {
-  int8_t order = log2c(size);
-  DEBUG("alloc: size %lu -> order %d\n", size, order);
+  int8_t order = log2c(align<PAGE_SIZE>(size) / PAGE_SIZE);
+  DEBUG("alloc: size 0x%lx -> order %d\n", size, order);
   for (int8_t ord = order; ord < total_order_; ord++) {
     auto fpage = free_list_[ord].front();
     if (fpage == nullptr)
@@ -150,7 +150,7 @@ void* PageAlloc::alloc(uint64_t size) {
 
 void PageAlloc::free(void* ptr) {
   DEBUG("free: page %p\n", ptr);
-  if (ptr == nullptr or ((uint64_t)ptr % PAGE_SIZE))
+  if (ptr == nullptr or not isPageAlign(ptr))
     return;
 
   auto apage = AllocatedPage(ptr);

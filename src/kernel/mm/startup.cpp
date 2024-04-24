@@ -18,7 +18,7 @@ void startup_alloc_init() {
   set_new_delete_handler(startup_malloc, startup_free);
 }
 
-void* startup_malloc(unsigned long size, unsigned long al) {
+void* startup_malloc(uint64_t size, uint64_t al) {
   heap_cur = align(heap_cur, al);
   if (!startup_free(size))
     return nullptr;
@@ -29,6 +29,6 @@ void* startup_malloc(unsigned long size, unsigned long al) {
 
 void startup_free(void*) {}
 
-bool startup_free(unsigned long size) {
+bool startup_free(uint64_t size) {
   return heap_cur + size <= __heap_end;
 }
