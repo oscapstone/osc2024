@@ -39,9 +39,19 @@ struct flist_t{
     struct frame_t* head;
 };
 
+// [TODO] memory pool
+// struct memory_pool_t{
+//     struct frame_t* head;
+//     uint8_t* used;
+//     uint32_t size;
+// };
+
 
 static struct frame_t frame_arr[FRAME_NUM];
 static struct flist_t flist_arr[MAX_LEVEL + 1];
+// static struct memory_pool_t memory_pools[MEMORY_POOL_SIZE];
+
+// uint32_t memory_pool_size[MEMORY_POOL_SIZE] = {16, 32, 64, 128};
 
 #define FREE                 0
 #define ALLOCATED            1
@@ -103,6 +113,11 @@ static void remove_from_flist(struct flist_t* flist, struct frame_t* frame)
     return;
 }
 
+static uint64_t pow_2(uint32_t n)
+{
+    return 1 << n;
+}
+
 void frame_init()
 {
     printf("\r\n[SYSTEM INFO] Frame Init Start at: ");
@@ -115,7 +130,7 @@ void frame_init()
     printf_hex(FRAME_NUM);
 
     printf("\r\n[SYSTEM INFO] Max Contiguous Size: ");
-    printf_hex(pow(2, MAX_LEVEL) * FRAME_SIZE);
+    printf_hex(pow_2(MAX_LEVEL) * FRAME_SIZE);
 
 
     for(int i=0; i<=MAX_LEVEL + 1; i++)
@@ -175,7 +190,10 @@ void print_allocated(int argc, char* argv[])
         if(frame_arr[i].status == ALLOCATED)
         {
             int cnt = 0;
-            int expected_cnt = pow(2, frame_arr[i].level);
+            int expected_cnt = pow_2(frame_arr[i].level);
+#ifdef DEBUG
+            int level = frame_arr[i].level;
+#endif
             printf("\r\n[SYSTEM INFO] Allocated Frame: "); printf_int(frame_arr[i].index); printf(", Level: "); printf_int(frame_arr[i].level);
             struct frame_t* curr = &frame_arr[i];
             while(curr){
@@ -183,32 +201,35 @@ void print_allocated(int argc, char* argv[])
                 i++;
                 curr = curr->next;
             }
+#ifdef DEBUG
+            printf("\r\n[DEBUG] Allocated Frame Count: "); printf_int(cnt); printf(", Expected Count: "); printf_int(expected_cnt); 
+            printf(" , level: "); printf_int(level);
+#endif
             assert(cnt == expected_cnt, "Allocated Frame Count Error!");
             i--;
         }
     }
 }
 
-static uint64_t* round_size(uint64_t size) // return size, level
+static uint64_t round_size(uint64_t size) // return size, level
 {
-    uint64_t *ret = (uint64_t*)simple_malloc(sizeof(uint64_t) * 2);
-    ret[0] = 1; ret[1] = 0;
-    
-    while(ret[0] < size)
-    {
-        ret[0] *= 2;
-        ret[1]++;
-    }
-    
+    uint64_t ret = 1;
+    while(ret < size) ret <<= 1;
     return ret;
+}
+
+static uint8_t get_level(uint32_t size)
+{
+    uint8_t level = 0;
+    for(int i=FRAME_SIZE; i<size; i<<=1) level++;
+    return level;
 }
 
 void* balloc(uint64_t size)
 {
-    uint64_t* round_info = round_size(size);
-    uint64_t round_size = round_info[0];
-    uint8_t level = (uint8_t)round_info[1];
-    printf("\r\n[SYSTEM INFO] Round Size: "); printf_int(round_size); printf(", Level: "); printf_int(level);
+    uint32_t r_size = round_size(size);
+    uint8_t level = get_level(r_size);
+    printf("\r\n[SYSTEM INFO] Round Size: "); printf_int(r_size); printf(", Level: "); printf_int(level);
     
     void* ret = NULL;
 
@@ -229,7 +250,7 @@ void* balloc(uint64_t size)
             while(from_level > level) // e.g. get level 4 frame, but only have level 6 frame
             {
                 from_level--;
-                uint64_t level_size = pow(2, from_level);
+                uint64_t level_size = pow_2(from_level);
                 uint32_t split_index = start_index + level_size;
 
                 frame_arr[split_index].level = from_level;
@@ -241,7 +262,7 @@ void* balloc(uint64_t size)
             }
             frame->status = ALLOCATED;
             frame->level = level;
-            frame_arr[start_index + round_size - 1].next = NULL;
+            frame_arr[start_index + pow_2(level) - 1].next = NULL;
             printf("\r\n[SYSTEM INFO] Allocate Frame: "); printf_int(frame->index);
             ret = (void*)(uint64_t)(MALLOC_START_ADDR + start_index * FRAME_SIZE);
             break;
@@ -258,7 +279,7 @@ void* balloc(uint64_t size)
 
 static void* get_buddy_address(void* ptr, uint8_t level)
 {
-    return (void*)((uint64_t)ptr ^ (pow(2, level) * FRAME_SIZE));
+    return (void*)((uint64_t)ptr ^ (pow_2(level) * FRAME_SIZE));
 }
 
 static uint32_t get_buddy_index(void* ptr, uint8_t level)
@@ -266,7 +287,7 @@ static uint32_t get_buddy_index(void* ptr, uint8_t level)
     return ((uint64_t)get_buddy_address(ptr, level) - MALLOC_START_ADDR) / FRAME_SIZE;
 }
 
-void bfree(void* ptr)
+int bfree(void* ptr)
 {
     struct frame_t* curr_frame = &frame_arr[((uint64_t)ptr - MALLOC_START_ADDR) / FRAME_SIZE];
     
@@ -274,9 +295,10 @@ void bfree(void* ptr)
     {
         case FREE:
             printf("\r\n[SYSTEM ERROR] Frame Already Free!");
-            return;
+            return 1;
         case LARGE_CONTIGUOUS:
             printf("\r\n[SYSTEM ERROR] Frame is belong to Large Contiguous Frame!");
+            return 1;
         default:
             break;
     }
@@ -304,13 +326,13 @@ void bfree(void* ptr)
         if(buddy_frame->index < curr_frame->index)
         {
             merge_index = buddy_frame->index;
-            frame_arr[buddy_frame->index + pow(2, buddy_frame->level) - 1].next = curr_frame;
+            frame_arr[buddy_frame->index + pow_2(buddy_frame->level) - 1].next = curr_frame;
             curr_frame->status = LARGE_CONTIGUOUS;
         }
         else
         {
             merge_index = curr_frame->index;
-            frame_arr[curr_frame->index + pow(2, curr_frame->level) - 1].next = buddy_frame;
+            frame_arr[curr_frame->index + pow_2(curr_frame->level) - 1].next = buddy_frame;
             buddy_frame->status = LARGE_CONTIGUOUS;
         }
 #ifdef DEBUG
@@ -334,6 +356,7 @@ void bfree(void* ptr)
     printf("\r\n[SYSTEM INFO] Add Frame:"); printf_int(curr_frame->index); printf(" to Level: "); printf_int(curr_frame->level);
     
     add_to_flist(&flist_arr[curr_frame->level], curr_frame);
+    return 0;
 }
 
 void bfree_wrapper(int argc, char *argv[])
@@ -347,8 +370,67 @@ void bfree_wrapper(int argc, char *argv[])
         printf("\nIndex out of range");
         return;
     }
-    bfree((void*)(MALLOC_START_ADDR + index * FRAME_SIZE));
-    print_flist(0, NULL);
-    print_allocated(0, NULL);
+    if(!bfree((void*)(MALLOC_START_ADDR + index * FRAME_SIZE)))
+    {
+        print_flist(0, NULL);
+        print_allocated(0, NULL);
+    }
     printf("\n===============================");
 }
+
+// void dynamic_allocation_init()
+// {
+//     for(int i=0; i<MEMORY_POOL_SIZE; i++)
+//     {
+//         void* alloc_addr = balloc(FRAME_SIZE); // request a frame
+//         memory_pools[i].frame_arr = &frame_arr[((uint64_t)alloc_addr - MALLOC_START_ADDR) / FRAME_SIZE];
+//         memory_pools[i].size = memory_pool_size[i];
+//         memory_pools[i].head = NULL;
+//         memory_pools[i].used = (uint8_t*)simple_malloc(Frame_SIZE/memory_pool_size[i]);
+        
+//     }
+// }
+
+// static void create_memory_pool(struct memory_pool_t* memory_pool)
+// {
+//     void* alloc_addr = balloc(FRAME_SIZE);
+//     uint32_t index = ((uint64_t)alloc_addr - MALLOC_START_ADDR) / FRAME_SIZE;
+//     struct frame_t* curr = memory_pool->head;
+//     struct frame_t* prev = NULL;
+//     while(curr)
+//     {
+//         prev = curr;
+//         curr = curr->next;
+//     }
+//     if(prev) prev->next = &frame_arr[index];
+//     else memory_pool->head = &frame_arr[index];
+//     for(int i=0; i<FRAME_SIZE/memory_pool->size; i++)
+//     {
+//         memory_pool->used[i] = 0;
+//     }
+// }
+
+// void* dynamic_alloc(uint32_t size)
+// {
+//     uint64_t* round_info = round_size(size);
+//     uint64_t round_size = round_info[0];
+//     uint8_t level = (uint8_t)round_info[1];
+//     printf("\r\n[SYSTEM INFO] Round Size: "); printf_int(round_size); printf(", Level: "); printf_int(level);
+//     for(int i=0; i<MEMORY_POOL_SIZE; i++)
+//     {
+//         if(memory_pools[i].size >= round_size)
+//         {
+//             printf("\r\n[SYSTEM INFO] Allocate from Memory Pool: "); printf_int(i);
+//             struct frame_t* frame = memory_pools[i].head;
+//             if(frame == NULL) // init a memory pool
+//             {
+//                 printf("\r\n[SYSTEM INFO] No available frame in memory pool! Allocate a new frame!");
+//                 void* alloc_addr = balloc(FRAME_SIZE);
+//                 uint32_t index = ((uint64_t)alloc_addr - MALLOC_START_ADDR) / FRAME_SIZE;
+//                 memory_pools[i].head = &frame_arr[index];
+//             }
+//         }
+//     }
+//     printf("\r\n[SYSTEM INFO] No suitable memory pool! Allocate from general balloc!");
+//     return balloc(round_size);
+// }

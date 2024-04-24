@@ -20,4 +20,6 @@ extern uint32_t _end;
 #define MALLOC_TOTAL_SIZE   (MALLOC_END_ADDR - MALLOC_START_ADDR)
 #define FRAME_NUM           MALLOC_TOTAL_SIZE / FRAME_SIZE
 
+// #define MEMORY_POOL_SIZE    4
+
 #endif
