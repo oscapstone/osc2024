@@ -5,6 +5,10 @@ use core::arch::asm;
 use super::critical_section::{disable_irq, enable_irq};
 
 pub fn get_line(buf: &mut[u8], len: usize) -> usize {
+    for c in buf.iter_mut() {
+        *c = 0;
+    }
+
     for idx in 0..len {
         let inp: u8;
         unsafe {
@@ -51,7 +55,7 @@ pub fn println(s: &str) {
     print("\r\n");
 }
 
-fn print_hex(n: u32) {
+pub fn print_hex_now(n: u32) {
     for i in 0..8 {
         let shift = (7 - i) * 4;
         let digit = (n >> shift) & 0xF;
@@ -61,10 +65,10 @@ fn print_hex(n: u32) {
             b'A' + (digit - 10) as u8
         };
         unsafe {
-            send_async(ascii);
+            send(ascii);
         }
     }
-    println("");
+    println_now("");
 }
 
 fn print_dec(n: u32) {
