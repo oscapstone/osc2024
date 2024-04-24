@@ -115,6 +115,7 @@ fn read_string(addr: u32) -> String {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum PropValue {
     Integer(u32),
     String(String),

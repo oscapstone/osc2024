@@ -1,5 +1,7 @@
 #![no_std]
 #![no_main]
+#![feature(allocator_api)]
+#![feature(btreemap_alloc)]
 
 extern crate alloc;
 
@@ -12,6 +14,7 @@ mod panic;
 mod timer;
 
 use alloc::boxed::Box;
+use allocator::buddy::BUDDY_SYSTEM;
 use core::arch::asm;
 use core::time::Duration;
 use stdio::{debug, gets, print, println};
@@ -20,12 +23,14 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 const MAX_COMMAND_LEN: usize = 0x100;
 
 fn main() -> ! {
-    for _ in 0..1000000 {
+    for _ in 0..10000 {
         unsafe {
             asm!("nop");
         }
     }
-    // uart::init();
+    unsafe {
+        BUDDY_SYSTEM.init();
+    }
     println!("Hello, world!");
     print_mailbox_info();
     debug!("Dealing with dtb...");

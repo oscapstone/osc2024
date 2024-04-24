@@ -72,8 +72,8 @@ run: all
 		-dtb $(DTB) --daemonize
 
 debug: all size
-	$(OBJDUMP) -d $(KERNEL_ELF) > $(BUILD_DIR)/kernel.S
-	$(OBJDUMP) -d $(BOOTLOADER_ELF) > $(BUILD_DIR)/bootloader.S
+	$(OBJDUMP) -D $(KERNEL_ELF) > $(BUILD_DIR)/kernel.S
+	$(OBJDUMP) -D $(BOOTLOADER_ELF) > $(BUILD_DIR)/bootloader.S
 	$(QEMU) -M raspi3b \
 		-serial null -serial pty \
 		-kernel $(BOOTLOADER_IMG) \
