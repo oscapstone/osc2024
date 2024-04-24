@@ -1,5 +1,6 @@
 #include "mm/page_alloc.hpp"
 
+#include "int/interrupt.hpp"
 #include "io.hpp"
 #include "math.hpp"
 #include "util.hpp"
@@ -118,19 +119,26 @@ void PageAlloc::merge(FreePage* apage) {
 }
 
 void* PageAlloc::alloc(uint64_t size) {
+  save_DAIF_disable_interrupt();
+
   int8_t order = log2c(align<PAGE_SIZE>(size) / PAGE_SIZE);
   MM_DEBUG("page_alloc", "alloc: size 0x%lx -> order %d\n", size, order);
+  AllocatedPage apage = nullptr;
   for (int8_t ord = order; ord < total_order_; ord++) {
     auto fpage = free_list_[ord].front();
     if (fpage == nullptr)
       continue;
-    auto apage = alloc(fpage, true);
+    apage = alloc(fpage, true);
     truncate(apage, order);
-    MM_DEBUG("page_alloc", "alloc: -> page %p\n", apage);
-    return apage;
+    break;
   }
-  MM_DEBUG("page_alloc", "alloc: no page availiable\n");
-  return nullptr;
+  if (apage)
+    MM_DEBUG("page_alloc", "alloc: -> page %p\n", apage);
+  else
+    MM_DEBUG("page_alloc", "alloc: no page availiable\n");
+
+  restore_DAIF();
+  return apage;
 }
 
 void PageAlloc::free(void* ptr) {
@@ -138,6 +146,10 @@ void PageAlloc::free(void* ptr) {
   if (ptr == nullptr or not isPageAlign(ptr))
     return;
 
+  save_DAIF_disable_interrupt();
+
   auto apage = AllocatedPage(ptr);
   release(apage);
+
+  restore_DAIF();
 }

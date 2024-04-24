@@ -1,5 +1,6 @@
 #include "ds/ringbuffer.hpp"
 
+#include "int/interrupt.hpp"
 #include "util.hpp"
 
 void RingBuffer::push(char c, bool wait) {
@@ -7,8 +8,10 @@ void RingBuffer::push(char c, bool wait) {
     return;
   while (full())
     NOP;
+  save_DAIF_disable_interrupt();
   buf[tail] = c;
   tail = ntail();
+  restore_DAIF();
 }
 
 char RingBuffer::pop(bool wait) {
@@ -16,7 +19,9 @@ char RingBuffer::pop(bool wait) {
     return -1;
   while (empty())
     NOP;
+  save_DAIF_disable_interrupt();
   auto c = buf[head];
   head = nhead();
+  restore_DAIF();
   return c;
 }

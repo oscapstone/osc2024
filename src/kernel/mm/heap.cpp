@@ -3,6 +3,7 @@
 #include <new.hpp>
 
 #include "ds/list.hpp"
+#include "int/interrupt.hpp"
 #include "mm/new.hpp"
 #include "mm/page_alloc.hpp"
 
@@ -117,14 +118,24 @@ void* heap_malloc(uint64_t req_size, uint64_t align) {
   if (req_size > max_chunk_size)
     return page_alloc.alloc(req_size);
 
-  auto idx = chunk_idx(req_size);
+  save_DAIF_disable_interrupt();
 
-  return info[idx].alloc();
+  auto idx = chunk_idx(req_size);
+  // MM_DEBUG("heap", "alloc 0x%lx -> 0x%x\n", req_size, chunk_size[idx]);
+  auto ptr = info[idx].alloc();
+
+  restore_DAIF();
+
+  return ptr;
 }
 
 void heap_free(void* ptr) {
   if (isPageAlign(ptr))
     return page_alloc.free(ptr);
+  save_DAIF_disable_interrupt();
+
   auto hdr = (PageHeader*)getPage(ptr);
   info[hdr->idx].free(ptr);
+
+  restore_DAIF();
 }

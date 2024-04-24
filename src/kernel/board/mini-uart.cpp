@@ -22,6 +22,16 @@ const bool& mini_uart_is_async = _mini_uart_is_async;
 RingBuffer rbuf, wbuf;
 int mini_uart_delay = 0;
 
+struct IntCtx {
+  union {
+    struct __attribute__((__packed__)) {
+      uint32_t iir;
+      char recv;
+    };
+    uint64_t value;
+  };
+};
+
 namespace getline_echo {
 bool enable = false;
 char* buffer;
@@ -104,19 +114,23 @@ void mini_uart_enqueue() {
     return;
   set_ier_reg(false, RECEIVE_INT);
   set_ier_reg(false, TRANSMIT_INT);
-  irq_add_task(9, mini_uart_handler, (void*)(uint64_t)iir);
+  IntCtx ctx{.iir = iir};
+  if (iir & (1 << 2)) {
+    // Receiver holds valid byte
+    ctx.recv = get32(AUX_MU_IO_REG) & MASK(8);
+  }
+  irq_add_task(9, mini_uart_handler, (void*)ctx.value);
 }
 
-void mini_uart_handler(void* iir_) {
-  auto iir = (uint32_t)(uint64_t)iir_;
+void mini_uart_handler(void* ctx_) {
+  IntCtx ctx{.value = (uint64_t)ctx_};
 
-  if (iir & (1 << 1)) {
+  if (ctx.iir & (1 << 1)) {
     // Transmit holding register empty
     if (not wbuf.empty())
       set32(AUX_MU_IO_REG, wbuf.pop());
-  } else if (iir & (1 << 2)) {
-    // Receiver holds valid byte
-    rbuf.push(get32(AUX_MU_IO_REG) & MASK(8));
+  } else if (ctx.iir & (1 << 2)) {
+    rbuf.push(ctx.recv);
   }
 
   // TODO: refactor uart task handlers

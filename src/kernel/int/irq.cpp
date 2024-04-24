@@ -31,13 +31,15 @@ void irq_add_task(int prio, Task::fp callback, void* context) {
 
 void irq_run() {
   while (not irq_tasks.empty()) {
-    auto task = irq_tasks.begin();
+    auto it = irq_tasks.begin();
+    auto task = *it;
     if (task->running)
       break;
     task->running = true;
     enable_interrupt();
     task->call();
     disable_interrupt();
-    irq_tasks.erase(task);
+    irq_tasks.erase(it);
+    delete task;
   }
 }
