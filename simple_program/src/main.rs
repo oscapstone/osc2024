@@ -11,14 +11,6 @@ global_asm!(include_str!("boot.s"));
 
 #[no_mangle]
 fn main() {
-    // let mut el: u64 = 0;
-    unsafe {
-        cpu::uart::initialize();
-        // asm!("mrs {tmp}, CurrentEL", tmp = out(reg) el);
-        // asm!("nop");
-    }
-    println!("Hello, world!");
-    // println!("Current EL: {}", el >> 2);
 
     loop {}
 }
