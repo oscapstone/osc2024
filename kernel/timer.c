@@ -1,11 +1,11 @@
 #include "malloc.h"
 #include "string.h"
 #include "timer.h"
+#include "uart.h"
 
 void add_timer(void)
 {
     char *line = NULL;
-    uart_puts("Enter MESSAGE SECONDS: ");
     getline(&line, 0x20);
 
     char *message = (char *) malloc(sizeof(char) * 50);
@@ -68,9 +68,7 @@ void update_timers(void)
     while (cur != NULL) {
         cur->second--;
         if (cur->second == 0) {
-            uart_puts("\ntimer timeout: ");
             uart_puts(cur->message);
-            uart_puts("\n");
 
             // TODO: remove this one
         }
