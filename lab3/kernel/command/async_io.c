@@ -26,6 +26,9 @@ void _async_io_demo(int argc, char **argv) {
         command[0] = '\0';
     }
     uart_disable_tx_interrupt();
+    
+    // TODO: find out why I should clear the buffer...
+    uart_async_read(command);
 }
 
 struct Command async_io_demo_command = {
