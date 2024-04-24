@@ -88,6 +88,26 @@ void cpio_cat(char *filename, unsigned int len)
         uart_send_char(file_content[i]);
     }
     uart_send_string("\n");
-
-
 }
+
+int cpio_get(const char *filename, unsigned int len, UPTR *content_addr, unsigned long *content_size)
+{
+    char* addr = cpio_findFile(filename, len);
+    if (!addr) {
+        return -1;
+    }
+    struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
+    unsigned long filename_size = utils_atoi(header->c_namesize,(int)sizeof(header->c_namesize));
+    unsigned long headerPathname_size = sizeof(struct cpio_newc_header) + filename_size;
+    unsigned long file_size = utils_atoi(header->c_filesize,(int)sizeof(header->c_filesize));
+    
+    utils_align(&headerPathname_size,4);
+    utils_align(&file_size,4);
+    
+    char *file_content = addr + headerPathname_size;
+
+    *content_addr = (UPTR)file_content;
+    *content_size = file_size;
+    return 0;
+}
+

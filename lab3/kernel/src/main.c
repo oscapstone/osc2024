@@ -4,23 +4,15 @@
 #include "io/uart.h"
 #include "shell/shell.h"
 #include "utils/utils.h"
+#include "utils/printf.h"
+#include "peripherals/irq.h"
+#include "io/exception.h"
 
-char* cpio_addr;
-
-void get_cpio_addr(int token, const char* name, const void *data, unsigned int size) {
-	if(token == FDT_PROP && (utils_strncmp(name, "linux,initrd-start", 18) == 0)) {
-		//uart_send_string("CPIO Prop found!\n");
-		U64 dataContent = (U64)data;
-		//uart_send_string("Data content: ");
-		//uart_hex64(dataContent);
-		//uart_send_string("\n");
-		U32 cpioAddrBigEndian = *((U32*)dataContent);
-		U32 realCPIOAddr = utils_transferEndian(cpioAddrBigEndian);
-		//uart_send_string("CPIO address: 0x");
-		//uart_hex64(realCPIOAddr);
-		//uart_send_string("\n");
-		cpio_addr = (char*)realCPIOAddr;
+void putc(void *p, char c) {
+	if (c == '\n') {
+		uart_send_char('\r');
 	}
+	uart_send_char(c);
 }
 
 void main() {
@@ -28,13 +20,19 @@ void main() {
     // initialze UART
     uart_init();
 
-	uart_send_string("try getting cpio address...\r\n");
-    // get the cpio address from dtb
-    
-	// TODO: bugge here fix some day
+	init_printf(0, putc);
+
+	set_exception_vector_table();
+	enable_interrupt_controller();
+	irq_enable();
+
+	// TODO: bugge here 
 	//fdt_traverse(get_cpio_addr);
 
-	uart_send_string("starting shell ...\r\n");
+	// while (1) {
+	// 	asm volatile("nop");
+	// }
+
     shell();
 
 }

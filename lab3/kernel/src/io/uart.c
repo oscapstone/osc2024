@@ -20,9 +20,15 @@ void uart_init() {
     REGS_AUX->enables = 1;
 	// 2. Set AUX_MU_CNTL_REG to 0. Disable transmitter and receiver during configuration.
     REGS_AUX->mu_control = 0;
-	// 3. Set AUX_MU_IER_REG to 0. Disable interrupt because currently you don’t need interrupt.
-    REGS_AUX->mu_ier = 0;
-	// 4. Set AUX_MU_LCR_REG to 3. Set the data size to 8 bit.
+
+    // bcm pg. 12 
+    // enable the receive interrupt, it is in ier 0 bit
+    REGS_AUX->mu_ier = 0xfd;
+
+	//// 3. Set AUX_MU_IER_REG to 0. Disable interrupt because currently you don’t need interrupt.
+    ////REGS_AUX->mu_ier = 0;
+	
+    // 4. Set AUX_MU_LCR_REG to 3. Set the data size to 8 bit.
     REGS_AUX->mu_lcr = 3;
 	// 5. Set AUX_MU_MCR_REG to 0. Don’t need auto flow control.
     REGS_AUX->mu_mcr = 0;

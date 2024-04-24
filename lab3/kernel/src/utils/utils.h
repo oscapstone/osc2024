@@ -13,5 +13,6 @@ U64 utils_strlen(const char *s);
 
 // in assembly file utilsASM.S
 void utils_delay(U64 cycle);
+U32 utils_get_el();
 
 #endif

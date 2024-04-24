@@ -6,12 +6,27 @@
 //#include "io/mailbox.h"
 #include "fs/cpio.h"
 #include "utils/utils.h"
+#include "utils/printf.h"
 
 extern char* _dtb_ptr;
-extern char* cpio_addr;
 
-// in main.c
-void get_cpio_addr(int token, const char* name, const void *data, unsigned int size);
+char* cpio_addr;
+
+void get_cpio_addr(int token, const char* name, const void *data, unsigned int size) {
+	if(token == FDT_PROP && (utils_strncmp(name, "linux,initrd-start", 18) == 0)) {
+		//uart_send_string("CPIO Prop found!\n");
+		U64 dataContent = (U64)data;
+		//uart_send_string("Data content: ");
+		//uart_hex64(dataContent);
+		//uart_send_string("\n");
+		U32 cpioAddrBigEndian = *((U32*)dataContent);
+		U32 realCPIOAddr = utils_transferEndian(cpioAddrBigEndian);
+		//uart_send_string("CPIO address: 0x");
+		//uart_hex64(realCPIOAddr);
+		//uart_send_string("\n");
+		cpio_addr = (char*)realCPIOAddr;
+	}
+}
 
 void shell() {
 
@@ -19,6 +34,9 @@ void shell() {
     char cmd_space[256];
 
     char* input_ptr = cmd_space;
+
+	// getting CPIO addr
+	fdt_traverse(get_cpio_addr);
 
     while (TRUE) {
 
@@ -85,17 +103,19 @@ void shell() {
 		}*/
 		 else if (utils_strncmp(cmd_space, "ls", 2) == 0) {
 			cpio_ls();
-		} else if (utils_strncmp(cmd_space, "cat", 3) == 0) {
+		} else if (utils_strncmp(cmd_space, "cat ", 4) == 0) {
 			char fileName[32];
-			unsigned int len = 0;
-			for(unsigned int i = 0; i < 32; i++) {
-				if (cmd_space[i + 4] == '\0') {
-					fileName[i] = '\0';
-					len = i - 1;	
-					break;
-				}
-				fileName[i] = cmd_space[i + 4];
+			U32 len = 0;
+			char s;
+			U32 iter = 4;
+			while ((s = cmd_space[iter]) == ' ') {
+				iter++;
 			}
+			while ((s = cmd_space[iter]) != '\0') {
+				fileName[len++] = cmd_space[iter++];
+			}
+			fileName[len] = '\0';
+			len--;
 			cpio_cat(fileName, len);
 		} else if (utils_strncmp(cmd_space, "dtb", 3) == 0) {
 			U64 dtbPtr = (U64) _dtb_ptr;
@@ -107,6 +127,8 @@ void shell() {
 		} else if (utils_strncmp(cmd_space, "reboot", 6) == 0) {
 			uart_send_string("Rebooting....\n");
 			reset(1000);
+		} else if (utils_strncmp(cmd_space, "exception", 9) == 0) {
+			printf("\nException level: %d\n", utils_get_el());
 		}
 		 else {
 			uart_send_string("Unknown command\n");

@@ -1,10 +1,12 @@
 #ifndef CPIO_H
 #define CPIO_H
 
+#include "base.h"
+
 char* cpio_findFile(const char* name, unsigned int len);
 void cpio_ls();
 void cpio_cat(char* filename, unsigned int len);
-
+int cpio_get(const char *filename, unsigned int len, UPTR *content_addr, unsigned long *content_size);
 
 struct cpio_newc_header {
     char    c_magic[6];

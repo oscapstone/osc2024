@@ -6,8 +6,8 @@ OBJCOPY	= aarch64-linux-gnu-objcopy
 # NS_DEBUG: enable debug output 
 
 # nostdlib: No standard library
-CFLAGS	= -Wall -Wextra -Wpedantic -O0 -ffreestanding \
-		  -nostdinc -nostdlib -nostartfiles \
+CFLAGS	= -Wall -ffreestanding \
+		  -nostdlib -nostartfiles \
 		  -mgeneral-regs-only\
 		  -I src\
 		  -D NS_DEBUG
@@ -18,17 +18,20 @@ OBJ_DIR = bin-int
 
 # object files
 OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
-				src/io/uart.o src/io/dtb.o src/io/reboot.o\
-				src/utils/utils.o src/utils/utilsASM.o \
+				src/io/uart.o src/io/dtb.o src/io/reboot.o src/io/exception.o\
+				src/utils/utils.o src/utils/utilsASM.o src/utils/printf.o\
 				src/shell/shell.o \
 				src/fs/cpio.o \
-				src/peripherals/gpio.o\
+				src/peripherals/gpio.o src/peripherals/irq.o\
 				)
 
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
 all : kernel.img
+
+gdb-run :
+	gdb-multiarch -ex 'set architecture aarch64' -ex 'file bin/kernel.elf' -ex 'target remote localhost:1234'
 
 kernel.img : $(OBJ_FILES) linker.ld $(BIN_DIR)
 	$(LD) --verbose $(OBJ_FILES) -T linker.ld -o $(BIN_DIR)/kernel.elf

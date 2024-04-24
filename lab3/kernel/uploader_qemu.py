@@ -13,7 +13,7 @@ def read_line(s):
 
 if __name__ == '__main__':
 
-    s = serial.Serial("/dev/pts/2", baudrate=115200)
+    s = serial.Serial("/dev/pts/3", baudrate=115200)
 
     kernel_filePath = "kernel.img"
 

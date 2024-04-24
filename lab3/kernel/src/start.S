@@ -1,5 +1,7 @@
 .section ".text.boot"
 
+#include "arm/sysregs.h"
+
 .global _start
 
 _start:
@@ -20,6 +22,10 @@ init:
 	ldr		x3, =_dtb_ptr
 	str		x2, [x3]
 
+	// to exception level 1
+	bl		from_el2_to_el1
+
+el1_entry:
 	// init stack pointer, because the code start from _start so lower address space can be stack
 	ldr		x1, =_start
 	mov		sp, x1
@@ -37,6 +43,20 @@ kernel_main:
 
 	bl		main					// branch label: will link in linking state
 	b		halt
+
+from_el2_to_el1:
+	// mmu
+	//ldr		x0, =SCTLR_VALUE_MMU_DISABLED
+	//msr		sctlr_el1, x0
+	// end mmu
+
+	mov		x0, HCR_VALUE			    // RW, register width control
+	msr		hcr_el2, x0
+	//mov		x0, 0x3c5				// EL1h (SPSel = 1) with interrupt disabled
+	mov		x0, SPSR_VALUE				// EL1h (SPSel = 1) with interrupt disabled
+	msr		spsr_el2, x0
+	msr		elr_el2, lr
+	eret
 
 halt:
 	wfe

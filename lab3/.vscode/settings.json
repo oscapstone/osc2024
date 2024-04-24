@@ -3,6 +3,7 @@
         "gpio.h": "c",
         "utils.h": "c",
         "aux.h": "c",
-        "uart.h": "c"
+        "uart.h": "c",
+        "exception.h": "c"
     }
 }
