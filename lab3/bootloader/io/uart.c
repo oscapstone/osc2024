@@ -18,6 +18,7 @@ void uart_init() {
 	r = 150; while (r--) { asm volatile("nop"); }
 	*GPPUDCLK0 = 0;
 
+	r = 500; while (r--) { asm volatile("nop"); }
 	// 1. set AUXENB register to enable mini UART.
 	*AUX_ENABLE |= 1;
 	// 2. Set AUX_MU_CNTL_REG to 0. Disable transmitter and receiver during configuration.
@@ -39,6 +40,7 @@ void uart_init() {
 	// 8. Set AUX_MU_CNTL_REG to 3. Enable the transmitter and receiver.
 	*AUX_MU_CNTL = 3;
 
+	r = 500; while (r--) { asm volatile("nop"); }
 }
 
 /**
@@ -63,13 +65,11 @@ void uart_send_char(unsigned int c) {
  * Receive a character
  */
 char uart_get_char() {
-    char r;
     /* wait until something is in the buffer */
     //bit 0 is set if the receive FIFO holds at least 1 symbol.
     do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x01));
-    /* read it and return */
-    r = (char)(*AUX_MU_IO);
-    return r;
+    
+    return (*AUX_MU_IO & 0xff);
 }
 
 /**
