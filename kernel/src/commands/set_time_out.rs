@@ -16,7 +16,7 @@ pub fn exec(command: &[u8]) {
         }
     };
     if args.len() < 2 {
-        debug!("Invalid arguments");
+        println!("Invalid arguments");
         return;
     }
     // println!("Args: {:?}", args);
@@ -24,18 +24,18 @@ pub fn exec(command: &[u8]) {
         Some(s) => match s.parse::<u64>() {
             Ok(n) => n,
             Err(_) => {
-                debug!("Invalid delay");
+                println!("Invalid delay");
                 return;
             }
         },
         None => {
-            debug!("Invalid delay");
+            println!("Invalid delay");
             return;
         }
     };
-    debug!("Delay: {}", delay);
+    // debug!("Delay: {}", delay);
     let message = args[1..].join(" ");
-    debug!("Message: {}", message);
+    // debug!("Message: {}", message);
     add_timer(Duration::from_millis(delay), message);
 }
 
