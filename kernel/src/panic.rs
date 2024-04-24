@@ -7,6 +7,7 @@ use core::panic::PanicInfo;
 fn panic(_info: &PanicInfo) -> ! {
     loop {
         stdio::println!("Kernel panic!");
+        stdio::println!("{:?}", _info);
         unsafe { asm!("b .") }
     }
 }

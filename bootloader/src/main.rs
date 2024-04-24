@@ -13,7 +13,7 @@ fn main() {
     uart::init();
     println!("Hello, world!");
 
-    let dtb_addr = 0x8f000 as *const u8;
+    let dtb_addr = 0x6f000 as *const u8;
     let dtb_addr = unsafe { core::ptr::read_volatile(dtb_addr as *const u32) };
 
     println!("DTB address: {:#x}", dtb_addr);

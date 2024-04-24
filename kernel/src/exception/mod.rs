@@ -12,7 +12,25 @@ global_asm!(include_str!("context_switch.S"));
 
 #[no_mangle]
 unsafe fn exception_handler(idx: u64) {
+    disable_inturrupt();
     match idx {
+        0x4 => {
+            let esr_el1: u64;
+            asm!(
+                "mrs {0}, esr_el1", out(reg) esr_el1,
+            );
+            debug!("Exception {}", idx);
+            debug!("ESR_EL1: 0x{:x}", esr_el1);
+            let elr_el1: u64;
+            asm!(
+                "mrs {0}, elr_el1", out(reg) elr_el1,
+            );
+            debug!("ELR_EL1: 0x{:x}", elr_el1);
+
+            for _ in 0..1000000 {
+                asm!("nop");
+            }
+        }
         0x5 => {
             if read_volatile(0x4000_0060 as *const u32) == 0x02 {
                 {
@@ -45,12 +63,12 @@ unsafe fn exception_handler(idx: u64) {
         _ => {
             debug!("Exception {}", idx);
             debug!("Unknown exception");
-            for _ in 0..100000000 {
+            for _ in 0..1000000 {
                 asm!("nop");
             }
         }
     }
-    // enable_inturrupt();
+    enable_inturrupt();
 }
 
 #[allow(dead_code)]

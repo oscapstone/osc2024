@@ -2,7 +2,7 @@ use super::timer::Timer;
 use alloc::boxed::Box;
 use alloc::collections::BinaryHeap;
 use core::{arch::asm, time::Duration};
-use stdio::println;
+use stdio::*;
 pub struct TimerManager {
     pq: BinaryHeap<Timer>,
 }
@@ -52,6 +52,7 @@ impl TimerManager {
         return ret;
     }
 
+    #[inline(never)]
     pub fn add_timer(&mut self, duration: Duration, callback: Box<dyn Fn() + Send + Sync>) {
         let expiry = self.compute_delay(duration);
         let timer = Timer::new(expiry, callback);
@@ -66,7 +67,10 @@ impl TimerManager {
 
     pub fn handle_inturrupt(&mut self) {
         if let Some(timer) = self.pq.pop() {
-            assert!(timer.expiry <= self.get_current());
+            assert!(
+                timer.expiry <= self.get_current(),
+                "Timer expired too early"
+            );
             timer.trigger();
             if self.pq.len() > 0 {
                 self.set_timer();

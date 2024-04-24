@@ -81,6 +81,6 @@ debug: all size
 		-dtb $(DTB) -S -s
 
 size: $(KERNEL_IMG) $(BOOTLOADER_IMG) $(PROG_IMG)
-	@stat $(KERNEL_IMG) --printf="Kernel size: %s bytes\n"
-	@stat $(BOOTLOADER_IMG) --printf="Bootloader size: %s bytes\n"
-	@stat $(PROG_IMG) --printf="Prog size: %s bytes\n"
+	@printf "Kernel: %d (0x%x) bytes\n" `stat -c %s $(KERNEL_IMG)` `stat -c %s $(KERNEL_IMG)`
+	@printf "Bootloader: %d (0x%x) bytes\n" `stat -c %s $(BOOTLOADER_IMG)` `stat -c %s $(BOOTLOADER_IMG)`
+	@printf "Initramfs: %d (0x%x) bytes\n" `stat -c %s $(INITRAMFS_CPIO)` `stat -c %s $(INITRAMFS_CPIO)`
