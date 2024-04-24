@@ -1,6 +1,6 @@
 #include "shell/cmd.hpp"
 
-#include "board/mini-uart.hpp"
+#include "io.hpp"
 #include "reloc.hpp"
 #include "string.hpp"
 
@@ -99,7 +99,7 @@ int runcmd(const char* buf, int len) {
   if (cmd != nullptr) {
     return reloc(cmd->fp)(argc, argv);
   } else {
-    mini_uart_printf("command not found: %s\n", buf);
+    kprintf("command not found: %s\n", buf);
     return -1;
   }
 }

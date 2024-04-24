@@ -1,6 +1,7 @@
 #include "board/mini-uart.hpp"
 #include "int/interrupt.hpp"
 #include "int/timer.hpp"
+#include "io.hpp"
 #include "shell/cmd.hpp"
 #include "string.hpp"
 
@@ -11,14 +12,13 @@ void print_2s_timer(void* context) {
   if (timer_delay > 0) {
     auto delay = timer_delay;
     timer_delay = 0;
-    mini_uart_printf_sync("delay timer %ds\n", delay);
+    kprintf("delay timer %ds\n", delay);
     auto cur = get_current_tick();
     while (get_current_tick() - cur < delay * freq_of_timer)
       NOP;
   }
   if (show_timer) {
-    mini_uart_printf("[" PRTval "] 2s timer interrupt\n",
-                     FTval(get_current_time()));
+    kprintf("[" PRTval "] 2s timer interrupt\n", FTval(get_current_time()));
     add_timer({2, 0}, (void*)context, (Timer::fp)context);
   }
 }
@@ -30,13 +30,13 @@ int demo_timer(int /*argc*/, char* /*argv*/[]) {
     show_timer = true;
     add_timer({2, 0}, (void*)print_2s_timer, print_2s_timer);
   }
-  mini_uart_printf("%s timer interrupt\n", show_timer ? "show" : "hide");
+  kprintf("%s timer interrupt\n", show_timer ? "show" : "hide");
   return 0;
 }
 
 int demo_preempt(int /*argc*/, char* /*argv*/[]) {
   auto print_data = [](void* ctx) {
-    mini_uart_printf("print from task %ld\n", (long)ctx);
+    kprintf("print from task %ld\n", (long)ctx);
   };
 
   save_DAIF_disable_interrupt();
@@ -52,19 +52,19 @@ int demo_preempt(int /*argc*/, char* /*argv*/[]) {
 
 int delay_uart(int argc, char* argv[]) {
   mini_uart_delay = argc >= 3 ? strtol(argv[2]) : 10;
-  mini_uart_printf("set delay uart %ds\n", mini_uart_delay);
+  kprintf("set delay uart %ds\n", mini_uart_delay);
   return 0;
 }
 
 int delay_timer(int argc, char* argv[]) {
   timer_delay = argc >= 3 ? strtol(argv[2]) : 10;
-  mini_uart_printf("set delay timer %ds\n", timer_delay);
+  kprintf("set delay timer %ds\n", timer_delay);
   return 0;
 }
 
 int cmd_demo(int argc, char* argv[]) {
   if (argc <= 1) {
-    mini_uart_puts("demo: require at least one argument\n");
+    kprintf("%s: require at least one argument\n", argv[0]);
     return -1;
   }
 
@@ -82,6 +82,6 @@ int cmd_demo(int argc, char* argv[]) {
   if (!strcmp(cmd, "delay-timer"))
     return delay_timer(argc, argv);
 
-  mini_uart_printf("demo: task '%s' not found\n", cmd);
+  kprintf("demo: task '%s' not found\n", cmd);
   return -1;
 }

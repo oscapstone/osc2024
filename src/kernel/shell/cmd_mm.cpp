@@ -1,4 +1,4 @@
-#include "board/mini-uart.hpp"
+#include "io.hpp"
 #include "mm/page_alloc.hpp"
 #include "mm/startup.hpp"
 #include "shell/cmd.hpp"
@@ -15,7 +15,7 @@ int cmd_mm(int argc, char* argv[]) {
       for (int i = 2; i < argc; i++) {
         int size = strtol(argv[i]);
         auto addr = startup_malloc(size);
-        mini_uart_printf("startup_malloc(%d) = %p\n", size, addr);
+        kprintf("startup_malloc(%d) = %p\n", size, addr);
       }
     }
   } else if (0 == strcmp(argv[1], "page")) {
@@ -24,19 +24,19 @@ int cmd_mm(int argc, char* argv[]) {
     } else if (0 == strcmp(argv[2], "alloc") and argc >= 4) {
       auto size = strtol(argv[3]);
       auto ptr = page_alloc.alloc(size);
-      mini_uart_printf("page: alloc(0x%lx) = %p\n", size, ptr);
+      kprintf("page: alloc(0x%lx) = %p\n", size, ptr);
       page_alloc.info();
     } else if (0 == strcmp(argv[2], "free") and argc >= 4) {
       auto ptr = (void*)strtol(argv[3]);
-      mini_uart_printf("page: free(%p)\n", ptr);
+      kprintf("page: free(%p)\n", ptr);
       page_alloc.free(ptr);
       page_alloc.info();
     } else {
-      mini_uart_printf("mm: page action '%s' not match\n", argv[2]);
+      kprintf("mm: page action '%s' not match\n", argv[2]);
       return -1;
     }
   } else {
-    mini_uart_printf("mm: '%s' not found\n", argv[1]);
+    kprintf("%s: '%s' not found\n", argv[0], argv[1]);
     return -1;
   }
 

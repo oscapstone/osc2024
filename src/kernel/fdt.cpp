@@ -1,6 +1,6 @@
 #include "fdt.hpp"
 
-#include "board/mini-uart.hpp"
+#include "io.hpp"
 #include "string.hpp"
 
 FDT fdt;
@@ -8,26 +8,26 @@ FDT fdt;
 bool print_fdt(uint32_t tag, int level, const char* node_name,
                const char* prop_name, uint32_t len, const char prop_value[]) {
   for (int i = 0; i < level; i++)
-    mini_uart_putc('\t');
+    kputc('\t');
   switch (tag) {
     case FDT_BEGIN_NODE: {
-      mini_uart_printf("begin %s", node_name);
+      kprintf("begin %s", node_name);
       break;
     }
     case FDT_END_NODE: {
-      mini_uart_printf("end %s", node_name);
+      kprintf("end %s", node_name);
       break;
     }
     case FDT_PROP: {
-      mini_uart_printf("%s: ", prop_name);
-      mini_uart_print({prop_value, (int)len});
+      kprintf("%s: ", prop_name);
+      kprint({prop_value, (int)len});
       break;
     }
     default: {
-      mini_uart_printf("unknown tag %x", tag);
+      kprintf("unknown tag %x", tag);
     }
   }
-  mini_uart_putc('\n');
+  kputc('\n');
   return false;
 }
 
@@ -39,38 +39,37 @@ void FDT::init(void* addr, bool debug) {
   base = (char*)addr;
 
   if (debug)
-    mini_uart_printf("DTB ADDR: %p\n", base);
+    kprintf("DTB ADDR: %p\n", base);
 
   if (fdt_magic(base) != FDT_MAGIC) {
-    mini_uart_printf("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base),
-                     FDT_MAGIC);
+    kprintf("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base), FDT_MAGIC);
     prog_hang();
   }
   if (fdt_last_comp_version(base) > LAST_COMP_VERSION) {
-    mini_uart_printf("Unsupport dtb v%d > v%d\n", fdt_last_comp_version(base),
-                     LAST_COMP_VERSION);
+    kprintf("Unsupport dtb v%d > v%d\n", fdt_last_comp_version(base),
+            LAST_COMP_VERSION);
     prog_hang();
   }
 
   if (debug) {
-    mini_uart_printf("magic             %x\n", fdt_magic(base));
-    mini_uart_printf("totalsize         %x\n", fdt_totalsize(base));
-    mini_uart_printf("off_dt_struct     %x\n", fdt_off_dt_struct(base));
-    mini_uart_printf("off_dt_strings    %x\n", fdt_off_dt_strings(base));
-    mini_uart_printf("off_mem_rsvmap    %x\n", fdt_off_mem_rsvmap(base));
-    mini_uart_printf("version           %x\n", fdt_version(base));
-    mini_uart_printf("last_comp_version %x\n", fdt_last_comp_version(base));
-    mini_uart_printf("boot_cpuid_phys   %x\n", fdt_boot_cpuid_phys(base));
-    mini_uart_printf("size_dt_strings   %x\n", fdt_size_dt_strings(base));
-    mini_uart_printf("size_dt_struct    %x\n", fdt_size_dt_struct(base));
+    kprintf("magic             %x\n", fdt_magic(base));
+    kprintf("totalsize         %x\n", fdt_totalsize(base));
+    kprintf("off_dt_struct     %x\n", fdt_off_dt_struct(base));
+    kprintf("off_dt_strings    %x\n", fdt_off_dt_strings(base));
+    kprintf("off_mem_rsvmap    %x\n", fdt_off_mem_rsvmap(base));
+    kprintf("version           %x\n", fdt_version(base));
+    kprintf("last_comp_version %x\n", fdt_last_comp_version(base));
+    kprintf("boot_cpuid_phys   %x\n", fdt_boot_cpuid_phys(base));
+    kprintf("size_dt_strings   %x\n", fdt_size_dt_strings(base));
+    kprintf("size_dt_struct    %x\n", fdt_size_dt_struct(base));
   }
 
   reserve_entry = (fdt_reserve_entry*)(base + fdt_off_mem_rsvmap(base));
   if (debug) {
     for (auto it = reserve_entry; fdtrsv_address(it) and fdtrsv_size(it);
          it++) {
-      mini_uart_printf("rsvmap %ld: %lx %lx\n", it - reserve_entry,
-                       fdtrsv_address(it), fdtrsv_size(it));
+      kprintf("rsvmap %ld: %lx %lx\n", it - reserve_entry, fdtrsv_address(it),
+              fdtrsv_size(it));
     }
   }
 
@@ -160,7 +159,7 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
   switch (tag) {
     case FDT_BEGIN_NODE: {
       if (debug)
-        mini_uart_printf("+ %s\n", node_name);
+        kprintf("+ %s\n", node_name);
 
       if (!match(node_name))
         return false;
@@ -190,7 +189,7 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
     case FDT_PROP: {
       if (last) {
         if (debug)
-          mini_uart_printf(": %s\n", prop_name);
+          kprintf(": %s\n", prop_name);
 
         if (not match(prop_name))
           return false;

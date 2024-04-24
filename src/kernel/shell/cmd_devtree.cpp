@@ -1,11 +1,11 @@
-#include "board/mini-uart.hpp"
 #include "fdt.hpp"
+#include "io.hpp"
 #include "shell/cmd.hpp"
 
 int cmd_devtree(int argc, char* argv[]) {
   if (argc <= 1) {
-    mini_uart_puts("devtree: require path\n");
-    mini_uart_puts("usage: devtree <path> [depth]\n");
+    kprintf("%s: require path\n", argv[0]);
+    kprintf("usage: %s <path> [depth]\n", argv[0]);
     return -1;
   }
 
@@ -16,11 +16,11 @@ int cmd_devtree(int argc, char* argv[]) {
   auto [found, view] = fdt.find(path, print_fdt, depth);
   if (not found) {
     r = -1;
-    mini_uart_printf("devtree: %s: No such device\n", path);
+    kprintf("%s: %s: No such device\n", argv[0], path);
   } else if (view.data()) {
-    mini_uart_printf("%s: ", path);
-    mini_uart_print(view);
-    mini_uart_printf("\n");
+    kprintf("%s: ", path);
+    kprint(view);
+    kprintf("\n");
   }
   return r;
 }

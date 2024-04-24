@@ -1,5 +1,5 @@
-#include "board/mini-uart.hpp"
 #include "int/timer.hpp"
+#include "io.hpp"
 #include "shell/cmd.hpp"
 
 struct Ctx {
@@ -15,15 +15,14 @@ struct Ctx {
 
 void print_message(void* context) {
   auto ctx = (Ctx*)context;
-  mini_uart_printf("[" PRTval "] " PRTval ": '%s'\n", FTval(get_current_time()),
-                   FTval(tick2timeval(ctx->tick)), ctx->msg);
+  klog(PRTval ": '%s'\n", FTval(tick2timeval(ctx->tick)), ctx->msg);
   delete ctx;
 }
 
 int cmd_setTimeout(int argc, char* argv[]) {
   if (argc <= 2) {
-    mini_uart_puts("setTimeout: require at least two argument\n");
-    mini_uart_puts("usage: message second [prio]\n");
+    kprintf("%s: require at least two argument\n", argv[0]);
+    kprintf("usage: %s message second [prio]\n", argv[0]);
     return -1;
   }
   auto msg = argv[1];

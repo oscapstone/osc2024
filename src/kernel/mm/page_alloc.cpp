@@ -1,6 +1,6 @@
 #include "mm/page_alloc.hpp"
 
-#include "board/mini-uart.hpp"
+#include "io.hpp"
 #include "math.hpp"
 #include "util.hpp"
 
@@ -9,9 +9,9 @@ static_assert(sizeof(PageAlloc::FreePage) <= PAGE_SIZE);
 #define LOG_LEVEL 3
 
 #if LOG_LEVEL >= 3
-#define DEBUG_PRINT(fmt, ...) mini_uart_printf(fmt __VA_OPT__(, ) __VA_ARGS__)
+#define DEBUG_PRINT(fmt, ...) kprintf(fmt __VA_OPT__(, ) __VA_ARGS__)
 #define DEBUG(fmt, ...) \
-  mini_uart_printf("[page_alloc] [DEBUG] " fmt __VA_OPT__(, ) __VA_ARGS__)
+  kprintf("[page_alloc] [DEBUG] " fmt __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define DEBUG_PRINT(fmt, ...) 0
 #define DEBUG(fmt, ...)       0
@@ -19,7 +19,7 @@ static_assert(sizeof(PageAlloc::FreePage) <= PAGE_SIZE);
 
 #if LOG_LEVEL >= 2
 #define INFO(fmt, ...) \
-  mini_uart_printf("[page_alloc] [*] " fmt __VA_OPT__(, ) __VA_ARGS__)
+  kprintf("[page_alloc] [*] " fmt __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define INFO(fmt, ...) 0
 #endif
@@ -27,28 +27,27 @@ static_assert(sizeof(PageAlloc::FreePage) <= PAGE_SIZE);
 PageAlloc page_alloc;
 
 void PageAlloc::info() {
-  mini_uart_printf("== PageAlloc ==\n");
+  kprintf("== PageAlloc ==\n");
   for (uint64_t i = 0; i < length_; i++) {
     if (array_[i].head())
-      mini_uart_printf("  frame 0x%lx: %d %s\n", i, array_[i].order,
-                       array_[i].allocated ? "allocated" : "free");
+      kprintf("  frame 0x%lx: %d %s\n", i, array_[i].order,
+              array_[i].allocated ? "allocated" : "free");
   }
   for (int8_t o = 0; o < total_order_; o++)
     if (not free_list_[o].empty()) {
-      mini_uart_printf("  free_list %d: ", o);
+      kprintf("  free_list %d: ", o);
       for (auto p : free_list_[o])
-        mini_uart_printf("%p -> ", p);
-      mini_uart_printf("\n");
+        kprintf("%p -> ", p);
+      kprintf("\n");
     }
-  mini_uart_printf("---------------\n");
+  kprintf("---------------\n");
 }
 
 void PageAlloc::init(uint64_t p_start, uint64_t p_end) {
   start_ = p_start, end_ = p_end;
   if (start_ % PAGE_SIZE or end_ % PAGE_SIZE) {
-    mini_uart_printf(
-        "%s: start 0x%lx or end 0x%lx not align with PAGE_SIZE 0x%lx\n",
-        __func__, start_, end_, PAGE_SIZE);
+    kprintf("%s: start 0x%lx or end 0x%lx not align with PAGE_SIZE 0x%lx\n",
+            __func__, start_, end_, PAGE_SIZE);
     prog_hang();
   }
 

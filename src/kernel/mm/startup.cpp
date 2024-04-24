@@ -1,6 +1,6 @@
 #include "mm/startup.hpp"
 
-#include "board/mini-uart.hpp"
+#include "io.hpp"
 #include "mm/new.hpp"
 #include "util.hpp"
 
@@ -9,7 +9,8 @@ extern char __heap_end[];
 char* heap_cur = __heap_start;
 
 void startup_alloc_info() {
-  mini_uart_printf("heap %p / (%p ~ %p)\n", heap_cur, __heap_start, __heap_end);
+  kprintf("[startup alloc] usage %p / (%p ~ %p)\n", heap_cur, __heap_start,
+          __heap_end);
 }
 
 void startup_alloc_init() {

@@ -38,6 +38,14 @@ class string_view {
   char operator[](int i) const {
     return buf_[i];
   }
+  bool printable() const {
+    for (int i = 0; i < size_; i++) {
+      auto c = buf_[i];
+      if (not(0x20 <= c and c <= 0x7e) and not(i + 1 == size_ and c == 0))
+        return false;
+    }
+    return true;
+  }
 };
 
 bool operator==(string_view, string_view);
