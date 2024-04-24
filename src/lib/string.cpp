@@ -68,9 +68,9 @@ long strtol(const char* s, const char** endptr, int base, int n) {
     if (*s != '0')
       base = 10;
     else if (*(s + 1) != 'x')
-      base = 8;
+      base = 8, s += 1;
     else
-      base = 16;
+      base = 16, s += 2;
   }
   for (int i = 0; (n == 0 or i < n) and (c = *s++); i++) {
     if ('0' <= c and c <= '9')
