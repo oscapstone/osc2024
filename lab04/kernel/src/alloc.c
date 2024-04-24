@@ -40,18 +40,24 @@ struct flist_t{
 };
 
 // [TODO] memory pool
-// struct memory_pool_t{
-//     struct frame_t* head;
-//     uint8_t* used;
-//     uint32_t size;
-// };
+struct memory_pool_t{
+    uint8_t frame_used;
+    uint8_t chunk_used;
+    uint32_t size;
+    uint32_t chunk_per_frame;
+    uint32_t chunk_offset;  // use to get the offset of chunk in a frame
+    struct chunk* free_chunk;
+    void *frame_base_addrs[MEMORY_POOL_DEPTH];
+};
 
+struct chunk{
+    struct chunk* next;
+    struct chunk* prev;
+};
 
 static struct frame_t frame_arr[FRAME_NUM];
 static struct flist_t flist_arr[MAX_LEVEL + 1];
-// static struct memory_pool_t memory_pools[MEMORY_POOL_SIZE];
-
-// uint32_t memory_pool_size[MEMORY_POOL_SIZE] = {16, 32, 64, 128};
+static struct memory_pool_t memory_pools[MEMORY_POOL_SIZE];
 
 #define FREE                 0
 #define ALLOCATED            1
@@ -166,13 +172,12 @@ void print_flist(int argc, char* argv[])
     for(int i=0; i<=MAX_LEVEL; i++)
     {
         struct frame_t* frame = flist_arr[i].head;
-        printf("\r\n[SYSTEM INFO] Level: "); printf_int(i); printf(", Frame: ");
         int sign = 0;
         while(frame != NULL)
         {
-            // printf("\r\n[SYSTEM INFO] Frame: "); printf_int(frame->index); printf(", Status: "); printf_int(frame->status);
             if(frame->status == FREE)
             {
+                if(sign == 0) { printf("\r\n[SYSTEM INFO] Level: "); printf_int(i); printf(", Frame: "); }
                 if(sign) printf("-> ");
                 printf_int(frame->index);
                 sign = 1;
@@ -209,9 +214,10 @@ void print_allocated(int argc, char* argv[])
             i--;
         }
     }
+    printf("\n===============================");
 }
 
-static uint64_t round_size(uint64_t size) // return size, level
+static uint64_t round_size(uint64_t size) // return size to the nearest power of 2
 {
     uint64_t ret = 1;
     while(ret < size) ret <<= 1;
@@ -378,59 +384,158 @@ void bfree_wrapper(int argc, char *argv[])
     printf("\n===============================");
 }
 
-// void dynamic_allocation_init()
-// {
-//     for(int i=0; i<MEMORY_POOL_SIZE; i++)
-//     {
-//         void* alloc_addr = balloc(FRAME_SIZE); // request a frame
-//         memory_pools[i].frame_arr = &frame_arr[((uint64_t)alloc_addr - MALLOC_START_ADDR) / FRAME_SIZE];
-//         memory_pools[i].size = memory_pool_size[i];
-//         memory_pools[i].head = NULL;
-//         memory_pools[i].used = (uint8_t*)simple_malloc(Frame_SIZE/memory_pool_size[i]);
-        
-//     }
-// }
+void memory_pool_init()
+{
+    for(int i=0; i<MEMORY_POOL_SIZE; i++)
+    {
+        memory_pools[i].frame_used = 0;
+        memory_pools[i].chunk_used = 0;
+        memory_pools[i].size = 0;
+        memory_pools[i].chunk_per_frame = 0;
+        memory_pools[i].chunk_offset = 0;
+        memory_pools[i].free_chunk = NULL;
+        for(int j=0; j<MEMORY_POOL_DEPTH; j++)
+        {
+            memory_pools[i].frame_base_addrs[j] = NULL;
+        }
+    }
+}
 
-// static void create_memory_pool(struct memory_pool_t* memory_pool)
-// {
-//     void* alloc_addr = balloc(FRAME_SIZE);
-//     uint32_t index = ((uint64_t)alloc_addr - MALLOC_START_ADDR) / FRAME_SIZE;
-//     struct frame_t* curr = memory_pool->head;
-//     struct frame_t* prev = NULL;
-//     while(curr)
-//     {
-//         prev = curr;
-//         curr = curr->next;
-//     }
-//     if(prev) prev->next = &frame_arr[index];
-//     else memory_pool->head = &frame_arr[index];
-//     for(int i=0; i<FRAME_SIZE/memory_pool->size; i++)
-//     {
-//         memory_pool->used[i] = 0;
-//     }
-// }
+static void init_memory_pool_with_size(struct memory_pool_t* memory_pool, uint64_t size)
+{
+    memory_pool->size = size;
+    memory_pool->chunk_per_frame = FRAME_SIZE / size;
+}
 
-// void* dynamic_alloc(uint32_t size)
-// {
-//     uint64_t* round_info = round_size(size);
-//     uint64_t round_size = round_info[0];
-//     uint8_t level = (uint8_t)round_info[1];
-//     printf("\r\n[SYSTEM INFO] Round Size: "); printf_int(round_size); printf(", Level: "); printf_int(level);
-//     for(int i=0; i<MEMORY_POOL_SIZE; i++)
-//     {
-//         if(memory_pools[i].size >= round_size)
-//         {
-//             printf("\r\n[SYSTEM INFO] Allocate from Memory Pool: "); printf_int(i);
-//             struct frame_t* frame = memory_pools[i].head;
-//             if(frame == NULL) // init a memory pool
-//             {
-//                 printf("\r\n[SYSTEM INFO] No available frame in memory pool! Allocate a new frame!");
-//                 void* alloc_addr = balloc(FRAME_SIZE);
-//                 uint32_t index = ((uint64_t)alloc_addr - MALLOC_START_ADDR) / FRAME_SIZE;
-//                 memory_pools[i].head = &frame_arr[index];
-//             }
-//         }
-//     }
-//     printf("\r\n[SYSTEM INFO] No suitable memory pool! Allocate from general balloc!");
-//     return balloc(round_size);
-// }
+static int get_memory_pool_id(uint64_t size)
+{
+    uint64_t r_size = round_size(size);
+    
+    if(r_size >= FRAME_SIZE) return -1; // larger than frame size, use general balloc
+
+    for(int i=0; i<MEMORY_POOL_SIZE; i++)
+    {
+        if(memory_pools[i].size >= r_size)
+        {
+            return i;
+        }
+        else if(memory_pools[i].size == 0)
+        {
+#ifdef DEBUG
+            printf("\r\n[DEBUG] Init New Memory Pool with chunk size: "); printf_int(r_size);
+#endif
+            init_memory_pool_with_size(&memory_pools[i], r_size);
+            return i;
+        }
+    }
+    return -2;
+}
+
+void* dynamic_alloc(uint64_t size)
+{
+    int ret = get_memory_pool_id(size);
+    switch(ret)
+    {
+        case -1: 
+            printf("\r\n[SYSTEM ERROR] Larger than Frame Size! Please use General balloc!");
+            // return balloc(size);
+            return 0;
+        case -2:
+            printf("\r\n[SYSTEM ERROR] No Enough Memory Pool! Please use General balloc!");
+            // return balloc(size);
+            return 0;
+        default:
+            break;
+    }
+
+    struct memory_pool_t* memory_pool = &memory_pools[ret];
+
+    void* res = NULL;
+
+    if(memory_pool->free_chunk != NULL) 
+    {
+        res = memory_pool->free_chunk;
+        memory_pool->free_chunk = memory_pool->free_chunk->next; // point to the next free chunk
+        return res;
+    }
+
+    if(memory_pool->frame_used >= MEMORY_POOL_DEPTH * memory_pool->chunk_per_frame)
+    {
+        printf("\r\n[SYSTEM ERROR] No Enough Memory Pool Frame!");
+        return res;
+    }
+
+    if(memory_pool->chunk_used >= memory_pool->frame_used * memory_pool->chunk_per_frame)
+    {
+        if(memory_pool->frame_used == 0)
+        {
+            printf("\r\n[SYSTEM INFO] Create First Frame for Memory Pool with size: ");printf_int(memory_pool->size);
+        }
+        else
+        {
+            printf("\r\n[SYSTEM INFO] The Frame of Memory Pool with size: ");printf_int(memory_pool->size);printf(" is Full! ");
+            printf("Create a New Frame!");
+        }
+            
+        void* new_frame = balloc(FRAME_SIZE);
+        memory_pool->frame_base_addrs[memory_pool->frame_used] = new_frame;
+        memory_pool->frame_used++;
+        memory_pool->chunk_offset = 0;
+    }
+
+    printf("\r\n[SYSTEM INFO] Allocate Chunk in Memory Pool with size: "); printf_int(memory_pool->size);
+    printf(" in Frame: "); printf_int(((struct frame_t*)memory_pool->frame_base_addrs[memory_pool->frame_used - 1])->index);
+
+    res = memory_pool->frame_base_addrs[memory_pool->frame_used - 1] + memory_pool->chunk_offset * memory_pool->size;
+    memory_pool->chunk_offset++;
+    memory_pool->chunk_used++;
+
+    return res;
+}
+
+int dfree(void* ptr)
+{
+    int memory_pool_index = -1;
+    for(int i=0; i<MEMORY_POOL_SIZE; i++)
+    {
+        for(int j=0; j<memory_pools[i].frame_used; j++)
+        {
+            void* prefix_addr = (void*)((uint64_t)ptr & 0xfffff000);
+            if(memory_pools[i].frame_base_addrs[j] == prefix_addr)
+            {
+                memory_pool_index = i;
+                break;
+            }
+        }
+    }
+
+    if(memory_pool_index == -1)
+    {
+        printf("\r\n[SYSTEM ERROR] Memory Pool Not Found!");
+        return 1;
+    }
+
+    uint32_t frame_index = ((uint64_t)ptr - MALLOC_START_ADDR) >>12; // 2^12 = 4096 = FRAME_SIZE
+    struct memory_pool_t* memory_pool = &memory_pools[memory_pool_index];
+
+    // check whether the chunk is already in the free chunk list
+    struct chunk* head_free_chunk = memory_pool->free_chunk;
+    while(head_free_chunk)
+    {
+        if(head_free_chunk == ptr)
+        {
+            printf("\r\n[SYSTEM ERROR] Chunk Already Free!");
+            return 1;
+        }
+        head_free_chunk = head_free_chunk->next;
+    }
+
+    printf("\r\n[SYSTEM INFO] Free Chunk in Frame: "); printf_int(frame_index);
+    memory_pool->chunk_used--;
+    struct chunk* last_free_chunk = memory_pool->free_chunk;
+    memory_pool->free_chunk = (struct chunk*)ptr;
+    memory_pool->free_chunk->next = last_free_chunk;
+
+    printf("\r\n[SYSTEM INFO] Free Chunk at address: "); printf_hex((uint64_t)ptr); 
+    return 0;
+}

@@ -5,6 +5,7 @@
 
 uint32_t strtol(const char *sptr, uint32_t base, int size);
 uint64_t atoi(const char *str);
+uint64_t atoi_hex(const char *str);
 uint64_t pow(int base, int exp);
 void assert(int condition, char* message);
 

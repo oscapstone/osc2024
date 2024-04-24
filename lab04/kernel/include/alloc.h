@@ -14,4 +14,7 @@ void frame_init();
 
 void* balloc(uint64_t size);
 
+void* dynamic_alloc(uint64_t size);
+int dfree(void* ptr);
+
 #endif
