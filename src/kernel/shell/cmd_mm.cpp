@@ -26,8 +26,8 @@ int cmd_mm(int argc, char* argv[]) {
     } else if (0 == strcmp(argv[2], "alloc") and argc >= 4) {
       auto size = strtol(argv[3]);
       auto ptr = page_alloc.alloc(size);
-      kprintf("page: alloc(0x%lx) = %p\n", size, ptr);
       page_alloc.info();
+      kprintf("page: alloc(0x%lx) = %p\n", size, ptr);
     } else if (0 == strcmp(argv[2], "free") and argc >= 4) {
       auto ptr = (void*)strtol(argv[3]);
       kprintf("page: free(%p)\n", ptr);
@@ -43,8 +43,8 @@ int cmd_mm(int argc, char* argv[]) {
     } else if (0 == strcmp(argv[2], "alloc") and argc >= 4) {
       auto size = strtol(argv[3]);
       auto ptr = heap_malloc(size);
-      kprintf("heap_malloc(0x%lx) = %p\n", size, ptr);
       heap_info();
+      kprintf("heap_malloc(0x%lx) = %p\n", size, ptr);
     } else if (0 == strcmp(argv[2], "free") and argc >= 4) {
       auto ptr = (void*)strtol(argv[3]);
       kprintf("heap_free(%p)\n", ptr);

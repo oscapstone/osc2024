@@ -8,9 +8,7 @@
 #include "int/irq.hpp"
 #include "int/timer.hpp"
 #include "io.hpp"
-#include "mm/heap.hpp"
-#include "mm/page_alloc.hpp"
-#include "mm/startup.hpp"
+#include "mm/mm.hpp"
 #include "shell/shell.hpp"
 
 void kernel_main(void* dtb_addr, uint32_t kernel_size) {
@@ -27,9 +25,7 @@ void kernel_main(void* dtb_addr, uint32_t kernel_size) {
   fdt.init(dtb_addr);
   initramfs_init();
 
-  startup_alloc_init();
-  page_alloc.init(0x1000'0000, 0x2000'0000);
-  heap_init();
+  mm_init();
 
   irq_init();
   enable_interrupt();

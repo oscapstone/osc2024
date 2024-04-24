@@ -57,37 +57,54 @@ struct Info {
   Info(int idx_ = -1) : idx(idx_), pages(nullptr), list() {}
 
   void split_page(PageHeader* hdr) {
-    for (uint32_t off = 0; sizeof(PageHeader) + off < PAGE_SIZE;
-         off += chunk_size[idx])
-      free(&hdr->data[off]);
+    auto sz = chunk_size[idx];
+    for (uint32_t off = PAGE_SIZE; off >= sizeof(PageHeader) + sz; off -= sz)
+      free(&hdr->data[off - sz]);
   }
 
-  bool alloc_page() {
+  void alloc_page() {
     auto page = page_alloc.alloc(PAGE_SIZE);
-    if (not page)
-      return false;
+    MM_DEBUG("heap", "alloc_page = %p\n", page);
     auto hdr = new (page) PageHeader(idx, pages);
     split_page(hdr);
     hdr = pages;
-    return true;
   }
 
   void* alloc() {
     if (list.empty())
-      if (not alloc_page())
-        return nullptr;
+      alloc_page();
     return list.pop_front();
   }
 
   void free(void* ptr) {
     auto chk = new (ptr) FreeChunk;
-    list.insert_tail(chk);
+    list.insert_front(chk);
+  }
+
+  void print() {
+    kprintf("%d: size 0x%x\n", idx, chunk_size[idx]);
+    kprintf("  pages: ");
+    for (auto it = pages; it; it = it->next)
+      kprintf("%p -> ", it);
+    kprintf("\n");
+    kprintf("  free chk: %d\n", list.size());
+    /*
+    kprintf("  free: ");
+    for (auto chk : list)
+      kprintf("%p -> ", chk);
+    kprintf("\n");
+    */
   }
 };
 
 Info info[chunk_class];
 
-void heap_info() {}
+void heap_info() {
+  kprintf("== Heap ==\n");
+  for (int i = 0; i < chunk_class; i++)
+    info[i].print();
+  kprintf("---------------\n");
+}
 
 void heap_init() {
   set_new_delete_handler(heap_malloc, heap_free);

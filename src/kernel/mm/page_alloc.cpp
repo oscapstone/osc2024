@@ -6,24 +6,6 @@
 
 static_assert(sizeof(PageAlloc::FreePage) <= PAGE_SIZE);
 
-#define LOG_LEVEL 3
-
-#if LOG_LEVEL >= 3
-#define DEBUG_PRINT(fmt, ...) kprintf(fmt __VA_OPT__(, ) __VA_ARGS__)
-#define DEBUG(fmt, ...) \
-  kprintf("[page_alloc] [DEBUG] " fmt __VA_OPT__(, ) __VA_ARGS__)
-#else
-#define DEBUG_PRINT(fmt, ...) 0
-#define DEBUG(fmt, ...)       0
-#endif
-
-#if LOG_LEVEL >= 2
-#define INFO(fmt, ...) \
-  kprintf("[page_alloc] [*] " fmt __VA_OPT__(, ) __VA_ARGS__)
-#else
-#define INFO(fmt, ...) 0
-#endif
-
 PageAlloc page_alloc;
 
 void PageAlloc::info() {
@@ -46,14 +28,17 @@ void PageAlloc::info() {
 void PageAlloc::init(uint64_t p_start, uint64_t p_end) {
   start_ = p_start, end_ = p_end;
   if (start_ % PAGE_SIZE or end_ % PAGE_SIZE) {
-    kprintf("%s: start 0x%lx or end 0x%lx not align with PAGE_SIZE 0x%lx\n",
-            __func__, start_, end_, PAGE_SIZE);
+    klog("%s: start 0x%lx or end 0x%lx not align with PAGE_SIZE 0x%lx\n",
+         __func__, start_, end_, PAGE_SIZE);
     prog_hang();
   }
 
+  MM_INFO("page_alloc", "init: 0x%lx ~ 0x%lx\n", start_, end_);
+
   length_ = (end_ - start_) / PAGE_SIZE;
   total_order_ = log2c(length_ + 1);
-  DEBUG("init: length = 0x%lx total_order = %x\n", length_, total_order_);
+  MM_DEBUG("page_alloc", "init: length = 0x%lx total_order = %x\n", length_,
+           total_order_);
   array_ = new Frame[length_];
 
   for (uint64_t i = 0; i < length_; i++)
@@ -65,7 +50,7 @@ void PageAlloc::init(uint64_t p_start, uint64_t p_end) {
       order--;
     array_[i] = {.allocated = true, .order = order};
     auto page = vpn2freepage(i);
-    free_list_[order].insert_tail(page);
+    free_list_[order].insert_back(page);
   }
 #if LOG_LEVEL >= 3
   info();
@@ -75,9 +60,9 @@ void PageAlloc::init(uint64_t p_start, uint64_t p_end) {
 void PageAlloc::release(PageAlloc::AllocatedPage apage) {
   auto vpn = addr2vpn(apage);
   auto order = array_[vpn].order;
-  INFO("release: page %p order %d\n", apage, order);
+  MM_INFO("page_alloc", "release: page %p order %d\n", apage, order);
   auto fpage = vpn2freepage(vpn);
-  free_list_[order].insert_tail(fpage);
+  free_list_[order].insert_back(fpage);
   merge(fpage);
 }
 
@@ -87,7 +72,7 @@ PageAlloc::AllocatedPage PageAlloc::alloc(PageAlloc::FreePage* fpage,
   auto order = array_[vpn].order;
   free_list_[order].erase(fpage);
   if (head) {
-    INFO("alloc: page %p order %d\n", fpage, order);
+    MM_INFO("page_alloc", "alloc: page %p order %d\n", fpage, order);
     array_[vpn].allocated = true;
     auto apage = AllocatedPage(fpage);
     return apage;
@@ -103,7 +88,7 @@ PageAlloc::AllocatedPage PageAlloc::split(AllocatedPage apage) {
   auto bvpn = buddy(vpn);
   array_[bvpn] = {.allocated = true, .order = o};
   auto bpage = vpn2addr(bvpn);
-  DEBUG("split: %p + %p\n", apage, bpage);
+  MM_DEBUG("page_alloc", "split: %p + %p\n", apage, bpage);
   return bpage;
 }
 
@@ -126,7 +111,7 @@ void PageAlloc::merge(FreePage* apage) {
       std::swap(avpn, bvpn);
       std::swap(apage, bpage);
     }
-    INFO("merge: %p + %p\n", apage, bpage);
+    MM_INFO("page_alloc", "merge: %p + %p\n", apage, bpage);
     alloc(bpage, false);
     array_[avpn].order++;
   }
@@ -134,22 +119,22 @@ void PageAlloc::merge(FreePage* apage) {
 
 void* PageAlloc::alloc(uint64_t size) {
   int8_t order = log2c(align<PAGE_SIZE>(size) / PAGE_SIZE);
-  DEBUG("alloc: size 0x%lx -> order %d\n", size, order);
+  MM_DEBUG("page_alloc", "alloc: size 0x%lx -> order %d\n", size, order);
   for (int8_t ord = order; ord < total_order_; ord++) {
     auto fpage = free_list_[ord].front();
     if (fpage == nullptr)
       continue;
     auto apage = alloc(fpage, true);
     truncate(apage, order);
-    DEBUG("alloc: -> page %p\n", apage);
+    MM_DEBUG("page_alloc", "alloc: -> page %p\n", apage);
     return apage;
   }
-  DEBUG("alloc: no page availiable\n");
+  MM_DEBUG("page_alloc", "alloc: no page availiable\n");
   return nullptr;
 }
 
 void PageAlloc::free(void* ptr) {
-  DEBUG("free: page %p\n", ptr);
+  MM_DEBUG("page_alloc", "free: page %p\n", ptr);
   if (ptr == nullptr or not isPageAlign(ptr))
     return;
 
