@@ -2,7 +2,7 @@ import serial
 import time
 import sys
 
-kernel_image_path = "kernel/kernel8.img"
+kernel_image_path = "build/kernel8.img"
 
 dev_name = sys.argv[1]
 ser = serial.Serial(dev_name, 115200, timeout=1)
