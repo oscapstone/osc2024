@@ -1,37 +1,44 @@
+#include "main.hpp"
+
 #include "board/mini-uart.hpp"
-#include "exception.hpp"
 #include "fdt.hpp"
-#include "heap.hpp"
-#include "initramfs.hpp"
-#include "interrupt.hpp"
-#include "irq.hpp"
-#include "shell.hpp"
-#include "timer.hpp"
+#include "fs/initramfs.hpp"
+#include "int/exception.hpp"
+#include "int/interrupt.hpp"
+#include "int/irq.hpp"
+#include "int/timer.hpp"
+#include "io.hpp"
+#include "mm/mm.hpp"
+#include "shell/shell.hpp"
 
-void print_2s_timer(void* context) {
-  if (show_timer)
-    mini_uart_printf("[" PRTval "] 2s timer interrupt\n",
-                     FTval(get_current_time()));
-  add_timer({2, 0}, (void*)context, (Timer::fp)context);
-}
-
-extern "C" void kernel_main(void* dtb_addr) {
+void kernel_main(void* dtb_addr) {
   mini_uart_setup();
-  mini_uart_puts("Hello Kernel!\n");
-  mini_uart_printf("Exception level: %d\n", get_el());
+  timer_init();
 
-  heap_reset();
+  klog("Hello Kernel!\n");
+  klog("Kernel start   : %p\n", _start);
+  klog("Exception level: %d\n", get_el());
+  klog("freq_of_timer  : %ld\n", freq_of_timer);
+  klog("boot time      : " PRTval "s\n", FTval(tick2timeval(boot_timer_tick)));
+
   fdt.init(dtb_addr);
   initramfs_init();
 
-  timer_init();
+  mm_preinit();
+
+  // spin tables for multicore boot
+  mm_reserve(0x0000, 0x1000);
+  // kernel code & bss & kernel stack
+  mm_reserve(_start, __stack_end);
+  // initramfs
+  mm_reserve(initramfs.startp(), initramfs.endp());
+  // flatten device tree
+  mm_reserve(fdt.startp(), fdt.endp());
+
+  mm_init();
+
   irq_init();
   enable_interrupt();
-  mini_uart_printf("freq_of_timer: %ld\n", freq_of_timer);
-  mini_uart_printf("boot time    : " PRTval "s\n",
-                   FTval(tick2timeval(boot_timer_tick)));
-
-  add_timer({2, 0}, (void*)print_2s_timer, print_2s_timer);
 
   mini_uart_use_async(true);
 

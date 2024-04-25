@@ -1,13 +1,13 @@
 #include "board/pm.hpp"
 
-#include "board/mini-uart.hpp"
+#include "io.hpp"
 #include "util.hpp"
 
 void reboot() {
-  mini_uart_puts("rebooting .");
+  kputs_sync("rebooting .");
   reset(0x50);
   for (;;) {
-    mini_uart_putc('.');
+    kputc_sync('.');
   }
 }
 

@@ -5,6 +5,7 @@ void memzero(void* start, void* end);
 void* memcpy(void* dst, const void* src, int n);
 }
 
+void memset(void* b, int c, int len);
 int memcmp(const void* s1, const void* s2, int n);
 int strlen(const char* s);
 int strcmp(const char* s1, const char* s2);
@@ -36,6 +37,14 @@ class string_view {
   }
   char operator[](int i) const {
     return buf_[i];
+  }
+  bool printable() const {
+    for (int i = 0; i < size_; i++) {
+      auto c = buf_[i];
+      if (not(0x20 <= c and c <= 0x7e) and not(i + 1 == size_ and c == 0))
+        return false;
+    }
+    return true;
   }
 };
 

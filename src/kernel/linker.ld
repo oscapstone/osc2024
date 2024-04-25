@@ -4,7 +4,6 @@ ENTRY(__kernel)
 
 SECTIONS {
     . = __kernel;
-    __boot_core_stack_end = .;
 
     .text : {
         KEEP(*(.text._start))
