@@ -11,7 +11,6 @@ use core::{
     ptr::{read_volatile, write_volatile},
     usize,
 };
-
 use driver::uart;
 
 const KERNEL_LOAD_ADDR: u64 = 0x80000;
@@ -21,25 +20,25 @@ const KERNEL_LOAD_ADDR: u64 = 0x80000;
 #[no_mangle]
 unsafe fn bootloader(){
     // initialize uart
-    uart::init_uart();
-    uart::_print("Bootloader started\r\n");
+    uart::init_uart(false);
+    uart::uart_write_str("Bootloader started\r\n");
     
     // print current pc value
     let mut pc: u64;
     core::arch::asm!("adr {}, .", out(reg) pc);
-    uart::_print("Current PC: ");
+    uart::uart_write_str("Current PC: ");
     uart::print_hex(pc as u32);
-    uart::_print("\r\n");
+    uart::uart_write_str("\r\n");
 
     
     // read kernel size
     let mut kernel_size: u32 = 0;
     
     // read kernel size (4 bytes) from uart
-    uart::read(&mut kernel_size as *mut u32 as *mut u8 /*(uint8_t)(&kernel_size) */, 4);
-    uart::_print("Kernel size: ");
+    uart::read(&mut kernel_size as *mut u32 as *mut u8 , 4);
+    uart::uart_write_str("Kernel size: ");
     uart::print_hex(kernel_size);
-    uart::_print("\r\n");
+    uart::uart_write_str("\r\n");
 
     // start to read kernel
     let mut kernel_addr: u64 = KERNEL_LOAD_ADDR;
@@ -59,5 +58,5 @@ unsafe fn bootloader(){
     }
 
     // jump to kernel
-    uart::_print("Jump to kernel\r\n");
+    uart::uart_write_str("Jump to kernel\r\n");
 }

@@ -13,6 +13,10 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
+	// Save the address of the device tree blob.
+	; ldr x1, =__dtb_addr
+	; str x0, [x1]
+
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	and	x0, x0, {CONST_CORE_ID_MASK}
@@ -61,9 +65,13 @@ _start:
 	// Jump to Rust code.
 	bl	_start_rust
 
+	// restore the address of the device tree blob.
+	; ldr x1, =__dtb_addr
+	; ldr x0, [x1]
+	
 	// jump to 0x80000
-	ldr x0, =0x80000	
-	br x0
+	ldr x1, =0x80000
+	br x1
 
 	// Infinitely wait for events (aka "park the core").
 .L_parking_loop:

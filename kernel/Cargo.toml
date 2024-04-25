@@ -20,7 +20,7 @@ path = "src/main.rs"
 
 [dependencies]
 driver = { path = "../driver" }
-
+fdt = "0.1.5"
 
 # Platform specific dependencies
 [target.'cfg(target_arch = "aarch64")'.dependencies]

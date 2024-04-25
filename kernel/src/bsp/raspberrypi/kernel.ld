@@ -29,5 +29,16 @@ SECTIONS
         . = ALIGN(16);
         __bss_end_exclusive = .;
     }
-
-}
+    . = ALIGN(8);
+    .usr_prog(NOLOAD): {
+        __usr_prog_start = .;
+        . = . + 0x1000;
+        __usr_prog_end = .;
+    }
+    __dtb_addr = .;
+    
+    /* . = ALIGN(8);
+    heap_base = .;
+    . = . + 0x200000;
+    heap_limit = .; */
+}   

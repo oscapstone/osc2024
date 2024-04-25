@@ -4,3 +4,8 @@ target
 .vscode
 rootfs
 .gdbinit
+initramfs.cpio
+*.dtb
+*.txt
+.idea
+initramfs/prog

@@ -14,5 +14,5 @@ global_asm!(
 #[no_mangle]
 pub unsafe fn _start_rust(){
     crate::bootloader();
-    uart::_print("Bootloader finished\r\n");
+    uart::uart_write_str("Bootloader finished\r\n");
 }
