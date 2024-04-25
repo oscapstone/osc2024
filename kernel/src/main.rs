@@ -23,11 +23,6 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 const MAX_COMMAND_LEN: usize = 0x100;
 
 fn main() -> ! {
-    for _ in 0..10000 {
-        unsafe {
-            asm!("nop");
-        }
-    }
     unsafe {
         BUDDY_SYSTEM.init();
     }
