@@ -26,6 +26,7 @@ const LAYER_COUNT: usize = 12;
 pub struct BuddyAllocator {
     frames: [Frame; NFRAME],
     free_list: [BTreeSet<usize, bump::BumpAllocator>; LAYER_COUNT],
+    verbose: bool,
 }
 
 impl BuddyAllocator {
@@ -36,6 +37,7 @@ impl BuddyAllocator {
                 state: BuddyState::Allocated,
             }; NFRAME],
             free_list: [EMPTY; LAYER_COUNT],
+            verbose: false,
         }
     }
     pub unsafe fn init(&mut self) {
@@ -67,11 +69,18 @@ impl BuddyAllocator {
         println!("Free list: {:?}", BUDDY_SYSTEM.free_list);
     }
 
+    pub unsafe fn print_info(&self) {
+        println!("Buddy allocator info:");
+        for layer in 0..LAYER_COUNT {
+            println!("Layer {}: {:?}", layer, BUDDY_SYSTEM.free_list[layer]);
+        }
+    }
+
     fn faddr(&self, idx: usize) -> u32 {
         MEMORY_START + (idx * FRAME_SIZE) as u32
     }
 
-    pub unsafe fn alloc_frame(&mut self, idx: usize) {
+    unsafe fn alloc_frame(&mut self, idx: usize) {
         assert!(idx < NFRAME);
         let layer = match BUDDY_SYSTEM.frames[idx].state {
             BuddyState::Head(l) => l,
@@ -84,7 +93,7 @@ impl BuddyAllocator {
         BUDDY_SYSTEM.free_list[layer].remove(&idx);
     }
 
-    pub unsafe fn get_by_layout(&mut self, size: usize, align: usize) -> Option<usize> {
+    unsafe fn get_by_layout(&mut self, size: usize, align: usize) -> Option<usize> {
         let mut layer = 0;
         if align < FRAME_SIZE {
             layer = 0;
@@ -122,7 +131,9 @@ impl BuddyAllocator {
         }
         BUDDY_SYSTEM.free_list[layer - 1].insert(idx);
         BUDDY_SYSTEM.free_list[layer - 1].insert(buddy);
-        println!("Split frame {} into {} and {}", idx, idx, buddy);
+        if BUDDY_SYSTEM.verbose {
+            println!("Split frame {} into {} and {}", idx, idx, buddy);
+        }
     }
 
     unsafe fn get_by_layer(&mut self, layer: usize) -> Option<usize> {
@@ -162,11 +173,13 @@ impl BuddyAllocator {
         while (1 << layer) * FRAME_SIZE < size {
             layer += 1;
         }
-        println!("Free frame {} at layer {}", idx, layer);
+        if BUDDY_SYSTEM.verbose {
+            println!("Free frame {} at layer {}", idx, layer);
+        }
         BUDDY_SYSTEM.free_by_idx(idx, layer);
     }
 
-    unsafe fn free_by_idx(&mut self, mut idx: usize, mut layer: usize) {
+    pub unsafe fn free_by_idx(&mut self, mut idx: usize, mut layer: usize) {
         loop {
             let buddy = idx ^ (1 << layer);
             if buddy >= NFRAME {
@@ -177,7 +190,9 @@ impl BuddyAllocator {
                 BuddyState::Head(l) => {
                     if l == layer {
                         BUDDY_SYSTEM.free_list[layer].remove(&buddy);
-                        println!("Merged frame {} and {}", idx, buddy);
+                        if BUDDY_SYSTEM.verbose {
+                            println!("Merged frame {} and {}", idx, buddy);
+                        }
                         layer += 1;
                         idx = idx & !((1 << layer) - 1);
                         continue;
@@ -201,6 +216,45 @@ impl BuddyAllocator {
         BUDDY_SYSTEM.free_list[layer].insert(idx);
         // println!("New free idx: {}", idx);
     }
+
+    pub unsafe fn get_frame(&mut self, layer: usize, idx: usize) -> Option<usize> {
+        assert!(idx < NFRAME);
+        assert!(BUDDY_SYSTEM.frames[idx].state != BuddyState::Allocated);
+        match BUDDY_SYSTEM.frames[idx].state {
+            BuddyState::Head(l) => {
+                if l == layer {
+                    Some(idx)
+                } else {
+                    BUDDY_SYSTEM.split_frame(idx);
+                    BUDDY_SYSTEM.get_frame(layer, idx)
+                }
+            }
+            BuddyState::Owned(h) => {
+                assert!(h != idx);
+                BUDDY_SYSTEM.split_frame(h);
+                BUDDY_SYSTEM.get_frame(layer, idx)
+            }
+            BuddyState::Allocated => None,
+        }
+    }
+
+    pub unsafe fn reserve_frame(&mut self, idx: usize) -> bool {
+        if idx >= NFRAME {
+            println!("Invalid frame index");
+            return false;
+        }
+        if BUDDY_SYSTEM.frames[idx].state == BuddyState::Allocated {
+            println!("Frame {} is already allocated", idx);
+            return false;
+        }
+        BUDDY_SYSTEM.get_frame(0, idx);
+        BUDDY_SYSTEM.alloc_frame(idx);
+        true
+    }
+    pub unsafe fn toggle_verbose(&mut self) {
+        BUDDY_SYSTEM.verbose = !BUDDY_SYSTEM.verbose;
+        println!("Verbose: {}", BUDDY_SYSTEM.verbose);
+    }
 }
 
 unsafe impl GlobalAlloc for BuddyAllocator {
@@ -210,9 +264,11 @@ unsafe impl GlobalAlloc for BuddyAllocator {
         let ret = BUDDY_SYSTEM.get_by_layout(size, align);
         if let Some(idx) = ret {
             let addr = BUDDY_SYSTEM.faddr(idx);
-            println!("Allocated frame {} {:?} at 0x{:x}", idx, layout, addr);
             assert!(addr % align as u32 == 0);
-            println!("Free list: {:?}", BUDDY_SYSTEM.free_list);
+            if BUDDY_SYSTEM.verbose {
+                println!("Allocated frame {} {:?} at 0x{:x}", idx, layout, addr);
+                println!("Free list: {:?}", BUDDY_SYSTEM.free_list);
+            }
             addr as *mut u8
         } else {
             panic!("Out of memory");

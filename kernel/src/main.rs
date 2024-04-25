@@ -92,6 +92,8 @@ fn execute_command(command: &[u8]) {
         commands::echo::exec(&command);
     } else if command.starts_with(b"setTimeOut") {
         commands::set_time_out::exec(&command);
+    } else if command.starts_with(b"buddy") {
+        commands::buddy::exec();
     } else {
         println!(
             "Unknown command: {}",

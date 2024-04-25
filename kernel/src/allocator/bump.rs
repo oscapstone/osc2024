@@ -1,10 +1,12 @@
 use core::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
 use core::ptr::NonNull;
 
+use stdio::debug;
+
 #[derive(Clone)]
 pub struct BumpAllocator;
 
-static mut CUR: usize = 0x2001_0000;
+static mut CUR: usize = 0x2000_0000;
 
 unsafe impl GlobalAlloc for BumpAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -13,7 +15,8 @@ unsafe impl GlobalAlloc for BumpAllocator {
         let ret = CUR;
         CUR += size;
         CUR = (CUR + align - 1) & !(align - 1);
-        assert!(CUR < 0x2002_0000, "Bump allocator out of memory!");
+        assert!(CUR < 0x2000_1000, "Bump allocator out of memory!");
+        debug!("Allocated {} bytes at 0x{:x}", size, ret);
         ret as *mut u8
     }
 
