@@ -16,7 +16,7 @@ void add_timer(void)
     for (i; line[i] != ' '; i++) {
         message[i] = line[i];
     }
-    message[i+1] = '\0';
+    message[i] = '\0';
 
     // second
     for (i; i < strlen_new(line); i++) {

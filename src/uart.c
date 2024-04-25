@@ -155,10 +155,9 @@ void uart_async_puts(char *s)
 char uart_async_getc()
 {
     uart_enable_rx_interrupt();
-    if (!rb_empty(&rx_buf)) {
-        return rb_read(&rx_buf);
-    }
-    // TODO: what if empty?
+    while (rb_empty(&rx_buf)) {}
+
+    return rb_read(&rx_buf);
 }
 
 void uart_tx_handler(void)
