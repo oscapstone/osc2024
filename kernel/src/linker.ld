@@ -34,7 +34,7 @@ SECTIONS
 
     .bss (NOLOAD) : ALIGN(16) {
         _bss_start = .;
-        *(.bss)
+        *(.bss*)
         . = ALIGN(16);
         _bss_end = .;
     } :segment_data

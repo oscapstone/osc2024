@@ -6,6 +6,11 @@ _stack_start    = 0x70000
 .global _bss_start
 .global _bss_end
 
+.macro ADR_REL register, symbol
+  adrp  \register, \symbol
+  add  \register, \register, #:lo12:\symbol
+.endm
+
 _start:
     # Store the address of the device tree
     # Should be removed when building for a real hardware
@@ -23,8 +28,8 @@ _start:
     str xzr, [x0]
     
     # Initialize bss
-   ldr x0, =_bss_start
-   ldr x1, =_bss_end
+    ADR_REL x0, _bss_start
+    ADR_REL x1, _bss_end
 .L_clear_bss:
    cmp x0, x1
    bge .L_done_clearing
@@ -48,7 +53,7 @@ _start:
 .from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
-    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
+    mov x0, 0x3c5 // EL1h (SPSel = 1) witH interrupt disabled
     msr spsr_el2, x0
     msr elr_el2, lr
     mov x0, sp
@@ -99,3 +104,4 @@ exception_vector_table:
     .align 7
     b exception_handler
     .align 7
+
