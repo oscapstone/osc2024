@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use stdio::gets;
 use stdio::print;
 use stdio::println;
@@ -16,8 +17,6 @@ pub fn exec() {
         }
     }
 }
-
-use alloc::vec::Vec;
 
 fn execute_command(buf: &[u8]) -> bool {
     let buf = match buf.iter().position(|&c| c == 0) {
