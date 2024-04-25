@@ -21,6 +21,9 @@ void PageSystem::info() {
       if (not reserved)
         r = i, reserved = true;
     } else if (array_[i].head()) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat"
+      // flag '0' results in undefined behavior with 'p' conversion specifier
       if (reserved) {
         kprintf("  frame %010p ~ %010p: %s\n", vpn2addr(r), vpn2addr(i),
                 str(FRAME_TYPE::RESERVED));
@@ -28,6 +31,7 @@ void PageSystem::info() {
       }
       kprintf("  frame %010p ~ %010p: %s\n", vpn2addr(i), vpn2end(i),
               str(array_[i].type));
+#pragma GCC diagnostic pop
     }
   }
   for (int8_t o = 0; o < total_order_; o++)

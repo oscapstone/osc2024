@@ -26,9 +26,13 @@ void kernel_main(void* dtb_addr) {
 
   mm_preinit();
 
+  // spin tables for multicore boot
   mm_reserve(0x0000, 0x1000);
+  // kernel code & bss & kernel stack
   mm_reserve(_start, __stack_end);
+  // initramfs
   mm_reserve(initramfs.startp(), initramfs.endp());
+  // flatten device tree
   mm_reserve(fdt.startp(), fdt.endp());
 
   mm_init();

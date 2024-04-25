@@ -4,7 +4,7 @@
 #include "int/interrupt.hpp"
 #include "int/timer.hpp"
 
-void irq_handler(ExceptionContext* context, int type) {
+void irq_handler(ExceptionContext* /* context */, int /* type */) {
   auto irq_source = get32(CORE0_IRQ_SOURCE);
   if ((irq_source & CNTPNSIRQ_INT) == CNTPNSIRQ_INT)
     timer_enqueue();

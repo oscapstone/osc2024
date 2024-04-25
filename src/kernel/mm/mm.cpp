@@ -33,6 +33,7 @@ void mm_reserve_p(void* start, void* end) {
 }
 
 void mm_init() {
+  // startup allocator
   mm_reserve(__heap_start, __heap_end);
 
   mm_page.init();
@@ -40,10 +41,10 @@ void mm_init() {
   set_new_delete_handler(kmalloc, kfree);
 }
 
-void* kmalloc(uint64_t size, uint64_t align) {
+// TODO: handle alignment
+void* kmalloc(uint64_t size, uint64_t /* align */) {
   void* res = nullptr;
   save_DAIF_disable_interrupt();
-  // TODO: handle alignment
   if (size > max_chunk_size)
     res = mm_page.alloc(size);
   else
