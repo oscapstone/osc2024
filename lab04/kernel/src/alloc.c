@@ -10,7 +10,7 @@ static char* HEAP_REAR;
 
 void  mem_init()
 {
-    HEAP_HEADER = (char*)&_end;
+    HEAP_HEADER = (char*)&_heap_start;
     HEAP_REAR = HEAP_HEADER;
 }
 
@@ -27,6 +27,15 @@ void* simple_malloc(uint32_t size)
 
 // ==========================================
 
+extern uint64_t  _kernel_end;
+static uint64_t* _kernel_end_ptr = &_kernel_end;
+static uint64_t* _heap_start_ptr = &_heap_start;
+
+#ifndef QEMU
+extern uint64_t CPIO_START_ADDR_FROM_DT;
+extern uint64_t CPIO_END_ADDR_FROM_DT;
+#endif
+
 struct frame_t{
     struct frame_t* next;
     struct frame_t* prev; // [TODO] maintain prev pointer
@@ -39,25 +48,31 @@ struct flist_t{
     struct frame_t* head;
 };
 
-// [TODO] memory pool
+struct buddy_system_list_t{
+    void* base_addr;
+    uint32_t index;
+    uint8_t max_level;
+};
+
 struct memory_pool_t{
     uint8_t frame_used;
     uint8_t chunk_used;
     uint32_t size;
     uint32_t chunk_per_frame;
     uint32_t chunk_offset;  // use to get the offset of chunk in a frame
-    struct chunk* free_chunk;
+    struct chunk_t* free_chunk;
     void *frame_base_addrs[MEMORY_POOL_DEPTH];
 };
 
-struct chunk{
-    struct chunk* next;
-    struct chunk* prev;
+struct chunk_t{
+    struct chunk_t* next;
+    struct chunk_t* prev;
 };
 
 static struct frame_t frame_arr[FRAME_NUM];
 static struct flist_t flist_arr[MAX_LEVEL + 1];
 static struct memory_pool_t memory_pools[MEMORY_POOL_SIZE];
+static struct buddy_system_list_t buddy_system_list[MAX_BUDDY_SYSTEM_LIST];
 
 #define FREE                 0
 #define ALLOCATED            1
@@ -83,7 +98,11 @@ static int get_next_Free_frame_index(uint8_t level)
 static void add_to_flist(struct flist_t* flist, struct frame_t* frame)
 {
     struct frame_t *curr = flist->head;
-    while(curr) curr = curr->next;
+    while(curr)
+    {
+        if(curr->next)curr = curr->next;
+        else break;
+    }
     if(curr) curr->next = frame;
     else 
     {
@@ -91,6 +110,9 @@ static void add_to_flist(struct flist_t* flist, struct frame_t* frame)
         flist->head = frame;
         // printf("\r\n[SYSTEM INFO] Frame status: "); printf_int(frame->status);
     }
+#ifdef DEBUG
+    printf("\r\n[DEBUG] Leave add_to_flist");
+#endif
 }
 
 static void remove_from_flist(struct flist_t* flist, struct frame_t* frame)
@@ -105,9 +127,8 @@ static void remove_from_flist(struct flist_t* flist, struct frame_t* frame)
         {
             if(prev) prev->next = next_index == -1 ? NULL : &frame_arr[next_index];
             else flist->head = next_index == -1 ? NULL : &frame_arr[next_index];
-#ifdef DEBUG
             printf("\r\n[DEBUG] Remove Frame: "); printf_int(frame->index); printf(" from flist Level: "); printf_int(frame->level);
-#endif
+            // curr->next = NULL;
             return;
         }
         prev = curr;
@@ -130,13 +151,13 @@ void frame_init()
     printf_hex(MALLOC_START_ADDR);
     printf(", End at: ");
     printf_hex(MALLOC_END_ADDR);
-    printf(", Total Size: ");
-    printf_hex(MALLOC_TOTAL_SIZE);
-    printf(", Frame Num: ");
-    printf_hex(FRAME_NUM);
+    // printf(", Total Size: ");
+    // printf_hex(MALLOC_TOTAL_SIZE);
+    // printf(", Frame Num: ");
+    // printf_hex(FRAME_NUM);
 
-    printf("\r\n[SYSTEM INFO] Max Contiguous Size: ");
-    printf_hex(pow_2(MAX_LEVEL) * FRAME_SIZE);
+    // printf("\r\n[SYSTEM INFO] Max Contiguous Size: ");
+    // printf_hex(pow_2(MAX_LEVEL) * FRAME_SIZE);
 
 
     for(int i=0; i<=MAX_LEVEL + 1; i++)
@@ -166,11 +187,164 @@ void frame_init()
     frame_arr[FRAME_NUM-1].next = NULL;
 }
 
+void memory_reserve(uint64_t start, uint64_t end, char* msg)
+{
+    printf("\r\n[SYSTEM INFO] Reserve Memory from: "); printf_hex(start); printf(" to: "); printf_hex(end);
+    uint32_t start_index = (start - 0) >> 12;
+    uint32_t end_index = (end - 0) >> 12;
+    
+    printf("\r\n[SYSTEM INFO] Reserve Memory from Frame: "); printf_int(start_index); printf(" to Frame: "); printf_int(end_index);
+    printf(" for "); printf(msg);
+    if(start_index == end_index) 
+        frame_arr[start_index].status = RESERVED;
+    else
+        for(int i=start_index; i<end_index; i++) { frame_arr[i].status = RESERVED; }
+}
+
+static uint8_t get_lower_bound_level(uint32_t cnt)
+{
+    uint8_t level = 0;
+    while(pow_2(level) < cnt) level++;
+    return level-1;
+}
+
+static uint32_t get_bid(uint64_t addr)
+{
+    for(int i=0; i<MAX_BUDDY_SYSTEM_LIST-1; i++)
+    {
+        if(buddy_system_list[i+1].base_addr == NULL && addr >= (uint64_t)buddy_system_list[i].base_addr)
+        {
+            return i;
+        }
+        else{
+            if( addr >= (uint64_t)buddy_system_list[i].base_addr 
+                && addr < (uint64_t)buddy_system_list[i+1].base_addr )
+            {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+void print_bslist(int argc, char* argv[])
+{
+    printf("\r\n========== buddy system list ==========");
+    for(int i=0; i<MAX_BUDDY_SYSTEM_LIST; i++)
+    {
+        if(buddy_system_list[i].base_addr == NULL) break;
+        printf("\r\n[SYSTEM INFO] Start Frame: "); printf_int(buddy_system_list[i].index);
+        printf(", Base Address: "); printf_hex((uint64_t)buddy_system_list[i].base_addr);
+        printf(", Max Level: "); printf_int(buddy_system_list[i].max_level);
+    }
+}
+
+void frame_init_with_reserve()
+{
+    for(uint32_t i=0; i<FRAME_NUM; i++) { frame_arr[i].status = LARGE_CONTIGUOUS; frame_arr[i].level = 0;}
+    memory_reserve(0x00000000, 0x00001000, "Spin Table"); // reserve for spin table
+    memory_reserve(0x00080000, (uint64_t)(void*)_kernel_end_ptr, "Kernel Image"); // kernel Image
+    memory_reserve((uint64_t)(void*)_heap_start_ptr, HEAP_END, "Simple Malloc"); // reserve for simple_malloc
+#ifndef QEMU
+    memory_reserve(CPIO_START_ADDR_FROM_DT, CPIO_END_ADDR_FROM_DT, "Initramfs"); // reserve for initramfs
+#else
+    memory_reserve(0x20000000, 0x20000400, "Test Initramfs");
+#endif
+    uint8_t bid = 0;
+    for(int i=0; i<MAX_BUDDY_SYSTEM_LIST; i++) { buddy_system_list[i].base_addr = NULL; buddy_system_list[i].max_level = 0; }
+    for(uint8_t i=0; i<=MAX_LEVEL; i++) { flist_arr[i].head = NULL; }
+
+    int is_free_start = 1;
+    int free_cnt = 0;
+    struct frame_t* free_start = NULL;
+#ifdef DEBUG
+    printf("\r\n[DEBUG] Frame NUM: "); printf_int(FRAME_NUM);
+    printf("\r\n[DEBUG] free_start: "); printf_hex((uint64_t)free_start);
+#endif
+    for(uint32_t i=0; i<FRAME_NUM; i++)
+    {
+        frame_arr[i].index = i;
+        
+        if(frame_arr[i].status != RESERVED)
+        {
+            if(i<FRAME_NUM-1 && (frame_arr[i].status == frame_arr[i+1].status)){
+                frame_arr[i].next = &frame_arr[i+1];
+            }
+            else{
+#ifdef DEBUG
+                printf("\r\n[DEBUG] Frame: "); printf_int(i); printf(", next is NULL");
+#endif
+                frame_arr[i].next = NULL;
+            }
+        }
+
+        if(frame_arr[i].status == RESERVED){
+            if(is_free_start==0 && free_start != NULL){
+                free_start->level = get_lower_bound_level(free_cnt);
+#ifdef DEBUG
+                printf("\r\n[DEBUG] Free Start Frame: "); printf_int(free_start->index);
+                printf(", Level: "); printf_int(free_start->level);
+#endif
+                buddy_system_list[bid].index = free_start->index;
+                buddy_system_list[bid].base_addr = (void*)(uint64_t)(MALLOC_START_ADDR + free_start->index * FRAME_SIZE);
+                buddy_system_list[bid++].max_level = free_start->level;
+                add_to_flist(&flist_arr[free_start->level], free_start);
+                is_free_start = 1;
+                free_cnt = 0;
+                free_start = NULL;
+            }
+        }
+        else{
+            if(is_free_start){
+                buddy_system_list[bid].base_addr = &frame_arr[i];
+                frame_arr[i].status = FREE;
+                free_start = &frame_arr[i];
+                is_free_start = 0;
+                free_cnt = 1;
+            }
+            else{
+                frame_arr[i].status = LARGE_CONTIGUOUS;
+                frame_arr[i].level = 0;
+                free_cnt++;
+            }
+        }
+        if(i== FRAME_NUM-1 && is_free_start==0 && free_start != NULL){
+            free_start->level = get_lower_bound_level(free_cnt);
+#ifdef DEBUG
+            printf("\r\n[DEBUG] Free Start Frame: "); printf_int(free_start->index);
+            printf(", Level: "); printf_int(free_start->level); printf(" "); printf_int(free_cnt);
+#endif
+            buddy_system_list[bid].index = free_start->index;
+            buddy_system_list[bid].base_addr = (void*)(uint64_t)(MALLOC_START_ADDR + free_start->index * FRAME_SIZE);
+            buddy_system_list[bid++].max_level = free_start->level;
+            add_to_flist(&flist_arr[free_start->level], free_start);
+            is_free_start = 1;
+            free_cnt = 0;
+            free_start = NULL;
+        }
+    }
+ 
+    int tag = 0;
+    printf("\r\n[SYSTEM INFO] Buddy System List (Start Frame, base_addr, max_level): \n");
+    for(int i=0; i<bid; i++)
+    {
+        if(tag)printf(" -> ");
+        if(buddy_system_list[i].base_addr == NULL) break;
+        printf("( "); printf_int(buddy_system_list[i].index); printf(", "); 
+        printf_hex((uint64_t)buddy_system_list[i].base_addr); printf(", "); 
+        printf_int(buddy_system_list[i].max_level); printf(" )");
+        tag = 1;
+    }
+}
+
 void print_flist(int argc, char* argv[])
 {
     printf("\r\n========== free list ==========");
     for(int i=0; i<=MAX_LEVEL; i++)
     {
+#ifdef DEBUG
+        printf("\r\n[DEBUG] Level: ");printf_int(i);
+#endif
         struct frame_t* frame = flist_arr[i].head;
         int sign = 0;
         while(frame != NULL)
@@ -181,10 +355,18 @@ void print_flist(int argc, char* argv[])
                 if(sign) printf("-> ");
                 printf_int(frame->index);
                 sign = 1;
+                frame = frame->next;
             }
-            frame = frame->next;
+            else 
+                frame = frame->next;
         }
+#ifdef DEBUG
+        printf("\r\n[DEBUG] Leave Level: ");printf_int(i);
+#endif
     }
+#ifdef DEBUG
+    printf("\r\n[DEBUG] Leave print_flist");
+#endif
 }
 
 void print_allocated(int argc, char* argv[])
@@ -196,9 +378,9 @@ void print_allocated(int argc, char* argv[])
         {
             int cnt = 0;
             int expected_cnt = pow_2(frame_arr[i].level);
-#ifdef DEBUG
+// #ifdef DEBUG
             int level = frame_arr[i].level;
-#endif
+// #endif
             printf("\r\n[SYSTEM INFO] Allocated Frame: "); printf_int(frame_arr[i].index); printf(", Level: "); printf_int(frame_arr[i].level);
             struct frame_t* curr = &frame_arr[i];
             while(curr){
@@ -206,10 +388,10 @@ void print_allocated(int argc, char* argv[])
                 i++;
                 curr = curr->next;
             }
-#ifdef DEBUG
+// #ifdef DEBUG
             printf("\r\n[DEBUG] Allocated Frame Count: "); printf_int(cnt); printf(", Expected Count: "); printf_int(expected_cnt); 
             printf(" , level: "); printf_int(level);
-#endif
+// #endif
             assert(cnt == expected_cnt, "Allocated Frame Count Error!");
             i--;
         }
@@ -290,13 +472,19 @@ static void* get_buddy_address(void* ptr, uint8_t level)
 
 static uint32_t get_buddy_index(void* ptr, uint8_t level)
 {
-    return ((uint64_t)get_buddy_address(ptr, level) - MALLOC_START_ADDR) / FRAME_SIZE;
+    return ((uint64_t)get_buddy_address(ptr, level) - MALLOC_START_ADDR) >> 12;
 }
 
 int bfree(void* ptr)
 {
-    struct frame_t* curr_frame = &frame_arr[((uint64_t)ptr - MALLOC_START_ADDR) / FRAME_SIZE];
+    uint8_t max_level = buddy_system_list[get_bid((uint64_t)ptr)].max_level;
+    uint32_t offset = buddy_system_list[get_bid((uint64_t)ptr)].index;
     
+    struct frame_t* curr_frame = &frame_arr[((uint64_t)ptr - MALLOC_START_ADDR) >> 12];
+    // struct frame_t* buddy_frame = &frame_arr[get_buddy_index((ptr-offset*FRAME_SIZE), curr_frame->level)+offset];
+    // printf("\r\n[SYSTEM INFO] Free Frame: "); printf_int(curr_frame->index); printf(", Level: "); printf_int(curr_frame->level);
+    // printf("\r\n[SYSTEM INFO] Buddy Frame: "); printf_int(buddy_frame->index); printf(", Level: "); printf_int(buddy_frame->level);
+    // printf(" buddy status: "); printf_int(buddy_frame->status);
     switch(curr_frame->status)
     {
         case FREE:
@@ -305,25 +493,28 @@ int bfree(void* ptr)
         case LARGE_CONTIGUOUS:
             printf("\r\n[SYSTEM ERROR] Frame is belong to Large Contiguous Frame!");
             return 1;
+        case RESERVED:
+            printf("\r\n[SYSTEM ERROR] Frame is Reserved!");
+            return 1;
         default:
             break;
     }
 
     // buddy address = curr address ^ (block size)
-    struct frame_t* buddy_frame = &frame_arr[get_buddy_index(ptr, curr_frame->level)];
+    struct frame_t* buddy_frame = &frame_arr[get_buddy_index((ptr-offset*FRAME_SIZE), curr_frame->level)+offset];
     
     printf("\r\n[SYSTEM INFO] Free Frame: "); printf_int(curr_frame->index); printf(", Level: "); printf_int(curr_frame->level);
     printf("\r\n[SYSTEM INFO] Buddy Frame: "); printf_int(buddy_frame->index); printf(", Level: "); printf_int(buddy_frame->level);
-    if(buddy_frame->status == ALLOCATED || buddy_frame->status == RESERVED)
+    if(buddy_frame->status != FREE)
     {
-        printf("\r\n[SYSTEM INFO] Buddy Frame is Allocated or Reserved!");
+        printf("\r\n[SYSTEM INFO] Buddy Frame is not FREE!");
         curr_frame->status = FREE;
     }
     else
     {
         printf("\r\n[SYSTEM INFO] Buddy Frame is Free!");
     }
-    while(buddy_frame->status == FREE && curr_frame->level < MAX_LEVEL)
+    while(buddy_frame->status == FREE && curr_frame->level < max_level)
     {
         curr_frame->status = FREE;
         printf("\r\n[SYSTEM INFO] Merge Frame:"); printf_int(curr_frame->index); printf(" and Frame: "); printf_int(buddy_frame->index);
@@ -350,11 +541,11 @@ int bfree(void* ptr)
 
         curr_frame = &frame_arr[merge_index];
         curr_frame->level++;
-        if(curr_frame->level == MAX_LEVEL)
+        if(curr_frame->level == max_level)
         {
             break;
         }
-        buddy_frame = &frame_arr[get_buddy_index((void*)(uint64_t)(MALLOC_START_ADDR + merge_index * FRAME_SIZE), curr_frame->level)];
+        buddy_frame = &frame_arr[get_buddy_index((void*)(uint64_t)(MALLOC_START_ADDR + (merge_index-offset) * FRAME_SIZE), curr_frame->level) + offset];
 
         printf("\r\n[SYSTEM INFO] New Frame: "); printf_int(curr_frame->index); printf(", Level: "); printf_int(curr_frame->level);
         printf("\r\n[SYSTEM INFO] New Buddy Frame: "); printf_int(buddy_frame->index); printf(", Level: "); printf_int(buddy_frame->level);
@@ -381,7 +572,6 @@ void bfree_wrapper(int argc, char *argv[])
         print_flist(0, NULL);
         print_allocated(0, NULL);
     }
-    printf("\n===============================");
 }
 
 void memory_pool_init()
@@ -519,7 +709,7 @@ int dfree(void* ptr)
     struct memory_pool_t* memory_pool = &memory_pools[memory_pool_index];
 
     // check whether the chunk is already in the free chunk list
-    struct chunk* head_free_chunk = memory_pool->free_chunk;
+    struct chunk_t* head_free_chunk = memory_pool->free_chunk;
     while(head_free_chunk)
     {
         if(head_free_chunk == ptr)
@@ -532,8 +722,8 @@ int dfree(void* ptr)
 
     printf("\r\n[SYSTEM INFO] Free Chunk in Frame: "); printf_int(frame_index);
     memory_pool->chunk_used--;
-    struct chunk* last_free_chunk = memory_pool->free_chunk;
-    memory_pool->free_chunk = (struct chunk*)ptr;
+    struct chunk_t* last_free_chunk = memory_pool->free_chunk;
+    memory_pool->free_chunk = (struct chunk_t*)ptr;
     memory_pool->free_chunk->next = last_free_chunk;
 
     printf("\r\n[SYSTEM INFO] Free Chunk at address: "); printf_hex((uint64_t)ptr); 

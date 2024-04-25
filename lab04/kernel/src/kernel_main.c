@@ -21,6 +21,7 @@ int main()
 #ifndef QEMU
     fdt_traverse(initramfs_callback);
 #endif
+    frame_init_with_reserve();
 
     printf("\nWelcome to Yuchang's Raspberry Pi 3!\n");
 
@@ -38,5 +39,6 @@ static void multiple_init()
     uart_init();
     task_head_init();
     uart_buff_init();
-    frame_init();
+    // frame_init();
+    memory_pool_init();
 }

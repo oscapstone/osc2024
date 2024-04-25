@@ -27,6 +27,7 @@ extern void cpio_exec(int argc, char *argv[]);
 extern void print_flist(int argc, char *argv[]);
 extern void print_allocated(int argc, char *argv[]);
 extern void bfree_wrapper(int argc, char* argv[]);
+extern void print_bslist(int argc, char* argv[]);
 
 
 int split_command(char* command, char *argv[]);
@@ -49,7 +50,8 @@ cmd cmds[] =
     {.name = "balloc", .func = &balloc_wrapper, .help_msg = "\nb_malloc\t: buddy system allocation"},
     {.name = "bfree", .func = &bfree_wrapper, .help_msg = "\nbfree\t: buddy system free"},
     {.name = "dalloc", .func = &dynamic_alloc_wrapper, .help_msg = "\ndalloc\t: dynamic allocation"},
-    {.name = "dfree", .func= &dynamic_free_wrapper, .help_msg = "\ndfree\t: dynamic free"}
+    {.name = "dfree", .func= &dynamic_free_wrapper, .help_msg = "\ndfree\t: dynamic free"},
+    {.name = "print_bslist", .func = &print_bslist, .help_msg = "\nprint_bslist\t: print buddy system list"}
 };
 
 

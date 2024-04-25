@@ -17,6 +17,8 @@ SECTIONS
 	    __bss_end = .;
   }
   . = ALIGN(0x8);
-  _end = .;
+  _kernel_end = .;
+  . = ALIGN(0x8);
+  _heap_start = .;
 }
 __bss_size = (__bss_end - __bss_start)>>3;
