@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "cpio.h": "c",
+        "uart.h": "c"
+    }
+}
