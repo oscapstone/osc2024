@@ -5,7 +5,9 @@
 #include "ds/list.hpp"
 #include "int/interrupt.hpp"
 #include "mm/log.hpp"
-#include "mm/page_alloc.hpp"
+#include "mm/page.hpp"
+
+#define MM_TYPE "heap"
 
 inline int chunk_idx(uint64_t size) {
   if (size <= 0x10)
@@ -57,8 +59,8 @@ struct Info {
   }
 
   void alloc_page() {
-    auto page = page_alloc.alloc(PAGE_SIZE);
-    MM_DEBUG("heap", "alloc_page = %p\n", page);
+    auto page = mm_page.alloc(PAGE_SIZE);
+    MM_DEBUG("alloc_page = %p\n", page);
     auto hdr = new (page) PageHeader(idx, pages);
     split_page(hdr);
     hdr = pages;
@@ -109,7 +111,7 @@ void* heap_malloc(uint64_t req_size) {
   save_DAIF_disable_interrupt();
 
   auto idx = chunk_idx(req_size);
-  // MM_DEBUG("heap", "alloc 0x%lx -> 0x%x\n", req_size, chunk_size[idx]);
+  // MM_DEBUG("alloc 0x%lx -> 0x%x\n", req_size, chunk_size[idx]);
   auto ptr = info[idx].alloc();
 
   restore_DAIF();

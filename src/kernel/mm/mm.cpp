@@ -4,7 +4,7 @@
 #include "int/interrupt.hpp"
 #include "mm/heap.hpp"
 #include "mm/new.hpp"
-#include "mm/page_alloc.hpp"
+#include "mm/page.hpp"
 #include "mm/startup.hpp"
 #include "pair.hpp"
 
@@ -25,17 +25,17 @@ void mm_preinit() {
   startup_alloc_init();
 
   auto [start, end] = mm_range();
-  page_alloc.preinit(start, end);
+  mm_page.preinit(start, end);
 }
 
 void mm_reserve_p(void* start, void* end) {
-  page_alloc.reserve(start, end);
+  mm_page.reserve(start, end);
 }
 
 void mm_init() {
   mm_reserve(__heap_start, __heap_end);
 
-  page_alloc.init();
+  mm_page.init();
   heap_init();
   set_new_delete_handler(kmalloc, kfree);
 }
@@ -45,7 +45,7 @@ void* kmalloc(uint64_t size, uint64_t align) {
   save_DAIF_disable_interrupt();
   // TODO: handle alignment
   if (size > max_chunk_size)
-    res = page_alloc.alloc(size);
+    res = mm_page.alloc(size);
   else
     res = heap_malloc(size);
   restore_DAIF();
@@ -55,7 +55,7 @@ void* kmalloc(uint64_t size, uint64_t align) {
 void kfree(void* ptr) {
   save_DAIF_disable_interrupt();
   if (isPageAlign(ptr))
-    page_alloc.free(ptr);
+    mm_page.free(ptr);
   else
     heap_free(ptr);
   restore_DAIF();

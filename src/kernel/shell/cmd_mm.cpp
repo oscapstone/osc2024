@@ -1,6 +1,6 @@
 #include "io.hpp"
 #include "mm/heap.hpp"
-#include "mm/page_alloc.hpp"
+#include "mm/page.hpp"
 #include "mm/startup.hpp"
 #include "shell/cmd.hpp"
 #include "string.hpp"
@@ -8,7 +8,7 @@
 int cmd_mm(int argc, char* argv[]) {
   if (argc <= 1) {
     startup_alloc_info();
-    page_alloc.info();
+    mm_page.info();
     heap_info();
   } else if (0 == strcmp(argv[1], "startup")) {
     if (argc <= 2) {
@@ -22,17 +22,17 @@ int cmd_mm(int argc, char* argv[]) {
     }
   } else if (0 == strcmp(argv[1], "page")) {
     if (argc <= 2) {
-      page_alloc.info();
+      mm_page.info();
     } else if (0 == strcmp(argv[2], "alloc") and argc >= 4) {
       auto size = strtol(argv[3]);
-      auto ptr = page_alloc.alloc(size);
-      page_alloc.info();
+      auto ptr = mm_page.alloc(size);
+      mm_page.info();
       kprintf("page: alloc(0x%lx) = %p\n", size, ptr);
     } else if (0 == strcmp(argv[2], "free") and argc >= 4) {
       auto ptr = (void*)strtol(argv[3]);
       kprintf("page: free(%p)\n", ptr);
-      page_alloc.free(ptr);
-      page_alloc.info();
+      mm_page.free(ptr);
+      mm_page.info();
     } else {
       kprintf("mm: page action '%s' not match\n", argv[2]);
       return -1;

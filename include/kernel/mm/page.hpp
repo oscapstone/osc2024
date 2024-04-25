@@ -7,7 +7,7 @@
 #include "mm/mm.hpp"
 #include "util.hpp"
 
-class PageAlloc {
+class PageSystem {
  public:
   enum class FRAME_TYPE : uint8_t {
     FREE,
@@ -110,4 +110,4 @@ class PageAlloc {
   }
 };
 
-extern PageAlloc page_alloc;
+extern PageSystem mm_page;
