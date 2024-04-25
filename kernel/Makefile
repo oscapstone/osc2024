@@ -8,7 +8,6 @@ target/aarch64-unknown-none-softfloat/release/$(project_name):
 	cargo rustc --release
 
 kernel8.img: target/aarch64-unknown-none-softfloat/release/$(project_name)
-	# aarch64-linux-gnu-objcopy -O binary target/aarch64-unknown-none-softfloat/release/$(project_name) kernel8.img
 	aarch64-elf-objcopy -O binary target/aarch64-unknown-none-softfloat/release/$(project_name) kernel8.img
 
 

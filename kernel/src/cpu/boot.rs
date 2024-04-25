@@ -1,14 +1,15 @@
 use crate::cpu::{device_tree::DeviceTree, mailbox, uart};
-use crate::os::stdio::println_now;
+use crate::os::stdio::{print_hex_now, println_now};
 use crate::os::{shell, timer, allocator};
 use crate::println;
 use core::arch::{asm, global_asm};
+use alloc::boxed::Box;
+
 
 global_asm!(include_str!("boot.s"));
 
 #[no_mangle]
 pub unsafe fn _start_rust() {
-    // crate::os::allocator::ALLOCATOR.init();
     uart::initialize();
     timer::init();
     allocator::init();
@@ -18,15 +19,10 @@ pub unsafe fn _start_rust() {
     allocator::reserve(0x0008_0000 as *mut u8, 0x0001_0000); // Code
     allocator::reserve(0x0800_0000 as *mut u8, 0x0100_0000); // Initramfs
     allocator::reserve(DeviceTree::get_device_tree_address(), 0x0100_0000); // Device Tree
-    allocator::reserve(0x0910_0000 as *mut u8, 0x06F0_0000); // Simple Allocator
-
-    //println_now("Finished");
-    //loop{}
+    allocator::reserve(0x0A00_0000 as *mut u8, 0x0600_0000); // Simple Allocator
 
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
-    
-    println!("Starting rust");
     
     let dt = DeviceTree::init();
     

@@ -12,6 +12,11 @@ static mut FRAME_ROOT: Option<Box<BuddyNode, &SimpleAllocator>> = None;
 
 pub struct BuddyAllocator;
 
+fn print_node_info(node: &mut BuddyNode) {
+    //print_hex_now(node.start_address as u32);
+    //print_hex_now(node.size as u32);
+}
+
 struct BuddyNode<'a> {
     start_address: *mut u8,
     size: usize,
@@ -21,6 +26,8 @@ struct BuddyNode<'a> {
 }
 
 pub unsafe fn init() {
+    println_now("Before init");
+    //print_hex_now((*(0x1000_0000 as *mut u8)) as u32);
     FRAME_ROOT = Some(Box::new_in(
         BuddyNode {
             start_address: 0x0000_0000 as *mut u8,
@@ -31,6 +38,8 @@ pub unsafe fn init() {
         },
         &SIMPLE_ALLOCATOR,
     ));
+    //FRAME_ROOT = None;
+    println_now("After init");
 }
 
 enum NodeStatus<T> {
@@ -120,9 +129,8 @@ unsafe fn alloc_recursive(
             return NodeStatus::too_small;
         } else {
             current_node.allocated = true;
-            //println_now("Found block");
-            print_hex_now(current_node.start_address as u32);
-            print_hex_now(current_node.size as u32);
+            println_now("Allocate block:");
+            print_node_info(current_node);
 
             return NodeStatus::success(allocated_start);
         }
@@ -143,6 +151,8 @@ unsafe fn dealloc_recursive(
             && current_node.start_address.add(current_node.size) >= ptr.add(layout.size())
         {
             current_node.allocated = false;
+            println_now("Free block:");
+            print_node_info(current_node);
             true
         } else {
             false
@@ -259,7 +269,7 @@ unsafe impl GlobalAlloc for BuddyAllocator {
 
         match allocate_status {
             NodeStatus::success(ret) => {
-                println_now("Memory allocated");
+                //println_now("Memory allocated");
                 ret
             }
             _ => panic!("No memory"),
@@ -267,8 +277,14 @@ unsafe impl GlobalAlloc for BuddyAllocator {
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         match dealloc_recursive(FRAME_ROOT.as_mut().unwrap(), &layout, ptr) {
-            true => println_now("Memory freed"),
-            false => panic!("Cannot find memory to free"),
+            true => {
+                //println_now("Memory freed");
+            }
+            false => {
+                //print_hex_now(ptr as u32);
+                //print_hex_now(layout.size() as u32);
+                panic!("Cannot find memory to free")
+            }
         }
     }
 }
