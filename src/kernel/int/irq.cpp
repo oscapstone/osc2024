@@ -20,8 +20,9 @@ void irq_init() {
   irq_tasks.init();
 }
 
-void irq_add_task(int prio, Task::fp callback, void* context) {
-  auto node = new Task{prio, callback, context};
+void irq_add_task(int prio, Task::fp callback, void* context,
+                  Task::fini_fp fini) {
+  auto node = new Task{prio, callback, context, fini};
   auto it = irq_tasks.begin();
   for (; it != irq_tasks.end(); it++)
     if (prio >= it->prio)
@@ -39,6 +40,7 @@ void irq_run() {
     enable_interrupt();
     task->call();
     disable_interrupt();
+    task->call_fini();
     irq_tasks.erase(it);
     delete task;
   }

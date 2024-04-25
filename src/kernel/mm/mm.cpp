@@ -1,6 +1,7 @@
 #include "mm/mm.hpp"
 
 #include "fdt.hpp"
+#include "int/interrupt.hpp"
 #include "mm/heap.hpp"
 #include "mm/new.hpp"
 #include "mm/page_alloc.hpp"
@@ -40,14 +41,22 @@ void mm_init() {
 }
 
 void* kmalloc(uint64_t size, uint64_t align) {
-  if (size > max_chunk_size)
-    return page_alloc.alloc(size);
+  void* res = nullptr;
+  save_DAIF_disable_interrupt();
   // TODO: handle alignment
-  return heap_malloc(size);
+  if (size > max_chunk_size)
+    res = page_alloc.alloc(size);
+  else
+    res = heap_malloc(size);
+  restore_DAIF();
+  return res;
 }
 
 void kfree(void* ptr) {
+  save_DAIF_disable_interrupt();
   if (isPageAlign(ptr))
-    return page_alloc.free(ptr);
-  heap_free(ptr);
+    page_alloc.free(ptr);
+  else
+    heap_free(ptr);
+  restore_DAIF();
 }

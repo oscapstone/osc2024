@@ -62,8 +62,8 @@ int kprintf_sync(const char* format, ...) {
 int klog(const char* format, ...) {
   va_list args;
   va_start(args, format);
-  kprintf_sync("[" PRTval "] ", FTval(get_current_time()));
-  int size = kvprintf_sync(format, args);
+  kprintf("[" PRTval "] ", FTval(get_current_time()));
+  int size = kvprintf(format, args);
   va_end(args);
   return size;
 }

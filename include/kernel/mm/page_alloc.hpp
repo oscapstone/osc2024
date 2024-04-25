@@ -86,7 +86,7 @@ class PageAlloc {
   template <bool assume = false>
   FreePage* vpn2freepage(uint64_t vpn) {
     auto addr = vpn2addr(vpn);
-    if (assume or not array_[vpn].allocated()) {
+    if (assume or array_[vpn].free()) {
       return (FreePage*)addr;
     } else {
       array_[vpn].type = FRAME_TYPE::FREE;

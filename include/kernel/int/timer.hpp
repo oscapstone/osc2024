@@ -26,7 +26,6 @@ extern ListHead<Timer> timers;
 extern bool show_timer;
 extern int timer_delay;
 
-
 inline timeval tick2timeval(uint64_t tick) {
   uint32_t sec = tick / freq_of_timer;
   uint32_t usec = tick % freq_of_timer / us_tick;

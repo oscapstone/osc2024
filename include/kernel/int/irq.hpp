@@ -14,23 +14,33 @@ struct Task : ListItem {
   using fp = void (*)(void*);
   fp callback;
   void* context;
+  using fini_fp = void (*)();
+  fini_fp fini;
 
   Task()
       : ListItem{},
         running{false},
         prio{-1},
         callback{nullptr},
-        context{nullptr} {}
+        context{nullptr},
+        fini{nullptr} {}
 
-  Task(int prio_, fp callback_, void* context_)
+  Task(int prio_, fp callback_, void* context_ = nullptr,
+       fini_fp fini_ = nullptr)
       : ListItem{},
         running{false},
         prio{prio_},
         callback{callback_},
-        context{context_} {}
+        context{context_},
+        fini{fini_} {}
 
   void call() const {
-    return callback(context);
+    if (callback)
+      callback(context);
+  }
+  void call_fini() const {
+    if (fini)
+      fini();
   }
 };
 
@@ -47,5 +57,6 @@ inline void unlink(Task* it) {
 extern ListHead<Task> irq_tasks;
 
 void irq_init();
-void irq_add_task(int prio, Task::fp callback, void* context);
+void irq_add_task(int prio, Task::fp callback, void* context = nullptr,
+                  Task::fini_fp = nullptr);
 void irq_run();

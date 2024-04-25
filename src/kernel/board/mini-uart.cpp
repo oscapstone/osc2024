@@ -18,29 +18,20 @@ decltype(&mini_uart_putc_raw) mini_uart_putc_raw_fp;
 #define TRANSMIT_INT 1
 
 bool _mini_uart_is_async;
+bool waiting = false;
 const bool& mini_uart_is_async = _mini_uart_is_async;
 RingBuffer rbuf, wbuf;
 int mini_uart_delay = 0;
-
-struct IntCtx {
-  union {
-    struct __attribute__((__packed__)) {
-      uint32_t iir;
-      char recv;
-    };
-    uint64_t value;
-  };
-};
 
 namespace getline_echo {
 bool enable = false;
 char* buffer;
 int length, r;
 
-bool impl(decltype(&mini_uart_putc_raw) putc,
-          decltype(&mini_uart_getc_raw) getc) {
+bool _impl(decltype(&mini_uart_putc_raw) putc,
+           decltype(&mini_uart_getc_raw) getc) {
   auto c = getc();
-  if (c == -1)
+  if (c == (char)-1)
     return false;
   if (c == '\r' or c == '\n') {
     putc('\r');
@@ -79,6 +70,14 @@ bool impl(decltype(&mini_uart_putc_raw) putc,
   }
 }
 
+bool impl(decltype(&mini_uart_putc_raw) putc,
+          decltype(&mini_uart_getc_raw) getc) {
+  save_DAIF_disable_interrupt();
+  auto res = _impl(putc, getc);
+  restore_DAIF();
+  return res;
+}
+
 };  // namespace getline_echo
 
 void set_ier_reg(bool enable, int bit) {
@@ -114,25 +113,19 @@ void mini_uart_enqueue() {
     return;
   set_ier_reg(false, RECEIVE_INT);
   set_ier_reg(false, TRANSMIT_INT);
-  IntCtx ctx{.iir = iir};
-  if (iir & (1 << 2)) {
-    // Receiver holds valid byte
-    ctx.recv = get32(AUX_MU_IO_REG) & MASK(8);
-  }
-  irq_add_task(9, mini_uart_handler, (void*)ctx.value);
-}
-
-void mini_uart_handler(void* ctx_) {
-  IntCtx ctx{.value = (uint64_t)ctx_};
-
-  if (ctx.iir & (1 << 1)) {
+  if (iir & (1 << 1)) {
     // Transmit holding register empty
     if (not wbuf.empty())
       set32(AUX_MU_IO_REG, wbuf.pop());
-  } else if (ctx.iir & (1 << 2)) {
-    rbuf.push(ctx.recv);
+  } else if (iir & (1 << 2)) {
+    // Receiver holds valid byte
+    rbuf.push(get32(AUX_MU_IO_REG) & MASK(8));
   }
+  waiting = true;
+  irq_add_task(9, mini_uart_handler, nullptr, mini_uart_handler_fini);
+}
 
+void mini_uart_handler(void*) {
   // TODO: refactor uart task handlers
   if (mini_uart_delay > 0) {
     int delay = mini_uart_delay;
@@ -143,13 +136,16 @@ void mini_uart_handler(void* ctx_) {
       NOP;
   }
 
-  if (getline_echo::enable and not rbuf.empty()) {
+  while (getline_echo::enable and not rbuf.empty()) {
     using namespace getline_echo;
     auto putc = [](char c) { wbuf.push(c); };
     auto getc = []() { return rbuf.pop(true); };
     impl(putc, getc);
   }
+}
 
+void mini_uart_handler_fini() {
+  waiting = false;
   if (not wbuf.empty())
     set_ier_reg(true, TRANSMIT_INT);
   if (not rbuf.full())
@@ -158,13 +154,13 @@ void mini_uart_handler(void* ctx_) {
 
 char mini_uart_getc_raw_async() {
   auto c = rbuf.pop(true);
-  set_ier_reg(true, RECEIVE_INT);
   return c;
 }
 
 void mini_uart_putc_raw_async(char c) {
   wbuf.push(c, true);
-  set_ier_reg(true, TRANSMIT_INT);
+  if (not waiting)
+    set_ier_reg(true, TRANSMIT_INT);
 }
 
 char mini_uart_getc_raw_sync() {

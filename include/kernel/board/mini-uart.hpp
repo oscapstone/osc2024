@@ -7,6 +7,7 @@ void mini_uart_use_async(bool use);
 
 void mini_uart_enqueue();
 void mini_uart_handler(void*);
+void mini_uart_handler_fini();
 
 char mini_uart_getc_raw_async();
 void mini_uart_putc_raw_async(char c);

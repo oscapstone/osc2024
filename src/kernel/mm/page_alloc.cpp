@@ -1,5 +1,6 @@
 #include "mm/page_alloc.hpp"
 
+#include "board/mini-uart.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
 #include "math.hpp"
@@ -19,11 +20,11 @@ void PageAlloc::info() {
         r = i, reserved = true;
     } else if (array_[i].head()) {
       if (reserved) {
-        kprintf("  frame %p ~ %p: %s\n", vpn2addr(r), vpn2addr(i),
+        kprintf("  frame %010p ~ %010p: %s\n", vpn2addr(r), vpn2addr(i),
                 str(FRAME_TYPE::RESERVED));
         reserved = false;
       }
-      kprintf("  frame %p ~ %p: %s\n", vpn2addr(i), vpn2end(i),
+      kprintf("  frame %010p ~ %010p: %s\n", vpn2addr(i), vpn2end(i),
               str(array_[i].type));
     }
   }

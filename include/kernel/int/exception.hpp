@@ -20,7 +20,6 @@ inline int get_el() {
 
 extern "C" {
 void print_exception(ExceptionContext* context, int type);
-void irq_handler(ExceptionContext* context, int type);
 // exception.S
 void set_exception_vector_table();
 }
