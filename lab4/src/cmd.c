@@ -2,6 +2,7 @@
 #include "alloc.h"
 #include "initrd.h"
 #include "mbox.h"
+#include "mm.h"
 #include "shell.h"
 #include "string.h"
 #include "timer.h"
@@ -140,6 +141,8 @@ void demo()
     char select[SHELL_BUF_SIZE];
     uart_puts("(1) UART async write\n");
     uart_puts("(2) UART async read\n");
+    uart_puts("(3) Buddy system\n");
+    uart_puts("(4) Dynamic allocator\n");
     uart_puts("Select: ");
     read_user_input(select);
     switch (atoi(select)) {
@@ -156,6 +159,23 @@ void demo()
         uart_async_read(buffer, 256);
         uart_puts(buffer);
         uart_putc('\n');
+        break;
+    case 3:
+        uart_puts("Get 2 pages 3 times\n");
+        void *p31 = kmalloc(8192);
+        void *p32 = kmalloc(8192);
+        void *p33 = kmalloc(8192);
+        kfree(p31);
+        kfree(p32);
+        kfree(p33);
+        break;
+    case 4:
+        uart_puts("Allocate 100 bytes\n");
+        void *p41 = kmalloc(100);
+        uart_puts("p1 = ");
+        uart_hex((unsigned int)p41);
+        uart_puts("\n");
+        kfree(p41);
         break;
     default:
         uart_puts("Option not found.\n");
