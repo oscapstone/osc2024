@@ -23,13 +23,17 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 const MAX_COMMAND_LEN: usize = 0x100;
 
 fn main() -> ! {
-    for _ in 0..10000 {
-        unsafe {
-            asm!("nop");
-        }
-    }
     unsafe {
         BUDDY_SYSTEM.init();
+    }
+    unsafe {
+        BUDDY_SYSTEM.reserve_by_addr_range(0x0000, 0x1000); // dtb reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x6_0000, 0x8_0000); // kernel stack reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x8_0000, 0x10_0000); // kernel code reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x8000_0000, 0x8200_0000); // initramfs reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x8200_0000, 0x8800_0000); // dtb reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x2000_0000, 0x2100_0000); // bump allocator reserved
+        BUDDY_SYSTEM.print_info();
     }
     println!("Hello, world!");
     print_mailbox_info();
@@ -97,6 +101,8 @@ fn execute_command(command: &[u8]) {
         commands::echo::exec(&command);
     } else if command.starts_with(b"setTimeOut") {
         commands::set_time_out::exec(&command);
+    } else if command.starts_with(b"buddy") {
+        commands::buddy::exec();
     } else {
         println!(
             "Unknown command: {}",

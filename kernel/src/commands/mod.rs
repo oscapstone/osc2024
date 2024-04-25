@@ -1,3 +1,4 @@
+pub mod buddy;
 pub mod cat;
 pub mod echo;
 pub mod exec;

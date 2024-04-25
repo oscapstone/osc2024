@@ -17,4 +17,8 @@ pub fn exec() {
         "{:width$}: {}",
         "setTimeOut", "print a message after some time"
     );
+    println!(
+        "{:width$}: {}",
+        "buddy", "interact with the dangerous buddy allocator"
+    );
 }
