@@ -11,7 +11,7 @@
 
 extern void  switch_to(void *curr_context, void *next_context);
 extern void* get_current();
-extern void* set_current();
+extern void* set_current(void *curr_context);
 extern void  store_context(void *curr_context);
 extern void  load_context(void *curr_context);
 

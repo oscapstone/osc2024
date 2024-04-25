@@ -17,7 +17,7 @@ int             done_sched_init = 0;
 
 void init_thread_sched() {
     lock();
-    run_queue = kmalloc(sizeof(thread_t));
+    run_queue = kmalloc(sizeof(list_head_t));
     INIT_LIST_HEAD(run_queue);
 
     char *thread_name = kmalloc(5);
@@ -97,7 +97,7 @@ void dump_thread_info(thread_t* t) {
 }
 
 void idle() {
-    unlock();
+    core_timer_enable();
     while (list_size(run_queue) > 1) {
         uart_puts("This is idle\n"); // debug
         schedule();     // switch to next thread in run queue
