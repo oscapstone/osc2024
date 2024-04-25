@@ -36,9 +36,9 @@ volatile unsigned int  __attribute__((aligned(16))) mbox[36];
 #define MBOX_STATUS     ((volatile unsigned int*)(VIDEOCORE_MBOX+0x18))
 #define MBOX_CONFIG     ((volatile unsigned int*)(VIDEOCORE_MBOX+0x1C))
 #define MBOX_WRITE      ((volatile unsigned int*)(VIDEOCORE_MBOX+0x20))
-#define MBOX_RESPONSE   0x80000000
-#define MBOX_FULL       0x80000000
-#define MBOX_EMPTY      0x40000000
+#define MBOX_RESPONSE   (0x80000000)
+#define MBOX_FULL       (0x80000000)
+#define MBOX_EMPTY      (0x40000000)
 
 #define GET_BOARD_REVISION 0x00010002
 #define GET_ARM_MEMORY     0x00010005
@@ -47,9 +47,9 @@ volatile unsigned int  __attribute__((aligned(16))) mbox[36];
 /**
  * Make a mailbox call. Returns 0 on failure, non-zero on success
  */
-int mbox_call(unsigned char ch)
+int __mbox_call(unsigned char ch, volatile unsigned int *mailbox)
 {
-    unsigned int r = (((unsigned int) ((unsigned long) &mbox) & ~0xF) | (ch & 0xF)); // combine message address and channel number
+    unsigned int r = (((unsigned int) ((unsigned long) mailbox) & ~0xF) | (ch & 0xF)); // combine message address and channel number
     /* wait until we can write to the mailbox */
     do {
         asm volatile("nop");
@@ -65,9 +65,36 @@ int mbox_call(unsigned char ch)
         /* is it a response to our message? */
         if(r == *MBOX_READ)
             /* is it a valid successful response? */
-            return mbox[1] == MBOX_RESPONSE;
+            return mailbox[1] == MBOX_RESPONSE;
     }
     return 0;
+}
+
+/**
+ * Make a mailbox call. Returns 0 on failure, non-zero on success
+ */
+int mbox_call(unsigned char ch)
+{
+    return __mbox_call(ch, mbox);
+    // unsigned int r = (((unsigned int) ((unsigned long) &mbox) & ~0xF) | (ch & 0xF)); // combine message address and channel number
+    // /* wait until we can write to the mailbox */
+    // do {
+    //     asm volatile("nop");
+    // } while (*MBOX_STATUS & MBOX_FULL);
+    // /* write the address of our message to the mailbox with channel identifier */
+    // *MBOX_WRITE = r;
+    // /* now wait for the response */
+    // while(1) {
+    //     /* is there a response? */
+    //     do{
+    //         asm volatile("nop");
+    //     } while (*MBOX_STATUS & MBOX_EMPTY);
+    //     /* is it a response to our message? */
+    //     if(r == *MBOX_READ)
+    //         /* is it a valid successful response? */
+    //         return mbox[1] == MBOX_RESPONSE;
+    // }
+    // return 0;
 }
 
 void get_board_revision()
@@ -81,7 +108,7 @@ void get_board_revision()
     mbox[6] = 0; // MBOX_TAG_LAST
     mbox_call(8);
 
-    uart_puts("==== board revision: 0x");
+    uart_puts("board revision: 0x");
     uart_hex(mbox[5]);
     uart_send('\n');
 }
@@ -98,10 +125,22 @@ void get_memory_info()
     mbox[7] = 0; // MBOX_TAG_LAST
     mbox_call(8);
 
-    uart_puts("==== arm memory base address : 0x");
-    uart_hex(mbox[5]);
-    uart_send('\n');
-    uart_puts("==== arm memory base size :      ");
-    uart_hex(mbox[6]);
-    uart_send('\n');
+    printf("arm memory base address : 0x%8x\n", mbox[5]);
+    printf("arm memory base size    :   %8x\n", mbox[6]);
+}
+
+void __get_memory_info(unsigned int *base, unsigned int *size)
+{
+    mbox[0] = 8 * 4;
+    mbox[1] = 0;
+    mbox[2] = GET_ARM_MEMORY;
+    mbox[3] = 8;
+    mbox[4] = 0; // TAG_REQUEST_CODE is 0
+    mbox[5] = 0;
+    mbox[6] = 0;
+    mbox[7] = 0; // MBOX_TAG_LAST
+    mbox_call(8);
+
+    *base = mbox[5];
+    *size = mbox[6];
 }

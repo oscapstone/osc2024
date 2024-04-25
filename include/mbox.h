@@ -24,8 +24,8 @@
  */
 
 /* a properly aligned buffer */
-#ifndef MBOX_H
-#define MBOX_H
+#ifndef __MBOX_H__
+#define __MBOX_H__
 
 extern volatile unsigned int mbox[36];
 
@@ -48,8 +48,10 @@ extern volatile unsigned int mbox[36];
 #define MBOX_TAG_LAST           0
 
 int mbox_call(unsigned char ch);
+int __mbox_call(unsigned char ch, volatile unsigned int *mailbox);
 void get_board_revision();
 void get_memory_info();
+void __get_memory_info(unsigned int *base, unsigned int *size);
 
 #endif
 

@@ -5,6 +5,8 @@
 #include "string.h"
 #include "initrd.h"
 #include "stddef.h"
+#include "memblock.h"
+#include "kernel.h"
 
 extern uint64_t __dtb_address;
 
@@ -14,6 +16,17 @@ void fdt_init()
 {
     uint64_t *tmp_pointer = (uint64_t *) &__dtb_address;
     dtb_address = (fdt_header *) *tmp_pointer;
+}
+
+void fdt_reserve_memory(void)
+{
+    int len = ALIGN(bswap_32(dtb_address->totalsize), 4096);
+    char *buf = (char *) dtb_address;
+
+    if (bswap_32(dtb_address->magic) != FDT_MAGIC)
+        return;
+
+    memblock_reserve((unsigned long) buf, ALIGN(len, 8));
 }
 
 /* Start from dtb_address, traverse all the node and property. */

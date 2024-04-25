@@ -1,14 +1,19 @@
 #ifndef __LIST_H__
 #define __LIST_H__ 
 
-/** Get the offset of MEMBER compared with the struct TYPE. 
+#include "stddef.h"
+#include "stdlib.h"
+
+/** 
+ * Get the offset of MEMBER compared with the struct TYPE. 
  * It cast address 0 to be the pointer of TYPE, then get the address of MEMBER.
  * Because the TYPE address is 0x0, so the address of ((TYPE *)0)->MEMBER is the offset.
  * Finally, it cast the offset to size_t */
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 
-/** It calculate the offset of member (compared with type), then recover the address of object by substracting the offset.
- *  Return the address of the object with type casting.
+/**
+ * It calculate the offset of member (compared with type), then recover the address of object by substracting the offset.
+ * Return the address of the object with type casting.
  */
 #define container_of(ptr, type, member) ({ \
     const typeof(((type *)0)->member) *__mptr = (ptr); \
@@ -17,7 +22,12 @@
 #define list_entry(ptr, type, member) container_of(ptr, type, member)
 
 #define list_for_each(pos, head) \
-    for (pos = (head)->next; pos != (head); pos = pos->next)
+    for (pos = (head)->next; pos != head; pos = pos->next)
+
+#define list_for_each_entry(pos, head, member) \
+    for (pos = list_entry((head)->next, typeof(*pos), member); \
+         &pos->member != (head); \
+         pos = list_entry(pos->member.next, typeof(*pos), member))
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
 

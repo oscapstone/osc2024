@@ -25,7 +25,7 @@
 
 .section ".text.boot"
 
-#define BOOTLOADER
+//#define BOOTLOADER
 
 .global _start
 _start:
@@ -40,8 +40,8 @@ _start:
 
 #ifndef BOOTLOADER
     // get the dtb address
-    ldr     x1, =__dtb_address
-    str     x0, [x1] // store the dtb address to the address given by the linker script
+    //ldr     x1, =__dtb_address
+    //str     x0, [x1] // store the dtb address to the address given by the linker script
 #endif
 
     // set exception vector table

@@ -40,8 +40,6 @@ extern fdt_header *dtb_address;
 
 void fdt_init();
 void fdt_traverse(void (*callback)(fdt_prop *, char *, char *));
-
-
-
+void fdt_reserve_memory(void);
 
 #endif

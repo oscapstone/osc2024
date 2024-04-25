@@ -41,6 +41,7 @@ int strcmp(const char *a, const char *b)
     return *(const unsigned char *)a - *(const unsigned char *)b;
 }
 
+/* if s1 == s2, return 0. Else return non-zero value */
 int memcmp(void *s1, void *s2, int n)
 {
     unsigned char *a=s1,*b=s2;
