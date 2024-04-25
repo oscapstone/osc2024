@@ -33,8 +33,10 @@ void PageSystem::info() {
   for (int8_t o = 0; o < total_order_; o++)
     if (not free_list_[o].empty()) {
       kprintf("  free_list %d: ", o);
+      save_DAIF_disable_interrupt();
       for (auto p : free_list_[o])
         kprintf("%p -> ", p);
+      restore_DAIF();
       kprintf("\n");
     }
   kprintf("---------------\n");
@@ -116,7 +118,7 @@ PageSystem::AllocatedPage PageSystem::split(AllocatedPage apage) {
   auto bvpn = buddy(vpn);
   array_[bvpn] = {.type = FRAME_TYPE::ALLOCATED, .order = o};
   auto bpage = vpn2addr(bvpn);
-  MM_DEBUG("split: %p + %p\n", apage, bpage);
+  MM_INFO("split: %p + %p\n", apage, bpage);
   return bpage;
 }
 
@@ -151,10 +153,10 @@ void PageSystem::merge(FreePage* apage) {
 }
 
 void* PageSystem::alloc(uint64_t size) {
-  save_DAIF_disable_interrupt();
-
   int8_t order = log2c(align<PAGE_SIZE>(size) / PAGE_SIZE);
   MM_DEBUG("alloc: size 0x%lx -> order %d\n", size, order);
+
+  save_DAIF_disable_interrupt();
   AllocatedPage apage = nullptr;
   for (int8_t ord = order; ord < total_order_; ord++) {
     auto fpage = free_list_[ord].front();
@@ -164,12 +166,13 @@ void* PageSystem::alloc(uint64_t size) {
     truncate(apage, order);
     break;
   }
+  restore_DAIF();
+
   if (apage)
     MM_DEBUG("alloc: -> page %p\n", apage);
   else
     MM_DEBUG("alloc: no page availiable\n");
 
-  restore_DAIF();
   return apage;
 }
 
