@@ -6,8 +6,6 @@
 
 volatile unsigned char *heap_head = ((volatile unsigned char *)(0x10000000));
 
-int page_start_idx = 0;
-int page_end_idx = 0;
 int page_num = 0;
 int total_object_num = 0;
 
@@ -30,7 +28,7 @@ void startup_allocate()
     memory_reserve((void *)0x80000, (void *)0x100000);    // Kernel image in the physical memory
     memory_reserve((void *)cpio_start, (void *)cpio_end); // Initramfs
     memory_reserve(startup_start, (void *)heap_head);     // startup allocator
-
+    
     page_allocator_init();
     object_allocator_init();
 }
@@ -44,6 +42,8 @@ void page_array_init(void *start, void *end)
     // initialize the page array
     for (int i = 0; i < page_num; i++)
     {
+        page_arr[i].idx = -1;
+        page_arr[i].page_idx = i;
         page_arr[i].address = cur;
         page_arr[i].val = FREE;
         page_arr[i].order_before_allocate = 0;
@@ -67,10 +67,48 @@ void object_array_init()
 
 void page_allocator_init()
 {
-    // move heap_head to the frame that hasn't used yet.
-    heap_head = (volatile unsigned char *)(((unsigned long long)heap_head / 4096 + 1) * 4096);
+    // initialize the free area array
+    for (int i = 0; i < MAX_ORDER; i++)
+    {
+        free_area_arr[i].free_list = NULL;
+        free_area_arr[i].nr_free = 0;
+    }
 
-    page_start_idx = (unsigned long long)heap_head / PAGE_SIZE;
+    for (int i = 0; i < page_num; i++) // traverse all the pages and merge the free and continous pages to the block
+    {
+        if (page_arr[i].val == FREE)
+        {
+            int j = i;
+            int count = 0;
+            // find the block order
+            while (page_arr[j].val == FREE)
+            {
+                j++;
+                count++;
+                if (count == 1024)
+                    break;
+            }
+            int order = -1;
+            while (count > 0)
+            {
+                count /= 2;
+                order++;
+            }
+            block_list_push(order, &page_arr[i]);
+            // set idx and val in this block
+            for (int k = i; k < j; k++)
+            {
+                page_arr[k].idx = k - i;
+                page_arr[k].val = (k == i ? order : BUDDY);
+            }
+            i = j; // set i to first page of next block 
+        }
+    }
+
+    /*// move heap_head to the frame that hasn't used yet.
+    heap_head = (volatile unsigned char *)((((void *)heap_head - PAGE_BASE) / PAGE_SIZE + 1) * PAGE_SIZE);
+
+    page_start_idx = ((void *)heap_head - PAGE_BASE) / PAGE_SIZE;
     page_end_idx = page_start_idx + 1024;
 
     // initialize the page array
@@ -89,7 +127,7 @@ void page_allocator_init()
         free_area_arr[i].nr_free = 0;
     }
     free_area_arr[10].free_list = &page_arr[page_start_idx];
-    free_area_arr[10].nr_free = 1;
+    free_area_arr[10].nr_free = 1;*/
 }
 
 void object_allocator_init()
@@ -240,7 +278,6 @@ void *allocate_block(int need_order)
             uart_hex_lower_case((unsigned long long)((block_head + page_num / 2)->address));
             uart_puts("\n");
 #endif
-
             block_list_push(order - 1, block_head + page_num / 2);
             order--;
         }
@@ -267,11 +304,11 @@ void merge_free_block(int order, page *free_block_head)
 
     while (1)
     {
-        int buddy_idx = page_start_idx + (free_block_head->idx ^ (1 << free_block_head->val)); // find the buddy.
+        int buddy_page_idx = free_block_head->page_idx + (free_block_head->idx ^ (1 << free_block_head->val)) - free_block_head->idx; // find the buddy.
 
-        if (page_arr[buddy_idx].val == free_block_head->val) // the buddy block is free and block size is equal to the free block.
+        if (page_arr[buddy_page_idx].val == free_block_head->val) // the buddy block is free and block size is equal to the free block.
         {
-            block_list_remove(page_arr[buddy_idx].val, &page_arr[buddy_idx]); // remove buddy block from free list
+            block_list_remove(page_arr[buddy_page_idx].val, &page_arr[buddy_page_idx]); // remove buddy block from free list
 
 #ifdef DEBUG
             uart_puts("Merge twe blocks that the order are ");
@@ -279,17 +316,17 @@ void merge_free_block(int order, page *free_block_head)
             uart_puts(" at 0x");
             uart_hex_lower_case((unsigned long long)free_block_head->address);
             uart_puts(" and at 0x");
-            uart_hex_lower_case((unsigned long long)page_arr[buddy_idx].address);
+            uart_hex_lower_case((unsigned long long)page_arr[buddy_page_idx].address);
             uart_puts("\n");
 #endif
 
-            if (buddy_idx < free_block_head->idx) // the buddy block is at front of the free block.
+            if (buddy_page_idx < free_block_head->page_idx) // the buddy block is at front of the free block.
             {
                 free_block_head->val = BUDDY;
-                free_block_head = &page_arr[buddy_idx];
+                free_block_head = &page_arr[buddy_page_idx];
             }
             else
-                page_arr[buddy_idx].val = BUDDY;
+                page_arr[buddy_page_idx].val = BUDDY;
 
             free_block_head->val++; // increase block size
         }
@@ -303,7 +340,7 @@ void merge_free_block(int order, page *free_block_head)
 
 void object_list_push(unsigned char *address)
 {
-    int page_idx = (address - (unsigned char *)PAGE_BASE) / PAGE_SIZE; // find the page index of object pool
+    int page_idx = (address - (unsigned char *)PAGE_BASE) / PAGE_SIZE;                  // find the page index of object pool
     int object_idx = (page_arr[page_idx].object_address - object_arr) / sizeof(object); // find the index of first object in object array in object pool
     while (object_arr[object_idx].address != address)
         object_idx++;
