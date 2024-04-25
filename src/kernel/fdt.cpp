@@ -38,7 +38,7 @@ void FDT::print() {
 void FDT::init(void* addr, bool debug) {
   base = (char*)addr;
 
-  klog("DTB ADDR       : %p\n", base);
+  klog("DTB addr       : %p ~ %p\n", startp(), endp());
 
   if (fdt_magic(base) != FDT_MAGIC) {
     klog("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base), FDT_MAGIC);
