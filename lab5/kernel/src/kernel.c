@@ -11,7 +11,6 @@ extern thread_t *curr_thread;
 extern thread_t *threads[];
 
 void kernel_main(char* arg) {
-	lock();
     dtb_init(arg);
 
 	uart_init();

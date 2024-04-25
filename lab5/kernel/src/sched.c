@@ -117,9 +117,8 @@ void dump_thread_info(thread_t* t) {
 }
 
 void idle() {
-    unlock();
     while (1) {
-        uart_puts("[*] Thread idle(0) is running.\n"); // debug
+        // uart_puts("[*] Thread idle(0) is running.\n"); // debug
         schedule();     // switch to next thread in run queue
     }
 }

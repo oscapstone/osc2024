@@ -72,7 +72,7 @@ void el1h_irq_router() {
         uart_puts("UNKNOWN el1h_irq_router\r\n");
     }
 
-    if (need_to_schedule) {
+    if (need_to_schedule == 1) {
         need_to_schedule = 0;
         schedule();
     }

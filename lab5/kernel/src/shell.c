@@ -20,12 +20,11 @@ static unsigned long long lock_count;
 
 
 void cli_start_shell() {
-    uart_puts("lock count: %d", lock_count);
     cli_print_welcome_msg();
 
     while (1) {
 		cli_clear_cmd(input_buf, MAX_CMD_LEN);
-		puts("▬▬ι" CYN "═══════- " CRESET "$ " );
+		uart_puts("▬▬ι" CYN "═══════- " CRESET "$ " );
 		cli_read_cmd(input_buf);
 		cli_exec_cmd(input_buf);
 	}
