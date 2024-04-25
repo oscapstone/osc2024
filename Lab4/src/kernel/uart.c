@@ -261,7 +261,7 @@ int uart_gets(char *buf, char **argv){
             }
         }
         else{
-            if(argv_buf_index[flag] < MAX_ARGV_LEN)
+            if(argv_buf_index[flag] < MAX_ARGV_LEN && input_char != ' ')
                 argv[flag][argv_buf_index[flag]++] = parse(input_char);
             uart_putc(input_char);
 
@@ -307,21 +307,24 @@ int uart_irq_gets(char *buf){
 
 void uart_irq_on(){
     *AUX_MU_IER_REG     |=   1;  //enable receive interrupt(transmit will be handled in its function)
+    *AUX_MU_IER_REG     |=   2;  //enable transmit interrupt
     *Enable_IRQs_1      |=   (1<<29);
 }
 
 void uart_irq_off(){
     mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG & ~(0x1));  //disable receive interrupt
+    mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG & ~(0x2));  //disable transmit interrupt
     *Disable_IRQs_1     |=   (1<<29);
 }
 
 int uart_irq_getc(){
     // there's char in buffer
     if(read_index_cur != read_index_tail){
+        int_off();
         int c = (int)read_buffer[read_index_cur++];
         // make it circular
         read_index_cur = read_index_cur % MAX_BUF_LEN;
-
+        int_on();
         return c;
     }
     else
@@ -329,15 +332,19 @@ int uart_irq_getc(){
 }
 
 void uart_irq_putc(unsigned char c){
+    int_off();
+
     write_buffer[write_index_tail++] = c;
     write_index_tail = write_index_tail % MAX_BUF_LEN;
+    
+    int_on();
     //p.12 The AUX_MU_IER_REG register is primary used to enable interrupts 
     mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | 0x2);
 }
 
 void uart_irq_puts(const char *str){
     int i;
-
+    int_off();
     for(i = 0; str[i] != '\0'; i++){
         if(str[i] == '\n'){
             write_buffer[write_index_tail++] = '\r';
@@ -346,6 +353,7 @@ void uart_irq_puts(const char *str){
         write_buffer[write_index_tail++] = str[i];
         write_index_tail = write_index_tail % MAX_BUF_LEN;
     }
+    int_on();
 
     mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | 0x2);
 }

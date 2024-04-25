@@ -3,6 +3,21 @@
 #include "kernel/gpio.h"
 #include "kernel/timer.h"
 #include "kernel/task.h"
+// test_NI is for testing nested interrupt
+int test_NI = 0;
+
+//static unsigned long long int_off_count = 0;
+void int_off(void){
+    asm volatile(
+        "msr daifset, 0xf;"
+    );
+}
+
+void int_on(void){
+    asm volatile(
+        "msr daifclr, 0xf;"
+    );
+}
 
 void c_exception_handler(){
     void *spsr1;
@@ -37,10 +52,10 @@ void c_exception_handler(){
     uart_putc('\n');
 
     uart_puts("Leaving exception handler\n");
-    
-    while(1){
+    // It will keep printing as next line of boot.S is 'b exception_handler'
+    /*while(1){
         asm volatile("nop");
-    }
+    }*/
 }
 
 void c_core_timer_handler(){
@@ -100,29 +115,48 @@ void c_write_handler(){
         
         write_index_cur = write_index_cur % MAX_BUF_LEN;
     }
-    // enable receiver interrupt
-    mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | (0x1));
+    // disable writer interrupt
+    mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | ~(0x2));
 }
 
 void c_recv_handler(){
-    while(!((*AUX_MU_LSR_REG) & 0x01) ){
-        // if bit 0 is set, break and return IO_REG
-        asm volatile("nop");
-    }
 
-    char c = (char)(*AUX_MU_IO_REG);
-    //uart_putc(c);
-    c = (c=='\r'?'\n':c);
+    char c = uart_getc();
 
     read_buffer[read_index_tail++] = c;
     read_index_tail = read_index_tail % MAX_BUF_LEN;
 
     // Put into write buffer such that the received char can be echoed out
-    write_buffer[write_index_tail++] = c;
-    write_index_tail = write_index_tail % MAX_BUF_LEN;
+    //write_buffer[write_index_tail++] = c;
+    //write_index_tail = write_index_tail % MAX_BUF_LEN;
 
-    //task_create_DF0(c_write_handler, 2);
-    mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | 0x2);
+    //task_create_DF0(c_write_handler, 0);
+
+    uart_putc(c);
+    
+    // Enable receiver interrupt
+    mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | 0x1);
+    //uart_puts("End of recv handler\n");
+}
+void gdb_brk(){
+    uart_puts("this is just for gdb\n");
+}
+void handler1(){
+    // clear register to prevent keeping interrupting
+    uart_getc();
+    uart_puts("handler1\n");
+    // use write interrupt to test nested interrupt
+    mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | (0x2));
+    delay(10000);
+    uart_puts("handler1 end\n");
+    PRI_TEST_FLAG = 1;
+    gdb_brk();
+}
+
+void handler2(){
+    uart_puts("handler2\n");
+    uart_puts("handler2 end\n");
+    PRI_TEST_FLAG = 1;
 }
 
 void c_timer_handler(){
@@ -193,13 +227,7 @@ void c_timer_handler(){
 
 void c_general_irq_handler(){
     unsigned int cpu_irq_src, gpu_irq_src;
-    unsigned long long spsr1, elr1, el;
-    // First save interrupt current status, then turn off interrupt by mask DAIF bits
-    /*asm volatile(
-        "mrs %[var1], daif;"
-        "msr daifset, 0xf;"
-        :[var1] "=r" (daif)
-    );*/
+    unsigned long long el;
 
     asm volatile(
         "mrs %[var1], CurrentEL;"
@@ -211,10 +239,6 @@ void c_general_irq_handler(){
     uart_putc('\n');*/
 
     cpu_irq_src = mmio_read((long)CORE0_INT_SRC);
-
-    /*uart_puts("core0 src:");
-    uart_b2x(cpu_irq_src);
-    uart_putc('\n');*/
     
     // Through this, we can see that uart interrupt is in pending register 1(0x00000100)
     /*irq_src = mmio_read((long)IRQ_basic_pending);
@@ -223,9 +247,7 @@ void c_general_irq_handler(){
     uart_putc('\n');*/
 
     gpu_irq_src = mmio_read((long)IRQ_pending_1);
-    /*uart_puts("pending 1:");
-    uart_b2x(gpu_irq_src);
-    uart_putc('\n');*/
+    
     // There periphial interrupt in pending 1 register
     // if bit29, meaning a async write or read
     if(gpu_irq_src & (1 << 29)){
@@ -237,17 +259,29 @@ void c_general_irq_handler(){
         if(irq_status & 0x4){
             // disable receive interrupt by setting bit1 to 0
             mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG & ~(0x1));
-            task_create_DF0(c_recv_handler, 1);
+            if(test_NI == 0)
+                task_create_DF0(c_recv_handler, 1);
+            else if(test_NI == 1)
+                task_create_DF0(handler1, 0);
+            else if(test_NI == 2)
+                task_create_DF0(handler1, 1);
+            prep_task();
+
             //c_recv_handler();
-            // not enable interrupt as we must first let recv_handler to execute
-            //mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | (0x1));
         }
         // [2:1]=01 : Transmit holding register empty
         if(irq_status & 0x2){
+            uart_puts("Transmit IRQ\n");
             // disable transmit interrupt, set bit2 to 0
             mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG & ~(0x2));
             //c_write_handler();
-            task_create_DF0(c_write_handler, 0);
+            if(test_NI == 0)
+                task_create_DF0(c_write_handler, 0);
+            else if(test_NI == 1)
+                task_create_DF0(handler2, 1);
+            else if(test_NI == 2)
+                task_create_DF0(handler2, 0);
+            prep_task();
         }
     }
     // CNTPNSIRQ interrupt bit, this is by observation, not quite sure why is that bit(which is Non-secure physical timer event.)
@@ -262,17 +296,12 @@ void c_general_irq_handler(){
             // disable core0 timer interrupt, 
             // p.13 https://github.com/Tekki/raspberrypi-documentation/blob/master/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
             mmio_write((long)CORE0_TIMER_IRQ_CTRL, 0);
-            c_timer_handler();
+            task_create_DF0(c_timer_handler, 0);
+            prep_task();
         }
     }
-    // Restore interrupt status
-    /*asm volatile(
-        "msr daif, %[var1];"
-        :
-        :[var1] "r" (daif)
-    );*/
     // Save the current state
-    asm volatile(
+    /*asm volatile(
         "mrs %[var1], spsr_el1;"
         "mrs %[var2], elr_el1;"
         : [var1] "=r" (spsr1), [var2] "=r" (elr1)
@@ -288,8 +317,5 @@ void c_general_irq_handler(){
         "msr elr_el1, %[var2];"
         :
         : [var1] "r" (spsr1), [var2] "r" (elr1)
-    );
-    /*while(1){
-
-    }*/
+    );*/
 }

@@ -126,3 +126,7 @@ unsigned int BE2LE(unsigned int BE){
 
     return LE;
 }
+
+void delay(unsigned int time){
+    while(time--);
+}

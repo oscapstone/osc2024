@@ -28,5 +28,6 @@ int simple_log(int num, int base);
 int find_min(int a, int b);
 // convert big endian to little endian 32bits
 unsigned int BE2LE(unsigned int BE);
+void delay(unsigned int time);
 
 #endif

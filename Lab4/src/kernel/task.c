@@ -2,6 +2,9 @@
 
 task_t* task_head = 0;
 task_t* task_tail = 0;
+int PRI_TEST_FLAG = 0;
+
+int cur_priority = 9999;
 
 // Function to insert a task into the task queue based on priority
 int task_create_DF1(void (*callback)(void *), void* data, int priority) {
@@ -160,4 +163,48 @@ void ExecTasks(void) {
     asm volatile(
         "msr daifclr, 0xf;"
     );
+}
+
+void prep_task(void){
+    int_on();
+    while(1){
+        task_t* cur = task_head;
+        int_off();
+
+        if(task_head == 0){
+            int_on();
+            delay(150);
+            break;
+        }
+        
+        // not execute if the task has lower priority
+        if(cur_priority <= cur->priority){
+            int_on();
+            delay(150);
+            break;
+        }
+        // next task got higher priority, prepare to execute it
+        // remove current task from list
+        task_head = cur->next;
+        if(task_head != 0){
+            task_head->prev = 0;
+        }
+        
+        // store original task priority
+        int prev = cur_priority;
+        cur_priority = cur->priority;
+
+        int_on();
+        delay(150);
+        // execute task
+        cur->callback(cur->data);
+        int_off();
+        delay(150);
+        // task finished, restore priority
+        cur_priority = prev;
+        int_on();
+        delay(150);
+        // free(cur)
+
+    }
 }
