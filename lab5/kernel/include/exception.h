@@ -13,6 +13,7 @@
 
 void print_currentEL();
 void invalid_exception_router(); // exception_handler.S
+void print_DAIF();
 
 void el1_interrupt_enable();
 void el1h_irq_router();

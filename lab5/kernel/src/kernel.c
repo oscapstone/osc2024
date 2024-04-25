@@ -23,7 +23,9 @@ void kernel_main(char* arg) {
     timer_list_init();
 
 	init_thread_sched();
-	el1_interrupt_enable();	
-
+	el1_interrupt_enable();
+	// cli_start_shell();
+	
 	load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
+	print_DAIF();
 }

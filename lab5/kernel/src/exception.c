@@ -47,6 +47,16 @@ void el1_interrupt_disable() {
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
+void print_DAIF() {
+    unsigned long long curr_daifclr;
+    unsigned long long curr_daifset;
+
+    __asm__ __volatile__("mrs %0, daifclr\n\t" : "=r"(curr_daifclr));
+    __asm__ __volatile__("mrs %0, daifset\n\t" : "=r"(curr_daifset));
+
+    uart_puts("daifclr: 0x%x, daifset: 0x%x", curr_daifclr, curr_daifset);
+}
+
 void el1h_irq_router() {
     lock();
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) {

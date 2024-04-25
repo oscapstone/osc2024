@@ -345,20 +345,20 @@ void cmd_kmalloc() {
     char *test5 = kmalloc(0x28);
     strcpy(test5, "  test kmalloc5");
     puts(test5);
-    puts("\r\n\r\n");
+    puts("\r\n");
 
     kfree(test1);
-    puts("\r\n");
+    // puts("\r\n");
 
     kfree(test2);
-    puts("\r\n");
+    // puts("\r\n");
 
     kfree(test3);
-    puts("\r\n");
+    // puts("\r\n");
 
     kfree(test4);
-    puts("\r\n");
+    // puts("\r\n");
 
     kfree(test5);
-    puts("\r\n");
+    // puts("\r\n");
 }

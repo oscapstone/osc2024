@@ -95,7 +95,7 @@ int uart_tx_buffer_isFull() {
 
 void uart_write_irq_handler() {
     lock();
-    // uart_puts("irq write handler\r\n");
+    uart_puts("irq write handler\r\n");
     if (uart_tx_buffer_isEmpty()) { // buffer empty
         *AUX_MU_IER_REG &= ~(2);    // disable write interrupt
         unlock();
@@ -113,7 +113,7 @@ void uart_write_irq_handler() {
 
 void uart_read_irq_handler() {
     lock();
-    // uart_puts("irq read handler\r\n");
+    uart_puts("irq read handler\r\n");
     if (uart_rx_buffer_isFull()) {  // buffer full
         *AUX_MU_IER_REG &= ~(1);    // disable read interrupt
         unlock();

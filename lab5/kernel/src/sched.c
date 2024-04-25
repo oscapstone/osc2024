@@ -17,7 +17,7 @@ int             done_sched_init = 0;
 
 void init_thread_sched() {
     lock();
-    run_queue = kmalloc(sizeof(list_head_t));
+    run_queue = kmalloc(sizeof(thread_t));
     INIT_LIST_HEAD(run_queue);
 
     char *thread_name = kmalloc(5);
@@ -29,9 +29,6 @@ void init_thread_sched() {
 	sprintf(thread_name, "shell");
 	thread_create(cli_start_shell, thread_name);
 
-
-    asm volatile("msr tpidr_el1, %0" ::"r"(&curr_thread->context));
-    done_sched_init = 1;
     unlock();
 }
 
@@ -101,14 +98,15 @@ void dump_thread_info(thread_t* t) {
 
 void idle() {
     unlock();
-    while (1) {
-        // uart_sendline("This is idle\n"); // debug
+    while (list_size(run_queue) > 1) {
+        uart_puts("This is idle\n"); // debug
         schedule();     // switch to next thread in run queue
     }
 }
 
 void schedule() {
-	unlock();
+    lock();
+    uart_puts("This is schedule\n"); // debug
 	do {
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
 		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
@@ -118,8 +116,8 @@ void schedule() {
 	// asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
 	// DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
 	// DEBUG("curr_thread->pid: %d\r\n", curr_thread->pid);
-	switch_to(get_current(), &(curr_thread->context));
-    unlock();
+	unlock();
+    switch_to(get_current(), &(curr_thread->context));
 }
 
 // void schedule_timer() {
