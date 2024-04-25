@@ -298,12 +298,12 @@ void merge_all(int print){
                     uart_puts("\n");
                     uart_send('\r');
                 }
-                merged = 1;  // Flag that a merge occurred
+                merged = 1; 
             }
         }
     }
     if (merged) {
-        merge_all(print);  // Only recurse if a merge occurred
+        merge_all(print);
     }
 }
 
