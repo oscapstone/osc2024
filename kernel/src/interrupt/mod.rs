@@ -1,4 +1,4 @@
-use crate::println;
+use crate::{println, println_polling};
 use driver::uart;
 
 use core::ptr::read_volatile;
@@ -20,9 +20,9 @@ pub fn rust_sync_handler() {
         core::arch::asm!("mrs {0}, elr_el1", out(reg) elr_el1);
         core::arch::asm!("mrs {0}, esr_el1", out(reg) esr_el1);
     }
-    println!("spsr_el1: {:#x}", spsr_el1);
-    println!("elr_el1: {:#x}", elr_el1);
-    println!("esr_el1: {:#x}", esr_el1);
+    println_polling!("spsr_el1: {:#x}", spsr_el1);
+    println_polling!("elr_el1: {:#x}", elr_el1);
+    println_polling!("esr_el1: {:#x}", esr_el1);
 }
 
 #[no_mangle]

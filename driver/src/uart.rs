@@ -29,7 +29,7 @@ struct RingBuffer {
     tail: usize,
 }
 
-impl RingBuffer{
+impl RingBuffer {
     pub fn new() -> RingBuffer {
         RingBuffer {
             buffer: [0; 1024],
@@ -76,7 +76,7 @@ static mut WRITE_RING_BUFFER: RingBuffer = RingBuffer {
 
 #[no_mangle]
 #[inline(never)]
-pub fn push_read_buf(c: u8){
+pub fn push_read_buf(c: u8) {
     unsafe {
         READ_RING_BUFFER.write(c);
     }
@@ -85,22 +85,18 @@ pub fn push_read_buf(c: u8){
 #[no_mangle]
 #[inline(never)]
 pub fn pop_read_buf() -> Option<u8> {
-    unsafe {
-        READ_RING_BUFFER.read()
-    }
+    unsafe { READ_RING_BUFFER.read() }
 }
 
 #[no_mangle]
 #[inline(never)]
 pub fn pop_write_buf() -> Option<u8> {
-    unsafe {
-        WRITE_RING_BUFFER.read()
-    }
+    unsafe { WRITE_RING_BUFFER.read() }
 }
 
 #[no_mangle]
 #[inline(never)]
-pub fn push_write_buf(c: u8){
+pub fn push_write_buf(c: u8) {
     unsafe {
         WRITE_RING_BUFFER.write(c);
     }
@@ -139,7 +135,6 @@ pub fn write_u8_buf(c: u8) {
     }
 }
 
-
 #[no_mangle]
 #[inline(never)]
 pub fn write_int(enable: bool) {
@@ -147,8 +142,7 @@ pub fn write_int(enable: bool) {
         // enable interrupt
         if enable {
             write_volatile(AUX_MU_IER_REG as *mut u32, 0b11);
-        }
-        else {
+        } else {
             write_volatile(AUX_MU_IER_REG as *mut u32, 0b01);
         }
     }
@@ -159,14 +153,13 @@ pub fn write_int(enable: bool) {
 pub fn send_write_buf() {
     loop {
         if let Some(s) = pop_write_buf() {
-            unsafe {write_u8(s)};
-        }
-        else {
+            unsafe { write_u8(s) };
+        } else {
             break;
         }
     }
     write_int(false);
-} 
+}
 // Initialize the UART
 #[no_mangle]
 #[inline(never)]
@@ -212,8 +205,6 @@ pub fn init_uart(int: bool) {
             // Set IRQs1 register to enable mini UART interrupt
             write_volatile(IRQS1_ADDR, 1 << 29);
             // write_volatile(IRQS2_ADDR, 1 << 25);
-
-
         } else {
             // Set AUX_MU_IER_REG to 0 (disable interrupts)
             write_volatile(AUX_MU_IER_REG as *mut u32, 0);
@@ -240,22 +231,43 @@ pub struct Uart;
 use core::fmt::{self, Write};
 
 pub struct UartWriter;
+pub struct UartWriterPolling;
+
 // core::fmt::write needs a mutable reference to the writer
 // we create a UartWriter which is implemented for Write trait with write_str method
 // write_str method writes the formatted string to the buffer
 impl Write for UartWriter {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        unsafe {
-            for i in s.bytes() {
-                write_u8_buf(i);
-            }
-            write_int(true);
+        for i in s.bytes() {
+            write_u8_buf(i);
         }
+        write_int(true);
         Ok(())
     }
     fn write_fmt(&mut self, args: core::fmt::Arguments) -> core::fmt::Result {
         core::fmt::write(&mut UartWriter, args).unwrap();
         Ok(())
+    }
+}
+
+
+
+impl Write for UartWriterPolling {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for i in s.bytes() {
+            unsafe { write_u8(i) };
+        }
+        Ok(())
+    }
+    fn write_fmt(&mut self, args: core::fmt::Arguments) -> core::fmt::Result {
+        core::fmt::write(&mut UartWriterPolling, args).unwrap();
+        Ok(())
+    }
+}
+
+impl UartWriterPolling {
+    pub fn new() -> UartWriterPolling {
+        UartWriterPolling
     }
 }
 
@@ -275,7 +287,7 @@ impl Uart {
 #[inline(never)]
 pub fn uart_write_str(s: &str) {
     for i in s.bytes() {
-        unsafe {write_u8(i)};
+        unsafe { write_u8(i) };
     }
 }
 

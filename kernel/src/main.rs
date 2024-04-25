@@ -40,14 +40,14 @@ fn get_initrd_addr(name: &str, data: *const u8, len: usize) -> Option<u32> {
         None
     }
 }
-
+#[no_mangle]
+#[inline(never)]
 fn exec(addr: extern "C" fn() -> !) {
     // set spsr_el1 to 0x3c0 and elr_el1 to the program’s start address.
     // set the user program’s stack pointer to a proper position by setting sp_el0.
     // issue eret to return to the user code.
     unsafe {
-        // enable_timer();
-        core::arch::asm!("
+                                                   core::arch::asm!("
         msr spsr_el1, {k}
         msr elr_el1, {a}
         msr sp_el0, {s}
@@ -85,7 +85,7 @@ fn shell(handler: CpioHandler) {
             }
             "ls" => {
                 for file in handler.get_files() {
-                    println!("{}", file.get_name());
+                    println!("{}, size: {}", file.get_name(), file.get_size());
                 }
             }
             "cat" => {
@@ -130,7 +130,6 @@ fn shell(handler: CpioHandler) {
                     continue;
                 }
                 let mut file = handler.get_files().find(|f| {
-                    println!("{} {}", f.get_name(), cmd[1]);
                     f.get_name() == cmd[1]}
                 );
                 if let Some(mut f) = file {
@@ -188,7 +187,6 @@ fn kernel_init() -> ! {
     } else {
         initrd_start = 0 as *mut u8;
     }
-
     let mut handler: CpioHandler = CpioHandler::new(initrd_start as *mut u8);
     let mut bh: BinaryHeap<u32> = BinaryHeap::new();
     // for i in 0..4096{

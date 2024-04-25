@@ -16,7 +16,6 @@ impl HeapMemory {
     }
 }
 
-
 pub fn alloc(layout: Layout, memory: &mut HeapMemory) -> *mut u8 {
     let size = layout.size();
     let align = layout.align();
@@ -27,3 +26,4 @@ pub fn alloc(layout: Layout, memory: &mut HeapMemory) -> *mut u8 {
     memory.current = new_current + size;
     new_current as *mut u8
 }
+

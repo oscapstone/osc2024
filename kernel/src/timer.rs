@@ -114,22 +114,6 @@ fn timer_callback(message: String) {
     println!("You have a timer after boot {}s, message: {}", current_time, message);
 }
 
-// pub fn test_binary_heap() {
-//     add_timer(timer_callback, 5, String::from("Hello, world! 5s"));
-//     add_timer(timer_callback, 4, String::from("Hello, world! 4s"));
-//     add_timer(timer_callback, 10, String::from("Hello, world! 10s"));
-//     add_timer(timer_callback, 3, String::from("Hello, world! 3s"));
-//     add_timer(timer_callback, 2, String::from("Hello, world! 2s"));
-//     add_timer(timer_callback, 9, String::from("Hello, world! 9s"));
-//     loop {
-//         if let Some(entry) = unsafe { TIMER_ENTRY_QUEUE.as_mut().unwrap().pop() } {
-//             println!("target_time: {}", entry.target_time);
-//         } else {
-//             break;
-//         }
-//     }
-// }
-
 fn set_timer_interrupt(target_time: u64) {
     unsafe {
         let addr: *mut u32 = 0x40000040 as *mut u32;

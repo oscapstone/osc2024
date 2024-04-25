@@ -13,11 +13,24 @@ pub fn _print(args: fmt::Arguments) {
     let mut writer = uart::UartWriter::new();
     writer.write_fmt(args);
 }
+#[no_mangle]
+#[inline(never)]
+pub fn _print_polling(args: fmt::Arguments) {
+    use core::fmt::Write;
+    let mut writer: uart::UartWriterPolling = uart::UartWriterPolling::new();
+    writer.write_fmt(args);
+}
 
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::print::_print(format_args!($($arg)*)));
 }
+
+#[macro_export]
+macro_rules! print_polling {
+    ($($arg:tt)*) => ($crate::print::_print_polling(format_args!($($arg)*)));
+}
+
 
 #[macro_export]
 macro_rules! println {
@@ -28,3 +41,12 @@ macro_rules! println {
     })
 }
 
+
+#[macro_export]
+macro_rules! println_polling {
+    () => ($crate::print_polling!("\r\n"));
+    ($($arg:tt)*) => ({
+        $crate::print::_print_polling(format_args_nl!($($arg)*));
+        $crate::print_polling!("\r")
+    })
+}
