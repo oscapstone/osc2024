@@ -1,5 +1,5 @@
 use super::bump;
-use alloc::collections::BTreeSet;
+use alloc::{collections::BTreeSet, vec::Vec};
 use core::alloc::{GlobalAlloc, Layout};
 use stdio::println;
 
@@ -10,8 +10,9 @@ enum BuddyState {
     Allocated,
 }
 
-const MEMORY_START: u32 = 0x1000_0000;
-const MEMORY_END: u32 = 0x1080_0000;
+// const MEMORY_START: u32 = 0x1000_0000;
+const MEMORY_START: u32 = 0;
+const MEMORY_END: u32 = 0x3c00_0000;
 const FRAME_SIZE: usize = 0x1000;
 
 const NFRAME: usize = (MEMORY_END - MEMORY_START) as usize / FRAME_SIZE;
@@ -21,10 +22,10 @@ struct Frame {
     state: BuddyState,
 }
 
-const LAYER_COUNT: usize = 12;
+const LAYER_COUNT: usize = 16;
 
 pub struct BuddyAllocator {
-    frames: [Frame; NFRAME],
+    frames: Vec<Frame, bump::BumpAllocator>,
     free_list: [BTreeSet<usize, bump::BumpAllocator>; LAYER_COUNT],
     verbose: bool,
 }
@@ -33,9 +34,7 @@ impl BuddyAllocator {
     pub const fn new() -> Self {
         const EMPTY: BTreeSet<usize, bump::BumpAllocator> = BTreeSet::new_in(bump::BumpAllocator);
         Self {
-            frames: [Frame {
-                state: BuddyState::Allocated,
-            }; NFRAME],
+            frames: Vec::new_in(bump::BumpAllocator),
             free_list: [EMPTY; LAYER_COUNT],
             verbose: false,
         }
@@ -49,6 +48,12 @@ impl BuddyAllocator {
             MEMORY_START,
             FRAME_SIZE
         );
+
+        for _ in 0..NFRAME {
+            self.frames.push(Frame {
+                state: BuddyState::Allocated,
+            });
+        }
         for idx in 0..NFRAME {
             if let BuddyState::Owned(_) = BUDDY_SYSTEM.frames[idx].state {
                 continue;
@@ -78,6 +83,10 @@ impl BuddyAllocator {
 
     fn faddr(&self, idx: usize) -> u32 {
         MEMORY_START + (idx * FRAME_SIZE) as u32
+    }
+
+    fn idx(&self, addr: u32) -> usize {
+        (addr - MEMORY_START) as usize / FRAME_SIZE
     }
 
     unsafe fn alloc_frame(&mut self, idx: usize) {
@@ -186,6 +195,9 @@ impl BuddyAllocator {
                 println!("Buddy out of range");
                 break;
             }
+            if layer == LAYER_COUNT - 1 {
+                break;
+            }
             match BUDDY_SYSTEM.frames[buddy].state {
                 BuddyState::Head(l) => {
                     if l == layer {
@@ -251,6 +263,21 @@ impl BuddyAllocator {
         BUDDY_SYSTEM.alloc_frame(idx);
         true
     }
+
+    pub unsafe fn reserve_by_addr_range(&mut self, start: u32, end: u32) -> bool {
+        let sidx = BUDDY_SYSTEM.idx(start);
+        let eidx = BUDDY_SYSTEM.idx(end);
+        for idx in sidx..eidx {
+            if BUDDY_SYSTEM.verbose {
+                println!("Reserving frame {}", idx);
+            }
+            if !BUDDY_SYSTEM.reserve_frame(idx) {
+                return false;
+            }
+        }
+        true
+    }
+
     pub unsafe fn toggle_verbose(&mut self) {
         BUDDY_SYSTEM.verbose = !BUDDY_SYSTEM.verbose;
         println!("Verbose: {}", BUDDY_SYSTEM.verbose);

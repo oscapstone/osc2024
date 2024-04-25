@@ -15,7 +15,7 @@ unsafe impl GlobalAlloc for BumpAllocator {
         let ret = CUR;
         CUR += size;
         CUR = (CUR + align - 1) & !(align - 1);
-        assert!(CUR < 0x2000_1000, "Bump allocator out of memory!");
+        assert!(CUR < 0x2100_0000, "Bump allocator out of memory!");
         debug!("Allocated {} bytes at 0x{:x}", size, ret);
         ret as *mut u8
     }
