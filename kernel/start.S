@@ -1,6 +1,14 @@
-.section .text
+.section .text.start
+.global _start
+
 
 _start:
+    // move devicetree's addr (ENABLE WHEN USING QEMU)
+    mov     x28, x0
+
+    // switch from EL2 to EL1
+    bl      el2_to_el1
+
     // set stack pointer
     ldr     x1, =__stack_top
     mov     sp, x1
