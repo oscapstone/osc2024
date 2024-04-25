@@ -7,7 +7,7 @@ _start:
     and     x1, x1, #0x3      // Keep the lowest two bits
     cbz     x1, setting     // if cpu_id > 0, stop
 proc_hang:
-    wfe                     // wait-for-event instruction, which makes processors 
+    wfe                     
     b       proc_hang
 setting:                      // if cpu_id == 0
     //mov     x27, x0
@@ -58,4 +58,4 @@ from_el2_to_el1:
 // mov: Move a value between registers or from a constant to a register.
 // ldr: load data from memory into a register
 // str: store (write) a value from a register into memory at a specified address.
-
+// wfe: wait-for-event instruction, which makes processors and is targeted at entering either standby, dormant or shutdown mode, where an interrupt is required to wake-up the processor.

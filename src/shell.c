@@ -3,7 +3,9 @@
 #include "alloc.h"
 #include "cpio_.h"
 #include "interrupt.h"
+#include "math_.h"
 #include "mbox.h"
+#include "mem.h"
 #include "string.h"
 #include "task.h"
 #include "timer.h"
@@ -15,8 +17,10 @@ extern void disable_interrupt();
 extern void core_timer_enable();
 extern void core0_timer_interrupt_enable();
 extern void core0_timer_interrupt_disable();
-extern void set_core_timer_int(unsigned long long s);
-extern void set_core_timer_int_sec(unsigned int s);
+extern void set_core_timer_int(uint64_t s);
+extern void set_core_timer_int_sec(uint32_t s);
+
+static void *ptr_buf[30];
 
 enum shell_status { Read, Parse };
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
@@ -47,12 +51,13 @@ enum ANSI_ESC decode_ansi_escape() {
 void shell_init() {
   uart_init();
   uart_flush();
-  // uart_send_string("\nInit UART done\r\n");
+  uart_send_string(
+      "\r\n======================= Kernel starts =======================\r\n");
 }
 
 void shell_input(char *cmd) {
   uart_send_string("\r# ");
-  int idx = 0, end = 0, i;
+  int32_t idx = 0, end = 0, i;
   cmd[0] = '\0';
   char c;
   while ((c = uart_read()) != '\n') {
@@ -107,7 +112,7 @@ void shell_controller(char *cmd) {
   }
 
   char *args[5];
-  unsigned int i = 0, idx = 0;
+  uint32_t i = 0, idx = 0;
   while (cmd[i] != '\0') {
     if (cmd[i] == ' ') {
       cmd[i] = '\0';
@@ -136,8 +141,8 @@ void shell_controller(char *cmd) {
         "set_timeout <MESSAGE> <SECONDS>: print the message after given "
         "seconds");
     uart_puts("demo_preempt: for the demo of the preemption mechanism");
-    uart_puts("loadimg: reupload the kernel image if the bootloader is used");
-
+    uart_puts("demo_malloc: for the demo of the memory allocator - malloc");
+    uart_puts("demo_free: for the demo of the memory allocator - free");
   } else if (!strcmp(cmd, "hello")) {
     uart_puts("Hello World!");
   } else if (!strcmp(cmd, "ls")) {
@@ -180,7 +185,6 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "timestamp")) {
     print_timestamp();
   } else if (!strcmp(cmd, "exec")) {
-    set_core_timer_int_sec(1);
     exec_in_el0(cpio_get_file_content_st_addr("user_prog.img"));
   } else if (!strcmp(cmd, "async_uart")) {
     enable_uart_interrupt();
@@ -194,7 +198,7 @@ void shell_controller(char *cmd) {
 
     wait_usec(1500000);
     char str_buf[50];
-    unsigned int n = uart_read_string_async(str_buf);
+    uint32_t n = uart_read_string_async(str_buf);
     uart_int(n);
     uart_send_string(" bytes received: ");
     uart_puts(str_buf);
@@ -207,7 +211,7 @@ void shell_controller(char *cmd) {
 
   } else if (!strncmp(cmd, "set_timeout", 11)) {
     char *msg = args[0];
-    unsigned int sec = atoi(args[1]);
+    uint32_t sec = atoi(args[1]);
 
     uart_send_string("set timeout: ");
     uart_int(sec);
@@ -221,15 +225,52 @@ void shell_controller(char *cmd) {
     enable_uart_interrupt();
     add_task(fake_long_handler, 99);
     pop_task();
-    uart_read_string_async(buf);
-    uart_send_string_async(buf);
+
+    uint32_t n = uart_read_string_async(buf);
+    uart_int(n);
+    uart_send_string(" bytes received: ");
+    uart_puts(buf);
+
+    n = uart_send_string_async(buf);
+    wait_usec(100000);
+    uart_send_string(", ");
+    uart_int(n);
+    uart_puts(" bytes sent");
+
     wait_usec(100000);
     disable_uart_interrupt();
     uart_send_string("\r\n");
-  } else if (!strcmp(cmd, "loadimg")) {
-    asm volatile(
-        "ldr x30, =0x60160;"
-        "ret;");
+  } else if (!strcmp(cmd, "demo_malloc")) {
+    int i;
+    for (i = 0; i < 20; i++) {
+      ptr_buf[i] = malloc(FRAME_SIZE);
+      wait_usec(2000000);
+    }
+    ptr_buf[i++] = malloc(16);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(16);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(32);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(32);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(64);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(64);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(128);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(128);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(256);
+    wait_usec(2000000);
+    ptr_buf[i++] = malloc(256);
+    wait_usec(2000000);
+  } else if (!strcmp(cmd, "demo_free")) {
+    for (int i = 0; i < 30; i++) {
+      free(ptr_buf[i]);
+      wait_usec(2000000);
+    }
   } else {
     uart_puts("shell: unvaild command");
   }
@@ -238,6 +279,7 @@ void shell_controller(char *cmd) {
 void shell_start() {
   enable_interrupt();
   core_timer_enable();
+  set_core_timer_int_sec(1);
   core0_timer_interrupt_enable();
 
   enum shell_status status = Read;

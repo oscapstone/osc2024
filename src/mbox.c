@@ -4,10 +4,10 @@
 #include "utli.h"
 
 /* mailbox message buffer */
-volatile unsigned int __attribute__((aligned(16))) mbox[36];
+volatile uint32_t __attribute__((aligned(16))) mbox[36];
 
-int mbox_call(unsigned char ch) {
-  unsigned int r = (((unsigned int)((unsigned long)&mbox) & ~0xF) | (ch & 0xF));
+int mbox_call(uint8_t ch) {
+  uint32_t r = (((uint32_t)((uint64_t)&mbox) & ~0xF) | (ch & 0xF));
   /* wait until we can write to the mailbox */
   do {
     asm volatile("nop");
@@ -46,11 +46,11 @@ void get_arm_base_memory_sz() {
   mbox[7] = MBOX_TAG_LAST;
 
   if (mbox_call(MBOX_CH_PROP)) {
-    uart_send_string("ARM memory base address: 0x");
+    uart_send_string("ARM memory base address: ");
     uart_hex(mbox[5]);
     uart_send_string("\r\n");
 
-    uart_send_string("ARM memory size: 0x");
+    uart_send_string("ARM memory size: ");
     uart_hex(mbox[6]);
     uart_send_string("\r\n");
 
@@ -73,7 +73,7 @@ void get_board_serial() {
   mbox[7] = MBOX_TAG_LAST;
 
   if (mbox_call(MBOX_CH_PROP)) {
-    uart_send_string("Borad serial number: 0x");
+    uart_send_string("Borad serial number: ");
     uart_hex(mbox[6]);
     uart_hex(mbox[5]);
     uart_send_string("\r\n");
@@ -94,8 +94,7 @@ void get_board_revision() {
   mbox[6] = MBOX_TAG_LAST;  // tags end
 
   if (mbox_call(MBOX_CH_PROP)) {
-    uart_send_string(
-        "Board revision: 0x");  // it should be 0xa020d3 for rpi3 b+
+    uart_send_string("Board revision: ");  // it should be 0xa020d3 for rpi3 b+
     uart_hex(mbox[5]);
     uart_send_string("\r\n");
   } else {

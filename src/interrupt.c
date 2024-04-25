@@ -5,7 +5,7 @@
 #include "uart1.h"
 #include "utli.h"
 
-static unsigned int el0_timer_trigger_cnt = 0;
+static uint32_t el0_timer_trigger_cnt = 0;
 extern void set_core_timer_int(unsigned long long s);
 extern void set_core_timer_int_sec(unsigned int s);
 extern void core0_timer_interrupt_disable();
@@ -17,16 +17,12 @@ static void el0_timer_interrupt_handler() {
   print_timestamp();
   uart_write('\n');
   set_core_timer_int_sec(2);
-  core0_timer_interrupt_enable();
 };
 
-static void el1_timer_interrupt_handler() {
-  timer_event_pop();
-  core0_timer_interrupt_enable();
-};
+static void el1_timer_interrupt_handler() { timer_event_pop(); }
 
 void el0_64_sync_interrupt_handler() {
-  add_task(print_el1_sys_reg, 20);
+  add_task(print_el1_sys_reg, SW_INT_PRIORITY);
   pop_task();
 }
 
@@ -45,7 +41,6 @@ void el0_64_irq_interrupt_handler() {
           "msr	esr_el1,  x1;"
           "b    shell_start");
     }
-    core0_timer_interrupt_disable();
     add_task(el0_timer_interrupt_handler, TIMER_INT_PRIORITY);
   }
   pop_task();
@@ -54,7 +49,6 @@ void el0_64_irq_interrupt_handler() {
 void el1h_irq_interrupt_handler() {
   if (*CORE0_INT_SRC & CORE_INT_SRC_TIMER) {
     set_core_timer_int(get_clk_freq() / 100);
-    core0_timer_interrupt_disable();
     add_task(el1_timer_interrupt_handler, TIMER_INT_PRIORITY);
   }
   if ((*CORE0_INT_SRC & CORE_INT_SRC_GPU) &&       //  (uart1_interrupt)

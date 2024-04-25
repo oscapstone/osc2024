@@ -4,4 +4,4 @@ kernel8.*
 build
 bootloader/bootloader.*
 bootloader_norlc/bootloader.*
-config.txt
+*.txt

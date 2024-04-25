@@ -1,4 +1,4 @@
-#include "math.h"
+#include "math_.h"
 #include "uart1.h"
 #include "utli.h"
 
@@ -8,10 +8,10 @@ int strcmp(const char *X, const char *Y) {
     X++;
     Y++;
   }
-  return *(const unsigned char *)X - *(const unsigned char *)Y;
+  return *(const uint8_t *)X - *(const uint8_t *)Y;
 }
 
-int strncmp(const char *X, const char *Y, unsigned int n) {
+int strncmp(const char *X, const char *Y, uint32_t n) {
   for (int i = 0; i < n; i++) {
     if (!X || !Y) {
       if (!X && !Y) {
@@ -21,23 +21,23 @@ int strncmp(const char *X, const char *Y, unsigned int n) {
       }
     } else {
       if (*X != *Y) {
-        return *(const unsigned char *)X - *(const unsigned char *)Y;
+        return *(const uint8_t *)X - *(const uint8_t *)Y;
       }
     }
   }
   return 0;
 }
 
-unsigned int strlen(const char *s) {
-  unsigned int i = 0;
+uint32_t strlen(const char *s) {
+  uint32_t i = 0;
   while (s[i]) {
     i++;
   }
   return i;
 }
 
-unsigned int atoi(char *str) {
-  unsigned int ret = 0;
+uint32_t atoi(char *str) {
+  uint32_t ret = 0;
   for (int i = 0; str[i] != '\0'; ++i) {
     if (str[i] > '9' || str[i] < '0') {
       return ret;
@@ -47,7 +47,7 @@ unsigned int atoi(char *str) {
   return ret;
 }
 
-char *memcpy(void *dest, const void *src, unsigned long long len) {
+char *memcpy(void *dest, const void *src, uint64_t len) {
   char *d = dest;
   const char *s = src;
   while (len--) {

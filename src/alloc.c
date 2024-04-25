@@ -2,10 +2,13 @@
 
 #include "utli.h"
 
-static unsigned char simple_malloc_buffer[SIMPLE_MALLOC_BUFFER_SIZE];
-static unsigned long simple_malloc_offset = 0;
+static uint8_t simple_malloc_buffer[SIMPLE_MALLOC_BUFFER_SIZE];
+static uint64_t simple_malloc_offset = 0;
+void *startup_alloc_start = (void *)simple_malloc_buffer;
+void *startup_alloc_end =
+    ((void *)simple_malloc_buffer + SIMPLE_MALLOC_BUFFER_SIZE);
 
-void *simple_malloc(unsigned int size) {
+void *simple_malloc(uint32_t size) {
   align_inplace(&size, 8);
 
   if (simple_malloc_offset + size >= SIMPLE_MALLOC_BUFFER_SIZE) {

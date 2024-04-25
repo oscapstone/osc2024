@@ -8,10 +8,10 @@ core_timer_enable:
 
 .global core0_timer_interrupt_enable
 core0_timer_interrupt_enable:
-  mov x0, 2
+  mov x0, 2             // bit1 (nCNTPNSIRQ IRQ control) : set to 1 -> IRQ enable)
   ldr x1, =CORE0_TIMER_IRQ_CTRL         
-  str w0, [x1]          // unmask the core0's timer interrupt ( bit1 (nCNTPNSIRQ IRQ control) : set to 1 -> IRQ enable)
-  ret
+  str w0, [x1]          // unmask the core0's timer interrupt 
+  ret                  
 
 .global core_timer_disable
 core_timer_disable:
