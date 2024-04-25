@@ -46,12 +46,19 @@ pub fn add_timer(callback: fn(String), time_sec: u64, message: String) {
         message: message,
     };
     unsafe {
-        set_timmer_interrupt(time_duration);
         if TIMER_ENTRY_QUEUE.is_none() {
             TIMER_ENTRY_QUEUE = Some(BinaryHeap::new());
         }
-        if TIMER_ENTRY_QUEUE.as_mut().unwrap().is_empty() {
+        if let Some(cur_ent) = TIMER_ENTRY_QUEUE.as_mut().unwrap().peek() {
+            if cur_ent.target_time > target_time {
+                set_timer_interrupt(target_time);
+            }
         }
+        else {
+            // if the queue is empty
+            set_timer_interrupt(target_time);
+        }
+
         TIMER_ENTRY_QUEUE.as_mut().unwrap().push(entry);
     }
 }
@@ -64,16 +71,16 @@ fn timer_boink() {
 
 pub fn timer_handler() {
     timer_boink();
-    driver::uart::uart_write_str("Timer interrupt!\n");
+    driver::uart::uart_write_str("Timer interrupt!\r\n");
     if let Some(queue) = unsafe {TIMER_ENTRY_QUEUE.as_mut()} {
         if let Some(entry) = queue.pop() {
             // execute the callback function
             (entry.callback)(entry.message.clone());
             if let Some(next_entry) = queue.peek() {
-                set_timmer_interrupt(next_entry.target_time - get_current_time());
+                set_timer_interrupt(next_entry.target_time);
             } else {
                 // queue is empty
-                disable_timmer_interrupt();
+                disable_timer_interrupt();
             }
         } else {
             panic!("No timer entry!");
@@ -123,15 +130,16 @@ fn timer_callback(message: String) {
 //     }
 // }
 
-fn set_timmer_interrupt(time: u64) {
+fn set_timer_interrupt(target_time: u64) {
     unsafe {
         let addr: *mut u32 = 0x40000040 as *mut u32;
         let basic_irq_enable: *mut u32 = 0x3F00B218 as *mut u32;
-        core::arch::asm!("msr cntp_tval_el0, {0}", in(reg) time);
+        core::arch::asm!("msr cntp_cval_el0, {0}", in(reg) target_time);
         println!(
-            "Debug: Set timer interrupt after {} tic, freq: {}",
-            time,
-            get_timer_freq()
+            "Debug: Set timer interrupt at {} tic, freq: {}, current {} tic",
+            target_time,
+            get_timer_freq(),
+            get_current_time()
         );
         // enable timer interrupt
         // write_volatile(basic_irq_enable, 0b1);
@@ -139,7 +147,7 @@ fn set_timmer_interrupt(time: u64) {
         write_volatile(addr, 0x2);
     }
 }
-fn disable_timmer_interrupt() {
+fn disable_timer_interrupt() {
     unsafe {
         let addr: *mut u32 = 0x40000040 as *mut u32;
         let basic_irq_enable: *mut u32 = 0x3F00B218 as *mut u32;
