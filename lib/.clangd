@@ -1,0 +1,5 @@
+CompileFlags:
+  Add: [
+    -I/Users/hsunhsun/Documents/Course/OS-capstone/osc2024/lib/include/lib,
+    -ffreestanding,
+  ]

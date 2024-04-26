@@ -2,16 +2,20 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,c
 
 ### BaBa ###
+# initrd
+*.cpio
+*.dtb
+
 # Test files
 test
 test.*
 
-# Build files
-kernel*
-
 ### C ###
 # Prerequisites
 *.d
+
+# Build
+*.img
 
 # Object files
 *.o
