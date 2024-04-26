@@ -15,4 +15,15 @@ U64 utils_strlen(const char *s);
 void utils_delay(U64 cycle);
 U32 utils_get_el();
 
+#define utils_read_sysreg(r) ({        \
+    unsigned long __val;         \
+    asm volatile("mrs %0, " #r   \
+                 : "=r"(__val)); \
+    __val;                       \
+})
+
+#define utils_write_sysreg(r, __val) ({                  \
+	asm volatile("msr " #r ", %0" :: "r" (__val)); \
+})
+
 #endif

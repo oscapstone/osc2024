@@ -1,8 +1,8 @@
 SECTIONS
 {
     /* bootloader load kernel to 0x80000 */
-    /*. = 0xffff000000080000; */
-    . = 0x80000;
+    . = 0xffff000000080000;
+    /*. = 0x80000;*/
     /* code section */
     .text :
     {
@@ -29,10 +29,6 @@ SECTIONS
         *(.bss)
         PROVIDE(__bss_end__ = .);
     }
-    /* identity mmu */
-    . = ALIGN(0x00001000);
-    __id_pgd__ = .;
-    .data.id_pgd : { . += (6 * (1 << 12)); }
     
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

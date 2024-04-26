@@ -25,14 +25,14 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/shell/shell.o \
 				src/fs/cpio.o \
 				src/peripherals/gpio.o src/peripherals/irq.o src/peripherals/timer.o src/peripherals/mailbox.o\
-				src/mm/mmutilASM.o src/mm/mem.o src/mm/mmu.o\
-				src/arm/elutilsASM.o\
+				src/mm/mmutilASM.o\
+				src/arm/elutilsASM.o src/arm/mmu.o\
 				)
 
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
-QEMU_DEVICE = /dev/pts/2
+QEMU_DEVICE = /dev/pts/3
 
 all : kernel.img
 
