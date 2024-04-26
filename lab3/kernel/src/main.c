@@ -29,12 +29,7 @@ void main() {
 
 	timer_init();
 
-	// TODO: bugge here 
-	//fdt_traverse(get_cpio_addr);
 
-	// while (1) {
-	// 	asm volatile("nop");
-	// }
 
     shell();
 

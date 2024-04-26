@@ -8,6 +8,9 @@
         "timer.h": "c",
         "auxregs.h": "c",
         "base.h": "c",
-        "fifo_buffer.h": "c"
+        "fifo_buffer.h": "c",
+        "mailbox.h": "c",
+        "bcm2837base.h": "c",
+        "mmu.h": "c"
     }
 }

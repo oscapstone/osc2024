@@ -5,8 +5,8 @@
 
 void gpio_set_func(U8 pinNumber, GpioFunc func) {
     U8 bitStart = (pinNumber * 3) % 30;
-    //U8 reg = pinNumber / 10;
-    U8 reg = 1;
+    U8 reg = pinNumber / 10;
+    //U8 reg = 1;
 
     register U32 selector = REGS_GPIO->func_select[reg];
     selector &= ~(7 << bitStart);

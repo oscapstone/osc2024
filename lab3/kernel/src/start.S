@@ -1,8 +1,11 @@
 .section ".text.boot"
 
 #include "arm/sysregs.h"
+#include "mm/mmu.h"
 
 .global _start
+
+#define PA(p) (p - 0xffff000000000000)
 
 _start:
 
@@ -22,17 +25,57 @@ init:
 	ldr		x3, =_dtb_ptr
 	str		x2, [x3]
 
+    // TODO: cpacr_el1
+    //ldr     x2, =CPACR_EL1_VAL
+    //msr     cpacr_el1, x2
+
 	// to exception level 1
 	bl		from_el2_to_el1
 
 el1_entry:
+	
 	// init stack pointer, because the code start from _start so lower address space can be stack
 	ldr		x1, =_start
 	mov		sp, x1
-	
+
+	// TODO: create page table here
+	//bl		create_page_table
+
+	// initialize the MMU
+    // put the page base address to ttbr0_el1 
+    // for kernel space
+    //adrp    x0, __id_pgd__
+    //msr     ttbr0_el1, x0
+
+    // setup TCR_EL1
+    ldr     x0, =TCR_CONFIG_DEFAULT
+    msr     tcr_el1, x0
+
+    // setup mair_el1
+    ldr     x1, =MAIR_VALUE
+    msr     mair_el1, x1
+
+    // enable the mmu using system control register
+    //mrs     x1, sctlr_el1
+    //orr     x1, x1, #SCTLR_MMU_ENABLED      // enable MMU
+    //msr     sctlr_el1, x1
+	// end initialize the MMU
+
+	// after enabling the MMU 
+	// stack pointer need the virtual address
+	//mov 	x1, #0
+    //movk 	x1, #0xffff, lsl 48
+	//mov		x0, sp
+	//orr		x0, x0, x1
+	//mov		sp, x0
+
 	// init bss
-	adr		x1, __bss_start__
-	adr		x2, __bss_size__
+	//ldr		x1, =PA(__bss_start__)
+	//ldr		x3, =PA(__bss_end__)
+	ldr		x1, =__bss_start__
+	ldr		x3, =__bss_end__
+	sub		x2, x3, x1
+	lsr		x2, x2, #3
 clear_bss:
 	cbz		x2, kernel_main
 	str		xzr, [x1], #8			// write zero to [x1] and write x1 = [x1 + 8], xzr is 64 bit (8 bytes) zero register
@@ -62,9 +105,10 @@ halt:
 	wfe
 	b		halt
 
+.section ".data"
+
 // variables
 .global _dtb_ptr
 
-.section ".data"
 _dtb_ptr: .quad 0x0
 

@@ -1,14 +1,10 @@
 SECTIONS
 {
-    /* bootloader load kernel to 0x80000 */
-    /*. = 0xffff000000080000; */
-    . = 0x80000;
+    . = 0x90000;
     /* code section */
     .text :
     {
-        /* keep the boot to the first section of text segment */
-        KEEP(*(.text.boot))
-        *(.text .text.*  .gnu.linkonce.t*)
+        KEEP(*(.text))
     }
     /* read only data section */
     .rodata :
@@ -25,14 +21,8 @@ SECTIONS
     .bss :
     {
         . = ALIGN(8);
-        PROVIDE(__bss_start__ = .);
         *(.bss)
-        PROVIDE(__bss_end__ = .);
     }
-    /* identity mmu */
-    . = ALIGN(0x00001000);
-    __id_pgd__ = .;
-    .data.id_pgd : { . += (6 * (1 << 12)); }
     
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

@@ -33,30 +33,32 @@ void show_invalid_entry_message(U32 type, U64 esr, U64 address, U64 spsr) {
 }
 
 void enable_interrupt_controller() {
+    // enable the interrupt
+    // AUX: Mini uart interrupt
+    // Sys timer 1: system timer 1
     REGS_IRQ->irq_enable_1 = AUX_IRQ | SYS_TIMER_1;
 }
 
 void handle_irq() {
+    // disable when handling irq
+    irq_disable();
     U32 irq = REGS_IRQ->irq_pending_1;
 
     while (irq) {
         // has AUX interrupt
         if (irq & AUX_IRQ) {
             irq &= ~AUX_IRQ;
-                
-            // pg. 13 in the read write bit
-            // 10: Receiver holds valid byte
-            // so when we and the iir with 4 getting 4
-            // mean the receiver holds valid byte
-            while ((REGS_AUX->mu_iir & 4) == 4) {
-                uart_handle_int();
-            }
+               
+            uart_handle_int();
         }
 
+        // has timer interrupt
         if (irq & SYS_TIMER_1) {
             irq &= ~SYS_TIMER_1;
 
             handle_timer_1();
         }
     }
+    // enable the interrupt again
+    irq_enable();
 }

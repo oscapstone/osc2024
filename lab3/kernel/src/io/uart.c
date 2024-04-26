@@ -6,14 +6,19 @@
 #include "utils/utils.h"
 #include "utils/printf.h"
 #include "utils/fifo_buffer.h"
+#include "peripherals/irq.h"
 
-static struct FIFO_BUFFER uart_fifo;
-static char uart_buffer[UART_BUFFER_SIZE];
+static struct FIFO_BUFFER uart_read_fifo;
+static char uart_read_buffer[UART_BUFFER_SIZE];
+
+static struct FIFO_BUFFER uart_write_fifo;
+static char uart_write_buffer[UART_BUFFER_SIZE];
 
 void uart_init() {
 
     // initialize the buffer
-    fifo_init(&uart_fifo, UART_BUFFER_SIZE, uart_buffer);
+    fifo_init(&uart_read_fifo, UART_BUFFER_SIZE, uart_read_buffer);
+    fifo_init(&uart_write_fifo, UART_BUFFER_SIZE, uart_write_buffer);
 
     gpio_set_func(TXD, GFAlt5);
     gpio_set_func(RXD, GFAlt5);
@@ -50,6 +55,14 @@ void uart_init() {
     REGS_AUX->mu_control = 3;
 
     utils_delay(500);
+}
+
+void uart_enable_int() {
+    REGS_IRQ->irq_enable_1 |= AUX_IRQ;
+}
+
+void uart_disable_int() {
+    REGS_IRQ->irq_disable_1 |= AUX_IRQ;
 }
 
 void uart_send_char(unsigned int c) 
@@ -115,22 +128,52 @@ void uart_hex64(U64 value) {
     }
 }
 
+// the mini uart interrupt handler
 void uart_handle_int() {
-    //uart_send_char(uart_get_char());
-    
-    if (fifo_put(&uart_fifo, uart_get_char())) {
-        uart_send_string("UART overflow");
+    // disable when handling current
+    uart_disable_int();
+
+    // pg. 13 in the read write bit
+    // 10: Receiver holds valid byte
+    // so when we and the iir with 4 getting 4
+    // mean the receiver holds valid byte
+    while ((REGS_AUX->mu_iir & 4) == 4) {
+        if (fifo_put(&uart_read_fifo, uart_get_char())) {
+            uart_send_string("UART overflow\r\n");
+        }
     }
+
+
+    if ((REGS_AUX->mu_iir & 2) == 2) {
+        while (fifo_status(&uart_write_fifo)) {
+            uart_send_char(fifo_get(&uart_write_fifo));
+        }
+        REGS_AUX->mu_ier &= ~(0x2);    // pg. 12 disable the transmit interrupt
+    }
+
+    uart_enable_int();
+}
+
+void uart_set_transmit_int() {
+    REGS_AUX->mu_ier |= 0x2;    // pg. 12 enable the transmit interrupt
 }
 
 BOOL uart_async_empty() {
-    return (fifo_status(&uart_fifo) == 0);
+    return (fifo_status(&uart_read_fifo) == 0);
 }
 
-char uart_a_get_char() {
-    char data = fifo_get(&uart_fifo);
+char uart_async_get_char() {
+    char data = fifo_get(&uart_read_fifo);
 
     return data;
+}
+
+int uart_async_write_char(U8 c) {
+    if (fifo_put(&uart_write_fifo, c) == -1) {
+        printf("Uart write buffer overflow.\n");
+        return -1;
+    }
+    return 0;
 }
 
 
