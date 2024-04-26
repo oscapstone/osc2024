@@ -8,13 +8,14 @@
 extern void from_el1_to_el0(uint64_t, uint64_t);
 
 #ifndef QEMU
-uint32_t CPIO_ADDR_FROM_DT = 0;
+uint64_t CPIO_START_ADDR_FROM_DT = 0;
+uint64_t CPIO_END_ADDR_FROM_DT = 0;
 #endif
 
 void cpio_list(int argc, char **argv)
 {   
 #ifndef QEMU
-    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR_FROM_DT;
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_START_ADDR_FROM_DT;
 #else
     cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR;
 #endif
@@ -76,7 +77,7 @@ void cpio_cat(int argc, char **argv)
     char *input_filename = argv[1];
 
 #ifndef QEMU
-    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR_FROM_DT;
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_START_ADDR_FROM_DT;
 #else
     cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR;
 #endif
@@ -123,7 +124,7 @@ void cpio_exec(int argc, char **argv)
     char *input_filename = argv[1];
 
 #ifndef QEMU
-    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR_FROM_DT;
+    cpio_newc_header* head = (void*)(uint64_t)CPIO_START_ADDR_FROM_DT;
 #else
     cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR;
 #endif
@@ -167,9 +168,15 @@ void initramfs_callback(char* node_name, char* property_name, fdt_prop* prop)
     // reference: https://stackoverflow.com/questions/73974443/how-does-the-linux-kernel-know-about-the-initrd-when-booting-with-a-device-tree
     if((strcmp(node_name, "chosen") == 0) && (strcmp(property_name, "linux,initrd-start") == 0)){
         void *data = (void*)prop + sizeof(fdt_prop);
-        CPIO_ADDR_FROM_DT = endian_swap(*(uint32_t*)data);
-        printf("\nInitramfs Address from DT: ");
-        printf_hex(CPIO_ADDR_FROM_DT);
+        CPIO_START_ADDR_FROM_DT = endian_swap(*(uint32_t*)data);
+        printf("\nInitramfs Start Address from DT: ");
+        printf_hex(CPIO_START_ADDR_FROM_DT);
+    }
+    if((strcmp(node_name, "chosen") == 0) && (strcmp(property_name, "linux,initrd-end") == 0)){
+        void *data = (void*)prop + sizeof(fdt_prop);
+        CPIO_END_ADDR_FROM_DT = endian_swap(*(uint32_t*)data);
+        printf("\nInitramfs End Address from DT: ");
+        printf_hex(CPIO_END_ADDR_FROM_DT);
     }
 }
 #endif

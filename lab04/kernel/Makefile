@@ -7,14 +7,15 @@ BUILD_DIR = build
 SRC_DIR = src
 
 
-all: clean kernel8.img
+all: clean makedir kernel8.img
 
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR) *.img
 
+makedir:
+	mkdir -p $(BUILD_DIR)
 $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
-	mkdir -p $(@D)
 	$(ARMGNU)-gcc $(COPS) -MMD -c $< -o $@
 
 $(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
@@ -34,14 +35,16 @@ kernel8.img: $(OBJ_FILES) $(SRC_DIR)/linker.ld
 	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
 
 .PHONY: run debug QEMU
-run: kernel8.img
+run: clean makedir kernel8.img
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd ../initramfs.cpio
 
 dump: kernel8.img
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -d in_asm
 
-debug: all
+gdb: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -S -s
 
 QEMU: COPS += -DQEMU
 QEMU: run
+DEBUG: COPS += -DDEBUG
+DEBUG: all

@@ -8,17 +8,27 @@
 #include "lib.h"
 #include "timer.h"
 #include "irq.h"
+#include "alloc.h"
 
 static void hello(int argc, char *argv[]);
 static void help(int argc, char *argv[]);
+static void clear(int argc, char *argv[]);
 static void mailbox(int argc, char *argv[]);
 static void test_malloc(int argc, char *argv[]);
 static void reboot(int argc, char *argv[]);
 static void set_timeout(int argc, char *argv[]);
+static void balloc_wrapper(int argc, char *argv[]);
+static void dynamic_alloc_wrapper(int argc, char *argv[]);
+static void dynamic_free_wrapper(int argc, char *argv[]);
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
 extern void cpio_exec(int argc, char *argv[]);
+extern void print_flist(int argc, char *argv[]);
+extern void print_allocated(int argc, char *argv[]);
+extern void bfree_wrapper(int argc, char* argv[]);
+extern void print_bslist(int argc, char* argv[]);
+
 
 int split_command(char* command, char *argv[]);
 
@@ -29,11 +39,19 @@ cmd cmds[] =
     {.name = "mailbox", .func = &mailbox,    .help_msg = "\nmailbox\t: print mailbox info"},
     {.name = "ls",      .func = &cpio_list,  .help_msg = "\nls\t: list files in the cpio archive"},
     {.name = "cat",     .func = &cpio_cat,   .help_msg = "\ncat\t: print file content in the cpio archive"},
-    {.name = "malloc",  .func = &test_malloc,.help_msg = "\nmalloc\t: test malloc function"},
+    {.name = "clear",   .func = &clear,      .help_msg = "\nclear\t: clear the screen"},
+    {.name = "s_malloc",  .func = &test_malloc,.help_msg = "\nmalloc\t: simple malloc function"},
     {.name = "reboot",  .func = &reboot,     .help_msg = "\nreboot\t: reboot the device"},
     {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
     {.name = "async",   .func = &async_shell, .help_msg = "\nasync\t: enter dummy async shell mode"},
-    {.name = "set_timeout", .func = &set_timeout, .help_msg = "\nset_timeout\t: set a new timer"}
+    {.name = "set_timeout", .func = &set_timeout, .help_msg = "\nset_timeout\t: set a new timer"},
+    {.name = "print_flist", .func = &print_flist, .help_msg = "\nprint_flist\t: print free list"},
+    {.name = "print_allocated", .func = &print_allocated, .help_msg = "\nprint_allocated\t: print allocated frames"},
+    {.name = "balloc", .func = &balloc_wrapper, .help_msg = "\nb_malloc\t: buddy system allocation"},
+    {.name = "bfree", .func = &bfree_wrapper, .help_msg = "\nbfree\t: buddy system free"},
+    {.name = "dalloc", .func = &dynamic_alloc_wrapper, .help_msg = "\ndalloc\t: dynamic allocation"},
+    {.name = "dfree", .func= &dynamic_free_wrapper, .help_msg = "\ndfree\t: dynamic free"},
+    {.name = "print_bslist", .func = &print_bslist, .help_msg = "\nprint_bslist\t: print buddy system list"}
 };
 
 
@@ -101,6 +119,11 @@ static void help(int argc, char **argv)
     }
 }
 
+static void clear(int argc, char **argv)
+{
+    printf("\033[H\033[J");
+}
+
 static void mailbox(int argc, char **argv)
 {
     printf("\nMailbox info:");
@@ -146,6 +169,57 @@ static void reboot(int argc, char **argv)
     reset(200);
 }
 
+// static void* alloc_queue[10] = {0};
+// static uint32_t alloc_queue_front = 0;
+// static uint32_t alloc_queue_rear = 0;
+
+static void balloc_wrapper(int argc, char **argv)
+{
+    if(argc != 2){
+        printf("\nUsage: balloc_wrapper <size>");
+        return;
+    }
+    uint64_t size = atoi(argv[1]);
+    void* pt = balloc(size);
+    if(pt == 0){
+        printf("\nAllocation failed");
+        return;
+    }
+    printf("\nAllocated at: "); printf_hex((uint64_t)pt);
+    printf("\n===============================");
+}
+
+static void dynamic_alloc_wrapper(int argc, char **argv)
+{
+    if(argc != 2){
+        printf("\nUsage: dynamic_alloc_wrapper <size>");
+        return;
+    }
+    uint64_t size = atoi(argv[1]);
+    void* pt = dynamic_alloc(size);
+    if(pt == 0){
+        printf("\nAllocation failed");
+        return;
+    }
+    printf("\nAllocated at: "); printf_hex((uint64_t)pt);
+    printf("\n===============================");
+}
+
+static void dynamic_free_wrapper(int argc, char *argv[])
+{
+    if(argc != 2){
+        printf("\nUsage: dynamic_free_wrapper <addr>");
+        return;
+    }
+    void* ptr = (void*)atoi_hex(argv[1]);
+    if(dfree(ptr)){
+        printf("\nFree failed");
+        return;
+    }
+    printf("\nFree success");
+
+}
+
 void readcmd(char x[256])
 {
     char input_char;
@@ -157,8 +231,8 @@ void readcmd(char x[256])
             if(input_index > 0){
                 input_index--;
                 printf("\b \b");
-                continue;
             }
+            continue;
         }
         x[input_index] = input_char;
         ++input_index;

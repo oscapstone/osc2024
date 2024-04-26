@@ -1,4 +1,4 @@
-# OSC2023-Lab03
+# OSC2023-Lab04
 
 | Github Account | Student ID | Name          |
 |----------------|------------|---------------|
@@ -19,4 +19,9 @@ make
 
 ```
 make QEMU
+```
+
+```
+## debug for qemu
+make DEBUG
 ```
