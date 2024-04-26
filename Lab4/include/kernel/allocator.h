@@ -6,11 +6,11 @@
 #include "kernel/dtb.h"
 #include "kernel/cpio.h"
 
-#define MAX_HEAP_SIZE       8192
+#define MAX_HEAP_SIZE       4194304
 #define PAGE_SIZE           4096
 #define BUDDY_START         0x0
 #define BUDDY_END           0x3C000000
-#define MAX_ORDER           18          // 2^17 ~= 128KB page frames = 512MB
+#define MAX_ORDER           19          // 0x3c000000/0x1000 = 0x3c000 = 245760 = 2^17 + 2^16 + 2^15 + 2^14, so the maximum order is 18(0~18)
 #define BUDDY_METADATA_ADDR 0x10000000
 // the number of memory pools
 #define NUM_POOLS   6
@@ -21,7 +21,7 @@ extern char* __end;
 extern char* _start;
 // make allocated variable global among all files
 extern char* allocated;
-extern int offset;
+extern int heap_offset;
 
 /*typedef struct buddy_block{
     unsigned int idx;           // the index of the block
