@@ -69,7 +69,7 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     uart_puts("\n");
 
     // no return from exception for now
-    // while(1);
+    while(1);
 }
 
 /**
@@ -108,24 +108,19 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
             syscall_handler(trapframe);
             break;
         case 1:
-            uart_puts("svc 1: user program\n");
-            uart_puts("name :");
+            uart_puts("svc 1: user program\nname :");
             shell_input(cmd);
             initrd_usr_prog(cmd);
             break;
         case 2:
             uart_puts("svc 2: enable timer\n");
             core_timer_enable();
-            // printf("Current time: %d\n", get_current_time());
-            uart_puts("Current time: ");
-            uart_hex(get_current_time());
-            uart_puts("\n");
+            printf("Current time: %d\n", get_current_time());
             break;
         case 3:
             unsigned long timeout;
             char message[64];
-            uart_puts("svc 3: set timeout\n");
-            uart_puts("timeout: ");
+            uart_puts("svc 3: set timeout\ntimeout: ");
             shell_input(cmd);
             timeout = (unsigned long) atoi(cmd);
 

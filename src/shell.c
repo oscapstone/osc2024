@@ -8,7 +8,7 @@
 void shell_init()
 {
     uart_init();
-    uart_puts("\n\n Hello from Raspi 3b+\n");
+    uart_puts("\n\n Hello from Raspi 3b+\n==== init: UART\n");
 }
 
 void shell_input(char *cmd)

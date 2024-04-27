@@ -5,7 +5,7 @@
 #include "dtb.h"
 #include "initrd.h"
 
-#define INIT_MEMLBOCK_REGIONS	(128)
+#define INIT_MEMLBOCK_REGIONS	(32)
 
 #define __for_each_mem_range(i, type_a, type_b,		\
 			   p_start, p_end)			\

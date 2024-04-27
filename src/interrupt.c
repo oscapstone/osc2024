@@ -9,7 +9,7 @@
 struct tasklet_struct tl_pool[2] = {
     {NULL, UART_TASKLET, uart_tasklet, 0},
     {NULL, TIMER_TASKLET, timer_tasklet, 0}};
-struct tasklet_head tl_head = {0};
+volatile struct tasklet_head tl_head = {0};
 volatile unsigned long cur_tl_priority = 0;
 
 /* Initialize the tasklet. */
@@ -19,7 +19,8 @@ void tasklet_init(void)
 
     /* Initialize the tasklet list. */
     tl_head.head = NULL;
-    tl_head.tail = &tl_head.head;
+    tl_head.tail = (struct tasklet_struct **) &tl_head.head;
+    uart_puts("==== init: Tasklet\n");
 }
 
 /* Add a tasklet to the tasklet list. */
@@ -47,8 +48,8 @@ void do_tasklet(void)
     /* Select the highest priority taskelt in the tl_head until there's no tasklet which priority greater than prev_priority */
     while (1)
     {
-        tl = &tl_head.head;
-        tl_iter = &tl_head.head;
+        tl = (struct tasklet_struct **) &tl_head.head;
+        tl_iter = (struct tasklet_struct **) &tl_head.head;
         todo = false;
         cur_tl = NULL;
 

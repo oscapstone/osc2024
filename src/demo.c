@@ -152,31 +152,16 @@ void demo_memory_allocator(void)
 {
     char *addr[10];
     int tmp = 6;
-    
-    /* Test memblock allocation */
-    // uart_puts("\n==Test memblock, allocate 16 bytes for 3 times.==\n");
-    // addr[0] = (char *) memblock_phys_alloc(16);
-    // uart_puts("addr: ");
-    // uart_hex((unsigned int) addr[0]);
-    // uart_puts("\n\n");
-    // addr[1] = (char *) memblock_phys_alloc(16);
-    // uart_puts("addr: ");
-    // uart_hex((unsigned int) addr[1]);
-    // uart_puts("\n\n");
-    // addr[2] = (char *) memblock_phys_alloc(16);
-    // uart_puts("addr: ");
-    // uart_hex((unsigned int) addr[2]);
-    // uart_puts("\n\n");
 
     /* Print the reservation information (printf has bugs, so print in qemu for now) */
-    // print_memblock_info();
+    print_memblock_info();
 
     get_buddy_info();
     uart_puts("==Get order 2 page for 6 times==\n\n");
     for (int i = 0; i < tmp; i++) {
         addr[i] = (char *) kmalloc(4096 << 2);
         uart_puts("addr: ");
-        uart_hex((unsigned int) addr[i]);
+        uart_hex((unsigned long) addr[i]);
         uart_puts("\n\n");
     }
     get_buddy_info();
@@ -189,25 +174,25 @@ void demo_memory_allocator(void)
     addr[0] = (char *) kmalloc(8);
     uart_puts("Get 8 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[0]);
+    uart_hex((unsigned long) addr[0]);
     uart_send('\n');
 
     addr[0] = (char *) kmalloc(8);
     uart_puts("Get 8 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[0]);
+    uart_hex((unsigned long) addr[0]);
     uart_send('\n');
 
     addr[1] = (char *) kmalloc(16);
     uart_puts("Get 16 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[1]);
+    uart_hex((unsigned long) addr[1]);
     uart_send('\n');
 
     addr[2] = (char *) kmalloc(16);
     uart_puts("Get 16 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[2]);
+    uart_hex((unsigned long) addr[2]);
     uart_send('\n');
 
     uart_puts("Free the previous 16 bytes\n");
@@ -216,6 +201,6 @@ void demo_memory_allocator(void)
     addr[1] = (char *) kmalloc(16);
     uart_puts("Get 16 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[1]);
+    uart_hex((unsigned long) addr[1]);
     uart_send('\n');
 }

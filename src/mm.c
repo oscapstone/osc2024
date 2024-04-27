@@ -172,7 +172,6 @@ static inline void page_frame_init(void)
 
     /* Initialize page structure*/
     for_each_memblock_type(i, &memblock.reserved, rgn) {
-        // printf("Reserved: %x - %x\n", rgn->base, rgn->base + rgn->size);
         for (unsigned long pfn = rgn->base >> 12; pfn < (rgn->base + rgn->size) >> 12; pfn++) {
             mem_map[pfn].flags = PG_RESERVED;
             INIT_LIST_HEAD(&(mem_map[pfn].buddy_list));
@@ -318,6 +317,7 @@ void mm_init(void)
     memblock_init();
     buddy_init();
     slab_init();
+    printf("==== init: Kernel Memory management\n");
 }
 
 struct page *__alloc_pages(unsigned int order)
@@ -341,21 +341,11 @@ void free_one_page(struct page *page, unsigned long pfn, unsigned int order)
 /* Get the memory information. */
 void get_buddy_info(void)
 {
-    // printf("\n=====================\nBuddy System Information\n-------------------\n");
-    // for (int i = 0; i < MAX_ORDER; i++) {
-    //     printf("Order %d free pages: %d\n", i, zone.free_area[i].nr_free);
-    // }
-    // printf("=====================\n\n");
-
-    uart_puts("\n=====================\nBuddy System Information\n-------------------\n");
+    printf("\n=====================\nBuddy System Information\n-------------------\n");
     for (int i = 0; i < MAX_ORDER; i++) {
-        uart_puts("Order ");
-        uart_hex(i);
-        uart_puts(" free pages: ");
-        uart_hex(zone.free_area[i].nr_free);
-        uart_send('\n');
+        printf("Order %d free pages: %d\n", i, zone.free_area[i].nr_free);
     }
-    uart_puts("=====================\n\n");
+    printf("=====================\n\n");
 }
 
 /* Kernel memory allocate, return physical address. */

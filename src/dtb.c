@@ -16,6 +16,9 @@ void fdt_init()
 {
     uint64_t *tmp_pointer = (uint64_t *) &__dtb_address;
     dtb_address = (fdt_header *) *tmp_pointer;
+
+    fdt_traverse(initramfs_callback);
+    printf("==== init: DTB & INITRD\n");
 }
 
 void fdt_reserve_memory(void)
