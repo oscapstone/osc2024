@@ -29,7 +29,7 @@ SRC_C = $(wildcard $(SRC_DIR)/*.c)
 SRC_ASM = $(wildcard $(SRC_DIR)/*.S)
 SRC_OBJS = $(SRC_C:$(SRC_DIR)/%.c=$(BUILD_DIR)/src/%.o)
 SRC_OBJS += $(SRC_ASM:$(SRC_DIR)/%.S=$(BUILD_DIR)/src/%.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -Iinclude -Ilibrary -c -g
+CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -mgeneral-regs-only -Iinclude -Ilibrary -c -g
 
 # TOOLCHAIN = aarch64-none-linux-gnu
 TOOLCHAIN = aarch64-none-elf

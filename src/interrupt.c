@@ -9,7 +9,7 @@
 struct tasklet_struct tl_pool[2] = {
     {NULL, UART_TASKLET, uart_tasklet, 0},
     {NULL, TIMER_TASKLET, timer_tasklet, 0}};
-volatile struct tasklet_head tl_head = {0};
+struct tasklet_head tl_head = {0};
 volatile unsigned long cur_tl_priority = 0;
 
 /* Initialize the tasklet. */

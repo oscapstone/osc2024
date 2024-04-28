@@ -1,7 +1,5 @@
 #include "sched.h"
 
-
-
 /* Execute `func` function at user mode. */
 void do_exec(void (*func)(void))
 {

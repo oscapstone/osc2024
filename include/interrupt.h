@@ -17,7 +17,7 @@ struct tasklet_struct {
 	struct tasklet_struct *next;
 	unsigned long state; // Use it to store priority.
 	void (*func)(unsigned long);
-	volatile unsigned long data;
+	unsigned long data;
 };
 
 /* Ref: kernel/softirq.c */
@@ -27,7 +27,7 @@ struct tasklet_head {
 };
 
 extern struct tasklet_struct tl_pool[2]; // I don't want to dynamically allocate memory for tasklet. So I use a fixed size pool.
-extern volatile struct tasklet_head tl_head; /* In linux, every cpu has its own tasklet_haed. */
+extern struct tasklet_head tl_head; /* In linux, every cpu has its own tasklet_haed. */
 extern volatile unsigned long cur_tl_priority; /* In osc2024 lab3, we use it to store the priority of current tasklet. */
 
 void do_tasklet(void);

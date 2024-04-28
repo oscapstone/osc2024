@@ -22,7 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-// extern volatile unsigned char _binary_ramdisk_start;
 #ifndef INITRD_H
 #define INITRD_H
 

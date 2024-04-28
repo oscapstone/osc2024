@@ -6,7 +6,7 @@
 #include "stdint.h"
 #include "demo.h"
 
-volatile struct timer timer_pool[NR_TIMER];
+struct timer timer_pool[NR_TIMER];
 
 /* Get current time by cntpct_el0 */
 unsigned long get_current_time()

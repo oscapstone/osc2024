@@ -24,7 +24,7 @@ struct timer {
     char message[64];
 };
 
-extern volatile struct timer timer_pool[NR_TIMER];
+extern struct timer timer_pool[NR_TIMER];
 
 extern void core_timer_enable(void); // defined in timer_.S
 unsigned long get_current_time(void);
