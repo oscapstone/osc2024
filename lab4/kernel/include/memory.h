@@ -19,18 +19,8 @@ void kfree(void *ptr);
 size_t get_memory_size();
 void memory_init();
 
-int allocate_frame();
-int allocate_frame_buddy(int begin_frame, int count, int val);
-
 void *page_malloc(size_t size);
 int page_free(void *frame);
-int page_insert(int val, frame_t *frame);
-frame_t *get_buddy(int val, frame_t *frame);
-
-void *frame_addr_to_phy_addr(frame_t *frame);
-frame_t *phy_addr_to_frame(void *ptr);
-size_t frame_to_index(frame_t *frame);
-frame_t *index_to_frame(size_t index);
 
 void dump_frame();
 

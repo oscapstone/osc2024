@@ -17,6 +17,108 @@
 
 extern char _heap_top;
 static char *khtop_ptr = &_heap_top;
+static unsigned int memory_size;
+static unsigned int max_frame;
+static frame_t *frame_array;
+static list_head_t *frame_freelist[MAX_VAL];
+
+static inline size_t frame_to_index(frame_t *frame)
+{
+    return (size_t)((frame_t *)frame - frame_array);
+}
+
+static inline frame_t *phy_addr_to_frame(void *ptr)
+{
+    return (frame_t *)&frame_array[(unsigned long)ptr / PAGE_FRAME_SIZE];
+}
+
+static inline void *frame_addr_to_phy_addr(frame_t *frame)
+{
+    return (void *)(frame_to_index(frame) * PAGE_FRAME_SIZE);
+}
+
+static inline frame_t *index_to_frame(size_t index)
+{
+    return &frame_array[index];
+}
+
+static inline frame_t *get_buddy(int val, frame_t *frame)
+{
+    // XOR(val, index)
+    return &(frame_array[frame_to_index(frame) ^ (1 << val)]);
+}
+
+static void *startup_malloc(size_t size)
+{
+    // -> khtop_ptr
+    //               header 0x10 bytes                   block
+    // ┌──────────────────────┬────────────────┬──────────────────────┐
+    // │  fill zero 0x8 bytes │ size 0x8 bytes │ size padding to 0x16 │
+    // └──────────────────────┴────────────────┴──────────────────────┘
+    //
+
+    void *sp;
+    asm("mov %0, sp" : "=r"(sp));
+    // 0x10 for heap_block header
+    char *r = khtop_ptr + 0x10;
+    // size paddling to multiple of 0x10
+    size = 0x10 + size - size % 0x10;
+    *(unsigned long long int *)(r - 0x8) = size;
+    khtop_ptr += size;
+    uart_puts("khtop_ptr: 0x%x, sp: 0x%x\n", khtop_ptr, sp);
+    return r;
+}
+
+static void startup_free(void *ptr)
+{
+    // TBD
+}
+
+static int page_insert(int val, frame_t *frame)
+{
+    // list_head_t *curr;
+    // list_for_each(curr, frame_freelist[val])
+    // {
+    //     if ((frame_t *)curr > frame)
+    //     {
+    //         list_add((list_head_t *)frame, curr->prev);
+    //         return 0;
+    //     }
+    // }
+    // uart_puts("page_insert: frame: 0x%x, frame_freelist[%d]: 0x%x\n", frame, val,frame_freelist[val]);
+    list_add((list_head_t *)frame, frame_freelist[val]);
+    return 0;
+}
+
+static int allocate_frame_buddy(int begin_frame, int count, int val)
+{
+    int size = 1 << val;
+    for (int i = 0; i < count; i++)
+    {
+        int curr_buddy = begin_frame + size * i;
+        frame_array[curr_buddy].val = val;
+        for (int j = 1; j < size; j++)
+            frame_array[curr_buddy + j].val = F_FRAME_VAL;
+        list_add_tail((list_head_t *)&(frame_array[curr_buddy]), frame_freelist[val]);
+    }
+    return 0;
+}
+
+static int allocate_frame()
+{
+    max_frame = memory_size / PAGE_FRAME_SIZE; // each frame is 4KB
+    frame_array = (frame_t *)startup_malloc(max_frame * sizeof(frame_t));
+    int begin_frame = 0;
+    for (int i = MAX_VAL - 1; i >= 0; i--)
+    {
+        frame_freelist[i] = (list_head_t *)startup_malloc(sizeof(list_head_t));
+        INIT_LIST_HEAD(frame_freelist[i]);
+        int count = (max_frame - begin_frame) / (1 << i);
+        allocate_frame_buddy(begin_frame, count, i);
+        begin_frame += count * (1 << i);
+    }
+    return 0;
+}
 
 void *kmalloc(size_t size)
 {
@@ -39,11 +141,6 @@ void kfree(void *ptr)
 {
     // TBD
 }
-
-unsigned int memory_size;
-unsigned int max_frame;
-frame_t *frame_array;
-list_head_t *frame_freelist[MAX_VAL];
 
 size_t get_memory_size()
 {
@@ -85,62 +182,6 @@ void memory_init()
         page_free(ptr[i]);
         dump_frame();
     }
-}
-
-static void *startup_malloc(size_t size)
-{
-    // -> khtop_ptr
-    //               header 0x10 bytes                   block
-    // ┌──────────────────────┬────────────────┬──────────────────────┐
-    // │  fill zero 0x8 bytes │ size 0x8 bytes │ size padding to 0x16 │
-    // └──────────────────────┴────────────────┴──────────────────────┘
-    //
-
-    void *sp;
-    asm("mov %0, sp" : "=r"(sp));
-    // 0x10 for heap_block header
-    char *r = khtop_ptr + 0x10;
-    // size paddling to multiple of 0x10
-    size = 0x10 + size - size % 0x10;
-    *(unsigned long long int *)(r - 0x8) = size;
-    khtop_ptr += size;
-    uart_puts("khtop_ptr: 0x%x, sp: 0x%x\n", khtop_ptr, sp);
-    return r;
-}
-
-static void startup_free(void *ptr)
-{
-    // TBD
-}
-
-int allocate_frame()
-{
-    max_frame = memory_size / PAGE_FRAME_SIZE; // each frame is 4KB
-    frame_array = (frame_t *)startup_malloc(max_frame * sizeof(frame_t));
-    int begin_frame = 0;
-    for (int i = MAX_VAL - 1; i >= 0; i--)
-    {
-        frame_freelist[i] = (list_head_t *)startup_malloc(sizeof(list_head_t));
-        INIT_LIST_HEAD(frame_freelist[i]);
-        int count = (max_frame - begin_frame) / (1 << i);
-        allocate_frame_buddy(begin_frame, count, i);
-        begin_frame += count * (1 << i);
-    }
-    return 0;
-}
-
-int allocate_frame_buddy(int begin_frame, int count, int val)
-{
-    int size = 1 << val;
-    for (int i = 0; i < count; i++)
-    {
-        int curr_buddy = begin_frame + size * i;
-        frame_array[curr_buddy].val = val;
-        for (int j = 1; j < size; j++)
-            frame_array[curr_buddy + j].val = F_FRAME_VAL;
-        list_add_tail((list_head_t *)&(frame_array[curr_buddy]), frame_freelist[val]);
-    }
-    return 0;
 }
 
 void *page_malloc(size_t size)
@@ -223,7 +264,7 @@ int page_free(void *ptr)
     int val = curr->val;
     curr->val = F_FRAME_VAL;
     // int new_val = val;
-    while (val < MAX_VAL-1)
+    while (val < MAX_VAL - 1)
     {
         frame_t *buddy = get_buddy(val, curr);
         if (buddy->val != val || list_empty((list_head_t *)buddy))
@@ -243,49 +284,6 @@ int page_free(void *ptr)
     curr->val = val;
     page_insert(val, curr);
     return 0;
-}
-
-int page_insert(int val, frame_t *frame)
-{
-    // list_head_t *curr;
-    // list_for_each(curr, frame_freelist[val])
-    // {
-    //     if ((frame_t *)curr > frame)
-    //     {
-    //         list_add((list_head_t *)frame, curr->prev);
-    //         return 0;
-    //     }
-    // }
-    // uart_puts("page_insert: frame: 0x%x, frame_freelist[%d]: 0x%x\n", frame, val,frame_freelist[val]);
-    list_add((list_head_t *)frame, frame_freelist[val]);
-    return 0;
-}
-
-void *frame_addr_to_phy_addr(frame_t *frame)
-{
-    return (void *)(frame_to_index(frame) * PAGE_FRAME_SIZE);
-}
-
-frame_t *phy_addr_to_frame(void *ptr)
-{
-    return (frame_t *)&frame_array[(unsigned int)ptr / PAGE_FRAME_SIZE];
-}
-
-size_t frame_to_index(frame_t *frame)
-{
-    return (size_t)((frame_t *)frame - frame_array);
-}
-
-frame_t *index_to_frame(size_t index)
-{
-    return &frame_array[index];
-}
-
-frame_t *get_buddy(int val, frame_t *frame)
-{
-    // XOR(val, index)
-    int index = frame_to_index(frame);
-    return &(frame_array[index ^ (1 << val)]);
 }
 
 void dump_frame()
