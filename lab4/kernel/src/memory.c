@@ -18,7 +18,7 @@
 extern char _heap_top;
 static char *khtop_ptr = &_heap_top;
 
-void *kmalloc(unsigned int size)
+void *kmalloc(size_t size)
 {
     // -> khtop_ptr
     //               header 0x10 bytes                   block
@@ -30,7 +30,7 @@ void *kmalloc(unsigned int size)
     char *r = khtop_ptr + 0x10;
     // size paddling to multiple of 0x10
     size = 0x10 + size - size % 0x10;
-    *(unsigned int *)(r - 0x8) = size;
+    *(size_t *)(r - 0x8) = size;
     khtop_ptr += size;
     return r;
 }
@@ -45,7 +45,7 @@ unsigned int max_frame;
 frame_t *frame_array;
 list_head_t *frame_freelist[MAX_VAL];
 
-unsigned int get_memory_size()
+size_t get_memory_size()
 {
     // print arm memory
     pt[0] = 8 * 4;
@@ -57,7 +57,7 @@ unsigned int get_memory_size()
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
-        return (unsigned int)pt[6];
+        return (size_t)pt[6];
     else
         return 0;
 }
@@ -66,28 +66,28 @@ void memory_init()
 {
     memory_size = get_memory_size();
     allocate_frame();
-    // print_frame();
-    void *test[10];
-    test[0] = page_malloc(1 * 4096);
-    print_frame();
-    test[1] = page_malloc(13 * 4096);
-    print_frame();
-    test[2] = page_malloc(13 * 4096);
-    print_frame();
-    test[3] = page_malloc(50 * 4096);
-    print_frame();
-    test[4] = page_malloc(20 * 4096);
-    print_frame();
-    test[5] = page_malloc(1 * 4096);
-    print_frame();
-    for (int i = 5; i >= 0; i--)
+
+// dump_frame();
+#define TEST_NUM 4
+    int size[TEST_NUM] = {5, 2, 43, 50};
+    int malloc_order[TEST_NUM] = {0, 3, 2, 1};
+    void *ptr[TEST_NUM];
+    int free_order[4] = {1, 3, 2, 0};
+    for (int i = 0; i < TEST_NUM; i++)
     {
-        page_free(test[i]);
-        print_frame();
+        ptr[i] = page_malloc(size[malloc_order[i]] * 1024);
+        uart_puts("malloc: 0x%x Bytes, address: 0x%x\n", size[malloc_order[i]] * 1024, ptr[i]);
+        dump_frame();
+    }
+    for (int i = 0; i < TEST_NUM; i++)
+    {
+        uart_puts("free: 0x%x Bytes, address: 0x%x\n", size[free_order[i]] * 1024, ptr[i]);
+        page_free(ptr[i]);
+        dump_frame();
     }
 }
 
-void *startup_malloc(unsigned long long int size)
+static void *startup_malloc(size_t size)
 {
     // -> khtop_ptr
     //               header 0x10 bytes                   block
@@ -96,13 +96,21 @@ void *startup_malloc(unsigned long long int size)
     // └──────────────────────┴────────────────┴──────────────────────┘
     //
 
+    void *sp;
+    asm("mov %0, sp" : "=r"(sp));
     // 0x10 for heap_block header
     char *r = khtop_ptr + 0x10;
     // size paddling to multiple of 0x10
     size = 0x10 + size - size % 0x10;
     *(unsigned long long int *)(r - 0x8) = size;
     khtop_ptr += size;
+    uart_puts("khtop_ptr: 0x%x, sp: 0x%x\n", khtop_ptr, sp);
     return r;
+}
+
+static void startup_free(void *ptr)
+{
+    // TBD
 }
 
 int allocate_frame()
@@ -135,7 +143,7 @@ int allocate_frame_buddy(int begin_frame, int count, int val)
     return 0;
 }
 
-void *page_malloc(unsigned int size)
+void *page_malloc(size_t size)
 {
     int val = 0;
     while ((1 << val) * PAGE_FRAME_SIZE < size)
@@ -148,7 +156,7 @@ void *page_malloc(unsigned int size)
     {
         curr = frame_freelist[val]->next;
         list_del_entry(curr);
-        index = (frame_t *)curr - frame_array;
+        index = frame_to_index((frame_t *)curr);
     }
     else
     {
@@ -191,14 +199,11 @@ void *page_malloc(unsigned int size)
 
         curr = frame_freelist[upper_val]->next;
         list_del_entry(curr);
-        char buf[VSPRINT_MAX_BUF_SIZE];
-        index = (frame_t *)curr - frame_array;
-        char buf1[VSPRINT_MAX_BUF_SIZE];
+        index = frame_to_index((frame_t *)curr);
         for (int j = upper_val; j > val; j--) // second half frame
         {
             frame_t *buddy = get_buddy(j - 1, (frame_t *)curr);
-            // sprintf(buf1, "curr: %x, curr_index: %d, buddy: %x, buddy_index: %d, val: %d, j-1: %d\n", curr, (frame_t *)curr - frame_array, buddy, buddy - frame_array, frame_array[index].val, j-1);
-            // uart_puts(buf1);
+            uart_puts("val: %d, split: (0x%x, 0x%x)\n", j, frame_addr_to_phy_addr((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)buddy));
             buddy->val = j - 1;
             list_del_entry((list_head_t *)buddy);
             page_insert(j - 1, buddy);
@@ -209,27 +214,26 @@ void *page_malloc(unsigned int size)
         return 0;
     }
     frame_array[index].val = val;
-    return (void *)(index * PAGE_FRAME_SIZE);
+    return frame_addr_to_phy_addr(index_to_frame(index));
 }
 
 int page_free(void *ptr)
 {
-    frame_t *curr = (frame_t *)&frame_array[(unsigned int)ptr / PAGE_FRAME_SIZE];
+    frame_t *curr = phy_addr_to_frame(ptr);
     int val = curr->val;
     curr->val = F_FRAME_VAL;
     // int new_val = val;
-    while (val < MAX_VAL)
+    while (val < MAX_VAL-1)
     {
         frame_t *buddy = get_buddy(val, curr);
-        char buf[VSPRINT_MAX_BUF_SIZE];
-        // sprintf(buf, "curr: %x, curr_index: %d, buddy: %x, buddy_index: %d, val: %d\n", curr, (frame_t *)curr - frame_array, buddy, buddy - frame_array, frame_array[(frame_t *)buddy - frame_array].val);
-        // uart_puts(buf);
         if (buddy->val != val || list_empty((list_head_t *)buddy))
         {
             // uart_puts("b\n");
             break;
         }
         list_del_entry((list_head_t *)buddy); // buddy is free and be able to merge
+        uart_puts("val: %d, merge: address(0x%x, 0x%x), frame(0x%x, 0x%x)\n", val, frame_addr_to_phy_addr((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)buddy), curr, buddy);
+
         buddy->val = F_FRAME_VAL;
         curr->val = F_FRAME_VAL;
         curr = curr < buddy ? curr : buddy;
@@ -241,57 +245,67 @@ int page_free(void *ptr)
     return 0;
 }
 
-frame_t *get_buddy(int val, frame_t *frame)
-{
-    // XOR(val, index)
-    int index = (frame - frame_array);
-    return &(frame_array[index ^ (1 << val)]);
-}
-
 int page_insert(int val, frame_t *frame)
 {
-    list_head_t *curr;
-    list_for_each(curr, frame_freelist[val])
-    {
-        if ((frame_t *)curr > frame)
-        {
-            list_add((list_head_t *)frame, curr->prev);
-            return 0;
-        }
-    }
-    list_add_tail((list_head_t *)frame, frame_freelist[val]);
+    // list_head_t *curr;
+    // list_for_each(curr, frame_freelist[val])
+    // {
+    //     if ((frame_t *)curr > frame)
+    //     {
+    //         list_add((list_head_t *)frame, curr->prev);
+    //         return 0;
+    //     }
+    // }
+    // uart_puts("page_insert: frame: 0x%x, frame_freelist[%d]: 0x%x\n", frame, val,frame_freelist[val]);
+    list_add((list_head_t *)frame, frame_freelist[val]);
     return 0;
 }
 
-void print_frame()
+void *frame_addr_to_phy_addr(frame_t *frame)
 {
-    char buf[VSPRINT_MAX_BUF_SIZE];
-    // sprintf(buf, "memory_size: %d, max_frame: %d\n", memory_size, max_frame);
-    // uart_puts(buf);
-    // for (int i = 0; i < max_frame; i++)
-    // {
-    //     if (frame_array[i].val == X_FRAME_VAL || frame_array[i].val == F_FRAME_VAL)
-    //     {
-    //         continue;
-    //     }
-    //     sprintf(buf, "index: %d, val: %d\n", i, frame_array[i].val);
-    //     uart_puts(buf);
-    // }
-    uart_puts("------------------------------------------------------------------------------------\r\n");
-    for (int i = MAX_VAL - 2; i >= 0; i--)
+    return (void *)(frame_to_index(frame) * PAGE_FRAME_SIZE);
+}
+
+frame_t *phy_addr_to_frame(void *ptr)
+{
+    return (frame_t *)&frame_array[(unsigned int)ptr / PAGE_FRAME_SIZE];
+}
+
+size_t frame_to_index(frame_t *frame)
+{
+    return (size_t)((frame_t *)frame - frame_array);
+}
+
+frame_t *index_to_frame(size_t index)
+{
+    return &frame_array[index];
+}
+
+frame_t *get_buddy(int val, frame_t *frame)
+{
+    // XOR(val, index)
+    int index = frame_to_index(frame);
+    return &(frame_array[index ^ (1 << val)]);
+}
+
+void dump_frame()
+{
+    for (int i = MAX_VAL - 1; i >= 0; i--)
     {
-        sprintf(buf, "---------------------- val: %d ----------------------\n", i);
-        uart_puts(buf);
-        struct list_head *curr;
         int count = 0;
+        struct list_head *curr;
         list_for_each(curr, frame_freelist[i])
         {
             count++;
-            sprintf(buf, "address: %x, val: %d, index: %d\n", ((frame_t *)curr), ((frame_t *)curr)->val, (frame_t *)curr - &(frame_array[0]));
-            uart_puts(buf);
         }
-        sprintf(buf, "%d KB : %d\n", (1 << i) * 4, count);
-        uart_puts(buf);
+        uart_puts("┌───────────────────────────────────────────────────────┐\r\n");
+        uart_puts("│            val:%2d ( 0x%8x B : %3d )              │\n", i, (1 << i) * PAGE_FRAME_SIZE, count);
+        uart_puts("├───────────────────────────────────────────────────────┤\n");
+        list_for_each(curr, frame_freelist[i])
+        {
+            uart_puts("│       index:%7d, address: 0x%8x, val:%2d      │\n", frame_to_index((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)curr), ((frame_t *)curr)->val);
+        }
+        uart_puts("└───────────────────────────────────────────────────────┘\r\n");
     }
-    uart_puts("------------------------------------------------------------------------------------\r\n");
+    uart_puts("---------------------------------------------------------\r\n");
 }

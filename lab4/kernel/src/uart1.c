@@ -79,8 +79,13 @@ void uart_send(unsigned int c)
     *AUX_MU_IO_REG = c;
 }
 
-void uart_puts(const char *s)
-{
+void uart_puts(char *fmt, ...) {
+    __builtin_va_list args;
+    __builtin_va_start(args, fmt);
+    char tmp[VSPRINT_MAX_BUF_SIZE];
+    char *s = tmp;
+    // use sprintf to format our string
+    vsprintf(s,fmt,args);
     while (*s)
         uart_send(*s++);
 }

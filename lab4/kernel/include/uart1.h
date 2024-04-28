@@ -5,7 +5,7 @@ void uart_init();
 void uart_flush_FIFO();
 char uart_recv();
 void uart_send(unsigned int c);
-void uart_puts(const char *s);
+void uart_puts(char *fmt, ...);
 char uart_async_recv();
 void uart_async_send(char c);
 void uart_interrupt_enable();
