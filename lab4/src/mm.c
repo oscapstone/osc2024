@@ -266,11 +266,54 @@ void mem_init()
         mem_map[i].cache = -1;
         mem_map[i].prev = 0;
         mem_map[i].next = 0;
-        // if (i % (1 << BUDDY_MAX_ORDER) == 0)
-        //     free_list_push(&free_area[BUDDY_MAX_ORDER], &mem_map[i],
-        //                    BUDDY_MAX_ORDER);
+        if (i % (1 << BUDDY_MAX_ORDER) == 0)
+            free_list_push(&free_area[BUDDY_MAX_ORDER], &mem_map[i],
+                           BUDDY_MAX_ORDER);
     }
-    // free_list_push(&free_area[BUDDY_MAX_ORDER], mem_map + 32, BUDDY_MAX_ORDER);
-    free_list_push(&free_area[BUDDY_MAX_ORDER], mem_map, BUDDY_MAX_ORDER);
+    // Reserve memory
+    //   Spin tables for multicore boot
+    //   Kernel image
+    //   Simple allocator
+    //   Initramfs
+    //   Devicetree
     free_list_display();
+}
+
+void memory_reserve(uint64_t start, uint64_t end)
+{
+    // Round the start and end addresses to the page boundary
+    start = start & ~(PAGE_SIZE - 1);
+    end = (end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    end--;
+
+    uart_puts("[INFO] Reserve memory from ");
+    uart_hex(start);
+    uart_puts(" to ");
+    uart_hex(end);
+    uart_puts("\n");
+
+    for (int order = BUDDY_MAX_ORDER; order >= 0; order--) {
+        struct page *current = free_area[order];
+        while (current != 0) {
+            struct page *next = current->next;
+            uint64_t page_start = (current - mem_map) * PAGE_SIZE;
+            uint64_t page_end = page_start + (PAGE_SIZE << order) - 1;
+            if (page_start >= start && page_end <= end) {
+                // The page is within the reserved memory range
+                // Remove the page from the free list
+                current->used = 1;
+                free_list_remove(&free_area[order], current);
+            } else if (start > page_end || end < page_start) {
+                // The page is outside the reserved memory range
+            } else {
+                // The page overlaps with the reserved memory range
+                // Split the page into two parts
+                struct page *half = get_buddy(current, order - 1);
+                free_list_remove(&free_area[order], current);
+                free_list_push(&free_area[order - 1], half, order - 1);
+                free_list_push(&free_area[order - 1], current, order - 1);
+            }
+            current = next;
+        }
+    }
 }

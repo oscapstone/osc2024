@@ -12,10 +12,10 @@ int main()
     /* Initialization */
     uart_init();
     alloc_init();
-    mem_init();
     enable_interrupt();
     timer_enable_interrupt();
     fdt_traverse(initrd_callback);
+    mem_init();
 
     /* Shell */
     uart_puts("Welcome!\n");
