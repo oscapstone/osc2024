@@ -17,7 +17,7 @@
 typedef struct page
 {
     unsigned char *address;
-    int idx, val;              // idx-> page index, val->page state
+    int idx, val;              // idx->index in block , val->page state
     int page_idx;              // the page index in page array
     int order_before_allocate; // if the page is allocated, the value is the block order, otherwise, its value is 0.
     int object_order;          // if the page is object pool, object_oder is the object order, otherwise, its value is -1.

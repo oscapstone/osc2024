@@ -102,6 +102,8 @@ void shell_cmd(char *cmd)
         uart_puts("\n");
         print_free_area();
         char *ptr = kmalloc(5000);
+        ptr = kmalloc(5000);
+        ptr = kmalloc(4000);
         uart_puts("-----------------------------------------------------\n");
         uart_puts("-----------------------------------------------------\n");
         kfree(ptr);

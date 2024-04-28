@@ -6,7 +6,7 @@
 
 volatile unsigned char *heap_head = ((volatile unsigned char *)(0x10000000));
 
-int page_num = 0;
+int total_page_num = 0;
 int total_object_num = 0;
 
 unsigned long long cpio_start = 0;
@@ -24,41 +24,43 @@ void startup_allocate()
     page_array_init(PAGE_BASE, PAGE_END);
     object_array_init();
 
-    memory_reserve((void *)0, (void *)0x1000);            // Spin tables for multicore boot (0x0000 - 0x1000)
-    memory_reserve((void *)0x80000, (void *)0x100000);    // Kernel image in the physical memory
-    memory_reserve((void *)cpio_start, (void *)cpio_end); // Initramfs
+    memory_reserve((void *)0, (void *)0x1000);            // spin tables for multicore boot (0x0000 - 0x1000)
+    memory_reserve((void *)0x80000, (void *)0x100000);    // kernel image in the physical memory
+    memory_reserve((void *)0x60000, (void *)0x80000);     // stack space
+    memory_reserve((void *)cpio_start, (void *)cpio_end); // initramfs
     memory_reserve(startup_start, (void *)heap_head);     // startup allocator
-    
+
     page_allocator_init();
     object_allocator_init();
 }
 
 void page_array_init(void *start, void *end)
 {
-    page_num = (end - start) / PAGE_SIZE;
-    page_arr = simple_malloc(page_num * sizeof(page)); // malloc page array
+    total_page_num = (end - start) / PAGE_SIZE;
+    page_arr = simple_malloc(total_page_num * sizeof(page)); // malloc page array
 
     unsigned char *cur = (unsigned char *)start;
     // initialize the page array
-    for (int i = 0; i < page_num; i++)
+    for (int i = 0; i < total_page_num; i++)
     {
-        page_arr[i].idx = -1;
-        page_arr[i].page_idx = i;
         page_arr[i].address = cur;
+        page_arr[i].idx = -1;
         page_arr[i].val = FREE;
+        page_arr[i].page_idx = i;
         page_arr[i].order_before_allocate = 0;
         page_arr[i].object_order = -1;
         page_arr[i].pre_block = NULL;
         page_arr[i].next_block = NULL;
         page_arr[i].object_address = NULL;
+
         cur += PAGE_SIZE;
     }
 }
 
 void object_array_init()
 {
-    object_arr = simple_malloc(page_num * sizeof(object)); // malloc same number of page array
-    for (int i = 0; i < page_num; i++)
+    object_arr = simple_malloc(total_page_num * sizeof(object)); // malloc same number of page array
+    for (int i = 0; i < total_page_num; i++)
     {
         object_arr[i].left = NULL;
         object_arr[i].right = NULL;
@@ -67,67 +69,51 @@ void object_array_init()
 
 void page_allocator_init()
 {
-    // initialize the free area array
+    // initialize the free area array.
     for (int i = 0; i < MAX_ORDER; i++)
     {
         free_area_arr[i].free_list = NULL;
         free_area_arr[i].nr_free = 0;
     }
 
-    for (int i = 0; i < page_num; i++) // traverse all the pages and merge the free and continous pages to the block
+    for (int start_page = 0; start_page < total_page_num; start_page++) // traverse all the pages and merge the continously free pages to the block.
     {
-        if (page_arr[i].val == FREE)
+        if (page_arr[start_page].val == FREE)
         {
-            int j = i;
-            int count = 0;
-            // find the block order
-            while (page_arr[j].val == FREE)
+            // find the block order.
+            int cur_page = start_page + 1;
+            int end_page = start_page;
+            int count = 1;
+            int order = 0;
+            int next_block_size = 2;
+            while (cur_page < total_page_num && page_arr[cur_page].val == FREE)
             {
-                j++;
                 count++;
+                if (count % next_block_size == 0)
+                {
+                    order++;
+                    next_block_size *= 2;
+                    end_page = cur_page;
+                }
+
                 if (count == 1024)
                     break;
+
+                cur_page++;
             }
-            int order = -1;
-            while (count > 0)
+
+            block_list_push(order, &page_arr[start_page]); // push block to free list.
+
+            // set idx and val in this block.
+            for (int k = start_page; k <= end_page; k++)
             {
-                count /= 2;
-                order++;
+                page_arr[k].idx = k - start_page;
+                page_arr[k].val = (k == start_page ? order : BUDDY);
             }
-            block_list_push(order, &page_arr[i]);
-            // set idx and val in this block
-            for (int k = i; k < j; k++)
-            {
-                page_arr[k].idx = k - i;
-                page_arr[k].val = (k == i ? order : BUDDY);
-            }
-            i = j; // set i to first page of next block 
+
+            start_page = end_page;
         }
     }
-
-    /*// move heap_head to the frame that hasn't used yet.
-    heap_head = (volatile unsigned char *)((((void *)heap_head - PAGE_BASE) / PAGE_SIZE + 1) * PAGE_SIZE);
-
-    page_start_idx = ((void *)heap_head - PAGE_BASE) / PAGE_SIZE;
-    page_end_idx = page_start_idx + 1024;
-
-    // initialize the page array
-    for (int i = page_start_idx; i < page_end_idx; i++)
-    {
-        page_arr[i].idx = i - page_start_idx;
-        page_arr[i].val = (i == page_start_idx ? 10 : BUDDY);
-    }
-    page_arr[page_start_idx].pre_block = NULL;
-    page_arr[page_start_idx].next_block = NULL;
-
-    // initialize the free area array
-    for (int i = 0; i < MAX_ORDER; i++)
-    {
-        free_area_arr[i].free_list = NULL;
-        free_area_arr[i].nr_free = 0;
-    }
-    free_area_arr[10].free_list = &page_arr[page_start_idx];
-    free_area_arr[10].nr_free = 1;*/
 }
 
 void object_allocator_init()
@@ -202,7 +188,7 @@ page *block_list_pop(int order)
 {
     page *block_head = free_area_arr[order].free_list;
 
-    if (block_head == NULL)
+    if (block_head == NULL) // if head of list is empty, return NULL
         return NULL;
 
     free_area_arr[order].free_list = free_area_arr[order].free_list->next_block; // move the head to the next block.
