@@ -4,6 +4,7 @@
 
 .global _start
 
+// transform p to physical address in kernel mode (EL1)
 #define PA(p) (p - 0xffff000000000000)
 
 _start:
@@ -51,10 +52,11 @@ el1_entry:
 	ldr		x1, =PA(_start)			// should use this version when switch the kernel mapping in linker script
 	mov		sp, x1
 
-	bl 		setup_kernel_page_table
+	// setup the identity mapping for lab and enable MMU
+	bl 		setup_identity_mapping
 
 	// after enabling the MMU 
-	// stack pointer need the virtual address
+	// stack pointer need to be in the virtual address
 	mov 	x1, #0
     movk 	x1, #0xffff, lsl 48
 
@@ -66,9 +68,7 @@ el1_entry:
     orr 	fp, x0, x1
 
 kernel_main:
-	ldr		x4, =main
-	br		x4
-	//bl		main					// branch label: will link in linking state
+	bl		main					// branch label: will link in linking state
 	b		halt
 
 from_el2_to_el1:

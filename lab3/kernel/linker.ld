@@ -29,6 +29,15 @@ SECTIONS
         *(.bss)
         PROVIDE(__bss_end__ = .);
     }
+    /* used for static memory allocation */
+    .data.static_mem :
+    {
+        PROVIDE(__static_mem_start__ = .);
+        . = ALIGN(8);
+        . += 8m;
+        PROVIDE(__static_mem_end__ = .);
+    }
+
     
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }

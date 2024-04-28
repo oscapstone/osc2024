@@ -28,4 +28,3 @@ memset_loop:
     bne     memset_loop
 end_memset:
     ret
-

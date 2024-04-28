@@ -42,6 +42,36 @@
     add sp, sp, #32 * 8
 .endm
 
+.macro kernel_entry el
+    save_all        // save all general register
+
+    // save the current exception register
+    sub     sp, sp, 2 * 16
+    
+    .if \el == 0
+    mrs     x0, sp_el0
+    stp     x0, [sp, 16 * 0]
+    .endif
+
+    mrs     x0, elr_el1
+    mrs     x1, spsr_el1
+    stp     x0, x1, [sp, 16 * 1]
+.endm
+
+.macro kernel_exit el
+    ldp     x0, x1, [sp, 16 * 1]
+    msr     spsr_el1, x1 
+    msr     elr_el1, x0 
+
+    .if \el == 0
+    ldp     x0, [sp, 16 * 0]
+    msr     sp_el0, x0
+    .endif
+
+    add     sp, sp, 2 * 16
+    load_all
+.endm
+
 .macro handle_invalid_entry type
     save_all
     mov     x0, #\type
@@ -95,9 +125,9 @@ sync_invalid_el1h:
     handle_invalid_entry SYNC_INVALID_EL1h
 
 handle_el1_irq:
-    save_all
+    kernel_entry 1
     bl      handle_irq
-    load_all
+    kernel_exit 1
     eret
 
 fiq_invalid_el1h:

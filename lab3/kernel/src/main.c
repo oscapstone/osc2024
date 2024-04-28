@@ -23,6 +23,9 @@ void main() {
 
 	init_printf(0, putc);
 
+	// init memory management	
+	mm_init();
+
 	set_exception_vector_table();
 	enable_interrupt_controller();
 	irq_enable();

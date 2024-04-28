@@ -19,6 +19,13 @@
  *     |11  | 10     |9     8|7  6|5   |4        2|
  * Bits [47:12]. This is the place where the address that a descriptor points to is stored. As I mentioned previously, only bits [47:12] of the address need to be stored, because all other bits are always 0.
  * Bits [63:48] Another set of attributes.
+ * 
+ * Virtual address format
+ * each level contain 9 bit
+ * for two level paging the page size is 1GB [29 ~ 0] = 2^30
+ * for three level paging the page size is 2MB [20 ~ 0] = 2^21
+ * for four level paging the page size is 4KB [11 ~ 0] = 2^12
+ * 4kb in memory is 0x1000
 */
 
 // [0, 2]
@@ -41,34 +48,8 @@
 // 4k page size
 #define PD_PAGE_SIZE        (1 << PD_PAGE_SHIFT)
 
-
-/**
- * ARMv8 p. 1990
- * MAIR register
- * Provides the memory attribute encodings corresponding to the possible AttrIndx values in a 
- * Long-descriptor format translation table entry for stage 1 translations at EL1.
- * This register is part of the Virtual memory control registers functional group
- * 
- * for page table to look the memory policy
- * 
-*/
-// for Device nGnRnE memory
-#define MAIR_DEVICE_nGnRnE      0b00000000
-// Normal memory, outer non-cacheable, normal memory, inner non-cacheable
-#define MAIR_NORMAL_NOCACHE     0b01000100
-// example define the attr0 for device nGnRnE
-#define MAIR_IDX_DEVICE_nGnRnE      0
-// example define the attr1 for normal non-cacheable memory
-#define MAIR_IDX_NORMAL_NOCACHE     1
-#define MAIR_DEFAULT_VALUE          ((MAIR_DEVICE_nGnRnE << (MAIR_IDX_DEVICE_nGnRnE * 8)) | (MAIR_NORMAL_NOCACHE << (MAIR_IDX_NORMAL_NOCACHE * 8)))
-
-/**
- * ARMv8 p. 2038
- * TCR register
-*/
-
-// config both TTBR0_EL1 and TTBR1_EL1 memory region
-#define TCR_CONFIG_REGION_48bit     (((64 - 48) << 0) | ((64 - 48) << 16))
-// set the TG0 and TG1 to 00 and 10 for 4K
-#define TCR_CONFIG_4KB              ((0b00 << 14) | (0b10 << 30))
-#define TCR_CONFIG_DEFAULT          (TCR_CONFIG_REGION_48bit | TCR_CONFIG_4KB)
+// can't use 0x0 for entry, the real machine will not work, 我蝦中了
+// the kernel boot page table entry
+#define PD_KERNEL_ENTRY     0x1000
+// 
+#define PD_FIRST_PUD_ENTRY  0x2000

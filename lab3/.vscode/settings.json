@@ -12,6 +12,8 @@
         "mailbox.h": "c",
         "bcm2837base.h": "c",
         "mmu.h": "c",
-        "sysregs.h": "c"
+        "sysregs.h": "c",
+        "elutils.h": "c",
+        "printf.h": "c"
     }
 }

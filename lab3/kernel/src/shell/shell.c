@@ -12,6 +12,9 @@
 
 extern char* _dtb_ptr;
 
+// the base of memory
+extern memory_manager mem_manager;
+
 char* cpio_addr;
 
 void get_cpio_addr(int token, const char* name, const void *data, unsigned int size) {
@@ -151,10 +154,13 @@ void shell() {
 			// Success! but will remove one day because it is ugly to run a program
 			elutil_from_el1_to_el0(0x90000);
 		}
-		 else if (utils_strncmp(cmd_space, "async", 4) == 0) {
+		 else if (utils_strncmp(cmd_space, "async", 5) == 0) {
 			printf("This will transmit A character for async uart\n");
 			uart_async_write_char('A');
 			uart_set_transmit_int();
+		 } else if (utils_strncmp(cmd_space, "mem", 3) == 0) {
+			printf("Memory base address: 0x%x\n", mem_manager.base_ptr);
+			printf("Memory size:         0x%x\n", mem_manager.size);
 		 }
 		 else {
 			uart_send_string("Unknown command\n");
