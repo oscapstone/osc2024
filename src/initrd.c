@@ -29,6 +29,8 @@
 #include "initrd.h"
 #include "stdint.h"
 #include "memblock.h"
+#include "exec.h"
+#include "mm.h"
 
 #define buf_size 128
 
@@ -128,7 +130,7 @@ void initrd_cat()
 
 void initrd_usr_prog(char *cmd)
 {
-    char *buf = cpio_base, *prog_addr;
+    char *buf = cpio_base, *prog_addr, *prog_page;
     int ns, fs;
     cpio_f *header;
 
@@ -144,26 +146,26 @@ void initrd_usr_prog(char *cmd)
         // check filename with buffer
         if (!strcmp(cmd, buf + sizeof(cpio_f))) {
             if (fs == 0) {
-                uart_send('\n');
-                uart_puts("user_program is empty.\n");
+                printf("\nUser program is empty\n");
                 return;
             } else {
-                uart_puts("\nInto user_program: ");
-                uart_puts(buf + sizeof(cpio_f));
-                uart_puts("\nAddress: ");
-                uart_hex((unsigned long) buf + ALIGN(sizeof(cpio_f) + ns, 4));
-                uart_send('\n');
+                printf("Into user_program: %s\n", buf + sizeof(cpio_f));
                 // get program start address
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
+                /* Allocate a page and copy the user program to the page. */
+                prog_page = (char *) kmalloc(4096);
+                memmove(prog_page, prog_addr, fs);
+
                 // jump to el0 and execute user program.
+                // do_exec((void (*)(void)) prog_addr);
                 asm volatile("mov x1, 0              \n\t"
                              "msr spsr_el1, x1       \n\t"
                              "mov x1, %0             \n\t"
                              "msr elr_el1, x1        \n\t"
                              "mov x1, 0x60000        \n\t"
                              "msr sp_el0, x1         \n\t"
-                             "eret                   \n\t"::"r" (prog_addr));
+                             "eret                   \n\t"::"r" (prog_page));
             }
         }
         // jump to the next file
@@ -177,9 +179,7 @@ void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
         cpio_base = (char *)((unsigned long)bswap_32(load_addr));
-        uart_puts("==== cpio_base: ");
-        uart_hex((unsigned long)cpio_base);
-        uart_send('\n');
+        printf("-- cpio_base: %x\n", cpio_base);
     }
 }
 

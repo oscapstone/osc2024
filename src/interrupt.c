@@ -12,7 +12,7 @@ struct tasklet_struct tl_pool[2] = {
 struct tasklet_head tl_head = {0};
 volatile unsigned long cur_tl_priority = 0;
 
-/* Initialize the tasklet. */
+/* Initialize tasklet related structures. */
 void tasklet_init(void)
 {
     cur_tl_priority = NO_TASKLET;

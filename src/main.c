@@ -1,13 +1,13 @@
 #include "uart.h"
 #include "shell.h"
 #include "dtb.h"
-#include "initrd.h"
 #include "exception.h"
 #include "sched.h"
 #include "timer.h"
 #include "interrupt.h"
 #include "mm.h"
 #include "demo.h"
+#include "exec.h"
 
 #define CMD_LEN 128
 
@@ -18,13 +18,13 @@ extern unsigned char _end;
 
 void main()
 {
-    shell_init(); // initialize the uart.
-    fdt_init(); // initialize the device tree blob and cpio base address.
-    timer_init(); // initialize timer pool.
-    tasklet_init(); // initialize tasklet related structures.
-    mm_init(); // Initialize the memory management: memblock, buddy, slab.
+    shell_init();
+    fdt_init();
+    timer_init();
+    tasklet_init();
+    mm_init();
+    sched_init();
 
-    /* Switch to el0 with interrupt enabled. */
     move_to_user_mode();
     while(1) {
         uart_puts("# ");

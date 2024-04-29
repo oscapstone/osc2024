@@ -60,18 +60,18 @@ extern char kstack_pool[NR_TASKS][KSTACK_SIZE];
 extern char ustack_pool[NR_TASKS][USTACK_SIZE];
 extern int num_running_task;
 
-/* function in schedule.S */
-extern struct task_struct *get_current();
+/* Get the task_struct of current task. */
+extern struct task_struct *get_current(void);
+/* Be called when doing context switch. */
 extern void switch_to(struct task_state_segment *prev, struct task_state_segment *next);
+/* Put the pointer of task_struct into tpidr_el1*/
 extern void update_current(struct task_struct *next);
 
-/* function in sched.c */
-void task_init(); // task init is to setup everything about task and the first task.
-void sched_init();
+void task_init(void);
+void sched_init(void);
 void context_switch(struct task_struct *next);
-int find_empty_task();
-int privilege_task_create(void (*func)(), long priority); // return the task_id
-void schedule();
-
+int find_empty_task(void);
+int privilege_task_create(void (*func)(), long priority);
+void schedule(void);
 
 #endif // __SCHED_H

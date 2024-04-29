@@ -21,6 +21,8 @@ static union task_union init_task = {INIT_TASK, };
 struct task_struct *current = &(init_task.task);
 */
 
+
+/* Initialize the task_struct and make kernel the first task. */
 void task_init()
 {
     for (int i = 0; i < NR_TASKS; i++) {
@@ -39,6 +41,7 @@ void task_init()
     num_running_task = 1;
 }
 
+/* Do context switch. */
 void context_switch(struct task_struct *next)
 {
     struct task_struct *prev = current; // the current task_struct address
@@ -46,6 +49,7 @@ void context_switch(struct task_struct *next)
     switch_to(&prev->tss, &next->tss);
 }
 
+/* Find empty task_struct. Return task id. */
 int find_empty_task()
 {
     int i;
@@ -57,6 +61,7 @@ int find_empty_task()
     return i;
 }
 
+/* Create new task and setup its task_struct. Return task id. */
 int privilege_task_create(void (*func)(), long priority)
 {
     int i = find_empty_task();
@@ -93,7 +98,6 @@ void schedule()
             if (task_pool[i].state == TASK_RUNNING)
                 task_pool[i].counter = (task_pool[i].counter >> 1) + task_pool[i].priority;
     }
-    // printf("schedule to task %d\n", next);
     context_switch(&task_pool[next]);
 }
 
@@ -110,7 +114,7 @@ void idle() {
     while(1);
 }
 
-
+/* Init task 0, enable core timer, interrupt. Then call schedule(). */
 void sched_init()
 {
     /* for OSDI-2020 Lab 4 requirement 1 */
@@ -129,6 +133,7 @@ void sched_init()
     // privilege_task_create(user_test, 5);
     // core_timer_enable();
     // idle();
+    task_init();
 
     enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
 

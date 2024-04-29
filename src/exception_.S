@@ -18,7 +18,7 @@ from_el2_to_el1:
     msr elr_el2, lr
 
     /* After eret, sp will be setup accordinge to sp_el1 */
-    mov x0, #0x60000
+    ldr x0, =_start
     msr sp_el1, x0
 
     eret // return to EL1

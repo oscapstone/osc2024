@@ -7,13 +7,18 @@ void core_timer_handler();
 void uart_interrupt_handler();
 
 void print_current_el(void);
+/* load_all register from stack and eret. */
 extern void exit_kernel();
 
-
-extern void move_to_user_mode(void); /* Move to user mode and enable interrupt in el0. Defined in exception_.S */
+/* Move to user mode and enable interrupt in el0. Defined in exception_.S */
+extern void move_to_user_mode(void);
+/* Enable interrupt. (DAIF) */
 extern void enable_interrupt();
+/* Disable interrupt. (DAIF) */
 extern void disable_interrupt();
+/* Enable IRQ only. */
 extern void enable_irq();
+/* Disable IRQ only. */
 extern void disable_irq();
 
 #endif // __EXCEPTION_H__

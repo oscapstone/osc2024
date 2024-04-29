@@ -5,6 +5,7 @@
 #include "initrd.h"
 #include "demo.h"
 
+/* Initialize UART and print Hello message. */
 void shell_init()
 {
     uart_init();

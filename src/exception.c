@@ -191,14 +191,16 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
     }
 }
 
-/* Substract the current task counter value */
+/* Substract the current task counter value and call schedule(). */
 void do_timer()
 {
+    // printf("[do timer]\n");
     if (--current->counter > 0)
         return;
     schedule();
 }
 
+/* Set the next core timer interrupt. Update timer related structure. */
 void core_timer_handler()
 {
     /* Mask the core timer interrupt first. Mask CORE0_TIMER_IRQ_CTRL. Spec says it will be done automatically? */
@@ -207,28 +209,23 @@ void core_timer_handler()
     /*     Setup next timer interrupt */
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
-        "mov x1, #2             \n\t"
+        "mov x1, #1             \n\t"
         "mul x0, x0, x1         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
 
-    /* Add a tasklet to tl_head */
     tasklet_add(&tl_pool[TIMER_TASKLET - 1]);
-    /* Enable other interrupt */
     enable_interrupt();
-    /* Do tasklet */
     do_tasklet();
-
-    // do_timer(); // multi-tasking function.
 
     /* Enable the core timer interrupt */
     *CORE0_TIMER_IRQ_CTRL |= (1 << 1);
+    do_timer(); // do_timer() may context switch, so we put it after enable the timer interrupt.
 }
 
+/* Print the current exception level. */
 void print_current_el(void)
 {
     unsigned long current_el;
     asm volatile("mrs %0, CurrentEL" : "=r" (current_el));
-    uart_puts("==== CurrentEL: ");
-    uart_hex((current_el >> 2) & 0x3);
-    uart_puts("\n");
+    printf("-- CurrentEL: %d\n", (current_el >> 2) & 0x3);
 }

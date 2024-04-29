@@ -1,7 +1,7 @@
 #ifndef __DEMO_H__
 #define __DEMO_H__
 
-#define DEMO // This macro is for demo tasklet (nested interrupt) for now.
+// #define DEMO // This macro is for demo tasklet (nested interrupt) for now.
 
 void demo_task1(void);
 void demo_task2(void);

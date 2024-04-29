@@ -21,19 +21,19 @@ int sys_get_taskid(struct trapframe *trapframe)
     return SYSCALL_SUCCESS;
 }
 
+/* uart read system call: x0: buffer address, x1: buffer size */
 int sys_uart_read(struct trapframe *trapframe)
 {
     /* x0: buffer address, x1: buffer size */
     char *buff_addr = (char *) trapframe->x[0];
     size_t buff_size = (size_t) trapframe->x[1];
-    for (int i = 0; i < buff_size; i++) {
+    for (int i = 0; i < buff_size; i++)
         buff_addr[i] = uart_getc();
-        uart_send(buff_addr[i]); // show the user input
-    }
     trapframe->x[0] = buff_size; // return the number of bytes read
     return SYSCALL_SUCCESS;
 }
 
+/* uart write system call: x0: buffer address, x1: buffer size */
 int sys_uart_write(struct trapframe *trapframe)
 {
     /* x0: buffer address, x1: buffer size */
@@ -45,6 +45,7 @@ int sys_uart_write(struct trapframe *trapframe)
     return SYSCALL_SUCCESS;
 }
 
+/* sys_exec: the function won't return? */
 int sys_exec(struct trapframe *trapframe)
 {
     do_exec((void (*)(void))trapframe->x[0]);
@@ -68,7 +69,6 @@ int sys_fork(struct trapframe *trapframe)
         kstack_pool[child_task_id][i] = kstack_pool[current->task_id][i];
         ustack_pool[child_task_id][i] = ustack_pool[current->task_id][i];
     }
-
 
     // compute the relative address between current task kstack and ustack
     int kstack_offset = kstack_pool[child_task_id] - kstack_pool[current->task_id];

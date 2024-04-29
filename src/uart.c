@@ -222,15 +222,6 @@ int uart_async_gets(char *buf)
 /* uart_tasklet: do enqueue read buffer */
 void uart_tasklet(unsigned long data)
 {
-#ifdef DEMO
-    uart_puts("Into uart_tasklet\n");
-#endif
-
     char c = (char)data;
     enqueue_char(&read_buffer, c);
-
-#ifdef DEMO
-    wait_cycles(5000000); // For demo nested irq in raspi 3b+, this delay is enough.
-    uart_puts("Exit uart_tasklet\n");
-#endif
 }

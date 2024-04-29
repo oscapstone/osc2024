@@ -43,6 +43,7 @@
 
 #define clamp(val, lo, hi) (min((max(val, lo)), (hi)))
 
+/* memmove: move 'n' byte from 'src' to 'dest'. */
 static inline void memmove(void *dest, const void *src, unsigned int n) {
     char *csrc = (char *)src;
     char *cdest = (char *)dest;
@@ -53,6 +54,5 @@ static inline void memmove(void *dest, const void *src, unsigned int n) {
         for (int i = 0; i < n; i++)
             cdest[i] = csrc[i];
 }
-
 
 #endif

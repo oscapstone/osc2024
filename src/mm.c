@@ -311,7 +311,7 @@ void buddy_init(void)
     page_frame_init();
 }
 
-/* Init buddy system and slab allocator. */
+/* Initialize the memory management: memblock, buddy, slab. */
 void mm_init(void)
 {
     memblock_init();
