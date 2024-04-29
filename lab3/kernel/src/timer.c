@@ -1,4 +1,5 @@
 #include "timer.h"
+#include "mini_uart.h"
 
 
 #define XSTR(s) STR(s)
@@ -30,9 +31,9 @@ void set_time_out(unsigned long long seconds) {
 }
 
 void timer_interrupt_handler() {
-    // 這裡插入你希望在時間到時執行的代碼
-    printf("Timer interrupt triggered!\n");
+    // // 這裡插入你希望在時間到時執行的代碼
+    // uart_puts("Timer interrupt triggered!\r\n");
 
-    // 重設計時器（例如每2秒）
-    set_time_out(2);
+    // // 重設計時器（例如每2秒）
+    // set_time_out(2);
 }
