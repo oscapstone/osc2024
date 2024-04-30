@@ -7,7 +7,8 @@
 void do_exec(void (*func)(void))
 {
     /* This user task will have sp == (&ustack_pool[current->task_id][USTACK_TOP]) at el0 */
-    asm volatile("msr spsr_el1, %0" ::"r" (0x0));
+    asm volatile("mov x1, 0              \n\t"
+                 "msr spsr_el1, x1       \n\t");
     asm volatile("msr elr_el1, %0" ::"r" (func));
     asm volatile("msr sp_el0, %0" ::"r" (&ustack_pool[current->task_id][USTACK_TOP]));
     asm volatile("eret");

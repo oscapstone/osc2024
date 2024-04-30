@@ -22,7 +22,7 @@ struct task_struct *current = &(init_task.task);
 */
 
 
-/* Initialize the task_struct and make kernel the first task. */
+/* Initialize the task_struct and make kernel be the first task. */
 void task_init()
 {
     for (int i = 0; i < NR_TASKS; i++) {
@@ -32,8 +32,8 @@ void task_init()
 
     // TODO: Understand how to deal with the task[0] (kernel). At linux 0.11, it is a special task.
     task_pool[0].state = TASK_RUNNING;
-    task_pool[0].priority = 1;
-    task_pool[0].counter = 1;
+    task_pool[0].priority = 100;
+    task_pool[0].counter = 100;
 
     // I don't have to initialize the tss of task[0], because when it switch to other task, the tss of task[0] will be saved to its own stack.
     // Maybe I should initialize the tss.sp or sp ?
@@ -98,6 +98,7 @@ void schedule()
             if (task_pool[i].state == TASK_RUNNING)
                 task_pool[i].counter = (task_pool[i].counter >> 1) + task_pool[i].priority;
     }
+    printf("Switch from task %d to task %d\n", current->task_id, next);
     context_switch(&task_pool[next]);
 }
 
@@ -117,6 +118,8 @@ void idle() {
 /* Init task 0, enable core timer, interrupt. Then call schedule(). */
 void sched_init()
 {
+    task_init();
+
     /* for OSDI-2020 Lab 4 requirement 1 */
     // privilege_task_create(demo_task1, 10);
     // privilege_task_create(demo_task2, 10);
@@ -133,7 +136,9 @@ void sched_init()
     // privilege_task_create(user_test, 5);
     // core_timer_enable();
     // idle();
-    task_init();
+
+    /* Demo osc2024 lab 5: fork test. */
+    privilege_task_create(do_fork_test, 10);
 
     enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
 

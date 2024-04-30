@@ -166,13 +166,14 @@ void uart_interrupt_handler()
             c = (char) (AUX->AUX_MU_IO_REG); // If we take char from AUX_MU_IO, the interrupt will be cleared.
             c = (c == '\r') ? '\n' : c;
 
-            /* Add a tasklet to tl_head */
+#ifdef ENABLE_TASKLET
             tl_pool[UART_TASKLET - 1].data = (unsigned long) c;
             tasklet_add(&tl_pool[UART_TASKLET - 1]);
-            /* Enable other interrupt */
             enable_interrupt();
-            /* Do tasklet */
             do_tasklet();
+#else
+            enqueue_char(&read_buffer, c);
+#endif
         }
     } else
         uart_puts("Unknown uart interrupt\n");
@@ -209,13 +210,16 @@ void core_timer_handler()
     /*     Setup next timer interrupt */
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
-        "mov x1, #1             \n\t"
-        "mul x0, x0, x1         \n\t"
+        "lsr x0, x0, #5         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
 
+#ifdef ENABLE_TASKLET
     tasklet_add(&tl_pool[TIMER_TASKLET - 1]);
     enable_interrupt();
     do_tasklet();
+#else
+    timer_update();
+#endif
 
     /* Enable the core timer interrupt */
     *CORE0_TIMER_IRQ_CTRL |= (1 << 1);

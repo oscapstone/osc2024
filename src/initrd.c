@@ -149,23 +149,24 @@ void initrd_usr_prog(char *cmd)
                 printf("\nUser program is empty\n");
                 return;
             } else {
-                printf("Into user_program: %s\n", buf + sizeof(cpio_f));
+                printf("\nInto user_program: %s\n", buf + sizeof(cpio_f));
+                printf("file size is %d\n", fs);
                 // get program start address
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
                 /* Allocate a page and copy the user program to the page. */
-                prog_page = (char *) kmalloc(4096);
+                prog_page = (char *) kmalloc(fs);
                 memmove(prog_page, prog_addr, fs);
 
                 // jump to el0 and execute user program.
-                // do_exec((void (*)(void)) prog_addr);
-                asm volatile("mov x1, 0              \n\t"
-                             "msr spsr_el1, x1       \n\t"
-                             "mov x1, %0             \n\t"
-                             "msr elr_el1, x1        \n\t"
-                             "mov x1, 0x60000        \n\t"
-                             "msr sp_el0, x1         \n\t"
-                             "eret                   \n\t"::"r" (prog_page));
+                do_exec((void (*)(void)) prog_page);
+                // asm volatile("mov x1, 0              \n\t"
+                //              "msr spsr_el1, x1       \n\t"
+                //              "mov x1, %0             \n\t"
+                //              "msr elr_el1, x1        \n\t"
+                //              "mov x1, 0x60000        \n\t"
+                //              "msr sp_el0, x1         \n\t"
+                //              "eret                   \n\t"::"r" (prog_page));
             }
         }
         // jump to the next file

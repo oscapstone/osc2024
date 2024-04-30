@@ -55,6 +55,7 @@ int sys_exec(struct trapframe *trapframe)
 
 int sys_fork(struct trapframe *trapframe)
 {
+    uart_puts("Forking...\n");
     int child_task_id = find_empty_task();
     struct task_struct *child_task = &task_pool[child_task_id];
 
@@ -84,6 +85,7 @@ int sys_fork(struct trapframe *trapframe)
     child_trapframe->x[0] = 0; // setup the return value of child task (fork())
 
     trapframe->x[0] = child_task_id; // return the child task id
+    uart_puts("End of fork\n");
     return SYSCALL_SUCCESS;
 }
 

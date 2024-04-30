@@ -9,6 +9,7 @@
 #include "mm.h"
 #include "memblock.h"
 
+/* for OSDI-2020 Lab 4 requirement 1 */
 void demo_task1()
 {
     while (1) {
@@ -19,6 +20,7 @@ void demo_task1()
     }
 }
 
+/* for OSDI-2020 Lab 4 requirement 1 */
 void demo_task2()
 {
     while (1) {
@@ -29,6 +31,7 @@ void demo_task2()
     }
 }
 
+/* for OSDI-2020 Lab 4 requirement 2 */
 void timer_task1()
 {
     while (1) {
@@ -37,6 +40,7 @@ void timer_task1()
     }
 }
 
+/* for OSDI-2020 Lab 4 requirement 2 */
 void timer_task2()
 {
     while (1) {
@@ -63,29 +67,33 @@ void user_task2()
     }
 }
 
+/* for OSDI-2020 Lab 4 requirement 3 */
 void demo_do_exec1()
 {
     do_exec(user_task1);
 }
 
+/* for OSDI-2020 Lab 4 requirement 3 */
 void demo_do_exec2()
 {
     do_exec(user_task2);
 }
 
+/* Only in demo.c, for delay usage. */
 void delay()
 {
     long count = 1000000; // 1000000000 can see the effect of multi-tasking, or I should increase the frequency of timer interrupt.
     while (count--);
 }
 
-void foo(){
+/* for OSDI-2020 Lab 4 requirement 4. At user space, not allowed to access timer */
+void foo() {
     int tmp = 5;
     printf("Task %d after exec, tmp address 0x%x, tmp value %d\n", get_taskid(), &tmp, tmp);
     exit(0);
 }
 
-/* At user space, not allowed to access timer */
+/* for OSDI-2020 Lab 4 requirement 4. At user space, not allowed to access timer */
 void test() {
     printf("Into test()\n");
     int cnt = 1;
@@ -107,6 +115,35 @@ void test() {
     }
 }
 
+/* osc2024, demo system calls. */
+void fork_test(void)
+{
+    printf("\nFork Test, pid %d\n", get_taskid());
+    int cnt = 1, ret = 0;
+    if ((ret = fork()) == 0) { // child
+        long long cur_sp;
+        asm volatile("mov %0, sp" : "=r"(cur_sp));
+        printf("first child, pid %d, cnt: %d, ptr: %x, sp: %x\n", get_taskid(), cnt, &cnt, cur_sp);
+        ++cnt;
+
+        if ((ret = fork()) != 0) {
+            asm volatile("mov %0, sp" : "=r"(cur_sp));
+            printf("first child pid: %d, cnt: %d, ptr: %x, sp: %x\n", get_taskid(), cnt, &cnt, cur_sp);
+        } else {
+            while (cnt < 5) {
+                asm volatile("mov %0, sp" : "=r"(cur_sp));
+                printf("second child pid: %d, cnt: %d, ptr: %x, sp: %x\n", get_taskid(), cnt, &cnt, cur_sp);
+                delay();
+                ++cnt;
+            }
+        }
+        exit(0);
+    } else {
+        printf("parent here, pid %d, child %d\n", get_taskid(), ret);
+    }
+}
+
+/* for OSDI-2020 Lab 4 requirement 4 */
 void user_test()
 {
     do_exec(test);
@@ -203,4 +240,10 @@ void demo_memory_allocator(void)
     uart_puts("addr: ");
     uart_hex((unsigned long) addr[1]);
     uart_send('\n');
+}
+
+/* Demo osc2024 lab 5: fork test. */
+void do_fork_test(void)
+{
+    do_exec(fork_test);
 }

@@ -219,7 +219,7 @@ int uart_async_gets(char *buf)
     return i;
 }
 
-/* uart_tasklet: do enqueue read buffer */
+/* Do enqueue read buffer */
 void uart_tasklet(unsigned long data)
 {
     char c = (char)data;
