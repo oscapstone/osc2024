@@ -114,10 +114,11 @@ void initrd_exec(const char *target)
             for (int i = 0; i < filesize; i++)
                 *program++ = (fptr + headsize)[i];
 
+            // TODO: Replace with kmalloc
             unsigned long sp = (unsigned long)simple_malloc(4096);
             asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
             asm volatile("msr elr_el1, %0" ::"r"(0x40000));
-            asm volatile("msr sp_el0, %0" ::"r"(sp));
+            asm volatile("msr sp_el0, %0" ::"r"(sp + 4096));
             asm volatile("eret;"); // Return to EL0 and execute
             return;
         }

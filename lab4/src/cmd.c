@@ -124,6 +124,7 @@ void clear()
 
 void timeout()
 {
+    // TODO: Replace with kmalloc
     char *msg = simple_malloc(SHELL_BUF_SIZE);
     uart_puts("Message: ");
     read_user_input(msg);

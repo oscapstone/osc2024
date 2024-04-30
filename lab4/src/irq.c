@@ -16,6 +16,7 @@ static irq_task_t *head = 0;
 // Note: call this function with interrupt disabled!
 void irq_add_task(void (*callback)(), int priority)
 {
+    // TODO: Replace with kmalloc
     irq_task_t *task = (irq_task_t *)simple_malloc(sizeof(irq_task_t));
     task->func = callback;
     task->priority = priority;

@@ -57,7 +57,7 @@ uint64_t timer_get_uptime()
 void timer_add(void (*callback)(void *), void *arg, int after)
 {
     // Insert the new timer node into the linked list (sorted by time)
-
+    // TODO: Replace with kmalloc
     timer_t *timer = (timer_t *)simple_malloc(sizeof(timer_t));
     timer->func = callback;
     timer->arg = arg;
