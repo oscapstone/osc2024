@@ -98,7 +98,7 @@ void schedule()
             if (task_pool[i].state == TASK_RUNNING)
                 task_pool[i].counter = (task_pool[i].counter >> 1) + task_pool[i].priority;
     }
-    printf("Switch from task %d to task %d\n", current->task_id, next);
+    // printf("Switch from task %d to task %d\n", current->task_id, next);
     context_switch(&task_pool[next]);
 }
 
@@ -138,7 +138,7 @@ void sched_init()
     // idle();
 
     /* Demo osc2024 lab 5: fork test. */
-    privilege_task_create(do_fork_test, 10);
+    privilege_task_create(demo_fork_test, 10);
 
     enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
 

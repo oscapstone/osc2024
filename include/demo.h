@@ -19,7 +19,7 @@ void demo_async_uart(void);
 void demo_bh_irq(void);
 
 void demo_memory_allocator(void);
-void do_fork_test(void);
+void demo_fork_test(void);
 
 
 #endif
