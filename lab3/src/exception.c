@@ -42,25 +42,26 @@ void except_handler_c()
 
 void timer_handler()
 {
-	disable_interrupt();
-	uart_send_string("In timer handle\n");
-	uint64_t current_time = get_current_time();
-	uart_send_string("Current time: ");
-	uart_hex(current_time);
-	uart_send_string(" s  \r\n");
-	set_expired_time(2);
-	enable_interrupt();
+	// disable_interrupt();
+	// uart_send_string("In timer handle\n");
+	// uint64_t current_time = get_current_time();
+	// uart_send_string("Current time: ");
+	// uart_hex(current_time);
+	// uart_send_string(" s  \r\n");
+	// set_expired_time(2);
+	// enable_interrupt();
 }
 
 void exception_el1_irq_handler()
 {
 	disable_interrupt();
 	if (*CORE0_INTERRUPT_SOURCE & 0x2) {
-		// disable_timer_interrupt();
-		timer_handler();
+		disable_timer_interrupt();
+		// timer_handler();
+		timer_interrupt_handler();
 	}
 	else if (*AUX_MU_IIR_REG & 0x4) {
-		// clr_rx_interrupts();
+		clr_rx_interrupts();
 		uart_rx_handler();
 	}
 	else if (*AUX_MU_IIR_REG & 0x2) {
@@ -68,4 +69,5 @@ void exception_el1_irq_handler()
 		uart_tx_handler();
 	}
 	enable_interrupt();
+	uart_send_string("> ");
 }

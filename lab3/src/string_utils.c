@@ -36,3 +36,23 @@ unsigned int my_strlen(char *str)
     }
     return count;
 }
+
+void my_strncpy(char *dest , char *src, uint32_t n)
+{
+    while (n > 0 && *src) {
+        *dest++ = *src++;
+        n--;
+    }
+    *dest = '\0';
+}
+
+unsigned int my_stoi(const char *str)
+{
+    char *s = str;
+    int value = 0;
+    while (*s) {
+        value = value * 10 + (*s - '0');
+        s++;
+    }
+    return value;
+}

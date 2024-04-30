@@ -166,6 +166,6 @@ void uart_async_demo()
 		c = uart_async_recv();
 	}
 	write_buffer_add(c);
-	clr_rx_interrupts();
+	// clr_rx_interrupts();
 	set_tx_interrupts();
 }

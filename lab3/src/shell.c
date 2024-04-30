@@ -59,10 +59,22 @@ void parse_command(char *buffer)
         cpio_cat();
     } else if (my_strcmp(buffer, "load") == 0) {
         cpio_load_program();
-    } else if (my_strcmp(buffer, "time") == 0) {
-        enable_timer_interrupt();
+    } else if (my_strcmp(buffer, "timer") == 0) {
+        // enable_timer_interrupt();
+        // TODO
+        char tmp_buffer[BUFFER_SIZE];
+        uart_send_string("Enter message: ");
+        read_command(tmp_buffer);
+        char msg[32]; 
+        my_strncpy(msg, tmp_buffer, 32);
+        uart_send_string("Enter duration: ");
+        read_command(tmp_buffer);
+        int duration = my_stoi(tmp_buffer);
+        add_timeout_event(msg, duration);
     } else if (my_strcmp(buffer, "async") == 0) {
         uart_async_demo();
+    } else if (my_strcmp(buffer, "test") == 0){
+        uart_hex(my_stoi("17"));
     } else if (my_strcmp(buffer, "malloc") == 0) {
         /* test malloc */
         char *tmp = malloc(4);
@@ -98,8 +110,9 @@ void help()
     uart_send_string("ls          show all files in rootfs\r\n");
     uart_send_string("cat         print out the content of specific file\r\n");
     uart_send_string("load        load user program and execute\r\n");
-    uart_send_string("time        enable timer interrupt\r\n");
+    uart_send_string("timer       add timer event\r\n");
     uart_send_string("async       async uart demo\r\n");
+    uart_send_string("test        test the function my_atoi\r\n");
     uart_send_string("malloc      try to print the content of malloc\r\n");
 }
 
