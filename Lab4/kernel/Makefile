@@ -41,14 +41,14 @@ kernel: $(OBJS) $(LIB_OBJS) $(ASM_OBJS)
 	$(LD) -T linker.ld -o $(BUILD_DIR)/kernel8.elf $(OBJS) $(LIB_OBJS) $(ASM_OBJS)
 	$(OBJCOPY) -O binary $(BUILD_DIR)/kernel8.elf kernel8.img
 
-run:
+run: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd $(CPIO) -display none -serial null -serial stdio -dtb $(DTB)
 
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd $(CPIO) -display none -serial null -serial stdio -s -S
 
 clean:
-	rm $(BUILD_DIR)/lib/*
-	rmdir $(BUILD_DIR)/lib
-	rm $(BUILD_DIR)/*
-	rmdir $(BUILD_DIR)
+	-rm $(BUILD_DIR)/lib/*
+	-rmdir $(BUILD_DIR)/lib
+	-rm $(BUILD_DIR)/*
+	-rmdir $(BUILD_DIR)

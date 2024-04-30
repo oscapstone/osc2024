@@ -58,6 +58,11 @@ void pop_task(){
     disable_interrupt();
     // print_str("\nPopping task...");
     task_t* exec_task = task_head->next;
+    
+    if (exec_task->prio == LOW_PRIO){
+        enable_interrupt();
+        return;
+    }
     // print_newline();
     // print_hex(exec_task->prio);
 

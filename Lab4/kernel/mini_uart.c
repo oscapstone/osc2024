@@ -1,12 +1,12 @@
 #include "mini_uart.h"
 
-char async_read_buf[256];
-char async_write_buf[256];
+char async_read_buf[1024];
+char async_write_buf[1024];
 uint32_t read_head = 0, read_end = 0;
 uint32_t write_head = 0, write_end = 0;
 
 void init_buffer(){
-    for (int i = 0; i < 256; i++){
+    for (int i = 0; i < 1024; i++){
         async_read_buf[i] = 0;
         async_write_buf[i] = 0;
     }
@@ -42,7 +42,7 @@ void rx_interrupt_handler(){
     char ch = *((char*)AUX_MU_IO);
     async_read_buf[read_end++] = ch;
 
-    if (read_end == 256)
+    if (read_end == 1024)
         read_end = 0;
 
     enable_interrupt();
@@ -61,7 +61,7 @@ void tx_interrupt_handler(){
         char ch = async_write_buf[write_head++];
         *AUX_MU_IO = ch;
 
-        if (write_head == 256)
+        if (write_head == 1024)
             write_head = 0;
 
         enable_interrupt();
@@ -101,7 +101,7 @@ uint32_t async_uart_gets(char* buffer, uint32_t len){
         buffer[read_len++] = async_read_buf[read_head++];
         enable_interrupt();
 
-        if (read_head == 256)
+        if (read_head == 1024)
             read_head = 0;
 
         if (buffer[read_len-1] == '\n' || buffer[read_len-1] == '\r'){
@@ -127,14 +127,14 @@ void async_uart_puts(char* str){
         if (*str == '\n'){
             async_write_buf[write_end++] = '\r';
             
-            if (write_end == 256)
+            if (write_end == 1024)
                 write_end = 0;
 
         }
 
         async_write_buf[write_end++] = *str++;
 
-        if (write_end == 256)
+        if (write_end == 1024)
             write_end = 0;
     }
 
@@ -149,13 +149,33 @@ void async_uart_puts(char* str){
     enable_uart_write_interrupt();
 }
 
+void async_uart_hex(uint32_t dec_val){
+
+    // print hex value
+    for (int shft = 28; shft >= 0; shft -= 4){
+        unsigned int n = (dec_val >> shft) & 0xf;
+
+        n += (n >= 10 ? 0x57 : 0x30); 
+
+        char ch = n;
+        async_write_buf[write_end++] = ch;
+
+        if (write_end == 1024)
+            write_end = 0;
+    }
+}
+
+void async_uart_newline(){
+    async_uart_puts("\n");
+}
+
 void test_async_uart(){
     
     enable_uart_interrupt();
 
-    char buffer[256];
+    char buffer[1024];
 
-    uint32_t rlen = async_uart_gets(buffer, 256);
+    uint32_t rlen = async_uart_gets(buffer, 1024);
 
     async_uart_puts(buffer);
 

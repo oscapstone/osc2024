@@ -26,6 +26,8 @@ void async_uart_handler();
 
 uint32_t async_uart_gets(char*, uint32_t);
 void async_uart_puts(char*);
+void async_uart_hex(uint32_t);
+void async_uart_newline();
 void test_async_uart();
 
 #endif

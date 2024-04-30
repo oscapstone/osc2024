@@ -1,7 +1,7 @@
 #ifndef _TASK_H
 #define _TASK_H
 
-#include "memory.h"
+#include "mem.h"
 #include "io.h"
 
 #define LOW_PRIO 0x100

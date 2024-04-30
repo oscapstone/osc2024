@@ -68,8 +68,13 @@ void el1_irq_entry(){
         // async_uart_handler();
     }else if (*CORE0_IRQ_SOURCE & IRQ_SOURCE_CNTPNSIRQ){
         disable_core_timer();
-        add_task(core_timer_handler, TIMER_PRIO);
+
+        if (!timer_empty()){
+            add_task(core_timer_handler, TIMER_PRIO);
+        }
+
         pop_task();
+        
         enable_core_timer();
         // core_timer_handler();
     }

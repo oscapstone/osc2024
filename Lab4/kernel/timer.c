@@ -134,6 +134,9 @@ void one_sec_pass(){
 }
 
 void core_timer_handler(){
+    
+    one_sec_pass();
+
     asm volatile(
         "mrs x0, cntfrq_el0;"
         "msr cntp_tval_el0, x0;"
@@ -141,7 +144,7 @@ void core_timer_handler(){
 
     // print_str("\nhere");
 
-    one_sec_pass();
+    
 }
 
 void two_sec_timer_handler(){
@@ -159,4 +162,13 @@ void two_sec_timer_handler(){
     );
 
 
+}
+
+uint32_t timer_empty(){
+    for (int i = 0; i < 10; i++){
+        if (!t_queue[i].valid)
+            return 0;
+    }
+    
+    return 1;
 }

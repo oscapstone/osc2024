@@ -36,4 +36,6 @@ void one_sec_pass();
 void core_timer_handler();
 void two_sec_timer_handler();
 
+uint32_t timer_empty();
+
 #endif

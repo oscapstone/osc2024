@@ -35,4 +35,4 @@ debug:
 	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -initrd $(CPIO) -display none -serial null -serial stdio -s -S
 
 clean:
-	rm bootloader.elf bootloader.img *.o $(LIBRARY_PATH)/*.o
+	-rm bootloader.elf bootloader.img *.o $(LIBRARY_PATH)/*.o

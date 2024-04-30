@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "timer.h"
 #include "mini_uart.h"
+#include "mem.h"
 
 int main(){
 
@@ -16,7 +17,7 @@ int main(){
     init_time_queue();
     init_task_queue();
     init_buffer();
-    // core_timer_enable();
+    init_mem();
     
     print_str("\nLogin Shell");
 
