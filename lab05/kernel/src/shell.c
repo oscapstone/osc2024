@@ -8,7 +8,10 @@
 #include "lib.h"
 #include "timer.h"
 #include "irq.h"
-#include "alloc.h"
+#include "fork.h"
+#include "schedule.h"
+
+#define delay(x) for(int i=0; i<x; i++) asm volatile("nop");
 
 static void hello(int argc, char *argv[]);
 static void help(int argc, char *argv[]);
@@ -16,6 +19,7 @@ static void clear(int argc, char *argv[]);
 static void mailbox(int argc, char *argv[]);
 static void test_malloc(int argc, char *argv[]);
 static void reboot(int argc, char *argv[]);
+static void multiple_thread_test(int argc, char *argv[]);
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
@@ -34,7 +38,8 @@ cmd cmds[] =
     {.name = "clear",   .func = &clear,      .help_msg = "\nclear\t: clear the screen"},
     {.name = "s_malloc",  .func = &test_malloc,.help_msg = "\nmalloc\t: simple malloc function"},
     {.name = "reboot",  .func = &reboot,     .help_msg = "\nreboot\t: reboot the device"},
-    {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"}
+    {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
+    {.name = "multi_thread", .func = &multiple_thread_test, .help_msg = "\nmulti_thread\t: test multiple threads"},
 };
 
 static void shell()
@@ -67,6 +72,26 @@ void shell_loop()
     while(1)
     {
         shell();
+    }
+}
+
+extern struct task_struct *current;
+
+static void foo()
+{
+    for(int i = 0; i < 10; ++i) {
+        printf("\r\nThread id: "); printf_int(current->pid); printf("\t,loop: "); printf_int(i);
+        delay(1000000);
+        schedule();
+    }
+    current->state = TASK_ZOMBIE;
+    while(1);
+}
+
+static void multiple_thread_test(int argc, char *argv[])
+{
+    for(int i = 0; i < 5; ++i) {
+        copy_process((unsigned long)&foo, 0);
     }
 }
 

@@ -14,6 +14,7 @@ struct chunk_t;
 void frame_init_with_reserve();
 
 void* balloc(uint64_t size);
+int bfree(void* ptr);
 
 void memory_pool_init();
 void* dynamic_alloc(uint64_t size);

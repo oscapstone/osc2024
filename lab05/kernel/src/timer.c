@@ -14,7 +14,7 @@ void timer_init()
 
 void irq_timer_handler()
 {
-    set_timer(20);
+    set_timer_asm(get_cpu_freq()>>5);
     timer_tick();
 }
 

@@ -32,6 +32,7 @@ int main()
     copy_process((unsigned long)(void*)&shell_loop, 0);
 
     while(1){
+        kill_zombies();
         schedule();
     }
     return 0;

@@ -1,5 +1,6 @@
 #include "schedule.h"
 #include "irq.h"
+#include "alloc.h"
 
 static struct task_struct init_task = INIT_TASK;
 struct task_struct *current = &(init_task);
@@ -35,7 +36,7 @@ void _schedule(void)
 		if (c) {    // found & break for switch to the task
 			break;
 		}
-        // if no task is found, decrease the counter of all tasks
+        // if no task is found, increase the counter of all tasks
 		for (int i = 0; i < NR_TASKS; i++) {
 			p = task[i];
 			if (p) {
@@ -77,4 +78,15 @@ void timer_tick()
 	enable_irq();
 	_schedule();
 	disable_irq();
+}
+
+void kill_zombies()
+{
+	for (int i = 0; i < NR_TASKS; i++) {
+		if (task[i] && task[i]->state == TASK_ZOMBIE) {
+			struct task_struct * p = task[i];
+			task[i] = 0;
+			bfree(p);
+		}
+	}
 }
