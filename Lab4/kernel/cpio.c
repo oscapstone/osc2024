@@ -1,6 +1,7 @@
 #include "cpio.h"
 
 uint32_t DEVTREE_CPIO_BASE = 0;
+uint32_t DEVTREE_CPIO_END = 0;
 
 void cpio_ls(){
     struct cpio_newc_header *head = (struct cpio_newc_header *)DEVTREE_CPIO_BASE;
@@ -105,7 +106,7 @@ void cpio_exec(){
             char* file_content = (char*)head + file_offset;
             // print_hex((uint32_t)file_content);
 
-            unsigned int sp_loc = 0x60000;
+            uint32_t sp_loc = 0x3600000;
 
             // print_str("\nhere");
 
@@ -130,7 +131,13 @@ void initramfs_callback(char* node_name, char* prop_name, struct fdt_prop* prop)
         strncmp(prop_name, "linux,initrd-start", 19)) {
 
         DEVTREE_CPIO_BASE = to_little_endian(*((uint32_t*)(prop + 1)));
-        print_str("\nDevice Tree Base: 0x");
-        print_hex(DEVTREE_CPIO_BASE);
+        // print_str("\nDevice Tree Base: 0x");
+        // print_hex(DEVTREE_CPIO_BASE);
+
+    }else if (strncmp(node_name, "chosen", 7) &&
+        strncmp(prop_name, "linux,initrd-end", 17)){
+        DEVTREE_CPIO_END = to_little_endian(*((uint32_t*)(prop + 1)));
+        // print_str("\nDevice Tree End: 0x");
+        // print_hex(DEVTREE_CPIO_END);
     }
 }

@@ -72,106 +72,91 @@ void test_simple_alloc(){
 
 void test_malloc(){
 
-    async_uart_puts("\n########## Test 1 ##########");
+    async_uart_puts("\n########## Test 1 ##########\n");
 
-    void* ptr_1 = malloc(MAX_SIZE >> 1);
+    void* ptr_1 = malloc((1 << 19));
     if (ptr_1 == 0)
         async_uart_puts("\nptr_1 Fail");
-    
-    void* ptr_2 = malloc(0x1000);
-    if (ptr_2 == 0)
+
+    async_uart_newline();
+
+    void* ptr_2 = malloc((1 << 19));
+    if (ptr_2 == 0)       
         async_uart_puts("\nptr_2 Fail");
 
-    void* ptr_3 = malloc(MAX_SIZE >> 1);
-    if (ptr_3 == 0)       
-        async_uart_puts("\nptr_3 Fail");
+    async_uart_newline();
 
-    async_uart_puts("\n\n########## Test 2 ##########");
-
-    // async_uart_puts("\nFree ptr 2");
-    free(ptr_2);
-
-    void* ptr_4 = malloc(0x100607);
-    if (ptr_4 == 0)
-        async_uart_puts("\nptr_4 Fail");
-    
-    // async_uart_puts("\nFree ptr_1");
     free(ptr_1);
 
-    async_uart_puts("\n\n########## Test 3 ##########");
+    async_uart_puts("\n\n########## Test 2 ##########\n");
+
+    void* ptr_3 = malloc(0x100607);
+    if (ptr_3 == 0)
+        async_uart_puts("\nptr_3 Fail");
+
+    async_uart_newline();
+
+    async_uart_puts("\n\n########## Test 3 ##########\n");
+
+    void* ptr_4 = malloc(20);
+    if (ptr_4 == 0)
+        async_uart_puts("\nptr_4 Fail");
+
+    async_uart_newline();
 
     void* ptr_5 = malloc(20);
     if (ptr_5 == 0)
         async_uart_puts("\nptr_5 Fail");
 
-    void* ptr_6 = malloc(3000);
+    async_uart_newline();
+
+    free(ptr_4);
+
+    async_uart_newline();
+
+    free(ptr_5);
+
+    async_uart_newline();
+
+    free(ptr_3);
+
+    async_uart_puts("\n\n########## Test 4 ##########\n");
+
+    void* ptr_6 = malloc(2048);
     if (ptr_6 == 0)
         async_uart_puts("\nptr_6 Fail");
 
-    // async_uart_puts("\nFree ptr_5");
-    free(ptr_5);
-
-    // async_uart_puts("\nFree ptr_6");
-    free(ptr_6);
-
-    async_uart_puts("\n\n########## Test 4 ##########");
+    async_uart_newline();
 
     void* ptr_7 = malloc(2048);
     if (ptr_7 == 0)
         async_uart_puts("\nptr_7 Fail");
 
-    // check_chunks();
+    async_uart_newline();
+
 
     void* ptr_8 = malloc(2048);
     if (ptr_8 == 0)
         async_uart_puts("\nptr_8 Fail");
 
-    // check_chunks();
+    async_uart_newline();
 
-    void* ptr_9 = malloc(2048);
-    if (ptr_9 == 0)
-        async_uart_puts("\nptr_9 Fail");
-
-    void* ptr_10 = malloc(2048);
-    if (ptr_10 == 0)
-        async_uart_puts("\nptr_10 Fail");
-
-    void* ptr_11 = malloc(2048);
-    if (ptr_11 == 0)
-        async_uart_puts("\nptr_11 Fail");
-
-    // check_chunks();
-
-    // async_uart_puts("\nFree ptr_8");
-    free(ptr_8);
-    free(ptr_10);
-
-    // check_chunks();
-
-    async_uart_puts("\nFree ptr_8 one more time");
-    free(ptr_8);
-    // check_chunks();
-
-    // async_uart_puts("\nFree ptr_9");
-    free(ptr_9);
-    // check_chunks();
-
-    // async_uart_puts("\nFree ptr_7");
     free(ptr_7);
-
-    free(ptr_11);
-    // check_chunks();
-
-    async_uart_puts("\n########## Test 5 ##########");
-
-    // async_uart_puts("\nFree ptr_4");
-    free(ptr_4); 
-
-    async_uart_puts("\nFree ptr_1 one more time");
-    free(ptr_1);
 
     async_uart_newline();
 
+    async_uart_puts("\nFree ptr_7 one more time\n");
+    free(ptr_7);
+
+    async_uart_newline();
+
+    free(ptr_8);
+
+    async_uart_newline();
+
+    free(ptr_6);
+
+    async_uart_newline();
 }
 
 void shell(){
@@ -196,7 +181,8 @@ void shell(){
     }else if (strcmp(cmd, "ls")){
         cpio_ls();
     }else if (strcmp(cmd, "alloc")){
-        test_simple_alloc();
+        async_uart_puts("\nCannot use this allocator! (memory size decided)");
+        // test_simple_alloc();
     }else if (strcmp(cmd, "exec")){
         test_exec();
     }else if (strcmp(cmd, "async")){

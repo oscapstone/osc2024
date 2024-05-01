@@ -67,6 +67,8 @@ from_el2_to_el1:
     msr hcr_el2, x0
     mov x0, 0x3c5           // EL1h (SPSel = 1) with interrupt disabled / 0x5 means EL1 with the highest level of exception handling in which the kernel or operating system typically operates
     msr spsr_el2, x0
+    ldr x0, =0x3c000000
+    msr sp_el1, x0
     msr elr_el2, lr
     eret                    // return to EL1
 
