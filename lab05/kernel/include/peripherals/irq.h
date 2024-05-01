@@ -23,4 +23,7 @@
 #define SYSTEM_TIMER_IRQ_1      (1 << 1)
 #define GPU_IRQ                 (1 << 8)
 
+#define ESR_ELx_EC_SHIFT		26
+#define ESR_ELx_EC_SVC64		0x15
+
 #endif

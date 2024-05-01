@@ -42,7 +42,7 @@ static void show_debug_msg(int type, unsigned long spsr, unsigned long elr, unsi
     printf_hex(esr);
 }
 
-void el1_irq_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
+void irq_handler(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
 {
     disable_irq();
 
@@ -60,19 +60,18 @@ void el1_irq_entry(int type, unsigned long spsr, unsigned long elr, unsigned lon
     enable_irq();
 }
 
-void default_exception_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
+void invalid_exception_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
 {
     
     show_debug_msg(type, spsr, elr, esr);
-    while(1);
 }
 
-void el0_irq_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
-{
-    disable_irq();
-    show_debug_msg(type, spsr, elr, esr);
-    enable_irq();
-}
+// void el0_irq_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
+// {
+//     disable_irq();
+//     show_debug_msg(type, spsr, elr, esr);
+//     enable_irq();
+// }
 
 void svc_exception_entry(int type, unsigned long spsr, unsigned long elr, unsigned long esr)
 {
