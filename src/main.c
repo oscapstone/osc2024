@@ -20,12 +20,12 @@ void kernel_init(void *arg) {
   core0_timer_interrupt_enable();
   core_timer_enable();
   set_core_timer_int(get_clk_freq() >> 5);
-  // enable_uart_interrupt();
+  enable_uart_interrupt();
   enable_interrupt();
 }
 
 void main(void *arg) {
   kernel_init(arg);
-  // startup_thread_exec("syscall.img");
+  startup_thread_exec("syscall.img");
   shell_start();
 }

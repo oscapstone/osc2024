@@ -30,11 +30,11 @@ void el0_64_sync_interrupt_handler(trapframe_t *tpf) {
     case SYSCALL_FORK:
       fork(tpf);
       break;
-    case SYSCALL_WAIT:
-      uart_puts("SYSCALL: WAIT");
+    case SYSCALL_EXIT:
+      exit(tpf);
       break;
     case SYSCALL_MBOX:
-      uart_puts("SYSCALL: MBOX");
+      sys_mbox_call(tpf, (uint8_t)tpf->x[0], (uint32_t *)tpf->x[1]);
       break;
     case SYSCALL_KILL:
       kill((uint32_t)tpf->x[0]);

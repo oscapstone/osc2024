@@ -12,7 +12,7 @@ task_struct* current_thread;
 task_struct* threads;
 static ts_deque ready_que;
 
-static inline void ready_que_push_back(task_struct* thread) {
+void ready_que_push_back(task_struct* thread) {
   OS_enter_critical();
   task_struct* t = ready_que.tail->prev;
   t->next = thread;
@@ -36,7 +36,7 @@ static void reclaim() {
   OS_enter_critical();
   for (int i = 0; i < PROC_NUM; i++) {
     if (threads[i].status == THREAD_DEAD) {
-      uart_send_string("reclaimed thread pid: ");
+      uart_send_string("\r\nidle task: reclaimed thread pid: ");
       uart_int(threads[i].pid);
       uart_send_string("\r\n");
       free(threads[i].usr_stk);
@@ -104,7 +104,7 @@ static void init_thread_pool() {
   threads = (task_struct*)malloc(sizeof(task_struct) * PROC_NUM);
   for (int i = 0; i < PROC_NUM; i++) {
     threads[i].status = THREAD_FREE;
-    threads[i].pid = i;
+    threads[i].pid = i + 1;
     threads[i].prev = threads[i].next = (task_struct*)0;
     threads[i].usr_stk = threads[i].ker_stk = (void*)0;
     threads[i].data = (void*)0;
@@ -150,11 +150,9 @@ task_struct* get_free_thread() {
 }
 
 task_struct* thread_create(start_routine_t start_routine) {
-  OS_enter_critical();
   task_struct* new_thread = get_free_thread();
   if (!new_thread) {
     uart_puts("new thread allocation fail");
-    OS_exit_critical();
     return (task_struct*)0;
   }
 
@@ -164,14 +162,12 @@ task_struct* thread_create(start_routine_t start_routine) {
   new_thread->cpu_context.lr = (uint64_t)start_routine;
   ready_que_push_back(new_thread);
 
-  OS_exit_critical();
   return new_thread;
 }
 
 void startup_thread_exec(char* file) {
   uint32_t file_sz;
   char* usr_prog = cpio_load(file, &file_sz);
-  uart_send_string("\r\n");
   if (!usr_prog) {
     return;
   }

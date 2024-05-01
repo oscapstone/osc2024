@@ -58,9 +58,11 @@ typedef struct ts_deque {
 } ts_deque;
 
 extern void switch_to(cpu_context_t* cur, cpu_context_t* to);
+extern void store_cpu_context(cpu_context_t* cur);
 extern cpu_context_t* get_current_thread();
 extern void set_current_thread(cpu_context_t* cpu_context);
 
+void ready_que_push_back(task_struct* thread);
 void foo();
 void schedule();
 void init_sched_thread();
