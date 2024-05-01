@@ -50,8 +50,8 @@ void timer_event_callback(timer_event_t *timer_event)
 {
     list_del_entry((struct list_head *)timer_event); // delete the event in queue
     kfree(timer_event->args);                        // free the event's space
-    kfree(timer_event);
     ((void (*)(char *))timer_event->callback)(timer_event->args); // call the event
+    kfree(timer_event);
 
     // set queue linked list to next time event if it exists
     if (!list_empty(timer_event_list))

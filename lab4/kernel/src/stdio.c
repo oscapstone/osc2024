@@ -1,6 +1,5 @@
 #include "uart1.h"
 #include "stdio.h"
-#include "stddef.h"
 
 char getchar()
 {

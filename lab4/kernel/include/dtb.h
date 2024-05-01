@@ -1,7 +1,8 @@
+#include "stdint.h"
+
 #ifndef _DTB_H_
 #define _DTB_H_
 
-#define uint32_t unsigned int
 
 // manipulate device tree with dtb file format
 // linux kernel fdt.h

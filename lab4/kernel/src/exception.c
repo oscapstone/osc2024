@@ -151,7 +151,6 @@ void irqtask_list_init()
 void irqtask_add(void *task_function, unsigned long long priority)
 {
     irqtask_t *the_task = kmalloc(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
-
     // store all the related information into irqtask node
     // manually copy the device's buffer
     the_task->priority = priority;

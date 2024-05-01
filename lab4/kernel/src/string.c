@@ -1,4 +1,4 @@
-#include "stddef.h"
+#include "stdint.h"
 
 size_t strlen(const char *str)
 {
@@ -24,7 +24,7 @@ int strcmp(const char *p1, const char *p2)
 	return c1 - c2;
 }
 
-int strncmp(const char *s1, const char *s2, unsigned long long n)
+int strncmp(const char *s1, const char *s2, size_t n)
 {
 	unsigned char c1 = '\0';
 	unsigned char c2 = '\0';

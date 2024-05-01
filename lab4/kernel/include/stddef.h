@@ -1,2 +1,6 @@
-typedef unsigned long size_t;
-typedef long ssize_t;
+#define NULL ((void *)0)
+
+enum {
+	false	= 0,
+	true	= 1
+};
