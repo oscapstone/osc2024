@@ -22,6 +22,7 @@ struct fdt_header {
 #define FDT_NOP        0x00000004
 #define FDT_END        0x00000009
 
+uint32_t be2le(const void *s);
 void fdt_traverse(void (*callback)(void *));
 
 #endif // DEVTREE_H

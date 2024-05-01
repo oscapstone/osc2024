@@ -12,7 +12,7 @@ void *DTB_BASE = (void *)0xF;
  * @param s: big-endian sequence
  * @return little-endian sequence
  */
-static uint32_t be2le(const void *s)
+uint32_t be2le(const void *s)
 {
     const uint8_t *bytes = (const uint8_t *)s;
     return (uint32_t)bytes[0] << 24 | (uint32_t)bytes[1] << 16 |

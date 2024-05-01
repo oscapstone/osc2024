@@ -1,13 +1,20 @@
 #include "mm.h"
+#include "alloc.h"
+#include "devtree.h"
+#include "string.h"
 #include "uart.h"
+#include "utils.h"
 
-#define BUDDY_MAX_ORDER 5
+extern char *__bss_end;
+extern void *DTB_BASE;
+
+#define BUDDY_MAX_ORDER 10
 #define CACHE_MAX_ORDER 6
 
 #define NUM_PAGES 0x3C000
 #define PAGE_SIZE 0x1000
 
-static struct page mem_map[NUM_PAGES];
+static struct page *mem_map;
 static struct page *free_area[BUDDY_MAX_ORDER + 1];
 static struct object *kmem_cache[CACHE_MAX_ORDER + 1];
 
@@ -116,7 +123,6 @@ struct page *alloc_pages(unsigned int order)
         uart_hex((unsigned int)(page - mem_map + (1 << order)));
         uart_puts("\n");
 
-        free_list_display();
         return page;
     }
     return 0;
@@ -162,7 +168,6 @@ void free_pages(struct page *page, unsigned int order)
         uart_puts("\n");
     }
     free_list_push(&free_area[order], current, order);
-    free_list_display();
 }
 
 /* Cache Allocator */
@@ -197,7 +202,7 @@ void *kmem_cache_alloc(unsigned int order)
         unsigned int page_addr = (page - mem_map) * PAGE_SIZE;
         unsigned int cache_size = 32 << order;
         for (int i = 0; i < PAGE_SIZE; i += cache_size) {
-            struct object *obj = page_addr + i;
+            struct object *obj = (struct object *)(uintptr_t)(page_addr + i);
             cache_list_push(&kmem_cache[order], obj, order);
         }
     }
@@ -230,7 +235,7 @@ void *kmalloc(unsigned int size)
         while ((PAGE_SIZE << order) < size)
             order++;
         struct page *page = alloc_pages(order);
-        return (page - mem_map) * PAGE_SIZE;
+        return (void *)((page - mem_map) * PAGE_SIZE);
     } else {
         // Cache Allocator
         int power = 0;
@@ -260,6 +265,7 @@ void kfree(void *ptr)
 void mem_init()
 {
     // Initialize the buddy allocator
+    mem_map = simple_malloc(sizeof(struct page) * NUM_PAGES);
     for (int i = NUM_PAGES - 1; i >= 0; i--) {
         mem_map[i].order = 0;
         mem_map[i].used = 0;
@@ -270,13 +276,53 @@ void mem_init()
             free_list_push(&free_area[BUDDY_MAX_ORDER], &mem_map[i],
                            BUDDY_MAX_ORDER);
     }
+
+    // Fetch the memory information from the device tree
+    uint64_t devtree_start = (uint64_t)DTB_BASE, devtree_end;
+    uint64_t initrd_start, initrd_end;
+    uintptr_t dtb_ptr = (uintptr_t)DTB_BASE;
+    struct fdt_header *header = (struct fdt_header *)dtb_ptr;
+    devtree_end = devtree_start + be2le(&header->totalsize);
+    uintptr_t structure = (uintptr_t)header + be2le(&header->off_dt_struct);
+    uintptr_t strings = (uintptr_t)header + be2le(&header->off_dt_strings);
+    uint32_t structure_size = be2le(&header->size_dt_struct);
+    uintptr_t ptr = structure;
+    while (ptr < structure + structure_size) {
+        uint32_t token = be2le((char *)ptr);
+        ptr += 4;
+        switch (token) {
+        case FDT_BEGIN_NODE:
+            ptr += align4(strlen((char *)ptr) + 1);
+            break;
+        case FDT_END_NODE:
+            break;
+        case FDT_PROP:
+            uint32_t len = be2le((char *)ptr);
+            ptr += 4;
+            uint32_t nameoff = be2le((char *)ptr);
+            ptr += 4;
+            if (!strcmp((char *)(strings + nameoff), "linux,initrd-start"))
+                initrd_start = (uint64_t)be2le((void *)ptr);
+            if (!strcmp((char *)(strings + nameoff), "linux,initrd-end"))
+                initrd_end = (uint64_t)be2le((void *)ptr);
+            ptr += align4(len);
+            break;
+        case FDT_NOP:
+            break;
+        case FDT_END:
+            break;
+        }
+    }
+
     // Reserve memory
     //   Spin tables for multicore boot
     //   Kernel image
     //   Simple allocator
-    //   Initramfs
     //   Devicetree
-    free_list_display();
+    //   Initramfs
+    memory_reserve(0x0, (unsigned long)&__bss_end + 0x800000);
+    memory_reserve(devtree_start, devtree_end);
+    memory_reserve(initrd_start, initrd_end);
 }
 
 void memory_reserve(uint64_t start, uint64_t end)

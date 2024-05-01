@@ -174,7 +174,7 @@ void demo()
         uart_puts("Allocate 100 bytes\n");
         void *p41 = kmalloc(100);
         uart_puts("p1 = ");
-        uart_hex((unsigned int)p41);
+        uart_hex((uintptr_t)p41);
         uart_puts("\n");
         kfree(p41);
         break;
