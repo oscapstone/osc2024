@@ -236,8 +236,6 @@ static inline void expand(struct page *page, unsigned int low_order, unsigned in
         high_order--;
         size >>= 1;
 
-        /* In linux kernel, there's a procedure named `set_page_guard()`. But I don't understand its purpose (seems like debug information), skip it for now.*/
-
 #ifdef DEMO
         if (isDemo) {
             uart_puts("[expand] insert page: ");

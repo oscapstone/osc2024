@@ -5,6 +5,8 @@
 #include "timer.h"
 #include "demo.h"
 #include "uart.h"
+#include "shell.h"
+#include "kernel.h"
 
 struct task_struct task_pool[NR_TASKS];
 char kstack_pool[NR_TASKS][KSTACK_SIZE];
@@ -32,11 +34,11 @@ void task_init()
 
     // TODO: Understand how to deal with the task[0] (kernel). At linux 0.11, it is a special task.
     task_pool[0].state = TASK_RUNNING;
-    task_pool[0].priority = 10;
-    task_pool[0].counter = 10;
+    task_pool[0].priority = 1;
+    task_pool[0].counter = 1;
 
     // I don't have to initialize the tss of task[0], because when it switch to other task, the tss of task[0] will be saved to its own stack.
-    // Maybe I should initialize the tss.sp or sp ?
+    // TODO: Because I don't initialize the tss of task[0], I can't fork() from task[0].
     update_current(&task_pool[0]);
     num_running_task = 1;
 }
@@ -47,7 +49,11 @@ void context_switch(struct task_struct *next)
     // printf("Switch from task %d to task %d\n", current->task_id, next->task_id);
     struct task_struct *prev = current; // the current task_struct address
     update_current(next);
+#ifdef DEBUG_MULTITASKING
+    printf("[context_switch] Switch from task %d to task %d\n", prev->task_id, next->task_id);
+#endif
     switch_to(&prev->tss, &next->tss);
+
 }
 
 /* Find empty task_struct. Return task id. */
@@ -83,7 +89,7 @@ int privilege_task_create(void (*func)(), long priority)
 }
 
 /* Select the task with the highest counter to run. If all tasks' counter is 0, then update all tasks' counter with their priority. */
-void schedule()
+void schedule(void)
 {
     int i = NR_TASKS, c = -1, next = 0;
     while (1) {
@@ -140,6 +146,7 @@ void sched_init()
     /* Demo osc2024 lab 5: fork test. */
     // privilege_task_create(demo_fork_test, 200);
     // privilege_task_create(do_foo, 5);
+    privilege_task_create(do_shell, 100);
 
     enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
 

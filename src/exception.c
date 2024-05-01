@@ -101,7 +101,6 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     char cmd[64];
 
     if (esr >> 26 != 0b010101) {
-        uart_puts("Exception occurs:\n");
         exc_handler(esr, elr, spsr, far);
         return;
     }
@@ -209,7 +208,6 @@ void core_timer_handler()
     /* Mask the core timer interrupt first. Mask CORE0_TIMER_IRQ_CTRL. Spec says it will be done automatically? */
     *CORE0_TIMER_IRQ_CTRL &= ~(1 << 1);
 #endif
-    uart_send('.');
     /*     Setup next timer interrupt */
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"

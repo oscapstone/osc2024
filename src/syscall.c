@@ -3,8 +3,7 @@
 #include "syscall.h"
 #include "exec.h"
 #include "exception.h"
-
-// #define DEBUG
+#include "kernel.h"
 
 /* The definition of system call handler function */
 syscall_t sys_call_table[SYSCALL_NUM] = {
@@ -19,7 +18,7 @@ syscall_t sys_call_table[SYSCALL_NUM] = {
 /* As a handler function for svc, setup the return value to trapframe */
 int sys_get_taskid(struct trapframe *trapframe)
 {
-#ifdef DEBUG
+#ifdef DEBUG_SYSCALL
     printf("[sys_get_taskid] Task %d get task id\n", current->task_id);
 #endif
     trapframe->x[0] = current->task_id;
@@ -29,16 +28,16 @@ int sys_get_taskid(struct trapframe *trapframe)
 /* uart read system call: x0: buffer address, x1: buffer size */
 int sys_uart_read(struct trapframe *trapframe)
 {
-#ifdef DEBUG
+#ifdef DEBUG_SYSCALL
     printf("[sys_uart_read] Task %d read\n", current->task_id);
 #endif
     /* x0: buffer address, x1: buffer size */
     char *buff_addr = (char *) trapframe->x[0];
     size_t buff_size = (size_t) trapframe->x[1];
     for (int i = 0; i < buff_size; i++)
-        buff_addr[i] = uart_async_getc();
+        buff_addr[i] = uart_getc();
     trapframe->x[0] = buff_size; // return the number of bytes read
-#ifdef DEBUG
+#ifdef DEBUG_SYSCALL
     printf("[sys_uart_read] Task %d read end\n", current->task_id);
 #endif
     return SYSCALL_SUCCESS;
@@ -47,7 +46,7 @@ int sys_uart_read(struct trapframe *trapframe)
 /* uart write system call: x0: buffer address, x1: buffer size */
 int sys_uart_write(struct trapframe *trapframe)
 {
-#ifdef DEBUG
+#ifdef DEBUG_SYSCALL
     printf("[sys_uart_write] Task %d write\n", current->task_id);
 #endif
     /* x0: buffer address, x1: buffer size */
@@ -62,7 +61,7 @@ int sys_uart_write(struct trapframe *trapframe)
 /* sys_exec: the function won't return? */
 int sys_exec(struct trapframe *trapframe)
 {
-#ifdef DEBUG
+#ifdef DEBUG_SYSCALL
     printf("[sys_exec] Task %d exec\n", current->task_id);
 #endif
     do_exec((void (*)(void))trapframe->x[0]);
@@ -72,7 +71,7 @@ int sys_exec(struct trapframe *trapframe)
 
 int sys_fork(struct trapframe *trapframe)
 {
-#ifdef DEBUG
+#ifdef DEBUG_SYSCALL
     printf("[sys_fork] Task %d fork\n", current->task_id);
 #endif
     int child_task_id = find_empty_task();
@@ -109,7 +108,7 @@ int sys_fork(struct trapframe *trapframe)
 
 /* Modify the current task state and reschedule. */
 int sys_exit(struct trapframe *trapframe) {
-#ifdef DEBUG
+#ifdef DEBUG_SYSCALL
     printf("[sys_exit] Task %d exit\n", current->task_id);
 #endif
     current->state = TASK_STOPPED;

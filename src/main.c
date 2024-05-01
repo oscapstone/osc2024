@@ -9,12 +9,8 @@
 #include "demo.h"
 #include "exec.h"
 
-#define CMD_LEN 128
-
 // get the end of bss segment from linker
 extern unsigned char _end;
-
-#define CMD_LEN 128
 
 void main()
 {
@@ -25,22 +21,7 @@ void main()
     mm_init();
     sched_init();
 
-    // move_to_user_mode();
-    while(1) {
-        uart_puts("# ");
-        char cmd[CMD_LEN];
-        shell_input(cmd);
-        shell_controller(cmd);
-    }
-    // if (fork() == 0) {
-    //     while(1) {
-    //         uart_puts("# ");
-    //         char cmd[CMD_LEN];
-    //         shell_input(cmd);
-    //         shell_controller(cmd);
-    //     }
-    // } else {
-    //     while (1)
-    //         asm volatile("nop");
-    // }
+    move_to_user_mode();
+    while (1)
+        asm volatile("nop");
 }

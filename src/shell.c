@@ -6,6 +6,9 @@
 #include "demo.h"
 #include "syscall.h"
 #include "exception.h"
+#include "exec.h"
+
+#define CMD_LEN 128
 
 /* Initialize UART and print Hello message. */
 void shell_init()
@@ -66,8 +69,25 @@ void shell_controller(char *cmd)
     } else if (!strcmp(cmd, "demo_irq")) {
         asm volatile ("svc 5");
     } else if (!strcmp(cmd, "demo_syscall")) {
+        /* shell is in el0, use system call to execute fork_test. */
         exec(fork_test);
     } else {
         uart_puts("shell: command not found\n");
     }
+}
+
+void do_shell_user(void)
+{
+    while (1) {
+        uart_puts("# ");
+        char cmd[CMD_LEN];
+        shell_input(cmd);
+        shell_controller(cmd);
+    }
+}
+
+/* shell: kernel task. */
+void do_shell(void)
+{
+    do_exec(do_shell_user);
 }

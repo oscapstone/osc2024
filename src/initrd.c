@@ -190,19 +190,20 @@ void initrd_reserve_memory(void)
     char *buf = cpio_base;
     int ns, fs;
 
-    if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
+    /* check if it's a cpio newc archive. */
+    if (memcmp(buf, "070701", 6))
         return;
 
-    // if it's a cpio newc archive. Cpio also has a trailer entry
+    /* if it's a cpio newc archive. Cpio also has a trailer entry */
     while(memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) {
         header = (cpio_f*) buf;
         ns = hex2bin(header->namesize, 8);
         fs = ALIGN(hex2bin(header->filesize, 8), 4);
 
-        // jump to the next file
+        /* jump to the next file */
         buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
-    // reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns
+    /* reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns */
     buf += ALIGN(sizeof(cpio_f) + 10, 4);
     memblock_reserve((unsigned long) cpio_base, ALIGN(buf - cpio_base, 8));
 }
