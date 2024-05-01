@@ -150,7 +150,7 @@ void initrd_usr_prog(char *cmd)
                 return;
             } else {
                 printf("\nInto user_program: %s\n", buf + sizeof(cpio_f));
-                printf("file size is %d\n", fs);
+                printf("file size is %d\n\n", fs);
                 // get program start address
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
@@ -160,7 +160,7 @@ void initrd_usr_prog(char *cmd)
 
                 // jump to el0 and execute user program.
                 do_exec((void (*)(void)) prog_page);
-                // asm volatile("mov x1, 0              \n\t"
+                // asm volatile("mov x1, #0x0           \n\t"
                 //              "msr spsr_el1, x1       \n\t"
                 //              "mov x1, %0             \n\t"
                 //              "msr elr_el1, x1        \n\t"

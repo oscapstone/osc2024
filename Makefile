@@ -60,7 +60,7 @@ clean:
 	rm *.elf *.img *.o >/dev/null 2>/dev/null || true
 
 run: initramfs.cpio
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial stdio -display none -drive file=test.dd,if=sd,format=raw
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial stdio -drive file=test.dd,if=sd,format=raw
 
 dtb: initramfs.cpio
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial stdio

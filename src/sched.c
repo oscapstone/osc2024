@@ -32,8 +32,8 @@ void task_init()
 
     // TODO: Understand how to deal with the task[0] (kernel). At linux 0.11, it is a special task.
     task_pool[0].state = TASK_RUNNING;
-    task_pool[0].priority = 100;
-    task_pool[0].counter = 100;
+    task_pool[0].priority = 10;
+    task_pool[0].counter = 10;
 
     // I don't have to initialize the tss of task[0], because when it switch to other task, the tss of task[0] will be saved to its own stack.
     // Maybe I should initialize the tss.sp or sp ?
@@ -44,6 +44,7 @@ void task_init()
 /* Do context switch. */
 void context_switch(struct task_struct *next)
 {
+    // printf("Switch from task %d to task %d\n", current->task_id, next->task_id);
     struct task_struct *prev = current; // the current task_struct address
     update_current(next);
     switch_to(&prev->tss, &next->tss);
@@ -73,9 +74,9 @@ int privilege_task_create(void (*func)(), long priority)
             task_pool[i].tss.lr = (uint64_t) func;
             task_pool[i].tss.sp = (uint64_t) &kstack_pool[i][KSTACK_TOP];
             task_pool[i].tss.fp = (uint64_t) &kstack_pool[i][KSTACK_TOP];
-            printf("Setup task %d, priority %d, counter %d, sp 0x%x, lr 0x%x\n", i, task_pool[i].priority, task_pool[i].counter, task_pool[i].tss.sp, task_pool[i].tss.lr);    
+            printf("[privilege_task_create] Setup task %d, priority %d, counter %d, sp 0x%x, lr 0x%x\n", i, task_pool[i].priority, task_pool[i].counter, task_pool[i].tss.sp, task_pool[i].tss.lr);    
     } else {
-        uart_puts("task pool is full, can't create a new task.\n");
+        uart_puts("[privilege_task_create] task pool is full, can't create a new task.\n");
         while (1);
     }
     return i;
@@ -86,7 +87,7 @@ void schedule()
 {
     int i = NR_TASKS, c = -1, next = 0;
     while (1) {
-        while (--i) {
+        while ((--i) >= 0) { // With `while (--i)`, the task 0 won't be selected.
             if (task_pool[i].state == TASK_RUNNING && task_pool[i].counter > c) {
                 c = task_pool[i].counter;
                 next = i;
@@ -98,7 +99,6 @@ void schedule()
             if (task_pool[i].state == TASK_RUNNING)
                 task_pool[i].counter = (task_pool[i].counter >> 1) + task_pool[i].priority;
     }
-    // printf("Switch from task %d to task %d\n", current->task_id, next);
     context_switch(&task_pool[next]);
 }
 
@@ -138,11 +138,11 @@ void sched_init()
     // idle();
 
     /* Demo osc2024 lab 5: fork test. */
-    privilege_task_create(demo_fork_test, 10);
+    // privilege_task_create(demo_fork_test, 200);
+    // privilege_task_create(do_foo, 5);
 
     enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
 
-    core_timer_enable(); // enable core timer.
-
+    core_timer_enable();
     schedule();
 }

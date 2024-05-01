@@ -82,15 +82,27 @@ void demo_do_exec2()
 /* Only in demo.c, for delay usage. */
 void delay()
 {
-    long count = 1000000; // 1000000000 can see the effect of multi-tasking, or I should increase the frequency of timer interrupt.
-    while (count--);
+    long count = 10000000000; // 10000000000 in qemu can see pid 3; 100000000 in raspi 3 can see pid 3.
+    while (count--) {
+        asm volatile("nop");
+    };
 }
 
 /* for OSDI-2020 Lab 4 requirement 4. At user space, not allowed to access timer */
 void foo() {
     int tmp = 5;
     printf("Task %d after exec, tmp address 0x%x, tmp value %d\n", get_taskid(), &tmp, tmp);
+    while (1) {
+        delay();
+        uart_send('f');
+    }
     exit(0);
+}
+
+/* Do nothing task.*/
+void do_foo(void)
+{
+    exec(foo);
 }
 
 /* for OSDI-2020 Lab 4 requirement 4. At user space, not allowed to access timer */
@@ -140,6 +152,7 @@ void fork_test(void)
         exit(0);
     } else {
         printf("parent here, pid %d, child %d\n", get_taskid(), ret);
+        delay();
         exit(0);
     }
 }

@@ -36,11 +36,17 @@ struct trapframe {
 };
 
 /* for systemcall.S, user space function */
+/* system call: get current task id. */
 extern int get_taskid();
+/* system call: uart_read(buf, size). Use uart_getc() to fill the buf for given size. */
 extern size_t uart_read(char *buf, size_t size);
+/* system call: uart_write(buf, size). Output the contents of the buf for given size. */
 extern size_t uart_write(const char *buf, size_t size);
+/* system call: exec(func). For user space to execute the function. */
 extern void exec(void (*func)());
+/* system call: For user space to fork current task. */
 extern int fork();
+/* system call: exit(status). */
 extern void exit(int status);
 
 /* for syscall.c, kernel space handler function */

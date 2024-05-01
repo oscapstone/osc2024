@@ -4,6 +4,8 @@
 #include "power.h"
 #include "initrd.h"
 #include "demo.h"
+#include "syscall.h"
+#include "exception.h"
 
 /* Initialize UART and print Hello message. */
 void shell_init()
@@ -40,6 +42,7 @@ void shell_controller(char *cmd)
         uart_puts("set_timeout    : set the timer to trigger an interrupt after given second.\n");
         uart_puts("demo_uart      : demo for asynchronous uart. Lab 3 Basic Exercise 3\n");
         uart_puts("demo_irq       : demo for bottom half irq. Lab 3 Advanced Exercise 2\n");
+        uart_puts("demo_syscall   : demo for system call. Lab 5 basic 2.\n");
     } else if (!strcmp(cmd, "hello")) {
         uart_puts("Hello World!\n");
     } else if (!strcmp(cmd, "reboot")) {
@@ -62,6 +65,8 @@ void shell_controller(char *cmd)
         demo_async_uart();
     } else if (!strcmp(cmd, "demo_irq")) {
         asm volatile ("svc 5");
+    } else if (!strcmp(cmd, "demo_syscall")) {
+        exec(fork_test);
     } else {
         uart_puts("shell: command not found\n");
     }

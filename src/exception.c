@@ -69,7 +69,9 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     uart_puts("\n");
 
     // no return from exception for now
-    while(1);
+    while (1) {
+        asm volatile("nop");
+    }
 }
 
 /**
@@ -99,7 +101,7 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     char cmd[64];
 
     if (esr >> 26 != 0b010101) {
-        uart_puts("Not a svc call\n");
+        uart_puts("Exception occurs:\n");
         exc_handler(esr, elr, spsr, far);
         return;
     }
@@ -195,7 +197,6 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
 /* Substract the current task counter value and call schedule(). */
 void do_timer()
 {
-    // printf("[do timer]\n");
     if (--current->counter > 0)
         return;
     schedule();
@@ -204,9 +205,11 @@ void do_timer()
 /* Set the next core timer interrupt. Update timer related structure. */
 void core_timer_handler()
 {
+#ifdef ENABLE_TASKLET
     /* Mask the core timer interrupt first. Mask CORE0_TIMER_IRQ_CTRL. Spec says it will be done automatically? */
     *CORE0_TIMER_IRQ_CTRL &= ~(1 << 1);
-
+#endif
+    uart_send('.');
     /*     Setup next timer interrupt */
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
@@ -217,12 +220,13 @@ void core_timer_handler()
     tasklet_add(&tl_pool[TIMER_TASKLET - 1]);
     enable_interrupt();
     do_tasklet();
+
+    /* Enable the core timer interrupt */
+    *CORE0_TIMER_IRQ_CTRL |= (1 << 1);
 #else
     timer_update();
 #endif
 
-    /* Enable the core timer interrupt */
-    *CORE0_TIMER_IRQ_CTRL |= (1 << 1);
     do_timer(); // do_timer() may context switch, so we put it after enable the timer interrupt.
 }
 

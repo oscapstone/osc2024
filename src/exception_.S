@@ -107,7 +107,7 @@ exception_vector_table:
 
     /* Exception from the current EL while using SP_ELx (x = 1 or 2) */
     .align 7 // synchronous
-    b exception_handler // el1 `svc` triggers this
+    b exception_handler
     .align 7 // irq
     b irq_handler
     .align 7 // fiq

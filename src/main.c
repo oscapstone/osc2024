@@ -25,11 +25,22 @@ void main()
     mm_init();
     sched_init();
 
-    move_to_user_mode();
+    // move_to_user_mode();
     while(1) {
         uart_puts("# ");
         char cmd[CMD_LEN];
         shell_input(cmd);
         shell_controller(cmd);
     }
+    // if (fork() == 0) {
+    //     while(1) {
+    //         uart_puts("# ");
+    //         char cmd[CMD_LEN];
+    //         shell_input(cmd);
+    //         shell_controller(cmd);
+    //     }
+    // } else {
+    //     while (1)
+    //         asm volatile("nop");
+    // }
 }
