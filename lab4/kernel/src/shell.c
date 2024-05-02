@@ -33,7 +33,7 @@ int start_shell()
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
 #ifdef QEMU
-        puts("[ d[^_^]b @ QEMU ] $ ");
+        puts("[ ─=≡Σ((( つ•̀ω•́)つ @ QEMU ] $ ");
 #elif RPI
         puts("[ d[^_^]b @ RPI ] $ ");
 #endif
@@ -197,6 +197,23 @@ void cli_print_banner()
         DEBUG("      │\r\n");
     });
     puts("└───────────────┘\r\n");
+#elif RPI
+    puts("|===============|\r\n");
+    puts("| Logging level |\r\n");
+    puts("|---------------|\n");
+    WARNING_BLOCK({
+        puts("| ");
+        WARNING("    |\r\n");
+    });
+    INFO_BLOCK({
+        puts("| ");
+        INFO("       |\r\n");
+    });
+    DEBUG_BLOCK({
+        puts("| ");
+        DEBUG("      |\r\n");
+    });
+    puts("|---------------|\r\n");
 #endif
     puts("                                                      \r\n");
 }

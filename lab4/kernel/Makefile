@@ -57,7 +57,7 @@ run: clean
 	$(QEMU) $(QOPS) -serial null -serial stdio
 
 pi: clean
-	$(MAKE) TARGET_PLATFORM=rpi
+	$(MAKE) TARGET_PLATFORM=rpi DEBUG=$(DEBUG)
 	@echo ""
 	@echo "-----------------------------------------------------------"
 	@echo "The kernel8.img intended for the Raspberry Pi 3B+ is ready."
