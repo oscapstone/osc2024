@@ -26,7 +26,7 @@ void uart_init()
     *AUX_MU_LCR_REG = 3;    // 8 bit data size
     *AUX_MU_MCR_REG = 0;    // disable flow control
     *AUX_MU_BAUD_REG = 270; // 115200 baud rate
-    *AUX_MU_IIR_REG = 6;    // disable FIFO
+    *AUX_MU_IIR_REG = 6;    // clean FIFO
 
     /* map UART1 to GPIO pins */
     selector = *GPFSEL1;

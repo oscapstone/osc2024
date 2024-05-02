@@ -20,7 +20,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
 
 extern char *dtb_ptr;
 
-void *CPIO_DEFAULT_PLACE;
+extern void *CPIO_DEFAULT_PLACE;
 
 int start_shell()
 {
@@ -248,7 +248,6 @@ int do_cmd_ls(int argc, char **argv)
     char *c_filepath;
     char *c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
     if (argc == 0)
     {
@@ -258,23 +257,19 @@ int do_cmd_ls(int argc, char **argv)
     {
         workdir = argv[0];
     }
-
-    while (header_ptr != 0)
-    {
-        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        // if parse header error
-        if (error)
-        {
-            puts("cpio parse error");
-            return -1;
-        }
-
+    int error;
+    CPIO_FOR_EACH(&c_filepath, &c_filesize, &c_filedata, error, {
         // if this is not TRAILER!!! (last of file)
-        if (header_ptr != 0)
+        if (error != TRAILER)
         {
             puts(c_filepath);
             puts("\r\n");
         }
+    });
+    if (error == ERROR)
+    {
+        puts("cpio parse error");
+        return -1;
     }
     return 0;
 }
@@ -282,10 +277,8 @@ int do_cmd_ls(int argc, char **argv)
 int do_cmd_cat(int argc, char **argv)
 {
     char *filepath;
-    char *c_filepath;
     char *c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
     if (argc == 1)
     {
@@ -293,32 +286,27 @@ int do_cmd_cat(int argc, char **argv)
     }
     else
     {
-        puts("Too many arguments\r\n");
+        puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    while (header_ptr != 0)
+
+    int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
+
+    if (result == ERROR)
     {
-        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        // if parse header error
-        if (error)
-        {
-            puts("cpio parse error\r\n");
-            break;
-        }
-
-        if (strcmp(c_filepath, filepath) == 0)
-        {
-            puts(c_filedata);
-            break;
-        }
-
-        // if this is TRAILER!!! (last of file)
-        if (header_ptr == 0)
-        {
-            puts("cat: ");
-            puts(filepath);
-            puts(": No such file or directory\r\n");
-        }
+        puts("cpio parse error\r\n");
+        return -1;
+    }
+    else if (result == TRAILER)
+    {
+        puts("cat: ");
+        puts(filepath);
+        puts(": No such file or directory\r\n");
+        return -1;
+    }
+    else if (result == SUCCESS)
+    {
+        puts(c_filedata);
     }
     return 0;
 }

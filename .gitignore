@@ -6,3 +6,4 @@
 .vscode/
 build/
 rootfs/
+dtb_tag
