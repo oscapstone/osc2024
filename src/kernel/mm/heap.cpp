@@ -27,7 +27,7 @@ inline int chunk_idx(uint64_t size) {
   return -1;
 }
 
-static_assert(max_chunk_size <= PAGE_SIZE);
+static_assert(max_chunk_size < PAGE_SIZE);
 
 struct FreeChunk : ListItem {};
 
