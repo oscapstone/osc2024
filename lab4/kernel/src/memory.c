@@ -176,7 +176,7 @@ void *kmalloc(size_t size)
         return ptr;
     }
     int8_t order = 0;
-    while (order_to_size(order) - sizeof(list_head_t) < size)
+    while (order_to_size(order) < size)
     {
         order++;
     }
@@ -193,7 +193,7 @@ void *kmalloc(size_t size)
         // uart_puts("sizeof(list_head_t): 0x%x, return: 0x%x\r\n", sizeof(list_head_t), (void *)curr + sizeof(list_head_t));
         // dump_cache();
         unlock();
-        return (void *)curr + sizeof(list_head_t);
+        return (void *)curr;
     }
 
     void *ptr = page_malloc(PAGE_FRAME_SIZE);
@@ -208,7 +208,7 @@ void *kmalloc(size_t size)
     }
     // dump_cache();
     unlock();
-    return ptr + sizeof(list_head_t);
+    return ptr;
 }
 
 void kfree(void *ptr)
@@ -224,7 +224,6 @@ void kfree(void *ptr)
         unlock();
         return;
     }
-    ptr -= sizeof(list_head_t);
     frame->cache_used_count--;
     // uart_puts("kfree: cache address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
     size_t order_size = order_to_size(frame->order);
