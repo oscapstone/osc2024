@@ -12,6 +12,7 @@ struct TrapFrame {
   uint64_t spsr_el1;
   uint64_t elr_el1;
   uint64_t esr_el1;
+  void show() const;
 };
 
 inline int get_el() {
@@ -20,6 +21,7 @@ inline int get_el() {
 
 extern "C" {
 void print_exception(TrapFrame* frame, int type);
+void sync_handler(TrapFrame* frame, int type);
 // irq.c
 void irq_handler(TrapFrame* frame, int type);
 // exception.S

@@ -1,8 +1,10 @@
 #include "int/exception.hpp"
 
+#include "arm.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
 #include "shell/shell.hpp"
+#include "syscall.hpp"
 
 const char* ExceptionFrom[] = {
     "Current Exception level with SP_EL0.",
@@ -17,6 +19,17 @@ const char* ExceptionType[] = {
     "SError or vSError",
 };
 
+void TrapFrame::show() const {
+  kprintf("=== Trap Frame ===\n");
+  for (int i = 0; i <= 30; i++)
+    kprintf("x%d      \t= 0x%lu\n", i, X[i]);
+  kprintf("LR      \t= 0x%lu\n", lr);
+  kprintf("SPSR_EL1\t= 0x%lu\n", spsr_el1);
+  kprintf("ELR_EL1 \t= 0x%lu\n", elr_el1);
+  kprintf("ESR_EL1 \t= 0x%lu\n", esr_el1);
+  kprintf("------------------\n");
+}
+
 void print_exception(TrapFrame* frame, int type) {
   kprintf_sync("(%d) %s: %s\n", type, ExceptionType[type % 4],
                ExceptionFrom[type / 4]);
@@ -26,4 +39,15 @@ void print_exception(TrapFrame* frame, int type) {
 
   enable_interrupt();
   shell();
+}
+
+void sync_handler(TrapFrame* frame, int /*type*/) {
+  auto ec = ESR_ELx_EC(frame->esr_el1);
+  switch (ec) {
+    case ESR_ELx_EC_SVC64:
+      syscall_handler(frame);
+      break;
+    default:
+      kprintf_sync("unknown ESR_ELx_EC %llx\n", ec);
+  }
 }

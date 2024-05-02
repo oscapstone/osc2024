@@ -89,7 +89,7 @@ exception_vector_table:
     CALL_WITH_CONTEXT 7 print_exception
 
     .org 0x400
-    CALL_WITH_CONTEXT 8 print_exception
+    CALL_WITH_CONTEXT 8 sync_handler
     .org 0x480
     CALL_WITH_CONTEXT 9 irq_handler
     .org 0x500
