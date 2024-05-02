@@ -36,3 +36,28 @@ Goals of this lab:
 * Implement a simple allocator.
 * Understand what’s initial ramdisk.
 * Understand what’s devicetree.
+
+### Lab 3: Exception and Interrupt
+An exception is an event that causes the currently executing program to relinquish the CPU to the corresponding handler. With the exception mechanism, an operating system can
+
+* do proper handling when an error occurs during execution.
+* A user program can generate an exception to get the corresponding operating system’s service.
+* A peripheral device can force the currently executing program to relinquish the CPU and execute its handler.
+
+Goals of this lab:
+
+* Understand what’s exception levels in Armv8-A.
+* Understand what’s exception handling.
+* Understand what’s interrupt.
+* Understand how rpi3’s peripherals interrupt the CPU by interrupt controllers.
+* Understand how to multiplex a timer.
+* Understand how to concurrently handle I/O devices.
+
+### Lab 4: Booting
+In Lab 4, you need to implement memory allocators. They’ll be used in all later labs.
+
+Goals of this lab:
+
+* Implement a page frame allocator.
+* Implement a dynamic memory allocator.
+* Implement a startup allocator.
