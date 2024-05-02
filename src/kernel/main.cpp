@@ -44,8 +44,9 @@ void kernel_main(void* dtb_addr) {
   mini_uart_use_async(true);
 
   schedule_init();
+  kthread_init();
 
-  create_thread(shell);
+  kthread_create(shell);
 
   auto foo = +[]() {
     for (int i = 0; i < 10; ++i) {
@@ -55,7 +56,7 @@ void kernel_main(void* dtb_addr) {
     }
   };
   for (int i = 0; i < 2; ++i)
-    create_thread(foo);
+    kthread_create(foo);
 
   idle();
 }
