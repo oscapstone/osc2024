@@ -1,6 +1,6 @@
 #pragma once
 
-#define MM_LOG_LEVEL 3
+#define MM_LOG_LEVEL 1
 
 #if MM_LOG_LEVEL >= 3
 #define MM_DEBUG_PRINT(fmt, ...) klog(fmt __VA_OPT__(, ) __VA_ARGS__)
