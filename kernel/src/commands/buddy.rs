@@ -1,9 +1,9 @@
+use crate::allocator::buddy::BUDDY_SYSTEM;
+use crate::allocator::utils::toggle_buddy_verbose;
 use alloc::vec::Vec;
 use stdio::gets;
 use stdio::print;
 use stdio::println;
-
-use crate::allocator::buddy::BUDDY_SYSTEM;
 
 const MAX_COMMAND_LEN: usize = 0x100;
 
@@ -38,9 +38,7 @@ fn execute_command(buf: &[u8]) -> bool {
         "info" => unsafe {
             BUDDY_SYSTEM.print_info();
         },
-        "verbose" => unsafe {
-            BUDDY_SYSTEM.toggle_verbose();
-        },
+        "verbose" => toggle_buddy_verbose(),
         "reserve" => unsafe {
             let idx = match args.get(1) {
                 Some(s) => match s.parse::<usize>() {

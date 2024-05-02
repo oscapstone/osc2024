@@ -15,6 +15,8 @@ mod timer;
 
 use alloc::boxed::Box;
 use allocator::buddy::BUDDY_SYSTEM;
+#[allow(unused_imports)]
+use allocator::utils::{toggle_buddy_verbose, toggle_bump_verbose, toggle_dynamic_verbose};
 use core::arch::asm;
 use core::time::Duration;
 use stdio::{debug, gets, print, println};
@@ -23,24 +25,29 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 const MAX_COMMAND_LEN: usize = 0x100;
 
 fn main() -> ! {
-    unsafe {
-        BUDDY_SYSTEM.init();
-    }
-    unsafe {
-        BUDDY_SYSTEM.reserve_by_addr_range(0x0000, 0x1000); // dtb reserved
-        BUDDY_SYSTEM.reserve_by_addr_range(0x6_0000, 0x8_0000); // kernel stack reserved
-        BUDDY_SYSTEM.reserve_by_addr_range(0x8_0000, 0x10_0000); // kernel code reserved
-        BUDDY_SYSTEM.reserve_by_addr_range(0x8000_0000, 0x8200_0000); // initramfs reserved
-        BUDDY_SYSTEM.reserve_by_addr_range(0x8200_0000, 0x8800_0000); // dtb reserved
-        BUDDY_SYSTEM.reserve_by_addr_range(0x2000_0000, 0x2100_0000); // bump allocator reserved
-        BUDDY_SYSTEM.print_info();
-    }
     println!("Hello, world!");
     print_mailbox_info();
     debug!("Dealing with dtb...");
     unsafe {
         INITRAMFS_ADDR = dtb::get_initrd_start().unwrap();
     }
+    debug!("Initramfs address: {:#x}", unsafe { INITRAMFS_ADDR });
+    unsafe {
+        BUDDY_SYSTEM.init();
+    }
+    unsafe {
+        // BUDDY_SYSTEM.toggle_verbose();
+        BUDDY_SYSTEM.reserve_by_addr_range(0x0000, 0x1000);
+        BUDDY_SYSTEM.reserve_by_addr_range(0x0_0000, 0x8_0000); // kernel stack reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x8_0000, 0x10_0000); // kernel code reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x800_0000, 0x820_0000); // qemu initramfs reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x820_0000, 0x880_0000); // qemu dtb reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x1000_0000, 0x1100_0000); // bump allocator reserved
+        BUDDY_SYSTEM.reserve_by_addr_range(0x2eff_0000, 0x2fff_0000); // rpi3 dtb reserved
+        BUDDY_SYSTEM.print_info();
+        // toggle_buddy_verbose();
+    }
+
     debug!("Initramfs address: {:#x}", unsafe { INITRAMFS_ADDR });
     // Get current timer value
     unsafe {
@@ -56,15 +63,14 @@ fn main() -> ! {
         println!("Frequency: {} Hz", freq);
         println!("Boot time: {} ms", now / (freq / 1000));
     }
-
+    // toggle_dynamic_verbose();
+    // toggle_bump_verbose();
     timer::manager::init_timer_manager();
-
     unsafe {
         exception::enable_inturrupt();
     }
     {
         let tm = timer::manager::get_timer_manager();
-
         tm.add_timer(
             Duration::from_secs(2),
             Box::new(|| {
@@ -117,6 +123,5 @@ fn print_mailbox_info() {
     let revision = driver::mailbox::get_board_revision();
     println!("Board revision: {:x}", revision);
     let (lb, ub) = driver::mailbox::get_arm_memory();
-    println!("Board revision: {:x}", revision);
     println!("ARM memory: {:x} - {:x}", lb, ub);
 }

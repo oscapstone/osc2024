@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-
 #[repr(C)]
 #[derive(Debug)]
 pub struct MemRsvMap {
