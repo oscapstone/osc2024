@@ -65,6 +65,11 @@ const Cmd cmds[] = {
         .help = "demo",
         .fp = cmd_demo,
     },
+    {
+        .name = "schedule",
+        .help = "schedule",
+        .fp = cmd_schedule,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

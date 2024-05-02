@@ -9,6 +9,7 @@
 #include "int/timer.hpp"
 #include "io.hpp"
 #include "mm/mm.hpp"
+#include "sched.hpp"
 #include "shell/shell.hpp"
 
 void kernel_main(void* dtb_addr) {
@@ -42,5 +43,19 @@ void kernel_main(void* dtb_addr) {
 
   mini_uart_use_async(true);
 
-  shell();
+  schedule_init();
+
+  create_thread(shell);
+
+  auto foo = +[]() {
+    for (int i = 0; i < 10; ++i) {
+      kprintf("Thread id: %d %d\n", current_thread()->tid, i);
+      delay(1000000);
+      schedule();
+    }
+  };
+  for (int i = 0; i < 2; ++i)
+    create_thread(foo);
+
+  idle();
 }
