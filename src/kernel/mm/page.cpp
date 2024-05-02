@@ -95,7 +95,7 @@ void PageSystem::release(PageSystem::AllocatedPage apage) {
   if (log)
     MM_INFO("release: page %p order %d\n", apage, order);
   auto fpage = vpn2freepage(vpn);
-  free_list_[order].insert_back(fpage);
+  free_list_[order].push_back(fpage);
   merge(fpage);
 }
 
@@ -152,7 +152,7 @@ void PageSystem::merge(FreePage* apage) {
     auto o = array_[avpn].order;
     free_list_[o].erase(apage);
     array_[avpn].order = ++o;
-    free_list_[o].insert_back(apage);
+    free_list_[o].push_back(apage);
   }
 }
 

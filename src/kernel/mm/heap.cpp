@@ -74,7 +74,7 @@ struct Info {
 
   void free(void* ptr) {
     auto chk = new (ptr) FreeChunk;
-    list.insert_front(chk);
+    list.pop_front(chk);
   }
 
   void print() {

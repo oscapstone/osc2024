@@ -83,10 +83,10 @@ class ListHead {
   void insert_before(iterator it, T* node) {
     insert(--it, node);
   }
-  void insert_front(T* node) {
+  void pop_front(T* node) {
     insert(&head_, node);
   }
-  void insert_back(T* node) {
+  void push_back(T* node) {
     insert(tail_.prev, node);
   }
   void erase(iterator it) {
