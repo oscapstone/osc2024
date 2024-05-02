@@ -171,15 +171,13 @@ void print_el1_sys_reg() {
                                    // 32-bit trapped instruction
 }
 
-void exec_in_el0(void *prog_st_addr) {
+void exec_in_el0(void *prog_st_addr, void *stk_ptr) {
   asm volatile(
       "msr	spsr_el1, xzr\n\t"  // 0000: EL0t(jump to EL0); saved process
                                     // state when an exception is taken to EL1
-      "msr	elr_el1,  x0\n\t"   // put program_start -> ELR_EL1
-      "mov	x1, #0x20000\n\t"   // set sp on 0x20000
+      "msr	elr_el1, x0\n\t"    // put program_start -> ELR_EL1
       "msr	sp_el0, x1\n\t"     // set EL0 stack pointer
-      "ERET");
-  return;
+      "eret");
 }
 
 void enable_EL0VCTEN() {
@@ -188,16 +186,13 @@ void enable_EL0VCTEN() {
   // counter, and access from EL0 to the physical counter, virtual counter, EL1
   // physical timers, and the virtual timer.
   asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
-  tmp |= 1;  // EL0VCTEN(bit[1]):  Controls whether the virtual counter,
-             // CNTVCT_EL0, and the frequency register CNTFRQ_EL0, are
-             // accessible from EL0 modes.
-             // CNTVCT_EL0 (Counter-timer Virtual Count register): holds the
-             // 64-bit virtual count value. CNTFRQ_EL0 (Counter-timer Frequency
-             // register): holds the clock frequency of the system timer.
+  tmp |= 1;  //  EL0PCTEN, bit[0]: Controls whether the physical counter,
+             //  CNTPCT_EL0, and the frequency register CNTFRQ_EL0, are
+             //  accessible from EL0 modes
   asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
 }
 
-void check_DAIF() {
+void print_DAIF() {
   uint64_t tmp;
   asm volatile("mrs %0, daif" : "=r"(tmp));
   uart_send_string("DAIF reg: ");

@@ -1,6 +1,7 @@
 #include "mem.h"
 
 #include "alloc.h"
+#include "interrupt.h"
 #include "math_.h"
 #include "uart1.h"
 #include "utli.h"
@@ -257,16 +258,18 @@ static void* alloc_chunk(uint32_t size) {
 }
 
 void* malloc(uint32_t size) {
-  if (size == 0) {
-    return (void*)0;
+  void* ret = (void*)0;
+  OS_enter_critical();
+  if (size != 0) {
+    if (size <= MAX_CHUNK_SIZE) {
+      ret = alloc_chunk(size);
+    } else {
+      uint32_t frame_num = (size + FRAME_SIZE - 1) / FRAME_SIZE;
+      ret = alloc_frame(frame_num);
+    }
   }
-
-  if (size <= MAX_CHUNK_SIZE) {
-    return alloc_chunk(size);
-  }
-
-  uint32_t frame_num = (size + FRAME_SIZE - 1) / FRAME_SIZE;
-  return alloc_frame(frame_num);
+  OS_exit_critical();
+  return ret;
 }
 
 static void free_chunk(void* addr) {
@@ -295,13 +298,10 @@ static void free_chunk(void* addr) {
 
 static void free_frame(void* addr) {
   uint32_t frame_idx = address2idx(addr);
-
   if (chunk_entry_arr[frame_idx].is_mem_pool) {
     return;
   }
-
   uint32_t buddy_idx = frame_idx ^ (1 << frame_entry_arr[frame_idx].order);
-
   // coalesce blocks
   while (
       frame_entry_arr[frame_idx].order < MAX_ORDER &&
@@ -318,7 +318,6 @@ static void free_frame(void* addr) {
 
     buddy_idx = frame_idx ^ (1 << frame_entry_arr[frame_idx].order);
   }
-
   add_free_frame(frame_idx, frame_entry_arr[frame_idx].order);
 }
 
@@ -326,6 +325,8 @@ void free(void* addr) {
   if (!addr) {
     return;
   }
+  OS_enter_critical();
   free_chunk(addr);
   free_frame(addr);
+  OS_exit_critical();
 }

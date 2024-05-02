@@ -13,9 +13,7 @@ void kernel_init(void *arg) {
   shell_init();
   fdt_traverse(get_cpio_addr);
   init_mem();
-  print_cur_sp();
   init_sched_thread();
-  print_cur_sp();
   enable_EL0VCTEN();
   core0_timer_interrupt_enable();
   core_timer_enable();

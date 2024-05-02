@@ -129,10 +129,11 @@ sync_el1h:
   bl  invaild_exception_handler
   load_all
   eret
-
+  
 irq_el1h:
   save_all
   bl  irq_interrupt_handler
+  bl  check_signal
   load_all
   eret
 
@@ -157,6 +158,7 @@ sync_el0_64:
 irq_el0_64:
   save_all
   bl  irq_interrupt_handler
+  bl  check_signal
   load_all
   eret
 fiq_el0_64:

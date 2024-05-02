@@ -11,6 +11,18 @@
 #define SYSCALL_EXIT 5
 #define SYSCALL_MBOX 6
 #define SYSCALL_KILL 7
+#define SYSCALL_SIG 8
+#define SYSCALL_SIGKILL 9
+#define SIG_RETURN 32
+#define SIG_NUM 32
+
+typedef void (*sig_handler_func)();
+
+typedef struct sig_handler_t {
+  uint8_t registered;
+  uint32_t sig_cnt;
+  sig_handler_func func;
+} sig_handler_t;
 
 typedef struct trapframe_t {
   uint64_t x[31];  // general registers from x0 ~ x30
@@ -24,7 +36,12 @@ uint32_t sys_uartread(trapframe_t *tpf, char buf[], uint32_t size);
 uint32_t sys_uartwrite(trapframe_t *tpf, const char buf[], uint32_t size);
 uint32_t exec(trapframe_t *tpf, const char *name, char *const argv[]);
 uint32_t fork();
-void exit(trapframe_t *tpf);
+void exit();
 uint32_t sys_mbox_call(trapframe_t *tpf, uint8_t ch, uint32_t *mbox);
 void kill(uint32_t pid);
+void signal(uint32_t SIGNAL, sig_handler_func handler);
+void sig_kill(uint32_t pid, uint32_t SIGNAL);
+void check_signal();
+void sig_kill_default_handler();
+void sig_return();
 #endif

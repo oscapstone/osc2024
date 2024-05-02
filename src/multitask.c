@@ -11,25 +11,46 @@
 task_struct* current_thread;
 task_struct* threads;
 static ts_deque ready_que;
+extern int32_t lock_cnt;
 
-void ready_que_push_back(task_struct* thread) {
+void ready_que_del_node(task_struct* thread) {
+  task_struct_node* n = &thread->ts_node;
+  if (n->prev == (task_struct_node*)0 && n->next == (task_struct_node*)0) {
+    return;
+  }
   OS_enter_critical();
-  task_struct* t = ready_que.tail->prev;
-  t->next = thread;
-  ready_que.tail->prev = thread;
-  thread->prev = t;
-  thread->next = ready_que.tail;
+  n->prev->next = n->next;
+  n->next->prev = n->prev;
+  n->prev = n->next = (task_struct_node*)0;
   OS_exit_critical();
 }
 
-static inline task_struct* ready_que_pop_front() {
+void ready_que_push_back(task_struct* thread) {
   OS_enter_critical();
-  task_struct* ret = ready_que.head->next;
+  task_struct_node* n = ready_que.tail->prev;
+  n->next = &thread->ts_node;
+  ready_que.tail->prev = &thread->ts_node;
+  thread->ts_node.prev = n;
+  thread->ts_node.next = ready_que.tail;
+  OS_exit_critical();
+}
+
+task_struct* ready_que_pop_front() {
+  OS_enter_critical();
+  task_struct_node* ret = ready_que.head->next;
   ready_que.head->next = ret->next;
   ret->next->prev = ready_que.head;
-  ret->prev = ret->next = (task_struct*)0;
+  ret->prev = ret->next = (task_struct_node*)0;
   OS_exit_critical();
-  return ret;
+  return ret->ts;
+}
+
+static void init_thread_struct(task_struct* ts, uint32_t pid) {
+  memset(ts, 0, sizeof(task_struct));
+  ts->pid = pid;
+  ts->status = THREAD_FREE;
+  ts->ts_node.ts = ts;
+  ts->sig_handlers[SYSCALL_SIGKILL].func = sig_kill_default_handler;
 }
 
 static void reclaim() {
@@ -41,8 +62,9 @@ static void reclaim() {
       uart_send_string("\r\n");
       free(threads[i].usr_stk);
       free(threads[i].ker_stk);
+      free(threads[i].sig_stk);
       free(threads[i].data);
-      threads[i].status = THREAD_FREE;
+      init_thread_struct(&threads[i], i + 1);
     }
   }
   OS_exit_critical();
@@ -51,12 +73,6 @@ static void reclaim() {
 static void idle_task() {
   while (1) {
     reclaim();
-    // uint64_t ttmp;
-    // asm volatile("mrs %0, daif" : "=r"(ttmp));
-    // uart_send_string("DAIF_: ");
-    // uart_hex_64(ttmp);
-    // uart_send_string("\r\n");
-    // wait_usec(100000);
     schedule();
   }
 }
@@ -77,44 +93,36 @@ void schedule() {
   if (current_thread->status == THREAD_READY) {
     ready_que_push_back(current_thread);
   }
-  task_struct* to_switch = ready_que_pop_front();
+  task_struct* to_switch;
+  to_switch = ready_que_pop_front();
 #ifdef DEBUG
+  print_timestamp();
   uart_send_string("current_thread->pid: ");
   uart_int(current_thread->pid);
-  uart_send_string("\r\n");
-  uart_send_string("to_switch->pid: ");
+  uart_send_string(", to_switch->pid: ");
   uart_int(to_switch->pid);
   uart_send_string("\r\n\n");
 #endif
-
+  if (lock_cnt != 0) {
+    uart_puts("schedule error: lock_cnt != 0");
+  }
   disable_interrupt();
   task_struct* tmp = current_thread;
   current_thread = to_switch;
-
-  // uint64_t ttmp;
-  // asm volatile("mrs %0, daif" : "=r"(ttmp));
-  // uart_send_string("DAIF: ");
-  // uart_hex_64(ttmp);
-  // uart_send_string("\r\n");
-
   switch_to(&tmp->cpu_context, &to_switch->cpu_context);
 }
 
 static void init_thread_pool() {
   threads = (task_struct*)malloc(sizeof(task_struct) * PROC_NUM);
   for (int i = 0; i < PROC_NUM; i++) {
-    threads[i].status = THREAD_FREE;
-    threads[i].pid = i + 1;
-    threads[i].prev = threads[i].next = (task_struct*)0;
-    threads[i].usr_stk = threads[i].ker_stk = (void*)0;
-    threads[i].data = (void*)0;
+    init_thread_struct(&threads[i], i + 1);
   }
 };
 
 static void init_ready_queue() {
-  task_struct* tmp_ts = (task_struct*)malloc(sizeof(task_struct));
-  tmp_ts->prev = tmp_ts->next = tmp_ts;
-  ready_que.head = ready_que.tail = tmp_ts;
+  task_struct_node* n = (task_struct_node*)malloc(sizeof(task_struct_node));
+  n->prev = n->next = n;
+  ready_que.head = ready_que.tail = n;
 }
 
 void init_sched_thread() {
@@ -176,51 +184,15 @@ void startup_thread_exec(char* file) {
   current_thread->data_size = file_sz;
   memcpy(current_thread->data, usr_prog, file_sz);
   current_thread->usr_stk = malloc(USR_STK_SZ);
-  current_thread->cpu_context.lr = (uint64_t)current_thread->data;
-  current_thread->cpu_context.fp = current_thread->cpu_context.sp =
-      (uint64_t)current_thread->ker_stk + KER_STK_SZ;
-
-#ifdef DEBUG
-  uart_send_string("thread_exec usr sp: ");
-  uart_hex_64((uint64_t)current_thread->usr_stk + USR_STK_SZ);
-  uart_send_string("\r\n");
-  uart_send_string("thread_exec ker sp: ");
-  uart_hex_64(current_thread->cpu_context.sp);
-  uart_send_string("\r\n");
-#endif
 
   asm volatile(
       "msr spsr_el1, xzr\n\t"
       "msr elr_el1, %0\n\t"
       "msr sp_el0, %1\n\t"
       "mov sp, %2\n\t"
-      "eret\n\t" ::"r"(current_thread->cpu_context.lr),
+      "eret\n\t" ::"r"((uint64_t)current_thread->data),
       "r"(current_thread->usr_stk + USR_STK_SZ),
-      "r"(current_thread->cpu_context.sp));
-}
-
-void thread_exec_func(start_routine_t start_routine) {
-  current_thread->ker_stk = malloc(KER_STK_SZ);
-  current_thread->usr_stk = malloc(USR_STK_SZ);
-  current_thread->cpu_context.lr = (uint64_t)start_routine;
-  current_thread->cpu_context.fp = current_thread->cpu_context.sp =
-      (uint64_t)current_thread->ker_stk + KER_STK_SZ;
-
-  uart_send_string("thread_exec usr sp: ");
-  uart_hex_64((uint64_t)current_thread->usr_stk + USR_STK_SZ);
-  uart_send_string("\r\n");
-  uart_send_string("thread_exec ker sp: ");
-  uart_hex_64(current_thread->cpu_context.sp);
-  uart_send_string("\r\n");
-
-  asm volatile(
-      "msr spsr_el1, xzr\n\t"
-      "msr elr_el1, %0\n\t"
-      "msr sp_el0, %1\n\t"
-      "mov sp, %2\n\t"
-      "eret\n\t" ::"r"(current_thread->cpu_context.lr),
-      "r"(current_thread->usr_stk + USR_STK_SZ),
-      "r"(current_thread->cpu_context.sp));
+      "r"(current_thread->ker_stk + KER_STK_SZ));
 }
 
 void task_exit() {
