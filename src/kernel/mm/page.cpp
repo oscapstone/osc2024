@@ -93,7 +93,7 @@ void PageSystem::release(PageSystem::AllocatedPage apage) {
   auto vpn = addr2vpn(apage);
   auto order = array_[vpn].order;
   if (log)
-    MM_INFO("release: page %p order %d\n", apage, order);
+    MM_VERBOSE("release: page %p order %d\n", apage, order);
   auto fpage = vpn2freepage(vpn);
   free_list_[order].push_back(fpage);
   merge(fpage);
@@ -106,7 +106,7 @@ PageSystem::AllocatedPage PageSystem::alloc(PageSystem::FreePage* fpage,
   free_list_[order].erase(fpage);
   if (head) {
     if (log)
-      MM_INFO("alloc(+): page %p order %d\n", fpage, order);
+      MM_VERBOSE("alloc(+): page %p order %d\n", fpage, order);
     array_[vpn].type = FRAME_TYPE::ALLOCATED;
     auto apage = AllocatedPage(fpage);
     return apage;
@@ -122,7 +122,7 @@ PageSystem::AllocatedPage PageSystem::split(AllocatedPage apage) {
   auto bvpn = buddy(vpn);
   array_[bvpn] = {.type = FRAME_TYPE::ALLOCATED, .order = o};
   auto bpage = vpn2addr(bvpn);
-  MM_INFO("split: %p + %p\n", apage, bpage);
+  MM_VERBOSE("split: %p + %p\n", apage, bpage);
   return bpage;
 }
 
@@ -147,7 +147,7 @@ void PageSystem::merge(FreePage* apage) {
       std::swap(apage, bpage);
     }
     if (log)
-      MM_INFO("merge: %p + %p\n", apage, bpage);
+      MM_VERBOSE("merge: %p + %p\n", apage, bpage);
     alloc(bpage, false);
     auto o = array_[avpn].order;
     free_list_[o].erase(apage);
