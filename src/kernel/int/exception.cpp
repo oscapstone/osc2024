@@ -42,12 +42,12 @@ void print_exception(TrapFrame* frame, int type) {
 }
 
 void sync_handler(TrapFrame* frame, int /*type*/) {
-  auto ec = ESR_ELx_EC(frame->esr_el1);
+  int ec = ESR_ELx_EC(frame->esr_el1);
   switch (ec) {
     case ESR_ELx_EC_SVC64:
       syscall_handler(frame);
       break;
     default:
-      kprintf_sync("unknown ESR_ELx_EC %llx\n", ec);
+      kprintf_sync("unknown ESR_ELx_EC %x\n", ec);
   }
 }

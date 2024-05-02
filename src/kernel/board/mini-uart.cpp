@@ -8,7 +8,6 @@
 #include "int/irq.hpp"
 #include "int/timer.hpp"
 #include "io.hpp"
-#include "nanoprintf.hpp"
 #include "util.hpp"
 
 decltype(&mini_uart_getc_raw) mini_uart_getc_raw_fp;
