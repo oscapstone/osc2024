@@ -26,6 +26,7 @@ void kfree(void *ptr);
 size_t get_memory_size();
 void memory_init();
 void init_cache();
+int memory_reserve(size_t start, size_t end);
 
 void *page_malloc(size_t size);
 int page_free(void *frame);

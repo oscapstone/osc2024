@@ -1,7 +1,8 @@
 #include "string.h"
 #include "cpio.h"
 
-void *CPIO_DEFAULT_PLACE;
+char *CPIO_START;
+char *CPIO_END;
 
 /* Parse an ASCII hex string into an integer. (big endian)*/
 static unsigned int parse_hex_str(char *s, unsigned int max_len)

@@ -6,13 +6,12 @@
 #include "memory.h"
 #include "exception.h"
 
-extern char *dtb_ptr;
 
 void main(char *arg)
 {
     lock();
-    dtb_ptr = arg;
-    traverse_device_tree(dtb_ptr, dtb_callback_initramfs);
+
+    dtb_init(arg);
 
     uart_init();
     uart_interrupt_enable();

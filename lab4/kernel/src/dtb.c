@@ -4,8 +4,10 @@
 #include "string.h"
 #include "stdio.h"
 
-extern void *CPIO_DEFAULT_PLACE;
-char *dtb_ptr;
+extern char *CPIO_START;
+extern char *CPIO_END;
+char *DTB_START;
+char *DTB_END;
 
 // stored as big endian
 struct fdt_header
@@ -28,9 +30,15 @@ uint32_t uint32_endian_big2little(uint32_t data)
 	return (r[3] << 0) | (r[2] << 8) | (r[1] << 16) | (r[0] << 24);
 }
 
-void traverse_device_tree(void *dtb_ptr, dtb_callback callback)
+void dtb_init(void *dtb_ptr){
+	DTB_START = dtb_ptr;
+	DTB_END = (char *)dtb_ptr + uint32_endian_big2little(((struct fdt_header*)dtb_ptr)->totalsize);
+	traverse_device_tree(dtb_callback_initramfs);
+}
+
+void traverse_device_tree(dtb_callback callback)
 {
-	struct fdt_header *header = dtb_ptr;
+	struct fdt_header *header = DTB_START;
 	if (uint32_endian_big2little(header->magic) != 0xD00DFEED)
 	{
 		puts("traverse_device_tree : wrong magic in traverse_device_tree");
@@ -122,6 +130,10 @@ void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_
 	// linux,initrd-start will be assigned by start.elf based on config.txt
 	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-start") == 0)
 	{
-		CPIO_DEFAULT_PLACE = (void *)(unsigned long long)uint32_endian_big2little(*(uint32_t *)value);
+		CPIO_START = (void *)(unsigned long long)uint32_endian_big2little(*(uint32_t *)value);
+	}
+	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0)
+	{
+		CPIO_END = (void *)(unsigned long long)uint32_endian_big2little(*(uint32_t *)value);
 	}
 }

@@ -1,4 +1,4 @@
-_heap_stack_size = 500M;
+_heap_stack_size = 10M;
 
 SECTIONS
 {

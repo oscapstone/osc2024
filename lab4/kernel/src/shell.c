@@ -23,9 +23,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
 };
 
-extern char *dtb_ptr;
-
-extern void *CPIO_DEFAULT_PLACE;
+extern void *CPIO_START;
 
 int start_shell()
 {
@@ -350,7 +348,7 @@ int do_cmd_kmalloc(int argc, char **argv)
 
 int do_cmd_dtb(int argc, char **argv)
 {
-    traverse_device_tree(dtb_ptr, dtb_callback_show_tree);
+    traverse_device_tree(dtb_callback_show_tree);
     return 0;
 }
 
@@ -398,18 +396,20 @@ int do_cmd_exec(int argc, char **argv)
 
 int do_cmd_setTimeout(int argc, char **argv)
 {
-    char *msg, *sec;
+    char *msg;
+    int64_t sec;
     if (argc == 2)
     {
+        // strcpy(msg, argv[0]);
         msg = argv[0];
-        sec = argv[1];
+        sec = atoi(argv[1]);
     }
     else
     {
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    add_timer(puts, atoi(sec), msg);
+    add_timer(puts, sec, msg);
     return 0;
 }
 

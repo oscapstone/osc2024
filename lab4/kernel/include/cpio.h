@@ -26,7 +26,7 @@
 #define CPIO_FOR_EACH(c_filepath, c_filesize, c_filedata, error, something_to_run_in_loop) \
     do                                                                                     \
     {                                                                                      \
-        struct cpio_newc_header *pos = CPIO_DEFAULT_PLACE;                                 \
+        struct cpio_newc_header *pos = CPIO_START;                                 \
         while (1)                                                                          \
         {                                                                                  \
             error = cpio_newc_parse_header(pos, c_filepath, c_filesize, c_filedata, &pos); \
