@@ -7,7 +7,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  --target=aarch64-unknown-none-elf \
 			  -nostdlib -Os -fPIE
 
-BINS = hello.bin svc.bin
+BINS = hello.img svc.img syscall.img
 
 .PHONY: all clean
 
@@ -25,5 +25,8 @@ clean:
 %.elf: %.s
 	$(CC) $(CFLAGS) $< -o $@
 
-%.bin: %.elf
+%.img: %.elf
 	$(OBJCOPY) -O binary $< $@
+
+syscall.img:
+	curl https://nycu-caslab.github.io/OSC2024/_downloads/58c515e3041658a045033c8e56ecff4c/initramfs.cpio --output - | cpio -id
