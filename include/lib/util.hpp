@@ -31,7 +31,7 @@ inline uint32_t get32(addr_t address) {
   asm volatile("ldr %w[v],[%[a]]" : [v] "=r"(value) : [a] "r"(address));
   return value;
 }
-inline void wait_cycle(unsigned cycle) {
+inline void delay(unsigned cycle) {
   while (cycle--)
     NOP;
 }

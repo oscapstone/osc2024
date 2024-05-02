@@ -190,11 +190,11 @@ void mini_uart_setup() {
   // disable pull-up / down
   set32(GPPUD, 0b00);
   // wait 150 cycle
-  wait_cycle(150);
+  delay(150);
   // set cycle for gpio14 & gpio15
   set32(GPPUDCLK0, get32(GPPUDCLK0) | (1 << 14) | (1 << 15));
   // wait 150 cycle
-  wait_cycle(150);
+  delay(150);
   // remove the control signal
   set32(GPPUD, 0);
   // remove clock

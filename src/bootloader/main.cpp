@@ -44,7 +44,7 @@ void bootloader_main(void* dtb_addr) {
         break;
       case 'j': {
         mini_uart_printf("[b] Jump to kernel @ %p\n", kernel_addr);
-        wait_cycle(0x1000);
+        delay(0x1000);
         (decltype (&kernel_main)(kernel_addr))(dtb_addr);
         break;
       }
