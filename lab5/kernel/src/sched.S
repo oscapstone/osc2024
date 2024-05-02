@@ -18,6 +18,7 @@ switch_to: // (prev, next) = (x0, x1)
     ldr x9, [x1, 16 * 6]
     mov sp,  x9
     msr tpidr_el1, x1          // update current thread id
+    # bl unlock
     ret
 
 .global get_current

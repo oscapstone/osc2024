@@ -16,6 +16,7 @@ void timer_list_init(){
     tmp |= 1;
     asm volatile("msr cntkctl_el1, %0":: "r"(tmp));
 
+    timer_event_list = init_malloc(sizeof(struct list_head));
     INIT_LIST_HEAD(timer_event_list);
 }
 
@@ -53,8 +54,8 @@ void core_timer_handler(){
 
 void timer_event_callback(timer_event_t * timer_event){
     list_del_entry((struct list_head*)timer_event); // delete the event in queue
-    s_free(timer_event->args);                        // free the event's space
-    s_free(timer_event);
+    init_free(timer_event->args);                        // free the event's space
+    init_free(timer_event);
     ((void (*)(char*))timer_event-> callback)(timer_event->args);  // call the event
 
     // set queue linked list to next time event if it exists
@@ -80,9 +81,10 @@ void timer_set2sAlert(char* str)
 
 
 void add_timer(void *callback, unsigned long long timeout, char* args, int inTickFormat){
-    timer_event_t* the_timer_event = s_allocator(sizeof(timer_event_t)); // free by timer_event_callback
+    // uart_sendline("add timer\n");
+    timer_event_t* the_timer_event = init_malloc(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
-    the_timer_event->args = s_allocator(strlen(args)+1);
+    the_timer_event->args = init_malloc(strlen(args)+1);
     strcpy(the_timer_event -> args,args);
 
     if(inTickFormat == 0)

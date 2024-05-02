@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "irqtask.h": "c",
+        "cpio.h": "c"
+    }
+}

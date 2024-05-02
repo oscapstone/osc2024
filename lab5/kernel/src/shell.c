@@ -44,8 +44,15 @@ void cli_cmd_init()
 }
 void cli_cmd()
 {
+    cli_print_banner();
     char input_buffer[CMD_MAX_LEN];
     while(1){
+        // for (int i = 0; i < 1000000000; i++){
+        //     asm volatile("nop");
+
+        // }            
+        // int num = timer_list_get_size();
+            // uart_puts("timer_list_get_size: %d\n", num);
         cli_cmd_clear(input_buffer, CMD_MAX_LEN);
         uart_puts("# ");
         // uart_sendline("# ");
@@ -211,7 +218,8 @@ DO_CMD_FUNC(do_cmd_exec)
     char* c_filedata;
     unsigned int c_filesize;
     struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
-
+    char temp[] = "syscall.img";
+    filepath = temp;
     while(header_ptr!=0)
     {
         int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
@@ -226,6 +234,7 @@ DO_CMD_FUNC(do_cmd_exec)
         {
             uart_recv_echo_flag = 0; // syscall.img has different mechanism on uart I/O.
             exec_thread(c_filedata, c_filesize);
+            break;
         }
 
         //if this is TRAILER!!! (last of file)
@@ -282,15 +291,15 @@ DO_CMD_FUNC(do_cmd_info)
 DO_CMD_FUNC(do_cmd_s_allocator)
 {
     //test malloc
-    char* test1 = s_allocator(0x18);
+    char* test1 = init_malloc(0x18);
     memcpy(test1,"test malloc1",sizeof("test malloc1"));
     uart_puts("%s\n",test1);
 
-    char* test2 = s_allocator(0x20);
+    char* test2 = init_malloc(0x20);
     memcpy(test2,"test malloc2",sizeof("test malloc2"));
     uart_puts("%s\n",test2);
 
-    char* test3 = s_allocator(0x28);
+    char* test3 = init_malloc(0x28);
     memcpy(test3,"test malloc3",sizeof("test malloc3"));
     uart_puts("%s\n",test3);
 
@@ -299,12 +308,17 @@ DO_CMD_FUNC(do_cmd_s_allocator)
 
 DO_CMD_FUNC(do_cmd_thread_tester)
 {
-    for (int i = 0; i < 5; ++i)
-    { // N should > 2
-        thread_create(foo);
+    int num_thread = 5;
+    if (argv[0] != NULL){
+        num_thread = atoi(argv[0]);
     }
-    idle();
-
+    
+    for (int i = 0; i < num_thread; ++i)
+    {
+        thread_create(foo, NORMAL_PRIORITY);
+    }
+    schedule();
+    uart_puts("%d Thread tester done! \r\n", num_thread);
     return 0;
 }
 DO_CMD_FUNC(do_cmd_ls)

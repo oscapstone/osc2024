@@ -138,16 +138,17 @@ void dtb_find_and_store_reserved_memory()
     // off_mem_rsvmap stores all of reserve memory map with address and size
     char *dt_mem_rsvmap_ptr = (char *)((char *)header + uint32_endian_big2lttle(header->off_mem_rsvmap));
     struct fdt_reserve_entry *reverse_entry = (struct fdt_reserve_entry *)dt_mem_rsvmap_ptr;
-
+    int count = 0;
+    char name[20] = "";
     // reserve memory which is defined by dtb
     while (reverse_entry->address != 0 || reverse_entry->size != 0)
     {
         unsigned long long start = uint64_endian_big2lttle(reverse_entry->address);
         unsigned long long end = uint64_endian_big2lttle(reverse_entry->size) + start;
-        memory_reserve(start, end);
-        reverse_entry++;
+        sprintf(name, "dtb reserved %d", count++);
+        memory_reserve(start, end, name);        reverse_entry++;
     }
 
     // reserve device tree itself
-    memory_reserve((unsigned long long)dtb_ptr, (unsigned long long)dtb_ptr + uint32_endian_big2lttle(header->totalsize));
+    memory_reserve((unsigned long long)dtb_ptr, (unsigned long long)dtb_ptr + uint32_endian_big2lttle(header->totalsize), "device tree itself");
 }
