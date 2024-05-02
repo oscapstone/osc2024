@@ -78,7 +78,7 @@ void command_run()
     //printf("file name: ");
     //uart_getline(file_name);
 
-    cpio_run_executable("user.img");
+    cpio_run_executable("syscall.img");
 }
 
 void command_timer_on()

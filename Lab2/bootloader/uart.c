@@ -97,7 +97,8 @@ char uart_get_char() {
     /* read it and return */
     r=(char)(*AUX_MU_IO);
     /* convert carriage return to newline */
-    return r=='\r'?'\n':r;
+    //return r=='\r'?'\n':r;
+    return r;
 }
 
 /**
