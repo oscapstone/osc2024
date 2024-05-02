@@ -3,6 +3,7 @@
 #include "bcm2837/rpi_irq.h"
 #include "uart1.h"
 #include "string.h"
+#include "exception.h"
 
 // implement first in first out buffer with a read index and a write index
 static char uart_tx_buffer[VSPRINT_MAX_BUF_SIZE];

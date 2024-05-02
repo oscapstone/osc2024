@@ -4,7 +4,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "cpio.h"
-#include "heap.h"
+#include "memory.h"
 #include "dtb.h"
 #include "timer.h"
 
@@ -23,12 +23,12 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
     {.command = "exec", .help = "execute user programs ", .func = do_cmd_exec},
     {.command = "setTime", .help = "setTime [MESSAGE] [SECONDS] ", .func = do_cmd_setTimeout},
-    {.command = "2sAlert", .help = "set core timer interrupt every 2 second ", .func = do_cmd_set2sAlert}
-};
+    {.command = "2sAlert", .help = "set core timer interrupt every 2 second ", .func = do_cmd_set2sAlert},
+    {.command = "mtest", .help = "memory testcase generator, allocate and free", .func = do_cmd_mtest}};
 
 extern char *dtb_ptr;
 
-void *CPIO_DEFAULT_PLACE;
+extern void *CPIO_DEFAULT_START;
 
 int start_shell()
 {
@@ -297,28 +297,9 @@ int do_cmd_ls(int argc, char **argv)
     char *c_filepath;
     char *c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
-    if (argc == 0)
+    CPIO_for_each(&c_filepath, &c_filesize, &c_filedata)
     {
-        workdir = ".";
-    }
-    else
-    {
-        workdir = argv[0];
-    }
-
-    while (header_ptr != 0)
-    {
-        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        // if parse header error
-        if (error)
-        {
-            puts("cpio parse error");
-            return -1;
-        }
-
-        // if this is not TRAILER!!! (last of file)
         if (header_ptr != 0)
         {
             puts(c_filepath);
@@ -330,11 +311,11 @@ int do_cmd_ls(int argc, char **argv)
 
 int do_cmd_cat(int argc, char **argv)
 {
+    int FLAG_getfile = 0;
     char *filepath;
     char *c_filepath;
     char *c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
     if (argc == 1)
     {
@@ -345,29 +326,22 @@ int do_cmd_cat(int argc, char **argv)
         puts("Too many arguments\r\n");
         return -1;
     }
-    while (header_ptr != 0)
-    {
-        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        // if parse header error
-        if (error)
-        {
-            puts("cpio parse error\r\n");
-            break;
-        }
 
+    CPIO_for_each(&c_filepath, &c_filesize, &c_filedata)
+    {
         if (strcmp(c_filepath, filepath) == 0)
         {
-            puts(c_filedata);
+            FLAG_getfile = 1;
+            Readfile(c_filedata, c_filesize);
             break;
         }
+    }
 
-        // if this is TRAILER!!! (last of file)
-        if (header_ptr == 0)
-        {
-            puts("cat: ");
-            puts(filepath);
-            puts(": No such file or directory\r\n");
-        }
+    if (!FLAG_getfile)
+    {
+        puts("cat: ");
+        puts(filepath);
+        puts(": No such file or directory\r\n");
     }
     return 0;
 }
@@ -375,17 +349,17 @@ int do_cmd_cat(int argc, char **argv)
 int do_cmd_malloc(int argc, char **argv)
 {
     // test malloc
-    char *test1 = kmalloc(0x18);
+    char *test1 = allocator(0x18);
     strcpy(test1, "test malloc1");
     puts(test1);
     puts("\r\n");
 
-    char *test2 = kmalloc(0x20);
+    char *test2 = allocator(0x20);
     strcpy(test2, "test malloc2");
     puts(test2);
     puts("\r\n");
 
-    char *test3 = kmalloc(0x28);
+    char *test3 = allocator(0x28);
     strcpy(test3, "test malloc3");
     puts(test3);
     puts("\r\n");
@@ -400,11 +374,11 @@ int do_cmd_dtb(int argc, char **argv)
 
 int do_cmd_exec(int argc, char **argv)
 {
+    int FLAG_getfile = 0;
     char *filepath;
     char *c_filepath;
     char *c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
     if (argc == 1)
     {
@@ -415,56 +389,78 @@ int do_cmd_exec(int argc, char **argv)
         puts("Too many arguments\r\n");
         return -1;
     }
-    while(header_ptr!=0)
-    {
-        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        //if parse header error
-        if(error)
-        {
-            puts("cpio parse error");
-            break;
-        }
 
-        if(strcmp(c_filepath, filepath)==0)
+    CPIO_for_each(&c_filepath, &c_filesize, &c_filedata)
+    {
+        if (strcmp(c_filepath, filepath) == 0)
         {
-            //exec c_filedata
-            char* ustack = kmalloc(USTACK_SIZE);
-            asm("msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
+            // exec c_filedata
+            FLAG_getfile = 1;
+            char *ustack = allocator(USTACK_SIZE);
+            asm("msr elr_el1, %0\n\t" // elr_el1: Set the address to return to: c_filedata
                 "mov x1, 0x3c0\n\t"
                 "msr spsr_el1, x1\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
-                "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
-                "eret\n\t"              // Perform exception return. EL1 -> EL0
-                :: "r" (c_filedata),
-                   "r" (ustack+USTACK_SIZE));
-            //free(ustack);
+                "msr sp_el0, %1\n\t"   // user program stack pointer set to new stack.
+                "eret\n\t"             // Perform exception return. EL1 -> EL0
+                ::"r"(c_filedata),
+                "r"(ustack + USTACK_SIZE));
+            // free(ustack);
             break;
         }
+    }
 
-        // if this is TRAILER!!! (last of file)
-        if (header_ptr == 0)
-        {
-            puts("cat: ");
-            puts(filepath);
-            puts(": No such file or directory\r\n");
-        }
+    if (!FLAG_getfile) // header_ptr
+    {
+        puts("cat: ");
+        puts(filepath);
+        puts(": No such file or directory\r\n");
     }
 }
 
 int do_cmd_setTimeout(int argc, char **argv)
 {
-    char* msg;
+    char *msg;
     int sec;
-    if(argc==2){
+    if (argc == 2)
+    {
         msg = argv[0];
-        sec = atoi(argv[1]);    
-        add_timer(puts,sec,msg);
+        sec = atoi(argv[1]);
     }
-    else{
+    else
+    {
         puts("setTimeout [MESSAGE] [SECONDS]\r\n");
-    }    
+        return -1;
+    }
+    add_timer(puts, sec, msg);
+    return 0;
 }
 
 int do_cmd_set2sAlert(int argc, char **argv)
 {
-    add_timer(timer_set2sAlert,2,"2sAlert");
+    add_timer(timer_set2sAlert, 2, "2sAlert");
+}
+
+int do_cmd_mtest(int argc, char **argv)
+{
+    // char *a = kmalloc(0x2000);
+    // char *b = kmalloc(0x2000);
+    // char *c = kmalloc(0x2000);
+    // kfree(c);
+    // kfree(b);
+    // kfree(a);
+
+    // char *d = kmalloc(0x20);
+    // for(int i =0;i<124;i++){
+    //     char *a = kmalloc(0x20);
+    // }
+    // kfree(d);
+
+    char *a = kmalloc(512);
+    kfree(a);
+
+    char *b = kmalloc(513);
+    kfree(b);
+
+    char *c = kmalloc(8);
+    kfree(c);
 }

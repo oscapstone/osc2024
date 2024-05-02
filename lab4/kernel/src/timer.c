@@ -1,6 +1,6 @@
 #include "timer.h"
 #include "uart1.h"
-#include "heap.h"
+#include "memory.h"
 #include "string.h"
 
 #define STR(x) #x
@@ -10,7 +10,7 @@ struct list_head *timer_event_list; // first head has nothing, store timer_event
 
 void timer_list_init()
 {
-    timer_event_list = kmalloc(sizeof(list_head_t));
+    timer_event_list = allocator(sizeof(list_head_t));
     INIT_LIST_HEAD(timer_event_list);
 }
 
@@ -37,8 +37,10 @@ void core_timer_disable()
 
 void core_timer_handler()
 {
+    uart_sendlinek("\nThis is core_timer_handler\n");
     if (list_empty(timer_event_list))
     {
+        uart_sendlinek("\ntimer_event_list is empty\n");
         set_core_timer_interrupt(10000); // disable timer interrupt (set a very big value)
         return;
     }
@@ -70,18 +72,22 @@ void timer_set2sAlert(char *str)
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0)); // tick frequency
 
-    //uart_sendlinek("[Interrupt]");
-    //for(int i = 0 ;i < 1000000000;i++){}
-    uart_sendlinek("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0 / cntfrq_el0);
+    uart_sendlinek("\n");
+    uart_sendlinek("[Interrupt start]\n");
+    for (int i = 0; i < 1000000000; i++)
+        ;
+    uart_sendlinek("[Interrupt finish]\n");
 
-    add_timer(timer_set2sAlert, 2, "2sAlert");
+    //uart_sendlinek("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0 / cntfrq_el0);
+
+    // add_timer(timer_set2sAlert, 2, "2sAlert");
 }
 
 void add_timer(void *callback, unsigned long long timeout, char *args)
 {
-    timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
+    timer_event_t *the_timer_event = allocator(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
-    the_timer_event->args = kmalloc(strlen(args) + 1);
+    the_timer_event->args = allocator(strlen(args) + 1);
     strcpy(the_timer_event->args, args);
     the_timer_event->interrupt_time = get_tick_plus_s(timeout);
     the_timer_event->callback = callback;
@@ -93,14 +99,14 @@ void add_timer(void *callback, unsigned long long timeout, char *args)
     {
         if (((timer_event_t *)curr)->interrupt_time > the_timer_event->interrupt_time)
         {
-            list_add(&the_timer_event->listhead, curr->prev); // add this timer at the place just before the bigger one (sorted)
+            list_add(&(the_timer_event->listhead), curr->prev); // add this timer at the place just before the bigger one (sorted)
             break;
         }
     }
     // if the timer_event is the biggest, run this code block
     if (list_is_head(curr, timer_event_list))
     {
-        list_add_tail(&the_timer_event->listhead, timer_event_list);
+        list_add_tail(&(the_timer_event->listhead), timer_event_list);
     }
     // set interrupt to first event
     set_core_timer_interrupt_by_tick(((timer_event_t *)timer_event_list->next)->interrupt_time);

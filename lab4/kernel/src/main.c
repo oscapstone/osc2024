@@ -1,6 +1,6 @@
 #include "uart1.h"
 #include "shell.h"
-#include "heap.h"
+#include "memory.h"
 #include "dtb.h"
 #include "exception.h"
 #include "timer.h"
@@ -19,6 +19,7 @@ void main(char *arg)
     uart_init();
     irqtask_list_init();
     timer_list_init();
+    allocator_init();
 
     core_timer_enable();
     uart_interrupt_enable();
