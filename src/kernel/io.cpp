@@ -93,3 +93,15 @@ void kprint(string_view view) {
   else
     kprint_hex(view);
 }
+
+unsigned kread(char buf[], unsigned size) {
+  for (unsigned i = 0; i < size; i++)
+    buf[i] = kgetc();
+  return size;
+}
+
+unsigned kwrite(const char buf[], unsigned size) {
+  for (unsigned i = 0; i < size; i++)
+    kputc(buf[i]);
+  return size;
+}

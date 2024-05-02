@@ -21,3 +21,6 @@ void kputs_sync(const char* s);
 void kprint_hex(string_view view);
 void kprint_str(string_view view);
 void kprint(string_view view);
+
+unsigned kread(char buf[], unsigned size);
+unsigned kwrite(const char buf[], unsigned size);
