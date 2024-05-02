@@ -17,12 +17,12 @@ const char* ExceptionType[] = {
     "SError or vSError",
 };
 
-void print_exception(ExceptionContext* context, int type) {
+void print_exception(TrapFrame* frame, int type) {
   kprintf_sync("(%d) %s: %s\n", type, ExceptionType[type % 4],
                ExceptionFrom[type / 4]);
-  kprintf_sync("SPSR_EL1: %032lb\n", context->spsr_el1);
-  kprintf_sync("ELR_EL1 : 0x%lx\n", context->elr_el1);
-  kprintf_sync("ESR_EL1 : %032lb\n", context->esr_el1);
+  kprintf_sync("SPSR_EL1: %032lb\n", frame->spsr_el1);
+  kprintf_sync("ELR_EL1 : 0x%lx\n", frame->elr_el1);
+  kprintf_sync("ESR_EL1 : %032lb\n", frame->esr_el1);
 
   enable_interrupt();
   shell();

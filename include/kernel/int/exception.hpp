@@ -6,7 +6,7 @@
 #define CNTPNSIRQ_INT    (1 << 1)
 #define GPU_INT          (1 << 8)
 
-struct ExceptionContext {
+struct TrapFrame {
   uint64_t X[30];
   uint64_t lr;
   uint64_t spsr_el1;
@@ -19,7 +19,9 @@ inline int get_el() {
 }
 
 extern "C" {
-void print_exception(ExceptionContext* context, int type);
+void print_exception(TrapFrame* frame, int type);
+// irq.c
+void irq_handler(TrapFrame* frame, int type);
 // exception.S
 void set_exception_vector_table();
 }
