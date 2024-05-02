@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "sched.h": "c",
+        "allocator.h": "c",
+        "type_traits": "c",
+        "stddef.h": "c",
+        "devicetree.h": "c"
+    }
+}
