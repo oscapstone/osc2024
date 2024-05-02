@@ -38,7 +38,7 @@ void dtb_init(void *dtb_ptr){
 
 void traverse_device_tree(dtb_callback callback)
 {
-	struct fdt_header *header = DTB_START;
+	struct fdt_header *header = (struct fdt_header *)DTB_START;
 	if (uint32_endian_big2little(header->magic) != 0xD00DFEED)
 	{
 		puts("traverse_device_tree : wrong magic in traverse_device_tree");

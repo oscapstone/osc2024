@@ -1,3 +1,4 @@
+.PHONY: all clean run debug kill
 CC := aarch64-linux-gnu-gcc
 LD := aarch64-linux-gnu-ld
 OBJCOPY := aarch64-linux-gnu-objcopy
@@ -6,10 +7,20 @@ QEMU := qemu-system-aarch64
 KILL_QEMU := killall $(QEMU)
 
 
-COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
+COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only $(cops)
 ASMOPS = -Iinclude 
 QOPS = -M raspi3b -kernel $(NAME).img -dtb ../bcm2710-rpi-3-b-plus.dtb -initrd ../initramfs.cpio  -display none
 GDBOPS = --init-eval-command="file $(BUILD_DIR)/$(NAME).elf" --init-eval-command="target remote :1234"
+
+ifdef DEBUG
+COPS += -D_DEBUG=$(DEBUG)
+endif
+
+ifeq ($(TARGET_PLATFORM), qemu)
+COPS += -DQEMU
+else ifeq ($(TARGET_PLATFORM), rpi)
+COPS += -DRPI
+endif
 
 NAME = kernel8
 BUILD_DIR = build
@@ -41,11 +52,18 @@ $(NAME).img: $(SRC_DIR)/$(LK_SCRIPT) $(OBJ_FILES)
 	$(LD) -T $(SRC_DIR)/$(LK_SCRIPT) -o $(BUILD_DIR)/$(NAME).elf  $(OBJ_FILES)
 	$(OBJCOPY) $(BUILD_DIR)/$(NAME).elf -O binary $(NAME).img
 
-
-run: $(NAME).img
+run: clean
+	$(MAKE) TARGET_PLATFORM=qemu DEBUG=$(DEBUG)
 	$(QEMU) $(QOPS) -serial null -serial stdio
- 
-debug: $(NAME).img
+
+pi: clean
+	$(MAKE) TARGET_PLATFORM=rpi
+	@echo ""
+	@echo "-----------------------------------------------------------"
+	@echo "The kernel8.img intended for the Raspberry Pi 3B+ is ready."
+	@echo "-----------------------------------------------------------"
+
+debug: clean $(NAME).img
 	tmux new-session -d -s $(SESSION_NAME) '$(QEMU) $(QOPS) -S -s  -serial null -serial stdio' \; split-window -h '$(GDB) $(GDBOPS)' \; attach -t $(SESSION_NAME)
 
 kill: 

@@ -10,9 +10,13 @@
 */
 
 #define CPIO_NEWC_HEADER_MAGIC "070701" // big endian constant, to check whether it is big endian or little endian
-#define TRAILER 0
-#define SUCCESS 1
-#define ERROR -1
+
+typedef enum
+{
+    CPIO_TRAILER = 0,
+    CPIO_SUCCESS = 1,
+    CPIO_ERROR = -1
+} CPIO_return_t;
 
 /**
  * list_for_each	-	iterate over a list
@@ -26,17 +30,17 @@
 #define CPIO_FOR_EACH(c_filepath, c_filesize, c_filedata, error, something_to_run_in_loop) \
     do                                                                                     \
     {                                                                                      \
-        struct cpio_newc_header *pos = CPIO_START;                                 \
+        struct cpio_newc_header *pos = (struct cpio_newc_header *)CPIO_START;              \
         while (1)                                                                          \
         {                                                                                  \
             error = cpio_newc_parse_header(pos, c_filepath, c_filesize, c_filedata, &pos); \
-            if (error == ERROR)                                                            \
+            if (error == CPIO_ERROR)                                                       \
             {                                                                              \
                 break;                                                                     \
             }                                                                              \
             else if (pos == 0)                                                             \
             {                                                                              \
-                error = TRAILER;                                                           \
+                error = CPIO_TRAILER;                                                      \
                 break; /*if this is TRAILER!!! (last of file)*/                            \
             }                                                                              \
             something_to_run_in_loop                                                       \
