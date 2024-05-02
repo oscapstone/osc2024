@@ -14,19 +14,45 @@
 extern void* CPIO_DEFAULT_START;
 extern thread_t *curr_thread;
 extern thread_t threads[PIDMAX + 1];
+extern int uart_recv_echo_flag; // to prevent the syscall.img from using uart_send() in uart_recv()
 
+int syscall_num = 0;
+SYSCALL_TABLE_T syscall_table [] = {
+    { .func=getpid                  },
+    { .func=uartread                },
+    { .func=uartwrite               },
+    { .func=exec                    },
+    { .func=fork                    },
+    { .func=exit                    },
+    { .func=syscall_mbox_call       },
+    { .func=kill                    },
+    { .func=signal_register         },
+    { .func=signal_kill             },
+    { .func=signal_reture           }
+};
+
+void init_syscall()
+{
+    syscall_num = sizeof(syscall_table) / sizeof(SYSCALL_TABLE_T);
+    // uart_sendline("syscall_table[syscall_no].func: 0x%x\r\n", syscall_table[0].func);
+
+}
 // trap is like a shared buffer for user space and kernel space
 // Because general-purpose registers are used for both arguments and return value,
 // We may receive the arguments we need, and overwrite them with return value.
 
-int getpid(trapframe_t *tpf)
+SYSCALL_DEFINE(getpid)
 {
+    // uart_sendline("getpid: %d\r\n", curr_thread->pid);
     tpf->x0 = curr_thread->pid;
     return curr_thread->pid;
 }
 
-size_t uartread(trapframe_t *tpf, char buf[], size_t size)
+SYSCALL_DEFINE(uartread)
 {
+    char *buf = (char *)tpf->x0;
+    size_t size = tpf->x1;
+
     int i = 0;
     for (int i = 0; i < size;i++)
     {
@@ -36,8 +62,12 @@ size_t uartread(trapframe_t *tpf, char buf[], size_t size)
     return i;
 }
 
-size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size)
+SYSCALL_DEFINE(uartwrite)
 {
+    // uart_sendline("uartwrite: %s\r\n", (char *)tpf->x0);
+    const char *buf = (const char *)tpf->x0;
+    size_t size = tpf->x1;
+
     int i = 0;
     for (int i = 0; i < size; i++)
     {
@@ -48,8 +78,11 @@ size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size)
 }
 
 //In this lab, you won’t have to deal with argument passing
-int exec(trapframe_t *tpf, const char *name, char *const argv[])
+SYSCALL_DEFINE(exec)
 {
+    char *name = (char *)tpf->x0;
+    // char *argv[] = (char **)tpf->x1;
+
     curr_thread->datasize = get_file_size((char*)name);
     char *new_data = get_file_start((char *)name);
     for (unsigned int i = 0; i < curr_thread->datasize;i++)
@@ -69,10 +102,11 @@ int exec(trapframe_t *tpf, const char *name, char *const argv[])
     return 0;
 }
 
-int fork(trapframe_t *tpf)
+SYSCALL_DEFINE(fork)
 {
     lock();
-    thread_t *newt = thread_create(curr_thread->data);
+    thread_t *newt = thread_create(curr_thread->data, NORMAL_PRIORITY);
+    // thread_t *newt = thread_create(curr_thread->data, 10);
     newt->datasize = curr_thread->datasize;
 
     //copy signal handler
@@ -96,14 +130,15 @@ int fork(trapframe_t *tpf)
         newt->kernel_stack_alloced_ptr[i] = curr_thread->kernel_stack_alloced_ptr[i];
     }
 
-    store_context(get_current());
+    store_context(get_current());       // store the content for child and child will start to this point 
 
     //for child
     if( parent_pid != curr_thread->pid)
     {
         goto child;
     }
-
+    uart_sendline("I'am parent\r\n");
+    uart_sendline("fork: parent_pid: %d, child_pid: %d\r\n", parent_pid, newt->pid);
     newt->context = curr_thread->context;
     // the offset of current syscall should also be updated to new cpu context
     newt->context.fp += newt->kernel_stack_alloced_ptr - curr_thread->kernel_stack_alloced_ptr;
@@ -114,6 +149,8 @@ int fork(trapframe_t *tpf)
     return newt->pid;   // pid = new
 
 child:
+    uart_sendline("I'am child\r\n");
+    uart_sendline("fork: child_pid: %d\r\n", newt->pid);
     // the offset of current syscall should also be updated to new return point
     tpf = (trapframe_t*)((char *)tpf + (unsigned long)newt->kernel_stack_alloced_ptr - (unsigned long)parent_thread->kernel_stack_alloced_ptr); // move tpf
     tpf->sp_el0 += newt->stack_alloced_ptr - parent_thread->stack_alloced_ptr;
@@ -121,13 +158,18 @@ child:
     return 0;           // pid = 0
 }
 
-void exit(trapframe_t *tpf, int status)
+SYSCALL_DEFINE(exit)
 {
+    // int status = tpf->x0;
+    uart_recv_echo_flag = 1;
     thread_exit();
+    return 0;
 }
 
-int syscall_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
+SYSCALL_DEFINE(syscall_mbox_call)
 {
+    unsigned char ch = (unsigned char)tpf->x0;
+    unsigned int *mbox = (unsigned int *)tpf->x1;
     lock();
     unsigned long r = (((unsigned long)((unsigned long)mbox) & ~0xF) | (ch & 0xF));
     do{asm volatile("nop");} while (*MBOX_STATUS & BCM_ARM_VC_MS_FULL);
@@ -147,34 +189,48 @@ int syscall_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
     return 0;
 }
 
-void kill(trapframe_t *tpf, int pid)
+SYSCALL_DEFINE(kill)
 {
-    if ( pid < 0 || pid >= PIDMAX || !threads[pid].isused) return;
+    int pid = tpf->x0;
+    if ( pid < 0 || pid >= PIDMAX || !threads[pid].isused) return -1;
     lock();
     threads[pid].iszombie = 1;
     unlock();
     schedule();
+    return 0;
 }
 
-void signal_register(int signal, void (*handler)())
+SYSCALL_DEFINE(signal_register)
 {
-    if (signal > SIGNAL_MAX || signal < 0) return;
+    int signal = tpf->x0;
+    void (*handler)() = (void (*)())tpf->x1;
+
+    if (signal > SIGNAL_MAX || signal < 0) return -1;
     curr_thread->signal_handler[signal] = handler;
+    return 0;
 }
 
-void signal_kill(int pid, int signal)
+SYSCALL_DEFINE(signal_kill)
 {
-    if (pid > PIDMAX || pid < 0 || !threads[pid].isused)return;
+    int pid = tpf->x0;
+    int signal = tpf->x1;
+
+    if (pid > PIDMAX || pid < 0 || !threads[pid].isused)return -1;
     lock();
     threads[pid].sigcount[signal]++;
     unlock();
+    return 0;
 }
 
-void sigreturn(trapframe_t *tpf)
+SYSCALL_DEFINE(signal_reture)
 {
-    unsigned long signal_ustack = tpf->sp_el0 % USTACK_SIZE == 0 ? tpf->sp_el0 - USTACK_SIZE : tpf->sp_el0 & (~(USTACK_SIZE - 1));
+    unsigned long signal_ustack = 
+        tpf->sp_el0 % USTACK_SIZE == 0 ? 
+        tpf->sp_el0 - USTACK_SIZE :             // if the signal doesn't use the stack
+        tpf->sp_el0 & (~(USTACK_SIZE - 1));     // if the signal uses the stack, return to the start of the stack 
     kfree((char*)signal_ustack);
     load_context(&curr_thread->signal_savedContext);
+    return 0;
 }
 
 

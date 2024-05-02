@@ -28,6 +28,8 @@ void irqtask_list_init();
 
 void el1_interrupt_enable();
 void el1_interrupt_disable();
+void lock();
+void unlock();
 
 void el1h_irq_router();
 void el0_sync_router();

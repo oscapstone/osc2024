@@ -8,7 +8,9 @@
 #include "sched.h"
 #include "signal.h"
 
-extern list_head_t *run_queue;
+extern int finish_init_thread_sched;
+extern int syscall_num;
+extern SYSCALL_TABLE_T *syscall_table;
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable(){
@@ -19,36 +21,59 @@ void el1_interrupt_disable(){
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
-static unsigned long long lock_count = 0;
+int get_current_el()
+{
+    int el;
+    __asm__ __volatile__("mrs %0, CurrentEL" : "=r"(el));
+    return el >> 2;
+}
+static unsigned long long lock_counter = 0;
+
 void lock()
 {
+    // uart_sendline("lock %d\r\n", lock_counter);
     el1_interrupt_disable();
-    lock_count++;
+    lock_counter++;
 }
 
 void unlock()
 {
-    lock_count--;
-    if (lock_count == 0)
+    // uart_sendline("unlock %d\r\n", lock_counter);
+    lock_counter--;
+    if (lock_counter < 0)
+    {
+        uart_puts("lock counter error\r\n");
+        while (1)
+            ;
+    }
+    else if (lock_counter == 0)
+    {
         el1_interrupt_enable();
+    }
 }
 
 void el1h_irq_router(trapframe_t *tpf){
+    lock();
+    // uart_sendline("irq_router\r\n");
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
-    if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
+    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IER_REG & (1 << 1))
+        if (*AUX_MU_IER_REG & 2)
         {
-            *AUX_MU_IIR_REG &= ~(2);  // disable write interrupt
+            // uart_sendline("write interrupt\r\n");
+            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
-        else if (*AUX_MU_IER_REG & (2 << 1))
+        else if (*AUX_MU_IER_REG & 1)
         {
-            *AUX_MU_IIR_REG &= ~(1);  // disable read interrupt
+            // uart_sendline("read interrupt\r\n");
+            *AUX_MU_IER_REG &= ~(1); // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive();
         }
     }
@@ -56,89 +81,64 @@ void el1h_irq_router(trapframe_t *tpf){
     {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock();
         irqtask_run_preemptive();
         core_timer_enable();
 
-        //at least two threads running -> schedule for any timer irq
-        if (run_queue->next->next != run_queue) schedule();
+        // check whether init_thread_sched is finished
+        if (finish_init_thread_sched == 1)
+            schedule();
     }
-
+    else
+    {
+        uart_puts("Hello World el1 64 router other interrupt!\r\n");
+    }
     //only do signal handler when return to user mode
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
         check_signal(tpf);
+        
     }
 }
 
 void el0_sync_router(trapframe_t *tpf){
 
     // Basic #3 - Based on System Call Format in Video Player’s Test Program
-
     el1_interrupt_enable(); // Allow UART input during exception
     unsigned long long syscall_no = tpf->x8;
-
-    if (syscall_no == 0)
+    if (syscall_no == 50) syscall_no = 10;
+    if (syscall_no > syscall_num|| syscall_no < 0)
     {
-        getpid(tpf);
+        // invalid syscall number
+        uart_sendline("Invalid syscall number: %d\r\n", syscall_no);
+        tpf->x0 = -1;
+        return;
     }
-    else if(syscall_no == 1)
-    {
-        uartread(tpf, (char *)tpf->x0, tpf->x1);
-    }
-    else if (syscall_no == 2)
-    {
-        uartwrite(tpf, (char *)tpf->x0, tpf->x1);
-    }
-    else if (syscall_no == 3)
-    {
-        exec(tpf, (char *)tpf->x0, (char **)tpf->x1);
-    }
-    else if (syscall_no == 4)
-    {
-        fork(tpf);
-    }
-    else if (syscall_no == 5)
-    {
-        exit(tpf, tpf->x0);
-    }
-    else if (syscall_no == 6)
-    {
-        syscall_mbox_call(tpf, (unsigned char)tpf->x0, (unsigned int *)tpf->x1);
-    }
-    else if (syscall_no == 7)
-    {
-        kill(tpf, (int)tpf->x0);
-    }
-    else if (syscall_no == 8)
-    {
-        signal_register(tpf->x0, (void (*)())tpf->x1);
-    }
-    else if (syscall_no == 9)
-    {
-        signal_kill(tpf->x0, tpf->x1);
-    }
-    else if (syscall_no == 50)
-    {
-        sigreturn(tpf);
-    }
+    
+    // char* func = (char*)(((&syscall_table)[syscall_no]));
+    // ((int (*)(trapframe_t *))func)(tpf);
+    ((int (*)(trapframe_t *))(((&syscall_table)[syscall_no])))(tpf);
 }
 
 void el0_irq_64_router(trapframe_t *tpf){
+    lock();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IER_REG & (0b01 << 1))
+       if (*AUX_MU_IER_REG & 2)
         {
-            *AUX_MU_IIR_REG &= ~(2);  // disable write interrupt
+            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            irqtask_run_preemptive();
+            unlock();
+            irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
-        else if (*AUX_MU_IER_REG & (0b10 << 1))
+        else if (*AUX_MU_IER_REG & 1)
         {
-            *AUX_MU_IIR_REG &= ~(1);  // disable read interrupt
+            *AUX_MU_IER_REG &= ~(1); // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive();
         }
     }
@@ -146,11 +146,13 @@ void el0_irq_64_router(trapframe_t *tpf){
     {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock();
         irqtask_run_preemptive();
         core_timer_enable();
 
-        //at least two trhead running -> schedule for any timer irq
-        if (run_queue->next->next != run_queue) schedule();
+        // check whether init_thread_sched is finished
+        if (finish_init_thread_sched == 1)
+            schedule();    
     }
 
     //only do signal handler when return to user mode
@@ -181,73 +183,69 @@ int curr_task_priority = 9999;   // Small number has higher priority
 struct list_head *task_list;
 void irqtask_list_init()
 {
+    task_list = init_malloc(sizeof(struct list_head));
     INIT_LIST_HEAD(task_list);
 }
 
 
-void irqtask_add(void *task_function,unsigned long long priority){
-    irqtask_t *the_task = s_allocator(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
+void irqtask_add(void *task_function, unsigned long long priority)
+{
+    irqtask_t *the_task = init_malloc(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
 
     // store all the related information into irqtask node
     // manually copy the device's buffer
     the_task->priority = priority;
     the_task->task_function = task_function;
-    INIT_LIST_HEAD(&the_task->listhead);
+    INIT_LIST_HEAD(&(the_task->listhead));
 
     // add the timer_event into timer_event_list (sorted)
     // if the priorities are the same -> FIFO
     struct list_head *curr;
 
-    // mask the device's interrupt line
-    lock();
     // enqueue the processing task to the event queue with sorting.
     list_for_each(curr, task_list)
     {
         if (((irqtask_t *)curr)->priority > the_task->priority)
         {
-            list_add(&the_task->listhead, curr->prev);
+            list_add(&(the_task->listhead), curr->prev);
             break;
         }
     }
     // if the priority is lowest
     if (list_is_head(curr, task_list))
     {
-        list_add_tail(&the_task->listhead, task_list);
+        list_add_tail(&(the_task->listhead), task_list);
     }
-    // unmask the interrupt line
-    unlock();
 }
 
-void irqtask_run_preemptive(){
+void irqtask_run_preemptive()
+{
     while (!list_empty(task_list))
     {
-        // critical section protects new coming node
         lock();
         irqtask_t *the_task = (irqtask_t *)task_list->next;
-        // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
             unlock();
             break;
         }
-        // get the scheduled task and run it.
         list_del_entry((struct list_head *)the_task);
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
-
+        
         unlock();
+        
         irqtask_run(the_task);
+        
         lock();
 
         curr_task_priority = prev_task_priority;
+        init_free(the_task);
         unlock();
-        s_free(the_task);
     }
 }
 
-void irqtask_run(irqtask_t* the_task)
+void irqtask_run(irqtask_t *the_task)
 {
     ((void (*)())the_task->task_function)();
 }
-
-

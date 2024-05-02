@@ -192,24 +192,35 @@ char* strcpy (char *dest, const char *src)
     return memcpy (dest, src, strlen (src) + 1);
 }
 
-char* str_SepbySpace(char* head)
+/*
+    *  str_SepbySpace
+    *  @param head: the head of the string
+    *  @param words: the array of words
+    *  @return the number of words
+    *  @brief separate the string by space
+    * @note the head will be modified
+*/
+int str_SepbySpace(char* head, char* words[])
 {
-    char* end;
-    while(1){
-        if(*head == '\0')
+    int count = 0;
+    char *cur = head;
+
+    while (1)
+    {
+        if (*cur == ' ')
         {
-            end = head;
+            *cur = '\0';
+            words[count++] = head;
+            head = cur + 1;
+        }
+        else if (*cur == '\0')
+        {
+            words[count++] = head;
             break;
         }
-        if(*head == ' ')
-        {
-            *head = '\0';
-            end = head + 1;
-            break;
-        }
-        head++;
+        cur++;
     }
-    return end;
+    return count;
 }
 
 // A simple atoi() function

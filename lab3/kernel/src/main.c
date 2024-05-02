@@ -16,20 +16,16 @@ void main(char* arg){
 
     cli_cmd_init();
     uart_init();
-    uart_sendline("\n");
+    // uart_sendline("\n");
     irqtask_list_init();
     timer_list_init();
 
     uart_interrupt_enable();
-    el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
+    uart_flush_FIFO();
     core_timer_enable();
 
-#if DEBUG
-    cli_cmd_read(input_buffer); // Wait for input, Windows cannot attach to SERIAL from two processes.
-#endif
-    // init_allocator();
-    // init_thread_sched();
 
+    el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
     cli_print_banner();
     cli_cmd();
 }

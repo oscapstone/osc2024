@@ -56,25 +56,32 @@ void run_signal(trapframe_t *tpf, int signal)
     }
 
     // run registered handler in userspace
-    char *temp_signal_userstack = kmalloc(USTACK_SIZE);
+    char *new_signal_userstack = kmalloc(USTACK_SIZE);
     asm("msr elr_el1, %0\n\t"
         "msr sp_el0, %1\n\t"
         "msr spsr_el1, %2\n\t"
-        "eret\n\t" ::"r"(signal_handler_wrapper),
-        "r"(temp_signal_userstack + USTACK_SIZE),
-        "r"(tpf->spsr_el1));
+        "eret\n\t" 
+        :
+        :"r"(signal_handler_wrapper),
+         "r"(new_signal_userstack + USTACK_SIZE),
+         "r"(tpf->spsr_el1));
 
 }
 
 void signal_handler_wrapper()
 {
     (curr_thread->curr_signal_handler)();
+
     // system call sigreturn
-    asm("mov x8,50\n\t"
-        "svc 0\n\t");
+    asm(
+        "mov x8,50\n\t"
+        "svc 0\n\t"
+    );
 }
 
 void signal_default_handler()
 {
-    kill(0,curr_thread->pid);
+    trapframe_t tpf;
+    tpf.x0 = curr_thread->pid;
+    kill(&tpf);
 }

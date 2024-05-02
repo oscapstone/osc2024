@@ -9,6 +9,7 @@
 struct list_head* timer_event_list;  // first head has nothing, store timer_event_t after it 
 
 void timer_list_init(){
+    timer_event_list = kmalloc(sizeof(struct list_head));
     INIT_LIST_HEAD(timer_event_list);
 }
 
@@ -64,6 +65,13 @@ void timer_set2sAlert(char* str)
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
+
+    // uart_sendline("timer start\n");
+    // for (int i = 0; i < 100000000000; i++)
+    // {
+    //     asm volatile("nop");
+    // }
+    // uart_sendline("timer end\n");
     uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
     add_timer(timer_set2sAlert,2,"2sAlert");
 }

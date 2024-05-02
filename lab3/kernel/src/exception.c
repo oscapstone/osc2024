@@ -18,6 +18,8 @@ void el1h_irq_router(){
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
+    // while(1)
+    //     uart_sendline("aaaaa\n");
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
         // It is for terminal output. (Like printf function in C)
@@ -104,6 +106,7 @@ int curr_task_priority = 9999;   // Small number has higher priority
 struct list_head *task_list;
 void irqtask_list_init()
 {
+    task_list = kmalloc(sizeof(struct list_head));
     INIT_LIST_HEAD(task_list);
 }
 
@@ -123,7 +126,7 @@ void irqtask_add(void *task_function,unsigned long long priority){
 
     // mask the device's interrupt line
     el1_interrupt_disable();
-    // enqueue the processing task to the event queue with sorting.
+    // enqueue the processing task to the event queue with sorting. number from low to high
     list_for_each(curr, task_list)
     {
         if (((irqtask_t *)curr)->priority > the_task->priority)

@@ -26,12 +26,15 @@ kernel8.img: $(SRC_DIR)/link.ld $(OBJ_FILES)
 	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
 	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
 
-all: kernel8.img
+all: 
+	kernel8.img
 
 clean:
 	rm -rf $(BUILD_DIR) *.img
 
 run:
+	rm -rf $(BUILD_DIR) *.img
+	make
 	qemu-system-aarch64 -M raspi3b -display none -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 debug:

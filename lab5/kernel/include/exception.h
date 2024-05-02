@@ -76,5 +76,7 @@ void invalid_exception_router(); // exception_handler.S
 
 void lock();
 void unlock();
+int get_current_el();
+void run_user_code();
 
 #endif /*_EXCEPTION_H_*/

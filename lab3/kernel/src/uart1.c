@@ -46,14 +46,12 @@ void uart_init()
     *AUX_MU_CNTL_REG = 3;      // enable TX/RX
 }
 
+void uart_flush_FIFO() {
+    *AUX_MU_IIR_REG = 6;    // disable FIFO
+}
+
 char uart_recv() {
-//    char r;
-//     while(!(*AUX_MU_LSR_REG & 0x01)){};
-//     r = (char)(*AUX_MU_IO_REG);
-//     uart_send(r);
-//     if(r =='\r') {uart_send('\r');uart_send('\n');}
-//     return r=='\r'?'\n':r;
-char r;
+    char r;
     while(!(*AUX_MU_LSR_REG & 0x01)){};
     r = (char)(*AUX_MU_IO_REG);
     if(r =='\t') {

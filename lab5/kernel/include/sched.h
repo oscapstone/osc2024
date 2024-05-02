@@ -13,6 +13,12 @@ extern void* get_current();
 extern void  store_context(void *curr_context);
 extern void  load_context(void *curr_context);
 
+#define SIZE_OF_RUEQUEUE 11
+
+#define IDLE_PRIORITY 100
+#define SHELL_PRIORITY 100
+#define NORMAL_PRIORITY 50
+
 // arch/arm64/include/asm/processor.h - cpu_context
 typedef struct thread_context
 {
@@ -35,6 +41,7 @@ typedef struct thread
 {
     list_head_t      listhead;                            // Freelist node
     thread_context_t context;                             // Thread registers
+    int              priority;                            // Thread priority 
     char*            data;                                // Process itself
     unsigned int     datasize;                            // Process size
     int              iszombie;                            // Process statement
@@ -52,10 +59,11 @@ typedef struct thread
 void schedule_timer(char *notuse);
 void init_thread_sched();
 void idle();
+void add_task_to_runqueue(thread_t *t);
 void schedule();
 void kill_zombies();
 void thread_exit();
-thread_t *thread_create(void *start);
+thread_t *thread_create(void *start, int priority);
 int exec_thread(char *data, unsigned int filesize);
 
 void foo();
