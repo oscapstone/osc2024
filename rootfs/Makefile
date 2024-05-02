@@ -5,9 +5,10 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
 			  -mcpu=cortex-a53 -mgeneral-regs-only \
 			  --target=aarch64-unknown-none-elf \
-			  -nostdlib -Os -fPIE
+			  -nostdlib -Os -fPIE \
+			  -I../include/lib -g
 
-BINS = hello.img svc.img syscall.img
+BINS = hello.img svc.img syscall.img fork.img
 
 .PHONY: all clean
 
