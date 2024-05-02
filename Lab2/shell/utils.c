@@ -26,7 +26,7 @@ unsigned long utils_atoi(const char *s, int char_size) {
     return num;
 }
 
-//different ddata type
+//different data type
 void utils_align(void *size, unsigned int s) {
 	unsigned long* x = (unsigned long*) size;
 	unsigned long mask = s-1;
