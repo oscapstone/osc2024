@@ -6,13 +6,14 @@
 extern char _bootloader[];
 
 void kernel_begin(char* fdt) {
-	uart_printf("Kernel begin\n");
 	uart_init();
 	uart_printf("This is the real kernel\n");
 
+	char t[100];
+	uart_recv_string(t);
+
 	fdt_traverse(get_initramfs_addr, fdt);
 	parse_cpio();
-	
 
 	shell_begin(fdt);
 	return;
