@@ -1,4 +1,4 @@
-#define __NR_syscalls 3
+#define __NR_syscalls 4
 
 #ifndef __SYSCALL
 #define __SYSCALL(x, y)
@@ -12,3 +12,6 @@ __SYSCALL(__NR_uartread, sys_uartread)
 
 #define __NR_uartwrite 2
 __SYSCALL(__NR_uartwrite, sys_uartwrite)
+
+#define __NR_exec 3
+__SYSCALL(__NR_exec, sys_exec)

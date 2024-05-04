@@ -1,5 +1,6 @@
 #include "syscall.hpp"
 
+#include "exec.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
 #include "thread.hpp"
@@ -38,4 +39,10 @@ long sys_uartwrite(const TrapFrame* frame) {
   auto buf = (const char*)frame->X[0];
   auto size = (unsigned)frame->X[1];
   return kwrite(buf, size);
+}
+
+long sys_exec(const TrapFrame* frame) {
+  auto name = (const char*)frame->X[0];
+  auto argv = (char** const)frame->X[1];
+  return exec(name, argv);
 }

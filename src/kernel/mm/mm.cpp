@@ -42,10 +42,10 @@ void mm_init() {
 }
 
 // TODO: handle alignment
-void* kmalloc(uint64_t size, uint64_t /* align */) {
+void* kmalloc(uint64_t size, uint64_t align) {
   void* res = nullptr;
   save_DAIF_disable_interrupt();
-  if (size > max_chunk_size)
+  if (size > max_chunk_size or align == PAGE_SIZE)
     res = mm_page.alloc(size);
   else
     res = heap_malloc(size);

@@ -46,9 +46,9 @@ const Cmd cmds[] = {
         .fp = cmd_devtree,
     },
     {
-        .name = "run",
-        .help = "run user program",
-        .fp = cmd_run,
+        .name = "exec",
+        .help = "exec user program",
+        .fp = cmd_exec,
     },
     {
         .name = "setTimeout",

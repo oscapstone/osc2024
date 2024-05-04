@@ -37,11 +37,11 @@ void kthread_fini() {
 
 void Kthread::init(Kthread::fp start) {
   tid = new_tid();
-  stack = (char*)kmalloc(STACK_SIZE);
+  stack = (char*)kmalloc(KTHREAD_STACK_SIZE);
   regs.init();
   regs.lr = (void*)kthread_start;
   regs.x19 = (uint64_t)start;
-  regs.sp = stack + STACK_SIZE - 0x10;
+  regs.sp = stack + KTHREAD_STACK_SIZE - 0x10;
   item = new ThreadItem(this);
 }
 

@@ -3,8 +3,6 @@
 #include "mm/mm.hpp"
 #include "thread.hpp"
 
-#define STACK_SIZE PAGE_SIZE
-
 extern "C" {
 // sched.S
 void switch_to(Kthread* prev, Kthread* next);

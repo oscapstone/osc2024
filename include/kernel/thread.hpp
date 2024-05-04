@@ -3,7 +3,10 @@
 #include <cstdint>
 
 #include "ds/list.hpp"
+#include "mm/mm.hpp"
 #include "util.hpp"
+
+constexpr uint64_t KTHREAD_STACK_SIZE = PAGE_SIZE;
 
 struct __attribute__((__packed__)) Regs {
   uint64_t x19, x20, x21, x22, x23, x24, x25, x26, x27, x28;
