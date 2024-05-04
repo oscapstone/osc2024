@@ -30,10 +30,26 @@ unsigned int write_cur = 0;
 char async_cmd[BUFFER_SIZE];
 
 void test_daif(){
+    unsigned long spsrel1;
+    uart_puts("Before test\n");
+    asm volatile ("mrs %0, SPSR_EL1" : "=r" (spsrel1));
+    uart_puts("SPSR_EL1: 0x");
+    uart_hex_long(spsrel1);
+    uart_puts("\n");
     int r;
     asm volatile("msr DAIFSet, 0xf");
-    r=150; while(r--) { asm volatile("nop"); }
+    uart_puts("in test\n");
+    asm volatile ("mrs %0, SPSR_EL1" : "=r" (spsrel1));
+    uart_puts("SPSR_EL1: 0x");
+    uart_hex_long(spsrel1);
+    uart_puts("\n");
     asm volatile("msr DAIFClr, 0xf");
+    uart_puts("After test\n");
+    asm volatile ("mrs %0, SPSR_EL1" : "=r" (spsrel1));
+    uart_puts("SPSR_EL1: 0x");
+    uart_hex_long(spsrel1);
+    uart_puts("\n");
+    uart_puts("--------------------------------\n");
 }
 
 void strcpy(char *s1, char *s2){
@@ -154,6 +170,8 @@ int hex_to_int(char *p, int len) {
 }
 
 void run_user_program(){
+    split_line();
+    uart_puts("In run user program\n");
     struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base ;
     char *current = (char *)cpio_base ;
     while (1) {
@@ -189,6 +207,8 @@ void run_user_program(){
 }
 
 void exception_entry() {
+    split_line();
+    uart_puts("In exception\n");
     unsigned long spsrel1, elrel1, esrel1;
     asm volatile ("mrs %0, SPSR_EL1" : "=r" (spsrel1));
     uart_puts("SPSR_EL1: 0x");
