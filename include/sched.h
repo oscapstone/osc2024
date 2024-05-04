@@ -4,7 +4,7 @@
 #include "uart.h"
 #include "stdint.h"
 
-#define NR_TASKS 64
+#define NR_TASKS 16
 #define FIRST_TASK task_pool[0]
 #define LAST_TASK task_pool[NR_TASKS - 1]
 #define KSTACK_SIZE 4096

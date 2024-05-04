@@ -32,6 +32,7 @@ int sys_uart_read(struct trapframe *trapframe)
     printf("[sys_uart_read] Task %d read\n", current->task_id);
 #endif
     /* x0: buffer address, x1: buffer size */
+    enable_interrupt(); // Enable interrupt, or the kernel will be stuck here.
     char *buff_addr = (char *) trapframe->x[0];
     size_t buff_size = (size_t) trapframe->x[1];
     for (int i = 0; i < buff_size; i++)

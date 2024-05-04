@@ -2,7 +2,7 @@
 #define KERNEL_H
 
 /* If DEBUG_MULTITASKING is defined, some logs in kernel for multi-tasking will be printed out. */
-#define DEBUG_MULTITASKING
+// #define DEBUG_MULTITASKING
 /* If DEBUG_SYSCALL is defined, some logs in kernel for system call will be printed out. */
 // #define DEBUG_SYSCALL
 

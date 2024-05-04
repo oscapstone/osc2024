@@ -139,6 +139,7 @@ void fork_test(void)
         ++cnt;
 
         if ((ret = fork()) != 0) {
+            delay();
             asm volatile("mov %0, sp" : "=r"(cur_sp));
             printf("first child, pid: %d, cnt: %d, ptr: %x, sp: %x\n", get_taskid(), cnt, &cnt, cur_sp);
         } else {
@@ -149,10 +150,12 @@ void fork_test(void)
                 ++cnt;
             }
         }
+        printf("child %d exit.\n", get_taskid());
         exit(0);
     } else {
         printf("parent here, pid %d, child %d\n", get_taskid(), ret);
         delay();
+        printf("parent exit.\n");
         exit(0);
     }
 }

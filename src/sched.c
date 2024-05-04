@@ -52,6 +52,7 @@ void context_switch(struct task_struct *next)
 #ifdef DEBUG_MULTITASKING
     printf("[context_switch] Switch from task %d to task %d\n", prev->task_id, next->task_id);
 #endif
+    // printf("[context_switch] Switch from task %d to task %d\n", prev->task_id, next->task_id);
     switch_to(&prev->tss, &next->tss);
 
 }
