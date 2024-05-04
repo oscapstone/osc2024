@@ -17,9 +17,15 @@ struct __attribute__((__packed__)) Regs {
   }
 };
 
-struct ThreadItem : ListItem {
+struct KthreadItem : ListItem {
   struct Kthread* thread;
-  ThreadItem(Kthread* th) : ListItem{}, thread{th} {}
+  KthreadItem(Kthread* th) : ListItem{}, thread{th} {}
+};
+
+enum class KthreadStatus {
+  kReady,
+  kWaiting,
+  kDead,
 };
 
 struct Kthread {
@@ -27,10 +33,13 @@ struct Kthread {
 
   using fp = void (*)(void);
   int tid;
-  bool dead = false;
-  char* stack;
+  KthreadStatus status;
+  int exit_code;
+  char *kernel_stack = nullptr, *user_text = nullptr, *user_stack = nullptr;
+  KthreadItem* item;
+
   void init(Kthread::fp start);
-  ThreadItem* item;
+  int alloc_user_text_stack(uint64_t text_size, uint64_t stack_size);
 };
 
 inline void set_current_thread(Kthread* thread) {

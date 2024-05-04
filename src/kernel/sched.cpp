@@ -3,7 +3,7 @@
 #include "int/interrupt.hpp"
 #include "io.hpp"
 
-ListHead<ThreadItem> rq;
+ListHead<KthreadItem> rq;
 void push_rq(Kthread* thread) {
   rq.push_back(thread->item);
 }
@@ -23,8 +23,17 @@ void schedule() {
   save_DAIF_disable_interrupt();
 
   auto cur = current_thread();
-  if (not cur->dead)
-    push_rq(cur);
+  switch (cur->status) {
+    case KthreadStatus::kReady:
+      push_rq(cur);
+      break;
+    case KthreadStatus::kWaiting:
+      // TODO:
+      break;
+    case KthreadStatus::kDead:
+      // TODO:
+      break;
+  }
   auto nxt = pop_rq();
 
   restore_DAIF();

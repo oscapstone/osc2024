@@ -2,7 +2,7 @@
 
 #include "fs/initramfs.hpp"
 #include "io.hpp"
-#include "mm/mm.hpp"
+#include "thread.hpp"
 
 int exec(const char* name, char* const argv[]) {
   klog("%s(%s, %p)\n", __func__, name, argv);
@@ -18,21 +18,13 @@ int exec(const char* name, char* const argv[]) {
   }
 
   auto file = hdr->file();
-  auto user_text = kmalloc(file.size(), PAGE_SIZE);
-  if (user_text == nullptr) {
-    klog("%s: can't alloc user_text / size = %x\n", __func__, file.size());
-    return -1;
-  }
-  auto user_stack = kmalloc(USER_STACK_SIZE, PAGE_SIZE);
-  if (user_stack == nullptr) {
-    kfree(user_text);
-    klog("%s: can't alloc user_stack / size = %lx\n", __func__,
-         USER_STACK_SIZE);
+  auto thread = current_thread();
+  if (thread->alloc_user_text_stack(file.size(), USER_STACK_SIZE)) {
     return -1;
   }
 
-  memcpy(user_text, file.data(), file.size());
-  exec_user_prog(user_text, user_stack);
+  memcpy(thread->user_text, file.data(), file.size());
+  exec_user_prog(thread->user_text, thread->user_stack);
 
   return 0;
 }
