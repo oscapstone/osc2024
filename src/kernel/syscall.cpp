@@ -19,7 +19,7 @@ void syscall_handler(TrapFrame* frame) {
 }
 
 #undef __SYSCALL
-#define __SYSCALL(nr, sym) [nr] = sym,
+#define __SYSCALL(nr, sym) sym,
 const syscall_fn_t sys_call_table[__NR_syscalls] = {
 #include "unistd.hpp"
 };
