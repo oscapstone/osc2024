@@ -4,6 +4,7 @@
 #include "int/interrupt.hpp"
 #include "io.hpp"
 #include "thread.hpp"
+#include "util.hpp"
 
 void syscall_handler(TrapFrame* frame) {
   uint64_t syscallno = frame->X[8];
@@ -46,3 +47,15 @@ long sys_exec(const TrapFrame* frame) {
   auto argv = (char** const)frame->X[1];
   return exec(name, argv);
 }
+
+long sys_not_implement(const TrapFrame* /*frame*/) {
+  klog("syscall not implemented\n");
+  return -1;
+}
+
+STRONG_ALIAS(sys_not_implement, sys_fork);
+STRONG_ALIAS(sys_not_implement, sys_exit);
+STRONG_ALIAS(sys_not_implement, sys_mbox_call);
+STRONG_ALIAS(sys_not_implement, sys_kill);
+STRONG_ALIAS(sys_not_implement, sys_signal);
+STRONG_ALIAS(sys_not_implement, sys_signal_kill);

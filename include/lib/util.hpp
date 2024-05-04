@@ -11,6 +11,11 @@
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
 
+// ref:
+// https://github.com/bminor/glibc/blob/glibc-2.35/include/libc-symbols.h#L140-L144
+#define STRONG_ALIAS(name, aliasname) \
+  extern __typeof(name) aliasname __attribute__((alias(#name)));
+
 #include <cstdint>
 using addr_t = volatile char*;
 

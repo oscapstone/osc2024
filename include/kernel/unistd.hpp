@@ -1,4 +1,4 @@
-#define __NR_syscalls 4
+#define __NR_syscalls 10
 
 #ifndef __SYSCALL
 #define __SYSCALL(x, y)
@@ -15,3 +15,21 @@ __SYSCALL(__NR_uartwrite, sys_uartwrite)
 
 #define __NR_exec 3
 __SYSCALL(__NR_exec, sys_exec)
+
+#define __NR_fork 4
+__SYSCALL(__NR_fork, sys_fork)
+
+#define __NR_exit 5
+__SYSCALL(__NR_exit, sys_exit)
+
+#define __NR_mbox_call 6
+__SYSCALL(__NR_mbox_call, sys_mbox_call)
+
+#define __NR_kill 7
+__SYSCALL(__NR_kill, sys_kill)
+
+#define __NR_signal 8
+__SYSCALL(__NR_signal, sys_signal)
+
+#define __NR_signal_kill 9
+__SYSCALL(__NR_signal_kill, sys_signal_kill)
