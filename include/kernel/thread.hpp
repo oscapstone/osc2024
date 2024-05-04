@@ -54,5 +54,6 @@ int new_tid();
 
 void kthread_init();
 void kthread_start();
+void kthread_exit(int status);
 void kthread_fini();
 Kthread* kthread_create(Kthread::fp start);

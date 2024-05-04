@@ -30,6 +30,11 @@ void kthread_start() {
   kthread_fini();
 }
 
+void kthread_exit(int status) {
+  current_thread()->exit_code = status;
+  kthread_fini();
+}
+
 void kthread_fini() {
   klog("fini thread %d\n", current_thread()->tid);
   current_thread()->status = KthreadStatus::kDead;
