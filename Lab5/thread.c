@@ -2,6 +2,9 @@
 #include "thread.h"
 #include "uart.h"
 
+//kernel stack: trapframe,... etc
+//user stack: user variables ...
+
 //set the start running address of thread to lr
 struct registers {
 	unsigned long x19;

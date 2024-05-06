@@ -198,7 +198,7 @@ void run_user_program(){
     uart_puts("found user.img\n");
 
     // current is the file address
-    asm volatile ("mov x0, 0x3c5"); 
+    asm volatile ("mov x0, 0"); 
     asm volatile ("msr spsr_el1, x0"); 
     asm volatile ("msr elr_el1, %0": :"r" (current));
     asm volatile ("mov x0, 0x20000");

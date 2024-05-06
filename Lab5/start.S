@@ -105,6 +105,11 @@ exception_handler:
     load_all
     eret
 
+async_exception_handler:
+    save_all
+    bl async_exception_entry
+    load_all
+    eret
 
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
@@ -118,7 +123,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b exception_handler
+  b async_exception_handler //el1 to el1 (debug)
   .align 7
   b interrupt_handler //uart, timer
   .align 7
@@ -127,7 +132,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b exception_handler
+  b async_exception_handler //el0 to el1 (user program)
   .align 7
   b interrupt_handler //el0 interrupt
   .align 7
