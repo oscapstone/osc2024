@@ -1,11 +1,9 @@
-#include <uart1.h>
+#include "uart1.h"
 
 #define LEVEL_ERROR 0
 #define LEVEL_WARNING 1
 #define LEVEL_INFO 2
 #define LEVEL_DEBUG 3
-
-#include <uart1.h>
 
 #define LEVEL_ERROR 0
 #define LEVEL_WARNING 1
@@ -13,7 +11,7 @@
 #define LEVEL_DEBUG 3
 
 #ifndef _DEBUG
-#define _DEBUG 0
+#define _DEBUG LEVEL_ERROR
 #endif
 
 #define PRINT_MESSAGE(level, prefix, fmt, ...)         \
@@ -64,3 +62,5 @@
 #define DEBUG(fmt, ...) NOTHING_TO_DO()
 #define DEBUG_BLOCK(content) NOTHING_TO_DO()
 #endif
+
+void print_log_level();

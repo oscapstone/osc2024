@@ -29,6 +29,8 @@ int start_shell()
 {
     char input_buffer[CMD_MAX_LEN] = {0};
     cli_print_banner();
+    print_log_level();
+
     while (1)
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
@@ -178,44 +180,7 @@ void cli_print_banner()
     puts("                   `=---='                            \r\n");
     puts("\r\n\r\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   \r\n");
     puts("           May the code be bug-free.                 \r\n\r\n");
-    puts("");
-
-#ifdef QEMU
-    puts("┌───────────────┐\r\n");
-    puts("│ Logging level │\r\n");
-    puts("├───────────────┤\n");
-    WARNING_BLOCK({
-        puts("│ ");
-        WARNING("    │\r\n");
-    });
-    INFO_BLOCK({
-        puts("│ ");
-        INFO("       │\r\n");
-    });
-    DEBUG_BLOCK({
-        puts("│ ");
-        DEBUG("      │\r\n");
-    });
-    puts("└───────────────┘\r\n");
-#elif RPI
-    puts("|===============|\r\n");
-    puts("| Logging level |\r\n");
-    puts("|---------------|\n");
-    WARNING_BLOCK({
-        puts("| ");
-        WARNING("    |\r\n");
-    });
-    INFO_BLOCK({
-        puts("| ");
-        INFO("       |\r\n");
-    });
-    DEBUG_BLOCK({
-        puts("| ");
-        DEBUG("      |\r\n");
-    });
-    puts("|---------------|\r\n");
-#endif
-    puts("                                                      \r\n");
+    puts("\r\n");
 }
 
 int do_cmd_help(int argc, char **argv)
