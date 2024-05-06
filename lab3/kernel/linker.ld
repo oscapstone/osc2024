@@ -34,7 +34,7 @@ SECTIONS
     {
         PROVIDE(__static_mem_start__ = .);
         . = ALIGN(8);
-        . += 8m;
+        . += 32m;
         PROVIDE(__static_mem_end__ = .);
     }
 

@@ -24,7 +24,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/utils/utils.o src/utils/utilsASM.o src/utils/printf.o src/utils/fifo_buffer.o\
 				src/shell/shell.o \
 				src/fs/cpio.o \
-				src/peripherals/gpio.o src/peripherals/irq.o src/peripherals/timer.o src/peripherals/mailbox.o\
+				src/peripherals/gpio.o src/peripherals/irq.o src/peripherals/timer.o src/peripherals/mailbox.o src/peripherals/irq_s.o\
 				src/mm/mmutilASM.o src/mm/mm.o\
 				src/arm/elutilsASM.o src/arm/mmu.o\
 				)
@@ -41,7 +41,7 @@ gdb-run :
 
 upload : all
 	python3 uploader_qemu.py $(QEMU_DEVICE)
-	sudo screen $(QEMU_DEVICE) 115200
+	sudo screen $(QEMU_DEVICE) 115200 > output.txt
 
 kernel.img : $(OBJ_FILES) linker.ld $(BIN_DIR)
 	$(LD) --verbose $(OBJ_FILES) -T linker.ld -o $(BIN_DIR)/kernel.elf

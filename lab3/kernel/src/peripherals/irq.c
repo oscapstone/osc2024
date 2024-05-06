@@ -5,6 +5,7 @@
 #include "utils/printf.h"
 #include "io/uart.h"
 #include "peripherals/timer.h"
+#include "utils/utils.h"
 
 const char entry_error_messages[16][32] = {
 	"SYNC_INVALID_EL1t",

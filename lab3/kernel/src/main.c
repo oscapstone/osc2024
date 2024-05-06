@@ -8,6 +8,7 @@
 #include "peripherals/irq.h"
 #include "io/exception.h"
 #include "peripherals/timer.h"
+#include "mm/mm.h"
 
 void putc(void *p, char c) {
 	if (c == '\n') {

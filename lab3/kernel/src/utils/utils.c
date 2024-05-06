@@ -50,3 +50,20 @@ U64 utils_strlen(const char *s) {
 	while (s[i]) i++;
 	return i+1;
 }
+
+U64 utils_highestOneBit(U64 number) {
+    int position = 0;
+    
+    // If n is 0, return 0
+    if (number == 0)
+        return 0;
+    
+    // Right-shift n until it becomes 1
+    while (number != 1) {
+        number >>= 1; // Right shift by 1 bit
+        position++; // Increment position
+    }
+    
+    // Position of highest 1 bit
+    return position + 1;
+}

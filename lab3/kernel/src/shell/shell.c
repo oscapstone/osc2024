@@ -13,7 +13,11 @@
 extern char* _dtb_ptr;
 
 // the base of memory
-extern memory_manager mem_manager;
+extern MEMORY_MANAGER mem_manager;
+
+// for memory testing
+U32 mem_buddy_alloc(U8 order);
+void mem_buddy_free(U32 frame_index);
 
 char* cpio_addr;
 
@@ -158,9 +162,34 @@ void shell() {
 			printf("This will transmit A character for async uart\n");
 			uart_async_write_char('A');
 			uart_set_transmit_int();
-		 } else if (utils_strncmp(cmd_space, "mem", 3) == 0) {
+		 } else if (utils_strncmp(cmd_space, "mem ", 4) == 0) {
 			printf("Memory base address: 0x%x\n", mem_manager.base_ptr);
 			printf("Memory size:         0x%x\n", mem_manager.size);
+			printf("Levels             : %d\n", mem_manager.levels);
+			for (U32 level = 0; level < mem_manager.levels; level++) {
+				FREE_INFO* info = &mem_manager.free_list[level];
+				printf("Level %d\n", level);
+				for(int i = 0;i < info->size;i++) {
+					if (info->info[i] == -1)
+						break;
+					printf("    frame idx     : %d\n", info->info[i]);
+					printf("    frame size exp: %d\n", mem_manager.frames[info->info[i]].order);
+				}
+			}
+		 } else if (utils_strncmp(cmd_space, "memtest", 7) == 0) {
+			printf("Memory management test\n");
+			U32 index1 = mem_buddy_alloc(4);
+			U32 index2 = mem_buddy_alloc(4);
+			U32 index3 = mem_buddy_alloc(4);
+			U32 index4 = mem_buddy_alloc(4);
+			printf("Memory allocate index:%d\n", index1);
+			printf("Memory allocate index:%d\n", index2);
+			printf("Memory allocate index:%d\n", index3);
+			printf("Memory allocate index:%d\n", index4);
+			mem_buddy_free(index1);
+			mem_buddy_free(index2);
+			mem_buddy_free(index3);
+			mem_buddy_free(index4);
 		 }
 		 else {
 			uart_send_string("Unknown command\n");

@@ -22,5 +22,5 @@
 #define ERROR_INVALID_EL0_32        15
 
 //void set_exception_vector_table();
-//void irq_enable();
-//void irq_disable();
+
+

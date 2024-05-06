@@ -66,9 +66,9 @@
  * 
 */
 // for Device nGnRnE memory
-#define MAIR_DEVICE_nGnRnE      0b00000000
+#define MAIR_DEVICE_nGnRnE      0x0
 // Normal memory, outer non-cacheable, normal memory, inner non-cacheable
-#define MAIR_NORMAL_NOCACHE     0b01000100
+#define MAIR_NORMAL_NOCACHE     0x44
 // here define the attr0 for device nGnRnE
 #define MAIR_IDX_DEVICE_nGnRnE      0
 // here define the attr1 for normal non-cacheable memory

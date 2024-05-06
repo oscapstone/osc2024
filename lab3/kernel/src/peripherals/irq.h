@@ -28,3 +28,7 @@ struct arm_irq_regs {
 void show_invalid_entry_message(U32 type, U64 esr, U64 address, U64 spsr);
 void enable_interrupt_controller();
 void handle_irq();
+
+// ARMv8 pg. 254 DAIF, mask and unmask the irq bit
+void irq_enable();
+void irq_disable();
