@@ -88,7 +88,7 @@ void uart_puts(const char *s) {
     }
 }
 
-void uart_hex(unsigned int d) {
+void uart_hex(unsigned long long int d) {
     uart_puts("0x");
     unsigned int n;
     int c;

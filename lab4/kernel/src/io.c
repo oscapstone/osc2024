@@ -26,7 +26,7 @@ void read_s(char *s) {
 
 void print_char(const char c) { return uart_send(c); }
 void print_string(const char *s) { return uart_puts(s); }
-void print_h(const int x) { uart_hex(x); }
+void print_h(const unsigned long long x) { uart_hex(x); }
 
 void print_d(const int x) {
     char buffer[10];

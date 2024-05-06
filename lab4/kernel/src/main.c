@@ -28,6 +28,9 @@ int main() {
     core_timer_enable();
     init_task_queue();
 
+    // lab4
+    init_kmalloc();
+
     struct Console *console = console_create();
     register_all_commands(console);
 
