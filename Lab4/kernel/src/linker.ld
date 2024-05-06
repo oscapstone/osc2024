@@ -9,17 +9,17 @@ SECTIONS
     .rodata : { *(.rodata) }
     .data : { *(.data) }
 
-    .bss : { 
+    .bss : {
         . = ALIGN(0x10);
         bss_begin = .;
-        *(.bss*) 
+        *(.bss*)
         bss_end = .;
     }
 
-    .heap : { 
+    .heap : {
         . = ALIGN(0x8);
-        heap_begin = .;    
-        heap_end = heap_begin + 0x100000;
+        heap_begin = .;
+        heap_end = heap_begin + 0x20000; # 128KB
     }
 
     PROVIDE(kernel_end = .);

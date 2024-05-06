@@ -18,12 +18,12 @@ proc_hang:
 /* Master core */
 master:
     mrs x1, CurrentEL
-    lsr x1, x1, #2 
+    lsr x1, x1, #2
 
     // running at EL3?
     cmp x1, #3
     bne from_el2_to_el1
-    
+
     ldr x1, =SCTLR_VALUE
     msr sctlr_el1, x1
 
@@ -35,7 +35,7 @@ master:
 
     ldr x1, =SPSR_VALUE
     msr spsr_el3, x1
-    
+
     adr x1, el1_entry
     msr elr_el3, x1
 
@@ -53,15 +53,15 @@ from_el2_to_el1:
 
     adr x1, el1_entry
     msr elr_el2, x1
-    
+
     eret
 
 el1_entry:
-    adr x0, bss_begin 
+    adr x0, bss_begin
     adr x1, bss_end
     sub x1, x1, x0
     bl memzero
- 
+
     mov x0, x10
     mov sp, #LOW_MEMORY
     bl kernel_main

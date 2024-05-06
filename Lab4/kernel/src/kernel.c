@@ -24,11 +24,14 @@ void kernel_main(uintptr_t x0)
 
     enable_irq();
 
-    int cond;
-    /* get dtb addr */
-    cond = fdt_init((uintptr_t)x0);
-    if (cond)
+    if (!mem_init((uintptr_t)x0))
         goto inf_loop;
+
+    // int cond;
+    // /* get dtb addr */
+    // cond = fdt_init((uintptr_t)x0);
+    // if (cond)
+    //     goto inf_loop;
 
     uintptr_t dtb_start = get_dtb_start();
     uart_send_string("DTB addr: 0x");
@@ -37,9 +40,9 @@ void kernel_main(uintptr_t x0)
     uart_send_string("\n");
 
     /* get cpio addr */
-    cond = cpio_init();
-    if (cond)
-        goto inf_loop;
+    // cond = cpio_init();
+    // if (cond)
+    //     goto inf_loop;
 
     uintptr_t cpio_start = get_cpio_start();
     uart_send_string("CPIO addr: 0x");
@@ -48,14 +51,16 @@ void kernel_main(uintptr_t x0)
     uart_send_string("\n");
 
     /* get root node (for the size of reg propery of the children node)*/
-    cond = fdt_traverse(fdt_find_root_node);
-    if (cond)
-        goto inf_loop;
+    // cond = fdt_traverse(fdt_find_root_node);
+    // if (cond)
+    //    goto inf_loop;
 
     /* get usable memory */
-    cond = fdt_traverse(fdt_find_memory_node);
-    if (cond)
-        goto inf_loop;
+    // cond = fdt_traverse(fdt_find_memory_node);
+    // if (cond)
+    //     goto inf_loop;
+
+    buddy_init();
 
     shell();
 

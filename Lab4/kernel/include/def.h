@@ -5,4 +5,6 @@
 
 #define UNUSED(x) UNUSED_##x __attribute__((__unused__))
 
+typedef __SIZE_TYPE__ size_t;
+
 #endif /* DEF_H */

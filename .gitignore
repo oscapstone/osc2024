@@ -10,3 +10,4 @@ tags
 .OSC/
 *.cpio
 *.dtb
+.cache/
