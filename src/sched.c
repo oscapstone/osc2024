@@ -9,8 +9,8 @@
 #include "kernel.h"
 
 struct task_struct task_pool[NR_TASKS];
-char kstack_pool[NR_TASKS][KSTACK_SIZE];
-char ustack_pool[NR_TASKS][USTACK_SIZE];
+char kstack_pool[NR_TASKS][KSTACK_SIZE] __attribute__((aligned(16)));
+char ustack_pool[NR_TASKS][USTACK_SIZE] __attribute__((aligned(16)));
 int num_running_task = 0;
 
 /* 

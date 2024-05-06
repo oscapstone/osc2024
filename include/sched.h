@@ -28,7 +28,8 @@
 #define EXIT_DEAD               0x010
 #define EXIT_ZOMBIE             0x020
 
-struct task_state_segment { // cpu context
+/* cpu context, in linux :thread_struct.cpu_context */
+struct task_state_segment {
     uint64_t x19;
     uint64_t x20;
     uint64_t x21;
@@ -52,7 +53,7 @@ struct task_struct {
     long counter;
 
     int exit_state;
-    struct task_state_segment tss; // cpu context
+    struct task_state_segment tss;
 };
 
 extern struct task_struct task_pool[NR_TASKS];

@@ -35,3 +35,9 @@ exit:
     mov x8, SYS_EXIT
     svc 0
     ret
+
+.global mailbox_call
+mailbox_call:
+    mov x8, SYS_MBOX_CALL
+    svc 0
+    ret
