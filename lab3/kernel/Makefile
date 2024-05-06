@@ -1,6 +1,6 @@
 SRCS = $(wildcard src/*.c)
 OBJS = $(SRCS:.c=.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -mcpu=cortex-a53+nosimd -Iinclude
+CFLAGS = -Wall -nostdlib -ffreestanding -nostdinc -mcpu=cortex-a53+nosimd -Iinclude 
 
 all: clean kernel8.img
 

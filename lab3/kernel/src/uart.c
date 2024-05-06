@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "types.h"
 #include "exception.h"
+#include "tasklist.h"
 
 /* Auxilary mini UART registers */
 #define AUXENB              ((volatile unsigned int*)(MMIO_BASE+0x00215004))
@@ -138,24 +139,37 @@ void disable_write_interrupt() {
     *AUX_MU_IER_REG &= ~0x02;
 }
 
+void async_uart_rx_exception() {
+    // Buffer is full, drop the data
+    if (((read_end + 1) % BUFSIZE) == read_head) {
+        disable_read_interrupt();
+    } else {
+        char c = *AUX_MU_IO_REG&0xFF;
+        read_buf[read_end++] = c;
+        if(read_end>=BUFSIZE) read_end=0;
+    }
+}
+
+void async_uart_tx_exception() {
+    if (write_head == write_end) {
+        disable_write_interrupt();
+    } else {
+        char c = write_buf[write_head++];
+        *AUX_MU_IO_REG = c;
+        if(write_head>=BUFSIZE)write_head=0;
+        enable_write_interrupt();
+    }
+}
+
 void async_uart_handler() {
     disable_uart_interrupt();
     //The AUX_MU_IIR_REG register shows the interrupt status. 
     if (*AUX_MU_IIR_REG & 0x04) { // 100 //read mode   Receiver holds valid byte 
-        char c = *AUX_MU_IO_REG&0xFF;
-        read_buf[read_end++] = c;
-        if(read_end==BUFSIZE) read_end=0;
+        create_task(async_uart_rx_exception, 2);
+		execute_tasks_preemptive();
     } else if (*AUX_MU_IIR_REG & 0x02) { //010  //send mode // check write enabled // Transmit holding register empty
-        while (*AUX_MU_LSR_REG & 0x20) { //0010 0000 //Both bits [7:6] always read as 1 as the FIFOs are always enabled 
-            if (write_head == write_end) {             
-                    enable_read_interrupt(); 
-                    break;
-                }
-            char c = write_buf[write_head];
-            write_head++;
-            *AUX_MU_IO_REG = c;
-            if(write_head==BUFSIZE)write_head=0;
-        }
+        create_task(async_uart_tx_exception, 1);
+		execute_tasks_preemptive();
     }
     enable_uart_interrupt();
 }

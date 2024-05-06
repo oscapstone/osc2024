@@ -1,16 +1,17 @@
 #include "uart.h"
 #include "exception.h"
 #include "timer.h"
+#include "tasklist.h"
 
-void disable_interrupt(void) { //ok
+void disable_interrupt(void) {
     asm volatile("msr DAIFSet, 0xf\r\n");
 }
 
-void enable_interrupt(void) { //ok
+void enable_interrupt(void) {
     asm volatile("msr DAIFClr, 0xf\r\n");
 }
 
-void el0_irq_entry(void) { //ok
+void el0_irq_entry(void) {
     print_boot_time();
     //In the basic part, you only need to enable interrupt in EL0
 }
@@ -29,7 +30,7 @@ void el1h_irq_entry(void) {
     enable_interrupt();
 }
 
-void exception_entry(void) { //ok
+void exception_entry(void) {
     disable_interrupt();
 
     unsigned long elr, esr, spsr;
@@ -52,5 +53,5 @@ void exception_entry(void) { //ok
 
     uart_puts("\r\n");
 
-   enable_interrupt();
+    enable_interrupt();
 }
