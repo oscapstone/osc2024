@@ -43,7 +43,7 @@ extern size_t uart_read(char *buf, size_t size);
 /* system call: uart_write(buf, size). Output the contents of the buf for given size. */
 extern size_t uart_write(const char *buf, size_t size);
 /* system call: exec(func). For user space to execute the function. */
-extern void exec(void (*func)());
+extern int exec(const char *name, char *const argv[]);
 /* system call: For user space to fork current task. */
 extern int fork();
 /* system call: exit(status). */

@@ -128,14 +128,15 @@ void initrd_cat()
     uart_puts("File not found\n");
 }
 
-void initrd_usr_prog(char *cmd)
+/* Return the user program execution address */
+void *_initrd_usr_prog(char *cmd)
 {
     char *buf = cpio_base, *prog_addr, *prog_page;
     int ns, fs;
     cpio_f *header;
 
     if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
-        return;
+        return NULL;
     
     // if it's a cpio newc archive. Cpio also has a trailer entry
     while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) { // check if it's a cpio newc archive and not the last file
@@ -147,32 +148,36 @@ void initrd_usr_prog(char *cmd)
         if (!strcmp(cmd, buf + sizeof(cpio_f))) {
             if (fs == 0) {
                 printf("\nUser program is empty\n");
-                return;
+                return NULL;
             } else {
-                printf("\nInto user_program: %s\n", buf + sizeof(cpio_f));
-                printf("file size is %d\n\n", fs);
-                // get program start address
+                printf("\nFound user_program: %s\n", buf + sizeof(cpio_f));
+                /* get program start address */
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
                 /* Allocate a page and copy the user program to the page. */
                 prog_page = (char *) kmalloc(fs);
                 memmove(prog_page, prog_addr, fs);
 
-                // jump to el0 and execute user program.
-                do_exec((void (*)(void)) prog_page);
-                // asm volatile("mov x1, #0x0           \n\t"
-                //              "msr spsr_el1, x1       \n\t"
-                //              "mov x1, %0             \n\t"
-                //              "msr elr_el1, x1        \n\t"
-                //              "mov x1, 0x60000        \n\t"
-                //              "msr sp_el0, x1         \n\t"
-                //              "eret                   \n\t"::"r" (prog_page));
+                return prog_page;
             }
         }
         // jump to the next file
         buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
-    uart_puts("File not found\n");
+    return NULL;
+}
+
+/* Execute the user program with program name as input parameter. */
+void initrd_usr_prog(char *cmd)
+{
+    char *prog;
+
+    prog = (char *) _initrd_usr_prog(cmd);
+    if (prog != NULL)
+        do_exec((void (*)(void)) prog);
+    else
+        uart_puts("File not found\n");
+    return;
 }
 
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)

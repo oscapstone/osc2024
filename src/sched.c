@@ -24,7 +24,7 @@ struct task_struct *current = &(init_task.task);
 */
 
 
-/* Initialize the task_struct and make kernel be the first task. */
+/* Initialize the task_struct and make kernel be task 0. */
 void task_init()
 {
     for (int i = 0; i < NR_TASKS; i++) {
@@ -94,7 +94,7 @@ void schedule(void)
 {
     int i = NR_TASKS, c = -1, next = 0;
     while (1) {
-        while ((--i) >= 0) { // With `while (--i)`, the task 0 won't be selected.
+        while (--i) { // With `while (--i)`, the task 0 won't be selected.
             if (task_pool[i].state == TASK_RUNNING && task_pool[i].counter > c) {
                 c = task_pool[i].counter;
                 next = i;
@@ -127,29 +127,14 @@ void sched_init()
 {
     task_init();
 
-    /* for OSDI-2020 Lab 4 requirement 1 */
-    // privilege_task_create(demo_task1, 10);
-    // privilege_task_create(demo_task2, 10);
-
-    /* for OSDI-2020 Lab 4 requirement 2 */
-    // privilege_task_create(timer_task1, 3);
-    // privilege_task_create(timer_task2, 3);
-
-    /* for OSDI-2020 Lab 4 requirement 3 */
-    // privilege_task_create(demo_do_exec1, 5);
-    // privilege_task_create(demo_do_exec2, 5);
-
-    /* for OSDI-2020 Lab 4 requirement 4 */
-    // privilege_task_create(user_test, 5);
-    // core_timer_enable();
-    // idle();
-
     /* Demo osc2024 lab 5: fork test. */
     // privilege_task_create(demo_fork_test, 200);
-    // privilege_task_create(do_foo, 5);
-    privilege_task_create(do_shell, 100);
 
-    enable_interrupt(); // for requirement 2 of OSDI 2020 Lab4. We enable interrupt here. Because we want timer interrupt at EL1.
+    /* Create the shell process. */
+    privilege_task_create(do_shell, 1); // 1 for the task execute 1 ticks per time.
+
+    /* We enable interrupt here. Because we want timer interrupt at EL1. */
+    enable_interrupt();
 
     core_timer_enable();
     schedule();

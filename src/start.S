@@ -25,7 +25,7 @@
 
 .section ".text.boot"
 
-//#define BOOTLOADER
+#define BOOTLOADER
 
 .global _start
 _start:

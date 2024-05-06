@@ -8,9 +8,11 @@
 #define FIRST_TASK task_pool[0]
 #define LAST_TASK task_pool[NR_TASKS - 1]
 #define KSTACK_SIZE 4096
-#define KSTACK_TOP (KSTACK_SIZE - 16)
+// #define KSTACK_TOP (KSTACK_SIZE - 16)
+#define KSTACK_TOP (KSTACK_SIZE)
 #define USTACK_SIZE 4096
-#define USTACK_TOP (USTACK_SIZE - 16)
+// #define USTACK_TOP (USTACK_SIZE - 16)
+#define USTACK_TOP (USTACK_SIZE)
 #define PAGE_SIZE 4096
 #define current get_current()
 

@@ -67,18 +67,6 @@ void user_task2()
     }
 }
 
-/* for OSDI-2020 Lab 4 requirement 3 */
-void demo_do_exec1()
-{
-    do_exec(user_task1);
-}
-
-/* for OSDI-2020 Lab 4 requirement 3 */
-void demo_do_exec2()
-{
-    do_exec(user_task2);
-}
-
 /* Only in demo.c, for delay usage. */
 void delay()
 {
@@ -97,34 +85,6 @@ void foo() {
         uart_send('f');
     }
     exit(0);
-}
-
-/* Do nothing task.*/
-void do_foo(void)
-{
-    exec(foo);
-}
-
-/* for OSDI-2020 Lab 4 requirement 4. At user space, not allowed to access timer */
-void test() {
-    printf("Into test()\n");
-    int cnt = 1;
-    if (fork() == 0) {
-        fork();
-        delay();
-        fork();
-        while(cnt < 10) {
-            printf("Task id: %d, cnt: %d\n", get_taskid(), cnt);
-            delay();
-            ++cnt;
-        }
-        printf("Child task %d done before exit\n", get_taskid());
-        exit(0);
-        printf("Should not be printed\n");
-    } else {
-        printf("Task %d before exec, cnt address 0x%x, cnt value %d\n", get_taskid(), &cnt, cnt);
-        exec(foo);
-    }
 }
 
 /* osc2024, demo system calls. */
@@ -158,12 +118,6 @@ void fork_test(void)
         printf("parent exit.\n");
         exit(0);
     }
-}
-
-/* for OSDI-2020 Lab 4 requirement 4 */
-void user_test()
-{
-    do_exec(test);
 }
 
 /* Lab 3 Basic Exercise 3: Asynchronous UART */

@@ -33,12 +33,12 @@ unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args)
     int len, sign, i;
     char *p, *orig=dst, tmpstr[19];
 
-    // failsafes
+    /* failsafes */
     if (dst == (void *) 0 || fmt == (void *) 0) {
         return 0;
     }
 
-    // main loop
+    /* main loop */
     arg = 0;
     while (*fmt) {
         // argument access

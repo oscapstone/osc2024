@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "kernel.h"
 #include "mbox.h"
+#include "initrd.h"
 
 /* The definition of system call handler function */
 syscall_t sys_call_table[SYSCALL_NUM] = {
@@ -68,7 +69,8 @@ int sys_exec(struct trapframe *trapframe)
 #ifdef DEBUG_SYSCALL
     printf("[sys_exec] Task %d exec\n", current->task_id);
 #endif
-    do_exec((void (*)(void))trapframe->x[0]);
+    /* Find the program in initrd */
+    initrd_usr_prog((char *) trapframe->x[0]);
     trapframe->x[0] = 0; // 0 means success
     return SYSCALL_SUCCESS;
 }
@@ -92,11 +94,10 @@ int sys_fork(struct trapframe *trapframe)
         kstack_pool[child_task_id][i] = kstack_pool[current->task_id][i];
         ustack_pool[child_task_id][i] = ustack_pool[current->task_id][i];
     }
-    printf("current task %d\n", current->task_id);
+
     /* compute the relative address between current task kstack and ustack */
     int kstack_offset = kstack_pool[child_task_id] - kstack_pool[current->task_id];
     int ustack_offset = ustack_pool[child_task_id] - ustack_pool[current->task_id];
-    printf("kstack_offset %d, ustack_offset %d\n", kstack_offset, ustack_offset);
 
     /* sp should be placed according to the relative address (offset) */
     char *sp_addr = (char *) trapframe; // the address of trapframe is the address of current sp (el1)
@@ -106,9 +107,6 @@ int sys_fork(struct trapframe *trapframe)
     struct trapframe *child_trapframe = (struct trapframe *)(child_task->tss.sp);
     child_trapframe->sp = (uint64_t) (sp_el0_addr + ustack_offset);
     child_trapframe->x[0] = 0; // setup the return value of child task (fork())
-
-    printf("parent : sp_el0 %x, sp_el1 %x.\n", trapframe->sp, sp_addr);
-    printf("child  : sp_el0 %x, sp_el1 %x.\n", child_trapframe->sp, child_task->tss.sp);
 
     trapframe->x[0] = child_task_id; // return the child task id
     return SYSCALL_SUCCESS;
@@ -139,5 +137,23 @@ int sys_mbox_call(struct trapframe *trapframe)
 /* Kill, dummy implement */
 int sys_kill(struct trapframe *trapframe)
 {
+    int pid;
+    struct task_struct *task;
+
+    pid = (int) trapframe->x[0];
+    if (pid == current->task_id || pid < 0 || pid >= NR_TASKS) {
+        printf("The given PID is not valid.\n");
+        return SYSCALL_ERROR;
+    }
+
+    task = &task_pool[pid];
+    if (task->state != TASK_RUNNING) {
+        printf("Kill a task that is not running\n");
+        return SYSCALL_ERROR;
+    }
+    task->state = TASK_STOPPED;
+    task->exit_state = 1;
+    num_running_task--;
+
     return SYSCALL_SUCCESS;
 }

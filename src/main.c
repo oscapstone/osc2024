@@ -21,7 +21,7 @@ void main()
     mm_init();
     sched_init();
 
-    move_to_user_mode();
+    /* Init a process to execute shell, so we should not return to main(). */
     while (1)
-        asm volatile("nop");
+        asm volatile("wfe");
 }
