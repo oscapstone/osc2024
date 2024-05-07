@@ -28,8 +28,8 @@ _start:
     str xzr, [x0]
     
     # Initialize bss
-    ADR_REL x0, _bss_start
-    ADR_REL x1, _bss_end
+    ldr x0, =_bss_start
+    ldr x1, =_bss_end
 .L_clear_bss:
    cmp x0, x1
    bge .L_done_clearing

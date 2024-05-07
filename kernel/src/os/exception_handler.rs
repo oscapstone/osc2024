@@ -25,9 +25,9 @@ unsafe fn exception_handler_rust() {
         asm!("mrs {elr_el1}, elr_el1", elr_el1 = out(reg) elr_el1);
         asm!("mrs {esr_el1}, esr_el1", esr_el1 = out(reg) esr_el1);
 
-        println!("spsr_el1: 0x{:x}", spsr_el1);
-        println!("elr_el1: 0x{:x}", elr_el1);
-        println!("esr_el1: 0x{:x}", esr_el1);
+        // println!("spsr_el1: 0x{:x}", spsr_el1);
+        // println!("elr_el1: 0x{:x}", elr_el1);
+        // println!("esr_el1: 0x{:x}", esr_el1);
     }
 
     if read_volatile(0x3F21_5000 as *const u32) & 0x1 == 0x1 {

@@ -171,7 +171,10 @@ pub unsafe fn reserve(ptr: *mut u8, size: usize) {
                 print_hex_now(frame.clone() as u32);
                 buddy_set.remove(&frame.clone());
             }
-            None => break,
+            None => {
+                println_now("=====");
+                break
+            }
         }
     }
 }
