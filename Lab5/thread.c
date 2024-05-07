@@ -35,7 +35,11 @@ void thread_exit(){
 
 void thread_execute(){
     thread * cur = get_current();
+    if(cur -> pid == 9)
+        hi();
     cur -> funct();
+    if(cur -> pid == 9)
+        hi();
     thread_exit();
 }
 
@@ -50,6 +54,10 @@ int create_thread(void * function, int priority){
             uart_int(i);
             newline();
             break;
+        }
+        if(i == MAX_TASK - 1){
+            uart_puts("Error, no more threads\n\r");
+            return -1;
         }
     }
 
@@ -83,6 +91,9 @@ void kill_zombies(){
             free_page(thread_pool[i] -> sp_el0 - 4096);
             free_page(thread_pool[i]);
             thread_pool[i] = 0;
+            uart_puts("Killed zombie PID ");
+            uart_int(i);
+            newline();
         }
     }
 }

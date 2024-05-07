@@ -3,6 +3,7 @@
 #include "dtb.h"
 #include "memory.h"
 #include "thread.h"
+#include "utils.h"
 
 void foo(){
     for(int i = 0; i < 10; ++i) {
@@ -11,8 +12,7 @@ void foo(){
         uart_puts(" ");
         uart_int(i);
         newline();
-        int r = 1000000;
-        while(r--) { asm volatile("nop"); }
+        delay(1000000);
         schedule();
     }
 }

@@ -2,6 +2,7 @@
 #include "thread.h"
 #include "shell.h"
 #include "dtb.h"
+#include "utils.h"
 
 //get elsel1, elrel1 and sp (Trapframe * = sp)
 //typedef struct thread thread;
@@ -63,8 +64,7 @@ void exec(trapframe * sp){
     //         uart_int("BUG!!!!!!!\n");
     //     }
     // }
-    int r = 100;
-        while(r--) { asm volatile("nop"); }
+    delay(100);
     // current is the file address
     asm volatile ("mov x0, 0"); 
     asm volatile ("msr spsr_el1, x0");
@@ -87,22 +87,26 @@ void kill(trapframe * sp){
     update_min_priority();
 }
 
-void uartread(trapframe *trapframe) {
-    char *buf = (char *)trapframe->x[0];
-    int size = (int)trapframe->x[1];
+void uartread(trapframe *sp) {
+    char *buf = (char *)sp->x[0];
+    int size = (int)sp->x[1];
     for (int i = 0; i < size; i++) {
         *(buf + i) = uart_getc();
     }
-    trapframe->x[0] = size;
+    sp->x[0] = size;
 }
 
-void uartwrite(trapframe *trapframe) {
-    const char *buf = (const char *)trapframe->x[0];
-    int size = (int)trapframe->x[1];
+void uartwrite(trapframe *sp) {
+    const char *buf = (const char *)sp->x[0];
+    int size = (int)sp->x[1];
     for (int i = 0; i < size; i++) {
         uart_send(*(buf + i));
     }
-    trapframe->x[0] = size;
+    sp->x[0] = size;
+}
+
+void fork(trapframe *sp) {
+    sp -> x[0] = 9;
 }
 
 void sys_call(trapframe * sp){
@@ -122,6 +126,9 @@ void sys_call(trapframe * sp){
             break;
         case 3:
             exec(sp);
+            break;
+        case 4:
+            fork(sp);
             break;
         case 5:
             exit(sp);
