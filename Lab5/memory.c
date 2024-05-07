@@ -310,13 +310,13 @@ void free_page(unsigned long address){
     */
     
     int i = (address - memory_start)/PAGE_SIZE;
-    uart_int(i);
-    uart_puts(" in freepage\n");
+    //uart_int(i);
+    //uart_puts(" in freepage\n");
     if(frames[i].status == 1){//allocated
         frames[i].status = -1;
         insert_into_freelist(&frames[i], frames[i].order);
         //merge_all(1);
-        merge_free(&frames[i], 1);
+        merge_free(&frames[i], 0);
         //print_freelist(3);
     }
     else{

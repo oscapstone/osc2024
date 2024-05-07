@@ -5,35 +5,6 @@
 //kernel stack: trapframe,... etc
 //user stack: user variables ...
 
-//set the start running address of thread to lr
-struct registers {
-	unsigned long x19;
-	unsigned long x20;
-	unsigned long x21;
-	unsigned long x22;
-	unsigned long x23;
-	unsigned long x24;
-	unsigned long x25;
-	unsigned long x26;
-	unsigned long x27;
-	unsigned long x28;
-	unsigned long fp;
-	unsigned long lr;
-	unsigned long sp;
-};
-
-struct thread{
-    struct registers regs;
-    int pid;
-    int state; //run queue, running, wait queue... 0: created
-    int parent; //-1: no parent
-    int priority; //2 normal
-    void (*funct)(void);
-    unsigned long stack_pointer;
-};
-
-typedef struct thread thread;
-
 extern void switch_to();
 extern thread* get_current();
 int min_priority = 999;
@@ -52,9 +23,8 @@ void update_min_priority(){
     }
 }
 
-void thread_execute(){
+void thread_exit(){
     thread * cur = get_current();
-    cur -> funct();
     cur -> state = -1; //end
     if(cur -> priority == min_priority){
         cur -> priority = 999;
@@ -63,7 +33,13 @@ void thread_execute(){
     schedule();
 }
 
-int create_thread(void * function){
+void thread_execute(){
+    thread * cur = get_current();
+    cur -> funct();
+    thread_exit();
+}
+
+int create_thread(void * function, int priority){
     int pid;
     //give it a page, page minus header is free space
     thread * t = allocate_page(sizeof(thread));//malloc(sizeof(struct thread));
@@ -84,11 +60,12 @@ int create_thread(void * function){
     t -> pid = pid;
     t -> state = 1; //running
     t -> parent = -1;
-    t -> priority = 2;
+    t -> priority = priority;
     t -> funct = function;
-    t -> stack_pointer = ((unsigned long)t + 4096); //sp start from bottom
+    t -> sp_el1 = ((unsigned long)t + 4096); //sp start from bottom
+    t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096;
     t -> regs.lr = thread_execute;
-    t -> regs.sp = t -> stack_pointer;
+    t -> regs.sp = t -> sp_el1;
     update_min_priority();
     thread_pool[pid] = t; 
     return pid;
@@ -103,6 +80,7 @@ void kill_zombies(){
         if(thread_pool[i] == 0)
             continue;
         if(thread_pool[i] -> state == -1){//recycle thread
+            free_page(thread_pool[i] -> sp_el0 - 4096);
             free_page(thread_pool[i]);
             thread_pool[i] = 0;
         }
@@ -156,7 +134,8 @@ void thread_init(){ // a nop thread for idle
     t -> parent = -1;
     t -> priority = 10;
     t -> funct = 0;
-    t -> stack_pointer = 0;
+    t -> sp_el1 = 0;
+    t -> sp_el0 = 0;
     thread_pool[0] = t;
     asm volatile ("msr tpidr_el1, %0"::"r"((unsigned long)thread_pool[0]));
 	unsigned long sp_el0 = 0;

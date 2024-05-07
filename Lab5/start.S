@@ -105,9 +105,12 @@ exception_handler:
     load_all
     eret
 
-async_exception_handler:
+sync_exception_handler:
     save_all
-    bl async_exception_entry
+    mrs x0, esr_el1 // to decide is syscall or not
+    mrs x1, elr_el1 // the address return to 
+    mov x2, sp      // trapframe
+    bl sync_exception_entry
     load_all
     eret
 
@@ -123,7 +126,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b async_exception_handler //el1 to el1 (debug)
+  b sync_exception_handler //el1 to el1 (debug)
   .align 7
   b interrupt_handler //uart, timer
   .align 7
@@ -132,7 +135,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b async_exception_handler //el0 to el1 (user program)
+  b sync_exception_handler //el0 to el1 (user program)
   .align 7
   b interrupt_handler //el0 interrupt
   .align 7

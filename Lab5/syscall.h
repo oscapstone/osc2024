@@ -1,1 +1,1 @@
-void async_exception_entry();
+void sync_exception_entry();

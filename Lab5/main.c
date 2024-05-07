@@ -17,6 +17,17 @@ void foo(){
     }
 }
 
+void test_svc(){
+    char* usr = "syscall.img";
+    asm volatile("mov x0, %0" : : "r" (usr));
+    asm volatile("mov x8, 3");
+    asm volatile("svc 0");
+    // asm volatile("mov x8, 5");
+    // asm volatile("svc 0");
+    // asm volatile("mov x8, 0");
+    // asm volatile("svc 0");
+}
+
 void main(void* dtb)
 {
     unsigned long el;
@@ -30,40 +41,43 @@ void main(void* dtb)
     // show el
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
     el = el >> 2;
-    // thread_init();
-    // for(int i=0;i<5;i++){
-    //     create_thread(foo);
-    // }
-    // uart_getc();
-    // //schedule();
-    // idle();
+    thread_init();
+    for(int i=0;i<5;i++){
+        create_thread(foo, 2);
+    }
+    create_thread(test_svc, 3);
+    create_thread(foo, 4);
+    create_thread(foo, 4);
+    uart_getc();
+    //schedule();
+    idle();
     
     //print current exception level
-    uart_puts("Booted! Current EL: ");
-    uart_send('0' + el);
-    uart_puts("\n");
+    // uart_puts("Booted! Current EL: ");
+    // uart_send('0' + el);
+    // uart_puts("\n");
     //core_timer_enable();
-    int idx = 0;
-    char in_char;
+    // int idx = 0;
+    // char in_char;
     // echo everything backf
-    while(1) {
-        char buffer[1024];
-        uart_send('\r');
-        uart_puts("# ");
-        while(1){
-            in_char = uart_getc();
-            uart_send(in_char);
-            if(in_char == '\n'){
-                buffer[idx] = '\0';
-                shell(buffer);
-                idx = 0;
-                break;
-            }
-            else{
-                buffer[idx] = in_char;
-                idx++;
-            }
-        }
+    // while(1) {
+    //     char buffer[1024];
+    //     uart_send('\r');
+    //     uart_puts("# ");
+    //     while(1){
+    //         in_char = uart_getc();
+    //         uart_send(in_char);
+    //         if(in_char == '\n'){
+    //             buffer[idx] = '\0';
+    //             shell(buffer);
+    //             idx = 0;
+    //             break;
+    //         }
+    //         else{
+    //             buffer[idx] = in_char;
+    //             idx++;
+    //         }
+    //     }
 
-    }
+    // }
 }
