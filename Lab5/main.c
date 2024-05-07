@@ -18,14 +18,20 @@ void foo(){
 }
 
 void test_svc(){
-    char* usr = "syscall.img";
-    asm volatile("mov x0, %0" : : "r" (usr));
-    asm volatile("mov x8, 3");
-    asm volatile("svc 0");
+    // char* usr = "syscall.img";
+    // asm volatile("mov x0, %0" : : "r" (usr));
+    // asm volatile("mov x8, 3");
+    // asm volatile("svc 0");
     // asm volatile("mov x8, 5");
     // asm volatile("svc 0");
     // asm volatile("mov x8, 0");
     // asm volatile("svc 0");
+    asm volatile("mov x8, 4");
+    asm volatile("svc 0");
+    //asm volatile("mov x8, 0");
+    hin(0);
+    
+    //asm volatile("svc 0");
 }
 
 void main(void* dtb)
@@ -42,12 +48,12 @@ void main(void* dtb)
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
     el = el >> 2;
     thread_init();
-    for(int i=0;i<5;i++){
-        create_thread(foo, 2);
-    }
+    // for(int i=0;i<5;i++){
+    //     create_thread(foo, 2);
+    // }
     create_thread(test_svc, 3);
-    create_thread(foo, 4);
-    create_thread(foo, 4);
+    // create_thread(foo, 4);
+    // create_thread(foo, 4);
     uart_getc();
     //schedule();
     idle();

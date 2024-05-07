@@ -356,29 +356,29 @@ void* allocate_page(unsigned long size){
 
             // Split the frame if its order is higher than needed
             while (frame->order > order) {
-                uart_puts("Split frame from order ");
-                uart_int(frame -> order);
+                // uart_puts("Split frame from order ");
+                // uart_int(frame -> order);
                 frame->order--;
-                uart_puts(" to ");
-                uart_int(frame -> order);
-                uart_puts("\n\rFrame index: ");
-                uart_int(frame -> index);
-                uart_puts(" and ");
+                // uart_puts(" to ");
+                // uart_int(frame -> order);
+                // uart_puts("\n\rFrame index: ");
+                // uart_int(frame -> index);
+                // uart_puts(" and ");
                 int buddy_index = frame->index + (1 << frame->order);
                 frames[buddy_index].order = frame->order;
                 frames[buddy_index].status = -1; // Buddy is now free
-                uart_int(buddy_index);
-                uart_puts("\n\r");
+                // uart_int(buddy_index);
+                // uart_puts("\n\r");
                 insert_into_freelist(&frames[buddy_index], frame->order); // Add buddy to the free list
                 //merge_free(&frames[buddy_index], 1);
             }
 
-            uart_puts("Allocated at index ");
-            uart_int(frame->index);
-            uart_puts(" of order ");
-            uart_int(frame->order);
-            uart_puts("\n");
-            uart_send('\r');
+            // uart_puts("Allocated at index ");
+            // uart_int(frame->index);
+            // uart_puts(" of order ");
+            // uart_int(frame->order);
+            // uart_puts("\n");
+            // uart_send('\r');
             return (void*)(memory_start + frame->index * PAGE_SIZE);
         }
     }

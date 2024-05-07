@@ -22,3 +22,4 @@ void uart_int(int d);
 void hi();
 void split_line();
 void newline();
+void hin(int i);

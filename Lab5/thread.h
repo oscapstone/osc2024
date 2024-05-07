@@ -33,4 +33,5 @@ int get_pid();
 void test_exec();
 void idle();
 void thread_init();
+void thread_execute();
 void thread_exit();

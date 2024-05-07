@@ -203,3 +203,8 @@ switch_to:
 get_current:
     mrs x0, tpidr_el1
     ret
+
+.global fork_return
+fork_return:
+    load_all
+    eret

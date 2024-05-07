@@ -8,13 +8,12 @@
 //typedef struct thread thread;
 extern thread * thread_pool[];
 extern thread * get_current();
-extern void fork_return();
 
 struct trapframe {
     unsigned long x[31]; // general register from x0 ~ x30
-    //unsigned long sp_el0;
-    unsigned long spsr_el1;
+    unsigned long sp_el0;
     unsigned long elr_el1;
+    unsigned long spsr_el1;
 };
 
 typedef struct trapframe trapframe;
@@ -106,45 +105,50 @@ void uartwrite(trapframe *sp) {
     sp->x[0] = size;
 }
 
+extern void ret_from_fork();
+
 void fork(trapframe *sp) {
-    int pid;
-    thread * t = allocate_page(sizeof(thread));
-    for(int i=0; i< 64; i++){
-        if(thread_pool[i] == 0){
-            pid = i;
-            uart_puts("Create thread with PID ");
-            uart_int(i);
-            newline();
-            break;
-        }
-    }
-    for(int i = 0; i< sizeof(thread); i++){
-        ((char*)t)[i] = 0; 
-    }
-    t -> pid = pid;
-    t -> parent = get_current() -> pid;
-    t -> state = get_current() -> state;
-    t -> priority = get_current() -> priority;
-    t -> sp_el1 = ((unsigned long)allocate_page(4096)) + 4096;//((unsigned long)t + 4096); //sp start from bottom
-    t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096;
-    t -> funct = fork_return;
-    // copy register
-    for(int i = 0; i< sizeof(struct registers); i++){
-        ((char*)(&(t -> regs)))[i] = ((char*)(&(get_current() -> regs)))[i]; 
-    }
+    thread *parent = get_current();
+    /* 
+        ret_from_fork 會把 child_trapframe load to register，
+        這樣跑 child thread 時就會用到 child_trapframe 更改的 sp
+    */
+    int newpid = create_thread(ret_from_fork, 3);
 
-    unsigned long sp_offset = (char *)(get_current() -> sp_el1) - (char*)sp;
-    for(int i = 1; i<= sp_offset; i++){
-        *((char *)(t -> sp_el1 - i)) = *((char *)(get_current() -> sp_el1 - i));
+    thread *child = thread_pool[newpid];
+    
+    // copy kernel stack and user stack
+    unsigned long kstack_offset = (char *)parent->sp_el1 - (char *)sp;
+    unsigned long ustack_offset = (char *)parent->sp_el0 - (char *)sp->sp_el0;
+    if(sp->sp_el0 == thread_pool[0] -> sp_el0)
+        ustack_offset = 0;
+    // copy kernel stack (including trapframe)
+    uart_int(parent->sp_el0);
+    newline();
+    uart_int((char *)sp->sp_el0);
+    newline();
+    uart_int(ustack_offset);
+    newline();
+    
+    for (unsigned long i = 1; i <= kstack_offset; i++) {
+        *((char *)(child->sp_el1 - i)) = *((char *)(parent->sp_el1 - i));
     }
+    delay(10000);
+    // copy user stack
+    for (unsigned long i = 1; i <= ustack_offset; i++) {
+        *((char *)(child->sp_el0 - i)) = *((char *)(parent->sp_el0 - i));
+    }
+    delay(10000);
+    child->regs.sp = child->sp_el1 - kstack_offset;
+    child->state = get_current() -> state;
+    
+    trapframe *child_trapframe = (trapframe *)child->regs.sp;
+    uart_int(child_trapframe -> x[8]);
+    child_trapframe->sp_el0 = child->sp_el0 - ustack_offset;
 
-    // modify sp for load all
-    t -> regs.sp = t -> sp_el1 - sp_offset;
-    ((trapframe*)(t -> regs.sp)) -> x[0] = 0;
-    // copy trapframe?
-    thread_pool[pid] = t;
-    update_min_priority();
-    sp -> x[0] = pid;
+    sp->x[0] = child->pid;
+    child_trapframe->x[0] = 0;
+    
 }
 
 void sys_call(trapframe * sp){

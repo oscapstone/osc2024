@@ -144,6 +144,12 @@ void hi(){
     uart_puts("hi\n\r");
 }
 
+void hin(int i){
+    uart_puts("hi");
+    uart_int(i);
+    newline();
+}
+
 void split_line(){
     uart_puts("-----------------------------------------------------------------------------\n\r");
 }
