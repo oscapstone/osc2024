@@ -16,10 +16,10 @@ static mut count: u32 = 0;
 
 pub unsafe fn init() {
     count = 4;
-    buddy_system::init();
+    buddy_system::init(0x3C00_0000);
 }
 
-pub fn reserve(ptr: *mut u8, size: usize) {
+pub unsafe fn reserve(ptr: *mut u8, size: usize) {
     buddy_system::reserve(ptr, size);
 }
 

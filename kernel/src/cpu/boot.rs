@@ -21,6 +21,8 @@ pub unsafe fn _start_rust() {
     allocator::reserve(DeviceTree::get_device_tree_address(), 0x0100_0000); // Device Tree
     allocator::reserve(0x0A00_0000 as *mut u8, 0x0600_0000); // Simple Allocator
 
+    // loop{}
+
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
     
