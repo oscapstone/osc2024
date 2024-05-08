@@ -1,6 +1,6 @@
 use super::buddy::BUDDY_SYSTEM;
-use super::buddy::FRAME_SIZE;
 use super::bump::BumpAllocator;
+use super::config::FRAME_SIZE;
 use alloc::vec::Vec;
 use alloc::{collections::BTreeMap, vec};
 use core::alloc::{GlobalAlloc, Layout};

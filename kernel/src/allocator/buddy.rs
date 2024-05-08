@@ -10,10 +10,7 @@ enum BuddyState {
     Allocated,
 }
 
-const MEMORY_START: u32 = 0;
-const MEMORY_END: u32 = 0x3c00_0000;
-pub const FRAME_SIZE: usize = 0x1000;
-
+use super::config::{FRAME_SIZE, MEMORY_END, MEMORY_START};
 const NFRAME: usize = (MEMORY_END - MEMORY_START) as usize / FRAME_SIZE;
 
 #[derive(Clone, Copy)]
