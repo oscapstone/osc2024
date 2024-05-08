@@ -69,6 +69,8 @@ extern int num_running_task;
 extern struct task_struct *get_current(void);
 /* Be called when doing context switch. */
 extern void switch_to(struct task_state_segment *prev, struct task_state_segment *next);
+/* Restore context after signal handling */
+extern void sig_restore_context(struct task_state_segment *tsk_tss);
 /* Put the pointer of task_struct into tpidr_el1*/
 extern void update_current(struct task_struct *next);
 

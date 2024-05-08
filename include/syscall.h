@@ -13,8 +13,9 @@
 #define SYS_KILL          7
 #define SYS_SIGNAL        8
 #define SYS_SIGKILL       9
+#define SYS_SIGRETURN    10
 
-#define SYSCALL_NUM 10
+#define SYSCALL_NUM 11
 #define SYSCALL_SUCCESS 0
 #define SYSCALL_ERROR -1
 
@@ -53,6 +54,8 @@ extern void exit(int status);
 extern int mailbox_call(unsigned char ch, unsigned int *mbox);
 /* system call: void kill(int pid) */
 extern void kill(int pid);
+/* System call to return kernel from signal handling. */
+extern void sigreturn(void);
 
 /* for syscall.c, kernel space handler function */
 int sys_get_taskid(struct trapframe *trapframe);
@@ -65,6 +68,7 @@ int sys_mbox_call(struct trapframe *trapframe);
 int sys_kill(struct trapframe *trapframe);
 int sys_signal(struct trapframe *trapframe);
 int sys_sigkill(struct trapframe *trapframe);
+int sys_sigreturn(struct trapframe *trapframe);
 
 typedef int (*syscall_t)(struct trapframe *);
 extern syscall_t sys_call_table[SYSCALL_NUM];

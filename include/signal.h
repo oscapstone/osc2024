@@ -8,7 +8,6 @@
 
 #define NR_SIGNALS 10
 
-// typedef void (*sighandler)(int);
 typedef void (*sighandler_t)(void);
 
 struct sighandler {
@@ -16,10 +15,5 @@ struct sighandler {
 };
 
 extern struct sighandler default_sighandler;
-
-
-void sigreturn(void);
-
-
 
 #endif // __SIGNAL_H__

@@ -1,22 +1,17 @@
 #include "signal.h"
 #include "uart.h"
 #include "syscall.h"
+#include "sched.h"
 
 void no_sighandler(void) {
+    printf("[no_sighandler] Do nothing in user space\n");
     return;
 }
 
 void default_sigkill(void) {
-    printf("SIGKILL handler in user space\n");
+    printf("[default_sigkill] default SIGKILL handler in user space\n");
     return;
 }
-
-void sigreturn(void)
-{
-    printf("[sigreturn] Task %d return from signal handler\n", get_taskid());
-    return;
-}
-
 
 struct sighandler default_sighandler = {
     .action = {no_sighandler, no_sighandler, no_sighandler, no_sighandler, no_sighandler,

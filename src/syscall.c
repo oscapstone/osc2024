@@ -6,6 +6,7 @@
 #include "kernel.h"
 #include "mbox.h"
 #include "initrd.h"
+#include "mm.h"
 
 /* The definition of system call handler function */
 syscall_t sys_call_table[SYSCALL_NUM] = {
@@ -18,7 +19,8 @@ syscall_t sys_call_table[SYSCALL_NUM] = {
     sys_mbox_call,
     sys_kill,
     sys_signal,
-    sys_sigkill
+    sys_sigkill,
+    sys_sigreturn
 };
 
 /* As a handler function for svc, setup the return value to trapframe */
@@ -163,6 +165,17 @@ int sys_kill(struct trapframe *trapframe)
 /* register a signal with the pair of signal number and handler function. */
 int sys_signal(struct trapframe *trapframe)
 {
+    int signum;
+    void (*handler)(void);
+
+    signum = (int) trapframe->x[0];
+    if (signum < 0 || signum >= NR_SIGNALS) {
+        printf("The given signal number is not valid.\n");
+        return SYSCALL_ERROR;
+    }
+
+    handler = (void *) trapframe->x[1];
+    current->sighand->action[signum] = handler;
     return SYSCALL_SUCCESS;
 }
 
@@ -185,5 +198,27 @@ int sys_sigkill(struct trapframe *trapframe)
     }
 
     task_pool[pid].pending = signum;
+    return SYSCALL_SUCCESS;
+}
+
+int sys_sigreturn(struct trapframe *trapframe)
+{
+#ifdef DEBUG_SYSCALL
+    printf("[sys_sigreturn] Task %d return from signal handler\n", current->task_id);
+#endif
+
+    /* Free the signal stack. */
+    kfree((void *) trapframe->sp);
+
+    /* If the signal is SIGKILL, we kill it here. */
+    if (current->pending == SIGKILL) {
+        current->state = TASK_STOPPED;
+        current->exit_state = 0;
+        num_running_task--;
+    }
+
+    /* Reset the pending variable*/
+    current->pending = 0;
+    sig_restore_context(&current->tss);
     return SYSCALL_SUCCESS;
 }

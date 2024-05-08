@@ -8,6 +8,8 @@
 #include "shell.h"
 #include "kernel.h"
 #include "signal.h"
+#include "syscall.h"
+#include "mm.h"
 
 struct task_struct task_pool[NR_TASKS];
 char kstack_pool[NR_TASKS][KSTACK_SIZE] __attribute__((aligned(16)));
@@ -48,16 +50,13 @@ void context_switch(struct task_struct *next)
 
     /* Before the process returns to user mode, check the pending signals. */
     if (current->pending != 0) {
-        /* If there is pending siganl, we should setup the tss properly, make the process handle signal after context switch */
-        /* 在這邊做 signal handling 最大的問題是拿不到 trapframe，所以沒辦法改 elr_el1，等於沒辦法跳到 user space 的 signal handler */
-        /* 但是我不需要靠 sp_el1, elr_el1 那些東西跳回去，可以自己跳走，然後再想辦法跳回來 */
-        printf("[context_switch] Task %d has pending signal %d\n", current->task_id, current->pending);
-        printf("sigreturn address: 0x%x\n", sigreturn);
-        asm volatile("mov lr, %0" ::"r" (sigreturn));
-        asm volatile("mov x1, #0x0           \n\t"
-                     "msr spsr_el1, x1       \n\t");
+        /* Allocate signal stack for the task. */
+        void *sig_stack = (void *) kmalloc(USTACK_SIZE);
+
+        asm volatile("msr spsr_el1, xzr");
         asm volatile("msr elr_el1, %0" ::"r" (current->sighand->action[current->pending]));
-        asm volatile("msr sp_el0, %0" ::"r" (0x60000));
+        asm volatile("msr sp_el0, %0" ::"r" (sig_stack + USTACK_SIZE - 16));
+        asm volatile("mov lr, %0" ::"r" (sigreturn));
         asm volatile("eret");
     }
 }

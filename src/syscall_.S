@@ -47,3 +47,9 @@ kill:
     mov x8, SYS_KILL
     svc 0
     ret
+
+.global sigreturn
+sigreturn:
+    mov x8, SYS_SIGRETURN
+    svc 0
+    ret
