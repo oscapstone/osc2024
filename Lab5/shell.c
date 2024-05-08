@@ -222,6 +222,7 @@ void exception_entry() {
     uart_puts("ESR_EL1: 0x");
     uart_hex_long(esrel1);
     uart_puts("\n");
+    while(1){}
 }
 
 void async_uart_io(){

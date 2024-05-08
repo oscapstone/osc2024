@@ -31,3 +31,5 @@ fork return 時 trapframe 是否也需要被複製，還是只要返回值對就
 先把save all跟load all改成可以用 trapframe 包起來的，再來想其他東西，檢查x9還是x10
 
 真的不行就先準備 thread，然後問 video player 播不出來能不能拿一半QAQ
+
+elrel1那些是0，好像怪怪的，可以檢查一下 那些正常的質應該要是多少

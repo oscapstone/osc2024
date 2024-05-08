@@ -12,9 +12,9 @@ extern void fork_return();
 
 struct trapframe {
     unsigned long x[31]; // general register from x0 ~ x30
-    //unsigned long sp_el0;
-    unsigned long spsr_el1;
+    unsigned long sp_el0;
     unsigned long elr_el1;
+    unsigned long spsr_el1;
 };
 
 typedef struct trapframe trapframe;
@@ -128,22 +128,33 @@ void fork(trapframe *sp) {
     t -> sp_el1 = ((unsigned long)allocate_page(4096)) + 4096;//((unsigned long)t + 4096); //sp start from bottom
     t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096;
     t -> funct = fork_return;
-    // copy register
+    // copy register x19~x28, sp, ...
     for(int i = 0; i< sizeof(struct registers); i++){
         ((char*)(&(t -> regs)))[i] = ((char*)(&(get_current() -> regs)))[i]; 
     }
 
     unsigned long sp_offset = (char *)(get_current() -> sp_el1) - (char*)sp;
-    for(int i = 1; i<= sp_offset; i++){
-        *((char *)(t -> sp_el1 - i)) = *((char *)(get_current() -> sp_el1 - i));
+    
+    for(int i=0; i<=4096; i++){
+        *((char *) (t -> sp_el1 - i)) = *((char *) (get_current() -> sp_el1 - i));
     }
+
+    // for(int i = 1; i<= sp_offset; i++){
+    //     *((char *)(t -> sp_el1 - i)) = *((char *)(get_current() -> sp_el1 - i));
+    // }
 
     // modify sp for load all
     t -> regs.sp = t -> sp_el1 - sp_offset;
+
+    for(int i=0; i< sizeof(trapframe);i++){
+        *((char*)(t -> regs.sp + i)) = *((char*)(sp + i));
+    }
     ((trapframe*)(t -> regs.sp)) -> x[0] = 0;
+    //uart_int(((trapframe*)(t -> regs.sp)) -> elr_el1);
+    //newline();
+    
     // copy trapframe?
     thread_pool[pid] = t;
-    update_min_priority();
     sp -> x[0] = pid;
 }
 
@@ -184,5 +195,8 @@ void sync_exception_entry(unsigned long esr_el1, unsigned long elr_el1, trapfram
 
     if (ec == 0b010101) { //system call
         sys_call(sp);
+    }
+    else{
+        while(1){}
     }
 }

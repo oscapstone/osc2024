@@ -67,15 +67,24 @@ from_el2_to_el1:
     stp x24, x25, [sp ,16 * 12]
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
-    str x30, [sp, 16 * 15]
-    mrs x1, spsr_el1        
-    str x1, [sp, 16 * 16]
-    mrs x1, elr_el1          
-    str x1, [sp, 16 * 17]
+
+    mrs x21, sp_el0
+    mrs	x22, elr_el1
+	mrs	x23, spsr_el1
+
+	stp	x30, x21, [sp, #16 * 15] 
+	stp	x22, x23, [sp, #16 * 16]
 .endm
 
 // load general registers from stack
 .macro load_all
+    ldp	x22, x23, [sp, #16 * 16]
+	ldp	x30, x21, [sp, #16 * 15] 
+
+    msr sp_el0, x21
+	msr	elr_el1, x22			
+	msr	spsr_el1, x23
+
     ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
     ldp x4, x5, [sp ,16 * 2]
@@ -91,11 +100,6 @@ from_el2_to_el1:
     ldp x24, x25, [sp ,16 * 12]
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
-    ldr x30, [sp, 16 * 15]
-    ldr x1, [sp, 16 * 16] 
-    msr spsr_el1, x1
-    ldr x1, [sp, 16 * 17] 
-    msr elr_el1, x1
     add sp, sp, 32 * 9
 .endm
 

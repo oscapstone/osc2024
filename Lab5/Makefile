@@ -21,3 +21,6 @@ run:
 
 run_d:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd .\initramfs.cpio -dtb .\bcm2710-rpi-3-b-plus.dtb
+
+debug:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd .\initramfs.cpio -dtb .\bcm2710-rpi-3-b-plus.dtb -S -s
