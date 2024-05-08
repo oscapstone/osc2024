@@ -49,7 +49,7 @@ void kernel_main(void* dtb_addr) {
 
   kthread_create(shell);
 
-  auto foo = +[]() {
+  auto foo = +[](void*) {
     for (int i = 0; i < 10; ++i) {
       kprintf("Thread id: %d %d\n", current_thread()->tid, i);
       delay(1000000);

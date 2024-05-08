@@ -30,3 +30,9 @@ int exec(const char* name, char* const argv[]) {
 
   return 0;
 }
+
+void exec_new_user_prog(void* ctx) {
+  auto name = (char*)ctx;
+  exec(name, nullptr);
+  kfree(name);
+}

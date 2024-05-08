@@ -51,6 +51,11 @@ const Cmd cmds[] = {
         .fp = cmd_exec,
     },
     {
+        .name = "run",
+        .help = "run user program",
+        .fp = cmd_run,
+    },
+    {
         .name = "setTimeout",
         .help = "prints msg after secs",
         .fp = cmd_setTimeout,

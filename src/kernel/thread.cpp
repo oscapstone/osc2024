@@ -79,9 +79,11 @@ void kthread_init() {
 
 void kthread_start() {
   Kthread::fp func;
+  void* ctx;
   asm volatile("mov %0, x19" : "=r"(func));
+  asm volatile("mov %0, x20" : "=r"(ctx));
   klog("start thread %d @ %p\n", current_thread()->tid, func);
-  func();
+  func(ctx);
   kthread_fini();
 }
 
@@ -96,8 +98,8 @@ void kthread_fini() {
   schedule();
 }
 
-Kthread* kthread_create(Kthread::fp start) {
-  auto thread = new Kthread(start);
+Kthread* kthread_create(Kthread::fp start, void* ctx) {
+  auto thread = new Kthread(start, ctx);
   push_rq(thread);
   return thread;
 }

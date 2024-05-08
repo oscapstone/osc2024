@@ -24,7 +24,7 @@ enum class KthreadStatus {
 struct Kthread {
   Regs regs;
 
-  using fp = void (*)(void);
+  using fp = void (*)(void*);
   int tid;
   KthreadStatus status = KthreadStatus::kReady;
   int exit_code = 0;
@@ -36,7 +36,7 @@ struct Kthread {
   friend void kthread_init();
 
  public:
-  Kthread(Kthread::fp start);
+  Kthread(Kthread::fp start, void* ctx);
   Kthread(const Kthread& o);
   void fix(const Kthread& o, void* faddr, uint64_t fsize);
   int alloc_user_text_stack(uint64_t text_size, uint64_t stack_size);
@@ -59,5 +59,5 @@ void kthread_init();
 void kthread_start();
 void kthread_exit(int status);
 void kthread_fini();
-Kthread* kthread_create(Kthread::fp start);
+Kthread* kthread_create(Kthread::fp start, void* ctx = nullptr);
 long kthread_fork();

@@ -5,7 +5,7 @@
 #include "shell/cmd.hpp"
 #include "string.hpp"
 
-void shell() {
+void shell(void*) {
   char buf[0x100];
   for (;;) {
     kputs("$ ");

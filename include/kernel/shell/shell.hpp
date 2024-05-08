@@ -1,3 +1,3 @@
 #pragma once
 
-void shell();
+void shell(void*);

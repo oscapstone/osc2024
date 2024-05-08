@@ -38,7 +38,7 @@ void print_exception(TrapFrame* frame, int type) {
   kprintf_sync("ESR_EL1 : %032lb\n", frame->esr_el1);
 
   enable_interrupt();
-  shell();
+  shell(nullptr);
 }
 
 void sync_handler(TrapFrame* frame, int /*type*/) {
