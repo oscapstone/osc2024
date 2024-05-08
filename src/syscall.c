@@ -16,7 +16,9 @@ syscall_t sys_call_table[SYSCALL_NUM] = {
     sys_fork,
     sys_exit,
     sys_mbox_call,
-    sys_kill
+    sys_kill,
+    sys_signal,
+    sys_sigkill
 };
 
 /* As a handler function for svc, setup the return value to trapframe */
@@ -87,7 +89,7 @@ int sys_fork(struct trapframe *trapframe)
     *child_task = *current;
     child_task->task_id = child_task_id;
     child_task->counter = child_task->priority;
-    child_task->tss.lr = (uint64_t) &exit_kernel; // current->tss.lr is not up-to-date, so we use exit_kernel
+    child_task->tss.lr = (uint64_t) &exit_kernel; /* After context switch, the child_task will exit kernel properly (since stack are setup). */
 
     /* Copy the content of kstack and ustack */
     for (int i = 0; i < KSTACK_SIZE; i++) {
@@ -155,5 +157,33 @@ int sys_kill(struct trapframe *trapframe)
     task->exit_state = 1;
     num_running_task--;
 
+    return SYSCALL_SUCCESS;
+}
+
+/* register a signal with the pair of signal number and handler function. */
+int sys_signal(struct trapframe *trapframe)
+{
+    return SYSCALL_SUCCESS;
+}
+
+/* Use signal to kill a process. */
+int sys_sigkill(struct trapframe *trapframe)
+{
+    int pid, signum;
+
+    pid = (int) trapframe->x[0];
+    signum = (int) trapframe->x[1];
+
+    if (pid == current->task_id || pid < 0 || pid >= NR_TASKS) {
+        printf("The given PID is not valid.\n");
+        return SYSCALL_ERROR;
+    }
+
+    if (signum < 0 || signum >= NR_SIGNALS) {
+        printf("The given signal number is not valid.\n");
+        return SYSCALL_ERROR;
+    }
+
+    task_pool[pid].pending = signum;
     return SYSCALL_SUCCESS;
 }

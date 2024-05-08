@@ -11,8 +11,10 @@
 #define SYS_EXIT          5
 #define SYS_MBOX_CALL     6
 #define SYS_KILL          7
+#define SYS_SIGNAL        8
+#define SYS_SIGKILL       9
 
-#define SYSCALL_NUM 8
+#define SYSCALL_NUM 10
 #define SYSCALL_SUCCESS 0
 #define SYSCALL_ERROR -1
 
@@ -23,16 +25,15 @@
  * */
 #ifndef __ASSEMBLER__ // Content below is not included in assembly file. (__ASSEMBLY__ is defined in assembly file)
 
-
 #include "stdlib.h"
 #include "stdint.h"
 
-
+/* ref: linux pt_regs */
 struct trapframe {
     uint64_t x[31];
     uint64_t sp; // sp_el0, user space stack pointer
     uint64_t pstate; // spsr_el1
-    uint64_t pc; // elr_el1
+    uint64_t pc; // elr_el1, it's the return address before entering kernel mode. (el0 -> el1 or el1 -> el1)
 };
 
 /* for systemcall.S, user space function */
@@ -62,6 +63,8 @@ int sys_fork(struct trapframe *trapframe);
 int sys_exit(struct trapframe *trapframe);
 int sys_mbox_call(struct trapframe *trapframe);
 int sys_kill(struct trapframe *trapframe);
+int sys_signal(struct trapframe *trapframe);
+int sys_sigkill(struct trapframe *trapframe);
 
 typedef int (*syscall_t)(struct trapframe *);
 extern syscall_t sys_call_table[SYSCALL_NUM];

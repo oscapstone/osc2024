@@ -33,6 +33,8 @@ void timer_init()
 int timer_set(unsigned long timeout, char *message)
 {
     int i;
+
+    printf("timer_set: timeout %d ,message %s\n", timeout, message); // Without this, the message will be empty. gcc's fault.
     for (i = 0; i < NR_TIMER; i++) {
         if (timer_pool[i].enable == TIMER_DISABLE) {
             timer_pool[i].enable = TIMER_ENABLE;

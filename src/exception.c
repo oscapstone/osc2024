@@ -108,6 +108,7 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     }
     switch (svc_num) {
         case 0: 
+            // uart_puts("svc 0: system call\n");
             syscall_handler(trapframe);
             break;
         case 1:

@@ -9,64 +9,6 @@
 #include "mm.h"
 #include "memblock.h"
 
-/* for OSDI-2020 Lab 4 requirement 1 */
-void demo_task1()
-{
-    while (1) {
-        uart_puts("demo task1\n");
-        wait_sec(1);
-        schedule();
-        // context_switch(&task_pool[2]); // for requirement 1-3
-    }
-}
-
-/* for OSDI-2020 Lab 4 requirement 1 */
-void demo_task2()
-{
-    while (1) {
-        uart_puts("demo task2\n");
-        wait_sec(1);
-        schedule();
-        // context_switch(&task_pool[1]); // for requirement 1-3
-    }
-}
-
-/* for OSDI-2020 Lab 4 requirement 2 */
-void timer_task1()
-{
-    while (1) {
-        uart_puts("kernel timer task1.\n");
-        wait_sec(10);
-    }
-}
-
-/* for OSDI-2020 Lab 4 requirement 2 */
-void timer_task2()
-{
-    while (1) {
-        uart_puts("kernel timer task2.\n");
-        wait_sec(10);
-    }
-}
-
-void user_task1()
-{
-    while (1) {
-        uart_puts("user task1\n");
-        int count = 1000000000;
-        while (count--);
-    }
-}
-
-void user_task2()
-{
-    while (1) {
-        uart_puts("user task2\n");
-        int count = 1000000000;
-        while (count--);
-    }
-}
-
 /* Only in demo.c, for delay usage. */
 void delay()
 {
@@ -74,17 +16,6 @@ void delay()
     while (count--) {
         asm volatile("nop");
     };
-}
-
-/* for OSDI-2020 Lab 4 requirement 4. At user space, not allowed to access timer */
-void foo() {
-    int tmp = 5;
-    printf("Task %d after exec, tmp address 0x%x, tmp value %d\n", get_taskid(), &tmp, tmp);
-    while (1) {
-        delay();
-        uart_send('f');
-    }
-    exit(0);
 }
 
 /* osc2024, demo system calls. */

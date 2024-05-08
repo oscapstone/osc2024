@@ -7,22 +7,12 @@
 #include "uart.h"
 #include "shell.h"
 #include "kernel.h"
+#include "signal.h"
 
 struct task_struct task_pool[NR_TASKS];
 char kstack_pool[NR_TASKS][KSTACK_SIZE] __attribute__((aligned(16)));
 char ustack_pool[NR_TASKS][USTACK_SIZE] __attribute__((aligned(16)));
 int num_running_task = 0;
-
-/* 
-// Codes below is the structure used in linux 0.11. But useless in osdi (hierarychy difference)
-union task_union {
-    struct task_struct task;
-    char stack[PAGE_SIZE];
-};
-static union task_union init_task = {INIT_TASK, };
-struct task_struct *current = &(init_task.task);
-*/
-
 
 /* Initialize the task_struct and make kernel be task 0. */
 void task_init()
@@ -30,6 +20,7 @@ void task_init()
     for (int i = 0; i < NR_TASKS; i++) {
         task_pool[i].state = TASK_STOPPED;
         task_pool[i].task_id = i;
+        task_pool[i].sighand = &default_sighandler;
     }
 
     // TODO: Understand how to deal with the task[0] (kernel). At linux 0.11, it is a special task.
@@ -41,20 +32,34 @@ void task_init()
     // TODO: Because I don't initialize the tss of task[0], I can't fork() from task[0].
     update_current(&task_pool[0]);
     num_running_task = 1;
+    // TODO: the task 0's stack are not in kstack_pool[0] and ustack_pool[0]. It is in the stack that start.S set up.
+    context_switch(&task_pool[0]);
 }
 
 /* Do context switch. */
 void context_switch(struct task_struct *next)
 {
-    // printf("Switch from task %d to task %d\n", current->task_id, next->task_id);
     struct task_struct *prev = current; // the current task_struct address
     update_current(next);
 #ifdef DEBUG_MULTITASKING
     printf("[context_switch] Switch from task %d to task %d\n", prev->task_id, next->task_id);
 #endif
-    // printf("[context_switch] Switch from task %d to task %d\n", prev->task_id, next->task_id);
     switch_to(&prev->tss, &next->tss);
 
+    /* Before the process returns to user mode, check the pending signals. */
+    if (current->pending != 0) {
+        /* If there is pending siganl, we should setup the tss properly, make the process handle signal after context switch */
+        /* 在這邊做 signal handling 最大的問題是拿不到 trapframe，所以沒辦法改 elr_el1，等於沒辦法跳到 user space 的 signal handler */
+        /* 但是我不需要靠 sp_el1, elr_el1 那些東西跳回去，可以自己跳走，然後再想辦法跳回來 */
+        printf("[context_switch] Task %d has pending signal %d\n", current->task_id, current->pending);
+        printf("sigreturn address: 0x%x\n", sigreturn);
+        asm volatile("mov lr, %0" ::"r" (sigreturn));
+        asm volatile("mov x1, #0x0           \n\t"
+                     "msr spsr_el1, x1       \n\t");
+        asm volatile("msr elr_el1, %0" ::"r" (current->sighand->action[current->pending]));
+        asm volatile("msr sp_el0, %0" ::"r" (0x60000));
+        asm volatile("eret");
+    }
 }
 
 /* Find empty task_struct. Return task id. */
@@ -81,7 +86,9 @@ int privilege_task_create(void (*func)(), long priority)
             task_pool[i].tss.lr = (uint64_t) func;
             task_pool[i].tss.sp = (uint64_t) &kstack_pool[i][KSTACK_TOP];
             task_pool[i].tss.fp = (uint64_t) &kstack_pool[i][KSTACK_TOP];
+#ifdef DEBUG_MULTITASKING
             printf("[privilege_task_create] Setup task %d, priority %d, counter %d, sp 0x%x, lr 0x%x\n", i, task_pool[i].priority, task_pool[i].counter, task_pool[i].tss.sp, task_pool[i].tss.lr);    
+#endif
     } else {
         uart_puts("[privilege_task_create] task pool is full, can't create a new task.\n");
         while (1);
@@ -106,20 +113,8 @@ void schedule(void)
             if (task_pool[i].state == TASK_RUNNING)
                 task_pool[i].counter = (task_pool[i].counter >> 1) + task_pool[i].priority;
     }
-    context_switch(&task_pool[next]);
-}
-
-void idle() {
-    while (1) {
-        if(num_running_task == 1) {
-            break;
-        }
-        schedule();
-        wait_sec(1);
-        // wait_msec(100);
-    }
-    printf("Test finished\n");
-    while(1);
+    if (next != current->task_id)
+        context_switch(&task_pool[next]);
 }
 
 /* Init task 0, enable core timer, interrupt. Then call schedule(). */

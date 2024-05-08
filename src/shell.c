@@ -72,6 +72,7 @@ void shell_controller(char *cmd)
     }
 }
 
+/* do shell job, can be run in user mode or kernel mode. */
 void do_shell_user(void)
 {
     while (1) {
@@ -85,5 +86,7 @@ void do_shell_user(void)
 /* shell: kernel task. */
 void do_shell(void)
 {
-    do_exec(do_shell_user);
+    // do_exec(do_shell_user);
+    move_to_user_mode();
+    exec("syscall.img", NULL);
 }

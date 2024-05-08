@@ -8,7 +8,7 @@ void core_timer_handler();
 void uart_interrupt_handler();
 
 void print_current_el(void);
-/* load_all register from stack and eret. */
+/* load context from sp_el1 and eret. It may return to el0 or el1, depending what's stored in spsr_el1. */
 extern void exit_kernel();
 
 /* Move to user mode and enable interrupt in el0. Defined in exception_.S */

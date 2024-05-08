@@ -3,15 +3,14 @@
 
 #include "uart.h"
 #include "stdint.h"
+#include "signal.h"
 
 #define NR_TASKS 16
 #define FIRST_TASK task_pool[0]
 #define LAST_TASK task_pool[NR_TASKS - 1]
 #define KSTACK_SIZE 4096
-// #define KSTACK_TOP (KSTACK_SIZE - 16)
 #define KSTACK_TOP (KSTACK_SIZE)
 #define USTACK_SIZE 4096
-// #define USTACK_TOP (USTACK_SIZE - 16)
 #define USTACK_TOP (USTACK_SIZE)
 #define PAGE_SIZE 4096
 #define current get_current()
@@ -44,7 +43,7 @@ struct task_state_segment {
     uint64_t x28;
     uint64_t fp; // x29, frame pointer
     uint64_t lr; // x30, link register
-    uint64_t sp;
+    uint64_t sp; // sp_el1
     uint64_t pc;
 };
 
@@ -54,8 +53,11 @@ struct task_struct {
     long priority;
     long counter;
 
+    int pending; // pending signal
+    struct sighandler *sighand;
+
     int exit_state;
-    struct task_state_segment tss;
+    struct task_state_segment tss; // because context switch occurs in kernel mode,sp are in el1 (sp_el1);
 };
 
 extern struct task_struct task_pool[NR_TASKS];
