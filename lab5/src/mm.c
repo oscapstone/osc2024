@@ -83,9 +83,9 @@ static struct page *get_buddy(struct page *page, unsigned int order)
 
 struct page *alloc_pages(unsigned int order)
 {
-    uart_puts("[BUDDY] (Allocate ");
-    uart_hex(1 << order);
-    uart_puts(" pages)\n");
+    // uart_puts("[BUDDY] (Allocate ");
+    // uart_hex(1 << order);
+    // uart_puts(" pages)\n");
 
     for (int i = order; i <= BUDDY_MAX_ORDER; i++) {
         if (free_area[i] == 0)
@@ -100,28 +100,28 @@ struct page *alloc_pages(unsigned int order)
             free_list_push(&free_area[i], buddy, i);
 
             // Print information
-            unsigned int pfn = page - mem_map;
-            unsigned int buddy_pfn = buddy - mem_map;
-            uart_puts("[BUDDY] Split ");
-            uart_hex(pfn);
-            uart_puts("-");
-            uart_hex((pfn + (1 << (i + 1))));
-            uart_puts(" into ");
-            uart_hex(pfn);
-            uart_puts("-");
-            uart_hex((pfn + (1 << i)));
-            uart_puts(" and ");
-            uart_hex(buddy_pfn);
-            uart_puts("-");
-            uart_hex((buddy_pfn + (1 << i)));
-            uart_puts("\n");
+            // unsigned int pfn = page - mem_map;
+            // unsigned int buddy_pfn = buddy - mem_map;
+            // uart_puts("[BUDDY] Split ");
+            // uart_hex(pfn);
+            // uart_puts("-");
+            // uart_hex((pfn + (1 << (i + 1))));
+            // uart_puts(" into ");
+            // uart_hex(pfn);
+            // uart_puts("-");
+            // uart_hex((pfn + (1 << i)));
+            // uart_puts(" and ");
+            // uart_hex(buddy_pfn);
+            // uart_puts("-");
+            // uart_hex((buddy_pfn + (1 << i)));
+            // uart_puts("\n");
         }
 
-        uart_puts("[BUDDY] Alloc ");
-        uart_hex((unsigned int)(page - mem_map));
-        uart_puts("-");
-        uart_hex((unsigned int)(page - mem_map + (1 << order)));
-        uart_puts("\n");
+        // uart_puts("[BUDDY] Alloc ");
+        // uart_hex((unsigned int)(page - mem_map));
+        // uart_puts("-");
+        // uart_hex((unsigned int)(page - mem_map + (1 << order)));
+        // uart_puts("\n");
 
         return page;
     }
@@ -130,9 +130,9 @@ struct page *alloc_pages(unsigned int order)
 
 void free_pages(struct page *page, unsigned int order)
 {
-    uart_puts("[BUDDY] (Free ");
-    uart_hex(1 << order);
-    uart_puts(" pages)\n");
+    // uart_puts("[BUDDY] (Free ");
+    // uart_hex(1 << order);
+    // uart_puts(" pages)\n");
 
     struct page *current = page;
     while (order < BUDDY_MAX_ORDER) {
@@ -151,21 +151,21 @@ void free_pages(struct page *page, unsigned int order)
         order++;
 
         // Print information
-        unsigned int pfn = current - mem_map;
-        unsigned int buddy_pfn = buddy - mem_map;
-        uart_puts("[BUDDY] Merge ");
-        uart_hex(pfn);
-        uart_puts("-");
-        uart_hex((pfn + (1 << (order - 1))));
-        uart_puts(" and ");
-        uart_hex(buddy_pfn);
-        uart_puts("-");
-        uart_hex((buddy_pfn + (1 << (order - 1))));
-        uart_puts(" into ");
-        uart_hex(pfn);
-        uart_puts("-");
-        uart_hex((pfn + (1 << order)));
-        uart_puts("\n");
+        // unsigned int pfn = current - mem_map;
+        // unsigned int buddy_pfn = buddy - mem_map;
+        // uart_puts("[BUDDY] Merge ");
+        // uart_hex(pfn);
+        // uart_puts("-");
+        // uart_hex((pfn + (1 << (order - 1))));
+        // uart_puts(" and ");
+        // uart_hex(buddy_pfn);
+        // uart_puts("-");
+        // uart_hex((buddy_pfn + (1 << (order - 1))));
+        // uart_puts(" into ");
+        // uart_hex(pfn);
+        // uart_puts("-");
+        // uart_hex((pfn + (1 << order)));
+        // uart_puts("\n");
     }
     free_list_push(&free_area[order], current, order);
 }
@@ -192,9 +192,9 @@ struct object *cache_list_pop(struct object **list_head)
 
 void *kmem_cache_alloc(unsigned int order)
 {
-    uart_puts("[CACHE] (Allocate ");
-    uart_hex(32 << order);
-    uart_puts(" bytes)\n");
+    // uart_puts("[CACHE] (Allocate ");
+    // uart_hex(32 << order);
+    // uart_puts(" bytes)\n");
 
     if (kmem_cache[order] == 0) {
         struct page *page = alloc_pages(0);
@@ -211,9 +211,9 @@ void *kmem_cache_alloc(unsigned int order)
 
 void kmem_cache_free(void *ptr, unsigned int index)
 {
-    uart_puts("[CACHE] (Free ");
-    uart_hex(32 << index);
-    uart_puts(" bytes)\n");
+    // uart_puts("[CACHE] (Free ");
+    // uart_hex(32 << index);
+    // uart_puts(" bytes)\n");
 
     cache_list_push(&kmem_cache[index], ptr, index);
 }
@@ -225,9 +225,9 @@ void *kmalloc(unsigned int size)
     if (size == 0)
         return 0;
 
-    uart_puts("[ALLOC] (Allocate ");
-    uart_hex(size);
-    uart_puts(" bytes)\n");
+    // uart_puts("[ALLOC] (Allocate ");
+    // uart_hex(size);
+    // uart_puts(" bytes)\n");
 
     if (size > (32 << CACHE_MAX_ORDER)) {
         // Buddy Allocator

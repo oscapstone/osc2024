@@ -3,6 +3,7 @@
 #include "initrd.h"
 #include "mbox.h"
 #include "mm.h"
+#include "sched.h"
 #include "shell.h"
 #include "string.h"
 #include "timer.h"
@@ -144,6 +145,7 @@ void demo()
     uart_puts("(2) UART async read\n");
     uart_puts("(3) Buddy system\n");
     uart_puts("(4) Dynamic allocator\n");
+    uart_puts("(5) Thread creation test\n");
     uart_puts("Select: ");
     read_user_input(select);
     switch (atoi(select)) {
@@ -178,6 +180,10 @@ void demo()
         uart_puts("\n");
         kfree(p41);
         break;
+    case 5:
+        for (int i = 0; i < 3; i++)
+            kthread_create(foo);
+        idle();
     default:
         uart_puts("Option not found.\n");
         break;
