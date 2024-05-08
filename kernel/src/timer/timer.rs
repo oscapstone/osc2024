@@ -1,12 +1,11 @@
 use alloc::boxed::Box;
-pub trait Callback: Send + Sync {
+pub trait Callback {
     fn call(&self);
 }
 
 impl<F> Callback for F
 where
-    F: Fn() + 'static,
-    F: Send + Sync,
+    F: Fn(),
 {
     fn call(&self) {
         (self)();
@@ -15,14 +14,13 @@ where
 
 pub struct Timer {
     pub expiry: u64,
-    callback: Box<dyn Callback + Send + Sync>,
+    callback: Box<dyn Callback>,
 }
 
 impl Timer {
     pub fn new<F>(expriy: u64, callback: F) -> Timer
     where
         F: Fn() + 'static,
-        F: Send + Sync,
     {
         Timer {
             expiry: expriy,

@@ -1,4 +1,5 @@
 use super::strings::StringMap;
+use super::utils::read_string;
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -22,8 +23,7 @@ impl Dt {
         let mut addr = dt_addr;
         let lexical = unsafe { core::ptr::read_volatile(addr as *const u32) };
 
-        // assert_eq!(lexical.swap_bytes(), Lexical::BeginNode as u32);
-        if lexical.swap_bytes() != Lexical::BeginNode as u32 {}
+        assert_eq!(lexical.swap_bytes(), Lexical::BeginNode as u32);
 
         addr += 4;
         dt.name = read_string(addr);
@@ -33,7 +33,6 @@ impl Dt {
         loop {
             let lexical = unsafe { core::ptr::read_volatile(addr as *const u32) };
             let lexical = lexical.swap_bytes();
-
             let lexical = Lexical::from_u32(lexical);
             match lexical {
                 Lexical::BeginNode => {
@@ -78,6 +77,7 @@ impl Dt {
     }
 }
 
+#[derive(Debug)]
 enum Lexical {
     BeginNode = 0x1,
     EndNode = 0x2,
@@ -97,21 +97,6 @@ impl Lexical {
             _ => panic!("Invalid lexical value {}", value),
         }
     }
-}
-
-// read untill null byte
-fn read_string(addr: u32) -> String {
-    let mut addr = addr;
-    let mut string = String::new();
-    loop {
-        let c = unsafe { core::ptr::read_volatile(addr as *const u8) };
-        if c == 0 {
-            break;
-        }
-        string.push(c as char);
-        addr += 1;
-    }
-    string
 }
 
 #[derive(Debug)]

@@ -94,7 +94,12 @@ pub fn send_async(c: u8) {
     unsafe {
         SND_BUFFER[SND_IDX] = c;
         SND_IDX = SND_IDX + 1;
-        while SND_IDX == BUFFER_SIZE {}
+        while SND_IDX == BUFFER_SIZE {
+            for i in 0..BUFFER_SIZE {
+                send(SND_BUFFER[i]);
+            }
+            SND_IDX = 0;
+        }
         Mmio::write_reg(Aux(MuIer), 0b11);
     }
 }

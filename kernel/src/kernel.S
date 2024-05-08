@@ -1,6 +1,19 @@
 .section ".text._start_kernel"
 
-.global _start_kernel
+.global _start
+
+_start:
+    // set stack before our code
+    ldr     x1, =_start
+    mov     sp, x1
+
+    // clear bss
+    ldr     x1, =__bss_start
+    ldr     w2, =__bss_size
+3:  cbz     w2, _start_kernel
+    str     xzr, [x1], #8
+    sub     w2, w2, #1
+    cbnz    w2, 3b
 
 _start_kernel:
     mrs x0, CurrentEL

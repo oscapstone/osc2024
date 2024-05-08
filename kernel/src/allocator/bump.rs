@@ -1,22 +1,39 @@
+use super::config::{BUMP_END_ADDR, BUMP_START_ADDR};
 use core::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
 use core::ptr::NonNull;
-
+#[allow(unused_imports)]
 use stdio::debug;
+use stdio::println;
 
 #[derive(Clone)]
 pub struct BumpAllocator;
 
-static mut CUR: usize = 0x2000_0000;
+static mut VERBOSE: bool = false;
+
+static mut CUR: u32 = BUMP_START_ADDR;
+
+#[allow(dead_code)]
+pub fn toggle_verbose() {
+    unsafe {
+        VERBOSE = !VERBOSE;
+    }
+    println!("BumpAllocator verbose: {}", unsafe { VERBOSE });
+}
 
 unsafe impl GlobalAlloc for BumpAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let size = layout.size();
-        let align = layout.align();
-        let ret = CUR;
-        CUR += size;
-        CUR = (CUR + align - 1) & !(align - 1);
-        assert!(CUR < 0x2100_0000, "Bump allocator out of memory!");
-        debug!("Allocated {} bytes at 0x{:x}", size, ret);
+        let size = layout.size() as u32;
+        let align = layout.align() as u32;
+        let mut ret = CUR;
+        ret = (ret + align - 1) & !(align - 1);
+        CUR = ret + size;
+        assert!(CUR < BUMP_END_ADDR, "Bump allocator out of memory!");
+        if unsafe { VERBOSE } {
+            debug!(
+                "BumpAllocator: alloc 0x{:x} size 0x{:x} align 0x{:x}",
+                ret, size, align
+            );
+        }
         ret as *mut u8
     }
 
