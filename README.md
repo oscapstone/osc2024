@@ -27,6 +27,11 @@ make asm
 make run
 ```
 
+### Use QEMU to run with displaying video output
+```
+make run_with_display
+```
+
 ### Use QEMU to debug
 ```
 make debug
