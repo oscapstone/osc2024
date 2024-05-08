@@ -9,7 +9,7 @@
 void syscall_handler(TrapFrame* frame) {
   uint64_t syscallno = frame->X[8];
   uint64_t ret;
-  klog("do syscall %ld\n", syscallno);
+  // klog("do syscall %ld\n", syscallno);
   if (syscallno < __NR_syscalls) {
     enable_interrupt();
     ret = sys_call_table[syscallno](frame);
