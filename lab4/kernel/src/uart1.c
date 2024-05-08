@@ -1,11 +1,9 @@
 #include "bcm2837/rpi_gpio.h"
 #include "bcm2837/rpi_uart1.h"
+#include "bcm2837/rpi_irq.h"
 #include "uart1.h"
 #include "exception.h"
 #include "u_string.h"
-
-
-#define IRQS1  ((volatile unsigned int*)(0x3f00b210))
 
 //implement first in first out buffer with a read index and a write index
 char uart_tx_buffer[VSPRINT_MAX_BUF_SIZE]={};
@@ -90,52 +88,31 @@ int  uart_sendline(char* fmt, ...) {
 }
 
 
-// Read a character asynchronously from UART receive buffer.
+// uart_async_getc read from buffer
+// uart_r_irq_handler write to buffer then output
 char uart_async_getc() {
-    // Enable read interrupt
-    *AUX_MU_IER_REG |= 1;
-    
-    // Loop until the buffer has data
-    while (uart_rx_buffer_ridx == uart_rx_buffer_widx) {
-        *AUX_MU_IER_REG |= 1; // Keep enabling read interrupt
-    }
-    
-    // Disable interrupts to ensure atomic operations
+    *AUX_MU_IER_REG |=1; // enable read interrupt
+    // do while if buffer empty
+    while (uart_rx_buffer_ridx == uart_rx_buffer_widx) *AUX_MU_IER_REG |=1; // enable read interrupt
     el1_interrupt_disable();
-    
-    // Read character from the buffer and increment read index
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
-    // Wrap around the index if it exceeds the buffer size
     if (uart_rx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE) uart_rx_buffer_ridx = 0;
-    
-    // Re-enable interrupts
     el1_interrupt_enable();
-    
-    return r; // Return the read character
+    return r;
 }
 
-// Write a character asynchronously to UART transmit buffer.
+
+// uart_async_putc writes to buffer
+// uart_w_irq_handler read from buffer then output
 void uart_async_putc(char c) {
-    // Wait if the buffer is full
-    while((uart_tx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_ridx) {
-        *AUX_MU_IER_REG |= 2;  // Enable write interrupt
-    }
-    
-    // Disable interrupts to ensure atomic operations
+    // if buffer full, wait for uart_w_irq_handler
+    while( (uart_tx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_ridx )  *AUX_MU_IER_REG |=2;  // enable write interrupt
     el1_interrupt_disable();
-    
-    // Write character to the buffer and increment write index
     uart_tx_buffer[uart_tx_buffer_widx++] = c;
-    // Wrap around the index if it exceeds the buffer size
-    if(uart_tx_buffer_widx >= VSPRINT_MAX_BUF_SIZE) uart_tx_buffer_widx = 0;
-    
-    // Re-enable interrupts
+    if(uart_tx_buffer_widx >= VSPRINT_MAX_BUF_SIZE) uart_tx_buffer_widx=0;  // cycle pointer
     el1_interrupt_enable();
-    
-    // Enable write interrupt
-    *AUX_MU_IER_REG |= 2;
+    *AUX_MU_IER_REG |=2;  // enable write interrupt
 }
-
 
 int  uart_puts(char* fmt, ...) {
     __builtin_va_list args;
@@ -159,7 +136,7 @@ int  uart_puts(char* fmt, ...) {
 void uart_interrupt_enable(){
     *AUX_MU_IER_REG |=1;  // enable read interrupt
     *AUX_MU_IER_REG |=2;  // enable write interrupt
-    *IRQS1 |= 1 << 29;    // Pg.112
+    *ENABLE_IRQS_1  |= 1 << 29;    // Pg.112
 }
 
 void uart_interrupt_disable(){
@@ -168,36 +145,25 @@ void uart_interrupt_disable(){
 }
 
 
-// UART receive interrupt handler
-void uart_r_irq_handler() {
-    // Check if the buffer is full
-    if((uart_rx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_rx_buffer_ridx) {
-        // Disable read interrupt to prevent overflow
-        *AUX_MU_IER_REG &= ~(1);
+void uart_r_irq_handler(){
+    if((uart_rx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_rx_buffer_ridx)
+    {
+        *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
         return;
     }
-    // Read data from UART and store it in the buffer
     uart_rx_buffer[uart_rx_buffer_widx++] = uart_recv();
-    // Wrap the write index if it reaches the buffer size
-    if(uart_rx_buffer_widx >= VSPRINT_MAX_BUF_SIZE) uart_rx_buffer_widx = 0;
-    // Re-enable read interrupt
-    *AUX_MU_IER_REG |= 1;
+    if(uart_rx_buffer_widx>=VSPRINT_MAX_BUF_SIZE) uart_rx_buffer_widx=0;
+    *AUX_MU_IER_REG |=1;
 }
 
-// UART write interrupt handler
-void uart_w_irq_handler() {
-    // Check if the buffer is empty
-    if(uart_tx_buffer_ridx == uart_tx_buffer_widx) {
-        // Disable write interrupt to avoid unnecessary interrupts
-        *AUX_MU_IER_REG &= ~(2);
-        return;  // Exit if nothing to send
+void uart_w_irq_handler(){
+    if(uart_tx_buffer_ridx == uart_tx_buffer_widx)
+    {
+        *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
+        return;  // buffer empty
     }
-    // Send data from the buffer via UART
     uart_send(uart_tx_buffer[uart_tx_buffer_ridx++]);
-    // Wrap the read index if it reaches the buffer size
-    if(uart_tx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE) uart_tx_buffer_ridx = 0;
-    // Re-enable write interrupt
-    *AUX_MU_IER_REG |= 2;
+    if(uart_tx_buffer_ridx>=VSPRINT_MAX_BUF_SIZE) uart_tx_buffer_ridx=0;
+    *AUX_MU_IER_REG |=2;  // enable write interrupt
 }
-
 

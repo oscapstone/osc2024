@@ -33,12 +33,12 @@ void cli_cmd_read(char* buffer)
     while (1)
     {
         if (idx >= CMD_MAX_LEN) break;
-        c = uart_async_getc(); //test preemtive
+        c = uart_async_getc(); 
         if (c == '\n') break;
 
         if (c == 127 && idx > 0)
         {
-            uart_puts("\b \b"); //test preemptive
+            uart_puts("\b \b"); 
             idx--;
             continue;
         }        
@@ -301,7 +301,7 @@ void do_cmd_reboot()
 void do_test_preemptive()
 {
     add_timer(test_loop, 1, "test loop");
-    add_timer(set_exit, 10, "exit");
+    add_timer(set_exit, 5, "exit");
 }
 
 volatile int exit = 0;
@@ -314,6 +314,6 @@ void test_loop()
 
 void set_exit()
 {
-    //exit = 1;
-    uart_sendline("We set exit as 1 to exit infinite loop at t = 10s.\n");
+    exit = 1;
+    uart_sendline("We set exit as 1 to exit infinite loop at t = 5s.\n");
 }

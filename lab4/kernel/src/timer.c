@@ -1,12 +1,10 @@
 #include "timer.h"
 #include "uart1.h"
-#include "heap.h"
+#include "memory.h"
 #include "u_string.h"
-#include "exception.h"
 
 #define STR(x) #x
 #define XSTR(s) STR(s)
-
 
 struct list_head* timer_event_list;  // first head has nothing, store timer_event_t after it 
 
@@ -15,18 +13,13 @@ void timer_list_init(){
 }
 
 void core_timer_enable(){
-    // enable timer
-    // CNTP_CTL_EL0: Control register for the EL1 physical timer.
-    // bit[0]: ENABLE
-    // bit[1]: IMASK
-    // bit[2]: ISTATUS
     __asm__ __volatile__(
         "mov x1, 1\n\t"
         "msr cntp_ctl_el0, x1\n\t" // cntp_ctl_el0[0]: enable, Control register for the EL1 physical timer.
                                    // cntp_tval_el0: Holds the timer value for the EL1 physical timer
         "mov x2, 2\n\t"
         "ldr x1, =" XSTR(CORE0_TIMER_IRQ_CTRL) "\n\t"
-        "str w2, [x1]\n\t"         // unmask timer interrupt
+        "str w2, [x1]\n\t"         // QA7_rev3.4.pdf: Core0 Timer IRQ allows Non-secure physical timer(nCNTPNSIRQ)
     );
 }
 
@@ -43,7 +36,6 @@ void core_timer_handler(){
     if (list_empty(timer_event_list))
     {
         set_core_timer_interrupt(10000); // disable timer interrupt (set a very big value)
-        set_core_timer_interrupt_by_tick(get_tick_plus_s(10000));
         return;
     }
     timer_event_callback((timer_event_t *)timer_event_list->next); // do callback and set new interrupt
@@ -51,27 +43,23 @@ void core_timer_handler(){
 
 void timer_event_callback(timer_event_t * timer_event){
     list_del_entry((struct list_head*)timer_event); // delete the event in queue
-    free(timer_event->args);                        // free the event's space
-    free(timer_event);
+    s_free(timer_event->args);                        // free the event's space
+    s_free(timer_event);
+    ((void (*)(char*))timer_event-> callback)(timer_event->args);  // call the event
 
     // set queue linked list to next time event if it exists
     if(!list_empty(timer_event_list))
     {
         set_core_timer_interrupt_by_tick(((timer_event_t*)timer_event_list->next)->interrupt_time);
     }
-    core_timer_enable();
-    ((void (*)(char*))timer_event->callback)(timer_event->args);  // call the event
-    
+    else
+    {
+        set_core_timer_interrupt(10000);  // disable timer interrupt (set a very big value)
+    }
 }
 
 void timer_set2sAlert(char* str)
 {
-    static int count = 0;
-    if(count > 3){
-        return;
-    }
-    count++;
-
     unsigned long long cntpct_el0;
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
     unsigned long long cntfrq_el0;
@@ -82,15 +70,12 @@ void timer_set2sAlert(char* str)
 
 
 void add_timer(void *callback, unsigned long long timeout, char* args){
-    timer_event_t* the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
+    timer_event_t* the_timer_event = s_allocator(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
-    // uart_puts("Setting timer for task: %s with delay: %d\n", args, timeout);
-    the_timer_event->args = kmalloc(strlen(args) + 1);
-    strcpy(the_timer_event->args, args);
+    the_timer_event->args = s_allocator(strlen(args)+1);
+    strcpy(the_timer_event -> args,args);
     the_timer_event->interrupt_time = get_tick_plus_s(timeout);
     the_timer_event->callback = callback;
-    //static int timer_priority = 0; //test 2 timer preemptive
-    //the_timer_event->priotity = timer_priority--;
     INIT_LIST_HEAD(&the_timer_event->listhead);
 
     // add the timer_event into timer_event_list (sorted)
@@ -108,7 +93,6 @@ void add_timer(void *callback, unsigned long long timeout, char* args){
     {
         list_add_tail(&the_timer_event->listhead,timer_event_list);
     }
-
     // set interrupt to first event
     set_core_timer_interrupt_by_tick(((timer_event_t*)timer_event_list->next)->interrupt_time);
 }
