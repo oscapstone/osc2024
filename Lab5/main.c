@@ -18,21 +18,24 @@ void foo(){
 }
 
 void test_svc(){
-    // char* usr = "syscall.img";
-    // asm volatile("mov x0, %0" : : "r" (usr));
-    // asm volatile("mov x8, 3");
-    // asm volatile("svc 0");
+    char* usr = "syscall.img";
+    asm volatile("mov x0, %0" : : "r" (usr));
+    asm volatile("mov x8, 3");
+    asm volatile("svc 0");
     // asm volatile("mov x8, 5");
     // asm volatile("svc 0");
     // asm volatile("mov x8, 0");
     // asm volatile("svc 0");
-    asm volatile("mov x8, 4");
-    asm volatile("svc 0");
-    int result;
-    asm volatile("mov %0, x0" : "=r"(result));
-    //asm volatile("mov x8, 0");
-    hin(result);
-    
+    // asm volatile("mov x8, 4");
+    // asm volatile("svc 0");
+    // int result;
+    // asm volatile("mov %0, x0" : "=r"(result));
+    // //asm volatile("mov x8, 0");
+    // hin(result);
+    // asm volatile("mov x8, 4");
+    // asm volatile("svc 0");
+    // asm volatile("mov %0, x0" : "=r"(result));
+    // hin(result);
     //asm volatile("svc 0");
 }
 

@@ -193,9 +193,9 @@ void frames_init(){
     //memory pool
     pools = simple_alloc(&base, (int) sizeof(memory_pool_t) * NUM_POOLS);
 
-    uart_int(frame_count);
-    uart_puts("\n\r");
-    split_line();
+    // uart_int(frame_count);
+    // uart_puts("\n\r");
+    // split_line();
     // init all frame with order 0 free
     for(int i=0; i<frame_count; i++){
         frames[i].index = i;

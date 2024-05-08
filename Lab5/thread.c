@@ -146,7 +146,6 @@ void idle(){
 }
 
 void do_nothing(){
-
 }
 
 void thread_init(){ // a nop thread for idle
