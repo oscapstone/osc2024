@@ -19,7 +19,7 @@ SECTIONS
     .heap : {
         . = ALIGN(0x8);
         heap_begin = .;
-        heap_end = heap_begin + 0x20000; # 128KB
+        heap_end = heap_begin + 0x20000;
     }
 
     PROVIDE(kernel_end = .);
