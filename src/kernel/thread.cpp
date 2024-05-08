@@ -3,6 +3,63 @@
 #include "io.hpp"
 #include "sched.hpp"
 
+Kthread::Kthread()
+    : regs{},
+      tid(new_tid()),
+      status(KthreadStatus::kReady),
+      exit_code(0),
+      item(new KthreadItem(this)) {
+  klog("init thread %d @ %p\n", tid, this);
+}
+
+Kthread::Kthread(Kthread::fp start)
+    : regs{.x19 = (uint64_t)start, .lr = (void*)kthread_start},
+      tid(new_tid()),
+      status(KthreadStatus::kReady),
+      exit_code(0),
+      kernel_stack(KTHREAD_STACK_SIZE, true),
+      item(new KthreadItem(this)) {
+  klog("new thread %d @ %p\n", tid, this);
+  reset_kernel_stack();
+}
+
+Kthread::Kthread(const Kthread& o)
+    : regs(o.regs),
+      tid(new_tid()),
+      status(o.status),
+      exit_code(0),
+      kernel_stack(o.kernel_stack),
+      user_text(o.user_text),
+      user_stack(o.user_stack),
+      item(new KthreadItem(this)) {
+  fix(o, &regs, sizeof(regs));
+  klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
+}
+
+void Kthread::fix(const Kthread& o, void* faddr, uint64_t fsize) {
+  kernel_stack.fix(o.kernel_stack, faddr, fsize);
+  user_text.fix(o.user_text, faddr, fsize);
+  user_stack.fix(o.user_stack, faddr, fsize);
+}
+
+int Kthread::alloc_user_text_stack(uint64_t text_size, uint64_t stack_size) {
+  user_text.dealloc();
+  user_stack.dealloc();
+
+  if (not user_text.alloc(text_size, false)) {
+    klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
+         tid, text_size);
+    return -1;
+  }
+
+  if (not user_stack.alloc(stack_size, true)) {
+    klog("%s: can't alloc user_stack / size = %lx\n", __func__, stack_size);
+    return -1;
+  }
+
+  return 0;
+}
+
 void idle() {
   while (true) {
     kill_zombies();
@@ -17,8 +74,6 @@ int new_tid() {
 
 void kthread_init() {
   auto thread = new Kthread;
-  thread->tid = new_tid();
-  thread->item = new KthreadItem(thread);
   set_current_thread(thread);
 }
 
@@ -41,43 +96,23 @@ void kthread_fini() {
   schedule();
 }
 
-void Kthread::init(Kthread::fp start) {
-  tid = new_tid();
-  if (kernel_stack)
-    kfree(kernel_stack);
-  status = KthreadStatus::kReady;
-  exit_code = 0;
-  kernel_stack = (char*)kmalloc(KTHREAD_STACK_SIZE);
-  regs.init();
-  regs.lr = (void*)kthread_start;
-  regs.x19 = (uint64_t)start;
-  regs.sp = kernel_stack + KTHREAD_STACK_SIZE - 0x10;
-  item = new KthreadItem(this);
-}
-
 Kthread* kthread_create(Kthread::fp start) {
-  auto thread = new Kthread;
-  thread->init(start);
+  auto thread = new Kthread(start);
   push_rq(thread);
   return thread;
 }
 
-int Kthread::alloc_user_text_stack(uint64_t text_size, uint64_t stack_size) {
-  kfree(user_text);
-  kfree(user_stack);
+long kthread_fork() {
+  auto othread = current_thread();
+  auto nthread = new Kthread(*othread);
 
-  user_text = (char*)kmalloc(text_size, PAGE_SIZE);
-  if (user_text == nullptr) {
-    klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
-         tid, text_size);
-    return -1;
+  save_regs(&nthread->regs);
+
+  if (current_thread()->tid == nthread->tid) {
+    return 0;
+  } else {
+    nthread->fix(*othread, &nthread->regs, sizeof(Regs));
+    push_rq(nthread);
+    return nthread->tid;
   }
-
-  user_stack = (char*)kmalloc(stack_size, PAGE_SIZE);
-  if (user_stack == nullptr) {
-    klog("%s: can't alloc user_stack / size = %lx\n", __func__, stack_size);
-    return -1;
-  }
-
-  return 0;
 }

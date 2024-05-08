@@ -23,8 +23,10 @@ int exec(const char* name, char* const argv[]) {
     return -1;
   }
 
-  memcpy(thread->user_text, file.data(), file.size());
-  exec_user_prog(thread->user_text, thread->user_stack);
+  memcpy(thread->user_text.addr, file.data(), file.size());
+  thread->reset_kernel_stack();
+  exec_user_prog(thread->user_text.addr, thread->user_stack.addr,
+                 thread->regs.sp);
 
   return 0;
 }

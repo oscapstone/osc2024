@@ -48,6 +48,10 @@ long sys_exec(const TrapFrame* frame) {
   return exec(name, argv);
 }
 
+long sys_fork(const TrapFrame* frame) {
+  return kthread_fork();
+}
+
 long sys_exit(const TrapFrame* frame) {
   auto status = (int)frame->X[0];
   kthread_exit(status);
@@ -59,7 +63,6 @@ long sys_not_implement(const TrapFrame* /*frame*/) {
   return -1;
 }
 
-STRONG_ALIAS(sys_not_implement, sys_fork);
 STRONG_ALIAS(sys_not_implement, sys_mbox_call);
 STRONG_ALIAS(sys_not_implement, sys_kill);
 STRONG_ALIAS(sys_not_implement, sys_signal);

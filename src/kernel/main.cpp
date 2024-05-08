@@ -11,6 +11,7 @@
 #include "mm/mm.hpp"
 #include "sched.hpp"
 #include "shell/shell.hpp"
+#include "thread.hpp"
 
 void kernel_main(void* dtb_addr) {
   mini_uart_setup();
