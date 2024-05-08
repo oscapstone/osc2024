@@ -1,6 +1,6 @@
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
+CFLAGS = -g -Wall -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles
 all: clean kernel8.img
 
 start.o: start.S
