@@ -190,14 +190,13 @@ void* page_malloc(unsigned int size)
     // turn size into minimum 4KB * 2**target_order
     for (int i = FRAME_IDX_0; i <= FRAME_IDX_FINAL; i++)
     {
-
+        // search from small to big
         if (size <= (PAGESIZE << i))
         {
             target_order = i;
             uart_sendline("        block size = 0x%x\n", PAGESIZE << i);
             break;
         }
-
         if (i == FRAME_IDX_FINAL)
         {
             uart_puts("[!] request size exceeded for page_malloc!!!!\r\n");
@@ -206,7 +205,7 @@ void* page_malloc(unsigned int size)
 
     }
 
-    // find the smallest larger frame in freelist
+    // find the available larger free page in freelist
     int order;
     for (order = target_order; order <= FRAME_IDX_FINAL; order++)
     {
@@ -228,26 +227,30 @@ void* page_malloc(unsigned int size)
     // // 計算目標 frame 的基地址
     unsigned long frame_base = BUDDY_MEMORY_BASE + (target_frame_ptr->idx * PAGESIZE);
 
+    // 目前不夠用會去比較大的地方切割
     // Release redundant memory block to separate into pieces
     for (int j = order; j > target_order; j--) // ex: 10000 -> 01111
     {
+        // ex 8kb-> 4kb, 4kb
         unsigned long left_block_start = frame_base;
         unsigned long left_block_end = left_block_start + (PAGESIZE << (j - 1)) - 1;
         unsigned long right_block_start = left_block_end + 1;
         unsigned long right_block_end = right_block_start + (PAGESIZE << (j - 1)) - 1;
 
         //uart_sendline("dump_page_info big to small:\n");
-        dump_page_info();
+        // dump_page_info();
         // // 輸出分割訊息
         uart_sendline("Split 0x%x to 0x%x ~ 0x%x and 0x%x ~ 0x%x\n",
             (unsigned int)frame_base,
             (unsigned int)left_block_start, (unsigned int)left_block_end,
             (unsigned int)right_block_start, (unsigned int)right_block_end);
         release_redundant(target_frame_ptr);//split
+        
     }
 
     
     // Allocate it
+    // return allocated buddy memory address
     target_frame_ptr->used = FRAME_ALLOCATED;
     uart_sendline("        physical address : 0x%x\n", BUDDY_MEMORY_BASE + (PAGESIZE * (target_frame_ptr->idx)));
     uart_sendline("        After\r\n");
@@ -257,7 +260,8 @@ void* page_malloc(unsigned int size)
 }
 
 void page_free(void* ptr)
-{
+{   
+    //idx : ((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12 
     frame_t* target_frame_ptr = &frame_array[((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12]; // PAGESIZE * Available Region -> 0x1000 * 0x10000000 // SPEC #1, #2
     uart_sendline("    [+] Free page: 0x%x, val = %d\r\n", ptr, target_frame_ptr->val);
     uart_sendline("        Before\r\n");
@@ -272,11 +276,13 @@ void page_free(void* ptr)
 frame_t* release_redundant(frame_t* frame)//split
 {
     // order -1 -> add its buddy to free list (frame itself will be used in master function)
+    // 切割出來的兩塊, 有一塊被aloocated掉沒有加進去
+
     frame->val -= 1;
     frame_t* buddyptr = get_buddy(frame);
     buddyptr->val = frame->val;
     list_add(&buddyptr->listhead, &frame_freelist[buddyptr->val]);
-    dump_page_info();
+    //dump_page_info();
     return frame;
 }
 
@@ -302,6 +308,7 @@ int coalesce(frame_t* frame_ptr)
         return -1;
 
     list_del_entry((struct list_head*)buddy);
+    // merge成更大塊，所以更新他的order值
     frame_ptr->val += 1;
     uart_sendline("    coalesce detected, merging 0x%x, 0x%x, -> val = %d\r\n", frame_ptr->idx, buddy->idx, frame_ptr->val);
     return 0;
@@ -482,12 +489,12 @@ void memory_reserve(unsigned long long start, unsigned long long end)
             {
                 ((frame_t*)pos)->used = FRAME_ALLOCATED;
                 uart_sendline("    [!] Reserved page in 0x%x - 0x%x\n", pagestart, pageend);
-                uart_sendline("        Before\n");
-                dump_page_info();
-                list_del_entry(pos);
-                uart_sendline("        Remove usable block for reserved memory: order %d\r\n", order);
-                uart_sendline("        After\n");
-                dump_page_info();
+                // uart_sendline("        Before\n");
+                // dump_page_info();
+                // list_del_entry(pos);
+                // uart_sendline("        Remove usable block for reserved memory: order %d\r\n", order);
+                // uart_sendline("        After\n");
+                // dump_page_info();
             } else if (start >= pageend || end <= pagestart) // no intersection
             {
                 continue;

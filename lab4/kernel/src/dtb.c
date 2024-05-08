@@ -146,6 +146,7 @@ void dtb_find_and_store_reserved_memory()
         unsigned long long start = uint64_endian_big2lttle(reverse_entry->address);
         unsigned long long end = uint64_endian_big2lttle(reverse_entry->size) + start;
         memory_reserve(start, end);
+        // increasing according to type
         reverse_entry++;
     }
 
