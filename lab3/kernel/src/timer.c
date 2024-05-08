@@ -11,8 +11,8 @@
 struct list_head* timer_list; 
 
 void timer_list_init() {
-    timer_list = kmalloc(sizeof(timer_event_t));
-    INIT_LIST_HEAD(timer_event_list);
+    timer_list = malloc(sizeof(timer_event_t));
+    INIT_LIST_HEAD(timer_list);
 }
 
 void core_timer_enable() {
@@ -59,7 +59,7 @@ void set_timer_interrupt_by_tick(unsigned long long tick) {
 // get cpu tick add some second
 unsigned long long get_cpu_tick_plus_s(unsigned long long seconds){
     unsigned long long cntpct_el0=0;
-    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
+    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick anchor
     unsigned long long cntfrq_el0=0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
     return (cntpct_el0 + cntfrq_el0*seconds);
@@ -82,10 +82,11 @@ void set_alert_2S(char* str) {
     unsigned long long interrupt_time = get_cpu_tick_plus_s(2);
     set_timer_interrupt_by_tick(interrupt_time);
     // Add timer
+    add_timer(set_alert_2S, 2,"2s-Alert");
 }
 
-add_timer(void *callback, unsigned long long timeout, char* args) {
-    timer_event_t* e = kmalloc(sizeof(timer_event_t));
+void add_timer(void *callback, unsigned long long timeout, char* args) {
+    timer_event_t* e = malloc(sizeof(timer_event_t));
 
     e->interrupt_time = get_cpu_tick_plus_s(timeout);
     e->callback = callback;
@@ -94,17 +95,41 @@ add_timer(void *callback, unsigned long long timeout, char* args) {
 
     INIT_LIST_HEAD(&e->listhead);
 
-    /* Add timer to the timer_list */
-    list_head* ptr;
-    list_for_each(ptr, e->listhead) {
-        if (ptr->list_head->interrupt_time > e->interrupt_time) {
+    /* Add timer to the sorted timer_list */
+    struct list_head* ptr;
+    list_for_each(ptr, timer_list) {
+        if (((timer_event_t*)ptr)->interrupt_time > e->interrupt_time) {
             // Insert the event just before the event with bigger time
             list_add(&e->listhead, ptr->prev);
             break;
         }
     }
+    /* If the event interrupt time is biggest, add to the tail of the tiemr_list */
+    if (list_is_head(ptr, timer_list)) {
+        list_add_tail(&e->listhead, timer_list);
+    }
 
+    set_timer_interrupt_by_tick(((timer_event_t*)ptr)->interrupt_time);
+}
 
+void core_timer_handler() {
+    if (list_empty(timer_list)) {
+        set_timer_interrupt(100000); // disable timer interrupt (set a very big value)
+        return;
+    }
+    timer_event_callback((timer_event_t *)timer_list->next); // do callback and set new interrupt
+}
 
+void timer_event_callback(timer_event_t * timer_event) {
+    list_del_entry((struct list_head*)timer_event); // delete the event in queue
+    // free(timer_event->args);                        // free the event's space
+    // free(timer_event);
+    ((void (*)(char*))timer_event-> callback)(timer_event->args);  // call the event
 
+    // set queue linked list to next time event if it exists
+    if(!list_empty(timer_list)) {
+        set_timer_interrupt_by_tick(((timer_event_t*)timer_list->next)->interrupt_time);
+    } else {
+        set_timer_interrupt(10000);  // disable timer interrupt (set a very big value)
+    }
 }

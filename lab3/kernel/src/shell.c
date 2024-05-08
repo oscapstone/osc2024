@@ -69,6 +69,8 @@ void cli_exec_cmd(char* buf) {
         cmd_cat(argvs[1]);
     } else if (cli_strcmp(cmd, "settimer") == 0) {
         cmd_enable_timer();
+    } else if (cli_strcmp(cmd, "sleep") == 0) {
+        cmd_sleep(argvs[1]);
     } else if (cli_strcmp(cmd, "setalert2s") == 0) {
         cmd_set_alert_2s(argvs[1]);
     } else if (cli_strcmp(cmd, "dtb") == 0) {
@@ -122,6 +124,7 @@ void cmd_help() {
     uart_puts("   ls                            - list all files in directory.\r\n");
     uart_puts("   dtb                           - show device tree.\r\n");
     uart_puts("   settimer                      - enable timer.\r\n");
+    uart_puts("   sleep         [sec]           - sleep with secs.\r\n");
     uart_puts("   setalert2s    [msg]           - set 2s alert with message.\r\n");
     uart_puts("   malloc                        - test malloc function.\r\n");
     uart_puts("   reboot                        - reboot the device.\r\n");
@@ -278,4 +281,8 @@ void cmd_enable_timer() {
 
 void cmd_set_alert_2s(char* str) {
     set_alert_2S(str);
+}
+
+void cmd_sleep(char* timeout) {
+    add_timer(uart_puts, atoi(timeout), "sleep\r\n");
 }

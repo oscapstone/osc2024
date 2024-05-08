@@ -22,5 +22,6 @@ void cmd_dtb();
 void cmd_currentEL();
 void cmd_enable_timer();
 void cmd_set_alert_2s(char* str);
+void cmd_sleep(char* timeout);
 
 #endif  /*_SHELL_H */

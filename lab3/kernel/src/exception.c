@@ -4,6 +4,10 @@
 #include "mini_uart.h"
 #include "utils.h"
 #include "timer.h"
+#include "heap.h"
+
+int curr_task_priority = 9999; // Small number has higher priority
+struct list_head *irqtask_list;
 
 void print_currentEL(){
     unsigned long long currentEL;
@@ -41,25 +45,28 @@ void el1h_irq_router() {
     // lock();
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) {
         if (*AUX_MU_IER_REG & 2) {
-            uart_puts("[el1h][irq][uart] Write Exception\r\n");
+            // uart_puts("[el1h][irq][uart] Write Exception\r\n");
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-            // irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            // unlock();
-            // irqtask_run_preemptive(); // run the queued task before returning to the program.
+            irqtask_add(uart_write_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
+            irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IER_REG & 1) {
-            uart_puts("[el1h][irq][uart] Read Exception\r\n");
+            // uart_puts("[el1h][irq][uart] Read Exception\r\n");
             *AUX_MU_IER_REG &= ~(1);
-             // disable read interrupt
-            // unlock();
-            // irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-            // unlock();
-            // irqtask_run_preemptive();
+            // disable read interrupt
+            unlock();
+            irqtask_add(uart_read_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
+            irqtask_run_preemptive();
         }
     }
     else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) {
-        uart_puts("[el1h][irq][timer] Exception\r\n");
-        set_timer_interrupt(100000);
+        core_timer_disable();
+        irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock();
+        irqtask_run_preemptive();
+        core_timer_enable();
     }   
     else {
         uart_puts("UNKNOWN el1h_irq_router\r\n");
@@ -94,4 +101,56 @@ void lock() {
 
 void unlock() {
     el1_interrupt_enable();
+}
+
+void irqtask_list_init() {
+    irqtask_list = malloc(sizeof(irqtask_t));
+    INIT_LIST_HEAD(irqtask_list);
+}
+
+void irqtask_add(void *task_function, unsigned long long priority) {
+    irqtask_t *irq_task = malloc(sizeof(irqtask_t));
+    irq_task->priority = priority;
+    irq_task->task_function = task_function;
+    INIT_LIST_HEAD(&(irq_task->listhead));
+
+    struct list_head *ptr;
+    list_for_each(ptr, irqtask_list) {
+        if (((irqtask_t *)ptr)->priority > irq_task->priority) {
+            list_add(&(irq_task->listhead), ptr->prev);
+            break;
+        }
+    }
+    // Lowest Priority
+    if (list_is_head(ptr, irqtask_list)) {
+        list_add_tail(&(irq_task->listhead), irqtask_list);
+    }
+}
+
+void irqtask_run(irqtask_t *task) {
+    ((void (*)())task->task_function)();
+}
+
+void irqtask_run_preemptive() {
+    while (!list_empty(irqtask_list)) {
+        lock();
+        irqtask_t *irq_task = (irqtask_t *)irqtask_list->next;
+
+        if (curr_task_priority <= irq_task->priority) {
+            unlock();
+            break;
+        }
+        
+        list_del_entry((struct list_head *)irq_task);
+        int prev_task_priority = curr_task_priority;
+        curr_task_priority = irq_task->priority;
+        
+        unlock();
+        irqtask_run(irq_task);
+        lock();
+
+        curr_task_priority = prev_task_priority;
+        // free(irq_task);
+        unlock();
+    }
 }
