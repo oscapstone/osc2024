@@ -5,9 +5,14 @@ user program 從現在的thread開始跑，可以寫一個test thread 裡面CALL
 
 TODOS:
 1. uartread, uartwrite V
-2. fork
-3. update thread for user stack (and exec to let the program run correctly)
-4. timer interrupt
+2. fork V (probably)
+3. update thread for user stack (and exec to let the program run correctly) V
+
+NEW TODO!
+1. TIMER INTERRUPT
+2. PREEMMIT DISABLE IN CRITICAL SECTION
+3. GOOD VIDEO (pls QAQ)
+4. MBOX CALL V
 
 因為 saveall 才把東西存進來，load all會再跳回去
 
@@ -33,3 +38,16 @@ fork return 時 trapframe 是否也需要被複製，還是只要返回值對就
 真的不行就先準備 thread，然後問 video player 播不出來能不能拿一半QAQ
 
 elrel1那些是0，好像怪怪的，可以檢查一下 那些正常的質應該要是多少
+
+問題s: 
+1. fork完有看到 program 要 mbox_call，應該算複製成功? 還是這樣還是有可能影片撥不出來QQ
+2. 沒有 timer interrupt 的情況下，他應該要是黑屏嗎?
+3. 有了 timer interrupt 以後發現，進去 user program 以後就又沒有了? (推測跟 read 有關)
+4. 在 read 的地方加了 disable 以後就正常，但是 fork 完去到另一邊就又沒有 interrupt 了
+5. 影片跑不出來但有看到 mbox ok，能不能拿一半QAQ 還有前一題能不能拿
+
+TOMORO
+1. 試跑 fork_test
+2. 可能可以試試 blr 跟 run thread
+3. 把 fork 改成阿倫的試試看 (同邏輯)
+4. 不然可能就得試試看別人的 memory allocator

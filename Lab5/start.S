@@ -43,14 +43,14 @@ _start:
 from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
-    mov x0, 0x345 // 3c5 EL1h (SPSel = 1) with interrupt disabled, 345 enable interrupt
+    mov x0, 0x5 // 3c5 EL1h (SPSel = 1) with interrupt disabled, 345 enable interrupt
     msr spsr_el2, x0
     msr elr_el2, lr
     eret // return to EL1
 
 
 .macro save_all
-	sub	sp, sp, 16 * 18
+	sub	    sp, sp, 16 * 18
 	stp 	x0, x1, [sp ,16 * 0]
 	stp 	x2, x3, [sp ,16 * 1]
 	stp 	x4, x5, [sp ,16 * 2]
@@ -67,19 +67,19 @@ from_el2_to_el1:
 	stp 	x26, x27, [sp ,16 * 13]
 	stp 	x28, x29, [sp ,16 * 14]
 	str 	x30, [sp, 16 * 15]
-	mrs	x28, spsr_el1
-	mrs	x29, elr_el1
+	mrs	    x28, spsr_el1
+	mrs	    x29, elr_el1
 	stp 	x28, x29, [sp ,16 * 16]
-	mrs	x28, sp_el0	// For fork
-	stp	x28, x0, [sp, 16 * 17]
+	mrs	    x28, sp_el0	// For fork
+	stp	    x28, x0, [sp, 16 * 17]
 .endm
 
 .macro load_all
-	ldp	x28, x0, [sp, 16 * 17]
-	msr	sp_el0, x28
+	ldp	    x28, x0, [sp, 16 * 17]
+	msr	    sp_el0, x28
 	ldp 	x28, x29, [sp ,16 * 16]
-	msr	spsr_el1, x28
-	msr	elr_el1, x29
+	msr	    spsr_el1, x28
+	msr	    elr_el1, x29
 	ldp 	x0, x1, [sp ,16 * 0]
 	ldp 	x2, x3, [sp ,16 * 1]
 	ldp 	x4, x5, [sp ,16 * 2]
@@ -164,6 +164,7 @@ core_timer_enable:
     mov x0, 1
     msr cntp_ctl_el0, x0 // enable
     mrs x0, cntfrq_el0
+    lsr x0, x0, #5
     msr cntp_tval_el0, x0 // set expired time
     mov x0, 2
     ldr x1, =CORE0_TIMER_IRQ_CTRL
@@ -208,3 +209,14 @@ get_current:
 fork_return:
     load_all
     eret
+
+
+.globl enable_irq
+enable_irq:
+	msr DAIFClr, #2 // IRQ mask bit
+	ret
+
+.globl disable_irq
+disable_irq:
+	msr	DAIFSet, #2
+	ret

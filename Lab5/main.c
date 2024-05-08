@@ -5,6 +5,8 @@
 #include "thread.h"
 #include "utils.h"
 
+extern void core_timer_enable();
+
 void foo(){
     for(int i = 0; i < 10; ++i) {
         uart_puts("Thread id: ");
@@ -39,6 +41,13 @@ void test_svc(){
     //asm volatile("svc 0");
 }
 
+void cpu_timer_register(){
+    unsigned long tmp;
+    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+    tmp |= 1;
+    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+}
+
 void main(void* dtb)
 {
     unsigned long el;
@@ -46,7 +55,8 @@ void main(void* dtb)
     uart_init();
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_start_callback);
     fdt_tranverse(dtb, "linux,initrd-end", initramfs_end_callback);
-
+    // core_timer_enable();
+    // cpu_timer_register();
     // say hello
     frames_init();
     // show el
