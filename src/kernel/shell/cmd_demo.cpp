@@ -92,6 +92,7 @@ int demo_thread(int /*argc*/, char* /*argv*/[]) {
   };
   for (int i = 0; i < 2; ++i)
     kthread_create(foo);
+  return 0;
 }
 
 int cmd_demo(int argc, char* argv[]) {
