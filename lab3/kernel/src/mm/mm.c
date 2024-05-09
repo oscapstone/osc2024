@@ -10,13 +10,16 @@
 extern char __static_mem_start__, __static_mem_end__;
 
 void buddy_init();
+void mem_pool_init();
+U32 mem_buddy_alloc(U8 order);
+int mem_put_free(U32 frame_index, U8 order);
 
 // the base of memory
 
 MEMORY_MANAGER mem_manager;
 
 #define MEM_ADDR_TO_INDEX(x)    ((((UPTR)x & -MEM_FRAME_SIZE) - mem_manager.base_ptr) / MEM_FRAME_SIZE)
-#define MEM_INDEX_TO_ADDR(x)    (U64*)((x * MEM_FRAME_SIZE) + mem_manager.base_ptr)
+#define MEM_INDEX_TO_ADDR(x)    ((x * MEM_FRAME_SIZE) + (char*)mem_manager.base_ptr)
 
 U64* smalloc_ptr;
 U64* smalloc_end_ptr;
@@ -55,11 +58,141 @@ void mm_init() {
     }
 
     buddy_init();
+
+    // TODO: reserve the memory in buddy system
+
+    // init dynamic memory pools
+    mem_pool_init();
 }
+
+void mem_pool_init() {
+    mem_manager.pools = smalloc(MEM_MEMORY_POOL_ORDER * sizeof(MEMORY_POOL));
+
+    for (int i = 0; i < MEM_MEMORY_POOL_ORDER; i++) {
+        MEMORY_POOL* pool = &mem_manager.pools[i];
+        pool->obj_size = MEM_MIN_OBJECT_SIZE * (i + 1);
+        pool->slot_size = MEM_FRAME_SIZE / pool->obj_size;
+        pool->chunk_count = 0;      // no chunk has been allocated
+        pool->chunks = smalloc(MEM_MAX_CHUNK * sizeof(CHUNK_INFO));
+        memzero(pool->chunks->slots, sizeof(pool->chunks->slots));
+    }
+}
+
+void* mem_chunk_alloc(U32 size) {
+    if (size > MEM_MIN_OBJECT_SIZE * MEM_MEMORY_POOL_ORDER) {
+        printf("[MEMORY][ERROR] can't allocate chunk, size too big");
+        return NULL;
+    }
+
+    U8 fit_order = size / MEM_MIN_OBJECT_SIZE;
+
+    // if 剛好相等, ex. 16, 32 is order to it's bin
+    if ((size - (MEM_MIN_OBJECT_SIZE * fit_order)) == 0)
+        fit_order--;
+
+    MEMORY_POOL* order_pool = &mem_manager.pools[fit_order];
+
+    for (U32 i = 0; i < order_pool->chunk_count; i++) {
+        // has space for this chunk
+        CHUNK_INFO* chunk_info = &order_pool->chunks[i];
+        if (chunk_info->ref_count < order_pool->slot_size) {
+            for (U32 j = 0; j < order_pool->slot_size; j++) {
+                CHUNK_SLOT* slot = &chunk_info->slots[j];
+                if (slot->flag & MEM_CHUNK_SLOT_FLAG_USED) {
+                    continue;
+                }
+
+                // this slot it not use
+                slot->flag |= MEM_CHUNK_SLOT_FLAG_USED;
+                chunk_info->ref_count++;
+
+                char* return_addr = MEM_INDEX_TO_ADDR(chunk_info->frame_index);
+                return_addr = return_addr + (j * order_pool->obj_size);
+
+                NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", chunk_info->frame_index, j);
+                return (void*)return_addr;
+            }
+        }
+    }
+
+    // no chunk can be allocate, allocate chunk
+    CHUNK_INFO* new_chunk = &order_pool->chunks[order_pool->chunk_count];
+    order_pool->chunk_count++;
+    new_chunk->frame_index = mem_buddy_alloc(0);
+    new_chunk->ref_count = 1;
+    new_chunk->slots[0].flag |= MEM_CHUNK_SLOT_FLAG_USED;
+    
+    FRAME_INFO* used_frame = &mem_manager.frames[new_chunk->frame_index];
+    used_frame->flag |= MEM_FRAME_FLAG_CHUNK;
+    used_frame->pool_order = fit_order;
+
+    NS_DPRINT("[MEMORY][TRACE] New chunk allocated\n");
+    NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", new_chunk->frame_index, 0);
+
+    return (void*)MEM_INDEX_TO_ADDR(new_chunk->frame_index);
+}
+
+void mem_chunk_free(void* ptr) {
+    U32 frame_index = MEM_ADDR_TO_INDEX(ptr);
+
+    FRAME_INFO* frame_info = &mem_manager.frames[frame_index];
+
+    if (!(frame_info->flag & MEM_FRAME_FLAG_CHUNK)) {
+        printf("[MEMORY][WARN] Freeing not chunk memory!\n");
+        return;
+    }
+
+    MEMORY_POOL* pool = &mem_manager.pools[frame_info->pool_order];
+
+    // searching chunk
+    CHUNK_INFO* chunk_info = NULL;
+    U8 chunk_offset = 0;
+    for(U8 i = 0; i < pool->chunk_count; i++) {
+        CHUNK_INFO* search_chunk = &pool->chunks[i];
+        if (search_chunk->frame_index == frame_index) {
+            chunk_info = search_chunk;
+            chunk_offset = i;
+            break;
+        }
+    }
+
+    if (chunk_info == NULL) {
+        printf("[MEMORY][ERROR] chunk not found in pool list!\n");
+        return;
+    }
+
+    char* offset_ptr = (char*)ptr - MEM_INDEX_TO_ADDR(frame_index);
+    UPTR slot_offset = (UPTR)offset_ptr / pool->obj_size;
+
+    CHUNK_SLOT* slot = &chunk_info->slots[slot_offset];
+    if (!(slot->flag & MEM_CHUNK_SLOT_FLAG_USED)) {
+        printf("[MEMORY][ERROR] slot is not used!\n");
+        return;
+    }
+    slot->flag &= ~MEM_CHUNK_SLOT_FLAG_USED;
+    chunk_info->ref_count--;
+
+    // chunk has no reference, free chunk
+    if (chunk_info->ref_count == 0) {
+        mem_buddy_free(chunk_info->frame_index);
+
+        frame_info->flag &= ~MEM_FRAME_FLAG_CHUNK;
+
+        // remove from pool
+        for (U8 i = chunk_offset; i < pool->chunk_count - 1; i++) {
+            pool->chunks[i] = pool->chunks[i + 1];
+        }
+        pool->chunk_count--;
+    }
+
+    NS_DPRINT("[MEMORY][TRACE] free chunk memory successfully, ptr:%x\n", ptr);
+}
+
 
 void buddy_init() {
 
     mem_manager.number_of_frames = mem_manager.size / MEM_FRAME_SIZE;
+    NS_DPRINT("[MEMORY][TRACE] Total frames: %d\n", mem_manager.number_of_frames);
     mem_manager.frames = smalloc(mem_manager.number_of_frames * sizeof(MEM_FRAME_INFO_SIZE));
 
     mem_manager.levels = utils_highestOneBit(mem_manager.number_of_frames);
@@ -71,7 +204,7 @@ void buddy_init() {
 
     // for each level
     NS_DPRINT("[TRACE] init each buddy level\n");
-    for (U32 current_level = mem_manager.levels - 1; current_level > 0; current_level--) {
+    for (int current_level = mem_manager.levels - 1; current_level >= 0; current_level--) {
         NS_DPRINT("[TRACE] Current level: %d\n", current_level);
         // the block size of this level
         U64 number_of_frames_in_block = (1 << current_level);
@@ -80,12 +213,13 @@ void buddy_init() {
         // calculate the max size of this level free list
         U32 max_free_size = (mem_manager.size / level_size) + 1;
         FREE_INFO* current_info = &mem_manager.free_list[current_level];
-        current_info->size = max_free_size;
+        current_info->space = max_free_size;
         current_info->info = smalloc(max_free_size * sizeof(int));
+        NS_DPRINT("[MEMORY][TRACE] free list init. level: %d, space: %d\n", current_level, current_info->space);
 
         // initialize the buddy
         U32 info_index = 0;
-        while ((mem_manager.base_ptr + (frame_index * MEM_FRAME_SIZE)) + level_size < mem_manager.base_ptr + mem_manager.size) {
+        while (frame_index + number_of_frames_in_block <= mem_manager.number_of_frames) {
             current_info->info[info_index] = frame_index;
             
             mem_manager.frames[frame_index].flag = 0;
@@ -97,7 +231,9 @@ void buddy_init() {
             info_index++;
             frame_index += number_of_frames_in_block;
         }
-        for(;info_index < current_info->size; info_index++) {
+        NS_DPRINT("[MEMORY][TRACE] free info insered. count: %d, frame offset: %d\n", info_index, frame_index);
+        current_info->size = info_index;
+        for(;info_index < current_info->space; info_index++) {
             current_info->info[info_index] = MEM_FREE_INFO_UNUSED;
         }
     }
@@ -111,7 +247,30 @@ U32 mem_get_free(U8 order) {
     U64 number_of_frames_in_block = (1 << order);
 
     FREE_INFO* current_free_info = &mem_manager.free_list[order];
-    for (U32 i = 0; i < current_free_info->size; i++) {
+    if (current_free_info->size == 0)
+        return MEM_FREE_INFO_UNUSED;
+    
+    // having enough space in free list
+    U32 start_frame = current_free_info->info[current_free_info->size - 1];
+
+    // mark the frames in use
+    mem_manager.frames[start_frame].flag |= MEM_FRAME_FLAG_USED;
+    mem_manager.frames[start_frame].flag &= ~MEM_FRAME_FLAG_CONTINUE;
+    mem_manager.frames[start_frame].order = order;
+    for (U64 i = 1; i < number_of_frames_in_block; i++) {
+        mem_manager.frames[start_frame + i].flag |= MEM_FRAME_FLAG_USED | MEM_FRAME_FLAG_CONTINUE;
+        mem_manager.frames[start_frame + i].order = order;
+    }
+
+    // remove from the free list
+    current_free_info->info[current_free_info->size - 1] = MEM_FREE_INFO_UNUSED;
+    current_free_info->size--;
+#ifdef NS_DEBUG
+    printf("[MEMORY][DEBUG] Found buddy, order: %d Start frame: %d\n", order, start_frame);
+#endif
+    return start_frame;
+    /** Old method
+    for (U32 i = 0; i < current_free_info->space; i++) {
         if (current_free_info->info[i] == MEM_FREE_INFO_UNUSED)
             break;
         
@@ -128,20 +287,21 @@ U32 mem_get_free(U8 order) {
         }
 
         // remove from the free list
-        for (U32 j = i + 1; j < current_free_info->size; j++) {
+        for (U32 j = i + 1; j < current_free_info->space; j++) {
             if (current_free_info->info[j] == MEM_FREE_INFO_UNUSED) {
                 current_free_info->info[j - 1] = MEM_FREE_INFO_UNUSED;
                 break;
             }
             current_free_info->info[j - 1] = current_free_info->info[j];
         }
+        current_free_info->size--;
 #ifdef NS_DEBUG
         printf("[MEMORY][DEBUG] Found buddy, order: %d Start frame: %d\n", order, start_frame);
 #endif
         return start_frame;
     }
-
-    return -1;
+    return MEM_FREE_INFO_UNUSED;
+    */
 }
 
 /**
@@ -153,18 +313,29 @@ int mem_put_free(U32 frame_index, U8 order) {
 
     FRAME_INFO* frame_info = &mem_manager.frames[frame_index];
 
+    if (current_free_info->size + 1 >= current_free_info->space) {
+        printf("[MEMORY][ERROR] Free list out of index! order: %d\n", order);
+        printf("[MEMORY][ERROR] current size: %d, space: %d\n", current_free_info->size, current_free_info->space);
+        return -1;
+    }
+    current_free_info->info[current_free_info->size] = frame_index;
+    current_free_info->size++;
+
+/** Old method
     U32 blank_info_idx = 0;
-    for (; blank_info_idx < current_free_info->size; blank_info_idx++) {
+    for (; blank_info_idx < current_free_info->space; blank_info_idx++) {
         if (current_free_info->info[blank_info_idx] == MEM_FREE_INFO_UNUSED)
             break;
     }
-    if (blank_info_idx >= current_free_info->size) {
+    if (blank_info_idx >= current_free_info->space) {
         printf("[MEMORY][ERROR] Free list out of index!\n");
         return -1;
     }
 
     // put the index to the free list
     current_free_info->info[blank_info_idx] = frame_index;
+    current_free_info->size++;
+*/
 
     // mark the frames in free
     frame_info->flag &= ~(MEM_FRAME_FLAG_USED | MEM_FRAME_FLAG_CONTINUE);
@@ -218,7 +389,7 @@ U32 mem_buddy_alloc(U8 order) {
         return MEM_FRAME_NOT_FOUND;
     }
 #ifdef NS_DEBUG
-        printf("[MEMORY][TRACE] Allocating larger block. index: %d, order: %d\n", frame_index, search_order - 1);
+        printf("[MEMORY][TRACE] Allocating larger block. index: %d, order: %d\n", frame_index, search_order);
 #endif
 
     // split the founded buddy
@@ -276,41 +447,48 @@ void mem_buddy_free(U32 frame_index) {
             other_buddy = frame_index - (1 << (check_order - 1));
         }
 
+        if (other_buddy >= mem_manager.number_of_frames) {
+            NS_DPRINT("[MEMORY][TRACE] the other buddy is not in memory, index: %d\n", other_buddy);
+            break;
+        }
+
+        if (mem_manager.frames[other_buddy].flag & MEM_FRAME_FLAG_CANT_USE) {
+            NS_DPRINT("[MEMORY][TRACE] buddy partner can not be use (reserved memory). buddy: %d\n", other_buddy);
+            break;
+        }
+
         // buddy is not free, can't merge
-        if (mem_manager.frames[other_buddy].flag & MEM_FRAME_FLAG_USED) {
-#ifdef NS_DEBUG
-            printf("[MEMORY][TRACE] buddy partner is not free\n");
-#endif
+        if (MEM_FRAME_IS_INUSE(mem_manager.frames[other_buddy])) {
+            NS_DPRINT("[MEMORY][TRACE] buddy partner is not free. buddy: %d\n", other_buddy);
             break;
         }
         
         if (mem_manager.frames[other_buddy].order != check_order - 1) {
-#ifdef NS_DEBUG
-            printf("[MEMORY][TRACE] buddy partner is free but not the same order\n");
-#endif
+            NS_DPRINT("[MEMORY][TRACE] buddy partner is free but not the same order\n");
             break;
         }
         // buddy is free, merge
         NS_DPRINT("[MEMORY][TRACE] buddy partner is free and match start merging\n");
         NS_DPRINT("[MEMORY][TRACE] buddy partner index: %d, order: %d\n", other_buddy, check_order - 1);
 
-        // remove the buddy from free list
+        // remove the buddy partner from free list
         FREE_INFO* buddy_order_free_list = &mem_manager.free_list[order];
         U32 i = 0;
-        for (; i < buddy_order_free_list->size; i++) {
+        for (; i < buddy_order_free_list->space; i++) {
             if (buddy_order_free_list->info[i] == other_buddy) {
-                for (U32 j = i + 1; j < buddy_order_free_list->size; j++) {
+                for (U32 j = i + 1; j < buddy_order_free_list->space; j++) {
                     if (buddy_order_free_list->info[j] == MEM_FREE_INFO_UNUSED) {
                         buddy_order_free_list->info[j - 1] = MEM_FREE_INFO_UNUSED;
                         break;
                     }
                     buddy_order_free_list->info[j - 1] = buddy_order_free_list->info[j];
                 }
+                buddy_order_free_list->size--;
                 break;
             }
         }
 #ifdef NS_DEBUG
-        if (i == buddy_order_free_list->size) {
+        if (i == buddy_order_free_list->space) {
             printf("[MEMORY][ERROR] Wired, buddy partner is not in free list. buddy index: %d\n", other_buddy);
         }
 #endif
@@ -324,10 +502,11 @@ void mem_buddy_free(U32 frame_index) {
 
     // put the buddy to the free list
     FREE_INFO* free_list = &mem_manager.free_list[order];
-    U32 i = 0;
-    for (; i < free_list->size; i++) {
+    U32 i = free_list->size;
+    for (; i < free_list->space; i++) {
         if (free_list->info[i] == MEM_FREE_INFO_UNUSED) {
             free_list->info[i] = frame_index;
+            free_list->size++;
             break;
         }
     }
@@ -349,14 +528,21 @@ void mem_buddy_free(U32 frame_index) {
 
 }
 
-/**
- * @param pages
- *      the number of pages you want to allocate
-*/
-void* alloc_pages(U64 pages) {
-    if (pages == 0)
-        return NULL;
+void* kmalloc(U64 size) {
+    
+    if (size > MEM_MIN_OBJECT_SIZE * MEM_MEMORY_POOL_ORDER) {
+        U8 order = (U8)utils_highestOneBit(size);
+        return MEM_INDEX_TO_ADDR(mem_buddy_alloc(order));
+    }
 
-    // TODO:
-    return NULL;
+    return mem_chunk_alloc(size);
+}
+
+void kfree(void* ptr) {
+    U32 frame_index = MEM_ADDR_TO_INDEX(ptr);
+    if (mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CHUNK) {
+        mem_chunk_free(ptr);
+    } else {
+        mem_buddy_free(frame_index);
+    }
 }

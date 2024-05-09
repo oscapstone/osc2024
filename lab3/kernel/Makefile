@@ -32,7 +32,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
-QEMU_DEVICE = /dev/pts/2
+QEMU_DEVICE = /dev/pts/3
 
 all : kernel.img
 
@@ -41,7 +41,7 @@ gdb-run :
 
 upload : all
 	python3 uploader_qemu.py $(QEMU_DEVICE)
-	sudo screen $(QEMU_DEVICE) 115200 > output.txt
+	sudo screen -L -Logfile screenlog.txt $(QEMU_DEVICE) 115200
 
 kernel.img : $(OBJ_FILES) linker.ld $(BIN_DIR)
 	$(LD) --verbose $(OBJ_FILES) -T linker.ld -o $(BIN_DIR)/kernel.elf

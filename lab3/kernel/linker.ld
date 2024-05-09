@@ -4,6 +4,7 @@ SECTIONS
     . = 0xffff000000080000;
     /*. = 0x80000;*/
     /* code section */
+    PROVIDE(__kernel_start__ = .);
     .text :
     {
         /* keep the boot to the first section of text segment */
@@ -37,6 +38,7 @@ SECTIONS
         . += 32m;
         PROVIDE(__static_mem_end__ = .);
     }
+    PROVIDE(__kernel_end__ = .);
 
     
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }

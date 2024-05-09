@@ -178,18 +178,18 @@ void shell() {
 			}
 		 } else if (utils_strncmp(cmd_space, "memtest", 7) == 0) {
 			printf("Memory management test\n");
-			U32 index1 = mem_buddy_alloc(4);
-			U32 index2 = mem_buddy_alloc(4);
-			U32 index3 = mem_buddy_alloc(4);
-			U32 index4 = mem_buddy_alloc(4);
-			printf("Memory allocate index:%d\n", index1);
-			printf("Memory allocate index:%d\n", index2);
-			printf("Memory allocate index:%d\n", index3);
-			printf("Memory allocate index:%d\n", index4);
-			mem_buddy_free(index1);
-			mem_buddy_free(index2);
-			mem_buddy_free(index3);
-			mem_buddy_free(index4);
+			char* ptr1 = kmalloc(16);
+			char* ptr2 = kmalloc(16);
+			char* ptr3 = kmalloc(32);
+			char* ptr4 = kmalloc(40);
+			printf("kmalloc(16). ptr: %x\n", ptr1);
+			printf("kmalloc(16). ptr: %x\n", ptr2);
+			printf("kmalloc(32). ptr: %x\n", ptr3);
+			printf("kmalloc(40). ptr: %x\n", ptr4);
+			kfree(ptr4);
+			kfree(ptr3);
+			kfree(ptr2);
+			kfree(ptr1);
 		 }
 		 else {
 			uart_send_string("Unknown command\n");
