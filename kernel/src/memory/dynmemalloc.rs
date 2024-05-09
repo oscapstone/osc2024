@@ -50,6 +50,7 @@ impl DynMemAllocator {
     pub fn pshow(&self) {
         unsafe {(*self.memory.get()).as_ref().unwrap().show()};   
     }
+
     pub fn dshow(&self) {
         unsafe {(*self.best_fit_alloc.get()).as_ref().unwrap().show()};   
     }

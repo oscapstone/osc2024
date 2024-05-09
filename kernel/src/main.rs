@@ -221,7 +221,12 @@ fn kernel_init() -> ! {
                 println!("Allocated address: {:#x}", alloc_addr);
             }
             "dfree" => {
+                if cmd.len() < 2 {
+                    println!("Usage: dfree <addr>");
+                    continue;
+                }
                 let size: usize = cmd[1].parse().unwrap();
+                unsafe {alloc.dealloc(size as *mut u8, Layout::from_size_align(1, 1).unwrap())};
             }
             "palloc" => {
                 let size: usize = cmd[1].parse().unwrap();
