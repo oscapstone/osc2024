@@ -15,7 +15,6 @@
   0x00000009  // marks the end of the structure block. There shall be only one
               // FDT_END token, and it shall be the last token in the structure
               // block.
-#define UNUSED(x) (void)(x)
 
 typedef void (*fdt_callback)(int type, const char *name, const void *data,
                              uint32_t size);

@@ -47,6 +47,9 @@ asm: all
 run: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
+run_with_display: all
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+
 debug: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -S -s -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 

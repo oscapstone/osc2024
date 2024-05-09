@@ -24,7 +24,6 @@ clear_bss:
 
 setup_el1:
     bl      from_el2_to_el1
-    //mov		sp, #0x40000		//put EL1 stack start from 0x40000	
 
 master:  
     mov     x0, x27

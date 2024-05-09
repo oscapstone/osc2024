@@ -93,9 +93,7 @@ static int32_t parse_struct(fdt_callback cb, void *cur_ptr, void *strings_ptr,
 
 int32_t fdt_traverse(fdt_callback cb) {
   fdt_header *header = (fdt_header *)_dtb_ptr_start;
-
   _dtb_ptr_end = _dtb_ptr_start + fdt_u32_le2be(&header->totalsize);
-
   uint32_t magic = fdt_u32_le2be(&(header->magic));
   uart_send_string("dtb magic number: ");
   uart_hex(magic);

@@ -35,7 +35,9 @@ void cpio_ls() {
     align_inplace(&headerPathname_size, 4);
     align_inplace(&file_size, 4);
     uart_send_string(addr + sizeof(cpio_header));
-    uart_send_string("\r\n");
+    uart_send_string("  ");
+    uart_int(file_size);
+    uart_puts("B");
     addr += (headerPathname_size + file_size);
   }
 }
@@ -81,20 +83,20 @@ void cpio_cat(const char *filename) {
   }
 }
 
-char *cpio_get_file_content_st_addr(const char *filename) {
+char *cpio_load(const char *filename, uint32_t *file_sz) {
   char *file = findFile(filename);
   if (file) {
     cpio_header *header = (cpio_header *)file;
     uint32_t filename_size =
         cpio_atoi(header->c_namesize, (int)sizeof(header->c_namesize));
     uint32_t headerPathname_size = sizeof(cpio_header) + filename_size;
-    uint32_t file_size =
-        cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
+    *file_sz = cpio_atoi(header->c_filesize, (int)sizeof(header->c_filesize));
     align_inplace(&headerPathname_size, 4);
-    align_inplace(&file_size, 4);
+    align_inplace(file_sz, 4);
     char *file_content = (char *)header + headerPathname_size;
     return file_content;
   }
+  *file_sz = 0;
   uart_send_string(filename);
   uart_puts(" not found");
   return (char *)0;
