@@ -22,15 +22,37 @@ int uartwrite(const char buf[], unsigned size) {
   return x0;
 }
 
+int exec(const char buf[]) {
+  register uint64_t x0 asm("x0") = (uint64_t)buf;
+  register uint64_t x1 asm("x1") = (uint64_t)0;
+  register int x8 asm("x8") = 3;
+  asm volatile("svc\t0" : "=r"(x0) : "r"(x0), "r"(x1), "r"(x8));
+  return x0;
+}
+
+void exit(int x) {
+  register uint64_t x0 asm("x0") = (uint64_t)x;
+  register int x8 asm("x8") = 5;
+  asm volatile("svc\t0" : "=r"(x0) : "r"(x0), "r"(x8));
+}
+
 int main() {
   char str[] = "Hello from EL0.\n";
   /* mini_uart_puts(str); */
   uartwrite(str, sizeof(str));
 
-  char c;
+  char c = 0;
   for (;;) {
     uartread(&c, 1);
     uartwrite(&c, 1);
+    if (c == 'h')
+      exec("hello.img");
+    if (c == 'f')
+      exec("fork.img");
+    if (c == 's')
+      exec("syscall.img");
+    if (c == 'e')
+      exit(0);
   }
 
   return 0;

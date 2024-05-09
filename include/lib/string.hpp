@@ -17,13 +17,13 @@ char* strdup(const char* s);
 
 class string_view {
   const char* buf_;
-  int size_;
+  long size_;
 
  public:
   using iterator = const char*;
   string_view() : buf_(nullptr), size_(0) {}
   string_view(const char* buf) : buf_(buf), size_(strlen(buf)) {}
-  string_view(const char* buf, int size) : buf_(buf), size_(size) {}
+  string_view(const char* buf, long size) : buf_(buf), size_(size) {}
   iterator begin() {
     return buf_;
   }
@@ -33,14 +33,17 @@ class string_view {
   const char* data() {
     return buf_;
   }
-  int size() const {
+  long size() const {
     return size_;
   }
-  char operator[](int i) const {
+  bool empty() const {
+    return size_ == 0;
+  }
+  char operator[](long i) const {
     return buf_[i];
   }
   bool printable() const {
-    for (int i = 0; i < size_; i++) {
+    for (long i = 0; i < size_; i++) {
       auto c = buf_[i];
       if (not(0x20 <= c and c <= 0x7e) and not(i + 1 == size_ and c == 0))
         return false;

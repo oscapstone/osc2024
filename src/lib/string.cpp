@@ -55,7 +55,7 @@ int strncmp(const char* s1, const char* s2, int n) {
 const char* strchr(const char* s, char c) {
   while (*s and *s != c)
     s++;
-  return *s == c ? s : nullptr;
+  return s;
 }
 
 long strtol(const char* s, const char** endptr, int base, int n) {
