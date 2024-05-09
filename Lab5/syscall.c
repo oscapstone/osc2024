@@ -93,7 +93,14 @@ void kill(trapframe * sp){
     update_min_priority();
 }
 
+//int en;
+
 void uartread(trapframe *sp) {
+    // if(en == 0){
+    enable_irq();
+    //    en += 1;
+    // }
+    
     char *buf = (char *)sp->x[0];
     int size = (int)sp->x[1];
     for (int i = 0; i < size; i++) {
@@ -165,12 +172,9 @@ void fork(trapframe *sp){
 }
 
 void sys_mbox_call(trapframe * sp){
-    hin(0);
     unsigned char ch = (unsigned char) sp -> x[0];
     unsigned int * mbox = (unsigned int *) sp -> x[1];
-    hin(1);
     sp -> x[0] = mbox_call(ch, mbox);
-    hin(2);
 }
 
 void sys_call(trapframe * sp){
@@ -239,11 +243,11 @@ void sync_exception_entry(unsigned long esr_el1, unsigned long elr_el1, trapfram
     }
 }
 
-// void timer_scheduler(){
-//     //hi();
-//     unsigned long cntfrq_el0;
-//     asm volatile ("mrs %0, cntfrq_el0":"=r" (cntfrq_el0));
-//     asm volatile ("lsr %0, %0, #5":"=r" (cntfrq_el0) :"r"(cntfrq_el0)); // 1/32 second tick
-//     asm volatile ("msr cntp_tval_el0, %0" : : "r"(cntfrq_el0));
-//     schedule();
-// }
+void timer_scheduler(){
+    //hi();
+    unsigned long cntfrq_el0;
+    asm volatile ("mrs %0, cntfrq_el0":"=r" (cntfrq_el0));
+    asm volatile ("lsr %0, %0, #5":"=r" (cntfrq_el0) :"r"(cntfrq_el0)); // 1/32 second tick
+    asm volatile ("msr cntp_tval_el0, %0" : : "r"(cntfrq_el0));
+    schedule();
+}

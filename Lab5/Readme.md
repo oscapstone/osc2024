@@ -1,3 +1,10 @@
+DEMO TODOs:
+* 搞懂那些 switch to, 關東東在幹嘛
+* 搞懂為啥read的時候要enable (可能要問)
+* 複習各個code怎麼寫的，還有那個lr怎麼運作
+* 搞懂為啥PID 0不會觸發
+* 各system call, sp複習
+
 exec 的時候，可以 malloc 然後複製一個檔案過去
 sp 用給定的就好
 

@@ -173,7 +173,7 @@ core_timer_enable:
 
 interrupt_handler:
     save_all
-    bl interrupt_handler_entry
+    bl timer_scheduler//interrupt_handler_entry
     load_all
     eret
 

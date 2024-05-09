@@ -55,8 +55,8 @@ void main(void* dtb)
     uart_init();
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_start_callback);
     fdt_tranverse(dtb, "linux,initrd-end", initramfs_end_callback);
-    // core_timer_enable();
-    // cpu_timer_register();
+    core_timer_enable();
+    cpu_timer_register();
     // say hello
     frames_init();
     // show el
