@@ -6,7 +6,7 @@ image_name = bootloader.img
 all: build
 
 target/aarch64-unknown-none-softfloat/release/$(project_name):
-	cargo rustc --release
+	cargo build --release
 
 $(image_name): target/aarch64-unknown-none-softfloat/release/$(project_name)
 	# aarch64-linux-gnu-objcopy -O binary target/aarch64-unknown-none-softfloat/release/$(project_name) $(image_name)

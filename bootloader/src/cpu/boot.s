@@ -3,18 +3,19 @@
 _stack_start    = 0x90000
 
 .global _start
+.global _code_start
 .global _text_size
 .global _bss_start
 .global _bss_end
 
 _start:
     # Store device tree address to 0x70000
-    ldr x1 , =0x8F000
+    ldr x1 , =0x75100
     str x0, [x1]
 
     # Copy code to addres 0x60000
     ldr x0, =0x80000
-    ldr x1, =0x60000
+    ldr x1, =_code_start
     ldr x2, =_text_size
 
 .L_copy_loop:

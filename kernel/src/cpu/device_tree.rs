@@ -111,7 +111,7 @@ impl Default for DeviceTree {
 }
 
 impl DeviceTree {
-    const DEVICE_TREE_ADDRESS: *const u32 = 0x8F000 as *const u32;
+    const DEVICE_TREE_ADDRESS: *const u32 = 0x75100 as *const u32;
     const FDT_BEGIN_NODE: u32 = 0x00000001;
     const FDT_END_NODE: u32 = 0x00000002;
     const FDT_PROP: u32 = 0x00000003;
@@ -120,6 +120,10 @@ impl DeviceTree {
 
     pub fn get(&self, name: &str) -> Option<&Vec<u8>> {
         self.tree_root.get(name)
+    }
+
+    pub fn get_address() -> *mut u8 {
+        unsafe {*(DeviceTree::DEVICE_TREE_ADDRESS) as *mut u8}
     }
 
     pub fn init() -> DeviceTree {

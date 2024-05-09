@@ -4,11 +4,11 @@ project_name = kernel
 .PHONY: all
 all: build
 
-target/aarch64-unknown-none-softfloat/release/$(project_name):
-	cargo rustc --release
+target/aarch64-unknown-none-softfloat/debug/$(project_name):
+	cargo rustc
 
-kernel8.img: target/aarch64-unknown-none-softfloat/release/$(project_name)
-	aarch64-elf-objcopy -O binary target/aarch64-unknown-none-softfloat/release/$(project_name) kernel8.img
+kernel8.img: target/aarch64-unknown-none-softfloat/debug/$(project_name)
+	aarch64-elf-objcopy -O binary target/aarch64-unknown-none-softfloat/debug/$(project_name) kernel8.img
 
 
 # Build the project using Cargo and convert it to a binary format.
@@ -28,11 +28,11 @@ debug: build
 # Genetate object file
 .PHONY: obj
 obj: build
-	objdump target/aarch64-unknown-none-softfloat/release/$(project_name) -D > obj.txt
+	objdump target/aarch64-unknown-none-softfloat/debug/$(project_name) -D > obj.txt
 
 .PHONY: table
 table: build
-	objdump target/aarch64-unknown-none-softfloat/release/$(project_name) -t > table.txt
+	objdump target/aarch64-unknown-none-softfloat/debug/$(project_name) -t > table.txt
 
 .PHONY: clean
 clean:

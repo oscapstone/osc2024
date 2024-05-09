@@ -34,8 +34,26 @@ SECTIONS
 
     .bss (NOLOAD) : ALIGN(16) {
         _bss_start = .;
-        *(.bss)
+        *(.bss*)
         . = ALIGN(16);
         _bss_end = .;
+    } :segment_data
+
+    .symtab : {
+        __start_symtab = .;
+        *(.symtab)
+        __stop_symtab = .;
+    } :segment_data
+
+    .shstrtab : {
+        __start_shstrtab = .;
+        *(.shstrtab)
+        __stop_shstrtab = .;
+    } :segment_data
+
+    .strtab : {
+        __start_strtab = .;
+        *(.strtab)
+        __stop_strtab = .;
     } :segment_data
 }

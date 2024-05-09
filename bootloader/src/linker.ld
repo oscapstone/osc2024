@@ -1,5 +1,5 @@
 /* The physical address at which the the kernel binary will be loaded by the Raspberry's firmware */
-_code_start = 0x60000;
+_code_start = 0x40000;
 _bss_start      = 0x20000000;
 _bss_end      = 0x20001000;
 
@@ -23,11 +23,18 @@ SECTIONS
     /***********************************************************************************************
     * Code
     ***********************************************************************************************/
+    _text_start = .;
     .text : {
-        _text_start = .;
         KEEP(*(.text.*))
-        _text_end = .;
     } :segment_code
+
+    .data : ALIGN(16){
+        *(.data)
+    }
+    .rodata : ALIGN(16) {
+        *(.rodata.*)
+    }
+    _text_end = .;
 
     .bss : {
         . = _bss_start;

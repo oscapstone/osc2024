@@ -1,10 +1,12 @@
 use crate::cpu::registers::Register;
 use crate::cpu::registers::MMIO;
 use crate::os::stdio::println;
+use crate::os::stdio::println_now;
 use crate::{println, print};
 use core::arch::asm;
+use crate::os::critical_section;
 
-const BUF_SIZE: usize = 1024;
+const BUF_SIZE: usize = 2048;
 
 static mut SEND_BUFFER: [u8; BUF_SIZE] = [0; BUF_SIZE];
 static mut RECV_BUFFER: [u8; BUF_SIZE] = [0; BUF_SIZE];
@@ -62,13 +64,19 @@ pub unsafe fn non_blocking_recv() -> Option<u8> {
 }
 
 pub unsafe fn send_async(c: u8) {
-    // asm!("msr DAIFSet, 0xf");
+    while SEND_IDX >= BUF_SIZE {
+        println_now("Buffer Full");
+        for c in 0..SEND_IDX {
+            send(SEND_BUFFER[c]);
+        }
+    }
+
+    critical_section::disable_irq();
     SEND_BUFFER[SEND_IDX] = c;
     SEND_IDX += 1;
-    while SEND_IDX == BUF_SIZE {}
     MMIO::write(Register::AUX_MU_IER_REG, 0b11);
     // println!("Send size: {}", SEND_IDX);
-    // asm!("msr DAIFClr, 0xf");
+    critical_section::enable_irq();
 }
 
 pub unsafe fn recv_async() -> Option<u8> {
