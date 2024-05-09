@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use core::panic;
 
-use crate::{print, println};
+use crate::println;
 #[derive(Clone, Debug)]
 enum PageState {
     Free(usize),  // free block head
@@ -224,14 +224,22 @@ impl MemoryManager {
             list_size: page_level,
         };
         // push the whole memory to the free list
-        manager.push_free(0, page_num);
-        // initialize the frame array, other pages are buddy of the first page
-        for i in 1..page_num {
-            manager.frame_array[i] = PageState::Buddy(0);
+        //  find the largest 2^n block
+        let mut remain = page_num;
+        let mut page_number = 0;
+        while remain > 0{
+            let block_size = 1 << remain.ilog2();
+            manager.push_free(page_number, block_size);
+            page_number += block_size;
+            remain -= block_size;
         }
-        println!("PageManager: initialtion: {} pages", page_num);
 
-        println!("PageManager: initialized");
+        //  manager.push_free(0, page_num);
+        //  // initialize the frame array, other pages are buddy of the first page
+        //  for i in 1..page_num {
+        //     manager.frame_array[i] = PageState::Buddy(0);
+        // }
+
         manager
     }
 
@@ -266,7 +274,7 @@ impl MemoryManager {
     }
 
     pub fn show(&self) {
-        println!("{:?}", self.frame_array);
+        // println!("{:?}", self.frame_array);
 
         for i in 0..self.list_size {
             println!("Free list {}: {:?}", i, self.free_list[i]);

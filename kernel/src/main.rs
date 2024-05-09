@@ -73,10 +73,39 @@ fn timer_callback(message: String) {
 
 }
 
-fn shell(handler: CpioHandler) {
+#[no_mangle]
+fn kernel_init() -> ! {
+    let mut dtb_addr = addr_loader::load_dtb_addr();
+    let dtb_parser = fdt::DtbParser::new(dtb_addr);
+ 
+    // init uart
+    uart::init_uart(true);
+    uart::uart_write_str("Kernel started\r\n");
+    
+    // find initrd value by dtb traverse
+
+    let mut initrd_start: *mut u8;
+    if let Some(addr) = dtb_parser.traverse(get_initrd_addr) {
+        initrd_start = addr as *mut u8;
+        println!("Initrd start address: {:#x}", initrd_start as u64)
+    } else {
+        initrd_start = 0 as *mut u8;
+    }
+    let mut handler: CpioHandler = CpioHandler::new(initrd_start as *mut u8);
+    let mut bh: BinaryHeap<u32> = BinaryHeap::new();
+    
+    // load symbol address usr_load_prog_base
+    
     let mut in_buf: [u8; 128] = [0; 128];
     let mut alloc = dynmemalloc::DynMemAllocator::new();
-    alloc.init(0x100000, 0x300000, 4096);
+ 
+    alloc.init(0x00000000, 0x3C000000 , 4096);
+
+    alloc.reserve_addr(0x0, 0x1000);
+    alloc.reserve_addr(0x60000, 0x80000); // stack
+    alloc.reserve_addr(0x80000, 0x100000); // code
+    alloc.reserve_addr(initrd_start as usize, initrd_start as usize + 4096); //initrd
+    alloc.reserve_addr(dtb_addr as usize, ((dtb_addr as usize + dtb_parser.get_dtb_size() as usize) + (4096 - 1)) & !(4096 - 1)); // dtb
 
     loop {
         print!("meow>> ");
@@ -118,12 +147,12 @@ fn shell(handler: CpioHandler) {
                     println!("File not found");
                 }
             }
-            // "dtb" => {
-            //     unsafe { println!("Start address: {:#x}", dtb_addr as u64) };
-            //     println!("dtb load address: {:#x}", dtb_addr as u64);
-            //     println!("dtb pos: {:#x}", unsafe {*(dtb_addr)});
-            //     dtb_parser.parse_struct_block();
-            // }
+            "dtb" => {
+                unsafe { println!("Start address: {:#x}", dtb_addr as u64) };
+                println!("dtb load address: {:#x}", dtb_addr as u64);
+                println!("dtb pos: {:#x}", unsafe {*(dtb_addr)});
+                dtb_parser.parse_struct_block();
+            }
             "mailbox" => {
                 println!("Revision: {:#x}", mailbox::get_board_revisioin());
                 let (base, size) = mailbox::get_arm_memory();
@@ -204,6 +233,10 @@ fn shell(handler: CpioHandler) {
                 unsafe {alloc.pfree(addr)};
             }
             "show" => {
+                if cmd.len() < 2 {
+                    println!("Usage: show <d/p>");
+                    continue;
+                }   
                 match cmd[1] {
                     "d" => {
                         alloc.dshow();
@@ -232,30 +265,6 @@ fn shell(handler: CpioHandler) {
         }
     }
 
-}
-
-#[no_mangle]
-fn kernel_init() -> ! {
-    let mut dtb_addr = addr_loader::load_dtb_addr();
-    // init uart
-    uart::init_uart(true);
-    uart::uart_write_str("Kernel started\r\n");
-    
-    let dtb_parser = fdt::DtbParser::new(dtb_addr);
-    // find initrd value by dtb traverse
-
-    let mut initrd_start: *mut u8;
-    if let Some(addr) = dtb_parser.traverse(get_initrd_addr) {
-        initrd_start = addr as *mut u8;
-        println!("Initrd start address: {:#x}", initrd_start as u64)
-    } else {
-        initrd_start = 0 as *mut u8;
-    }
-    let mut handler: CpioHandler = CpioHandler::new(initrd_start as *mut u8);
-    let mut bh: BinaryHeap<u32> = BinaryHeap::new();
-    
-    // load symbol address usr_load_prog_base
-    shell(handler);
 
     panic!()
 }

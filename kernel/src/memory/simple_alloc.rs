@@ -1,5 +1,5 @@
 use core::{alloc::{Layout, GlobalAlloc}, panic};
-const HEAP_SIZE: usize = 1024 * 1024 * 10; // 10 MB
+const HEAP_SIZE: usize = 0xA00000; // 10 MB
 const HEAP_START: usize = 0x200000;
 
 use core::cell::UnsafeCell;
