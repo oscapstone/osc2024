@@ -46,6 +46,7 @@ void _test_kmalloc_comand(int argc, char **argv) {
     print_d((uint64_t)ptr);
     print_string("\n");
 
+    // print_kmalloc_caches();
     print_free_areas();
 }
 

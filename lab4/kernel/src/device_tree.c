@@ -74,8 +74,8 @@ void fdt_traverse(void (*callback)(void *)) {
     }
 }
 
-uint64_t get_initrd_start() { return initrd_start; }
-uint64_t get_initrd_end() { return initrd_end; }
+uint64_t fdt_get_initrd_start() { return initrd_start; }
+uint64_t fdt_get_initrd_end() { return initrd_end; }
 
 static uint32_t be2le(const void *s) {
     const uint8_t *bytes = (const uint8_t *)s;

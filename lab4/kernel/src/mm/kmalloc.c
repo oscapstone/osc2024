@@ -48,8 +48,8 @@ void init_kmalloc() {
     
     print_free_areas();
 
-    memory_reserve((phys_addr_t)get_initrd_start(),
-                   (phys_addr_t)get_initrd_end());  // Initramfs
+    memory_reserve((phys_addr_t)fdt_get_initrd_start(),
+                   (phys_addr_t)fdt_get_initrd_end());  // Initramfs
 
     print_free_areas();
 }
@@ -57,7 +57,7 @@ void init_kmalloc() {
 void print_kmalloc_caches() {
     for (int i = 0; i < KMEM_CACHE_MAX_ORDER - KMEM_CACHE_MIN_ORDER; i++) {
         kmem_cache_t *cache = kmalloc_caches[i];
-        print_string("\nCache Order ");
+        print_string("Cache Order ");
         print_d(i);
         print_string(": ");
         while (cache != NULL) {
@@ -65,6 +65,7 @@ void print_kmalloc_caches() {
             print_string(" -> ");
             cache = cache->next;
         }
+        print_string("NULL\n");
     }
 }
 

@@ -13,6 +13,8 @@ char *get_heap_top();
 void init_kmalloc();
 void *kmalloc(uint32_t size);
 void kfree(void *ptr);
+
+void print_kmalloc_caches();
 void print_free_areas();
 
 #endif

@@ -22,9 +22,10 @@ static inline page_t *__pop_page(page_t **head) {
         return NULL;
     }
     page_t *page = *head;
+
+    *head = page->next;
     page->next = NULL;
 
-    *head = (*head)->next;
     if (*head) {  // unlink the head
         (*head)->prev = NULL;
     }
@@ -219,7 +220,7 @@ void memory_reserve(phys_addr_t start, phys_addr_t end) {
                 uint32_t buddy_pfn = (page - mem_map) ^ (1 << (cur_order - 1));
                 page_t *buddy = &mem_map[buddy_pfn];
 
-                print_string("\nSplit page: ");
+                print_string("Split page: ");
                 print_h((uint64_t)page_addr);
                 print_string(", ");
                 print_h((uint64_t)get_addr_by_page(buddy));
