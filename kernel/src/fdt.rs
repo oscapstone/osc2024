@@ -192,6 +192,10 @@ impl DtbParser {
             }
         }
     }
+
+    pub fn get_dtb_size(&self) -> u32 {
+        return self.totalsize;
+    }
 }
 
 fn mem_rsvmap_paser(dtb: *const u8, off_mem_rsvmap: u32) -> Vec<FdtReserveEntry> {

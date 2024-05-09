@@ -37,8 +37,4 @@ SECTIONS
     }
     __dtb_addr = .;
     
-    /* . = ALIGN(8);
-    heap_base = .;
-    . = . + 0x200000;
-    heap_limit = .; */
 }   
