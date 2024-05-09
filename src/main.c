@@ -8,6 +8,7 @@
 #include "mm.h"
 #include "demo.h"
 #include "exec.h"
+#include "syscall.h"
 
 // get the end of bss segment from linker
 extern unsigned char _end;
@@ -21,7 +22,6 @@ void main()
     mm_init();
     sched_init();
 
-    /* Init a process to execute shell, so we should not return to main(). */
-    while (1)
-        asm volatile("wfe");
+    /* sched_init() will make kernel be the task 0, then run shell in user mode. So there should not be returned. */
+    while (1);
 }
