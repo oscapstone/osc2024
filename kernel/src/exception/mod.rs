@@ -3,19 +3,40 @@ use core::{
     ptr::read_volatile,
 };
 
+use crate::timer::manager::get_timer_manager;
+
 use driver::mmio::{regs::AuxReg, regs::MmioReg, Mmio};
-use stdio::println;
+use stdio::{debug, println};
 
 global_asm!(include_str!("context_switch.S"));
 
 #[no_mangle]
 unsafe fn exception_handler(idx: u64) {
+    disable_inturrupt();
     match idx {
+        0x4 => {
+            let esr_el1: u64;
+            asm!(
+                "mrs {0}, esr_el1", out(reg) esr_el1,
+            );
+            debug!("Exception {}", idx);
+            debug!("ESR_EL1: 0x{:x}", esr_el1);
+            let elr_el1: u64;
+            asm!(
+                "mrs {0}, elr_el1", out(reg) elr_el1,
+            );
+            debug!("ELR_EL1: 0x{:x}", elr_el1);
+
+            for _ in 0..1000000 {
+                asm!("nop");
+            }
+        }
         0x5 => {
             if read_volatile(0x4000_0060 as *const u32) == 0x02 {
-                println!("Timer interrupt");
-                asm!("mov {0}, 0", "msr cntp_ctl_el0, {0}", out(reg) _);
-                println!("Timer interrupt disabled");
+                {
+                    let tm = get_timer_manager();
+                    tm.handle_inturrupt();
+                }
             }
             if Mmio::read_reg(MmioReg::Aux(AuxReg::Irq)) & 0x1 == 0x1 {
                 // println!("irq interrupt");
@@ -40,21 +61,24 @@ unsafe fn exception_handler(idx: u64) {
             println!("esr_el1: 0x{:x}", esr_el1);
         }
         _ => {
-            println!("Exception {}", idx);
-            println!("Unknown exception");
+            debug!("Exception {}", idx);
+            debug!("Unknown exception");
+            for _ in 0..1000000 {
+                asm!("nop");
+            }
         }
     }
-    // enable_inturrupt();
+    enable_inturrupt();
 }
 
 #[allow(dead_code)]
 #[inline(always)]
-unsafe fn enable_inturrupt() {
+pub unsafe fn enable_inturrupt() {
     asm!("msr DAIFClr, 0xf");
 }
 
 #[allow(dead_code)]
 #[inline(always)]
-unsafe fn disable_inturrupt() {
+pub unsafe fn disable_inturrupt() {
     asm!("msr DAIFSet, 0xf");
 }

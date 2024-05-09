@@ -1,8 +1,7 @@
-use core::arch::{asm, global_asm};
-
-use stdio::println;
-
+use crate::exception::enable_inturrupt;
+use core::arch::global_asm;
 use driver::uart::init;
+use stdio::println;
 
 global_asm!(include_str!("kernel.S"));
 
@@ -10,7 +9,7 @@ global_asm!(include_str!("kernel.S"));
 extern "C" fn _start_rust() {
     init();
     unsafe {
-        asm!("msr DAIFClr, 0xf");
+        enable_inturrupt();
     }
     println!("Kernel starting main...");
     crate::main();

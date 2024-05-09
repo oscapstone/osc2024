@@ -17,6 +17,7 @@ fn _recv() -> u8 {
 }
 
 fn recv() -> u8 {
+    // let c = uart::recv();
     let c = _recv();
     match c {
         b'\r' | b'\n' => {
