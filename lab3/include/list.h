@@ -55,10 +55,9 @@ static inline int node_is_first(const struct list_head *node, const struct list_
 
 /*
  * list_is_empty() - Check if the list is empty or not
- * @node: pointer to the node
  * @head: pointer to the head of the list
  *
- * Return: 0 - node is not the first node of the list !0 - node is the first node of the list.
+ * Return: 1 - the list is empty, only contains the head of list.
  */
 static inline int list_is_empty(const struct list_head * head)
 {

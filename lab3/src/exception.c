@@ -3,10 +3,14 @@
 #include "../include/timer_utils.h"
 #include "../include/exception.h"
 #include "../include/peripherals/mini_uart.h"
+#include "../include/task_queue.h"
+#include "../include/list.h"
+#include <stddef.h>
 
 void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
 
+static int nested_interrupted_task = -1; 
 
 static void show_exception_info()
 {
@@ -40,6 +44,64 @@ void except_handler_c()
 	enable_interrupt();
 }
 
+/* for Advanced 2: nested interrupt and preemption */
+
+typedef void (*task_callback)(void);
+
+static LIST_HEAD(task_queue);
+
+struct task_event {
+	struct list_head head;
+	int priority;
+	task_callback cb;
+};
+
+static struct task_event *task_event_create(task_callback cb, int priority)
+{
+	struct task_event *event = malloc(sizeof(struct task_event));
+	event->cb = cb;
+	event->priority = priority;
+	return event;
+}
+
+static void task_event_add_queue(struct task_event *event)
+{
+	struct list_head *curr = task_queue.next;
+
+	while (curr != &task_queue && (((struct task_event *)curr)->priority <= event->priority))
+		curr = curr->next;
+	list_add(&event->head, curr->prev, curr);
+}
+
+// static void print_task()
+// {
+// 	struct list_head *curr = task_queue.next;
+// 	while (curr != &task_queue) {
+// 		struct task_event *tmp_event = (struct task_event *)curr;
+
+// 	}
+// }
+
+static void exec_task()
+{
+	if (!list_is_empty((struct list_head *)&task_queue)) {
+		struct task_event *event = (struct task_event *)task_queue.next;
+		// nested_interrupted_task++;
+		// uart_send_string("# of nested interrupted event: ");
+		// uart_hex(nested_interrupted_task);
+		// uart_send_string("\r\n");
+		enable_interrupt();
+		event->cb();
+		disable_interrupt();
+		// uart_send_string("# of nested interrupted event: ");
+		// uart_hex(nested_interrupted_task);
+		// uart_send_string("\r\n");
+		// nested_interrupted_task--;
+
+		list_del((struct list_head *)event);
+	}
+}
+
 void timer_handler()
 {
 	// disable_interrupt();
@@ -55,19 +117,37 @@ void timer_handler()
 void exception_el1_irq_handler()
 {
 	disable_interrupt();
+	nested_interrupted_task++;
+	uart_send_string("Before handler: # of nested interrupted event: ");
+	uart_hex(nested_interrupted_task);
+	uart_send_string("\r\n");
+	struct task_event *event = NULL;
 	if (*CORE0_INTERRUPT_SOURCE & 0x2) {
 		disable_timer_interrupt();
 		// timer_handler();
-		timer_interrupt_handler();
+		// timer_interrupt_handler();
+		// uart_send_string("> ");
+		event = task_event_create(timer_interrupt_handler, 1);
 	}
-	else if (*AUX_MU_IIR_REG & 0x4) {
-		clr_rx_interrupts();
-		uart_rx_handler();
+	else if (*IRQ_PENDING_1 & (1 << 29)) {
+		if (*AUX_MU_IIR_REG & 0x4) {
+			clr_rx_interrupts();
+			// uart_rx_handler();
+			// delay((uint64_t)1 << 31);
+			event = task_event_create(uart_rx_handler, 3);
+		}
+		else if (*AUX_MU_IIR_REG & 0x2) {
+			clr_tx_interrupts();
+			// uart_tx_handler();
+			event = task_event_create(uart_tx_handler, 3);
+		}
 	}
-	else if (*AUX_MU_IIR_REG & 0x2) {
-		clr_tx_interrupts();
-		uart_tx_handler();
-	}
+
+	task_event_add_queue(event);
+	exec_task();
+	uart_send_string("After handler: # of nested interrupted event: ");
+	uart_hex(nested_interrupted_task);
+	uart_send_string("\r\n");
+	nested_interrupted_task--;
 	enable_interrupt();
-	uart_send_string("> ");
 }

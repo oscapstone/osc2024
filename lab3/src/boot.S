@@ -50,7 +50,7 @@ from_el2_to_el1:
 
 // save general registers to stack
 .macro save_all
-    sub sp, sp, 32 * 8
+    sub sp, sp, 36 * 8
     stp x0, x1, [sp ,16 * 0]
     stp x2, x3, [sp ,16 * 1]
     stp x4, x5, [sp ,16 * 2]
@@ -67,6 +67,13 @@ from_el2_to_el1:
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
     str x30, [sp, 16 * 15]
+
+    // push information for nested interrupt
+    mrs     x0,       spsr_el1
+    str     x0,       [sp, 16 * 16] // push spsr_el1
+    mrs     x0,       elr_el1
+    str     x0,       [sp, 16 * 17] // push elr_el1
+
 .endm
 
 // load general registers from stack
@@ -87,7 +94,14 @@ from_el2_to_el1:
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
-    add sp, sp, 32 * 8
+
+    // pop information for nested interrupt
+    ldr     x0,       [sp, 16 * 16] 
+    msr     spsr_el1, x0            // pop spsr_el1
+    ldr     x0,       [sp, 16 * 17]
+    msr     elr_el1,  x0            // pop elr_el1
+
+    add sp, sp, 36 * 8
 .endm
 
 .macro exception_entry label

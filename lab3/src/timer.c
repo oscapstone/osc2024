@@ -108,6 +108,13 @@ void add_timeout_event(char *data, uint64_t duaration)
     timer_add_event(print_message, data, duaration);
 }
 
+static void delay(uint64_t time)
+{
+    while (time--) {
+        asm volatile ("nop");
+    }
+}
+
 /*
  * Core timer IRQ:
  * 1. Run the first event of the list
@@ -122,6 +129,15 @@ void timer_interrupt_handler()
 
     struct timer_event *event = (struct timer_event *) timer_event_queue.next;
 
+    // for (int i = 0; i < 15; i++) {
+    //     uart_send('a');
+    //     delay(1 << 28);
+    // }
+
+    // uart_send_string("\r\n");
+
+    // add delay time
+    delay((uint64_t)1 << 30);
     event->callback(event->message);
 
     uart_send_string("Command time: ");

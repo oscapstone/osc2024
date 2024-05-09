@@ -96,7 +96,7 @@ void uart_init ( void )
 	*AUX_MU_LCR_REG = 3;                //Enable 8 bit mode
 	*AUX_MU_MCR_REG = 0;                //Set RTS line to be always high
 	*AUX_MU_BAUD_REG = 270;             //Set baud rate to 115200
-	*AUX_MU_IIR_REG = 6;
+	*AUX_MU_IIR_REG = 6;                //Clear receive / transmit FIFO (p.13 in BCM 2835 ARM Peripherals)
 
 	*AUX_MU_CNTL_REG = 3;               //Finally, enable transmitter and receiver
 }
@@ -131,23 +131,23 @@ uint8_t uart_async_recv()
 	return c;
 }
 
-void uart_async_send(uint8_t c)
-{
-	write_buffer_add(c);
-	set_tx_interrupts();
-}
+// void uart_async_send(uint8_t c)
+// {
+// 	write_buffer_add(c);
+// 	set_tx_interrupts();
+// }
 
 void uart_rx_handler()
 {
-	// disable_irq_interrupts();
+	// disable_aux_interrupts();
 	read_buffer_add(uart_recv());
-	// enable_irq_interrupts();
+	// enable_aux_interrupts();
 	// clr_rx_interrupts();
 }
 
 void uart_tx_handler()
 {
-	// disable_irq_interrupts();
+	// disable_aux_interrupts();
 	while (!write_buffer_empty()) {
 		delay(1 << 28);                // (1 << 28) for qemu
 		uint8_t c = write_buffer_get();
@@ -159,7 +159,7 @@ void uart_tx_handler()
 
 void uart_async_demo()
 {
-	enable_irq_interrupts();
+	enable_aux_interrupts();
 	uint8_t c = uart_async_recv();
 	while (c != '\r') {
 		write_buffer_add(c);

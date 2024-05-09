@@ -27,7 +27,7 @@
 #define set_tx_interrupts() { *AUX_MU_IER_REG |= 0x2;}
 #define clr_tx_interrupts() { *AUX_MU_IER_REG &= ~(0x2);}
 
-#define enable_irq_interrupts() {*ENB_IRQS1 = (1 << 29);}
-#define disable_irq_interrupts() {*DISABLE_IRQS1 = (1 << 29);}
+#define enable_aux_interrupts() {*ENB_IRQS1 = (1 << 29);}
+#define disable_aux_interrupts() {*DISABLE_IRQS1 = (1 << 29);}
 
 #endif  /*_P_MINI_UART_H */

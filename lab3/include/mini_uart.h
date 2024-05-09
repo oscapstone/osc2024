@@ -11,7 +11,7 @@ void uart_hex(unsigned int d);
 
 /* async part */
 uint8_t uart_async_recv(void);
-void uart_async_send(uint8_t c);
+// void uart_async_send(uint8_t c);
 void uart_rx_handler();
 void uart_tx_handler();
 void uart_async_demo();
