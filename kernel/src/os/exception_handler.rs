@@ -1,7 +1,7 @@
-use super::{super::{
-    cpu::uart,
-    os::timer,
-}, stdio::println_now};
+use super::{
+    super::{cpu::uart, os::timer},
+    stdio::{print_hex_now, println_now},
+};
 use core::{
     arch::{asm, global_asm},
     ptr::read_volatile,
@@ -11,7 +11,6 @@ global_asm!(include_str!("context_switching.s"));
 
 #[no_mangle]
 unsafe fn exception_handler_rust() {
-    // println!("Exception handler");
     let interrupt_source = read_volatile(0x40000060 as *const u32);
 
     if interrupt_source & 0x2 > 0 {

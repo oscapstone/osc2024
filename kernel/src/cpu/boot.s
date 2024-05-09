@@ -24,6 +24,7 @@ _start:
     ldr x0, =_stack_start
     mov sp, x0
 
+    # CS counter
     ldr x0, =0x75000
     str xzr, [x0]
     
