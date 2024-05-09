@@ -54,7 +54,7 @@ void* kmalloc(uint64_t size, uint64_t align) {
 }
 
 void kfree(void* ptr) {
-  if (ptr == nullptr)
+  if (ptr == nullptr or is_startup(ptr))
     return;
   save_DAIF_disable_interrupt();
   if (isPageAlign(ptr))

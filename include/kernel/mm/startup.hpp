@@ -10,3 +10,4 @@ void startup_alloc_init();
 void* startup_malloc(uint64_t size, uint64_t align = 1);
 void startup_free(void* ptr);
 bool startup_free(uint64_t size);
+bool is_startup(void* ptr);

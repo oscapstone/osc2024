@@ -46,9 +46,9 @@ struct Mem {
   }
 
   bool alloc(uint64_t size_, bool copy) {
-    if (addr or size_ < PAGE_SIZE)
+    if (addr)
       return false;
-    addr = (char*)kmalloc(size_);
+    addr = (char*)kmalloc(size_, PAGE_SIZE);
     if (addr == nullptr)
       return false;
     size = size_;
@@ -57,7 +57,7 @@ struct Mem {
   }
 
   void dealloc() {
-    if (addr and ref and --(*ref) == 0) {
+    if (addr and (not ref or --(*ref) == 0)) {
       kfree(addr);
       kfree(ref);
     }

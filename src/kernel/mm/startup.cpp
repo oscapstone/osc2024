@@ -34,3 +34,7 @@ void startup_free(void*) {}
 bool startup_free(uint64_t size) {
   return heap_cur + size <= __heap_end;
 }
+
+bool is_startup(void* ptr) {
+  return __heap_start <= ptr and ptr < __heap_end;
+}
