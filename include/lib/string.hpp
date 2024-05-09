@@ -13,7 +13,10 @@ int strncmp(const char* s1, const char* s2, int n);
 const char* strchr(const char* s, char c);
 long strtol(const char* s, const char** endptr = nullptr, int base = 0,
             int n = 0);
+
+#if __has_include("mm/mm.hpp")
 char* strdup(const char* s);
+#endif
 
 class string_view {
   const char* buf_;
