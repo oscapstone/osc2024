@@ -1,7 +1,7 @@
 #include "board/mailbox.hpp"
 
-void mailbox_call(message_t* mailbox) {
-  uint32_t data = (((uint32_t)(unsigned long)mailbox) & ~0xf) | 8;
+void mailbox_call(uint8_t ch, message_t* mailbox) {
+  uint32_t data = (((uint32_t)(unsigned long)mailbox) & ~0xf) | ch;
   while ((get32(MAILBOX_STATUS) & MAILBOX_FULL) != 0)
     NOP;
   set32(MAILBOX_WRITE, data);
@@ -26,7 +26,7 @@ uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx) {
     mailbox->value_buf[i] = 0;
   mailbox->value_buf[value_length] = END_TAG;
 
-  mailbox_call(mailbox);
+  mailbox_call(8, mailbox);
 
   return mailbox->value_buf[idx];
 }

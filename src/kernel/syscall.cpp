@@ -1,5 +1,6 @@
 #include "syscall.hpp"
 
+#include "board/mailbox.hpp"
 #include "exec.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
@@ -58,12 +59,19 @@ long sys_exit(const TrapFrame* frame) {
   return -1;
 }
 
+long sys_mbox_call(const TrapFrame* frame) {
+  auto ch = (unsigned char)frame->X[0];
+  auto mbox = (message_t*)frame->X[1];
+  kprintf("mbox_call %d %p\n", ch, mbox);
+  mailbox_call(ch, mbox);
+  return 0;
+}
+
 long sys_not_implement(const TrapFrame* /*frame*/) {
   klog("syscall not implemented\n");
   return -1;
 }
 
-STRONG_ALIAS(sys_not_implement, sys_mbox_call);
 STRONG_ALIAS(sys_not_implement, sys_kill);
 STRONG_ALIAS(sys_not_implement, sys_signal);
 STRONG_ALIAS(sys_not_implement, sys_signal_kill);
