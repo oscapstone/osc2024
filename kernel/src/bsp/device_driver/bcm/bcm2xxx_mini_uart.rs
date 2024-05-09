@@ -218,7 +218,9 @@ impl MiniUartInner {
             .AUX_MU_BAUD_REG
             .write(AUX_MU_BAUD_REG::BUAD_RATE::Default);
         // self.registers.AUX_MU_IIR_REG.set(0xc6); //todo NOT_POSSIBLE
-        self.registers.AUX_MU_IIR_REG.write(AUX_MU_IIR_REG::INTERRUPT_ID::NOT_POSSIBLE); //todo NOT_POSSIBLE
+        self.registers
+            .AUX_MU_IIR_REG
+            .write(AUX_MU_IIR_REG::INTERRUPT_ID::NOT_POSSIBLE); //todo NOT_POSSIBLE
 
         self.registers.AUX_MU_CNTL_REG.set(3);
     }
@@ -289,7 +291,7 @@ impl MiniUartInner {
 
         // Convert carrige return to newline.
         if ret == '\r' {
-            ret = '\n'
+            ret = '\n';
         }
 
         // Update statistics.

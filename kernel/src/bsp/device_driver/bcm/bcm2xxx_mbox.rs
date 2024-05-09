@@ -8,7 +8,7 @@ use crate::println;
 
 use crate::{
     bsp::device_driver::common::MMIODerefWrapper,
-    driver,
+    driver, mbox,
     synchronization::{interface::Mutex, NullLock},
 };
 
@@ -138,7 +138,6 @@ impl MBOXInner {
             println!("{:x}", mailbox_ptr);
             println!("ptr failed");
             return false;
-            
         }
 
         Self::mailbox_write(self, CHANNEL_GPU, mailbox_ptr);
@@ -153,13 +152,13 @@ impl MBOXInner {
 
     pub fn get_board_revision(&mut self) -> u32 {
         let mut mailbox = MailboxMsg { buffer: [0; 8] };
-        mailbox.buffer[0] =  7 * 4;
-        mailbox.buffer[1] =  0;
-        mailbox.buffer[2] =  0x0001_0002;
-        mailbox.buffer[3] =  4;
-        mailbox.buffer[4] =  0;
-        mailbox.buffer[5] =  0;
-        mailbox.buffer[6] =  0x0000_0000;
+        mailbox.buffer[0] = 7 * 4;
+        mailbox.buffer[1] = 0;
+        mailbox.buffer[2] = 0x0001_0002;
+        mailbox.buffer[3] = 4;
+        mailbox.buffer[4] = 0;
+        mailbox.buffer[5] = 0;
+        mailbox.buffer[6] = 0x0000_0000;
         // let mut mbox = [
         //     7 * 4,       // Buffer size in bytes
         //     0,           // Request/response code
@@ -178,13 +177,14 @@ impl MBOXInner {
 
     pub fn get_arm_memory(&mut self) -> (u32, u32) {
         let mut mailbox = MailboxMsg { buffer: [0; 8] };
-        mailbox.buffer[0] =  8 * 4;
-        mailbox.buffer[1] =  0;
-        mailbox.buffer[2] =  0x0001_0005;
-        mailbox.buffer[3] =  0;
-        mailbox.buffer[4] =  0;
-        mailbox.buffer[5] =  0;
-        mailbox.buffer[6] =  0x0000_0000;
+        mailbox.buffer[0] = 8 * 4;
+        mailbox.buffer[1] = 0;
+        mailbox.buffer[2] = 0x0001_0005;
+        mailbox.buffer[3] = 8;
+        mailbox.buffer[4] = 0;
+        mailbox.buffer[5] = 0;
+        mailbox.buffer[6] = 0;
+        mailbox.buffer[7] = 0x0000_0000;
         // let mut mbox = [
         //     8 * 4,       // Buffer size in bytes
         //     0,           // Request/response code
@@ -199,7 +199,7 @@ impl MBOXInner {
             println!("get mem failed");
             return (0, 0);
         }
-        (mailbox.buffer[6], mailbox.buffer[7])
+        (mailbox.buffer[5], mailbox.buffer[6])
     }
 }
 
@@ -220,14 +220,6 @@ impl MBOX {
             inner: NullLock::new(MBOXInner::new(mmio_start_addr)),
         }
     }
-
-    pub fn get_board_revision(&self) -> u32 {
-        self.inner.lock(|inner| inner.get_board_revision())
-    }
-
-    pub fn get_arm_memory(&self) -> (u32, u32) {
-        self.inner.lock(|inner| inner.get_arm_memory())
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -244,3 +236,17 @@ impl driver::interface::DeviceDriver for MBOX {
         Ok(())
     }
 }
+
+impl mbox::interface::Boardinfo for MBOX {
+    /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
+    /// serialize access.
+    fn get_arm_memory(&self) -> (u32, u32) {
+        self.inner.lock(|inner| inner.get_arm_memory())
+    }
+
+    fn get_board_revision(&self) -> u32 {
+        self.inner.lock(|inner| inner.get_board_revision())
+    }
+}
+
+impl mbox::interface::All for MBOX {}

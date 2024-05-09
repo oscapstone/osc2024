@@ -5,7 +5,7 @@
 //! BSP driver support.
 
 use super::memory::map::mmio;
-use crate::{bsp::device_driver, console, driver as generic_driver};
+use crate::{bsp::device_driver, console, driver as generic_driver, mbox};
 use core::sync::atomic::{AtomicBool, Ordering};
 
 //--------------------------------------------------------------------------------------------------
@@ -17,8 +17,8 @@ static MINI_UART: device_driver::MiniUart =
 // static PL011_UART: device_driver::PL011Uart =
 //     unsafe { device_driver::PL011Uart::new(mmio::PL011_UART_START) };
 static GPIO: device_driver::GPIO = unsafe { device_driver::GPIO::new(mmio::GPIO_START) };
-pub static MBOX: device_driver::MBOX =
-    unsafe { device_driver::MBOX::new(mmio::MAILBOX_START) };
+pub static MBOX: device_driver::MBOX = unsafe { device_driver::MBOX::new(mmio::MAILBOX_START) };
+// unsafe { device_driver::MBOX::new(mmio::MAILBOX_START) };
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
@@ -39,10 +39,10 @@ fn post_init_gpio() -> Result<(), &'static str> {
     Ok(())
 }
 
-
-// fn post_init_mbox() -> Result<(), &'static str> {
-//     Ok(())
-// }
+fn post_init_mbox() -> Result<(), &'static str> {
+    mbox::register_mbox(&MBOX);
+    Ok(())
+}
 
 fn driver_uart() -> Result<(), &'static str> {
     let uart_descriptor =
@@ -60,12 +60,12 @@ fn driver_gpio() -> Result<(), &'static str> {
     Ok(())
 }
 
-// fn driver_mbox() -> Result<(), &'static str> {
-//     let mbox_descriptor = generic_driver::DeviceDriverDescriptor::new(&MBOX, Some(post_init_mbox));
-//     generic_driver::driver_manager().register_driver(mbox_descriptor);
+fn driver_mbox() -> Result<(), &'static str> {
+    let mbox_descriptor = generic_driver::DeviceDriverDescriptor::new(&MBOX, Some(post_init_mbox));
+    generic_driver::driver_manager().register_driver(mbox_descriptor);
 
-//     Ok(())
-// }
+    Ok(())
+}
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
@@ -81,11 +81,10 @@ pub unsafe fn init() -> Result<(), &'static str> {
     if INIT_DONE.load(Ordering::Relaxed) {
         return Err("Init already done");
     }
-    
+
     driver_gpio()?;
     driver_uart()?;
-    // driver_mbox()?;
-    
+    driver_mbox()?;
 
     INIT_DONE.store(true, Ordering::Relaxed);
     Ok(())

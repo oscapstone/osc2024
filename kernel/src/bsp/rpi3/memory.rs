@@ -10,7 +10,7 @@
 
 /// The board's physical memory map.
 #[rustfmt::skip]
-pub(super) mod map {
+pub(crate) mod map {
 
     pub const GPIO_OFFSET:         usize = 0x0020_0000;
     // pub const PL011_UART_OFFSET:         usize = 0x0020_1000;
@@ -28,8 +28,20 @@ pub(super) mod map {
         pub const GPIO_START:       usize = START + GPIO_OFFSET;
         pub const MAILBOX_START:    usize = START + MAILBOX_OFFSET;
         // pub const PL011_UART_START: usize = START + UART_OFFSET;
-        pub const MINI_UART_START  :usize = START + MINI_UART_OFFSET;
+        pub const MINI_UART_START:  usize = START + MINI_UART_OFFSET;
 
+    }
+
+    /*
+    After rpi3 is booted, some physical memory is already in use. For example, 
+    there are already spin tables for multicore boot(0x0000 - 0x1000), f
+    latten device tree, initramfs, and your kernel image in the physical memory. 
+    Your memory allocator should not allocate these memory blocks if you still need to use them.
+    */
+    pub mod sdram {
+
+        pub const RAM_START:            usize = 0x1000_0000;
+        pub const RAM_END:              usize = 0x8000_0000;
     }
 
 }

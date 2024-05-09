@@ -91,3 +91,5 @@ hw0/
 *.img
 target/
 kernel*.img
+
+initramfs.cpio

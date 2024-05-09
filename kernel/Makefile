@@ -102,6 +102,16 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 	$(call color_progress_prefix, "Size")
 	$(call disk_usage_KiB, $(KERNEL_BIN))
 
+
+##------------------------------------------------------------------------------
+## Debug
+##------------------------------------------------------------------------------
+debug:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img \
+	-display none -serial null -serial stdio \
+	-dtb ../resources/bcm2710-rpi-3-b-plus.dtb \
+	-initrd ../resources/initramfs.cpio
+
 ##------------------------------------------------------------------------------
 ## Clean
 ##------------------------------------------------------------------------------

@@ -5,20 +5,26 @@
 #![no_main]
 #![no_std]
 
-use core::ptr::write_volatile;
-
+mod arrsting;
 mod bsp;
 mod console;
 mod cpu;
+mod device_tree;
 mod driver;
+mod fs;
+mod mbox;
+mod memory;
 mod panic_wait;
+mod power;
 mod print;
+mod shell;
 mod synchronization;
 
-mod arrsting;
+use crate::bsp::memory::map::sdram;
 
-use arrsting::ArrString;
-
+extern "C" {
+    static __dtb_address: u64;
+}
 /// Early init code.
 ///
 /// # Safety
@@ -35,12 +41,27 @@ unsafe fn kernel_init() -> ! {
     driver::driver_manager().init_drivers();
     // println! is usable from here on.
 
+    // Initialize real memory
+    memory::ALLOCATOR.init(sdram::RAM_START, sdram::RAM_END);
+
+    // let dtb_addr = 0x50000 as *const u8;
+    // let dtb_addr = unsafe { core::ptr::read_volatile(dtb_addr as *const u32) };
+
+    // loop{
+    //     println!("dtb_addr: {:#x}", dtb_addr);
+    //     println!("dtb_addr_padding {:#x}",  core::ptr::read_volatile(__dtb_address as *const u32));
+    // }
+
+    // Init device tree
+    let initrd_address = device_tree::get_initrd_start().unwrap();
+    println!("initrd_address: {:#x}", initrd_address);
+
     // Transition from unsafe to safe.
     kernel_main()
 }
 
 /// The main function running after the early init.
-unsafe fn kernel_main() -> ! {
+fn kernel_main() -> ! {
     use console::console;
 
     println!(
@@ -56,86 +77,5 @@ unsafe fn kernel_main() -> ! {
     println!("[3] Chars written: {}", console().chars_written());
     println!("[4] Echoing input now");
 
-    let msg_buf_exceed = "[system] Buf size limit exceed, reset buf";
-
-    let msg_help = "help\t: print this help menu\r\nhello\t: print Hello World!\r\nreboot\t: reboot the device";
-    let msg_hello_world = "HelloWorld!";
-    let msg_not_found = "Command not found";
-    let msg_reboot = "Rebooting...";
-
-    let arr_help = ArrString::new("help");
-    let arr_hello: ArrString = ArrString::new("hello");
-    let arr_reboot = ArrString::new("reboot");
-    let arr_info = ArrString::new("info");
-
-    let mut buf = ArrString::new("");
-
-    // Discard any spurious received characters before going into echo mode.
-    console().clear_rx();
-
-    println!("TEST VER 0.0.2\r\n");
-    print!("{}\r\n#", msg_help);
-
-    loop {
-        let c = console().read_char();
-        console().write_char(c);
-
-        if c == '\n' {
-            if buf == arr_help {
-                println!("{}", msg_help);
-            } else if buf == arr_hello {
-                println!("{}", msg_hello_world);
-            } else if buf == arr_reboot {
-                println!("{}", msg_reboot);
-                reboot();
-            } else if buf == arr_info {
-                println!("BoardVersion: {:x}", bsp::driver::MBOX.get_board_revision());
-                println!(
-                    "RAM: {} {}",
-                    bsp::driver::MBOX.get_arm_memory().0,
-                    bsp::driver::MBOX.get_arm_memory().1
-                );
-            } else {
-                println!("{}", msg_not_found);
-            }
-
-            buf.clean_buf();
-            print!("#");
-            continue;
-
-            // arrsting::arrstrcmp(buf, help);
-        } else if buf.get_len() == 1024 {
-            buf.clean_buf();
-            println!("{}\r\n#", msg_buf_exceed);
-            print!("#");
-            continue;
-        } else {
-            buf.push_char(c);
-        }
-    }
-}
-
-unsafe fn reboot() {
-    reset(100);
-}
-
-const PM_PASSWORD: u32 = 0x5a000000;
-const PM_RSTC: u32 = 0x3F10_001C;
-const PM_WDOG: u32 = 0x3F10_0024;
-
-pub fn reset(tick: u32) {
-    unsafe {
-        let mut r = PM_PASSWORD | 0x20;
-        write_volatile(PM_RSTC as *mut u32, r);
-        r = PM_PASSWORD | tick;
-        write_volatile(PM_WDOG as *mut u32, r);
-    }
-}
-
-pub fn cancel_reset() {
-    unsafe {
-        let r = PM_PASSWORD | 0;
-        write_volatile(PM_RSTC as *mut u32, r);
-        write_volatile(PM_WDOG as *mut u32, r);
-    }
+    shell::start_shell();
 }
