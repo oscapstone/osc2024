@@ -5,21 +5,26 @@
 #![no_main]
 #![no_std]
 
+mod arrsting;
 mod bsp;
 mod console;
 mod cpu;
+mod device_tree;
 mod driver;
-mod panic_wait;
-mod print;
-mod synchronization;
+mod fs;
 mod mbox;
-mod power;
-mod shell;
-mod arrsting;
 mod memory;
+mod panic_wait;
+mod power;
+mod print;
+mod shell;
+mod synchronization;
 
 use crate::bsp::memory::map::sdram;
 
+extern "C" {
+    static __dtb_address: u64;
+}
 /// Early init code.
 ///
 /// # Safety
@@ -37,7 +42,19 @@ unsafe fn kernel_init() -> ! {
     // println! is usable from here on.
 
     // Initialize real memory
-    memory::ALLOCATOR.init(sdram::RAM_START,sdram::RAM_END);
+    memory::ALLOCATOR.init(sdram::RAM_START, sdram::RAM_END);
+
+    // let dtb_addr = 0x50000 as *const u8;
+    // let dtb_addr = unsafe { core::ptr::read_volatile(dtb_addr as *const u32) };
+
+    // loop{
+    //     println!("dtb_addr: {:#x}", dtb_addr);
+    //     println!("dtb_addr_padding {:#x}",  core::ptr::read_volatile(__dtb_address as *const u32));
+    // }
+
+    // Init device tree
+    let initrd_address = device_tree::get_initrd_start().unwrap();
+    println!("initrd_address: {:#x}", initrd_address);
 
     // Transition from unsafe to safe.
     kernel_main()

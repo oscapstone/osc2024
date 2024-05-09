@@ -50,6 +50,7 @@ fn panic(info: &PanicInfo) -> ! {
         _ => ("???", 0, 0),
     };
 
+    loop{
     println!(
         "Kernel panic!\n\n\
         Panic location:\n      File '{}', line {}, column {}\n\n\
@@ -59,6 +60,7 @@ fn panic(info: &PanicInfo) -> ! {
         column,
         info.message().unwrap_or(&format_args!("")),
     );
+}
 
     cpu::wait_forever()
 }

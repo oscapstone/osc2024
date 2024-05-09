@@ -1,71 +1,76 @@
 extern crate alloc;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, string::String};
 use core::ptr;
 
-use crate::{arrsting::ArrString, console::console, mbox, power, print, println};
+use crate::{console::console, device_tree, fs, mbox, power, print, println};
 
+pub fn start_shell() -> ! {
+    println!("TEST VER 0.0.3\r\n");
+    print_help();
 
-pub fn start_shell() -> !{
-    let msg_buf_exceed = "[system] Buf size limit exceed, reset buf";
-
-    let msg_help = "help\t: print this help menu\r\nhello\t: print Hello World!\r\nreboot\t: reboot the device\r\ninfo\t: show the device info";
-    let msg_hello_world = "HelloWorld!";
-    let msg_not_found = "Command not found";
-    let msg_reboot = "Rebooting...";
-
-    let arr_help = ArrString::new("help");
-    let arr_hello = ArrString::new("hello");
-    let arr_reboot = ArrString::new("reboot");
-    let arr_info = ArrString::new("info");
-    let msg_alloc_test=ArrString::new("alloc");
-
-    let mut buf = ArrString::new("");
-
-    println!("TEST VER 0.0.2\r\n");
-    print!("{}\r\n#", msg_help);
+    let mut input_string = String::from("");
 
     loop {
         let c = console().read_char();
         console().write_char(c);
+        input_string.push(c);
+        // println!("[shell] input_string: {}", input_string);
 
-        if c == '\n' {
+        if c == '\r' || c == '\n' {
+            let (cmd, arg1) = input_string.split_once(char::is_whitespace).unwrap();
+            let arg1 = arg1.trim_start();
+            // println!("[shell] cmd: {}, arg1: {}", cmd, arg1);
             print!("\r");
-            if buf == arr_help {
-                println!("{}", msg_help);
-            } else if buf == arr_hello {
-                println!("{}", msg_hello_world);
-            } else if buf == arr_reboot {
-                println!("{}", msg_reboot);
-                power::reboot();
-            } else if buf == arr_info {
-                println!("BoardVersion: {:x}", mbox::mbox().get_board_revision());
-                // println!("BoardVersion: {:x}", bsp::driver::MBOX.get_board_revision());
-                println!(
-                    "RAM: {} {}",
-                    mbox::mbox().get_arm_memory().0,
-                    mbox::mbox().get_arm_memory().1
-                );
-            } else if buf == msg_alloc_test {
-                println!("Allocate test start!");
-                check_alloc();
-                println!("Allocate test End!");
-            } else {
-                println!("{}", msg_not_found);
+
+            match cmd {
+                "help" => {
+                    print_help();
+                }
+                "hello" => {
+                    println!("Hello World!");
+                }
+                "reboot" => {
+                    println!("Rebooting...");
+                    power::reboot();
+                }
+                "info" => {
+                    println!("BoardVersion: {:x}", mbox::mbox().get_board_revision());
+                    // println!("BoardVersion: {:x}", bsp::driver::MBOX.get_board_revision());
+                    println!(
+                        "RAM: {} {}",
+                        mbox::mbox().get_arm_memory().0,
+                        mbox::mbox().get_arm_memory().1
+                    )
+                }
+                "alloc" => {
+                    println!("Allocate test start!");
+                    check_alloc();
+                    println!("Allocate test End!");
+                }
+                "ls" => {
+                    let fs: fs::init_ram_fs::Cpio = fs::init_ram_fs::Cpio::load(
+                        device_tree::get_initrd_start().unwrap() as *const u8,
+                    );
+                    fs.print_file_list();
+                }
+                "cat" => {
+                    // memory::get_initramfs_files(arg_1);
+                    let fs: fs::init_ram_fs::Cpio = fs::init_ram_fs::Cpio::load(
+                        device_tree::get_initrd_start().unwrap() as *const u8,
+                    );
+                    if let Some(data) = fs.get_file(arg1) {
+                        print!("{}", core::str::from_utf8(data).unwrap());
+                    } else {
+                        println!("File not found: {}", arg1);
+                    }
+                }
+                _ => {
+                    println!("Unknown command: {:?}", cmd);
+                }
             }
-
-            buf.clean_buf();
+            input_string.clear();
             print!("#");
-            continue;
-
-            // arrsting::arrstrcmp(buf, help);
-        } else if buf.get_len() == 1024 {
-            buf.clean_buf();
-            println!("{}", msg_buf_exceed);
-            print!("#");
-            continue;
-        } else {
-            buf.push_char(c);
         }
     }
 }
@@ -76,8 +81,18 @@ fn check_alloc() {
     for i in 0..32 {
         let x = Box::new(i);
         println!("{}", i);
-        println!{"{:p}" ,ptr::addr_of!(*x)};
+        println! {"{:p}" ,ptr::addr_of!(*x)};
         assert_eq!(*x, i);
     }
     assert_eq!(*long_lived, 1); // new
+}
+
+fn print_help() {
+    println!("help\t: print this help menu");
+    println!("hello\t: print Hello World!");
+    println!("reboot\t: reboot the device");
+    println!("info\t: show the device info");
+    println!("alloc\t: test allocator");
+    println!("ls\t: list file");
+    println!("cat\t: print file");
 }

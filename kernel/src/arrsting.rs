@@ -22,7 +22,7 @@ impl ArrString {
         self.len
     }
 
-    pub fn get_data(&self) -> [u8 ;MAXIUM_LEN] {
+    pub fn get_data(&self) -> [u8; MAXIUM_LEN] {
         self.data
     }
 

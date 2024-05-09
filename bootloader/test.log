@@ -1,0 +1,5 @@
+qemu-system-aarch64 -M raspi3b -kernel bootloader.img \
+	-display none -serial null -serial pty \
+	-dtb ../resources/bcm2710-rpi-3-b-plus.dtb \
+	-initrd ../resources/initramfs.cpio	
+char device redirected to /dev/ttys019 (label serial1)

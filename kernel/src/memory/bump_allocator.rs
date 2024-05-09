@@ -4,8 +4,11 @@ inspired from https://os.phil-opp.com
 use crate::synchronization::{interface::Mutex, NullLock};
 // use crate::{print, println};
 
-use core::alloc::{GlobalAlloc, Layout};
-use crate::println;
+// use crate::println;
+use core::{
+    alloc::{GlobalAlloc, Layout},
+    usize,
+};
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -47,8 +50,9 @@ impl BumpAllocatorInner {
     }
 
     fn alloc(&mut self, layout: Layout) -> *mut u8 {
-        println!("START alloc");
-        let alloc_start = self.next;
+        // println!("[Alloc] START alloc");
+        let alloc_start = align_up(self.next, layout.align());
+        // println!("[Alloc] alloc_start: {:#x}", alloc_start);
         self.next = alloc_start + layout.size();
         self.allocations += 1;
         alloc_start as *mut u8
@@ -60,6 +64,12 @@ impl BumpAllocatorInner {
     }
 }
 
+fn align_up(addr: usize, align: usize) -> usize {
+    match addr % align {
+        0 => addr,
+        remainder => addr + align - remainder,
+    }
+}
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------

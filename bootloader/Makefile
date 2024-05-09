@@ -109,8 +109,16 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 debug:
 # qemu-system-aarch64 -M raspi3b -kernel $(KERNEL_BIN) -display none -serial null -serial stdio
 # qemu-system-aarch64 -M raspi3b -kernel $(KERNEL_BIN) -display none -serial stdio
-	qemu-system-aarch64 -M raspi3b -kernel $(KERNEL_BIN) -display none -serial null -serial pty
-	
+	qemu-system-aarch64 -M raspi3b -kernel $(KERNEL_BIN) \
+	-display none -serial null -serial pty \
+	-dtb ../resources/bcm2710-rpi-3-b-plus.dtb \
+	-initrd ../resources/initramfs.cpio	
+
+# debug:
+# 	qemu-system-aarch64 -M raspi3b -kernel $(KERNEL_BIN) \
+# 	-display none -serial null -serial pty \
+# 	-dtb ../resources/bcm2710-rpi-3-b-plus.dtb \
+# 	-initrd ../resources/initramfs.cpio	
 
 ##------------------------------------------------------------------------------
 ## Clean

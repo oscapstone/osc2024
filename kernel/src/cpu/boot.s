@@ -18,6 +18,18 @@
 	add	\register, \register, #:lo12:\symbol
 .endm
 
+// Load the address of a symbol into a register, absolute.
+//
+// # Resources
+//
+// - https://sourceware.org/binutils/docs-2.36/as/AArch64_002dRelocations.html
+.macro ADR_ABS register, symbol
+	movz	\register, #:abs_g3:\symbol
+	movk	\register, #:abs_g2_nc:\symbol
+	movk	\register, #:abs_g1_nc:\symbol
+	movk	\register, #:abs_g0_nc:\symbol
+.endm
+
 //--------------------------------------------------------------------------------------------------
 // Public Code
 //--------------------------------------------------------------------------------------------------
@@ -27,6 +39,14 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
+	// ldr	x1, 0x50000
+	// str	x0, [x1]
+
+	// load address 0x60000's value and save it into __dtb_address
+	ADR_ABS	x2, __dtb_address
+	ldr	x1, =0x50000
+	str	x1, [x2]
+
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	and	x0, x0, {CONST_CORE_ID_MASK}

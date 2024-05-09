@@ -77,6 +77,18 @@ fn kernel_main() -> ! {
     // Discard any spurious received characters before starting with the loader protocol.
     // console().clear_rx();
 
+    // loop {
+    //     println!("OK!");
+    // }
+
+    // let dtb_addr = 0x50000 as *const u8;
+    // let dtb_addr = unsafe { core::ptr::read_volatile(dtb_addr as *const u32) };
+
+    // loop {
+    //     println!("OK!");
+    //     println!("DTB address: {:#x}", dtb_addr);
+    // }
+
     // Read the binary's size.
     let mut size: u32 = u32::from(console().read_char() as u8);
     size |= u32::from(console().read_char() as u8) << 8;
@@ -84,8 +96,8 @@ fn kernel_main() -> ! {
     size |= u32::from(console().read_char() as u8) << 24;
 
     // Trust it's not too big.
-    console().write_char('O');
-    console().write_char('K');
+    // console().write_char('O');
+    // console().write_char('K');
 
     let kernel_addr: *mut u8 = bsp::memory::board_default_load_addr() as *mut u8;
 
@@ -96,8 +108,8 @@ fn kernel_main() -> ! {
         let mut checksum: u16 = 0;
         for i in 0..size {
             let c = console().read_char();
-            checksum = (checksum %100 + c as u16 % 100) % 100;
-            
+            checksum = (checksum % 100 + c as u16 % 100) % 100;
+
             core::ptr::write_volatile(kernel_addr.offset(i as isize), c as u8);
             // if i % 1024 == 0{
             //     println!("pos:{} data:{} checksum:{}",i,c as u16, checksum);

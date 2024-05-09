@@ -21,9 +21,6 @@ def send_file(filename, serial_port):
         file_size = len(file_content)
         ser.write(file_size.to_bytes(4, 'little'))
 
-        text = ser.readline()
-        print(text)
-
         # Send the file content
         byte_counter = 0
         checksum = 0

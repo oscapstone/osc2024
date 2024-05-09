@@ -38,6 +38,10 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
+	// x0 will save dtb address, so backup to 0x60000
+	ldr	x15, =0x50000
+	str	x0, [x15]
+
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	and	x0, x0, {CONST_CORE_ID_MASK}
