@@ -1,36 +1,43 @@
-# 自動尋找所有.c檔案作為源碼檔案
-SRCS = $(wildcard *.c)
-# 將所有的.c檔案名換成.o作為目標檔案名
-OBJS = $(SRCS:.c=.o)
-# 設定編譯器的旗標：開啟所有警告、優化等級2、不使用標準庫、不使用啟動檔案
-CFLAGS = -g -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
-# 定義編譯器
-CC = aarch64-none-elf-gcc
-# 定義鏈接器
-LINKER = aarch64-none-elf-ld
-# 定義目標複製工具，用於將ELF格式的可執行檔案轉換成二進位格式
-OBJ_CPY = aarch64-none-elf-objcopy
+# ARMGNU ?= aarch64-linux-gnu
+ARMGNU ?= aarch64-none-elf
 
-# 預設目標：先清理再建立kernel8.img
-all: clean kernel8.img
+CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
+ASMFLAGS = -Iinclude
 
-# 編譯啟動組合語言檔案
-start.o: start.S
-	$(CC) $(CFLAGS) -c start.S -o start.o
+BUILD_DIR = build
+SRC_DIR = .
+KERNEL_NAME = kernel8
+#---------------------------------------------------------------------------------------
 
-# 通用規則：將所有.c檔案編譯成.o檔案
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+C_FILES = $(wildcard $(SRC_DIR)/*.c)
+ASM_FILES = $(wildcard $(SRC_DIR)/*.S)
+OBJ_FILES = $(C_FILES:$(SRC_DIR)/%.c=$(BUILD_DIR)/%_c.o)
+OBJ_FILES += $(ASM_FILES:$(SRC_DIR)/%.S=$(BUILD_DIR)/%_s.o)
 
-# 連結所有的.o檔案，產生ELF格式的kernel8.elf，再將其轉換成二進位格式的kernel8.img
-kernel8.img: start.o $(OBJS)
-	$(LINKER) --nostdlib start.o $(OBJS) -T link.ld -o kernel8.elf
-	$(OBJ_CPY) -O binary kernel8.elf kernel8.img
+DEP_FILES = $(OBJ_FILES:%.o=%.d)
+-include $(DEP_FILES)
 
-# 清理目標：刪除之前建立的檔案，忽略任何錯誤訊息
+$(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
+	@mkdir -p $(@D)
+	$(ARMGNU)-gcc $(CFLAGS) -MMD -c $< -o $@
+
+$(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
+	$(ARMGNU)-gcc $(ASMFLAGS) -MMD -c $< -o $@
+
+$(KERNEL_NAME).img: $(SRC_DIR)/link.ld $(OBJ_FILES)
+	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/$(KERNEL_NAME).elf  $(OBJ_FILES)
+	$(ARMGNU)-objcopy $(BUILD_DIR)/$(KERNEL_NAME).elf -O binary $(KERNEL_NAME).img
+
+all: $(KERNEL_NAME).img
+
 clean:
-	rm kernel8.elf kernel8.img *.o >/dev/null 2>/dev/null || true
+	rm -rf $(BUILD_DIR) $(KERNEL_NAME).img
 
-# 執行目標：使用QEMU模擬器執行kernel8.img，設定模擬的機器為Raspberry Pi 3模型B
 run:
-	qemu-system-aarch64 -M raspi3b -serial null -serial stdio -display none  -kernel kernel8.img
+	qemu-system-aarch64 -M raspi3b -kernel $(KERNEL_NAME).img -serial null -serial stdio -display none
+
+debug:
+	qemu-system-aarch64 -M raspi3b -kernel $(KERNEL_NAME).img -display none -S -s
+
+gdb:
+	$(ARMGNU)-gdb -x debug.gdb

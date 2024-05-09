@@ -1,2 +1,2 @@
-file kernel/build/kernel8.elf
+file kernel8.elf
 target remote :1234
