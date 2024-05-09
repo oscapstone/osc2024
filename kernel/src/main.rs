@@ -11,6 +11,8 @@ mod dtb;
 mod exception;
 mod kernel;
 mod panic;
+mod scheduler;
+mod thread;
 mod timer;
 
 use alloc::boxed::Box;
@@ -19,13 +21,31 @@ use core::arch::asm;
 use core::time::Duration;
 use stdio::{debug, gets, print, println};
 
-use crate::dtb::get_initrd_start;
-
 pub static mut INITRAMFS_ADDR: u32 = 0;
-const MAX_COMMAND_LEN: usize = 0x100;
 
 fn main() -> ! {
     boot();
+    println!("Kernel booted successfully!");
+    let scheduler = scheduler::get();
+    for _ in 0..4 {
+        scheduler.create_thread(thread::test_func, 0 as *mut u8);
+    }
+    let tm = timer::manager::get();
+    tm.add_timer(
+        Duration::from_millis(1000),
+        Box::new(|| {
+            let sched = scheduler::get();
+            sched.schedule();
+            println!("Scheduler scheduled!");
+        }),
+    );
+    loop {}
+    // kernel_shell();
+}
+
+#[allow(dead_code)]
+fn kernel_shell() -> ! {
+    const MAX_COMMAND_LEN: usize = 0x100;
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         print!("> ");
@@ -37,12 +57,11 @@ fn main() -> ! {
 fn boot() {
     println!("Hello, world!");
     print_mailbox_info();
-
-    initramfa_init();
-
+    initramfs_init();
     buddy_init();
+    timer::manager::init();
+    scheduler::init();
     print_boot_time();
-    timmer_manger_init();
 }
 
 fn execute_command(command: &[u8]) {
@@ -82,9 +101,9 @@ fn print_mailbox_info() {
     println!("ARM memory: {:x} - {:x}", lb, ub);
 }
 
-fn initramfa_init() {
+fn initramfs_init() {
     unsafe {
-        INITRAMFS_ADDR = get_initrd_start();
+        INITRAMFS_ADDR = dtb::get_initrd_start();
     }
     debug!("Initramfs address: {:#x}", unsafe { INITRAMFS_ADDR });
 }
@@ -95,6 +114,7 @@ fn buddy_init() {
     }
     buddy_reserve_memory();
 }
+
 fn buddy_reserve_memory() {
     let rsv_mem = dtb::get_reserved_memory();
     for (addr, size) in rsv_mem {
@@ -138,21 +158,5 @@ fn print_boot_time() {
         println!("Current time: {}", now);
         println!("Frequency: {} Hz", freq);
         println!("Boot time: {} ms", now / (freq / 1000));
-    }
-}
-
-fn timmer_manger_init() {
-    timer::manager::init_timer_manager();
-    unsafe {
-        exception::enable_inturrupt();
-    }
-    {
-        let tm = timer::manager::get_timer_manager();
-        tm.add_timer(
-            Duration::from_secs(2),
-            Box::new(|| {
-                println!("First boot timer expired!");
-            }),
-        );
     }
 }

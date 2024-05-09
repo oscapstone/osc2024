@@ -2,9 +2,6 @@ use core::{
     arch::{asm, global_asm},
     ptr::read_volatile,
 };
-
-use crate::timer::manager::get_timer_manager;
-
 use driver::mmio::{regs::AuxReg, regs::MmioReg, Mmio};
 use stdio::{debug, println};
 
@@ -12,7 +9,7 @@ global_asm!(include_str!("context_switch.S"));
 
 #[no_mangle]
 unsafe fn exception_handler(idx: u64) {
-    disable_inturrupt();
+    disable_interrupt();
     match idx {
         0x4 => {
             let esr_el1: u64;
@@ -34,8 +31,8 @@ unsafe fn exception_handler(idx: u64) {
         0x5 => {
             if read_volatile(0x4000_0060 as *const u32) == 0x02 {
                 {
-                    let tm = get_timer_manager();
-                    tm.handle_inturrupt();
+                    let tm = crate::timer::manager::get();
+                    tm.handle_interrupt();
                 }
             }
             if Mmio::read_reg(MmioReg::Aux(AuxReg::Irq)) & 0x1 == 0x1 {
@@ -68,17 +65,17 @@ unsafe fn exception_handler(idx: u64) {
             }
         }
     }
-    enable_inturrupt();
+    enable_interrupt();
 }
 
 #[allow(dead_code)]
 #[inline(always)]
-pub unsafe fn enable_inturrupt() {
+pub unsafe fn enable_interrupt() {
     asm!("msr DAIFClr, 0xf");
 }
 
 #[allow(dead_code)]
 #[inline(always)]
-pub unsafe fn disable_inturrupt() {
+pub unsafe fn disable_interrupt() {
     asm!("msr DAIFSet, 0xf");
 }

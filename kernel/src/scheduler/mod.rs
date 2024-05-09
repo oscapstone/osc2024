@@ -1,6 +1,5 @@
 use crate::exception;
 use crate::thread::Thread;
-use crate::timer::manager::get_timer_manager;
 use alloc::boxed::Box;
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
@@ -31,16 +30,16 @@ impl Scheduler {
     }
 
     pub fn schedule(&mut self) {
-        let tm = get_timer_manager();
+        let tm = crate::timer::manager::get();
         tm.add_timer(
             Duration::from_millis(1000),
             Box::new(|| {
-                let scheduler = get_scheduler();
+                let scheduler = get();
                 scheduler.schedule();
             }),
         );
         unsafe {
-            exception::enable_inturrupt();
+            exception::enable_interrupt();
         }
         tm.print();
         if let Some(mut current) = self.current.take() {
@@ -114,11 +113,11 @@ pub extern "C" fn thread_wrapper() {
 
 static mut SCHEDULER: Option<Scheduler> = None;
 
-pub fn get_scheduler() -> &'static mut Scheduler {
+pub fn get() -> &'static mut Scheduler {
     unsafe { SCHEDULER.as_mut().unwrap() }
 }
 
-pub fn scheduler_init() {
+pub fn init() {
     unsafe {
         SCHEDULER = Some(Scheduler::new());
     }

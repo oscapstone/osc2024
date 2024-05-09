@@ -41,7 +41,7 @@ pub fn exec(command: &[u8]) {
 
 #[inline(never)]
 fn add_timer(duration: Duration, message: String) {
-    let tm = timer::manager::get_timer_manager();
+    let tm = timer::manager::get();
     tm.add_timer(
         duration,
         Box::new(move || {
