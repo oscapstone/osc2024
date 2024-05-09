@@ -12,10 +12,10 @@ pub static mut ALLOCATOR: BuddyAllocator = BuddyAllocator {};
 
 pub static mut SIMPLE_ALLOCATOR: SimpleAllocator = SimpleAllocator {};
 
-static mut count: u32 = 0;
+static mut SA_ADDRESS: *mut u8 = 0 as *mut u8;
 
 pub unsafe fn init() {
-    count = 4;
+    SA_ADDRESS = 0x0A00_0000 as *mut u8;
     buddy_system::init(0x3C00_0000);
 }
 
@@ -35,20 +35,17 @@ unsafe impl GlobalAlloc for SimpleAllocator {
             println("Warning: Allocating zero size");
             return null_mut();
         }
-        let start = 0x0A00_0000 as *mut u8;
 
-        let aligned_start = start.add(count as usize).align_offset(layout.align());
-        let allocated_start = start.add(count as usize + aligned_start);
+        let aligned_start = SA_ADDRESS.align_offset(layout.align());
+        let allocated_start = SA_ADDRESS.add(aligned_start);
 
-        count += (layout.size() + aligned_start) as u32;
 
-        if allocated_start as u32 > 0x1000_0000 {
+        SA_ADDRESS = allocated_start.add(layout.size());
+
+        if allocated_start as usize > 0x1000_0000 {
             println!("Out of memory: {:x}", allocated_start as u32);
             panic!("Out of memory");
         }
-
-        //println_now("SA: allocated");
-        //print_hex_now(allocated_start as u32);
 
         allocated_start
     }

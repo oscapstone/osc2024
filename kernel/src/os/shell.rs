@@ -7,6 +7,7 @@ use core::arch::asm;
 use core::time;
 use alloc::string::{String, ToString};
 use alloc::boxed::Box;
+mod commands;
 
 fn print_time(time: u64) {
     let sec = time / 1000;
@@ -35,12 +36,7 @@ pub fn start(initrd_start: u32) {
         let initramfs = cpio::CpioArchive::load(initrd_start as *const u8);
 
         if inp_buf.starts_with(b"help") {
-            println!("help\t:print this help menu");
-            println!("hello\t:print Hello, World!");
-            println!("reboot\t:reboot the device");
-            println!("ls\t:list files in the initramfs");
-            println!("cat\t:print the content of a file in the initramfs");
-            println!("exec\t:load a file to memory and execute it");
+            commands::help();
         } else if inp_buf.starts_with(b"hello") {
             println!("Hello, World!");
         } else if inp_buf.starts_with(b"reboot") {

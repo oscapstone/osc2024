@@ -4,7 +4,7 @@ use core::arch::asm;
 use alloc::boxed::Box;
 use super::critical_section;
 
-static mut TimerPQ: Option<BinaryHeap<Timer>> = None;
+static mut TIMER_PQ: Option<BinaryHeap<Timer>> = None;
 
 pub trait Callback: Send + Sync {
     fn call(&self);
@@ -53,7 +53,7 @@ impl PartialEq for Timer {
 
 pub fn init() {
     unsafe {
-        TimerPQ = Some(BinaryHeap::new());
+        TIMER_PQ = Some(BinaryHeap::new());
         set_timer(u64::MAX);
         asm!(
             "mov {tmp}, 1",
@@ -124,19 +124,19 @@ where
 {
     // println!("AT: Start");
     unsafe {
-        assert_eq!(TimerPQ.is_some(), true, "TimerPQ is not initialized");
+        assert_eq!(TIMER_PQ.is_some(), true, "TIMER_PQ is not initialized");
 
-        TimerPQ.as_mut().unwrap().push(Timer { time, callback: Box::new(callback) });
+        TIMER_PQ.as_mut().unwrap().push(Timer { time, callback: Box::new(callback) });
 
         // println!("AT: Pushed");
 
-        if let Some(&Timer { time, ref callback }) = TimerPQ.as_mut().unwrap().peek() {
+        if let Some(&Timer { time, ref callback }) = TIMER_PQ.as_mut().unwrap().peek() {
             if time < get_timer_ticks() {
                 set_timer(time);
                 // println!("T: set");
             }
         } else {
-            panic!("TimerPQ should not be empty.");
+            panic!("TIMER_PQ should not be empty.");
         }
         // println!("T: added");
     }
@@ -154,7 +154,7 @@ fn set_timer(time: u64) {
 pub unsafe fn irq_handler() {
     // println!("IRQ handler");
     loop {
-        if let Some(&Timer { time, ref callback }) = TimerPQ.as_mut().unwrap().peek() {
+        if let Some(&Timer { time, ref callback }) = TIMER_PQ.as_mut().unwrap().peek() {
             if time < get_ticks() {
                 // for c in b"T: callback start\r\n" {
                 //     crate::cpu::uart::send(*c);
@@ -165,7 +165,7 @@ pub unsafe fn irq_handler() {
                 // for c in b"T: callback end\r\n" {
                 //     crate::cpu::uart::send(*c);
                 // }
-                TimerPQ.as_mut().unwrap().pop();
+                TIMER_PQ.as_mut().unwrap().pop();
             } else {
                 set_timer(time);
                 break;
