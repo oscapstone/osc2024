@@ -1,4 +1,3 @@
-extern volatile unsigned int mailbox[36];
 
 
 //#define MBOX_REQUEST    0
@@ -18,6 +17,6 @@ extern volatile unsigned int mailbox[36];
 // #define MBOX_TAG_GETSERIAL      0x10004
 // #define MBOX_TAG_LAST           0
 
-int mbox_call(unsigned char ch, unsigned int * mailbox);
+int mbox_call(unsigned char ch, unsigned int * mbox);
 // int get_board_revision();
 // int get_arm_memory();

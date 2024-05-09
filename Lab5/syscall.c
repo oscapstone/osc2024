@@ -165,10 +165,12 @@ void fork(trapframe *sp){
 }
 
 void sys_mbox_call(trapframe * sp){
+    hin(0);
     unsigned char ch = (unsigned char) sp -> x[0];
     unsigned int * mbox = (unsigned int *) sp -> x[1];
-    mbox_call(ch, mbox);
-    sp -> x[0] = 0;
+    hin(1);
+    sp -> x[0] = mbox_call(ch, mbox);
+    hin(2);
 }
 
 void sys_call(trapframe * sp){
