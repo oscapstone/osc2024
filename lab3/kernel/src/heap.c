@@ -15,8 +15,7 @@ void* kmalloc(unsigned int size) {
     // size paddling to multiple of 0x10
     size = 0x10 + size - size % 0x10;
     *(unsigned int*)(r - 0x8) = size;
-    int total_size = size + 0x10;
-    htop_ptr += total_size;
+    htop_ptr += size;
     return r;
 }
 

@@ -35,28 +35,9 @@ proc_hang:
     b       proc_hang
 
 from_el2_to_el1:
-    mov x1, (1 << 31)
-    msr hcr_el2, x1
-    mov x1, 0x3c5
-    msr spsr_el2, x1
-    msr elr_el2, lr
-    eret
-
-// mov x1, (1 << 31)
-// msr hcr_el2, x1
-// hcr_el2: page 1923, 64-bit register. Configuration controls for EL2.
-// hcr_el2[31]: RW bit, indicates EL1 runs in AArch64.
-
-// mov x1, 0x3c5
-// msr spsr_el2, x1
-// spsr_el2: page 283, 32-bit register. Holds the saved process state when an exception is taken to EL2.
-// 0011: bit [11:10]: reserved. D(bit [9]): mask bit of watchpoint, breakpoint, etc. A(bit [8]): SError mask bit.
-// 1100: I(bit [7]): IRQ mask bit. F(bit [6]): FIQ mask bit. bit [5]: reserved. bit [4]: 0 means exception taken from AArch64.
-// 0101: M[3:0](bit [3:0])Exception was taken from EL1h. h(M[0]) means the saved processor state is determined by the EL.
-
-// msr elr_el2, lr
-// elr_el2: page 259, 64-bit register. When taking an exception to EL2, holds the address to return to.
-// lr: Link Register, holds the return address.
-
-// eret
-// Exception return from EL2 to EL1.
+    mov x1, (1 << 31)              // hcr_el2: Execution state control for EL2
+    msr hcr_el2, x1                //          RW[31]: 0b1 The processor execution environment for EL1 is AArch64
+    mov x1, 0x3c5                  // spsr_el2: Holds the saved process state when an exception is taken to EL2.
+    msr spsr_el2, x1               //           (1)[1111] 00 (2)[0101] -> (1) EL2-PSTATE.DAIF Disabled (2) Exception level = EL1h
+    msr elr_el2, lr                // elr_el2: When taking an exception to EL2, holds the address to return to.
+    eret                           // eret: Perform an exception return. EL2 -> EL1

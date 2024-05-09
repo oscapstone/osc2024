@@ -136,9 +136,9 @@ int  uart_puts(char* fmt, ...) {
 
 // AUX_MU_IER_REG -> BCM2837-ARM-Peripherals.pdf - Pg.12
 void uart_interrupt_enable(){
-    *AUX_MU_IER_REG |=1;  // enable receive interrupt
-    *AUX_MU_IER_REG |=2;  // enable transmit interrupt
-    *IRQS1 |= 1 << 29;    // Pg.116
+    *AUX_MU_IER_REG |=1;  // enable read interrupt
+    *AUX_MU_IER_REG |=2;  // enable write interrupt
+    *IRQS1 |= 1 << 29;    // Pg.112
 }
 
 void uart_interrupt_disable(){
