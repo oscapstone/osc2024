@@ -4,6 +4,7 @@ DEMO TODOs:
 * 複習各個code怎麼寫的，還有那個lr怎麼運作
 * 搞懂為啥PID 0不會觸發
 * 各system call, sp複習
+* 把 fork 再改的好看一點，也比較好demo解釋(補註解)
 
 exec 的時候，可以 malloc 然後複製一個檔案過去
 sp 用給定的就好
