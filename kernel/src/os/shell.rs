@@ -1,13 +1,16 @@
 use super::file_system::cpio;
 use super::stdio::{get_line, print};
-use crate::os::stdio::println_now;
+use crate::os::stdio::{println, println_now};
 use crate::os::timer;
 use crate::println;
+use core::alloc::Layout;
 use core::arch::asm;
 use core::time;
+use alloc::alloc::alloc;
 use alloc::string::{String, ToString};
 use alloc::boxed::Box;
 mod commands;
+use super::allocator;
 
 fn print_time(time: u64) {
     let sec = time / 1000;
@@ -100,6 +103,8 @@ pub fn start(initrd_start: u32) {
             
             // timer::add_timer_ms(time, move || println!("{}", message));
         
+        } else if inp_buf.starts_with(b"test_memory") {
+            commands::test_memory();
         } else {
             println!(
                 "Unknown command {}",

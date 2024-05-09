@@ -14,6 +14,10 @@ pub static mut SIMPLE_ALLOCATOR: SimpleAllocator = SimpleAllocator {};
 
 static mut SA_ADDRESS: *mut u8 = 0 as *mut u8;
 
+pub fn set_print_debug(status: bool) {
+    buddy_system::set_print_debug(status);
+}
+
 pub unsafe fn init() {
     SA_ADDRESS = 0x0A00_0000 as *mut u8;
     buddy_system::init(0x3C00_0000);
