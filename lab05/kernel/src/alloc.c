@@ -27,6 +27,8 @@ void* simple_malloc(uint32_t size)
 
 // ==========================================
 
+static uint64_t pow_2(uint32_t n);
+
 extern uint64_t  _kernel_end;
 static uint64_t* _kernel_end_ptr = &_kernel_end;
 static uint64_t* _heap_start_ptr = &_heap_start;
@@ -80,21 +82,6 @@ static struct buddy_system_list_t buddy_system_list[MAX_BUDDY_SYSTEM_LIST];
 #define RESERVED             3
 
 
-static int get_next_Free_frame_index(uint8_t level)
-{
-    struct frame_t* frame = flist_arr[level].head->next;
-    while(frame != NULL)
-    {
-        if(frame->status == FREE)
-        {
-            return frame->index;
-        }
-        frame = frame->next;
-    }
-    return -1;
-}
-
-
 static void add_to_flist(struct flist_t* flist, struct frame_t* frame)
 {
     struct frame_t *curr = flist->head;
@@ -117,10 +104,11 @@ static void add_to_flist(struct flist_t* flist, struct frame_t* frame)
 
 static void remove_from_flist(struct flist_t* flist, struct frame_t* frame)
 {
-    uint8_t level = frame->level;
     struct frame_t *curr = flist->head;
     struct frame_t *prev = NULL;
-    int next_index = get_next_Free_frame_index(level);
+    int next_index = frame_arr[frame->index + pow_2(frame->level) - 1].next == NULL \
+                        ? -1 : frame_arr[frame->index + pow_2(frame->level) - 1].next->index;
+    frame_arr[frame->index + pow_2(frame->level) - 1].next = NULL;
     while(curr)
     {
         if(curr == frame)
@@ -252,6 +240,7 @@ void frame_init_with_reserve()
                 buddy_system_list[bid].index = free_start->index;
                 buddy_system_list[bid].base_addr = (void*)(uint64_t)(MALLOC_START_ADDR + free_start->index * FRAME_SIZE);
                 buddy_system_list[bid++].max_level = free_start->level;
+                frame_arr[free_start->index + pow_2(free_start->level) - 1].next = NULL;
                 add_to_flist(&flist_arr[free_start->level], free_start);
                 is_free_start = 1;
                 free_cnt = 0;
@@ -281,6 +270,7 @@ void frame_init_with_reserve()
             buddy_system_list[bid].index = free_start->index;
             buddy_system_list[bid].base_addr = (void*)(uint64_t)(MALLOC_START_ADDR + free_start->index * FRAME_SIZE);
             buddy_system_list[bid++].max_level = free_start->level;
+            frame_arr[free_start->index + pow_2(free_start->level) - 1].next = NULL;
             add_to_flist(&flist_arr[free_start->level], free_start);
             is_free_start = 1;
             free_cnt = 0;
@@ -325,10 +315,12 @@ void print_flist(int argc, char* argv[])
                 if(sign) printf("-> ");
                 printf_int(frame->index);
                 sign = 1;
-                frame = frame->next;
+                // frame = frame->next;
+                frame = frame_arr[frame->index + pow_2(frame->level) - 1].next;
+#ifdef DEBUG
+                if(frame != NULL) {printf(" (expected next: "); printf_int(frame->index); printf(")");}
+#endif
             }
-            else 
-                frame = frame->next;
         }
 #ifdef DEBUG
         printf("\r\n[DEBUG] Leave Level: ");printf_int(i);
@@ -403,8 +395,7 @@ void* balloc(uint64_t size)
             printf("\r\n[DEBUG] From Level: "); printf_int(from_level);
             printf("\r\n[DEBUG] Start Index: "); printf_int(start_index);
 #endif
-            uint32_t free_index = get_next_Free_frame_index(from_level);
-            flist_arr[from_level].head = free_index != -1 ? &frame_arr[free_index] : NULL;
+            remove_from_flist(&flist_arr[from_level], frame);
             
             while(from_level > level) // e.g. get level 4 frame, but only have level 6 frame
             {
@@ -478,6 +469,7 @@ int bfree(void* ptr)
             break;
     }
 
+    // printf("\r\n[SYSTEM INFO] Free Frame Address: "); printf_hex((uint64_t)ptr);
     // buddy address = curr address ^ (block size)
     struct frame_t* buddy_frame = &frame_arr[get_buddy_index((ptr-offset*FRAME_SIZE), curr_frame->level)+offset];
 #ifdef DEBUG
@@ -504,6 +496,12 @@ int bfree(void* ptr)
         printf("\r\n[SYSTEM INFO] Merge Frame:"); printf_int(curr_frame->index); printf(" and Frame: "); printf_int(buddy_frame->index);
         printf(" to Level: "); printf_int(curr_frame->level + 1);
 #endif
+
+#ifdef DEBUG
+        printf("\r\n[DEBUG] remove_from_flist: level: "); printf_int(buddy_frame->level); printf(" index: "); printf_int(buddy_frame->index);
+#endif
+        remove_from_flist(&flist_arr[buddy_frame->level], buddy_frame);
+        
         uint32_t merge_index;
         if(buddy_frame->index < curr_frame->index)
         {
@@ -517,10 +515,7 @@ int bfree(void* ptr)
             frame_arr[curr_frame->index + pow_2(curr_frame->level) - 1].next = buddy_frame;
             buddy_frame->status = LARGE_CONTIGUOUS;
         }
-#ifdef DEBUG
-        printf("\r\n[DEBUG] remove_from_flist: level: "); printf_int(buddy_frame->level); printf(" index: "); printf_int(buddy_frame->index);
-#endif
-        remove_from_flist(&flist_arr[buddy_frame->level], buddy_frame);
+
 #ifdef DEBUG
         printf(" with head frame: "); printf_int(merge_index);
 #endif

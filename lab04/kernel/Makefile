@@ -46,5 +46,5 @@ gdb: all
 
 QEMU: COPS += -DQEMU
 QEMU: run
-DEBUG: COPS += -DDEBUG
-DEBUG: all
+DEBUG: COPS += -DDEBUG -DQEMU
+DEBUG: run
