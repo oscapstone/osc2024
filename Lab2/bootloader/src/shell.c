@@ -5,11 +5,16 @@
 #include"mailbox.h"
 #include"reboot.h"
 
+extern unsigned long long _start;
+extern char _heap_top;
+
 int cmd_help(){
 	puts("help:");for(int i=4;i<32;i++)puts(" ");puts("print this help menu.\r\n");
 	puts("hello:");for(int i=5;i<32;i++)puts(" ");puts("print Hello World!\r\n");
 	puts("info:");for(int i=4;i<32;i++)puts(" ");puts("print device info.\r\n");
 	puts("reboot:");for(int i=6;i<32;i++)puts(" ");puts("reboot the device.\r\n");
+    puts("getsp:");for(int i=5;i<32;i++)puts(" ");puts("test stack position.\r\n");
+    puts("loadimg:");for(int i=7;i<32;i++)puts(" ");puts("load kernal8.img.\r\n");
 	
 	return 0;
 }
@@ -74,11 +79,71 @@ int cmd_reboot(){
     return 0;
 }
 
+int cmd_get_sp(){
+    unsigned int value=5;
+    puts("0x");
+    put_long_hex((unsigned long long)&value);
+    puts("\r\n");
+    cmd_get_sp();
+    return 0;
+}
+
+int cmd_test(){
+	
+    unsigned long long* ptr=0x80000;
+    unsigned long long* ptr2=0x60000;
+    for(int i=0;i<100;i++){
+        puts("ptr1:");
+        puts("0x");
+    	put_long_hex((unsigned long long)*ptr);
+    	puts("\r\n");
+        puts("ptr2:");
+        puts("0x");
+    	put_long_hex((unsigned long long)*ptr2);
+    	puts("\r\n");
+    	ptr++;
+    	ptr2++;
+    }
+    
+}
+
+int cmd_loadimg(){
+    char c;
+    unsigned long long kernel_size = 0;
+    char *kernel_start = (char *)(&_start);
+    puts("Please upload the image file.\r\n");
+    for (int i = 0; i < 8; i++){
+        c = getbyte();
+        putchar(c);
+        kernel_size += c << (i * 8);
+    }
+    for (int i = 0; i < kernel_size; i++){
+        c = getbyte();
+        putchar(c);
+        kernel_start[i] = c;
+    } 
+    puts("Image file downloaded successfully.\r\n");
+    puts("Point to new kernel ...\r\n");
+    asm volatile(
+        "mov x0, x10;"
+        "mov x1, x11;"
+        "mov x2, x12;"
+        "mov x3, x13;"
+        "mov x30, 0x80000;"
+        "ret;"
+    );
+    return 0;
+
+}
+
 int cmd_handler(char* cmd){
 	if(!strcmp(cmd,"help"))cmd_help();
 	else if(!strcmp(cmd,"hello"))cmd_hello();
 	else if(!strcmp(cmd,"info"))cmd_info();
-    	else if(!strcmp(cmd,"reboot"))cmd_reboot();
+    else if(!strcmp(cmd,"reboot"))cmd_reboot();
+    else if(!strcmp(cmd,"getsp"))cmd_get_sp();
+    else if(!strcmp(cmd,"test"))cmd_test();
+    else if(!strcmp(cmd,"loadimg"))cmd_loadimg();
 	else {
 		puts("can't find command:");
 		puts(cmd);
