@@ -24,6 +24,8 @@ struct fdt_header {
 #define FDT_END 0x00000009
 
 void fdt_traverse(void (*callback)(void *));
+uint64_t fdt_get_initrd_start();
+uint64_t fdt_get_initrd_end();
 
 /**
  * @brief Convert a 4-byte big-endian sequence to little-endian.

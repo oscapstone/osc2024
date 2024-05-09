@@ -7,10 +7,12 @@
 // get this value from start.S
 extern void *dtb_base;
 
+static uint64_t initrd_start, initrd_end;
+
 void fdt_traverse(void (*callback)(void *)) {
     struct fdt_header *header = (struct fdt_header *)(dtb_base);
     print_string("[INFO] Dtb loaded address: ");
-    uart_hex((uint32_t) header);
+    uart_hex((uint32_t)header);
     print_string("\n");
 
     // get the offset of the structure block and string block by adding the base
@@ -51,10 +53,17 @@ void fdt_traverse(void (*callback)(void *)) {
                 print_string("\n[fdt_traverse] ");
                 print_string((char *)strings + nameoff);
 #endif
+
+                // TODO: 這個寫法很怪應為很大程度限制了只能傳 ramfs 的 callback
                 if (strcmp((char *)(strings + nameoff), "linux,initrd-start") ==
                     0) {
+                    initrd_start = be2le((void *)ptr);
                     callback((void *)(uint32_t *)be2le((void *)ptr));
+                } else if (strcmp((char *)(strings + nameoff),
+                                  "linux,initrd-end") == 0) {
+                    initrd_end = be2le((void *)ptr);
                 }
+
                 ptr += align4(len);
                 break;
             case FDT_NOP:
@@ -64,6 +73,9 @@ void fdt_traverse(void (*callback)(void *)) {
         }
     }
 }
+
+uint64_t fdt_get_initrd_start() { return initrd_start; }
+uint64_t fdt_get_initrd_end() { return initrd_end; }
 
 static uint32_t be2le(const void *s) {
     const uint8_t *bytes = (const uint8_t *)s;

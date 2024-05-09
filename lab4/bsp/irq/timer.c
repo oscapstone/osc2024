@@ -11,7 +11,7 @@ void core_timer_enable() {
         "mrs x0, cntfrq_el0;"
         "msr cntp_tval_el0, x0;"  // Set expired time
         "mov x0, 2;"
-        "ldr x1, =0x40000040;"
+        "ldr x1, =0x40000040;" // timer interrupt control register for core 0
         "str w0, [x1];");  // Unmask timer interrupt
 }
 
@@ -21,9 +21,7 @@ void core_timer_disable() {
 #endif
     asm volatile(
         "mov x0, 0;"
-        "msr cntp_ctl_el0, x0 // disable;"
-        "ldr x1, =0x40000040;"
-        "str w0, [x1];"  // Mask timer interrupt
+        "msr cntp_ctl_el0, x0;" // disable
     );
 }
 

@@ -2,13 +2,13 @@
 #include <kernel/memory.h>
 #include <lib/stdlib.h>
 
-extern int _end;
-#define HEAP_MAX (&_end) + 0x10000
+extern uint64_t __heap_start;
+#define HEAP_MAX (&__heap_start) + 0x100000
 
 static char *heap_top;
 
 void init_memory() {
-    heap_top = (&_end);
+    heap_top = (&__heap_start);
     // heap_top++;
 }
 

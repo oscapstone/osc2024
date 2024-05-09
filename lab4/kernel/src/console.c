@@ -76,6 +76,8 @@ void register_all_commands(struct Console *console) {
     register_command(console, &test_malloc_command);
     register_command(console, &async_io_demo_command);
     register_command(console, &set_timeout_command);
+    register_command(console, &test_kmalloc_command);
+    register_command(console, &test_kfree_command);
 }
 
 static void read_command(char *x) {

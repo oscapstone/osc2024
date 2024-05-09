@@ -19,7 +19,7 @@ SECTIONS
 	    __bss_end = .;
   }
   . = ALIGN(8);
-  _end = .;
+  __heap_start = .;
   __loader_end = .;
 }
 __bss_size = (__bss_end - __bss_start) >> 3;

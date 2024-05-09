@@ -119,29 +119,13 @@ set_exception_vector_table:
     msr vbar_el1, x0                // set the base address of the exception vector table
     ret
 
-/*
-    ARM® Architecture Reference Manual ARMv8, for ARMv8-A architecture profile
 
-    spsr: (page. 2107)
-       31  30  29  28     22   21   20     10   9   8   7   6      5      4        0
-    | N | Z | C | V | RES0 | SS | IL | RES0 | D | A | I | F | RES0 | M[4] | M[3:0] |
-
-    hcr: Provides configuration controls for virtualization, including defining whether various Non-secure 
-operations are trapped to EL2.
-
-    Exception level   Options
-        EL0:            EL0t
-        EL1:            EL1t, EL1h
-        EL2:            EL2t, EL2h
-        EL3:            EL3t, EL3h
-    The t and h suffixes indicate that the SP_EL0 and SP_ELx stack pointers are selected respectively.
-*/
-
+// page 2107
 .global from_el2_to_el1
 from_el2_to_el1:
     mov x0, (1 << 31)   // EL1 uses aarch64
     msr hcr_el2, x0     // msr: Status Register <-- Register (page 1924)
-    mov x0, 0x3c5       // EL1h (SPSel = 1) with interrupt disabled (D = 1, A = 1, I = 1, F = 1, M[3:0] = 5) EL1h// TDO: check
+    mov x0, 0x3c5       // EL1h (SPSel = 1) with interrupt disabled (D = 1, A = 1, I = 1, F = 1, M[3:0] = 5) EL1h
     msr spsr_el2, x0    // Save the current processor's state
     msr elr_el2, lr     // Save the exception return address
     eret                // return to EL1 (use eret to return from the exception)
