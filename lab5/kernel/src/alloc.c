@@ -209,18 +209,22 @@ void frame_free(char* addr) {
 	}
 }
 
+const int chunk_size = 512;
+// should be divisor of 4096
+
 void* my_malloc(size_t size) {
-	if (size > 512) {
+	if (size > chunk_size) {
 		return frame_malloc((size + 4096 - 1) / 4096);
 	}
 	if (node_arr[20] == NULL) {
 		char* t = frame_malloc(1);
-		for (char* i = t; i < t + 4096; i += 512) {
+		for (char* i = t; i < t + 4096; i += chunk_size) {
 			add_node_list(20, i);
 		}
 	}
 	int pos = pop_node_list(20);
 	if (pos == -1) {
+		uart_printf ("Failing to get a small chunk\r\n");
 		return 0;
 	}
 	frame_pool[pos >> 12] ++;
@@ -236,7 +240,7 @@ void my_free(char* addr) {
 	add_node_list(20, addr);
 	frame_pool[pos] --;
 	if (frame_pool[pos] == 0) {
-		for (int i = pos << 12; i < (pos << 12) + 4096; i += 512) {
+		for (int i = pos << 12; i < (pos << 12) + 4096; i += chunk_size) {
 			remove_node_list(20, i);
 		}
 		frame_free(pos << 12);

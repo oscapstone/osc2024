@@ -58,15 +58,31 @@ void async_test() {
 
 void page_test() {
 	print_node_list();
-	int arr0 = my_malloc(4096 * 1);
-	int arr1 = my_malloc(4096 * 2);
-	int arr2 = my_malloc(4096 * 2);
-	int arr3 = my_malloc(4096 * 4);
-	int arr4 = my_malloc(4096 * 8);
+	int* arr0 = (int*)my_malloc(4096 * 1);
+	int* arr1 = (int*)my_malloc(4096 * 2);
+	int* arr2 = (int*)my_malloc(4096 * 2);
+	int* arr3 = (int*)my_malloc(4096 * 4);
+	int* arr4 = (int*)my_malloc(4096 * 8);
 	print_node_list();
-	int arr5 = my_malloc(4096 * 1);
-	uart_printf ("%d, %d, %d, %d, %d, %d\r\n", arr0 >> 12, arr1 >> 12, arr2 >> 12, 
-	arr3 >> 12, arr4 >> 12, arr5 >> 12);
+	int* arr5 = (int*)my_malloc(4096 * 1);
+	for (int i = 0; i < 4096; i += sizeof(int)){
+		arr0[i] = 1;
+	}
+	for (int i = 0; i < 4096 * 2; i += sizeof(int)){
+		arr1[i] = 1;
+	}
+	for (int i = 0; i < 4096 * 2; i += sizeof(int)){
+		arr2[i] = 1;
+	}
+	for (int i = 0; i < 4096 * 4; i += sizeof(int)){
+		arr3[i] = 1;
+	}
+	for (int i = 0; i < 4096 * 8; i += sizeof(int)){
+		arr4[i] = 1;
+	}
+	for (int i = 0; i < 4096; i += sizeof(int)){
+		arr5[i] = 1;
+	}
 	print_node_list();
 	my_free(arr5);
 	print_node_list();
@@ -77,7 +93,9 @@ void malloc_test() {
 	char* arr[17];
 	for (int i = 0; i < 17; i ++) {
 		arr[i] = my_malloc(512);
-		uart_printf("%d\r\n", arr[i]);
+		for (int j = 0; j < 512; j ++) {
+			arr[i][j] = 'a';
+		}
 	}
 	print_node_list();
 	print_pool();
