@@ -25,3 +25,5 @@ Kthread* pop_rq();
 void kill_zombies();
 void schedule_init();
 void schedule();
+void schedule_timer();
+void schedule_timer_callback(void*);

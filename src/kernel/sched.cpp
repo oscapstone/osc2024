@@ -1,6 +1,7 @@
 #include "sched.hpp"
 
 #include "int/interrupt.hpp"
+#include "int/timer.hpp"
 #include "io.hpp"
 #include "thread.hpp"
 
@@ -40,6 +41,7 @@ void kill_zombies() {
 
 void schedule_init() {
   rq.init();
+  schedule_timer();
 }
 
 void schedule() {
@@ -61,4 +63,13 @@ void schedule() {
 
   restore_DAIF();
   switch_to(cur, nxt);
+}
+
+void schedule_timer() {
+  add_timer(freq_of_timer >> 5, nullptr, schedule_timer_callback, 2);
+}
+
+void schedule_timer_callback(void*) {
+  schedule_timer();
+  schedule();
 }
