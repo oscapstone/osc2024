@@ -139,9 +139,9 @@ uint8_t uart_async_recv()
 
 void uart_rx_handler()
 {
-	// disable_aux_interrupts();
+	disable_aux_interrupts();
 	read_buffer_add(uart_recv());
-	// enable_aux_interrupts();
+	enable_aux_interrupts();
 	// clr_rx_interrupts();
 }
 

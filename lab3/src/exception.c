@@ -133,7 +133,6 @@ void exception_el1_irq_handler()
 		if (*AUX_MU_IIR_REG & 0x4) {
 			clr_rx_interrupts();
 			// uart_rx_handler();
-			// delay((uint64_t)1 << 31);
 			event = task_event_create(uart_rx_handler, 3);
 		}
 		else if (*AUX_MU_IIR_REG & 0x2) {
