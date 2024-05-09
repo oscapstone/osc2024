@@ -1,10 +1,9 @@
 use crate::cpu::{device_tree::DeviceTree, mailbox, uart};
 use crate::os::stdio::{print_hex_now, println_now};
-use crate::os::{shell, timer, allocator};
+use crate::os::{allocator, shell, timer};
 use crate::println;
-use core::arch::{asm, global_asm};
 use alloc::boxed::Box;
-
+use core::arch::{asm, global_asm};
 
 global_asm!(include_str!("boot.s"));
 
@@ -19,20 +18,19 @@ pub unsafe fn _start_rust() {
     allocator::reserve(0x0007_5000 as *mut u8, 0x0000_0004); // CS counter
     allocator::reserve(0x0007_5100 as *mut u8, 0x0000_0004); // device tree address
     allocator::reserve(0x0008_0000 as *mut u8, 0x0004_0000); // Code
-    allocator::reserve(0x0800_0000 as *mut u8, 0x0100_0000); // Initramfs
-    allocator::reserve(DeviceTree::get_device_tree_address(), 0x0100_0000); // Device Tree
+    allocator::reserve(0x0800_0000 as *mut u8, 0x0010_0000); // Initramfs
+    allocator::reserve(DeviceTree::get_address(), 0x0100_0000); // Device Tree
     allocator::reserve(0x0880_0000 as *mut u8, 0x0780_0000); // Simple Allocator
-    
 
     // println_now("Reserved memory");
 
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
-    
+
     let dt = DeviceTree::init();
-    
+
     println!("Device tree initialized");
-    
+
     let initrd_start = match dt.get("linux,initrd-start") {
         Some(v) => {
             let mut val = 0u32;
