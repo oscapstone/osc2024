@@ -14,8 +14,8 @@ _stack_start    = 0x70000
 _start:
     # Store the address of the device tree
     # Should be removed when building for a real hardware
-    # ldr x1, =0x75100
-    # str x0, [x1]
+    ldr x1, =0x75100
+    str x0, [x1]
 
     mrs x0, mpidr_el1
     cbz x0, .L_parking_loop

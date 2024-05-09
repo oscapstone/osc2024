@@ -1,12 +1,12 @@
 use core::arch::{asm, global_asm};
 
-use crate::stdio::{println};
+use crate::stdio::println;
 use crate::uart_load::load_kernel;
 
 global_asm!(include_str!("boot.s"));
 
 #[no_mangle]
-pub unsafe fn _start_rust() { 
+pub unsafe fn _start_rust() {
     crate::cpu::uart::initialize();
     println("+------------------------------------+");
     println("+   Bootloader v1.1 by @zolark173    +");
@@ -25,6 +25,10 @@ pub unsafe fn _start_rust() {
     }
 
     // Jump to the kernel
-    asm!("ldr x0, =0x80000");
-    asm!("br x0");
+    asm!(
+        "ldr x2, =0x75100",
+        "ldr x0, [x2]",
+        "ldr x1, =0x80000",
+        "br x1"
+    );
 }
