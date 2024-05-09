@@ -38,6 +38,10 @@ pub fn start(initrd_start: u32) {
         let len = get_line(&mut inp_buf, 256);
         let initramfs = cpio::CpioArchive::load(initrd_start as *const u8);
 
+        if !inp_buf[0].is_ascii_alphabetic() {
+            continue;
+        }
+
         if inp_buf.starts_with(b"help") {
             commands::help();
         } else if inp_buf.starts_with(b"hello") {
@@ -107,8 +111,7 @@ pub fn start(initrd_start: u32) {
             commands::test_memory();
         } else {
             println!(
-                "Unknown command {}",
-                core::str::from_utf8(&inp_buf).unwrap().trim_end()
+                "Unknown command"
             );
         }
     }

@@ -20,7 +20,7 @@ pub fn set_print_debug(status: bool) {
 
 pub unsafe fn init() {
     SA_ADDRESS = 0x0A00_0000 as *mut u8;
-    buddy_system::init(0x3C00_0000);
+    buddy_system::init(0x3B40_0000);
 }
 
 pub unsafe fn reserve(ptr: *mut u8, size: usize) {
