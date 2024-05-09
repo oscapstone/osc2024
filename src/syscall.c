@@ -198,6 +198,7 @@ int sys_sigkill(struct trapframe *trapframe)
     }
 
     task_pool[pid].pending = signum;
+
     return SYSCALL_SUCCESS;
 }
 
@@ -210,15 +211,12 @@ int sys_sigreturn(struct trapframe *trapframe)
     /* Free the signal stack. */
     kfree((void *) trapframe->sp);
 
-    /* If the signal is SIGKILL, we kill it here. */
-    if (current->pending == SIGKILL) {
+    if (current->process_sig == SIGKILL) {
         current->state = TASK_STOPPED;
-        current->exit_state = 0;
+        current->exit_state = 1;
         num_running_task--;
     }
 
-    /* Reset the pending variable*/
-    current->pending = 0;
     sig_restore_context(&current->tss);
     return SYSCALL_SUCCESS;
 }

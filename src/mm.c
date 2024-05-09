@@ -165,10 +165,10 @@ static inline void page_frame_init(void)
     unsigned int i;
 
     /* Setup the number of pages from memblock.current_limit. */
-    nr_pages = (memblock.current_limit >> 12) + 1;
+    nr_pages = (memblock.current_limit >> 12);
 
     /* Allocate memory from memblock. */
-    mem_map = (struct page *) memblock_phys_alloc(sizeof(struct page) * NR_PAGES);
+    mem_map = (struct page *) memblock_phys_alloc(sizeof(struct page) * nr_pages);
 
     /* Initialize page structure*/
     for_each_memblock_type(i, &memblock.reserved, rgn) {
@@ -284,6 +284,7 @@ static inline struct page *__rmqueue_smallest(unsigned int order)
 
         /* Setup page.flags to PG_USED */
         page->flags = PG_USED;
+
         return page;
     }
     return NULL;
@@ -315,7 +316,6 @@ void mm_init(void)
     memblock_init();
     buddy_init();
     slab_init();
-    printf("==== init: Kernel Memory management\n");
 }
 
 struct page *__alloc_pages(unsigned int order)
@@ -328,7 +328,8 @@ void free_one_page(struct page *page, unsigned long pfn, unsigned int order)
 {
     /* Just make sure the page is from buddy system. */
     if (page->flags != PG_USED) {
-        printf("Error: Try to free a page that is not allocated from buddy system.\n");
+        printf("Error: Try to page %x order %d, which is not allocated from buddy system (flag %x).\n", pfn_to_phys(pfn), order, page->flags);
+        while (1);
         return;
     }
     /* Linux kernel use spin_lock to protect critical region (buddy system), but I didn't implement it for now. */

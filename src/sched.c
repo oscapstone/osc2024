@@ -22,6 +22,8 @@ void task_init()
     for (int i = 0; i < NR_TASKS; i++) {
         task_pool[i].state = TASK_STOPPED;
         task_pool[i].task_id = i;
+        task_pool[i].pending = 0;
+        task_pool[i].process_sig = 0;
         task_pool[i].sighand = &default_sighandler;
     }
 
@@ -53,11 +55,18 @@ void context_switch(struct task_struct *next)
         /* Allocate signal stack for the task. */
         void *sig_stack = (void *) kmalloc(USTACK_SIZE);
 
+        current->process_sig = current->pending;
+        current->pending = 0;
+
         asm volatile("msr spsr_el1, xzr");
-        asm volatile("msr elr_el1, %0" ::"r" (current->sighand->action[current->pending]));
+        asm volatile("msr elr_el1, %0" ::"r" (current->sighand->action[current->process_sig]));
         asm volatile("msr sp_el0, %0" ::"r" (sig_stack + USTACK_SIZE - 16));
         asm volatile("mov lr, %0" ::"r" (sigreturn));
         asm volatile("eret");
+    }
+
+    if (current->state == TASK_STOPPED) {
+        schedule();
     }
 }
 

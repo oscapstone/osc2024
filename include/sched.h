@@ -54,6 +54,7 @@ struct task_struct {
     long counter;
 
     int pending; // pending signal
+    int process_sig; // signal that is being processed
     struct sighandler *sighand;
 
     int exit_state;

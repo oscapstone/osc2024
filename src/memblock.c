@@ -287,12 +287,12 @@ void memblock_init(void)
     fdt_reserve_memory();
 }
 
+/* Print the memblock info */
 void print_memblock_info(void)
 {
     printf("\n===============\nMemory block information:\n");
     printf("Memory:\n");
     for (int i = 0; i < memblock.memory.cnt; i++) {
-        // uart_puts("    ");
         printf("    regions [%d]: ", i);
         printf("%x - %x\n", memblock.memory.regions[i].base, \
                 memblock.memory.regions[i].base + memblock.memory.regions[i].size);

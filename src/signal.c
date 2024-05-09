@@ -9,7 +9,10 @@ void no_sighandler(void) {
 }
 
 void default_sigkill(void) {
-    printf("[default_sigkill] default SIGKILL handler in user space\n");
+    int pid = get_taskid();
+
+    printf("[default_sigkill] default SIGKILL handler in user space, task %d be killed.\n", pid);
+
     return;
 }
 
