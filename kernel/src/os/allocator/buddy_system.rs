@@ -4,6 +4,7 @@ use crate::println;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec::Vec;
+use core::char::MAX;
 use core::f32::MIN;
 use core::{
     alloc::{GlobalAlloc, Layout},
@@ -12,14 +13,20 @@ use core::{
     ptr::null_mut,
 };
 
-const PRINT_DEBUG: bool = false;
-const FRAME_MAX_ORDER: u32 = 24;
-const MIN_FRAME_SIZE: usize = 16;
+static mut PRINT_DEBUG: bool = false;
+const FRAME_MAX_ORDER: u32 = 22;
+const MIN_FRAME_SIZE: usize = 256;
 const MAX_FRAME_SIZE: usize = MIN_FRAME_SIZE * 2usize.pow(FRAME_MAX_ORDER - 1);
 const START_ADDRESS: usize = 0x0000_0000;
 
 static mut FRAMES: Option<BTreeMap<usize, BTreeSet<*mut u8, &SimpleAllocator>, &SimpleAllocator>> =
     None;
+
+pub fn set_print_debug(status: bool) {
+    unsafe {
+        PRINT_DEBUG = status;
+    }
+}
 
 pub unsafe fn init(memory_size: usize) {
     FRAMES = Some(BTreeMap::new_in(&SimpleAllocator));
@@ -33,15 +40,32 @@ pub unsafe fn init(memory_size: usize) {
         );
     }
 
-    let max_frame_num = memory_size / MAX_FRAME_SIZE;
-    let max_frame_set = FRAMES.as_mut().unwrap().get_mut(&MAX_FRAME_SIZE).unwrap();
+    let mut current_size = MAX_FRAME_SIZE;
+    let mut current_ptr = START_ADDRESS;
 
-    for i in 0..max_frame_num {
-        match FRAMES.as_mut().unwrap().get_mut(&MAX_FRAME_SIZE) {
-            Some(set) => set.insert((START_ADDRESS + i * MAX_FRAME_SIZE) as *mut u8),
-            None => panic!("Cannot get the key just inserted to map"),
-        };
+    while current_size >= MIN_FRAME_SIZE {
+        let buddy_set = FRAMES.as_mut().unwrap().get_mut(&current_size).unwrap();
+
+        while current_ptr + current_size <= START_ADDRESS + memory_size {
+            buddy_set.insert(current_ptr as *mut u8);
+            current_ptr += current_size;
+        }
+
+        current_size /= 2;
     }
+
+    println_now("Buddy system initialized");
+    print_hex_now(current_ptr as u32);
+
+    // let mut i = MAX_FRAME_SIZE;
+
+    // while i >= MIN_FRAME_SIZE {
+    //     let buddy_set = FRAMES.as_mut().unwrap().get_mut(&i).unwrap();
+    //     print_hex_now(i as u32);
+    //     print_hex_now(buddy_set.len() as u32);
+    //     println_now("======");
+    //     i /= 2;
+    // }
 }
 
 // Allocate a block of memory with the given size
