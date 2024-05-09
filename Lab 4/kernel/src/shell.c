@@ -42,6 +42,15 @@ print_help()
     uart_str("timer\t| ");
     uart_line("set timeout message [timer msg duration]");
 
+    uart_str("malloc\t| ");
+    uart_line("memory allocation [data size in bytes]");
+
+    uart_str("free\t| ");
+    uart_line("memory release [block addr in hexdecimal]");   
+
+    uart_str("memory\t| ");
+    uart_line("memory infomation");  
+
     uart_str("reboot\t| ");
     uart_line("reboot this device");
 
@@ -141,6 +150,24 @@ parse_command(byteptr_t buffer)
         tok = next_tok(buffer, "duration: ");
         uint32_t duration = ascii_dec_to_uint32(tok);
         core_timer_add_timeout_event(msg, duration);
+    }
+
+    else if (str_eql(cmd, "malloc")) {
+        byteptr_t tok = next_tok(buffer, "size: ");
+        uint32_t size = ascii_dec_to_uint32(tok);
+        byteptr_t ptr = kmemory_alloc(size);
+        uart_printf("malloc: %d bytes, addr: 0x%x\n", size, ptr);
+    }
+
+    else if (str_eql(cmd, "free")) {
+        byteptr_t tok = next_tok(buffer, "addr: ");
+        uint64_t addr = ascii_to_uint64(tok, str_len(tok));
+        uart_printf("free: %s, 0x%x\n", tok, addr);
+        kmemory_release((byteptr_t) addr);
+    }
+
+    else if (str_eql(cmd, "memory")) {
+        memory_print_info();
     }
 
     else if (str_len(buffer) > 0) {

@@ -9,6 +9,8 @@
 #include "frame.h"
 #include "memory.h"
 
+#include "chunk.h"
+
 
 /**
  * Note:
@@ -45,24 +47,11 @@ _kernel_init(uint64_t x0, void (*ptr)(uint64_t))
 	uart_printf("|   DTB_start   = 0x%8x   |\n", dtb_get_ptr());
 	uart_printf("|    DTB_end    = 0x%8x   |\n", dtb_get_end());
 
+	uart_printf("|   frame preserved = %d      |\n", frame_preserved_count());
+
 	uart_line("+------------------------------+");
 
-	// frame_print_info();
-
-	byteptr_t block1 = frame_alloc();
-	frame_print_info();
-
-	byteptr_t block2 = frame_alloc();
-	frame_print_info();
-
-	frame_release(block2);
-	frame_print_info();
-
-	frame_release(block1);
-	frame_print_info();
-
     exception_l1_enable();
-
 }
 
 

@@ -23,6 +23,10 @@ typedef uint64_t*   uint64_ptr;
 #define INT32_RIGHTMOST_ORDER(x)    ({__builtin_ctz(x);})
 #define INT32_RIGHTMOST(x)          1 << INT32_RIGHTMOST_ORDER(x)
 
+#define UINT32_ALIGN(v, o)          ({(v) & ~((1 << o) - 1);})
+#define UINT32_PADDING(v, o)        ({(v + ((1 << o) - 1)) & ~((1 << o) - 1);})
+
+
 #define max(a, b) (a > b ? a : b)
 #define min(a, b) (a < b ? a : b)
 
