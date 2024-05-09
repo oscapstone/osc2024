@@ -12,8 +12,10 @@ Kthread::Kthread()
   klog("init thread %d @ %p\n", tid, this);
 }
 
-Kthread::Kthread(Kthread::fp start)
-    : regs{.x19 = (uint64_t)start, .lr = (void*)kthread_start},
+Kthread::Kthread(Kthread::fp start, void* ctx)
+    : regs{.x19 = (uint64_t)start,
+           .x20 = (uint64_t)ctx,
+           .lr = (void*)kthread_start},
       tid(new_tid()),
       status(KthreadStatus::kReady),
       exit_code(0),
@@ -73,7 +75,10 @@ int new_tid() {
 }
 
 void kthread_init() {
+  extern char __stack_beg[], __stack_end[];
   auto thread = new Kthread;
+  thread->kernel_stack.addr = __stack_beg;
+  thread->kernel_stack.size = __stack_end - __stack_beg;
   set_current_thread(thread);
 }
 
