@@ -1,6 +1,8 @@
 #ifndef SCHED_H
 #define SCHED_H
 
+#define STACK_SIZE 4096
+
 struct thread_struct {
     unsigned long x19;
     unsigned long x20;
@@ -26,7 +28,8 @@ struct task_struct {
     struct thread_struct context;
     int pid;
     enum task_state state;
-    void *stack; // kernel stack
+    void *stack;
+    void *user_stack;
     struct task_struct *prev;
     struct task_struct *next;
 };
@@ -45,6 +48,6 @@ void schedule();
 void idle();
 
 void display_run_queue();
-void foo();
+void thread_test();
 
-#endif
+#endif // SCHED_H

@@ -1,6 +1,6 @@
 /* save general registers to stack */
 .macro save_all
-    sub sp, sp, 32 * 9
+    sub sp, sp, 16 * 17
     stp x0, x1, [sp, 16 * 0]
     stp x2, x3, [sp, 16 * 1]
     stp x4, x5, [sp, 16 * 2]
@@ -16,17 +16,20 @@
     stp x24, x25, [sp, 16 * 12]
     stp x26, x27, [sp, 16 * 13]
     stp x28, x29, [sp, 16 * 14]
-    str x30, [sp, 16 * 15]
-    mrs x28, spsr_el1
-    mrs x29, elr_el1
-    stp x28, x29, [sp, 16 * 16]
+    mrs x10, spsr_el1
+    mrs x11, elr_el1
+    mrs x12, sp_el0
+    stp x30, x10, [sp, 16 * 15]
+    stp x11, x12, [sp, 16 * 16]
 .endm
 
 /* load general registers from stack */
 .macro load_all
-    ldp x28, x29, [sp, 16 * 16]
-    msr spsr_el1, x28
-    msr elr_el1, x29
+    ldp x30, x10, [sp, 16 * 15]
+    ldp x11, x12, [sp, 16 * 16]
+    msr spsr_el1, x10
+    msr elr_el1, x11
+    msr sp_el0, x12
     ldp x0, x1, [sp, 16 * 0]
     ldp x2, x3, [sp, 16 * 1]
     ldp x4, x5, [sp, 16 * 2]
@@ -42,15 +45,12 @@
     ldp x24, x25, [sp, 16 * 12]
     ldp x26, x27, [sp, 16 * 13]
     ldp x28, x29, [sp, 16 * 14]
-    ldr x30, [sp, 16 * 15]
-    add sp, sp, 32 * 9
+    add sp, sp, 16 * 17
 .endm
 
 exception_handler:
     save_all
-    mrs x0, elr_el1
-    mrs x1, esr_el1
-    mrs x2, spsr_el1
+    mov x0, sp
     bl exception_entry // defined in traps.c
     load_all
     eret
@@ -67,6 +67,11 @@ invalid_exc_handler:
     mrs x1, esr_el1
     mrs x2, spsr_el1
     bl invalid_entry // defined in traps.c
+    load_all
+    eret
+
+.global child_ret_from_fork
+child_ret_from_fork:
     load_all
     eret
 

@@ -2,8 +2,6 @@
 #include "mm.h"
 #include "uart.h"
 
-#define STACK_SIZE 4096
-
 static int thread_count = 0;
 static struct task_struct *run_queue;
 
@@ -50,12 +48,12 @@ void schedule()
 void kill_zombies()
 {
     struct task_struct *task = run_queue;
-    do {
+    do { // TODO: extract *next out from the if statement
         if (task->state == EXIT_ZOMBIE) {
             struct task_struct *next = task->next;
             remove(&run_queue, task);
-            kfree((void *)task->context.sp - STACK_SIZE);
-            kfree(task->stack - STACK_SIZE);
+            kfree(task->stack);
+            kfree(task->user_stack);
             task = next;
             continue;
         }
@@ -66,6 +64,9 @@ void kill_zombies()
 void idle()
 {
     while (1) {
+        for (int i = 0; i < 1000000; i++)
+            ;
+        uart_puts("idle...\n");
         kill_zombies();
         schedule();
     }
@@ -80,12 +81,13 @@ void kthread_init()
 struct task_struct *kthread_create(void (*func)())
 {
     struct task_struct *task = kmalloc(sizeof(struct task_struct));
-    task->context.lr = (unsigned long)func;
-    task->context.sp = (unsigned long)kmalloc(STACK_SIZE) + STACK_SIZE;
-    task->context.fp = task->context.sp;
     task->pid = thread_count++;
     task->state = TASK_RUNNING;
-    task->stack = kmalloc(STACK_SIZE) + STACK_SIZE;
+    task->stack = kmalloc(STACK_SIZE);
+    task->user_stack = kmalloc(STACK_SIZE);
+    task->context.lr = (unsigned long)func;
+    task->context.sp = (unsigned long)task->user_stack + STACK_SIZE;
+    task->context.fp = (unsigned long)task->user_stack;
     enqueue(&run_queue, task);
     return task;
 }
@@ -96,7 +98,7 @@ void kthread_exit()
     schedule();
 }
 
-void foo()
+void thread_test()
 {
     for (int i = 0; i < 5; ++i) {
         uart_puts("Thread id: ");

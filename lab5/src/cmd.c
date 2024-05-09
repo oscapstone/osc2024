@@ -6,6 +6,7 @@
 #include "sched.h"
 #include "shell.h"
 #include "string.h"
+#include "syscall.h"
 #include "timer.h"
 #include "uart.h"
 #include "utils.h"
@@ -146,6 +147,7 @@ void demo()
     uart_puts("(3) Buddy system\n");
     uart_puts("(4) Dynamic allocator\n");
     uart_puts("(5) Thread creation test\n");
+    uart_puts("(6) Fork test\n");
     uart_puts("Select: ");
     read_user_input(select);
     switch (atoi(select)) {
@@ -182,8 +184,13 @@ void demo()
         break;
     case 5:
         for (int i = 0; i < 3; i++)
-            kthread_create(foo);
+            kthread_create(thread_test);
         idle();
+        break;
+    case 6:
+        kthread_create(fork_test);
+        idle();
+        break;
     default:
         uart_puts("Option not found.\n");
         break;

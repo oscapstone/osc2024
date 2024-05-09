@@ -5,6 +5,7 @@
 #include "mm.h"
 #include "sched.h"
 #include "shell.h"
+#include "syscall.h"
 #include "timer.h"
 #include "uart.h"
 

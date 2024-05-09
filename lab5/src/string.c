@@ -49,3 +49,12 @@ char *strcat(char *dest, const char *src)
 
     return dest;
 }
+
+void *memcpy(void *dest, const void *src, int n)
+{
+    char *d = dest;
+    const char *s = src;
+    while (n--)
+        *d++ = *s++;
+    return dest;
+}
