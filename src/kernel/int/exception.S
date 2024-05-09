@@ -8,7 +8,7 @@ set_exception_vector_table:
 
 // save general registers to stack
 .macro save_all
-    sub     sp, sp, 17 * 16
+    sub     sp, sp, 16 * 18
     stp     x0, x1, [sp ,16 * 0]
     stp     x2, x3, [sp ,16 * 1]
     stp     x4, x5, [sp ,16 * 2]
@@ -27,14 +27,18 @@ set_exception_vector_table:
     mrs     x0, SPSR_EL1
     mrs     x1, ELR_EL1
     mrs     x2, ESR_EL1
+    mrs     x3, SP_EL0
     stp     lr, x0, [sp, 16 * 15]
     stp     x1, x2, [sp, 16 * 16]
+    stp     x3, x4, [sp, 16 * 17]
 .endm
 
 // load general registers from stack
 .macro load_all
+    stp     x3, x4, [sp, 16 * 17]
     ldp     x1, x2, [sp, 16 * 16]
     ldp     lr, x0, [sp, 16 * 15]
+    msr     SP_EL0, x3
     msr     ESR_EL1, x2
     msr     ELR_EL1, x1
     msr     SPSR_EL1, x0
@@ -53,7 +57,7 @@ set_exception_vector_table:
     ldp     x4, x5, [sp ,16 * 2]
     ldp     x2, x3, [sp ,16 * 1]
     ldp     x0, x1, [sp ,16 * 0]
-    add     sp, sp, 17 * 16
+    add     sp, sp, 16 * 18
 .endm
 
 .macro CALL_WITH_CONTEXT type handler

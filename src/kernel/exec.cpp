@@ -2,6 +2,7 @@
 
 #include "fs/initramfs.hpp"
 #include "io.hpp"
+#include "string.hpp"
 #include "thread.hpp"
 
 int exec(const char* name, char* const argv[]) {
@@ -25,7 +26,7 @@ int exec(const char* name, char* const argv[]) {
 
   memcpy(thread->user_text.addr, file.data(), file.size());
   thread->reset_kernel_stack();
-  exec_user_prog(thread->user_text.addr, thread->user_stack.addr,
+  exec_user_prog(thread->user_text.addr, thread->user_stack.end(0x10),
                  thread->regs.sp);
 
   return 0;
@@ -33,6 +34,7 @@ int exec(const char* name, char* const argv[]) {
 
 void exec_new_user_prog(void* ctx) {
   auto name = (char*)ctx;
+  // TODO: mem leak
   exec(name, nullptr);
-  kfree(name);
+  // kfree(ctx);
 }

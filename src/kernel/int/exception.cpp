@@ -27,6 +27,7 @@ void TrapFrame::show() const {
   kprintf("SPSR_EL1\t= 0x%lu\n", spsr_el1);
   kprintf("ELR_EL1 \t= 0x%lu\n", elr_el1);
   kprintf("ESR_EL1 \t= 0x%lu\n", esr_el1);
+  kprintf("SP_EL0 \t= 0x%lu\n", sp_el0);
   kprintf("------------------\n");
 }
 

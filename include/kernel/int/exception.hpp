@@ -12,6 +12,8 @@ struct TrapFrame {
   uint64_t spsr_el1;
   uint64_t elr_el1;
   uint64_t esr_el1;
+  uint64_t sp_el0;
+  uint64_t _;
   void show() const;
 };
 

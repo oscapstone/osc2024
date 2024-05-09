@@ -38,10 +38,12 @@ struct Kthread {
  public:
   Kthread(Kthread::fp start, void* ctx);
   Kthread(const Kthread& o);
+  void fix(const Kthread& o, Mem mem);
   void fix(const Kthread& o, void* faddr, uint64_t fsize);
+  void* fix(const Kthread& o, void* ptr);
   int alloc_user_text_stack(uint64_t text_size, uint64_t stack_size);
   void reset_kernel_stack() {
-    regs.sp = kernel_stack.addr + KTHREAD_STACK_SIZE - 0x10;
+    regs.sp = kernel_stack.end(0x10);
   }
 };
 

@@ -16,18 +16,24 @@ struct Mem {
   }
 
   Mem(const Mem& o) : size(o.size), ref(o.ref) {
-    if (o.ref) {
-      (*o.ref)++;
-      addr = o.addr;
-    } else {
-      addr = (char*)kmalloc(size);
-      memcpy(addr, o.addr, size);
-      fix(o, addr, size);
+    if (o.addr) {
+      if (ref) {
+        (*ref)++;
+        addr = o.addr;
+      } else {
+        addr = (char*)kmalloc(size, PAGE_SIZE);
+        memcpy(addr, o.addr, size);
+        fix(o, addr, size);
+      }
     }
   }
 
   ~Mem() {
     dealloc();
+  }
+
+  void* end(uint64_t off = 0) {
+    return addr + size - off;
   }
 
   void fix(const Mem& o, void* faddr, uint64_t fsize) {
@@ -40,6 +46,11 @@ struct Mem {
         *it = addr + (value - o.addr);
     }
   }
+  void* fix(const Mem& o, void* value) {
+    if (o.has(value))
+      return addr + ((char*)value - o.addr);
+    return value;
+  }
 
   bool has(void* p) const {
     return addr <= (char*)p and (char*) p < addr + size;
@@ -48,11 +59,17 @@ struct Mem {
   bool alloc(uint64_t size_, bool copy) {
     if (addr)
       return false;
+    size_ = align<PAGE_SIZE>(size_);
     addr = (char*)kmalloc(size_, PAGE_SIZE);
     if (addr == nullptr)
       return false;
     size = size_;
-    ref = copy ? nullptr : (int*)kmalloc(sizeof(int));
+    if (copy) {
+      ref = nullptr;
+    } else {
+      ref = (int*)kmalloc(sizeof(int));
+      *ref = 1;
+    }
     return true;
   }
 

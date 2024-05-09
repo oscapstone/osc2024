@@ -35,13 +35,26 @@ Kthread::Kthread(const Kthread& o)
       user_stack(o.user_stack),
       item(new KthreadItem(this)) {
   fix(o, &regs, sizeof(regs));
+  fix(o, kernel_stack);
+  fix(o, user_stack);
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
+}
+
+void Kthread::fix(const Kthread& o, Mem mem) {
+  fix(o, mem.addr, mem.size);
 }
 
 void Kthread::fix(const Kthread& o, void* faddr, uint64_t fsize) {
   kernel_stack.fix(o.kernel_stack, faddr, fsize);
   user_text.fix(o.user_text, faddr, fsize);
   user_stack.fix(o.user_stack, faddr, fsize);
+}
+
+void* Kthread::fix(const Kthread& o, void* ptr) {
+  ptr = kernel_stack.fix(o.kernel_stack, ptr);
+  ptr = user_text.fix(o.user_text, ptr);
+  ptr = user_stack.fix(o.user_stack, ptr);
+  return ptr;
 }
 
 int Kthread::alloc_user_text_stack(uint64_t text_size, uint64_t stack_size) {
