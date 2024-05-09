@@ -3,12 +3,11 @@
 #include "int/interrupt.hpp"
 #include "int/irq.hpp"
 
-uint64_t freq_of_timer, boot_timer_tick, us_tick;
+uint64_t freq_of_timer, boot_timer_tick;
 ListHead<Timer> timers;
 
 void timer_init() {
   freq_of_timer = read_sysreg(CNTFRQ_EL0);
-  us_tick = freq_of_timer / (int)1e6;
   boot_timer_tick = get_timetick();
   write_sysreg(CNTP_CTL_EL0, 1);
   timers.init();

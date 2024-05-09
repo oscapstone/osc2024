@@ -20,7 +20,8 @@ struct Timer : ListItem {
         context(context_) {}
 };
 
-extern uint64_t freq_of_timer, boot_timer_tick, us_tick;
+constexpr uint64_t S_TO_US = 1e6;
+extern uint64_t freq_of_timer, boot_timer_tick;
 extern ListHead<Timer> timers;
 // cmds/timer.cpp
 extern bool show_timer;
@@ -28,12 +29,12 @@ extern int timer_delay;
 
 inline timeval tick2timeval(uint64_t tick) {
   uint32_t sec = tick / freq_of_timer;
-  uint32_t usec = tick % freq_of_timer / us_tick;
+  uint32_t usec = tick * S_TO_US / freq_of_timer % S_TO_US;
   return {sec, usec};
 }
 
 inline uint64_t timeval2tick(timeval tval) {
-  return tval.sec * freq_of_timer + tval.usec * us_tick;
+  return tval.sec * freq_of_timer + tval.usec * freq_of_timer / S_TO_US;
 }
 
 void timer_init();
