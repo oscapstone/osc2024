@@ -3,7 +3,7 @@
 #include "uart1.h"
 #include "exception.h"
 #include "timer.h"
-#include "heap.h"
+#include "memory.h"
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable(){
@@ -15,29 +15,28 @@ void el1_interrupt_disable(){
 }
 
 void el1h_irq_router(){
-    static int timer_priority = 10;
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IIR_REG & (1 << 1)) // FIFO clear bits
+        if (*AUX_MU_IIR_REG & (1 << 1))
         {
             *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
-            irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY); //rpi write mean we read
+            irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
-        else if (*AUX_MU_IIR_REG & (2 << 1)) // Interrupt ID bits
+        else if (*AUX_MU_IIR_REG & (2 << 1))
         {
             *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
-            irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY); //rpi read mean we write
+            irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive();
         }
     }
     else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
         core_timer_disable();
-        irqtask_add(core_timer_handler, timer_priority--);
+        irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         irqtask_run_preemptive();
         core_timer_enable();
     }
@@ -49,7 +48,7 @@ void el0_sync_router(){
     unsigned long long elr_el1;
     __asm__ __volatile__("mrs %0, ELR_EL1\n\t" : "=r" (elr_el1));   // ELR_EL1 holds the address if return to EL1
     unsigned long long esr_el1;
-    __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r" (esr_el1));   // ESR_EL1 holds symdrome information of exception, to know  the cause od that exception
+    __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r" (esr_el1));   // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
     uart_sendline("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\n", spsr_el1, elr_el1, esr_el1);
 }
 
@@ -59,13 +58,13 @@ void el0_irq_64_router(){
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IIR_REG & (0b01 << 1)) //0000 1011 0000 0001 -> 0001 0110 0000 0010
+        if (*AUX_MU_IIR_REG & (0b01 << 1))
         {
             *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             irqtask_run_preemptive();
         }
-        else if (*AUX_MU_IIR_REG & (0b10 << 1)) // 0000 1011 0001 0000 -> 0001 0110 0010 0000
+        else if (*AUX_MU_IIR_REG & (0b10 << 1))
         {
             *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
@@ -83,8 +82,8 @@ void el0_irq_64_router(){
 
 
 void invalid_exception_router(unsigned long long x0){
-    // uart_sendline("invalid exception : 0x%x\r\n",x0);
-    // while(1);
+    //uart_sendline("invalid exception : 0x%x\r\n",x0);
+    //while(1);
 }
 
 // ------------------------------------------------------------------------------------------
@@ -107,7 +106,7 @@ void irqtask_list_init()
 
 
 void irqtask_add(void *task_function,unsigned long long priority){
-    irqtask_t *the_task = kmalloc(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
+    irqtask_t *the_task = s_allocator(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
 
     // store all the related information into irqtask node
     // manually copy the device's buffer
@@ -139,39 +138,31 @@ void irqtask_add(void *task_function,unsigned long long priority){
     el1_interrupt_enable();
 }
 
-extern int exit;
-
-void irqtask_run_preemptive()
-{
-    
+void irqtask_run_preemptive(){
     el1_interrupt_enable();
     while (!list_empty(task_list))
     {
-        // critical section protects new coming task
+        // critical section protects new coming node
         el1_interrupt_disable();
-        // get next task(highest priority) in list which is sorted by priority
         irqtask_t *the_task = (irqtask_t *)task_list->next;
         // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
-            //exit = 1;
             el1_interrupt_enable();
             break;
         }
         // get the scheduled task and run it.
         list_del_entry((struct list_head *)the_task);
-        // the kernel can check the last executing task’s priority before returning to the previous interrupt handler
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
 
         el1_interrupt_enable();
-
         irqtask_run(the_task);
-
         el1_interrupt_disable();
+
         curr_task_priority = prev_task_priority;
         el1_interrupt_enable();
-        free(the_task);
+        s_free(the_task);
     }
 }
 
@@ -179,3 +170,4 @@ void irqtask_run(irqtask_t* the_task)
 {
     ((void (*)())the_task->task_function)();
 }
+
