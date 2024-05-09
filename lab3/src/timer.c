@@ -154,5 +154,7 @@ void timer_interrupt_handler()
         struct timer_event *first = (struct timer_event *) timer_event_queue.next;
         set_expired_time(first->expired_time - get_current_time());
         enable_timer_interrupt();
+    } else { // timer_queue is empty, need to set a bigger time.
+        set_expired_time(1000 + get_current_time());
     }
 }

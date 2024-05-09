@@ -147,14 +147,13 @@ void uart_rx_handler()
 
 void uart_tx_handler()
 {
-	// disable_aux_interrupts();
+	disable_aux_interrupts();
 	while (!write_buffer_empty()) {
 		delay(1 << 28);                // (1 << 28) for qemu
 		uint8_t c = write_buffer_get();
 		uart_send(c);
 	}
 	uart_send('\n');
-	// clr_tx_interrupts();
 }
 
 void uart_async_demo()
