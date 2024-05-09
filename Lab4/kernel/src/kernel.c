@@ -5,12 +5,13 @@
 #include "logo.h"
 #include "memory.h"
 #include "mini_uart.h"
+#include "page_alloc.h"
 #include "shell.h"
 #include "string.h"
 #include "timer.h"
 #include "utils.h"
 
-void kernel_main(uintptr_t x0)
+void kernel_main(uintptr_t dtb_ptr)
 {
     uart_init();
     uart_printf("Welcome to Raspberry Pi 3B+\n");
@@ -22,7 +23,7 @@ void kernel_main(uintptr_t x0)
 
     enable_irq();
 
-    if (!mem_init((uintptr_t)x0))
+    if (!mem_init((uintptr_t)dtb_ptr))
         goto inf_loop;
 
     buddy_init();
