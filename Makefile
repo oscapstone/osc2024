@@ -26,7 +26,7 @@ CFLAGS 		+= --sysroot=/usr/aarch64-linux-gnu \
 			   -I/usr/aarch64-linux-gnu/include/c++/12/aarch64-linux-gnu/
 endif
 
-QEMU_FLAGS 	= -display none -smp cpus=4 \
+QEMU_FLAGS 	= -smp cpus=4 \
 			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb \
 			  $(QEMU_EXT_FLAGS)
 
