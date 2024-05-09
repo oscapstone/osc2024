@@ -153,6 +153,7 @@ sync_el0_64:
   save_all
   mov x0, sp // for trapframe
   bl  el0_64_sync_interrupt_handler
+  bl  check_signal
   load_all
   eret
 irq_el0_64:
