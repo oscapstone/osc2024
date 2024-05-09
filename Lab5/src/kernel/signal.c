@@ -14,23 +14,23 @@ void check_signal(trap_frame_t *tf){
         return;
     }
     current_task->signal_is_checking = 1;
-    //unlock();
+    unlock();
     
     for(int i = 0; i <= NR_SIGNALS; i++){
         // save the context of the process, used for sigret
         store_context(&current_task->signal_saved_context);
         if(current_task->sigcount[i] > 0){
-            //lock();
+            lock();
             //uart_puts("Signal ");
             current_task->sigcount[i]--;
-            //unlock();
+            unlock();
 
             run_signal(tf, i);
             //break;
         }
     }
 
-    //lock();
+    lock();
     current_task->signal_is_checking = 0;
     unlock();
 }
@@ -43,6 +43,7 @@ void run_signal(trap_frame_t *tf, int signal){
     }
 
     char *sig_stk = pool_alloc(THREAD_STK_SIZE);
+    uart_b2x_64((unsigned long long)tf->spsr_el1);
 
     asm("msr elr_el1, %[var1];"
         "msr sp_el0, %[var2];"

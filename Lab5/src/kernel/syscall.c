@@ -133,6 +133,9 @@ void sigreg(int SIGNAL, void (*handler)()){
         return;
     }
     lock();
+    // if(SIGNAL == 9)
+    //     current_task->signal_handler[SIGNAL] = signal_default_handler;
+    // else
     current_task->signal_handler[SIGNAL] = handler;
     unlock();
 }

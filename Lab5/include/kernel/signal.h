@@ -7,6 +7,8 @@
 #include "kernel/syscall.h"
 #include "kernel/lock.h"
 
+#define SIGNAL_KILL 9
+
 extern void store_context(void *context);
 
 void signal_default_handler();
