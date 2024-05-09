@@ -15,8 +15,6 @@ mod timer;
 
 use alloc::boxed::Box;
 use allocator::buddy::BUDDY_SYSTEM;
-#[allow(unused_imports)]
-use allocator::utils::{toggle_buddy_verbose, toggle_bump_verbose, toggle_dynamic_verbose};
 use core::arch::asm;
 use core::time::Duration;
 use stdio::{debug, gets, print, println};
