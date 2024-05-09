@@ -12,6 +12,7 @@ use core::{
     ptr::null_mut,
 };
 
+const PRINT_DEBUG: bool = false;
 const FRAME_MAX_ORDER: u32 = 24;
 const MIN_FRAME_SIZE: usize = 16;
 const MAX_FRAME_SIZE: usize = MIN_FRAME_SIZE * 2usize.pow(FRAME_MAX_ORDER - 1);
@@ -33,10 +34,6 @@ pub unsafe fn init(memory_size: usize) {
     }
 
     let max_frame_num = memory_size / MAX_FRAME_SIZE;
-
-    // print_hex_now(max_frame_num as u32);
-    // loop{}
-
     let max_frame_set = FRAMES.as_mut().unwrap().get_mut(&MAX_FRAME_SIZE).unwrap();
 
     for i in 0..max_frame_num {
@@ -56,18 +53,22 @@ unsafe fn alloc_recursive(size: usize) -> Option<*mut u8> {
                 match alloc_recursive(size * 2) {
                     Some(ptr) => {
                         frame_set.insert(ptr.add(*size));
-                        print_hex_now(ptr as u32);
-                        print_hex_now(*size as u32);
-                        println_now("======");
+                        if PRINT_DEBUG {
+                            print_hex_now(ptr as u32);
+                            print_hex_now(*size as u32);
+                            println_now("======");
+                        }
                         Some(ptr)
                     }
                     None => None,
                 }
             } else {
                 let ptr = frame_set.pop_first().unwrap();
-                print_hex_now(ptr as u32);
-                print_hex_now(*size as u32);
-                println_now("======");
+                if PRINT_DEBUG {
+                    print_hex_now(ptr as u32);
+                    print_hex_now(*size as u32);
+                    println_now("======");
+                }
                 Some(ptr)
             }
         }
@@ -87,16 +88,15 @@ unsafe fn dealloc_iter(ptr: *mut u8, size: usize) -> bool {
     let mut current_ptr = ptr;
 
     while current_size < MAX_FRAME_SIZE {
-        print_hex_now(ptr as u32);
-        print_hex_now(current_size as u32);
-        println_now("======");
+        if PRINT_DEBUG {
+            print_hex_now(current_ptr as u32);
+            print_hex_now(current_size as u32);
+            println_now("======");
+        }
 
         let buddy_ptr = match current_ptr as usize % (current_size * 2) {
             0 => current_ptr.add(current_size),
-            rem => {
-                assert!(rem == current_size, "Invalid dealloc ptr");
-                current_ptr.sub(current_size)
-            }
+            rem => current_ptr.sub(current_size),
         };
 
         let buddy_set = FRAMES.as_mut().unwrap().get_mut(&current_size).unwrap();
@@ -104,8 +104,12 @@ unsafe fn dealloc_iter(ptr: *mut u8, size: usize) -> bool {
         buddy_set.remove(&current_ptr);
 
         if buddy_set.remove(&buddy_ptr) {
-            println_now("Buddy found");
-            print_hex_now(buddy_ptr as u32);
+            if PRINT_DEBUG {
+                println_now("Buddy found");
+                print_hex_now(buddy_ptr as u32);
+                // print_hex_now(current_size as u32);
+                println_now("======");
+            }
 
             current_size *= 2;
             current_ptr = cmp::min(current_ptr, buddy_ptr);
@@ -168,12 +172,16 @@ pub unsafe fn reserve(ptr: *mut u8, size: usize) {
     loop {
         match buddy_set.range(first_frame_ptr..last_frame_ptr).next() {
             Some(frame) => {
-                print_hex_now(frame.clone() as u32);
+                if PRINT_DEBUG {
+                    print_hex_now(frame.clone() as u32);
+                }
                 buddy_set.remove(&frame.clone());
             }
             None => {
-                println_now("=====");
-                break
+                if PRINT_DEBUG {
+                    println_now("=====");
+                }
+                break;
             }
         }
     }
@@ -195,8 +203,10 @@ unsafe impl GlobalAlloc for BuddyAllocator {
 
         match allocate_status {
             Some(ptr) => {
-                println_now("Memory allocated");
-                println_now("");
+                if PRINT_DEBUG {
+                    println_now("Memory allocated");
+                    println_now("");
+                }
                 return ptr;
             }
             None => {
@@ -208,8 +218,10 @@ unsafe impl GlobalAlloc for BuddyAllocator {
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         match dealloc_iter(ptr, layout.size()) {
             true => {
-                println_now("Memory freed");
-                println_now("");
+                if PRINT_DEBUG {
+                    println_now("Memory freed");
+                    println_now("");
+                }
             }
             false => {
                 //print_hex_now(ptr as u32);
