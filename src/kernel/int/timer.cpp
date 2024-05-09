@@ -12,6 +12,9 @@ void timer_init() {
   boot_timer_tick = get_timetick();
   write_sysreg(CNTP_CTL_EL0, 1);
   timers.init();
+
+  // allow EL0 access physical timer
+  write_sysreg(CNTKCTL_EL1, read_sysreg(CNTKCTL_EL1) | 1);
 }
 
 void add_timer(timeval tval, void* context, Timer::fp callback, int prio) {
