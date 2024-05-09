@@ -53,23 +53,27 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
             case 3: uart_puts(" at level 3"); break;
         }
     }
-    // dump registers
+    /* dump registers */
+    // printf(":\n ESR_EL1  %x ELR_EL1 %x\n", esr, elr);
+    // printf(" SPSR_EL1 %x FAR_EL1 %x\n", spsr, far);
     uart_puts(":\n  ESR_EL1 ");
-    uart_hex(esr>>32);
+    // uart_hex(esr>>32);
     uart_hex(esr);
     uart_puts(" ELR_EL1 ");
-    uart_hex(elr>>32);
+    // uart_hex(elr>>32);
     uart_hex(elr);
     uart_puts("\n SPSR_EL1 ");
-    uart_hex(spsr>>32);
+    // uart_hex(spsr>>32);
     uart_hex(spsr);
     uart_puts(" FAR_EL1 ");
-    uart_hex(far>>32);
+    // uart_hex(far>>32);
     uart_hex(far);
     uart_puts("\n");
 
     // no return from exception for now
-    // while(1);
+    while (1) {
+        asm volatile("nop");
+    }
 }
 
 /**
@@ -99,33 +103,28 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     char cmd[64];
 
     if (esr >> 26 != 0b010101) {
-        uart_puts("Not a svc call\n");
         exc_handler(esr, elr, spsr, far);
         return;
     }
     switch (svc_num) {
         case 0: 
+            // uart_puts("svc 0: system call\n");
             syscall_handler(trapframe);
             break;
         case 1:
-            uart_puts("svc 1: user program\n");
-            uart_puts("name :");
+            uart_puts("svc 1: user program\nname :");
             shell_input(cmd);
             initrd_usr_prog(cmd);
             break;
         case 2:
             uart_puts("svc 2: enable timer\n");
             core_timer_enable();
-            // printf("Current time: %d\n", get_current_time());
-            uart_puts("Current time: ");
-            uart_hex(get_current_time());
-            uart_puts("\n");
+            printf("Current time: %d\n", get_current_time());
             break;
         case 3:
             unsigned long timeout;
             char message[64];
-            uart_puts("svc 3: set timeout\n");
-            uart_puts("timeout: ");
+            uart_puts("svc 3: set timeout\ntimeout: ");
             shell_input(cmd);
             timeout = (unsigned long) atoi(cmd);
 
@@ -171,13 +170,14 @@ void uart_interrupt_handler()
             c = (char) (AUX->AUX_MU_IO_REG); // If we take char from AUX_MU_IO, the interrupt will be cleared.
             c = (c == '\r') ? '\n' : c;
 
-            /* Add a tasklet to tl_head */
+#ifdef ENABLE_TASKLET
             tl_pool[UART_TASKLET - 1].data = (unsigned long) c;
             tasklet_add(&tl_pool[UART_TASKLET - 1]);
-            /* Enable other interrupt */
             enable_interrupt();
-            /* Do tasklet */
             do_tasklet();
+#else
+            enqueue_char(&read_buffer, c);
+#endif
         }
     } else
         uart_puts("Unknown uart interrupt\n");
@@ -196,7 +196,7 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
     }
 }
 
-/* Substract the current task counter value */
+/* Substract the current task counter value and call schedule(). */
 void do_timer()
 {
     if (--current->counter > 0)
@@ -204,36 +204,37 @@ void do_timer()
     schedule();
 }
 
+/* Set the next core timer interrupt. Update timer related structure. */
 void core_timer_handler()
 {
+#ifdef ENABLE_TASKLET
     /* Mask the core timer interrupt first. Mask CORE0_TIMER_IRQ_CTRL. Spec says it will be done automatically? */
     *CORE0_TIMER_IRQ_CTRL &= ~(1 << 1);
-
+#endif
     /*     Setup next timer interrupt */
     asm volatile(
         "mrs x0, cntfrq_el0     \n\t"
-        "mov x1, #2             \n\t"
-        "mul x0, x0, x1         \n\t"
+        "lsr x0, x0, #5         \n\t"
         "msr cntp_tval_el0, x0  \n\t");
 
-    /* Add a tasklet to tl_head */
+#ifdef ENABLE_TASKLET
     tasklet_add(&tl_pool[TIMER_TASKLET - 1]);
-    /* Enable other interrupt */
     enable_interrupt();
-    /* Do tasklet */
     do_tasklet();
-
-    // do_timer(); // multi-tasking function.
 
     /* Enable the core timer interrupt */
     *CORE0_TIMER_IRQ_CTRL |= (1 << 1);
+#else
+    timer_update();
+#endif
+
+    do_timer(); // do_timer() may context switch, so we put it after enable the timer interrupt.
 }
 
+/* Print the current exception level. */
 void print_current_el(void)
 {
     unsigned long current_el;
     asm volatile("mrs %0, CurrentEL" : "=r" (current_el));
-    uart_puts("==== CurrentEL: ");
-    uart_hex((current_el >> 2) & 0x3);
-    uart_puts("\n");
+    printf("-- CurrentEL: %d\n", (current_el >> 2) & 0x3);
 }

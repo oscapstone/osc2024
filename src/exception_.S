@@ -18,7 +18,7 @@ from_el2_to_el1:
     msr elr_el2, lr
 
     /* After eret, sp will be setup accordinge to sp_el1 */
-    mov x0, #0x60000
+    ldr x0, =_start
     msr sp_el1, x0
 
     eret // return to EL1
@@ -107,7 +107,7 @@ exception_vector_table:
 
     /* Exception from the current EL while using SP_ELx (x = 1 or 2) */
     .align 7 // synchronous
-    b exception_handler // el1 `svc` triggers this
+    b exception_handler
     .align 7 // irq
     b irq_handler
     .align 7 // fiq

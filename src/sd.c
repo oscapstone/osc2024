@@ -164,7 +164,6 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num)
     return sd_err!=SD_OK || c!=num? 0 : num*512;
 }
 
-
 /**
  * set SD clock to frequency in Hz
  */

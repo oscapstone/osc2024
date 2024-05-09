@@ -1,7 +1,7 @@
 #include "stdlib.h"
 #include "stddef.h"
 
-volatile unsigned long available = 0;
+unsigned long available = 0;
 
 void *simple_malloc(size_t size)
 {

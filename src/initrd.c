@@ -29,6 +29,8 @@
 #include "initrd.h"
 #include "stdint.h"
 #include "memblock.h"
+#include "exec.h"
+#include "mm.h"
 
 #define buf_size 128
 
@@ -126,14 +128,15 @@ void initrd_cat()
     uart_puts("File not found\n");
 }
 
-void initrd_usr_prog(char *cmd)
+/* Return the user program execution address */
+void *_initrd_usr_prog(char *cmd)
 {
-    char *buf = cpio_base, *prog_addr;
+    char *buf = cpio_base, *prog_addr, *prog_page;
     int ns, fs;
     cpio_f *header;
 
     if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
-        return;
+        return NULL;
     
     // if it's a cpio newc archive. Cpio also has a trailer entry
     while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) { // check if it's a cpio newc archive and not the last file
@@ -144,32 +147,37 @@ void initrd_usr_prog(char *cmd)
         // check filename with buffer
         if (!strcmp(cmd, buf + sizeof(cpio_f))) {
             if (fs == 0) {
-                uart_send('\n');
-                uart_puts("user_program is empty.\n");
-                return;
+                printf("\nUser program is empty\n");
+                return NULL;
             } else {
-                uart_puts("\nInto user_program: ");
-                uart_puts(buf + sizeof(cpio_f));
-                uart_puts("\nAddress: ");
-                uart_hex((unsigned long) buf + ALIGN(sizeof(cpio_f) + ns, 4));
-                uart_send('\n');
-                // get program start address
+                printf("\nFound user_program: %s\n", buf + sizeof(cpio_f));
+                /* get program start address */
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
-                // jump to el0 and execute user program.
-                asm volatile("mov x1, 0              \n\t"
-                             "msr spsr_el1, x1       \n\t"
-                             "mov x1, %0             \n\t"
-                             "msr elr_el1, x1        \n\t"
-                             "mov x1, 0x60000        \n\t"
-                             "msr sp_el0, x1         \n\t"
-                             "eret                   \n\t"::"r" (prog_addr));
+                /* Allocate a page and copy the user program to the page. */
+                prog_page = (char *) kmalloc(fs);
+                memmove(prog_page, prog_addr, fs);
+
+                return prog_page;
             }
         }
         // jump to the next file
         buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
-    uart_puts("File not found\n");
+    return NULL;
+}
+
+/* Execute the user program with program name as input parameter. */
+void initrd_usr_prog(char *cmd)
+{
+    char *prog;
+
+    prog = (char *) _initrd_usr_prog(cmd);
+    if (prog != NULL)
+        do_exec((void (*)(void)) prog);
+    else
+        uart_puts("File not found\n");
+    return;
 }
 
 void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
@@ -177,9 +185,7 @@ void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
         cpio_base = (char *)((unsigned long)bswap_32(load_addr));
-        uart_puts("==== cpio_base: ");
-        uart_hex((unsigned long)cpio_base);
-        uart_send('\n');
+        printf("-- cpio_base: %x\n", cpio_base);
     }
 }
 
@@ -189,19 +195,20 @@ void initrd_reserve_memory(void)
     char *buf = cpio_base;
     int ns, fs;
 
-    if (memcmp(buf, "070701", 6)) // check if it's a cpio newc archive
+    /* check if it's a cpio newc archive. */
+    if (memcmp(buf, "070701", 6))
         return;
 
-    // if it's a cpio newc archive. Cpio also has a trailer entry
+    /* if it's a cpio newc archive. Cpio also has a trailer entry */
     while(memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) {
         header = (cpio_f*) buf;
         ns = hex2bin(header->namesize, 8);
         fs = ALIGN(hex2bin(header->filesize, 8), 4);
 
-        // jump to the next file
+        /* jump to the next file */
         buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
     }
-    // reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns
+    /* reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns */
     buf += ALIGN(sizeof(cpio_f) + 10, 4);
     memblock_reserve((unsigned long) cpio_base, ALIGN(buf - cpio_base, 8));
 }

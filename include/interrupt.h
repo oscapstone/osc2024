@@ -17,7 +17,7 @@ struct tasklet_struct {
 	struct tasklet_struct *next;
 	unsigned long state; // Use it to store priority.
 	void (*func)(unsigned long);
-	volatile unsigned long data;
+	unsigned long data;
 };
 
 /* Ref: kernel/softirq.c */

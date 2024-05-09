@@ -22,17 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-// extern volatile unsigned char _binary_ramdisk_start;
 #ifndef INITRD_H
 #define INITRD_H
 
 #include "dtb.h"
 
 extern char *cpio_base;
-
-// void initrd_list(char *buf);
-// void initrd_ls(char *buf);
-// void initrd_cat(char *buf);
 
 void initrd_list();
 void initrd_ls();

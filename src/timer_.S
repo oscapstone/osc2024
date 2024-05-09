@@ -5,7 +5,12 @@ core_timer_enable:
     mov x0, 1
     msr cntp_ctl_el0, x0            // enable
 
+    mrs x0, cntkctl_el1
+    orr x0, x0, #1
+    msr cntkctl_el1, x0
+
     mrs x0, cntfrq_el0              // get timer frequency
+    lsr x0, x0, #5
     msr cntp_tval_el0, x0           // set expired time
     
     mov x0, 2

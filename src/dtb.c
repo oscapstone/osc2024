@@ -12,10 +12,15 @@ extern uint64_t __dtb_address;
 
 fdt_header *dtb_address;
 
+/* Initialize the device tree blob and cpio base address. */
 void fdt_init()
 {
     uint64_t *tmp_pointer = (uint64_t *) &__dtb_address;
     dtb_address = (fdt_header *) *tmp_pointer;
+    // dtb_address = 0x8200000;
+
+    fdt_traverse(initramfs_callback);
+    printf("==== init: DTB & INITRD\n");
 }
 
 void fdt_reserve_memory(void)

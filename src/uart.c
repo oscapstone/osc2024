@@ -31,8 +31,6 @@
 #include "queue.h" // for async uart
 #include "demo.h"
 
-extern unsigned char _end;
-
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
  */
@@ -131,7 +129,9 @@ void printf(char *fmt, ...)
     __builtin_va_start(args, fmt);
     // we don't have memory allocation yet, so we
     // simply place our string after our code
-    char *s = (char*)&_end;
+    static char tmp[32];
+    // char *s = (char*)&_end;
+    char *s = tmp;
     // use sprintf to format our string
     vsprintf(s,fmt,args);
     // print out as usual
@@ -219,18 +219,9 @@ int uart_async_gets(char *buf)
     return i;
 }
 
-/* uart_tasklet: do enqueue read buffer */
+/* Do enqueue read buffer */
 void uart_tasklet(unsigned long data)
 {
-#ifdef DEMO
-    uart_puts("Into uart_tasklet\n");
-#endif
-
     char c = (char)data;
     enqueue_char(&read_buffer, c);
-
-#ifdef DEMO
-    wait_cycles(5000000); // For demo nested irq in raspi 3b+, this delay is enough.
-    uart_puts("Exit uart_tasklet\n");
-#endif
 }

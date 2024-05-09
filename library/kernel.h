@@ -1,11 +1,16 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
+/* If DEBUG_MULTITASKING is defined, some logs in kernel for multi-tasking will be printed out. */
+// #define DEBUG_MULTITASKING
+/* If DEBUG_SYSCALL is defined, some logs in kernel for system call will be printed out. */
+// #define DEBUG_SYSCALL
+
 #define	EPERM		 1	/* Operation not permitted */
 #define	ENOENT		 2	/* No such file or directory */
 #define	ESRCH		 3	/* No such process */
 #define	EINTR		 4	/* Interrupted system call */
-#define	EIO		 5	/* I/O error */
+#define	EIO		     5	/* I/O error */
 #define	ENXIO		 6	/* No such device or address */
 #define	E2BIG		 7	/* Argument list too long */
 #define	ENOEXEC		 8	/* Exec format error */
@@ -43,6 +48,7 @@
 
 #define clamp(val, lo, hi) (min((max(val, lo)), (hi)))
 
+/* memmove: move 'n' byte from 'src' to 'dest'. */
 static inline void memmove(void *dest, const void *src, unsigned int n) {
     char *csrc = (char *)src;
     char *cdest = (char *)dest;
@@ -53,6 +59,5 @@ static inline void memmove(void *dest, const void *src, unsigned int n) {
         for (int i = 0; i < n; i++)
             cdest[i] = csrc[i];
 }
-
 
 #endif

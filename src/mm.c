@@ -165,14 +165,13 @@ static inline void page_frame_init(void)
     unsigned int i;
 
     /* Setup the number of pages from memblock.current_limit. */
-    nr_pages = (memblock.current_limit >> 12) + 1;
+    nr_pages = (memblock.current_limit >> 12);
 
     /* Allocate memory from memblock. */
-    mem_map = (struct page *) memblock_phys_alloc(sizeof(struct page) * NR_PAGES);
+    mem_map = (struct page *) memblock_phys_alloc(sizeof(struct page) * nr_pages);
 
     /* Initialize page structure*/
     for_each_memblock_type(i, &memblock.reserved, rgn) {
-        // printf("Reserved: %x - %x\n", rgn->base, rgn->base + rgn->size);
         for (unsigned long pfn = rgn->base >> 12; pfn < (rgn->base + rgn->size) >> 12; pfn++) {
             mem_map[pfn].flags = PG_RESERVED;
             INIT_LIST_HEAD(&(mem_map[pfn].buddy_list));
@@ -237,8 +236,6 @@ static inline void expand(struct page *page, unsigned int low_order, unsigned in
         high_order--;
         size >>= 1;
 
-        /* In linux kernel, there's a procedure named `set_page_guard()`. But I don't understand its purpose (seems like debug information), skip it for now.*/
-
 #ifdef DEMO
         if (isDemo) {
             uart_puts("[expand] insert page: ");
@@ -287,6 +284,7 @@ static inline struct page *__rmqueue_smallest(unsigned int order)
 
         /* Setup page.flags to PG_USED */
         page->flags = PG_USED;
+
         return page;
     }
     return NULL;
@@ -312,7 +310,7 @@ void buddy_init(void)
     page_frame_init();
 }
 
-/* Init buddy system and slab allocator. */
+/* Initialize the memory management: memblock, buddy, slab. */
 void mm_init(void)
 {
     memblock_init();
@@ -330,7 +328,8 @@ void free_one_page(struct page *page, unsigned long pfn, unsigned int order)
 {
     /* Just make sure the page is from buddy system. */
     if (page->flags != PG_USED) {
-        printf("Error: Try to free a page that is not allocated from buddy system.\n");
+        printf("Error: Try to page %x order %d, which is not allocated from buddy system (flag %x).\n", pfn_to_phys(pfn), order, page->flags);
+        while (1);
         return;
     }
     /* Linux kernel use spin_lock to protect critical region (buddy system), but I didn't implement it for now. */
@@ -341,21 +340,11 @@ void free_one_page(struct page *page, unsigned long pfn, unsigned int order)
 /* Get the memory information. */
 void get_buddy_info(void)
 {
-    // printf("\n=====================\nBuddy System Information\n-------------------\n");
-    // for (int i = 0; i < MAX_ORDER; i++) {
-    //     printf("Order %d free pages: %d\n", i, zone.free_area[i].nr_free);
-    // }
-    // printf("=====================\n\n");
-
-    uart_puts("\n=====================\nBuddy System Information\n-------------------\n");
+    printf("\n=====================\nBuddy System Information\n-------------------\n");
     for (int i = 0; i < MAX_ORDER; i++) {
-        uart_puts("Order ");
-        uart_hex(i);
-        uart_puts(" free pages: ");
-        uart_hex(zone.free_area[i].nr_free);
-        uart_send('\n');
+        printf("Order %d free pages: %d\n", i, zone.free_area[i].nr_free);
     }
-    uart_puts("=====================\n\n");
+    printf("=====================\n\n");
 }
 
 /* Kernel memory allocate, return physical address. */

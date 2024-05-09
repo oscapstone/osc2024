@@ -9,107 +9,46 @@
 #include "mm.h"
 #include "memblock.h"
 
-void demo_task1()
-{
-    while (1) {
-        uart_puts("demo task1\n");
-        wait_sec(1);
-        schedule();
-        // context_switch(&task_pool[2]); // for requirement 1-3
-    }
-}
-
-void demo_task2()
-{
-    while (1) {
-        uart_puts("demo task2\n");
-        wait_sec(1);
-        schedule();
-        // context_switch(&task_pool[1]); // for requirement 1-3
-    }
-}
-
-void timer_task1()
-{
-    while (1) {
-        uart_puts("kernel timer task1.\n");
-        wait_sec(10);
-    }
-}
-
-void timer_task2()
-{
-    while (1) {
-        uart_puts("kernel timer task2.\n");
-        wait_sec(10);
-    }
-}
-
-void user_task1()
-{
-    while (1) {
-        uart_puts("user task1\n");
-        int count = 1000000000;
-        while (count--);
-    }
-}
-
-void user_task2()
-{
-    while (1) {
-        uart_puts("user task2\n");
-        int count = 1000000000;
-        while (count--);
-    }
-}
-
-void demo_do_exec1()
-{
-    do_exec(user_task1);
-}
-
-void demo_do_exec2()
-{
-    do_exec(user_task2);
-}
-
+/* Only in demo.c, for delay usage. */
 void delay()
 {
-    long count = 1000000; // 1000000000 can see the effect of multi-tasking, or I should increase the frequency of timer interrupt.
-    while (count--);
+    long count = 10000000000; // 10000000000 in qemu can see pid 3; 100000000 in raspi 3 can see pid 3.
+    while (count--) {
+        asm volatile("nop");
+    };
 }
 
-void foo(){
-    int tmp = 5;
-    printf("Task %d after exec, tmp address 0x%x, tmp value %d\n", get_taskid(), &tmp, tmp);
-    exit(0);
-}
-
-/* At user space, not allowed to access timer */
-void test() {
-    printf("Into test()\n");
-    int cnt = 1;
-    if (fork() == 0) {
-        fork();
-        delay();
-        fork();
-        while(cnt < 10) {
-            printf("Task id: %d, cnt: %d\n", get_taskid(), cnt);
-            delay();
-            ++cnt;
-        }
-        printf("Child task %d done before exit\n", get_taskid());
-        exit(0);
-        printf("Should not be printed\n");
-    } else {
-        printf("Task %d before exec, cnt address 0x%x, cnt value %d\n", get_taskid(), &cnt, cnt);
-        exec(foo);
-    }
-}
-
-void user_test()
+/* osc2024, demo system calls. */
+void fork_test(void)
 {
-    do_exec(test);
+    printf("\nFork Test, pid %d\n", get_taskid());
+    int cnt = 1, ret = 0;
+    if ((ret = fork()) == 0) { // child
+        long long cur_sp;
+        asm volatile("mov %0, sp" : "=r"(cur_sp));
+        printf("first child, pid %d, cnt: %d, ptr: %x, sp: %x\n", get_taskid(), cnt, &cnt, cur_sp);
+        ++cnt;
+
+        if ((ret = fork()) != 0) {
+            delay();
+            asm volatile("mov %0, sp" : "=r"(cur_sp));
+            printf("first child, pid: %d, cnt: %d, ptr: %x, sp: %x\n", get_taskid(), cnt, &cnt, cur_sp);
+        } else {
+            while (cnt < 5) {
+                asm volatile("mov %0, sp" : "=r"(cur_sp));
+                printf("second child, pid: %d, cnt: %d, ptr: %x, sp: %x\n", get_taskid(), cnt, &cnt, cur_sp);
+                delay();
+                ++cnt;
+            }
+        }
+        printf("child %d exit.\n", get_taskid());
+        exit(0);
+    } else {
+        printf("parent here, pid %d, child %d\n", get_taskid(), ret);
+        delay();
+        printf("parent exit.\n");
+        exit(0);
+    }
 }
 
 /* Lab 3 Basic Exercise 3: Asynchronous UART */
@@ -152,31 +91,16 @@ void demo_memory_allocator(void)
 {
     char *addr[10];
     int tmp = 6;
-    
-    /* Test memblock allocation */
-    // uart_puts("\n==Test memblock, allocate 16 bytes for 3 times.==\n");
-    // addr[0] = (char *) memblock_phys_alloc(16);
-    // uart_puts("addr: ");
-    // uart_hex((unsigned int) addr[0]);
-    // uart_puts("\n\n");
-    // addr[1] = (char *) memblock_phys_alloc(16);
-    // uart_puts("addr: ");
-    // uart_hex((unsigned int) addr[1]);
-    // uart_puts("\n\n");
-    // addr[2] = (char *) memblock_phys_alloc(16);
-    // uart_puts("addr: ");
-    // uart_hex((unsigned int) addr[2]);
-    // uart_puts("\n\n");
 
     /* Print the reservation information (printf has bugs, so print in qemu for now) */
-    // print_memblock_info();
+    print_memblock_info();
 
     get_buddy_info();
     uart_puts("==Get order 2 page for 6 times==\n\n");
     for (int i = 0; i < tmp; i++) {
         addr[i] = (char *) kmalloc(4096 << 2);
         uart_puts("addr: ");
-        uart_hex((unsigned int) addr[i]);
+        uart_hex((unsigned long) addr[i]);
         uart_puts("\n\n");
     }
     get_buddy_info();
@@ -189,25 +113,25 @@ void demo_memory_allocator(void)
     addr[0] = (char *) kmalloc(8);
     uart_puts("Get 8 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[0]);
+    uart_hex((unsigned long) addr[0]);
     uart_send('\n');
 
     addr[0] = (char *) kmalloc(8);
     uart_puts("Get 8 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[0]);
+    uart_hex((unsigned long) addr[0]);
     uart_send('\n');
 
     addr[1] = (char *) kmalloc(16);
     uart_puts("Get 16 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[1]);
+    uart_hex((unsigned long) addr[1]);
     uart_send('\n');
 
     addr[2] = (char *) kmalloc(16);
     uart_puts("Get 16 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[2]);
+    uart_hex((unsigned long) addr[2]);
     uart_send('\n');
 
     uart_puts("Free the previous 16 bytes\n");
@@ -216,6 +140,12 @@ void demo_memory_allocator(void)
     addr[1] = (char *) kmalloc(16);
     uart_puts("Get 16 bytes memory ");
     uart_puts("addr: ");
-    uart_hex((unsigned int) addr[1]);
+    uart_hex((unsigned long) addr[1]);
     uart_send('\n');
+}
+
+/* Demo osc2024 lab 5: fork test. */
+void demo_fork_test(void)
+{
+    do_exec(fork_test);
 }

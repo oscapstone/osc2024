@@ -4,11 +4,17 @@
 #include "power.h"
 #include "initrd.h"
 #include "demo.h"
+#include "syscall.h"
+#include "exception.h"
+#include "exec.h"
 
+#define CMD_LEN 128
+
+/* Initialize UART and print Hello message. */
 void shell_init()
 {
     uart_init();
-    uart_puts("\n\n Hello from Raspi 3b+\n");
+    uart_puts("\n\n Hello from Raspi 3b+\n==== init: UART\n");
 }
 
 void shell_input(char *cmd)
@@ -64,4 +70,23 @@ void shell_controller(char *cmd)
     } else {
         uart_puts("shell: command not found\n");
     }
+}
+
+/* do shell job, can be run in user mode or kernel mode. */
+void do_shell_user(void)
+{
+    while (1) {
+        uart_puts("# ");
+        char cmd[CMD_LEN];
+        shell_input(cmd);
+        shell_controller(cmd);
+    }
+}
+
+/* shell: kernel task. */
+void do_shell(void)
+{
+    // do_exec(do_shell_user);
+    move_to_user_mode();
+    exec("syscall.img", NULL);
 }
