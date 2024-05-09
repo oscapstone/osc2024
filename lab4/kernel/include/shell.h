@@ -31,6 +31,7 @@ void do_cmd_kmalloc(char* size);
 void do_cmd_kfree(char* addr);
 void do_cmd_page_addr();
 void do_cmd_chunk_addr();
+void do_cmd_page_idx();
 void do_cmd_reboot();
 
 #endif /* _SHELL_H_ */

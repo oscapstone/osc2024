@@ -52,8 +52,8 @@ frame_t *release_redundant(frame_t *frame);
 frame_t *get_buddy(frame_t *frame);
 int      coalesce(frame_t *frame_ptr);
 
-void dump_page_info();
-void dump_chunk_info();
+void page_info();
+void chunk_info();
 
 //buddy system
 void* page_malloc(unsigned int size);

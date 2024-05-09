@@ -102,13 +102,16 @@ void cli_cmd_exec(char* buffer)
     {
         do_cmd_kfree(argvs);
     
-    } else if (strcmp(cmd, "page_addr"))
+    } else if (strcmp(cmd, "page_addr") == 0)
     {
         do_cmd_page_addr();
-    } else if (strcmp(cmd, "chunk_addr"))
+    } else if (strcmp(cmd, "chunk_addr") == 0)
     {
         do_cmd_chunk_addr();
-    } else if (strcmp(cmd, "reboot") == 0)
+    } else if (strcmp(cmd, "page_idx") == 0)
+    {
+        do_cmd_page_idx();
+    }else if (strcmp(cmd, "reboot") == 0)
     {
         do_cmd_reboot();
     }
@@ -374,21 +377,21 @@ void do_cmd_set2sAlert()
 }
 
 void do_cmd_kmalloc(char* size) {
-    uart_puts("size (Bytes): ");
+    page_info();
+    uart_sendline("size (Bytes): ");
     cli_cmd_read(size);
     void* address = kmalloc((unsigned int)atoi(size));
     uintptr_t address_int = (uintptr_t)address;
-    
-    uart_puts("address: 0x");
+    uart_sendline("address: 0x");
     uart_2hex((unsigned int)address_int);
-    uart_puts("\n");
+    uart_sendline("\n");
 }
 
 void do_cmd_kfree(char* addr) {
-    uart_puts("address: ");
+    uart_sendline("address: ");
     cli_cmd_read(addr);
     kfree((void*)str_to_hex(addr));
-    uart_puts("\n");
+    uart_sendline("\n");
 }
 // void do_cmd_buddy_system_alloc(char *size)
 // {
@@ -417,6 +420,11 @@ void do_cmd_page_addr()
 void do_cmd_chunk_addr()
 {
     print_allocated_chunks_addr();
+}
+
+void do_cmd_page_idx()
+{
+    print_allocated_pages_index();
 }
 
 void do_cmd_reboot()

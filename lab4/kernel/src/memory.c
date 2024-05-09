@@ -3,6 +3,7 @@
 #include "uart1.h"
 #include "exception.h"
 #include "dtb.h"
+#include "shell.h"
 
 extern char  _heap_top;
 static char* htop_ptr = &_heap_top;
@@ -50,7 +51,7 @@ void init_allocator()
     for (int i = 0; i < BUDDY_MEMORY_PAGE_COUNT; i++)
     {
         if (i % (1 << FRAME_IDX_FINAL) == 0)
-        {//val : order
+        {   //val : order
             frame_array[i].val = FRAME_IDX_FINAL;
             frame_array[i].used = FRAME_FREE;
         }
@@ -93,98 +94,14 @@ void init_allocator()
     uart_sendline("buddy system: usable memory region: 0x%x ~ 0x%x\n", BUDDY_MEMORY_BASE, BUDDY_MEMORY_BASE + BUDDY_MEMORY_PAGE_COUNT * PAGESIZE);
     dtb_find_and_store_reserved_memory(); // find spin tables in dtb
     memory_reserve((unsigned long long) & _start, (unsigned long long) & _end); // kernel
-    memory_reserve((unsigned long long) & _heap_top, (unsigned long long) & _stack_top);  // heap & stack -> simple allocator
     memory_reserve((unsigned long long)CPIO_DEFAULT_START, (unsigned long long)CPIO_DEFAULT_END);
 }
-
-// void print_allocated_pages_addr() {
-//     uart_sendline("Currently allocated addresses:");
-//     int allocated_count = 0;
-
-//     for (int i = 0; i < BUDDY_MEMORY_PAGE_COUNT; i++) {
-//         if (frame_array[i].used == FRAME_ALLOCATED) {
-//             unsigned long long address = BUDDY_MEMORY_BASE + (i * PAGESIZE);
-//             uart_sendline(" 0x%x", address);
-//             allocated_count++;
-//         }
-//     }
-
-//     if (allocated_count == 0) {
-//         uart_sendline(" No allocated addresses currently.\n");
-//     } else {
-//         uart_sendline("\nTotal allocated addresses: %d.\n", allocated_count);
-//     }
-
-//     uart_sendline("----------------------------\n");
-// }
-
-// struct frame_t *list_entry(struct list_head *list) {
-//     // 根據你的情況調整偏移量，以獲取 frame_t 結構
-//     return (struct frame_t *)((char *)list - offsetof(struct frame_t, list));
-// }
-
-
-void print_allocated_pages_addr()
-{
-    // struct list_head *tmp;
-    // uart_sendline("\n------- BS free list -------\n");
-    // for (int i = 0; i < FRAME_MAX_IDX; i++) {
-    //     uart_sendline("Order ");
-    //     if (i < 10) uart_sendline(" ");
-    //     uart_sendline("%d free list index: ",i);
-    //     list_for_each(tmp, &frame_freelist[i])
-    //     {
-    //         // uart_2hex(list_entry(tmp, struct frame_t, list)->idx);
-    //         struct frame_t *frame = get_frame_from_list(tmp);
-    //         uart_2hex(frame->idx);
-    //         uart_sendline(" ");
-    //     }
-    //     uart_sendline("\n");
-    // }
-    // uart_sendline("\n----------------------------\n");
-
-    // return;
-}
-
-void print_allocated_chunks_addr() {
-    uart_sendline("Currently allocated chunk addresses:");
-    int allocated_count = 0;
-
-    // 遍歷所有的 chunk 清單，找出被分配的 chunk 地址
-    for (int i = CHUNK_IDX_0; i <= CHUNK_IDX_FINAL; i++) {
-        int chunk_size = (32 << i);  // 取得每個 chunk 大小
-        list_head_t *current = chunk_list[i].next;
-
-        // 列印每個未在空閒清單中的 chunk 地址
-        while (current != &chunk_list[i]) {
-            char *chunk_address = (char *)current;
-            frame_t *page_frame = &frame_array[((unsigned long long)chunk_address - BUDDY_MEMORY_BASE) >> 12];
-
-            // 檢查該 chunk 是否被分配：不在當前 chunk 清單即為分配
-            if (page_frame->chunk_order != i) {
-                uart_sendline(" 0x%x (size: %dB)", chunk_address, chunk_size);
-                allocated_count++;
-            }
-
-            current = current->next;
-        }
-    }
-
-    if (allocated_count == 0) {
-        uart_sendline(" No allocated chunks currently.\n");
-    } else {
-        uart_sendline("\nTotal allocated chunks: %d.\n", allocated_count);
-    }
-
-    uart_sendline("----------------------------\n");
-}
-
 
 void* page_malloc(unsigned int size)
 {
     uart_sendline("    [+] Allocate page - size : %d(0x%x)\r\n", size, size);
     uart_sendline("        Before\r\n");
-    dump_page_info();
+    page_info();
 
     int target_order;
     // turn size into minimum 4KB * 2**target_order
@@ -209,6 +126,7 @@ void* page_malloc(unsigned int size)
     int order;
     for (order = target_order; order <= FRAME_IDX_FINAL; order++)
     {
+        // 如果有的話跳出執行
         // freelist does not have 2**i order frame, going for next order
         if (!list_empty(&frame_freelist[order]))
             break;
@@ -221,6 +139,7 @@ void* page_malloc(unsigned int size)
 
     // get the available frame from freelist
     // 找當前order的freelist的第一個frame
+    // current order is the closest freelist node
     frame_t* target_frame_ptr = (frame_t*)frame_freelist[order].next;
     list_del_entry((struct list_head*)target_frame_ptr);
 
@@ -237,8 +156,8 @@ void* page_malloc(unsigned int size)
         unsigned long right_block_start = left_block_end + 1;
         unsigned long right_block_end = right_block_start + (PAGESIZE << (j - 1)) - 1;
 
-        //uart_sendline("dump_page_info big to small:\n");
-        // dump_page_info();
+        //uart_sendline("page_info big to small:\n");
+        // page_info();
         // // 輸出分割訊息
         uart_sendline("Split 0x%x to 0x%x ~ 0x%x and 0x%x ~ 0x%x\n",
             (unsigned int)frame_base,
@@ -254,7 +173,7 @@ void* page_malloc(unsigned int size)
     target_frame_ptr->used = FRAME_ALLOCATED;
     uart_sendline("        physical address : 0x%x\n", BUDDY_MEMORY_BASE + (PAGESIZE * (target_frame_ptr->idx)));
     uart_sendline("        After\r\n");
-    dump_page_info();
+    page_info();
 
     return (void*)BUDDY_MEMORY_BASE + (PAGESIZE * (target_frame_ptr->idx));
 }
@@ -265,12 +184,12 @@ void page_free(void* ptr)
     frame_t* target_frame_ptr = &frame_array[((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12]; // PAGESIZE * Available Region -> 0x1000 * 0x10000000 // SPEC #1, #2
     uart_sendline("    [+] Free page: 0x%x, val = %d\r\n", ptr, target_frame_ptr->val);
     uart_sendline("        Before\r\n");
-    dump_page_info();
+    page_info();
     target_frame_ptr->used = FRAME_FREE;
     while (coalesce(target_frame_ptr) == 0); // merge buddy iteratively
     list_add(&target_frame_ptr->listhead, &frame_freelist[target_frame_ptr->val]);
     uart_sendline("        After\r\n");
-    dump_page_info();
+    page_info();
 }
 
 frame_t* release_redundant(frame_t* frame)//split
@@ -282,7 +201,7 @@ frame_t* release_redundant(frame_t* frame)//split
     frame_t* buddyptr = get_buddy(frame);
     buddyptr->val = frame->val;
     list_add(&buddyptr->listhead, &frame_freelist[buddyptr->val]);
-    //dump_page_info();
+    //page_info();
     return frame;
 }
 
@@ -314,7 +233,7 @@ int coalesce(frame_t* frame_ptr)
     return 0;
 }
 
-void dump_page_info()
+void page_info()
 {
     unsigned int exp2 = 1;
     uart_sendline("        ----------------- [  Number of Available Page Blocks  ] -----------------\r\n        | ");
@@ -329,7 +248,7 @@ void dump_page_info()
     uart_sendline("|\r\n");
 }
 
-void dump_chunk_info()
+void chunk_info()
 {
     unsigned int exp2 = 1;
     uart_sendline("    -- [  Number of Available Chunk Blocks ] --\r\n    | ");
@@ -364,7 +283,7 @@ void* chunk_malloc(unsigned int size)
 {
     uart_sendline("[+] Allocate chunk - size : %d(0x%x)\r\n", size, size);
     uart_sendline("    Before\r\n");
-    dump_chunk_info();
+    chunk_info();
 
     // turn size into chunk order: 32B * 2**target_order
     int target_order;
@@ -383,7 +302,7 @@ void* chunk_malloc(unsigned int size)
     list_del_entry(r);
     uart_sendline("    physical address : 0x%x\n", r);
     uart_sendline("    After\r\n");
-    dump_chunk_info();
+    chunk_info();
     return r;
 }
 
@@ -406,10 +325,21 @@ int all_chunks_free_in_page(frame_t* page_frame)
             free_chunks_count++;
         }
     }
+    if (free_chunks_count == num_chunks_in_page)
+    {
+        list_for_each(current, &chunk_list[chunk_order])
+        {
+            if ((unsigned long long)current >= page_start && (unsigned long long)current < page_end) {
+                list_del_entry(current);
+            }
+        }
+
+    }
 
     // 如果該頁面內所有 chunk 都已釋放，則返回 true
     return (free_chunks_count == num_chunks_in_page);
 }
+
 
 void chunk_free(void* ptr)
 {
@@ -417,10 +347,10 @@ void chunk_free(void* ptr)
     frame_t* pageframe_ptr = &frame_array[((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12];
     uart_sendline("[+] Free chunk: 0x%x, val = %d\r\n", ptr, pageframe_ptr->chunk_order);
     uart_sendline("    Before\r\n");
-    dump_chunk_info();
+    chunk_info();
     list_add(c, &chunk_list[pageframe_ptr->chunk_order]);
     uart_sendline("    After\r\n");
-    dump_chunk_info();
+    chunk_info();
     // uart_sendline("%d", 32 * pageframe_ptr->chunk_order << 1 * list_size(&chunk_list[pageframe_ptr->chunk_order]));
     // if (32 * 1<<pageframe_ptr->chunk_order * list_size(&chunk_list[pageframe_ptr->chunk_order]) == PAGESIZE)
     // {
@@ -469,13 +399,14 @@ void kfree(void* ptr)
 
 void memory_reserve(unsigned long long start, unsigned long long end)
 {
+    char input_buffer[1];
     start -= start % PAGESIZE; // floor (align 0x1000)
     end = end % PAGESIZE ? end + PAGESIZE - (end % PAGESIZE) : end; // ceiling (align 0x1000)
 
     uart_sendline("Reserved Memory: ");
     uart_sendline("start 0x%x ~ ", start);
     uart_sendline("end 0x%x\r\n", end);
-
+    
     // delete page from free list
     for (int order = FRAME_IDX_FINAL; order >= 0; order--)
     {
@@ -489,12 +420,12 @@ void memory_reserve(unsigned long long start, unsigned long long end)
             {
                 ((frame_t*)pos)->used = FRAME_ALLOCATED;
                 uart_sendline("    [!] Reserved page in 0x%x - 0x%x\n", pagestart, pageend);
-                // uart_sendline("        Before\n");
-                // dump_page_info();
-                // list_del_entry(pos);
-                // uart_sendline("        Remove usable block for reserved memory: order %d\r\n", order);
-                // uart_sendline("        After\n");
-                // dump_page_info();
+                uart_sendline("        Before\n");
+                page_info();
+                list_del_entry(pos);
+                uart_sendline("        Remove usable block for reserved memory: order %d\r\n", order);
+                uart_sendline("        After\n");
+                page_info();
             } else if (start >= pageend || end <= pagestart) // no intersection
             {
                 continue;
@@ -502,9 +433,78 @@ void memory_reserve(unsigned long long start, unsigned long long end)
             {
                 list_del_entry(pos);
                 list_head_t* temppos = pos->prev;
+                // split current frame ptr and add it to free list
                 list_add(&release_redundant((frame_t*)pos)->listhead, &frame_freelist[order - 1]);// recursion reduant memory
                 pos = temppos;
             }
         }
     }
+    cli_cmd_read(input_buffer);
+    page_info();
+}
+
+void print_allocated_pages_addr()
+{
+    struct list_head *tmp;
+    uart_sendline("\n------- BS free list -------\n");
+    for (int i = 0; i < FRAME_MAX_IDX; i++) {
+        uart_sendline("Order ");
+        if (i < 10) uart_sendline(" ");
+        uart_sendline("%d free list address: ",i);
+        list_for_each(tmp, &frame_freelist[i])
+        {
+            // uart_2hex(list_entry(tmp, struct frame_t, list)->idx);
+            struct frame* frame = tmp;//get_frame_from_list(tmp);
+            uart_2hex(frame->idx<<12);
+            //uart_sendline("%x", frame->idx);
+            uart_sendline(" ");
+        }
+        uart_sendline("\n");
+    }
+    uart_sendline("\n----------------------------\n");
+
+    //print_allocated_pages_index();
+    return;
+}
+
+void print_allocated_pages_index() {
+    uart_sendline("Currently allocated address:");
+    int allocated_count = 0;
+
+    for (int i = 0; i < MAX_PAGES; i++) {
+        if (frame_array[i].used == FRAME_ALLOCATED) {
+            uart_sendline(" %x ",i<<12);
+            //uart_2hex(i);
+            //uart_sendline(" ");
+            allocated_count++;
+        }
+    }
+
+    if (allocated_count == 0) {
+        uart_sendline(" No allocations currently.\n");
+    } else {
+        uart_sendline("\nTotal allocated blocks: %d blocks.\n",allocated_count);
+    }
+    
+    uart_sendline("----------------------------\n");
+}
+
+void print_allocated_chunks_addr() {
+    uart_sendline("\n------- Chunk List -------\n");
+    for (int i = CHUNK_IDX_0; i <= CHUNK_IDX_FINAL; i++) {
+        uart_sendline("Order %d (size: %d bytes) address: ", i, 32 << i);
+        struct list_head *tmp;
+        
+        // 遍歷指定 order 的 chunk 列表
+        list_for_each(tmp, &chunk_list[i]) {
+            struct list_head *chunk = tmp;
+            // 計算 chunk 的起始地址
+            unsigned long long chunk_address = (unsigned long long)chunk;
+            
+            uart_2hex(chunk_address);
+            uart_sendline(" ");
+        }
+        uart_sendline("\n");
+    }
+    uart_sendline("\n-------------------------\n");
 }
