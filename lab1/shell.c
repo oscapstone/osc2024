@@ -1,87 +1,107 @@
 #include "shell.h"
-#include "command.h"
-#include "string.h"
+#include "mbox.h"
+#include "power.h"
 #include "uart.h"
+#include "utils.h"
 
-void shell_start() {
-  int buffer_counter = 0;
-  char input_char;
-  char buffer[MAX_BUFFER_LEN];
-  enum SPECIAL_CHARACTER input_parse;
+void show_banner() {
+  uart_send("\n\n\r\x1B[2J\x1B[H");
+  uart_send("======================================================\n");
+  uart_send("||                                                  ||\n");
+  uart_send("||           Raspberry Pi Mini UART Shell           ||\n");
+  uart_send("||                                                  ||\n");
+  uart_send("======================================================\n");
+  uart_send("Type 'help' for a list of available commands.\n");
+}
 
-  strset(buffer, 0, MAX_BUFFER_LEN);
+void shell_run() {
+  char cmd[MAX_CMD_LEN];
+  int cur_pos = 0, end_pos = 0;
+  show_banner();
 
-  // new line head
-  uart_puts("# ");
-
-  // read input
   while (1) {
-    input_char = uart_getc();
+    uart_send("# ");
+    end_pos = 0, cur_pos = 0;
+    char c = '\0';
+    for (int i = 0; i < MAX_CMD_LEN; i++) {
+      cmd[i] = '\0';
+    }
 
-    input_parse = parse(input_char);
+    do {
+      c = uart_getc();
+      if (c < 0 || c >= 128)
+        continue;
 
-    command_controller(input_parse, input_char, buffer, &buffer_counter);
+      if (c == '\n') {
+        uart_send("\n");
+        cmd[end_pos] = '\0';
+        break;
+      } else if (c == '\b' || c == 0x7F) {
+        if (cur_pos > 0) {
+          cur_pos--, end_pos--;
+          char *start_ptr = &cmd[cur_pos];
+          char *end_ptr = &cmd[end_pos] - 1;
+          for (char *ptr = start_ptr; ptr <= end_ptr; ptr++) {
+            *ptr = *(ptr + 1);
+          }
+          cmd[end_pos] = '\0';
+          uart_send("\b\x1b[s\x1b[K%s\x1b[u", &cmd[cur_pos]);
+        }
+      } else if (c == '\x1b') {
+        c = uart_getc(), c = uart_getc();
+        if (c == 'D' && cur_pos > 0) {
+          cur_pos--;
+          uart_send("\x1b[D");
+        } else if (c == 'C' && cur_pos < end_pos) {
+          cur_pos++;
+          uart_send("\x1b[C");
+        }
+      } else {
+        char *end_ptr = &cmd[end_pos] - 1;
+        char *insert_ptr = &cmd[cur_pos];
+        for (char *ptr = end_ptr; ptr >= insert_ptr; ptr--) {
+          *(ptr + 1) = *ptr;
+        }
+        *insert_ptr = c;
+        cur_pos++, end_pos++;
+        uart_send("\x1b[s\x1b[K%s\x1b[u\x1b[C", insert_ptr);
+      }
+    } while (end_pos < MAX_CMD_LEN - 1);
+
+    if (strcmp(cmd, "help") == 0) {
+      do_cmd_help();
+    } else if (strcmp(cmd, "hello") == 0) {
+      uart_send("Hello, World!\n");
+    } else if (strcmp(cmd, "info") == 0) {
+      do_cmd_info();
+    } else if (strcmp(cmd, "clear") == 0) {
+      show_banner();
+    } else if (strcmp(cmd, "reboot") == 0) {
+      reboot();
+    } else if (strcmp(cmd, "cancel") == 0) {
+      cancel_reboot();
+    } else if (strcmp(cmd, "exit") == 0) {
+      uart_send("Exiting...\n");
+      break;
+    } else if (end_pos > 0) {
+      uart_send("Unknown command: %s\n", cmd);
+    }
   }
 }
 
-enum SPECIAL_CHARACTER parse(char c) {
-  if (!(c < 128 && c >= 0))
-    return UNKNOWN;
-
-  if (c == BACK_SPACE)
-    return BACK_SPACE;
-  else if (c == LINE_FEED || c == CARRIAGE_RETURN)
-    return NEW_LINE;
-  else
-    return REGULAR_INPUT;
+void do_cmd_help() {
+  uart_send("Supported commands:\n");
+  uart_send("\x1B[32m  help    - Display all available commands.\n");
+  uart_send("  hello   - Display 'Hello, World!'\n");
+  uart_send("  info    - Display board revision and ARM memory information"
+            "via mailbox.\n");
+  uart_send("  reboot  - Reboot the device.\n");
+  uart_send("  cancel  - Cancel the ongoing reboot.\n");
+  uart_send("  clear   - Clear the screen.\n");
+  uart_send("  exit    - Exit the shell.\x1B[0m\n");
 }
 
-void command_controller(enum SPECIAL_CHARACTER input_parse, char c,
-                        char buffer[], int *counter) {
-  if (input_parse == UNKNOWN)
-    return;
-
-  // Special key
-  if (input_parse == BACK_SPACE) {
-    if ((*counter) > 0)
-      (*counter)--;
-
-    uart_send('\b');
-    uart_send(' ');
-    uart_send('\b');
-  } else if (input_parse == NEW_LINE) {
-    uart_send(c);
-
-    if ((*counter) == MAX_BUFFER_LEN) {
-      input_buffer_overflow_message(buffer);
-    } else {
-      buffer[(*counter)] = '\0';
-
-      if (!strcmp(buffer, "help"))
-        command_help();
-      else if (!strcmp(buffer, "hello"))
-        command_hello();
-      else if (!strcmp(buffer, "reboot"))
-        command_reboot();
-      else if (!strcmp(buffer, "info"))
-        command_info();
-      else if (!strcmp(buffer, "clear"))
-        command_clear();
-      else
-        command_not_found(buffer);
-    }
-
-    (*counter) = 0;
-    strset(buffer, 0, MAX_BUFFER_LEN);
-
-    // new line head;
-    uart_puts("# ");
-  } else if (input_parse == REGULAR_INPUT) {
-    uart_send(c);
-
-    if (*counter < MAX_BUFFER_LEN) {
-      buffer[*counter] = c;
-      (*counter)++;
-    }
-  }
+void do_cmd_info() {
+  get_board_revision();
+  get_arm_memory();
 }

@@ -1,0 +1,58 @@
+git clone https://github.com/b06608062/osc2024.git
+git branch
+git fetch
+git branch -r
+git checkout --track origin/A122573
+touch .gitignore
+git add .
+git commit -m "test"
+git push origin A122573
+
+### install arm-gnu-toolchain-13.2.rel1-darwin-arm64-aarch64-none-elf.pkg from https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads
+### /System/Volumes/Data/Applications/ArmGNUToolchain/13.2.Rel1/aarch64-none-elf/bin/aarch64-none-elf-gcc
+nano ~/.zshrc
+export PATH="/System/Volumes/Data/Applications/ArmGNUToolchain/13.2.Rel1/aarch64-none-elf/bin:$PATH"
+source ~/.zshrc
+aarch64-none-elf-gcc --version
+
+brew install qemu
+qemu-system-aarch64 -version
+aarch64-none-elf-objdump -d your_program.o
+
+
+### download bootable image
+diskutil list
+sudo diskutil unmount /dev/disk4s1
+sudo diskutil unmount /dev/disk4s2
+sudo dd if=nycuos.img of=/dev/disk4 bs=4M
+
+ls /dev/cu.*
+screen /dev/cu.SLAB_USBtoUART 115200
+sudo lsof /dev/cu.SLAB_USBtoUART
+pip install pyserial
+pip install pwntools
+
+
+### Linux
+sudo apt update
+sudo apt install gcc-aarch64-linux-gnu
+sudo apt install qemu-system-aarch64
+sudo apt install screen
+sudo apt install gdb-multiarch
+sudo apt install git
+git clone -b 310552061 https://github.com/oscapstone/osc2023.git
+
+sudo screen /dev/ttyUSB0 115200
+sudo lsof /dev/ttyUSB0
+sudo kill [pid]
+sudo kill $(sudo lsof -t /dev/ttyUSB0)
+sudo ./kernel_transmitter.py -d /dev/ttyUSB0
+
+### gdb
+break _start
+break main
+break code_relocate
+continue
+s
+print $sp
+info register
