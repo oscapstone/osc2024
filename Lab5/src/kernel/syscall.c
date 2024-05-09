@@ -164,6 +164,9 @@ void sigret(void){
         sig_stk = current_tf->sp_el0 & ~(THREAD_STK_SIZE - 1);
 
     pool_free((void*)sig_stk);
+    // kill process if it's kill signal
+    if(current_task->signal_handler[SIGNAL_KILL] != signal_default_handler)
+        kill(current_task->pid);
     
     // restore the context of the process
     load_context(&current_task->signal_saved_context);
