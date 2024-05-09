@@ -7,12 +7,10 @@
 #include "task.h"
 #include "utli.h"
 
-static uint32_t w_f = 0, w_b = 0;
-static uint32_t r_f = 0, r_b = 0;
-char async_uart_read_buf[MAX_BUF_SIZE];
-char async_uart_write_buf[MAX_BUF_SIZE];
-extern void enable_interrupt();
-extern void disable_interrupt();
+static volatile uint32_t w_f = 0, w_b = 0;
+static volatile uint32_t r_f = 0, r_b = 0;
+volatile char async_uart_read_buf[MAX_BUF_SIZE];
+volatile char async_uart_write_buf[MAX_BUF_SIZE];
 
 void uart_init() {
   /* Initialize UART */
@@ -94,9 +92,13 @@ void uart_flush() {
   }
 }
 
-void uart_int(uint64_t d) {
+void uart_int(int64_t d) {
   if (d == 0) {
     uart_write('0');
+  }
+  if (d < 0) {
+    uart_write('-');
+    d *= -1;
   }
   uint8_t tmp[10];
   int32_t total = 0;
@@ -156,8 +158,10 @@ void uart_write_async(char c) {
   while ((w_b + 1) % MAX_BUF_SIZE == w_f) {  // full buffer -> wait
     asm volatile("nop");
   }
+  OS_enter_critical();
   async_uart_write_buf[w_b++] = c;
   w_b %= MAX_BUF_SIZE;
+  OS_exit_critical();
   enable_uart_tx_interrupt();
 }
 
@@ -165,18 +169,22 @@ char uart_read_async() {
   while (r_f == r_b) {
     asm volatile("nop");
   }
-  char c = async_uart_read_buf[r_f++];
+  OS_enter_critical();
+  char r = async_uart_read_buf[r_f++];
   r_f %= MAX_BUF_SIZE;
+  OS_exit_critical();
   enable_uart_rx_interrupt();
-  return c;
+  return r == '\r' ? '\n' : r;
 }
 
 uint32_t uart_send_string_async(const char *str) {
   uint32_t i = 0;
   while ((w_b + 1) % MAX_BUF_SIZE != w_f &&
          str[i] != '\0') {  // full buffer -> wait
+    OS_enter_critical();
     async_uart_write_buf[w_b++] = str[i++];
     w_b %= MAX_BUF_SIZE;
+    OS_exit_critical();
   }
   enable_uart_tx_interrupt();
   return i;
@@ -185,8 +193,10 @@ uint32_t uart_send_string_async(const char *str) {
 uint32_t uart_read_string_async(char *str) {
   uint32_t i = 0;
   while (r_f != r_b) {
+    OS_enter_critical();
     str[i++] = async_uart_read_buf[r_f++];
     r_f %= MAX_BUF_SIZE;
+    OS_exit_critical();
   }
   str[i] = '\0';
   enable_uart_rx_interrupt();
@@ -206,6 +216,7 @@ static void uart_rx_interrupt_handler() {
   if ((r_b + 1) % MAX_BUF_SIZE == r_f) {
     return;
   }
+
   async_uart_read_buf[r_b++] = (char)(*AUX_MU_IO);
   r_b %= MAX_BUF_SIZE;
   enable_uart_rx_interrupt();

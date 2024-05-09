@@ -6,8 +6,8 @@
 /* mailbox message buffer */
 volatile uint32_t __attribute__((aligned(16))) mbox[36];
 
-int mbox_call(uint8_t ch) {
-  uint32_t r = (((uint32_t)((uint64_t)&mbox) & ~0xF) | (ch & 0xF));
+uint32_t mbox_call(uint8_t ch) {
+  uint64_t r = (((uint64_t)((uint64_t)mbox) & ~0xF) | (ch & 0xF));
   /* wait until we can write to the mailbox */
   do {
     asm volatile("nop");
@@ -16,10 +16,6 @@ int mbox_call(uint8_t ch) {
 
   *MBOX_WRITE = r;
   /* now wait for the response */
-
-  do {
-    asm volatile("nop");
-  } while (*MBOX_STATUS & MBOX_EMPTY);
 
   while (1) {
     /* is there a response? */
@@ -74,8 +70,8 @@ void get_board_serial() {
 
   if (mbox_call(MBOX_CH_PROP)) {
     uart_send_string("Borad serial number: ");
-    uart_hex(mbox[6]);
-    uart_hex(mbox[5]);
+    uint64_t num = ((uint64_t)mbox[6] << 32) | ((uint64_t)mbox[5]);
+    uart_hex_64(num);
     uart_send_string("\r\n");
   } else {
     uart_puts("Unable to query serial number..");

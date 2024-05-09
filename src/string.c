@@ -47,11 +47,17 @@ uint32_t atoi(char *str) {
   return ret;
 }
 
-char *memcpy(void *dest, const void *src, uint64_t len) {
+void memcpy(void *dest, const void *src, uint64_t len) {
   char *d = dest;
   const char *s = src;
   while (len--) {
     *d++ = *s++;
   }
-  return dest;
+}
+
+void memset(void *dest, uint8_t val, uint64_t len) {
+  char *d = dest;
+  while (len--) {
+    *d++ = val;
+  }
 }

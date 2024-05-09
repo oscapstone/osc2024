@@ -11,7 +11,7 @@ void uart_puts(const char *str);
 void uart_write(char c);
 char uart_read();
 void uart_flush();
-void uart_int(uint64_t d);
+void uart_int(int64_t d);
 void uart_hex(uint32_t d);
 void uart_hex_64(uint64_t d);
 void disable_uart_interrupt();
