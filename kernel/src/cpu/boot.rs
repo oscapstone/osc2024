@@ -12,16 +12,18 @@ global_asm!(include_str!("boot.s"));
 pub unsafe fn _start_rust() {
     uart::initialize();
     timer::init();
+    // println_now("Initialized UART and timer");
     allocator::init();
     allocator::reserve(0x0000_0000 as *mut u8, 0x0000_1000); // Device reserved memory
     allocator::reserve(0x0003_0000 as *mut u8, 0x0004_0000); // Stack
     allocator::reserve(0x0007_5000 as *mut u8, 0x0000_0004); // CS counter
-    allocator::reserve(0x0008_0000 as *mut u8, 0x0001_0000); // Code
+    allocator::reserve(0x0007_5100 as *mut u8, 0x0000_0004); // device tree address
+    allocator::reserve(0x0008_0000 as *mut u8, 0x0004_0000); // Code
     allocator::reserve(0x0800_0000 as *mut u8, 0x0100_0000); // Initramfs
     allocator::reserve(DeviceTree::get_device_tree_address(), 0x0100_0000); // Device Tree
     allocator::reserve(0x0A00_0000 as *mut u8, 0x0600_0000); // Simple Allocator
 
-    println_now("Reserved memory");
+    // println_now("Reserved memory");
 
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
@@ -37,7 +39,7 @@ pub unsafe fn _start_rust() {
                 val |= (v[i] as u32) << (i * 8);
             }
             val = val.swap_bytes();
-            println!("Initrd start: {:#X}", val);
+            println!("Initrd start address: {:#X}", val);
             val
         }
         None => {

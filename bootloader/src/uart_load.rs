@@ -1,5 +1,5 @@
 use crate::cpu::uart::{recv_non_blocking};
-use crate::stdio::{print, println, print_dec};
+use crate::stdio::{print, print_dec, print_hex, println};
 
 const KERNEL_LOAD_ADDRESS: u32 = 0x80000;
 
@@ -30,6 +30,7 @@ pub fn load_kernel() {
                         print("Received ");
                         print_dec(count, false);
                         println(" bytes.");
+                        print_hex(ptr as u32);
                         return;
                     }
                 }

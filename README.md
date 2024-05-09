@@ -29,7 +29,7 @@ make run
 
 ### Used memory address
 * `0x7_5000`: Critical Section counter
-* `0x8_F000`: Device Tree temporary address
+* `0x7_5100`: Device Tree temporary address
 * Start from `0x8_0000`: Code section
 * Start from `0x6_0000`: Boot code section
 * End from `0x7_0000`: Stack

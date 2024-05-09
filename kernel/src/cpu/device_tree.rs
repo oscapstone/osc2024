@@ -111,7 +111,7 @@ impl Default for DeviceTree {
 }
 
 impl DeviceTree {
-    const DEVICE_TREE_ADDRESS: *const u32 = 0x8F000 as *const u32;
+    const DEVICE_TREE_ADDRESS: *const u32 = 0x75100 as *const u32;
     const FDT_BEGIN_NODE: u32 = 0x00000001;
     const FDT_END_NODE: u32 = 0x00000002;
     const FDT_PROP: u32 = 0x00000003;
