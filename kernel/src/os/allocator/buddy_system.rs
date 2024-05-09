@@ -14,8 +14,8 @@ use core::{
 };
 
 static mut PRINT_DEBUG: bool = false;
-const FRAME_MAX_ORDER: u32 = 22;
-const MIN_FRAME_SIZE: usize = 256;
+const FRAME_MAX_ORDER: u32 = 25;
+const MIN_FRAME_SIZE: usize = 32;
 const MAX_FRAME_SIZE: usize = MIN_FRAME_SIZE * 2usize.pow(FRAME_MAX_ORDER - 1);
 const START_ADDRESS: usize = 0x0000_0000;
 
