@@ -22,12 +22,12 @@ const char* ExceptionType[] = {
 void TrapFrame::show() const {
   kprintf("=== Trap Frame ===\n");
   for (int i = 0; i <= 30; i++)
-    kprintf("x%d      \t= 0x%lu\n", i, X[i]);
-  kprintf("LR      \t= 0x%lu\n", lr);
-  kprintf("SPSR_EL1\t= 0x%lu\n", spsr_el1);
-  kprintf("ELR_EL1 \t= 0x%lu\n", elr_el1);
-  kprintf("ESR_EL1 \t= 0x%lu\n", esr_el1);
-  kprintf("SP_EL0 \t= 0x%lu\n", sp_el0);
+    kprintf("x%d      \t= 0x%lx\n", i, X[i]);
+  kprintf("LR      \t= 0x%lx\n", lr);
+  kprintf("SPSR_EL1\t= 0x%lx\n", spsr_el1);
+  kprintf("ELR_EL1 \t= 0x%lx\n", elr_el1);
+  kprintf("ESR_EL1 \t= 0x%lx\n", esr_el1);
+  kprintf("SP_EL0  \t= 0x%lx\n", sp_el0);
   kprintf("------------------\n");
 }
 

@@ -7,16 +7,16 @@
 
 void Regs::show() const {
   kprintf("=== Regs ===\n");
-  kprintf("x19\t= 0x%lu\n", x19);
-  kprintf("x20\t= 0x%lu\n", x20);
-  kprintf("x21\t= 0x%lu\n", x21);
-  kprintf("x22\t= 0x%lu\n", x22);
-  kprintf("x23\t= 0x%lu\n", x23);
-  kprintf("x24\t= 0x%lu\n", x24);
-  kprintf("x25\t= 0x%lu\n", x25);
-  kprintf("x26\t= 0x%lu\n", x26);
-  kprintf("x27\t= 0x%lu\n", x27);
-  kprintf("x28\t= 0x%lu\n", x28);
+  kprintf("x19\t= 0x%lx\n", x19);
+  kprintf("x20\t= 0x%lx\n", x20);
+  kprintf("x21\t= 0x%lx\n", x21);
+  kprintf("x22\t= 0x%lx\n", x22);
+  kprintf("x23\t= 0x%lx\n", x23);
+  kprintf("x24\t= 0x%lx\n", x24);
+  kprintf("x25\t= 0x%lx\n", x25);
+  kprintf("x26\t= 0x%lx\n", x26);
+  kprintf("x27\t= 0x%lx\n", x27);
+  kprintf("x28\t= 0x%lx\n", x28);
   kprintf("FP \t= %p\n", fp);
   kprintf("LR \t= %p\n", lr);
   kprintf("SP \t= %p\n", sp);
