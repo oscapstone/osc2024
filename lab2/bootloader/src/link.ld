@@ -3,7 +3,7 @@ _bootloader_size = 64K;
 
 SECTIONS
 {
-    . = 0x80000;                 /* Set the starting address of the sections to 0x80000 */
+    . = 0x80000;                 /* Set the starting address of the sections to 0x80000(512Kb) */
     _start = .;                  /* Define the start symbol at the current address */
     .text : { *(.text.boot) *(.text) }
     .rodata : { *(.rodata) }
@@ -24,7 +24,7 @@ SECTIONS
     }
     _end = .;                             /* Define the end symbol at the current addres*  */
     
-    . = 0x3000000;                        /* Set the starting address of the next section to 0x3000000 */
+    . = 0x3000000;                        /* Set the starting address of the next section to 0x3000000(48Mb) */
     _bootloader_relocated_addr = 0x3000000; /* Define the relocated address of the bootloader */
     . = . + _bootloader_size;             /* Increase the location counter by the size of the bootloader */
 }

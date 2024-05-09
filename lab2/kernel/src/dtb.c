@@ -21,33 +21,26 @@ struct fdt_header
     uint32_t size_dt_struct;    // Size of the structure block
 };
 
-// Function to convert big-endian data to little-endian format
-uint32_t uint32_endian_big2lttle(uint32_t data)
-{
-    char *r = (char *)&data;
-    return (r[3] << 0) | (r[2] << 8) | (r[1] << 16) | (r[0] << 24);
-}
-
 // Function to traverse the device tree and execute a callback function for each node
 void traverse_device_tree(void *dtb_ptr, dtb_callback callback)
 {
     struct fdt_header *header = dtb_ptr;                      // Pointer to the FDT header
-    if (uint32_endian_big2lttle(header->magic) != 0xD00DFEED) // Check if the magic number is correct
+    if (__builtin_bswap32(header->magic) != 0xD00DFEED) // Check if the magic number is correct
     {
         uart_puts("traverse_device_tree : wrong magic in traverse_device_tree");
         return;
     }
 
-    uint32_t struct_size = uint32_endian_big2lttle(header->size_dt_struct);                            // Get the size of the structure block
-    char *dt_struct_ptr = (char *)((char *)header + uint32_endian_big2lttle(header->off_dt_struct));   // Pointer to the structure block
-    char *dt_strings_ptr = (char *)((char *)header + uint32_endian_big2lttle(header->off_dt_strings)); // Pointer to the strings block
+    uint32_t struct_size = __builtin_bswap32(header->size_dt_struct);                            // Get the size of the structure block
+    char *dt_struct_ptr = (char *)((char *)header + __builtin_bswap32(header->off_dt_struct));   // Pointer to the structure block dtb_spec.pdf p.50
+    char *dt_strings_ptr = (char *)((char *)header + __builtin_bswap32(header->off_dt_strings)); // Pointer to the strings block
 
     char *end = (char *)dt_struct_ptr + struct_size; // Pointer to the end of the structure block
     char *pointer = dt_struct_ptr;                   // Pointer to the current position in the structure block
 
     while (pointer < end) // Loop through the structure block
     {
-        uint32_t token_type = uint32_endian_big2lttle(*(uint32_t *)pointer); // Get the token type
+        uint32_t token_type = __builtin_bswap32(*(uint32_t *)pointer); // Get the token type
 
         pointer += 4;                     // Move the pointer to the next token
         if (token_type == FDT_BEGIN_NODE) // If the token is a beginning of a node
@@ -62,9 +55,9 @@ void traverse_device_tree(void *dtb_ptr, dtb_callback callback)
         }
         else if (token_type == FDT_PROP) // If the token is a property
         {
-            uint32_t len = uint32_endian_big2lttle(*(uint32_t *)pointer);                        // Get the length of the property value
+            uint32_t len = __builtin_bswap32(*(uint32_t *)pointer);                        // Get the length of the property value
             pointer += 4;                                                                        // Move the pointer to the property name offset
-            char *name = (char *)dt_strings_ptr + uint32_endian_big2lttle(*(uint32_t *)pointer); // Get the property name
+            char *name = (char *)dt_strings_ptr + __builtin_bswap32(*(uint32_t *)pointer); // Get the property name
             pointer += 4;                                                                        // Move the pointer to the property value
             callback(token_type, name, pointer, len);                                            // Call the callback function
             pointer += len;                                                                      // Move the pointer to the end of the property value
@@ -145,6 +138,6 @@ void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_
     // linux,initrd-start will be assigned by start.elf based on config.txt
     if (node_type == FDT_PROP && strcmp(name, "linux,initrd-start") == 0) // If the property is "linux,initrd-start"
     {
-        CPIO_DEFAULT_PLACE = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t *)value); // Set the default place of the CPIO archive
+        CPIO_DEFAULT_PLACE = (void *)(unsigned long long)__builtin_bswap32(*(uint32_t *)value); // Set the default place of the CPIO archive
     }
 }

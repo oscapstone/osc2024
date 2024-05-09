@@ -95,7 +95,7 @@ void cmd_loadimg()
     char *bak_dtb = _dtb;                   // Backup the original DTB pointer
     char c;                                 // Variable to store received characters
     unsigned long long kernel_size = 0;     // Variable to store the size of the kernel image
-    char *kernel_start = (char *)(&_start); // Pointer to the start of the kernel in memory
+    char *kernel_start = (char *)(&_start); // Pointer to the start of the kernel in memory (define in link.ld)
 
     uart_puts("Please upload the image file.\r\n");
 
@@ -103,7 +103,7 @@ void cmd_loadimg()
     for (int i = 0; i < 8; i++)
     {
         c = uart_getc();             // Read a character from UART
-        kernel_size += c << (i * 8); // Accumulate the size, shifting each byte to its correct position
+        kernel_size += c << (i * 8); // 1st iter we get the least significant byte, so shift 0
     }
 
     // Read the kernel image into memory, byte by byte

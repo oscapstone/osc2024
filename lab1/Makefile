@@ -3,7 +3,7 @@ ARMGNU ?= aarch64-linux-gnu
 
 # Compiler options, donn't use C standard library, don't use standard startup files,
 # -ffreestanding directs the compiler to not assume that standard functions have their usual definition
-COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude
+COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -g
 # Assembler options
 ASMOPS = -Iinclude 
 

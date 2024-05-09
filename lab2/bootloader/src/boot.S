@@ -43,8 +43,6 @@ init_bss:
     cbnz    w2, init_bss        // If BSS size counter is not zero, loop back to init_bss
 
 run_main:
-    ldr     x1, =_dtb           // Load address of the Device Tree Blob (DTB) into x1
-    str     x0, [x1], #8        // Store the value in x0 (DTB address passed by bootloader) to the address in x1, then increment x1 by 8
     bl      main                // Branch with link to the main function
 
 proc_hang:

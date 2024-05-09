@@ -39,7 +39,7 @@ int mbox_call(unsigned char ch) {
     
     /* 2. Check if Mailbox 0 status register’s full flag is set ,write to the mailbox */
     while (1) {
-        if (!(*MBOX_STATUS & MBOX_FULL)) //If not, then you can write to Mailbox 1 Read/Write register.
+        if (!(*MBOX_STATUS & MBOX_FULL)) //If not, then you can write to Mailbox 1 Write register.
             break;
     }
     /* write the address of our message to the mailbox with channel identifier */

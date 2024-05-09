@@ -18,9 +18,13 @@ void *malloc(unsigned int size)
     // Round up the requested size to a multiple of 0x10 for alignment
     size = 0x10 + size - size % 0x10;
     // Store the size of the allocated block (including the header) at the beginning of the block
-    *(unsigned int *)(r - 0x8) = size;
+    *(unsigned int*)(r - 0x8) = size;
+
+    // total size of header (0x10) + allocated size (e.g.0x18 -> 0x20) = 0x30
+    unsigned int total_size = 0x10 + size;
+        
     // Move the heap top pointer forward by the size of the allocated block
-    htop_ptr += size;
+    htop_ptr += total_size;
     // Return a pointer to the allocated memory (excluding the header)
     return r;
 }
