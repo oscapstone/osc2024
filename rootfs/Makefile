@@ -8,7 +8,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -nostdlib -Os -fPIE \
 			  -I../include/lib -g
 
-BINS = hello.img svc.img syscall.img fork.img
+BINS = hello.img svc.img syscall.img fork.img vm.img
 
 .PHONY: all clean
 
@@ -31,3 +31,6 @@ clean:
 
 syscall.img:
 	curl https://nycu-caslab.github.io/OSC2024/_downloads/58c515e3041658a045033c8e56ecff4c/initramfs.cpio --output - | cpio -id
+
+vm.img:
+	wget https://nycu-caslab.github.io/OSC2024/_downloads/4a3ff2431ab7fa74536c184270dbe5c0/vm.img
