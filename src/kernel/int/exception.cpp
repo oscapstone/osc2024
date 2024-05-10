@@ -1,9 +1,10 @@
 #include "int/exception.hpp"
 
 #include "arm.hpp"
+#include "board/pm.hpp"
 #include "int/interrupt.hpp"
+#include "int/timer.hpp"
 #include "io.hpp"
-#include "shell/shell.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -39,8 +40,8 @@ void print_exception(TrapFrame* frame, int type) {
   kprintf_sync("ELR_EL1 : 0x%lx\n", frame->elr_el1);
   kprintf_sync("ESR_EL1 : %032lb\n", read_sysreg(ESR_EL1));
 
-  enable_interrupt();
-  shell(nullptr);
+  delay(freq_of_timer);
+  reboot();
 }
 
 void sync_handler(TrapFrame* frame, int /*type*/) {
