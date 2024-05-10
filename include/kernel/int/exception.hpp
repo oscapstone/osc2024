@@ -20,6 +20,7 @@ inline int get_el() {
 }
 
 extern "C" {
+void return_to_user(TrapFrame* frame);
 void print_exception(TrapFrame* frame, int type);
 void sync_handler(TrapFrame* frame, int type);
 // irq.c

@@ -14,7 +14,7 @@ void del_list(Kthread* thread) {
 }
 
 // TODO: don't use linear search
-Kthread* find_list(int tid) {
+Kthread* find_thread_by_tid(int tid) {
   for (auto thread : kthreads)
     if (thread->tid == tid)
       return thread;
@@ -26,7 +26,8 @@ Kthread::Kthread()
       tid(new_tid()),
       status(KthreadStatus::kReady),
       exit_code(0),
-      item(new KthreadItem(this)) {
+      item(new KthreadItem(this)),
+      signal{this} {
   klog("init thread %d @ %p\n", tid, this);
 }
 
@@ -38,7 +39,8 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
       status(KthreadStatus::kReady),
       exit_code(0),
       kernel_stack(KTHREAD_STACK_SIZE, true),
-      item(new KthreadItem(this)) {
+      item(new KthreadItem(this)),
+      signal{this} {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
   add_list(this);
@@ -52,7 +54,8 @@ Kthread::Kthread(const Kthread& o)
       kernel_stack(o.kernel_stack),
       user_text(o.user_text),
       user_stack(o.user_stack),
-      item(new KthreadItem(this)) {
+      item(new KthreadItem(this)),
+      signal{this, o.signal} {
   fix(o, &regs, sizeof(regs));
   fix(o, kernel_stack);
   fix(o, user_stack);
@@ -132,7 +135,7 @@ void kthread_start() {
 }
 
 void kthread_kill(int pid) {
-  auto thread = find_list(pid);
+  auto thread = find_thread_by_tid(pid);
   if (thread)
     kthread_kill(thread);
 }

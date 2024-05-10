@@ -6,6 +6,7 @@
 #include "ds/mem.hpp"
 #include "mm/mm.hpp"
 #include "sched.hpp"
+#include "signal.hpp"
 #include "util.hpp"
 
 constexpr uint64_t KTHREAD_STACK_SIZE = PAGE_SIZE;
@@ -30,6 +31,7 @@ struct Kthread : ListItem {
   int exit_code = 0;
   Mem kernel_stack, user_text, user_stack;
   KthreadItem* item;
+  Signal signal;
 
  private:
   Kthread();
@@ -58,7 +60,7 @@ inline Kthread* current_thread() {
 
 void add_list(Kthread* thread);
 void del_list(Kthread* thread);
-Kthread* find_list(int tid);
+Kthread* find_thread_by_tid(int tid);
 
 void idle();
 int new_tid();

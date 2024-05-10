@@ -56,12 +56,12 @@ set_exception_vector_table:
     add     sp, sp, 16 * 17
 .endm
 
-.macro CALL_WITH_CONTEXT type handler
+.macro CALL_WITH_CONTEXT type handler leave
     save_all
     mov     x1, \type
     mov     x0, sp
     bl      \handler
-    b       exception_restore_context
+    b       \leave
 .endm
 
 // D1.10.2 Exception vectors
@@ -71,41 +71,46 @@ set_exception_vector_table:
 .global exception_vector_table
 exception_vector_table:
     .org 0x000
-    CALL_WITH_CONTEXT 0 print_exception
+    CALL_WITH_CONTEXT 0 print_exception exception_restore_context
     .org 0x080
-    CALL_WITH_CONTEXT 1 print_exception
+    CALL_WITH_CONTEXT 1 print_exception exception_restore_context
     .org 0x100
-    CALL_WITH_CONTEXT 2 print_exception
+    CALL_WITH_CONTEXT 2 print_exception exception_restore_context
     .org 0x180
-    CALL_WITH_CONTEXT 3 print_exception
+    CALL_WITH_CONTEXT 3 print_exception exception_restore_context
 
     .org 0x200
-    CALL_WITH_CONTEXT 4 print_exception
+    CALL_WITH_CONTEXT 4 print_exception exception_restore_context
     .org 0x280
-    CALL_WITH_CONTEXT 5 irq_handler
+    CALL_WITH_CONTEXT 5 irq_handler exception_restore_context
     .org 0x300
-    CALL_WITH_CONTEXT 6 print_exception
+    CALL_WITH_CONTEXT 6 print_exception exception_restore_context
     .org 0x380
-    CALL_WITH_CONTEXT 7 print_exception
+    CALL_WITH_CONTEXT 7 print_exception exception_restore_context
 
     .org 0x400
-    CALL_WITH_CONTEXT 8 sync_handler
+    CALL_WITH_CONTEXT 8 sync_handler back_to_user
     .org 0x480
-    CALL_WITH_CONTEXT 9 irq_handler
+    CALL_WITH_CONTEXT 9 irq_handler back_to_user
     .org 0x500
-    CALL_WITH_CONTEXT 10 print_exception
+    CALL_WITH_CONTEXT 10 print_exception exception_restore_context
     .org 0x580
-    CALL_WITH_CONTEXT 11 print_exception
+    CALL_WITH_CONTEXT 11 print_exception exception_restore_context
 
     .org 0x600
-    CALL_WITH_CONTEXT 12 print_exception
+    CALL_WITH_CONTEXT 12 print_exception exception_restore_context
     .org 0x680
-    CALL_WITH_CONTEXT 13 print_exception
+    CALL_WITH_CONTEXT 13 print_exception exception_restore_context
     .org 0x700
-    CALL_WITH_CONTEXT 14 print_exception
+    CALL_WITH_CONTEXT 14 print_exception exception_restore_context
     .org 0x780
-    CALL_WITH_CONTEXT 15 print_exception
+    CALL_WITH_CONTEXT 15 print_exception exception_restore_context
     .org 0x800
+
+back_to_user:
+    mov     x0, sp
+    bl      return_to_user
+    b       exception_restore_context
 
 exception_restore_context:
     load_all

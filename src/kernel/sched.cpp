@@ -73,7 +73,7 @@ void schedule() {
       // TODO:
       break;
     case KthreadStatus::kDead:
-      // TODO:
+      push_dead(cur);
       break;
   }
   auto nxt = pop_rq();

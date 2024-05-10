@@ -5,6 +5,7 @@
 #include "io.hpp"
 #include "shell/shell.hpp"
 #include "syscall.hpp"
+#include "thread.hpp"
 
 const char* ExceptionFrom[] = {
     "Current Exception level with SP_EL0.",
@@ -55,4 +56,10 @@ void sync_handler(TrapFrame* frame, int /*type*/) {
     default:
       kprintf_sync("unknown ESR_ELx_EC %06b\n", ec);
   }
+}
+
+void return_to_user(TrapFrame* frame) {
+  enable_interrupt();
+  current_thread()->signal.handle(frame);
+  disable_interrupt();
 }

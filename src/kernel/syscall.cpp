@@ -4,6 +4,7 @@
 #include "exec.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
+#include "signal.hpp"
 #include "thread.hpp"
 #include "util.hpp"
 
@@ -72,10 +73,27 @@ long sys_kill(const TrapFrame* frame) {
   return 0;
 }
 
+long sys_signal(const TrapFrame* frame) {
+  auto signal = (int)frame->X[0];
+  auto handler = (signal_handler)frame->X[1];
+  current_thread()->signal.regist(signal, handler);
+  return 0;
+}
+
+long sys_signal_kill(const TrapFrame* frame) {
+  auto pid = (int)frame->X[0];
+  auto signal = (int)frame->X[1];
+  signal_kill(pid, signal);
+  return 0;
+}
+
+long sys_signal_return(const TrapFrame* frame) {
+  klog("thread %d signal_return\n", current_thread()->tid);
+  signal_return(const_cast<TrapFrame*>(frame));
+  return 0;
+}
+
 long sys_not_implement(const TrapFrame* /*frame*/) {
   klog("syscall not implemented\n");
   return -1;
 }
-
-STRONG_ALIAS(sys_not_implement, sys_signal);
-STRONG_ALIAS(sys_not_implement, sys_signal_kill);
