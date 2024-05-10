@@ -24,7 +24,7 @@
 switch_to_regs:
     SAVE_REG    x0
     LOAD_REG    x1
-    msr         TPIDR_EL1, x1
+    msr         TPIDR_EL1, x2
     ret
 
 .global save_regs

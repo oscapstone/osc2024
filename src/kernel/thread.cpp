@@ -1,7 +1,25 @@
 #include "thread.hpp"
 
+#include "int/interrupt.hpp"
 #include "io.hpp"
 #include "sched.hpp"
+
+ListHead<Kthread> kthreads;
+
+void add_list(Kthread* thread) {
+  kthreads.push_back(thread);
+}
+void del_list(Kthread* thread) {
+  kthreads.erase(thread);
+}
+
+// TODO: don't use linear search
+Kthread* find_list(int tid) {
+  for (auto thread : kthreads)
+    if (thread->tid == tid)
+      return thread;
+  return nullptr;
+}
 
 Kthread::Kthread()
     : regs{},
@@ -23,6 +41,7 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
       item(new KthreadItem(this)) {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
+  add_list(this);
 }
 
 Kthread::Kthread(const Kthread& o)
@@ -38,6 +57,12 @@ Kthread::Kthread(const Kthread& o)
   fix(o, kernel_stack);
   fix(o, user_stack);
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
+  add_list(this);
+}
+
+Kthread::~Kthread() {
+  del_list(this);
+  delete item;
 }
 
 void Kthread::fix(const Kthread& o, Mem& mem) {
@@ -88,6 +113,7 @@ int new_tid() {
 }
 
 void kthread_init() {
+  kthreads.init();
   extern char __stack_beg[], __stack_end[];
   auto thread = new Kthread;
   thread->kernel_stack.addr = __stack_beg;
@@ -103,6 +129,30 @@ void kthread_start() {
   klog("start thread %d @ %p\n", current_thread()->tid, func);
   func(ctx);
   kthread_fini();
+}
+
+void kthread_kill(int pid) {
+  auto thread = find_list(pid);
+  if (thread)
+    kthread_kill(thread);
+}
+
+void kthread_kill(Kthread* thread) {
+  if (thread == nullptr or thread->status == KthreadStatus::kDead)
+    return;
+  klog("kill thread %d\n", thread->tid);
+  if (thread == current_thread()) {
+    kthread_exit(-1);
+  } else {
+    save_DAIF_disable_interrupt();
+
+    thread->exit_code = -1;
+    thread->status = KthreadStatus::kDead;
+    erase_rq(thread);
+    push_dead(thread);
+
+    restore_DAIF();
+  }
 }
 
 void kthread_exit(int status) {

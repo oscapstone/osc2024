@@ -66,11 +66,16 @@ long sys_mbox_call(const TrapFrame* frame) {
   return 1;  // TODO ???
 }
 
+long sys_kill(const TrapFrame* frame) {
+  auto pid = (int)frame->X[0];
+  kthread_kill(pid);
+  return 0;
+}
+
 long sys_not_implement(const TrapFrame* /*frame*/) {
   klog("syscall not implemented\n");
   return -1;
 }
 
-STRONG_ALIAS(sys_not_implement, sys_kill);
 STRONG_ALIAS(sys_not_implement, sys_signal);
 STRONG_ALIAS(sys_not_implement, sys_signal_kill);

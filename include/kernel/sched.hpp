@@ -12,7 +12,7 @@ struct __attribute__((__packed__)) Regs {
 
 extern "C" {
 // sched.S
-void switch_to_regs(Regs* prev, Regs* next);
+void switch_to_regs(Regs* prev, Regs* next, Kthread* nthread);
 void save_regs(Regs* r);
 void load_regs(Regs* r);
 }
@@ -20,7 +20,11 @@ void load_regs(Regs* r);
 void switch_to(Kthread* prev, Kthread* next);
 
 void push_rq(Kthread* thread);
+void erase_rq(Kthread* thread);
 Kthread* pop_rq();
+
+void push_dead(Kthread* thread);
+Kthread* pop_dead();
 
 void kill_zombies();
 void schedule_init();

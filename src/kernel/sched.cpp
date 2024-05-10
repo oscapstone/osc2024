@@ -24,19 +24,36 @@ void Regs::show() const {
 }
 
 void switch_to(Kthread* prev, Kthread* next) {
-  switch_to_regs(&prev->regs, &next->regs);
+  switch_to_regs(&prev->regs, &next->regs, next);
 }
 
 ListHead<KthreadItem> rq;
 void push_rq(Kthread* thread) {
   rq.push_back(thread->item);
 }
+void erase_rq(Kthread* thread) {
+  rq.erase(thread->item);
+}
 Kthread* pop_rq() {
+  if (rq.empty())
+    return nullptr;
   return rq.pop_front()->thread;
 }
 
+ListHead<KthreadItem> deadq;
+void push_dead(Kthread* thread) {
+  deadq.push_back(thread->item);
+}
+Kthread* pop_dead() {
+  if (deadq.empty())
+    return nullptr;
+  return deadq.pop_front()->thread;
+}
+
 void kill_zombies() {
-  // TODO
+  while (auto thread = pop_dead()) {
+    delete thread;
+  }
 }
 
 void schedule_init() {

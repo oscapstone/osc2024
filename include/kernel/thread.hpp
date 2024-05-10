@@ -21,7 +21,7 @@ enum class KthreadStatus {
   kDead,
 };
 
-struct Kthread {
+struct Kthread : ListItem {
   Regs regs;
 
   using fp = void (*)(void*);
@@ -38,6 +38,8 @@ struct Kthread {
  public:
   Kthread(Kthread::fp start, void* ctx);
   Kthread(const Kthread& o);
+  ~Kthread();
+
   void fix(const Kthread& o, Mem& mem);
   void fix(const Kthread& o, void* faddr, uint64_t fsize);
   void* fix(const Kthread& o, void* ptr);
@@ -54,11 +56,17 @@ inline Kthread* current_thread() {
   return (Kthread*)read_sysreg(TPIDR_EL1);
 }
 
+void add_list(Kthread* thread);
+void del_list(Kthread* thread);
+Kthread* find_list(int tid);
+
 void idle();
 int new_tid();
 
 void kthread_init();
 void kthread_start();
+void kthread_kill(int pid);
+void kthread_kill(Kthread* thread);
 void kthread_exit(int status);
 void kthread_fini();
 Kthread* kthread_create(Kthread::fp start, void* ctx = nullptr);
