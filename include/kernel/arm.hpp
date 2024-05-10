@@ -20,4 +20,10 @@
 #define ESR_ELx_EC_MASK  (MASK(6) << ESR_ELx_EC_SHIFT)
 #define ESR_ELx_EC(esr)  (((esr) & ESR_ELx_EC_MASK) >> ESR_ELx_EC_SHIFT)
 
-#define ESR_ELx_EC_SVC64 (0x15)
+#define ESR_ELx_IL_SHIFT (25)
+#define ESR_ELx_IL       (MASK(1) << ESR_ELx_IL_SHIFT)
+#define ESR_ELx_ISS_MASK (MASK(25))
+#define ESR_ELx_ISS(esr) ((esr) & ESR_ELx_ISS_MASK)
+
+#define ESR_ELx_EC_SVC64    (0b010101)
+#define ESR_ELx_EC_DABT_LOW (0b100100)

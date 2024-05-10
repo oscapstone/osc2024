@@ -1,6 +1,6 @@
 #pragma once
 
-#define MASK(bits) ((1ll << bits) - 1)
+#define MASK(bits) ((1ULL << bits) - 1)
 #define NOP        asm volatile("nop")
 
 // ref: https://github.com/v8/v8/blob/12.5.71/src/base/compiler-specific.h#L26

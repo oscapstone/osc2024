@@ -26,7 +26,7 @@ void TrapFrame::show() const {
   kprintf("LR      \t= 0x%lx\n", lr);
   kprintf("SPSR_EL1\t= 0x%lx\n", spsr_el1);
   kprintf("ELR_EL1 \t= 0x%lx\n", elr_el1);
-  kprintf("ESR_EL1 \t= 0x%lx\n", esr_el1);
+  kprintf("ESR_EL1 \t= 0x%lx\n", read_sysreg(ESR_EL1));
   kprintf("SP_EL0  \t= 0x%lx\n", sp_el0);
   kprintf("------------------\n");
 }
@@ -36,19 +36,23 @@ void print_exception(TrapFrame* frame, int type) {
                ExceptionFrom[type / 4]);
   kprintf_sync("SPSR_EL1: %032lb\n", frame->spsr_el1);
   kprintf_sync("ELR_EL1 : 0x%lx\n", frame->elr_el1);
-  kprintf_sync("ESR_EL1 : %032lb\n", frame->esr_el1);
+  kprintf_sync("ESR_EL1 : %032lb\n", read_sysreg(ESR_EL1));
 
   enable_interrupt();
   shell(nullptr);
 }
 
 void sync_handler(TrapFrame* frame, int /*type*/) {
-  int ec = ESR_ELx_EC(frame->esr_el1);
+  unsigned long esr = read_sysreg(ESR_EL1);
+  unsigned ec = ESR_ELx_EC(esr);
+  unsigned iss = ESR_ELx_ISS(esr);
+
   switch (ec) {
     case ESR_ELx_EC_SVC64:
-      syscall_handler(frame);
+      if ((iss & MASK(16)) == 0)
+        syscall_handler(frame);
       break;
     default:
-      kprintf_sync("unknown ESR_ELx_EC %x\n", ec);
+      kprintf_sync("unknown ESR_ELx_EC %06b\n", ec);
   }
 }
