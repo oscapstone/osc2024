@@ -188,7 +188,7 @@ void demo()
         idle();
         break;
     case 6:
-        kthread_create(fork_test);
+        kthread_create(from_el1_to_el0);
         idle();
         break;
     default:

@@ -39,24 +39,21 @@ int sys_fork(trap_frame *tf)
     struct task_struct *parent = get_current();
     struct task_struct *child = kthread_create(0);
 
-    // Copy registers
-    // memcpy(&child->context, &parent->context, sizeof(struct thread_struct));
-
     // Copy kernel stack and user stack
     memcpy(child->stack, parent->stack, STACK_SIZE);
     memcpy(child->user_stack, parent->user_stack, STACK_SIZE);
 
-    unsigned long offset = (unsigned long)tf - (unsigned long)parent->stack;
-    trap_frame *child_trap_frame = (trap_frame *)(child->stack + offset);
+    unsigned long sp_off = (unsigned long)tf - (unsigned long)parent->stack;
+    trap_frame *child_trap_frame = (trap_frame *)(child->stack + sp_off);
+
     child->context.sp = (unsigned long)child_trap_frame;
-    child->context.lr = (unsigned long)child_ret_from_fork; // Redirect to eret
+    child->context.lr = (unsigned long)child_ret_from_fork;
+
+    unsigned long sp_el0_off = tf->sp_el0 - (unsigned long)parent->user_stack;
+    child_trap_frame->sp_el0 = (unsigned long)child->user_stack + sp_el0_off;
     child_trap_frame->x0 = 0;
 
-    if (parent->pid == get_current()->pid) {
-        return child->pid;
-    } else {
-        return 0;
-    }
+    return child->pid;
 }
 
 void sys_exit()
@@ -97,10 +94,17 @@ static void exit()
     asm volatile("svc 0");
 }
 
+void from_el1_to_el0()
+{
+    asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
+    asm volatile("msr elr_el1, %0" ::"r"(fork_test));
+    asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
+    asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));
+    asm volatile("eret;");
+}
+
 void fork_test()
 {
-    from_el1_to_el0();
-
     uart_puts("Fork Test (pid = ");
     uart_hex(getpid());
     uart_puts(")\n");
@@ -119,7 +123,6 @@ void fork_test()
         uart_hex(cur_sp);
         uart_puts("\n");
         cnt++;
-
         if ((ret = fork()) != 0) {
             asm volatile("mov %0, sp" : "=r"(cur_sp));
             uart_puts("first child pid: ");

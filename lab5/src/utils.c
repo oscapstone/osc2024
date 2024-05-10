@@ -33,13 +33,3 @@ int atoi(const char *s)
 
     return sign * result;
 }
-
-void from_el1_to_el0()
-{
-    asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
-    asm volatile("msr elr_el1, lr");
-    // TODO: user_stack + STACK_SIZE or context.sp?
-    asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
-    asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));
-    asm volatile("eret;");
-}
