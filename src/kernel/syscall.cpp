@@ -62,9 +62,8 @@ long sys_exit(const TrapFrame* frame) {
 long sys_mbox_call(const TrapFrame* frame) {
   auto ch = (unsigned char)frame->X[0];
   auto mbox = (message_t*)frame->X[1];
-  kprintf("mbox_call %d %p\n", ch, mbox);
   mailbox_call(ch, mbox);
-  return 0;
+  return 1;  // TODO ???
 }
 
 long sys_not_implement(const TrapFrame* /*frame*/) {
