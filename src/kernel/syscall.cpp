@@ -6,7 +6,6 @@
 #include "io.hpp"
 #include "signal.hpp"
 #include "thread.hpp"
-#include "util.hpp"
 
 void syscall_handler(TrapFrame* frame) {
   uint64_t syscallno = frame->X[8];
@@ -50,7 +49,7 @@ long sys_exec(const TrapFrame* frame) {
   return exec(name, argv);
 }
 
-long sys_fork(const TrapFrame* frame) {
+long sys_fork(const TrapFrame* /*frame*/) {
   return kthread_fork();
 }
 

@@ -13,7 +13,8 @@ void timer_init() {
   timers.init();
 
   // allow EL0 access physical timer
-  write_sysreg(CNTKCTL_EL1, read_sysreg(CNTKCTL_EL1) | 1);
+  auto cntkctl = read_sysreg(CNTKCTL_EL1);
+  write_sysreg(CNTKCTL_EL1, cntkctl | 1);
 }
 
 void add_timer(timeval tval, void* context, Timer::fp callback, int prio) {

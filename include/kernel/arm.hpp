@@ -1,6 +1,8 @@
 #pragma once
 
-#define MASK(bits) ((1ll << bits) - 1)
+#ifndef MASK
+#define MASK(bits) ((1ULL << bits) - 1)
+#endif
 
 // D8.2.32 HCR_EL2, Hypervisor Configuration Register (EL2)
 
