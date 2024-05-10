@@ -40,7 +40,7 @@ Kthread::Kthread(const Kthread& o)
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
 }
 
-void Kthread::fix(const Kthread& o, Mem mem) {
+void Kthread::fix(const Kthread& o, Mem& mem) {
   fix(o, mem.addr, mem.size);
 }
 
