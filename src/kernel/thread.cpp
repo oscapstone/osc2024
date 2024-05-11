@@ -136,6 +136,12 @@ void kthread_start() {
   kthread_fini();
 }
 
+// TODO: wq
+void kthread_wait(int pid) {
+  while (find_thread_by_tid(pid))
+    NOP;
+}
+
 void kthread_kill(int pid) {
   auto thread = find_thread_by_tid(pid);
   if (thread)

@@ -12,6 +12,9 @@ int cmd_run(int argc, char* argv[]) {
   }
 
   auto ctx = new ExecCtx{argv[1], argv + 1};
-  kthread_create(exec_new_user_prog, (void*)ctx);
+  auto th = kthread_create(exec_new_user_prog, (void*)ctx);
+  auto tid = th->tid;
+  kthread_wait(tid);
+
   return 0;
 }

@@ -68,6 +68,7 @@ int new_tid();
 
 void kthread_init();
 void kthread_start();
+void kthread_wait(int pid);
 void kthread_kill(int pid);
 void kthread_kill(Kthread* thread);
 void kthread_exit(int status);
