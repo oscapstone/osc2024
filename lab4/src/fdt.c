@@ -1,10 +1,12 @@
 #include "fdt.h"
 
 char* dtb_base;
+char* dtb_end;
 
 void fdt_traverse(dtb_callback callback)
 {
     struct fdt_header *header = (struct fdt_header *)dtb_base;
+    dtb_end = dtb_base + endian_big2little(header->totalsize);
     // fdt header magic 0xD00DFEED (big-endian)
     if (endian_big2little(header->magic) != 0xD00DFEED)
     {

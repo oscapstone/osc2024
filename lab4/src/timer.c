@@ -2,7 +2,7 @@
 #include "mini_uart.h"
 #include "string.h"
 #include "alloc.h"
-#include "utils.h"
+#include "c_utils.h"
 #include "exception.h"
 
 timer_t *timer_head = 0;
@@ -29,7 +29,7 @@ void set_timeout(char* message, unsigned long long timeout) {
 
     if(!timer_head) {
         // enable timer
-        put32(CORE0_TIMER_IRQ_CTRL, 2);
+        *CORE0_TIMER_IRQ_CTRL = 2;
     }
 
     create_timer(print_message, message_copy, timeout);

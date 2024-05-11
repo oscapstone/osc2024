@@ -7,6 +7,8 @@
 #include "c_utils.h"
 
 char *ramfs_base;
+char *ramfs_end;
+
 
 // Convert hexadecimal string to int
 // @param s: hexadecimal string
@@ -154,6 +156,12 @@ void initrd_callback(unsigned int node_type, char *name, void *value, unsigned i
         ramfs_base = (char *)(unsigned long long)endian_big2little(*(unsigned int *)value);
         uart_send_string("ramfs_base: ");
         uart_hex((unsigned long)ramfs_base);
+        uart_send_string("\n");
+    }
+    if(!strcmp(name, "linux,initrd-end")){
+        ramfs_end = (char *)(unsigned long long)endian_big2little(*(unsigned int *)value);
+        uart_send_string("ramfs_end: ");
+        uart_hex((unsigned long)ramfs_end);
         uart_send_string("\n");
     }
 }

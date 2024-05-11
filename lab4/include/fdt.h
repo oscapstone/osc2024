@@ -23,7 +23,11 @@ struct fdt_header {
 #define FDT_PROP        0x3             /* Property: name off, size, content */
 #define FDT_NOP         0x4             /* nop */
 #define FDT_END         0x9
+
 typedef void (*dtb_callback)(unsigned int node_type, char *name, void *value, unsigned int name_size);
+
+extern char* dtb_base;
+extern char* dtb_end;
 
 void fdt_traverse(dtb_callback callback);
 

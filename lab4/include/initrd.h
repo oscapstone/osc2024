@@ -7,6 +7,9 @@
 #define CPIO_NEWC_HEADER_MAGIC "070701"    // big endian
 
 
+extern char *ramfs_base;
+extern char *ramfs_end;
+
 // Cpio Archive File Header (New ASCII Format)
 typedef struct {
 	char c_magic[6];

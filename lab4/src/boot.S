@@ -32,7 +32,7 @@ set_exception_vector:
     msr vbar_el1, x20 // vector base address register
 
 set_stack:
-	ldr x1, =_start
+	ldr x1, =__stack_end // __stack_end = 0x0200000
     mov sp, x1
 	ldr x1, =bss_begin
     ldr w2, =__bss_size

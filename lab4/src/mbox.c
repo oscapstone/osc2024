@@ -1,6 +1,5 @@
 #include "mbox.h"
 #include "mini_uart.h"
-#include "utils.h"
 
 
 void mailbox_call(unsigned int* mailbox){
