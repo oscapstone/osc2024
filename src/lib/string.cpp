@@ -88,16 +88,6 @@ long strtol(const char* s, const char** endptr, int base, int n) {
   return r * x;
 }
 
-#if __has_include("mm/mm.hpp")
-#include "mm/mm.hpp"
-char* strdup(const char* s) {
-  int size = strlen(s) + 1;
-  auto p = (char*)kmalloc(size);
-  memcpy(p, s, size);
-  return p;
-}
-#endif
-
 bool operator==(string_view a, string_view b) {
   if (a.size() != b.size())
     return false;

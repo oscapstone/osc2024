@@ -45,12 +45,12 @@ else
 	QEMU_FLAGS 	+= -serial null -serial pty
 endif
 
-LIB_SRC_DIR  	= $(SRC_DIR)/lib
-CFLAGS 			+= -Iinclude/lib
-
 TARGET_BUILD_DIR 	= $(BUILD_DIR)/$(TARGET)
 TARGET_SRC_DIR  	= $(SRC_DIR)/$(TARGET)
 CFLAGS 				+= -Iinclude/$(TARGET)
+
+LIB_SRC_DIR  	= $(SRC_DIR)/lib
+CFLAGS 			+= -Iinclude/lib
 
 KERNEL_ELF 	= $(BUILD_DIR)/$(TARGET).elf
 KERNEL_BIN 	= $(DISK_DIR)/$(TARGET).img
