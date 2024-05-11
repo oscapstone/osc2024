@@ -113,6 +113,11 @@ fn get_input(commands: &Vec<commands::command>) -> String {
                     print!("> ");
                     print!("{}", input_buffer);
                 }
+            } else if c == 127 {
+                if !input_buffer.is_empty() {
+                    input_buffer.pop();
+                    print!("\x08 \x08");
+                }
             } else {
                 input_buffer.push(c as char);
                 print!("{}", c as char);
@@ -139,7 +144,7 @@ pub fn start(initrd_start: u32) {
         let input_command = input.next().unwrap_or("");
         let input_args: Vec<&str> = input.collect();
         let input_args = {
-            let mut args = Vec::new();
+            let mut args = Vec::from([input_command.to_string()]);
             for arg in input_args.iter() {
                 args.push(String::from(*arg));
             }
