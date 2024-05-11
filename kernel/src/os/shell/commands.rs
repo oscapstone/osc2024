@@ -72,8 +72,9 @@ pub fn ls(args: Vec<String>) {
 }
 
 pub fn cat(args: Vec<String>) {
+    let args = args.iter().skip(1);
     let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
-    for arg in args.iter() {
+    for arg in args {
         initramfs.print_file_content(arg);
     }
 }
@@ -110,22 +111,16 @@ pub fn exec(args: Vec<String>) {
 }
 
 pub fn set_timeout(args: Vec<String>) {
-    // let mut inp_buf = [0u8; 256];
-    // let inp_buf = &inp_buf[..len - 1];
-    // let mut iter = inp_buf.split(|c| c.clone() == b' ');
-    // assert_eq!(iter.next().unwrap(), b"setTimeout");
-    // let message = core::str::from_utf8(iter.next().unwrap())
-    //     .unwrap()
-    //     .to_string();
-    // let time = core::str::from_utf8(iter.next().unwrap()).unwrap();
-    // match time.parse::<u64>() {
-    //     Ok(time) => {
-    //         timer::add_timer_ms(time, move || println!("{}", message));
-    //     }
-    //     Err(_) => {
-    //         println!("Invalid time: {}", time.len());
-    //     }
-    // }
+    let message = args.get(1).unwrap().clone();
+    let time = args.get(2).unwrap();
+    match time.parse::<u64>() {
+        Ok(time) => {
+            timer::add_timer_ms(time, move || println!("{}", message));
+        }
+        Err(_) => {
+            println!("Invalid time: {}", time.len());
+        }
+    }
 }
 
 pub fn test_memory(args: Vec<String>) {
