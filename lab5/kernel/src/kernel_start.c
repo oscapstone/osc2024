@@ -2,7 +2,8 @@
 #include <shell.h>
 #include "fdt.h"
 #include "cpio.h"
-// #include "alloc.h"
+#include "alloc.h"
+#include "thread.h"
 
 extern char _bootloader[];
 extern void core_timer_enable();
@@ -13,6 +14,10 @@ void kernel_begin(char* fdt) {
 	fdt_traverse(get_initramfs_addr, fdt); // also set _cpio_file
 	manage_init(fdt);
 	core_timer_enable();
+
+	thread_init();
+	thread_test();
+
 	shell_begin(fdt);
 	return;
 }
