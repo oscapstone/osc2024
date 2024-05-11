@@ -82,7 +82,8 @@ fn get_input(commands: &Vec<commands::command>) -> String {
                     let match_name = matched_commands[0].get_name();
                     let match_name_remaining = &match_name[input_buffer.len()..];
                     input_buffer.push_str(match_name_remaining);
-                    print!("{}", match_name_remaining);
+                    input_buffer.push(' ');
+                    print!("{} ", match_name_remaining);
                 } else {
                     if matched_commands.len() > 1 {
                         // find the common prefix

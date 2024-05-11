@@ -79,12 +79,9 @@ pub fn cat(args: Vec<String>) {
     }
 }
 pub fn exec(args: Vec<String>) {
-    let mut inp_buf = [0u8; 256];
     let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
-    print!("Filename: ");
-    let len = get_line(&mut inp_buf, 256);
-    let filename = core::str::from_utf8(&inp_buf[..len - 1]).unwrap();
-    match initramfs.load_file_to_memory(filename, 0x2001_0000 as *mut u8) {
+    let filename = args.get(1).unwrap_or(&String::new()).clone();
+    match initramfs.load_file_to_memory(filename.as_str(), 0x2001_0000 as *mut u8) {
         true => println!("File loaded to memory"),
         false => {
             println!("File not found");
