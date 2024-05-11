@@ -39,13 +39,13 @@ typedef struct task_queue_t {
     struct task_struct *rear;
 } task_queue_t;
 
-extern void switch_to(struct task_struct *prev, struct task_struct *next);
 extern struct task_struct *get_current();
 void kthread_init();
 struct task_struct *kthread_create(void (*func)());
 void kthread_exit();
 void schedule();
 void idle();
+void kill(int pid);
 
 void display_run_queue();
 void thread_test();

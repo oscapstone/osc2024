@@ -2,6 +2,8 @@
 
 #include "alloc.h"
 #include "initrd.h"
+#include "mm.h"
+#include "sched.h"
 #include "string.h"
 #include "uart.h"
 #include "utils.h"
@@ -109,17 +111,15 @@ void initrd_exec(const char *target)
         char pathname[namesize];
         strncpy(pathname, fptr + sizeof(cpio_t), namesize);
         if (!strcmp(target, pathname)) {
-            // Load the user program
-            char *program = (char *)0x40000;
-            for (int i = 0; i < filesize; i++)
-                *program++ = (fptr + headsize)[i];
-
-            // TODO: Replace with kmalloc
-            unsigned long sp = (unsigned long)simple_malloc(4096);
+            void *program = kmalloc(filesize);
+            memcpy(program, fptr + headsize, filesize);
+            struct task_struct *task = kthread_create((void *)program);
+            asm volatile("msr tpidr_el1, %0;" ::"r"(task));
             asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
-            asm volatile("msr elr_el1, %0" ::"r"(0x40000));
-            asm volatile("msr sp_el0, %0" ::"r"(sp + 4096));
-            asm volatile("eret;"); // Return to EL0 and execute
+            asm volatile("msr elr_el1, %0" ::"r"(task->context.lr));
+            asm volatile("msr sp_el0, %0" ::"r"(task->user_stack + STACK_SIZE));
+            asm volatile("mov sp, %0" ::"r"(task->stack + STACK_SIZE));
+            asm volatile("eret;");
             return;
         }
 

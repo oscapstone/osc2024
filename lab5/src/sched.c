@@ -2,10 +2,12 @@
 #include "mm.h"
 #include "uart.h"
 
+extern void switch_to(struct task_struct *prev, struct task_struct *next);
+
 static int thread_count = 0;
 static struct task_struct *run_queue;
 
-void enqueue(struct task_struct **queue, struct task_struct *task)
+static void enqueue(struct task_struct **queue, struct task_struct *task)
 {
     if (*queue == 0) {
         *queue = task;
@@ -19,7 +21,7 @@ void enqueue(struct task_struct **queue, struct task_struct *task)
     }
 }
 
-void remove(struct task_struct **queue, struct task_struct *task)
+static void remove(struct task_struct **queue, struct task_struct *task)
 {
     if (*queue == task)
         *queue = (task->next == task) ? 0 : task->next;
@@ -70,6 +72,18 @@ void idle()
         kill_zombies();
         schedule();
     }
+}
+
+void kill(int pid)
+{
+    struct task_struct *next, *task = run_queue;
+    do {
+        next = task->next;
+        if (task->pid == pid)
+            task->state = EXIT_ZOMBIE;
+        task = next;
+    } while (task != run_queue);
+    schedule();
 }
 
 void kthread_init()

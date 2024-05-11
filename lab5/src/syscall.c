@@ -14,12 +14,18 @@ int sys_getpid()
 
 size_t sys_uart_read(char *buf, size_t size)
 {
-    return 0;
+    int i = 0;
+    while (i < size)
+        buf[i++] = uart_getc();
+    return i;
 }
 
 size_t sys_uart_write(const char *buf, size_t size)
 {
-    return 0;
+    int i = 0;
+    while (i < size)
+        uart_putc(buf[i++]);
+    return i;
 }
 
 int sys_exec(const char *name, char *const argv[])
@@ -61,6 +67,7 @@ int sys_mbox_call(unsigned char ch, unsigned int *mbox)
 
 void sys_kill(int pid)
 {
+    kill(pid);
 }
 
 /* System Call Test */
