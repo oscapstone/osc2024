@@ -30,6 +30,16 @@ int exec(const char buf[]) {
   return x0;
 }
 
+char getc() {
+  char c;
+  uartread(&c, 1);
+  return c;
+}
+
+void putc(char c) {
+  uartwrite(&c, 1);
+}
+
 void exit(int x) {
   register uint64_t x0 asm("x0") = (uint64_t)x;
   register int x8 asm("x8") = 5;
@@ -41,10 +51,9 @@ int main() {
   /* mini_uart_puts(str); */
   uartwrite(str, sizeof(str));
 
-  char c = 0;
   for (;;) {
-    uartread(&c, 1);
-    uartwrite(&c, 1);
+    char c = getc();
+    putc(c);
     if (c == 'h')
       exec("hello.img");
     if (c == 'f')
