@@ -89,7 +89,7 @@ exception_vector_table:
     CALL_WITH_CONTEXT 7 print_exception exception_restore_context
 
     .org 0x400
-    CALL_WITH_CONTEXT 8 sync_handler back_to_user
+    CALL_WITH_CONTEXT 8 el0_sync_handler back_to_user
     .org 0x480
     CALL_WITH_CONTEXT 9 irq_handler back_to_user
     .org 0x500

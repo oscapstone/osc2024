@@ -98,11 +98,9 @@ int main() {
         ++cnt;
       }
     }
-    exit();
   } else {
     printf("parent here, pid %d, child %d\n", get_pid(), ret);
   }
 
-  exit();
   return 0;
 }

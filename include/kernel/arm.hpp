@@ -29,3 +29,4 @@
 
 #define ESR_ELx_EC_SVC64    (0b010101)
 #define ESR_ELx_EC_DABT_LOW (0b100100)
+#define ESR_ELx_EC_IABT_LOW (0b100000)

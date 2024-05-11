@@ -44,7 +44,7 @@ void print_exception(TrapFrame* frame, int type) {
   reboot();
 }
 
-void sync_handler(TrapFrame* frame, int /*type*/) {
+void el0_sync_handler(TrapFrame* frame, int /*type*/) {
   unsigned long esr = read_sysreg(ESR_EL1);
   unsigned ec = ESR_ELx_EC(esr);
   unsigned iss = ESR_ELx_ISS(esr);
@@ -63,9 +63,24 @@ void sync_handler(TrapFrame* frame, int /*type*/) {
       }
       break;
 
+    case ESR_ELx_EC_DABT_LOW:
+      segv_handler("data abort");
+      break;
+
+    case ESR_ELx_EC_IABT_LOW:
+      segv_handler("undefined instruction");
+      break;
+
     default:
       kprintf_sync("unknown ESR_ELx_EC %06b\n", ec);
+      kthread_exit(-1);
+      prog_hang();
   }
+}
+
+void segv_handler(const char* reason) {
+  klog("thread %d: %s\n", current_thread()->tid, reason);
+  kthread_exit(-1);
 }
 
 void return_to_user(TrapFrame* frame) {

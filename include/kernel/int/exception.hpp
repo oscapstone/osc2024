@@ -22,9 +22,11 @@ inline int get_el() {
 extern "C" {
 void return_to_user(TrapFrame* frame);
 void print_exception(TrapFrame* frame, int type);
-void sync_handler(TrapFrame* frame, int type);
+void el0_sync_handler(TrapFrame* frame, int type);
 // irq.c
 void irq_handler(TrapFrame* frame, int type);
 // exception.S
 void set_exception_vector_table();
 }
+
+void segv_handler(const char* reason);
