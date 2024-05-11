@@ -58,6 +58,7 @@ inline Kthread* current_thread() {
   return (Kthread*)read_sysreg(TPIDR_EL1);
 }
 
+extern ListHead<Kthread> kthreads;
 void add_list(Kthread* thread);
 void del_list(Kthread* thread);
 Kthread* find_thread_by_tid(int tid);
