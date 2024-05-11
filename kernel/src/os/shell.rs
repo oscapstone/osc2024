@@ -4,7 +4,7 @@ use crate::cpu::uart::recv_async;
 use crate::os::timer;
 use crate::println;
 use alloc::boxed::Box;
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use core::arch::asm;
 mod commands;
 use alloc::vec::Vec;
@@ -14,12 +14,6 @@ fn print_time(time: u64) {
     let ms = time % 1000;
     println!("Time: {}.{:03} s", sec, ms);
     // set_next_timer(2000);
-}
-
-fn clear_buffer(buf: &mut [u8]) {
-    for c in buf.iter_mut() {
-        *c = 0;
-    }
 }
 
 static mut INITRAMFS: Option<cpio::CpioArchive> = None;
@@ -67,91 +61,102 @@ fn push_all_commands(commands: &mut Vec<commands::command>) {
     ));
 }
 
+fn get_input(commands: &Vec<commands::command>) -> String {
+    let mut input_buffer = String::new();
+
+    loop {
+        if let Some(c) = unsafe { recv_async() } {
+            if c == b'\r' {
+                println!("");
+                break input_buffer;
+            } else if c == b'\t' {
+                let mut matched_commands = Vec::new();
+                for command in commands.iter() {
+                    let name = command.get_name();
+                    if name.starts_with(input_buffer.as_str()) {
+                        matched_commands.push(command);
+                    }
+                }
+
+                if matched_commands.len() == 1 {
+                    let match_name = matched_commands[0].get_name();
+                    let match_name_remaining = &match_name[input_buffer.len()..];
+                    input_buffer.push_str(match_name_remaining);
+                    print!("{}", match_name_remaining);
+                } else {
+                    if matched_commands.len() > 1 {
+                        // find the common prefix
+                        'prefix: for idx in input_buffer.len().. {
+                            match matched_commands[0].get_name().as_bytes().get(idx) {
+                                Some(c) => {
+                                    for cmd in &matched_commands {
+                                        if cmd.get_name().as_bytes().get(idx).unwrap_or(&0).clone()
+                                            != *c
+                                        {
+                                            break 'prefix;
+                                        }
+                                    }
+                                    input_buffer.push(*c as char);
+                                }
+                                None => break,
+                            }
+                        }
+                    }
+
+                    let padding = commands.iter().map(|cmd| cmd.get_name().len()).max().unwrap_or(0);
+
+                    // print all matches
+                    println!("");
+                    for cmd in matched_commands.iter() {
+                        println!("{: <width$}: {}", cmd.get_name(), cmd.get_description(), width = padding);
+                    }
+                    print!("> ");
+                    print!("{}", input_buffer);
+                }
+            } else {
+                input_buffer.push(c as char);
+                print!("{}", c as char);
+            }
+        }
+    }
+}
+
 pub fn start(initrd_start: u32) {
-    let mut inp_buf = [0u8; 256];
     unsafe {
         INITRAMFS = Some(cpio::CpioArchive::load(initrd_start as *const u8));
     }
 
     let mut commands = Vec::new();
     push_all_commands(&mut commands);
+    commands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 
     'shell: loop {
         print!("> ");
-        clear_buffer(&mut inp_buf[..]);
 
-        let mut len = 0;
+        let input = get_input(&commands);
+        let mut input = input.trim().split_whitespace();
 
-        loop {
-            if let Some(c) = unsafe { recv_async() } {
-                if c == b'\r' {
-                    println!("");
-                    break;
-                } else if c == b'\t' {
-                    let mut matches = Vec::new();
-                    for command in commands.iter() {
-                        let name = command.get_name();
-                        let input = core::str::from_utf8(&inp_buf[..len]).unwrap();
-                        if name.starts_with(input) {
-                            matches.push(command);
-                        }
-                    }
-
-                    if matches.len() == 1 {
-                        let match_name = matches[0].get_name();
-                        let match_name_bytes = match_name.as_bytes();
-                        for i in len..match_name_bytes.len() {
-                            inp_buf[len] = match_name_bytes[i];
-                            len += 1;
-                            print!("{}", match_name_bytes[i] as char);
-                        }
-                    } else {
-                        if matches.len() > 1 {
-                            // find the common prefix
-                            let mut prefix = Vec::new();
-                            let mut idx = 0;
-                            'prefix: loop {
-                                let c = matches[0].get_name().as_bytes()[idx];
-                                for cmd in matches.iter() {
-                                    if cmd.get_name().as_bytes()[idx] != c {
-                                        break 'prefix;
-                                    }
-                                }
-                                prefix.push(c);
-                                idx += 1;
-                            }
-                            let ori_len = len;
-                            for c in prefix[len..].iter() {
-                                inp_buf[len] = *c;
-                                len += 1;
-                            }
-                        }
-
-                        // print all matches
-                        println!("");
-                        for cmd in matches.iter() {
-                            println!("{}\t:{}", cmd.get_name(), cmd.get_description());
-                        }
-                        print!("> ");
-                        for i in 0..len {
-                            print!("{}", inp_buf[i] as char);
-                        }
-                    }
-                } else {
-                    inp_buf[len] = c;
-                    len += 1;
-                    print!("{}", c as char);
-                }
+        let input_command = input.next().unwrap_or("");
+        let input_args: Vec<&str> = input.collect();
+        let input_args = {
+            let mut args = Vec::new();
+            for arg in input_args.iter() {
+                args.push(String::from(*arg));
             }
-        }
-        
-        if !inp_buf[0].is_ascii_alphabetic() {
-            continue;
+            args
+        };
+
+        if input_command == "help" {
+            let padding = commands.iter().map(|cmd| cmd.get_name().len()).max().unwrap_or(0);
+            for cmd in commands.iter() {
+                println!("{: <width$}: {}", cmd.get_name(), cmd.get_description(), width = padding);
+            }
+            continue 'shell;
         }
 
         for command in commands.iter() {
-            if inp_buf.starts_with(command.get_name().as_bytes()) {
-                command.execute(Vec::new());
+            if input_command == command.get_name() {
+                command.execute(input_args);
                 continue 'shell;
             }
         }
