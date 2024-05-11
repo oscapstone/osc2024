@@ -27,13 +27,6 @@ int sys_exec(const char *name, char *const argv[])
     return 0;
 }
 
-int get_link_register()
-{
-    unsigned long lr;
-    asm volatile("mov %0, lr" : "=r"(lr));
-    return lr;
-}
-
 int sys_fork(trap_frame *tf)
 {
     struct task_struct *parent = get_current();
@@ -70,6 +63,8 @@ void sys_kill(int pid)
 {
 }
 
+/* System Call Test */
+
 static int getpid()
 {
     int pid = -1;
@@ -92,15 +87,6 @@ static void exit()
 {
     asm volatile("mov x8, 5");
     asm volatile("svc 0");
-}
-
-void from_el1_to_el0()
-{
-    asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
-    asm volatile("msr elr_el1, %0" ::"r"(fork_test));
-    asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
-    asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));
-    asm volatile("eret;");
 }
 
 void fork_test()
@@ -160,4 +146,13 @@ void fork_test()
         uart_puts("\n");
     }
     exit();
+}
+
+void run_fork_test()
+{
+    asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
+    asm volatile("msr elr_el1, %0" ::"r"(fork_test));
+    asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
+    asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));
+    asm volatile("eret;");
 }

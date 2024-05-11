@@ -6,18 +6,11 @@
 
 void print_registers(uint64_t elr, uint64_t esr, uint64_t spsr)
 {
-    // Print spsr_el1
     uart_puts("spsr_el1: ");
     uart_hex(spsr);
-    uart_putc('\n');
-
-    // Print elr_el1
-    uart_puts(" elr_el1: ");
+    uart_puts("\n elr_el1: ");
     uart_hex(elr);
-    uart_putc('\n');
-
-    // Print esr_el1
-    uart_puts(" esr_el1: ");
+    uart_puts("\n esr_el1: ");
     uart_hex(esr);
     uart_puts("\n\n");
 }

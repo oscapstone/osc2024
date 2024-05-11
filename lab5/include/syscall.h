@@ -13,6 +13,6 @@ int sys_fork(trap_frame *tf);
 void sys_exit();
 int sys_mbox_call(unsigned char ch, unsigned int *mbox);
 void sys_kill(int pid);
-void fork_test();
+void run_fork_test();
 
 #endif // SYSCALL_H

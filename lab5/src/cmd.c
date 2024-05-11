@@ -146,8 +146,8 @@ void demo()
     uart_puts("(2) UART async read\n");
     uart_puts("(3) Buddy system\n");
     uart_puts("(4) Dynamic allocator\n");
-    uart_puts("(5) Thread creation test\n");
-    uart_puts("(6) Fork test\n");
+    uart_puts("(5) Thread creation\n");
+    uart_puts("(6) Fork system call\n");
     uart_puts("Select: ");
     read_user_input(select);
     switch (atoi(select)) {
@@ -177,7 +177,7 @@ void demo()
     case 4:
         uart_puts("Allocate 100 bytes\n");
         void *p41 = kmalloc(100);
-        uart_puts("p1 = ");
+        uart_puts("ptr = ");
         uart_hex((uintptr_t)p41);
         uart_puts("\n");
         kfree(p41);
@@ -188,7 +188,7 @@ void demo()
         idle();
         break;
     case 6:
-        kthread_create(from_el1_to_el0);
+        kthread_create(run_fork_test);
         idle();
         break;
     default:
