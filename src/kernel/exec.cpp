@@ -5,8 +5,11 @@
 #include "string.hpp"
 #include "thread.hpp"
 
-int exec(const char* name, char* const argv[]) {
-  klog("%s(%s, %p)\n", __func__, name, argv);
+int exec(ExecCtx* ctx) {
+  // TODO: args, envp
+  auto name = ctx->name;
+
+  klog("%s(%s)\n", __func__, name);
 
   auto hdr = initramfs.find(name);
   if (hdr == nullptr) {
@@ -24,6 +27,8 @@ int exec(const char* name, char* const argv[]) {
     return -1;
   }
 
+  delete ctx;
+
   memcpy(thread->user_text.addr, file.data(), file.size());
   thread->reset_kernel_stack();
   exec_user_prog(thread->user_text.addr, thread->user_stack.end(0x10),
@@ -33,8 +38,5 @@ int exec(const char* name, char* const argv[]) {
 }
 
 void exec_new_user_prog(void* ctx) {
-  auto name = (char*)ctx;
-  // TODO: mem leak
-  exec(name, nullptr);
-  // kfree(ctx);
+  exec((ExecCtx*)ctx);
 }

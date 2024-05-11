@@ -8,6 +8,7 @@ void* memcpy(void* dst, const void* src, int n);
 void memset(void* b, int c, int len);
 int memcmp(const void* s1, const void* s2, int n);
 int strlen(const char* s);
+char* strcpy(char* dst, const char* src);
 int strcmp(const char* s1, const char* s2);
 int strncmp(const char* s1, const char* s2, int n);
 const char* strchr(const char* s, char c);

@@ -34,6 +34,12 @@ int strlen(const char* s) {
   return e - s;
 }
 
+char* strcpy(char* dst, const char* src) {
+  while ((*dst = *src))
+    dst++, src++;
+  return dst;
+}
+
 int strcmp(const char* s1, const char* s2) {
   char c1, c2;
   int d;

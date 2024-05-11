@@ -9,6 +9,6 @@ int cmd_exec(int argc, char* argv[]) {
     return -1;
   }
 
-  auto name = argv[1];
-  return exec(name, nullptr);
+  auto ctx = new ExecCtx{argv[1], argv + 1};
+  return exec(ctx);
 }

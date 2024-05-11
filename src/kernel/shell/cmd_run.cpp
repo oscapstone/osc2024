@@ -11,8 +11,7 @@ int cmd_run(int argc, char* argv[]) {
     return -1;
   }
 
-  // TODO: handle argv
-  auto name = strdup(argv[1]);
-  kthread_create(exec_new_user_prog, (void*)name);
+  auto ctx = new ExecCtx{argv[1], argv + 1};
+  kthread_create(exec_new_user_prog, (void*)ctx);
   return 0;
 }

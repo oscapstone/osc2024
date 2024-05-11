@@ -46,7 +46,9 @@ long sys_uartwrite(const TrapFrame* frame) {
 long sys_exec(const TrapFrame* frame) {
   auto name = (const char*)frame->X[0];
   auto argv = (char** const)frame->X[1];
-  return exec(name, argv);
+
+  auto ctx = new ExecCtx{name, argv};
+  return exec(ctx);
 }
 
 long sys_fork(const TrapFrame* /*frame*/) {
