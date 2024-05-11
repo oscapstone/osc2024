@@ -13,12 +13,14 @@
 #include "shell/shell.hpp"
 #include "thread.hpp"
 
+extern char __kernel_end[];
+
 void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   timer_init();
 
   klog("Hello Kernel!\n");
-  klog("Kernel start   : %p\n", _start);
+  klog("Kernel start   : %p ~ %p\n", _start, __kernel_end);
   klog("Exception level: %d\n", get_el());
   klog("freq_of_timer  : %ld\n", freq_of_timer);
   klog("boot time      : " PRTval "s\n", FTval(tick2timeval(boot_timer_tick)));

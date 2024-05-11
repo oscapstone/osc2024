@@ -28,4 +28,6 @@ SECTIONS {
         *(.comment)
         *(.gnu*) *(.note*) *(.eh_frame*)
     }
+
+    __kernel_end = .;
 }
