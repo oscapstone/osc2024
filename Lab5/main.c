@@ -55,8 +55,6 @@ void main(void* dtb)
     uart_init();
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_start_callback);
     fdt_tranverse(dtb, "linux,initrd-end", initramfs_end_callback);
-    core_timer_enable();
-    cpu_timer_register();
     // say hello
     frames_init();
     // show el
@@ -69,7 +67,11 @@ void main(void* dtb)
     create_thread(test_svc, 3);
     // create_thread(foo, 4);
     // create_thread(foo, 4);
+    uart_puts("-----PRESS ANY KEY TO START USER PROGRAM-----\n\r");
     uart_getc();
+    core_timer_enable();
+    //hin(1);
+    cpu_timer_register();
     //schedule();
     idle();
     

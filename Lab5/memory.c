@@ -178,21 +178,19 @@ void memory_reserve(unsigned long start, unsigned long end) {
 void frames_init(){
     // get the start and end address of useable memory
     get_memory(dtb_start);
-    memory_start = 0x000;
-    memory_end = 0x3C000000;
+    // memory_start = 0x000;
+    // memory_end = 0x3C000000;
     split_line();
     frame_count = (memory_end - memory_start) / PAGE_SIZE;
     // startup allocation, allocate after the kernel
     void * base = (void *) &_end;
     // sending &base will keep track of the memory required to reserve
-    
     //frame array
     frames = simple_alloc(&base ,(int) sizeof(frame_t) * frame_count);
     //freelist
     fl = simple_alloc(&base, (int) sizeof(freelist_t) * (MAX_ORDER + 1));
     //memory pool
     pools = simple_alloc(&base, (int) sizeof(memory_pool_t) * NUM_POOLS);
-
     // uart_int(frame_count);
     // uart_puts("\n\r");
     // split_line();
