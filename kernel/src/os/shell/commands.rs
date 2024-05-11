@@ -59,14 +59,9 @@ pub fn reboot(args: Vec<String>) {
     loop {}
 }
 
+// TODO - Implement the help function
 pub fn help(args: Vec<String>) {
-    println!("help\t:print this help menu");
-    println!("hello\t:print Hello, World!");
-    println!("reboot\t:reboot the device");
-    println!("ls\t:list files in the initramfs");
-    println!("cat\t:print the content of a file in the initramfs");
-    println!("exec\t:load a file to memory and execute it");
-    println!("test_memory\t:test buddy memory allocation");
+    todo!("Implement the help function");
 }
 
 pub fn ls(args: Vec<String>) {
@@ -77,14 +72,11 @@ pub fn ls(args: Vec<String>) {
 }
 
 pub fn cat(args: Vec<String>) {
-    let mut inp_buf = [0u8; 256];
     let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
-    print!("Filename: ");
-    let len = get_line(&mut inp_buf, 256);
-    let filename = core::str::from_utf8(&inp_buf[..len - 1]).unwrap();
-    initramfs.print_file_content(filename);
+    for arg in args.iter() {
+        initramfs.print_file_content(arg);
+    }
 }
-
 pub fn exec(args: Vec<String>) {
     let mut inp_buf = [0u8; 256];
     let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
