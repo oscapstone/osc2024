@@ -69,6 +69,8 @@ class ListHead {
     init();
   }
 
+  ListHead(const ListHead&) = delete;
+
   void init() {
     size_ = 0;
     head_.prev = tail_.next = nullptr;

@@ -2,7 +2,7 @@
 
 class RingBuffer {
   static constexpr int capacity = 0x1000;
-  int head = 0, tail = 0;
+  volatile int head = 0, tail = 0;
   char buf[capacity]{};
 
   int nhead() const {

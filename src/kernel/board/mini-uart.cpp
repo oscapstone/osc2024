@@ -23,7 +23,7 @@ RingBuffer rbuf, wbuf;
 int mini_uart_delay = 0;
 
 namespace getline_echo {
-bool enable = false;
+volatile bool enable = false;
 char* buffer;
 int length, r;
 
@@ -138,7 +138,7 @@ void mini_uart_handler(void*) {
   while (getline_echo::enable and not rbuf.empty()) {
     using namespace getline_echo;
     auto putc = [](char c) { wbuf.push(c); };
-    auto getc = []() { return rbuf.pop(true); };
+    auto getc = []() { return rbuf.pop(); };
     impl(putc, getc);
   }
 }
