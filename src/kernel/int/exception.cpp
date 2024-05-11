@@ -51,9 +51,18 @@ void sync_handler(TrapFrame* frame, int /*type*/) {
 
   switch (ec) {
     case ESR_ELx_EC_SVC64:
-      if ((iss & MASK(16)) == 0)
-        syscall_handler(frame);
+      // imm16
+      switch (iss & MASK(16)) {
+        case 0:
+          syscall_handler(frame);
+          break;
+        case 1:
+          klog("thread %d signal_return\n", current_thread()->tid);
+          signal_return(const_cast<TrapFrame*>(frame));
+          break;
+      }
       break;
+
     default:
       kprintf_sync("unknown ESR_ELx_EC %06b\n", ec);
   }

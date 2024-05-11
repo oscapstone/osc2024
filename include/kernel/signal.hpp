@@ -8,7 +8,7 @@ struct Kthread;
 #define SIGKILL 9
 
 constexpr int NSIG = 32;
-using signal_handler = void (*)();
+using signal_handler = void (*)(int);
 
 struct SigAction {
   bool in_kernel;
@@ -29,12 +29,13 @@ struct Signal {
   Signal(Kthread*, const Signal& other);
 
   void regist(int signal, signal_handler handler);
+  void setall(signal_handler handler);
   void operator()(int signal);
   void handle(TrapFrame* frame);
 };
 
-void signal_handler_nop();
-void signal_handler_kill();
+void signal_handler_nop(int);
+void signal_handler_kill(int);
 
 void signal_kill(int pid, int signal);
 void signal_return(TrapFrame* frame);

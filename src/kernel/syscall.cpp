@@ -88,12 +88,6 @@ long sys_signal_kill(const TrapFrame* frame) {
   return 0;
 }
 
-long sys_signal_return(const TrapFrame* frame) {
-  klog("thread %d signal_return\n", current_thread()->tid);
-  signal_return(const_cast<TrapFrame*>(frame));
-  return 0;
-}
-
 long sys_not_implement(const TrapFrame* /*frame*/) {
   klog("syscall not implemented\n");
   return -1;

@@ -28,7 +28,9 @@ Kthread::Kthread()
       exit_code(0),
       item(new KthreadItem(this)),
       signal{this} {
+  signal.setall([](int) { klog("init thread can't killed!!\n"); });
   klog("init thread %d @ %p\n", tid, this);
+  add_list(this);
 }
 
 Kthread::Kthread(Kthread::fp start, void* ctx)

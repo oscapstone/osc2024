@@ -33,6 +33,3 @@ __SYSCALL(__NR_signal, sys_signal)
 
 #define __NR_signal_kill 9
 __SYSCALL(__NR_signal_kill, sys_signal_kill)
-
-#define __NR_signal_return 10
-__SYSCALL(__NR_signal_return, sys_signal_return)
