@@ -37,31 +37,31 @@ void Signal::operator()(int sig) {
   if (sig >= NSIG)
     return;
   klog("thread %d signal %d\n", cur->tid, sig);
-  auto& act = actions[sig];
-  if (act.in_kernel) {
-    act.handler(sig);
-  } else {
-    list.push_back(new SignalItem{sig});
-  }
+  list.push_back(new SignalItem{sig});
 }
 
 void Signal::handle(TrapFrame* frame) {
-  if (list.empty())
-    return;
+  while (not list.empty()) {
+    auto it = list.pop_front();
+    auto sig = it->signal;
+    delete it;
 
-  auto it = list.pop_front();
-  auto sig = it->signal;
-  delete it;
+    auto& act = actions[sig];
+    klog("thread %d handle signal %d @ %p\n", cur->tid, sig, act.handler);
 
-  auto& act = actions[sig];
-  klog("thread %d handle signal %d @ %p\n", cur->tid, sig, act.handler);
-
-  auto new_stack = (char*)kmalloc(PAGE_SIZE);
-  char* new_stack_end = new_stack + PAGE_SIZE - sizeof(TrapFrame);
-  memcpy(new_stack_end, frame, sizeof(TrapFrame));
-  frame->sp_el0 = (uint64_t)new_stack_end;
-  frame->elr_el1 = (uint64_t)act.handler;
-  frame->lr = (uint64_t)el0_sig_return;
+    if (act.in_kernel) {
+      act.handler(sig);
+    } else {
+      auto new_stack = (char*)kmalloc(PAGE_SIZE);
+      char* new_stack_end = new_stack + PAGE_SIZE - sizeof(TrapFrame);
+      memcpy(new_stack_end, frame, sizeof(TrapFrame));
+      frame->sp_el0 = (uint64_t)new_stack_end;
+      frame->elr_el1 = (uint64_t)act.handler;
+      frame->X[0] = sig;
+      frame->lr = (uint64_t)el0_sig_return;
+      break;
+    }
+  }
 }
 
 void signal_handler_nop(int) {}
