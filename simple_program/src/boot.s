@@ -1,11 +1,19 @@
-.section ".text._start"
+.section .text._start
+
 .global _start
+.global _bss_start
+.global _bss_end
+
 _start:
-    mov x0, 0
-1:
-    add x0, x0, 1
-    svc 0
-    cmp x0, 5
-    blt 1b
-1:
-    //b 1b
+    # Initialize bss
+    ldr x0, =_bss_start
+    ldr x1, =_bss_end
+.L_clear_bss:
+    cmp x0, x1
+    bge .L_done_clearing
+    str xzr, [x0], #8
+    b .L_clear_bss
+
+.L_done_clearing:
+
+    b main

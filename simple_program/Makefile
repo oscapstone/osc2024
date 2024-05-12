@@ -36,6 +36,10 @@ obj: build
 table: build
 	objdump target/aarch64-unknown-none-softfloat/release/$(project_name) -t > table.txt
 
+.PHONY: cpramfs
+cpramfs: build
+	cp $(binary_name) ../ramfs/rootfs/
+
 .PHONY: clean
 clean:
 	cargo clean
