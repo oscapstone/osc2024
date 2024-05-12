@@ -1,4 +1,5 @@
 #include "syscall.h"
+#include "initrd.h"
 #include "sched.h"
 #include "string.h"
 #include "traps.h"
@@ -30,6 +31,7 @@ size_t sys_uart_write(const char *buf, size_t size)
 
 int sys_exec(const char *name, char *const argv[])
 {
+    initrd_sys_exec(name);
     return 0;
 }
 

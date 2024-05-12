@@ -58,56 +58,35 @@ void initrd_list()
 void initrd_cat(const char *target)
 {
     char *fptr = (char *)RAMFS_BASE;
-
-    // Check if the file is encoded with New ASCII Format
     while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
         cpio_t *header = (cpio_t *)fptr;
-
-        // New ASCII Format uses 8-byte hexadecimal string for all numbers
         int namesize = hextoi(header->c_namesize, 8);
         int filesize = hextoi(header->c_filesize, 8);
-
-        // Total size of (header + pathname) is a multiple of four bytes
-        // File data is also padded to a multiple of four bytes
         int headsize = align4(sizeof(cpio_t) + namesize);
         int datasize = align4(filesize);
-
-        // Match target file
         char pathname[namesize];
         strncpy(pathname, fptr + sizeof(cpio_t), namesize);
         if (!strcmp(target, pathname)) {
-            // Print its content
             char data[filesize];
             strncpy(data, fptr + headsize, filesize);
             uart_puts(data);
             uart_putc('\n');
             return;
         }
-
         fptr += headsize + datasize;
     }
-
     uart_puts("File not found.\n");
 }
 
 void initrd_exec(const char *target)
 {
     char *fptr = (char *)RAMFS_BASE;
-
-    // Check if the file is encoded with New ASCII Format
     while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
         cpio_t *header = (cpio_t *)fptr;
-
-        // New ASCII Format uses 8-byte hexadecimal string for all numbers
         int namesize = hextoi(header->c_namesize, 8);
         int filesize = hextoi(header->c_filesize, 8);
-
-        // Total size of (header + pathname) is a multiple of four bytes
-        // File data is also padded to a multiple of four bytes
         int headsize = align4(sizeof(cpio_t) + namesize);
         int datasize = align4(filesize);
-
-        // Match target file
         char pathname[namesize];
         strncpy(pathname, fptr + sizeof(cpio_t), namesize);
         if (!strcmp(target, pathname)) {
@@ -122,10 +101,30 @@ void initrd_exec(const char *target)
             asm volatile("eret;");
             return;
         }
-
         fptr += headsize + datasize;
     }
+    uart_puts("File not found.\n");
+}
 
+void initrd_sys_exec(const char *target)
+{
+    char *fptr = (char *)RAMFS_BASE;
+    while (memcmp(fptr + sizeof(cpio_t), "TRAILER!!!", 10)) {
+        cpio_t *header = (cpio_t *)fptr;
+        int namesize = hextoi(header->c_namesize, 8);
+        int filesize = hextoi(header->c_filesize, 8);
+        int headsize = align4(sizeof(cpio_t) + namesize);
+        int datasize = align4(filesize);
+        char pathname[namesize];
+        strncpy(pathname, fptr + sizeof(cpio_t), namesize);
+        if (!strcmp(target, pathname)) {
+            void *program = kmalloc(filesize);
+            memcpy(program, fptr + headsize, filesize);
+            get_current()->context.lr = (unsigned long)program;
+            return;
+        }
+        fptr += headsize + datasize;
+    }
     uart_puts("File not found.\n");
 }
 

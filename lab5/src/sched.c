@@ -2,10 +2,10 @@
 #include "mm.h"
 #include "uart.h"
 
-extern void switch_to(struct task_struct *prev, struct task_struct *next);
-
 static int thread_count = 0;
 static struct task_struct *run_queue;
+
+extern void switch_to(struct task_struct *prev, struct task_struct *next);
 
 static void enqueue(struct task_struct **queue, struct task_struct *task)
 {
@@ -76,6 +76,7 @@ void idle()
 
 void kill(int pid)
 {
+    // TODO: Should remove the task from the run_queue
     struct task_struct *next, *task = run_queue;
     do {
         next = task->next;
@@ -83,6 +84,7 @@ void kill(int pid)
             task->state = EXIT_ZOMBIE;
         task = next;
     } while (task != run_queue);
+    kill_zombies();
     schedule();
 }
 
