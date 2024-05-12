@@ -119,7 +119,7 @@ void cpio_load(char* str) {
 	void* pos = cpio_find(str); 
 	uart_printf("Running code from %x...\n", pos);
 	asm volatile(
-		"mov x1, 0x3c0;"
+		"mov x1, 0;"
 		"msr spsr_el1, x1;"
 		"mov x1, %[var1];"
 		"ldr x2, =0x1000000;"

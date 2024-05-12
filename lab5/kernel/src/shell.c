@@ -9,6 +9,7 @@
 #include "fdt.h"
 #include "timer.h"
 #include "exception.h"
+#include "thread.h"
 
 char buf[1024];
 
@@ -188,6 +189,9 @@ void shell_begin(char* fdt)
 			uart_recv_string(buf);
 			uart_printf("\n");
 			cpio_load(buf);
+		}
+		else if (same(buf, "thread")) {
+			thread_test();
 		}
 		else {
 			uart_printf("Command not found\n");

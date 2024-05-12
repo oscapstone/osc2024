@@ -168,7 +168,7 @@ exception_vector_table:
 
   b exception_handler 
   .align 7
-  b undefined_exception
+  b general_irq_handler 
   .align 7
   b undefined_exception
   .align 7

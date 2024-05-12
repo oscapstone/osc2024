@@ -16,7 +16,6 @@ void kernel_begin(char* fdt) {
 	core_timer_enable();
 
 	thread_init();
-	thread_test();
 
 	shell_begin(fdt);
 	return;

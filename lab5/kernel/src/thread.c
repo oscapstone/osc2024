@@ -5,36 +5,35 @@
 #define stack_size 4096
 #define max_thread_num 100
 
-thread_node* thread_start;
-thread_node* thread_tail;
+thread* thread_start;
+thread* thread_tail;
 
-thread_node* threads[max_thread_num];
+thread* threads[max_thread_num];
 
-extern thread_node* get_current();
-extern void switch_to(thread_node*, thread_node*);
+extern thread* get_current();
+extern void switch_to(thread*, thread*);
 
 void thread_init() {
 	for (int i = 0; i < max_thread_num; i ++) {
 		threads[i] = NULL;
 	}
-	thread_start = my_malloc(sizeof(thread_node));
+	thread_start = my_malloc(sizeof(thread));
 	thread_start -> next = NULL;
+	thread_start -> prev = NULL;
 	thread_tail = thread_start;
 	uart_printf ("initialized thread_start and thread_tail\r\n");
 
 	thread* x = my_malloc(sizeof(thread));
-	thread_node* y = my_malloc(sizeof(thread_node));
-	y -> thread = x;
-	threads[0] = y;
-	y -> id = 0;
-	asm volatile ("msr tpidr_el1, %0" : "=r" (y));
+	threads[0] = x;
+	x -> id = -1;
+	x -> state = 1;
+	asm volatile ("msr tpidr_el1, %0" : "=r" (x));
 }
 
 void kill_zombies() {
 	for (int i = 0; i < max_thread_num; i ++) {
-		if (threads[i] -> thread -> state == 0) {
-			my_free(threads[i] -> thread -> stack_start);
-			my_free(threads[i] -> thread);
+		if (threads[i] -> state == 0) {
+			my_free(threads[i] -> stack_start);
 			my_free(threads[i]);
 			threads[i] = NULL;
 		}
@@ -42,21 +41,30 @@ void kill_zombies() {
 }
 
 void idle() {
-	uart_printf ("In idle\r\n");
 	while (1) {
+		uart_printf ("In idle\r\n");
 		kill_zombies();
-		schedule();
+		schedule(1);
 	}
 }
 
-void schedule() {
+void schedule(int d) {
 	if (thread_start -> next == NULL) {
-		return;
+		uart_printf ("No next thread job, shouldn't happen");
 	}
-	
 	thread_start = thread_start -> next;
-	uart_printf("jumping from %d to %d\r\n", get_current() -> id, thread_start -> id);
-	uart_printf ("%x\r\n", thread_start -> thread -> lr);
+	if (thread_start -> id == -1) {
+		thread_start = thread_start -> next;
+	}
+	if (thread_start -> id == get_current() -> id) return;
+	
+	if (d) {
+		thread_tail -> next = get_current();
+		get_current() -> prev = thread_tail;
+		get_current() -> next = NULL;
+		thread_tail = thread_tail -> next;
+	}
+		
 	switch_to(get_current(), thread_start);
 }
 
@@ -68,13 +76,10 @@ void thread_create(void* func) {
 	x -> lr = func; // by this when ret, it'll do function.
 	x -> state = 1;
 
-	thread_node* y = my_malloc(sizeof(thread_node));
-	y -> thread = x;
-	
 	for (int i = 0; i < max_thread_num; i ++) {
 		if (threads[i] == NULL) {
-			threads[i] = y;
-			y -> id = i;
+			threads[i] = x;
+			x -> id = i;
 			break;
 		}
 		if (i == max_thread_num - 1) {
@@ -83,11 +88,17 @@ void thread_create(void* func) {
 		}
 	}
 	
-	y -> next = thread_tail -> next;
-	thread_tail -> next = y;
-	thread_tail = y;
+	x -> next = NULL; 
+	x -> prev = thread_tail;
+	thread_tail -> next = x;
+	thread_tail = thread_tail -> next;
+}
 
-	uart_printf ("%d: %x\r\n", y -> id, x -> lr);
+void kill_thread() {
+	get_current() -> prev -> next = get_current() -> next;
+	get_current() -> next -> prev = get_current() -> prev;
+	get_current() -> state = 0;
+	schedule(0);
 }
 
 void delay(int t) {
@@ -95,12 +106,14 @@ void delay(int t) {
 }
 
 void foo(){
-    for(int i = 0; i < 10; ++i) {
+    for(int i = 0; i < 3; ++i) {
         uart_printf("Thread id: %d %d\n", get_current() -> id, i);
         delay(1000000);
-        schedule();
+        schedule(1);
     }
-	get_current() -> thread -> state = 0;
+	kill_thread();
+	uart_printf ("should not come here\r\n");
+	while(1);
 }
 
 void thread_test() {
@@ -109,5 +122,5 @@ void thread_test() {
 	for (int i = 0; i < 3; i ++) {
 		thread_create(foo);
 	}
-	schedule();	
+	schedule(0);	
 }

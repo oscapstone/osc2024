@@ -7,14 +7,10 @@ typedef struct thread {
 	void* lr;
 	void* sp;
 	void* stack_start;
-	int state;
+	int state, id;
+	struct thread* next;
+	struct thread* prev;
 } thread;
-
-typedef struct thread_node {
-	thread* thread;
-	struct thread_node* next;
-	int id;
-} thread_node;
 
 void thread_init();
 void thread_test();

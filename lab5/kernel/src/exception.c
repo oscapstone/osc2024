@@ -52,10 +52,10 @@ void core_timer_entry() {
     );
 
 	asm volatile("msr cntp_ctl_el0,%0"::"r"(0));
-	asm volatile("msr DAIFSet, 0xf");
-
+	irq(0);
+	
 	if (head == NULL) {
-		asm volatile("msr DAIFClr, 0xf");
+		irq(1);
 		unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
 		*address = 2;
 		return;
@@ -69,9 +69,26 @@ void core_timer_entry() {
 		asm volatile("msr cntp_ctl_el0,%0"::"r"(1));
 	}
 
-	asm volatile("msr DAIFClr, 0xf");
+	irq(1);
 	unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
 	*address = 2;
+}
+
+void simple_core_timer_entry() {
+	irq(0);
+    unsigned long long cur_cnt, cnt_freq;
+
+    asm volatile(
+        "mrs %[var1], cntpct_el0;"
+        "mrs %[var2], cntfrq_el0;"
+        :[var1] "=r" (cur_cnt), [var2] "=r" (cnt_freq)
+    );
+	uart_printf ("Now is %d\r\n", cur_cnt / cnt_freq);
+
+	asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq * 2));
+	unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
+	*address = 2;
+	irq(1);
 }
 
 
@@ -96,7 +113,7 @@ void c_general_irq_handler(){
 	else if (cpu_irq_src & (0x1 << 1)) {
 		unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
 		*address = 0;
-		create_task(core_timer_entry, 5);
+		create_task(simple_core_timer_entry, 5);
 	}
 	irq(1);
 	execute_tasks();
