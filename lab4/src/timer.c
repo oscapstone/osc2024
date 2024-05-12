@@ -23,7 +23,7 @@ void print_message(void *data) {
 }
 
 void set_timeout(char* message, unsigned long long timeout) {
-    char* message_copy = simple_malloc(strlen(message)+1);
+    char* message_copy = kmalloc(strlen(message)+1);
     strncpy_(message_copy, message, strlen(message)+1);
     if(!message_copy) return;
 
@@ -40,7 +40,7 @@ void create_timer(
     void *data, 
     unsigned long long timeout
 ) {
-    timer_t *timer = simple_malloc(sizeof(timer_t));
+    timer_t *timer = kmalloc(sizeof(timer_t));
     if(!timer) return;
 
     timer->callback = callback;

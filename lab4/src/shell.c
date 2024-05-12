@@ -16,7 +16,7 @@ void shell(){
         if(!strcmp(str, "hello")){
             uart_async_send_string("Hello World!\n");
         } else if(!strcmp(str, "mailbox")){
-            uart_async_send_string("Mailbox info: \n");
+            uart_send_string("Mailbox info: \n");
             get_board_revision();
             get_memory_info();
         } else if(!strcmp(str, "ls")){
@@ -33,17 +33,6 @@ void shell(){
             uart_recv_command(file_name);
             uart_async_send_string("\n");
             initrd_exec_prog(file_name);
-        } else if (!strcmp(str, "count2s")){
-            uart_async_send_string("Triggering timer interrupt...\n");
-            // asm volatile(
-            //     "mov x20, 1;"
-            //     "msr cntp_ctl_el0, x20;"
-            //     "mrs x20, cntfrq_el0;"
-            //     "msr cntp_tval_el0, x20;"
-            //     "mov x20, 2;"
-            //     "ldr x1, =0x40000040;"
-            //     "str w20, [x1];"
-            // );
         } else if (!strncmp(str, "setTimeout", 10)){
             // str = setTimeout MESSAGE SECONDS
             // split the message and seconds into two char*
@@ -73,10 +62,10 @@ void shell(){
             seconds[strlen(str) - j - 1] = '\0';
             // convert seconds to int
             unsigned int timeout = atoi(seconds);
-            uart_async_send_string(message);
-            uart_async_send_string(" will be printed in ");
-            uart_async_send_string(seconds);
-            uart_async_send_string(" seconds\n");
+            uart_send_string(message);
+            uart_send_string(" will be printed in ");
+            uart_send_string(seconds);
+            uart_send_string(" seconds\n");
             set_timeout(message, timeout);
         } else if (!strcmp(str, "reboot")){
             uart_async_send_string("Rebooting...\n");
@@ -90,7 +79,6 @@ void shell(){
             uart_async_send_string("cat\t: print content of a file\n");
             uart_async_send_string("reboot\t: reboot this device\n");
             uart_async_send_string("exec\t: execute program from initramfs\n");
-            uart_async_send_string("count2s\t: trigger timer interrupt\n");
             uart_async_send_string("setTimeout\t: setTimeout MESSAGE SECONDS\n");
         }
     }

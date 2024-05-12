@@ -10,16 +10,7 @@
 
 extern char *dtb_base;
 
-
-void main(char* base) {
-	dtb_base = base;
-	uart_init();
-	uart_send_string("DTB base address: ");
-	uart_hex(dtb_base);
-	uart_send_string("\n");
-	fdt_traverse(initrd_callback);
-	alloc_init();
-	uart_enable_interrupt();
+void demo_mm() {
 	char* page_addr[TEST_SIZE];
 	for(int i=0;i<TEST_SIZE;i+=3) {
 		page_addr[i] = kmalloc(20);
@@ -35,5 +26,18 @@ void main(char* base) {
 		// free_list_info();
 		print_chunk_info();
 	}
+}
+
+void main(char* base) {
+	dtb_base = base;
+	uart_init();
+	uart_send_string("DTB base address: ");
+	uart_hex(dtb_base);
+	uart_send_string("\n");
+	fdt_traverse(initrd_callback);
+	alloc_init();
+	uart_enable_interrupt();
+	demo_mm();
+	debug = 0;
 	shell();
 }

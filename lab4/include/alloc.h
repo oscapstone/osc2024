@@ -12,6 +12,8 @@
 #define ALLOCATED -2 // allocated memory pages
 #define RESERVED -3 // reserved memory pages
 
+extern int debug;
+
 typedef struct page {
     unsigned char* addr;
     unsigned long long idx;

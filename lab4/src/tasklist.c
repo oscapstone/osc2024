@@ -9,7 +9,7 @@ int cur_priority = 100;
 
 void create_task(task_callback_t callback, unsigned long long priority) {
     el1_interrupt_disable();
-    task_t* task = simple_malloc(sizeof(task_t));
+    task_t* task = kmalloc(sizeof(task_t));
     if(!task) return;
 
     task->callback = callback;
