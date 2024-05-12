@@ -10,6 +10,8 @@ thread* thread_tail;
 
 thread* threads[max_thread_num];
 
+void* thread_fn[max_thread_num];
+
 extern thread* get_current();
 extern void switch_to(thread*, thread*);
 
@@ -68,17 +70,33 @@ void schedule(int d) {
 	switch_to(get_current(), thread_start);
 }
 
+void kill_thread() {
+	get_current() -> prev -> next = get_current() -> next;
+	get_current() -> next -> prev = get_current() -> prev;
+	get_current() -> state = 0;
+	schedule(0);
+}
+
+void thread_func_handler() {
+	int id = get_current() -> id;
+	void(*func)() = thread_fn[id];
+	func();
+	kill_thread();
+}
+
 void thread_create(void* func) {
 	thread* x = my_malloc(sizeof(thread));
 	x -> stack_start = my_malloc(stack_size);
 	x -> sp = x -> stack_start + stack_size - 16; 
 	x -> fp = x -> sp;
-	x -> lr = func; // by this when ret, it'll do function.
+	x -> lr = thread_func_handler;
 	x -> state = 1;
+	
 
 	for (int i = 0; i < max_thread_num; i ++) {
 		if (threads[i] == NULL) {
 			threads[i] = x;
+			thread_fn[i] = func; // this records what to do
 			x -> id = i;
 			break;
 		}
@@ -94,13 +112,6 @@ void thread_create(void* func) {
 	thread_tail = thread_tail -> next;
 }
 
-void kill_thread() {
-	get_current() -> prev -> next = get_current() -> next;
-	get_current() -> next -> prev = get_current() -> prev;
-	get_current() -> state = 0;
-	schedule(0);
-}
-
 void delay(int t) {
 	while (t --);
 }
@@ -111,9 +122,9 @@ void foo(){
         delay(1000000);
         schedule(1);
     }
-	kill_thread();
-	uart_printf ("should not come here\r\n");
-	while(1);
+	// kill_thread();
+	// uart_printf ("should not come here\r\n");
+	// while(1);
 }
 
 void thread_test() {
