@@ -42,12 +42,11 @@ void kernel_main(void* dtb_addr) {
   mm_init();
 
   irq_init();
+  kthread_init();
+  schedule_init();
   enable_interrupt();
 
   mini_uart_use_async(true);
-
-  schedule_init();
-  kthread_init();
 
   kthread_create(shell);
 
