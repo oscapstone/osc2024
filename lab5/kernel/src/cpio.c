@@ -117,17 +117,22 @@ void cpio_parse_cat(char* name) {
 
 void cpio_load(char* str) {
 	void* pos = cpio_find(str); 
+	void* stack = my_malloc(4096);
+	stack += 4096 - 1;
+	void* code = my_malloc(4096);
+	strcpy(pos, code, 4096 * (64 / 8));
+	
 	uart_printf("Running code from %x...\n", pos);
 	asm volatile(
 		"mov x1, 0;"
 		"msr spsr_el1, x1;"
-		"mov x1, %[var1];"
-		"ldr x2, =0x1000000;"
+		"mov x1, %[code];"
+		"mov x2, %[sp];"
 		"msr elr_el1, x1;"
 		"msr sp_el0, x2;"
-		"eret"
+		"eret;"
 		:
-		: [var1] "r" (pos)
+		: [code] "r" (code), [sp] "r" (stack)
 		: "x1", "x2"
 	);
 }

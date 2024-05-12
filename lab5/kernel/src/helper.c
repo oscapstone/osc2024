@@ -39,3 +39,9 @@ unsigned long stoi(char* str) {
 	}
 	return res;
 }
+
+void strcpy(char* from, char* to, int size) {
+	for (int i = 0; i < size; i ++) {
+		to[i] = from[i];
+	}
+}

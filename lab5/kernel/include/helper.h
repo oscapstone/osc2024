@@ -6,6 +6,7 @@ int same(char*, char*);
 
 void substr(char*, char*, int, int);
 int strlen(char*);
+void strcpy(char*, char*, int);
 
 unsigned long stoi(char*);
 
