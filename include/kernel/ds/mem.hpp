@@ -11,7 +11,7 @@ struct Mem {
   int* ref;
 
   Mem() : addr(nullptr), size(0), ref(nullptr) {}
-  Mem(uint64_t size, bool copy) {
+  Mem(uint64_t size, bool copy) : Mem{} {
     alloc(size, copy);
   }
 
