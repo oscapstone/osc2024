@@ -4,7 +4,7 @@
 #include "sprintf.h"
 #include "utils.h"
 
-#define PRINTF_BUFFER_SIZE 0x400
+#define PRINTF_BUFFER_SIZE 0x100
 static char* printf_buffer;
 
 #define UART_BUFFER_SIZE 0x100  // must be power of 2
