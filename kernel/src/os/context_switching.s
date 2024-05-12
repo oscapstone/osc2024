@@ -40,15 +40,27 @@
     add sp, sp, 32 * 8
 .endm
 
+# Dummy handlers
 .global exception_handler
 exception_handler:
+    eret
+
+.global irq_handler
+irq_handler:
     save_all
     bl disable_irq
-
-    bl exception_handler_rust
-
+    mov x0, sp
+    bl irq_handler_rust
     bl enable_irq
-
     load_all
+    eret
 
+.global svc_handler
+svc_handler:
+    save_all
+    bl disable_irq
+    mov x0, sp
+    bl svc_handler_rust
+    bl enable_irq
+    load_all
     eret

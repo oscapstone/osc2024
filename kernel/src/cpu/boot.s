@@ -32,10 +32,10 @@ _start:
     ldr x0, =_bss_start
     ldr x1, =_bss_end
 .L_clear_bss:
-   cmp x0, x1
-   bge .L_done_clearing
-   str xzr, [x0], #8
-   b .L_clear_bss
+    cmp x0, x1
+    bge .L_done_clearing
+    str xzr, [x0], #8
+    b .L_clear_bss
 .L_done_clearing:
 
     bl .from_el2_to_el1
@@ -73,7 +73,7 @@ _start:
 .align 11
 .global exception_vector_table
 exception_vector_table:
-    b exception_handler
+    b svc_handler
     .align 7
     b exception_handler
     .align 7
@@ -81,17 +81,17 @@ exception_vector_table:
     .align 7
     b exception_handler
     .align 7
-    b exception_handler
+    b svc_handler
+    .align 7
+    b irq_handler
     .align 7
     b exception_handler
     .align 7
     b exception_handler
     .align 7
-    b exception_handler
+    b svc_handler
     .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
+    b irq_handler
     .align 7
     b exception_handler
     .align 7

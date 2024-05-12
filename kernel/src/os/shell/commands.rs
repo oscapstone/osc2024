@@ -24,6 +24,7 @@ impl Display for command {
 }
 
 fn set_next_timer() {
+    println!("Timer expired");
     timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
 }
 

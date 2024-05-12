@@ -5,7 +5,8 @@ use crate::os::stdio::{print_hex_now, println_now};
 const CS_COUNTER: *mut u32 = 0x7_5000 as *mut u32;
 
 #[no_mangle]
-pub fn disable_irq() {
+#[inline(never)]
+pub extern "C" fn disable_irq() {
     unsafe {
         let mut counter: u32 = read_volatile(CS_COUNTER);
         counter += 1;
@@ -16,7 +17,8 @@ pub fn disable_irq() {
     }
 }
 #[no_mangle]
-pub fn enable_irq() {
+#[inline(never)]
+pub extern "C" fn enable_irq() {
     unsafe {
         let mut counter: u32 = read_volatile(CS_COUNTER);
         counter -= 1;
