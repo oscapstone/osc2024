@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+void timer_init();
 void timer_enable_interrupt();
 void timer_disable_interrupt();
 void timer_irq_handler();

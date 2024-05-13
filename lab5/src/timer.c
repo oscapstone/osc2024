@@ -12,6 +12,15 @@ typedef struct __timer_t {
 
 static timer_t *head = 0;
 
+void timer_init()
+{
+    // TODO: Move the core timer initialization code to here
+    uint64_t tmp;
+    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+    tmp |= 1;
+    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+}
+
 void timer_enable_interrupt()
 {
     asm volatile("mov x0, 1;"

@@ -15,6 +15,7 @@ int main()
     uart_init();
     alloc_init();
     enable_interrupt();
+    timer_init();
     timer_enable_interrupt();
     fdt_traverse(initrd_callback);
     mem_init();
