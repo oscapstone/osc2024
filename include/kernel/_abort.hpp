@@ -5,7 +5,6 @@
 
 namespace std {
 inline void abort() {
-  kputs_sync("abort");
-  prog_hang();
+  panic("abort");
 }
 };  // namespace std

@@ -30,4 +30,3 @@ void set_exception_vector_table();
 }
 
 void segv_handler(int el, const char* reason);
-void panic(const char* reason);

@@ -11,10 +11,8 @@
 pair<uint32_t, uint32_t> mm_range() {
   auto path = "/memory/reg";
   auto [found, view] = fdt.find(path);
-  if (!found) {
-    klog("mm: device %s not found\n", path);
-    prog_hang();
-  }
+  if (!found)
+    panic("mm: device %s not found", path);
   auto value = fdt_ld64(view.data());
   uint32_t start = value >> 32;
   uint32_t end = value & MASK(32);

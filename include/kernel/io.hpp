@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdarg>
 
+#include "board/pm.hpp"
 #include "string.hpp"
 #include "util.hpp"
 
@@ -24,3 +25,10 @@ void kprint(string_view view);
 
 unsigned kread(char buf[], unsigned size);
 unsigned kwrite(const char buf[], unsigned size);
+
+#define panic(reason, ...)                                                \
+  do {                                                                    \
+    klog("kernel panic: " reason " @ 0x%lx\n" __VA_OPT__(, ) __VA_ARGS__, \
+         read_sysreg(ELR_EL1));                                           \
+    reboot();                                                             \
+  } while (0)

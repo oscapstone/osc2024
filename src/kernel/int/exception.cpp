@@ -89,17 +89,12 @@ void sync_handler(TrapFrame* frame, int type) {
 
 void segv_handler(int el, const char* reason) {
   if (el != 0) {
-    panic(reason);
+    panic("%s", reason);
   } else {
     klog("thread %d: %s @ 0x%lx\n", current_thread()->tid, reason,
          read_sysreg(ELR_EL1));
     kthread_exit(-1);
   }
-}
-
-void panic(const char* reason) {
-  klog("kernel panic: %s @ 0x%lx\n", reason, read_sysreg(ELR_EL1));
-  reboot();
 }
 
 void return_to_user(TrapFrame* frame) {

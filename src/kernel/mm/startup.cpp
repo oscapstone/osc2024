@@ -18,12 +18,9 @@ void startup_alloc_init() {
 
 void* startup_malloc(uint64_t size, uint64_t al) {
   heap_cur = align(heap_cur, al);
-  if (!startup_free(size)) {
-    klog("[startup alloc] oom require 0x%lx / %p / (%p ~ %p)\n", size, heap_cur,
-         __heap_start, __heap_end);
-    prog_hang();
-    return nullptr;
-  }
+  if (!startup_free(size))
+    panic("[startup alloc] oom require 0x%lx / %p / (%p ~ %p)", size, heap_cur,
+          __heap_start, __heap_end);
   void* tmp = heap_cur;
   heap_cur += size;
   return tmp;

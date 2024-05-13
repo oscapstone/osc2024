@@ -48,11 +48,9 @@ void PageSystem::info() {
 
 void PageSystem::preinit(uint64_t p_start, uint64_t p_end) {
   start_ = p_start, end_ = p_end;
-  if (start_ % PAGE_SIZE or end_ % PAGE_SIZE) {
-    klog("%s: start 0x%lx or end 0x%lx not align with PAGE_SIZE 0x%lx\n",
-         __func__, start_, end_, PAGE_SIZE);
-    prog_hang();
-  }
+  if (start_ % PAGE_SIZE or end_ % PAGE_SIZE)
+    panic("[%s] start 0x%lx or end 0x%lx not align with PAGE_SIZE 0x%lx",
+          __func__, start_, end_, PAGE_SIZE);
 
   MM_INFO("%s: 0x%lx ~ 0x%lx\n", __func__, start_, end_);
 
