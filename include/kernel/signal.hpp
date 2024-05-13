@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ds/list.hpp"
+#include "ds/mem.hpp"
 #include "int/exception.hpp"
 
 struct Kthread;
@@ -24,9 +25,11 @@ struct Signal {
   Kthread* cur;
   ListHead<SignalItem> list;
   SigAction actions[NSIG];
+  Mem stack;
 
   Signal(Kthread*);
   Signal(Kthread*, const Signal& other);
+  Signal(const Signal&) = delete;
 
   void regist(int signal, signal_handler handler);
   void setall(signal_handler handler);

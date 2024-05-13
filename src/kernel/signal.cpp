@@ -2,7 +2,7 @@
 
 #include "thread.hpp"
 
-Signal::Signal(Kthread* thread) : cur(thread), list{} {
+Signal::Signal(Kthread* thread) : cur(thread), list{}, stack{} {
   setall(signal_handler_nop);
   actions[SIGKILL] = {
       .in_kernel = true,
@@ -10,7 +10,8 @@ Signal::Signal(Kthread* thread) : cur(thread), list{} {
   };
 }
 
-Signal::Signal(Kthread* thread, const Signal& other) : cur(thread), list{} {
+Signal::Signal(Kthread* thread, const Signal& other)
+    : cur(thread), list{}, stack{} {
   for (int i = 0; i < NSIG; i++)
     actions[i] = other.actions[i];
 }
@@ -53,10 +54,11 @@ void Signal::handle(TrapFrame* frame) {
       act.handler(sig);
     } else {
       if (frame) {
-        auto new_stack = (char*)kmalloc(PAGE_SIZE);
-        char* new_stack_end = new_stack + PAGE_SIZE - sizeof(TrapFrame);
-        memcpy(new_stack_end, frame, sizeof(TrapFrame));
-        frame->sp_el0 = (uint64_t)new_stack_end;
+        if (not stack.alloc(PAGE_SIZE, true))
+          panic("[signal::handle] can't alloc new stack");
+        auto backup_frame = stack.end(sizeof(TrapFrame));
+        memcpy(backup_frame, frame, sizeof(TrapFrame));
+        frame->sp_el0 = (uint64_t)backup_frame;
         frame->elr_el1 = (uint64_t)act.handler;
         frame->X[0] = sig;
         frame->lr = (uint64_t)el0_sig_return;
@@ -82,9 +84,10 @@ void signal_kill(int pid, int sig) {
 }
 
 void signal_return(TrapFrame* frame) {
-  auto new_stack = (char*)getPage((void*)frame->sp_el0);
-  char* new_stack_end = new_stack + PAGE_SIZE - sizeof(TrapFrame);
-  memcpy(frame, new_stack_end, sizeof(TrapFrame));
+  klog("thread %d signal_return\n", current_thread()->tid);
+  auto backup_frame = (void*)frame->sp_el0;
+  memcpy(frame, backup_frame, sizeof(TrapFrame));
+  current_thread()->signal.stack.dealloc();
 }
 
 // run on EL0

@@ -56,7 +56,6 @@ void sync_handler(TrapFrame* frame, int type) {
           syscall_handler(frame);
           break;
         case 1:
-          klog("thread %d signal_return\n", current_thread()->tid);
           signal_return(frame);
           break;
       }
