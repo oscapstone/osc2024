@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "initrd.h"
+#include "mbox.h"
 #include "sched.h"
 #include "string.h"
 #include "traps.h"
@@ -64,7 +65,7 @@ void sys_exit()
 
 int sys_mbox_call(unsigned char ch, unsigned int *mbox)
 {
-    return 0;
+    return mbox_call(ch, mbox);
 }
 
 void sys_kill(int pid)

@@ -30,7 +30,8 @@
 #define MAILBOX_CH_COUNT 7
 #define MAILBOX_CH_PROP  8
 
-extern volatile unsigned int mbox[36];
-int mailbox_call(unsigned char c);
+int mbox_call(unsigned char ch, unsigned int *mbox);
+void get_revision();
+void get_mem_info();
 
 #endif // MBOX_H
