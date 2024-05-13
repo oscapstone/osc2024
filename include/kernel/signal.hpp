@@ -31,7 +31,7 @@ struct Signal {
   void regist(int signal, signal_handler handler);
   void setall(signal_handler handler);
   void operator()(int signal);
-  void handle(TrapFrame* frame);
+  void handle(TrapFrame* frame = nullptr);
 };
 
 void signal_handler_nop(int);

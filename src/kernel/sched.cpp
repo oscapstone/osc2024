@@ -62,6 +62,8 @@ void schedule_init() {
 }
 
 void schedule() {
+  current_thread()->signal.handle();
+
   save_DAIF_disable_interrupt();
 
   auto cur = current_thread();

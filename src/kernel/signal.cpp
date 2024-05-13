@@ -52,13 +52,17 @@ void Signal::handle(TrapFrame* frame) {
     if (act.in_kernel) {
       act.handler(sig);
     } else {
-      auto new_stack = (char*)kmalloc(PAGE_SIZE);
-      char* new_stack_end = new_stack + PAGE_SIZE - sizeof(TrapFrame);
-      memcpy(new_stack_end, frame, sizeof(TrapFrame));
-      frame->sp_el0 = (uint64_t)new_stack_end;
-      frame->elr_el1 = (uint64_t)act.handler;
-      frame->X[0] = sig;
-      frame->lr = (uint64_t)el0_sig_return;
+      if (frame) {
+        auto new_stack = (char*)kmalloc(PAGE_SIZE);
+        char* new_stack_end = new_stack + PAGE_SIZE - sizeof(TrapFrame);
+        memcpy(new_stack_end, frame, sizeof(TrapFrame));
+        frame->sp_el0 = (uint64_t)new_stack_end;
+        frame->elr_el1 = (uint64_t)act.handler;
+        frame->X[0] = sig;
+        frame->lr = (uint64_t)el0_sig_return;
+      } else {
+        list.push_front(new SignalItem{sig});
+      }
       break;
     }
   }
