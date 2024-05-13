@@ -3,7 +3,6 @@
 #include "arm.hpp"
 #include "board/pm.hpp"
 #include "int/interrupt.hpp"
-#include "int/timer.hpp"
 #include "io.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
@@ -92,13 +91,14 @@ void segv_handler(int el, const char* reason) {
   if (el != 0) {
     panic(reason);
   } else {
-    klog("thread %d: %s\n", current_thread()->tid, reason);
+    klog("thread %d: %s @ 0x%lx\n", current_thread()->tid, reason,
+         read_sysreg(ELR_EL1));
     kthread_exit(-1);
   }
 }
 
 void panic(const char* reason) {
-  klog("kernel panic: %s\n", reason);
+  klog("kernel panic: %s @ 0x%lx\n", reason, read_sysreg(ELR_EL1));
   reboot();
 }
 
