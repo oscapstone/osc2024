@@ -139,7 +139,7 @@ void kthread_start() {
 // TODO: wq
 void kthread_wait(int pid) {
   while (find_thread_by_tid(pid))
-    NOP;
+    schedule();
 }
 
 void kthread_kill(int pid) {
