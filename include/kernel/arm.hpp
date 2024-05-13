@@ -28,5 +28,9 @@
 #define ESR_ELx_ISS(esr) ((esr) & ESR_ELx_ISS_MASK)
 
 #define ESR_ELx_EC_SVC64    (0b010101)
-#define ESR_ELx_EC_DABT_LOW (0b100100)
 #define ESR_ELx_EC_IABT_LOW (0b100000)
+#define ESR_ELx_EC_IABT_CUR (0b100001)
+#define ESR_ELx_EC_PC_ALIGN (0b100010)
+#define ESR_ELx_EC_DABT_LOW (0b100100)
+#define ESR_ELx_EC_DABT_CUR (0b100101)
+#define ESR_ELx_EC_SP_ALIGN (0b100110)

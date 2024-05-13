@@ -7,7 +7,7 @@ set_exception_vector_table:
     ret
 
 // save general registers to stack
-.macro save_all
+.macro save_all el
     sub     sp, sp, 16 * 17
     stp     x0, x1, [sp ,16 * 0]
     stp     x2, x3, [sp ,16 * 1]
@@ -27,14 +27,20 @@ set_exception_vector_table:
     mrs     x0, SPSR_EL1
     stp     lr, x0, [sp, 16 * 15]
     mrs     x1, ELR_EL1
+    .if \el == 0
     mrs     x2, SP_EL0
+    .else
+    mov     x2, xzr
+    .endif
     stp     x1, x2, [sp, 16 * 16]
 .endm
 
 // load general registers from stack
-.macro load_all
+.macro load_all el
     ldp     x1, x2, [sp, 16 * 16]
+    .if \el == 0
     msr     SP_EL0, x2
+    .endif
     msr     ELR_EL1, x1
     ldp     lr, x0, [sp, 16 * 15]
     msr     SPSR_EL1, x0
@@ -56,12 +62,24 @@ set_exception_vector_table:
     add     sp, sp, 16 * 17
 .endm
 
-.macro CALL_WITH_CONTEXT type handler leave
-    save_all
+.macro CALL_WITH_CONTEXT type handler
+    .if \type < 8
+    save_all 1
+    .else
+    save_all 0
+    .endif
     mov     x1, \type
     mov     x0, sp
     bl      \handler
-    b       \leave
+    .if \type >= 8
+    mov     x0, sp
+    bl      return_to_user
+    .endif
+    .if \type < 8
+    b       exception_restore_context_EL1
+    .else
+    b       exception_restore_context_EL0
+    .endif
 .endm
 
 // D1.10.2 Exception vectors
@@ -71,47 +89,46 @@ set_exception_vector_table:
 .global exception_vector_table
 exception_vector_table:
     .org 0x000
-    CALL_WITH_CONTEXT 0 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 0 print_exception
     .org 0x080
-    CALL_WITH_CONTEXT 1 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 1 print_exception
     .org 0x100
-    CALL_WITH_CONTEXT 2 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 2 print_exception
     .org 0x180
-    CALL_WITH_CONTEXT 3 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 3 print_exception
 
     .org 0x200
-    CALL_WITH_CONTEXT 4 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 4 sync_handler
     .org 0x280
-    CALL_WITH_CONTEXT 5 irq_handler exception_restore_context
+    CALL_WITH_CONTEXT 5 irq_handler
     .org 0x300
-    CALL_WITH_CONTEXT 6 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 6 print_exception
     .org 0x380
-    CALL_WITH_CONTEXT 7 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 7 print_exception
 
     .org 0x400
-    CALL_WITH_CONTEXT 8 el0_sync_handler back_to_user
+    CALL_WITH_CONTEXT 8 sync_handler
     .org 0x480
-    CALL_WITH_CONTEXT 9 irq_handler back_to_user
+    CALL_WITH_CONTEXT 9 irq_handler
     .org 0x500
-    CALL_WITH_CONTEXT 10 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 10 print_exception
     .org 0x580
-    CALL_WITH_CONTEXT 11 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 11 print_exception
 
     .org 0x600
-    CALL_WITH_CONTEXT 12 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 12 print_exception
     .org 0x680
-    CALL_WITH_CONTEXT 13 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 13 print_exception
     .org 0x700
-    CALL_WITH_CONTEXT 14 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 14 print_exception
     .org 0x780
-    CALL_WITH_CONTEXT 15 print_exception exception_restore_context
+    CALL_WITH_CONTEXT 15 print_exception
     .org 0x800
 
-back_to_user:
-    mov     x0, sp
-    bl      return_to_user
-    b       exception_restore_context
+exception_restore_context_EL0:
+    load_all 0
+    eret
 
-exception_restore_context:
-    load_all
+exception_restore_context_EL1:
+    load_all 1
     eret

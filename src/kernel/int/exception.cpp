@@ -40,11 +40,11 @@ void print_exception(TrapFrame* frame, int type) {
   kprintf_sync("ELR_EL1 : 0x%lx\n", frame->elr_el1);
   kprintf_sync("ESR_EL1 : %032lb\n", read_sysreg(ESR_EL1));
 
-  delay(freq_of_timer);
-  reboot();
+  panic("unknown exception");
 }
 
-void el0_sync_handler(TrapFrame* frame, int /*type*/) {
+void sync_handler(TrapFrame* frame, int type) {
+  auto el = type < 8 ? 1 : 0;
   unsigned long esr = read_sysreg(ESR_EL1);
   unsigned ec = ESR_ELx_EC(esr);
   unsigned iss = ESR_ELx_ISS(esr);
@@ -58,29 +58,49 @@ void el0_sync_handler(TrapFrame* frame, int /*type*/) {
           break;
         case 1:
           klog("thread %d signal_return\n", current_thread()->tid);
-          signal_return(const_cast<TrapFrame*>(frame));
+          signal_return(frame);
           break;
       }
       break;
 
-    case ESR_ELx_EC_DABT_LOW:
-      segv_handler("data abort");
+    case ESR_ELx_EC_IABT_LOW:
+    case ESR_ELx_EC_IABT_CUR:
+      segv_handler(el, "undefined instruction");
       break;
 
-    case ESR_ELx_EC_IABT_LOW:
-      segv_handler("undefined instruction");
+    case ESR_ELx_EC_PC_ALIGN:;
+      segv_handler(el, "PC alignment fault");
+      break;
+
+    case ESR_ELx_EC_DABT_LOW:
+    case ESR_ELx_EC_DABT_CUR:
+      segv_handler(el, "data abort");
+      break;
+
+    case ESR_ELx_EC_SP_ALIGN:;
+      segv_handler(el, "SP alignment fault");
       break;
 
     default:
-      kprintf_sync("unknown ESR_ELx_EC %06b\n", ec);
-      kthread_exit(-1);
+      kprintf_sync("unknown ESR_ELx_EC %06b / %d %d\n", ec, type, el);
+      segv_handler(el, "unknown");
       prog_hang();
   }
 }
 
-void segv_handler(const char* reason) {
-  klog("thread %d: %s\n", current_thread()->tid, reason);
-  kthread_exit(-1);
+void segv_handler(int el, const char* reason) {
+  if (el != 0) {
+    panic(reason);
+  } else {
+    klog("thread %d: %s\n", current_thread()->tid, reason);
+    kthread_exit(-1);
+  }
+}
+
+void panic(const char* reason) {
+  klog("kernel panic: %s\n", reason);
+  delay(freq_of_timer);
+  reboot();
 }
 
 void return_to_user(TrapFrame* frame) {
