@@ -4,7 +4,6 @@
 
 #define PM_PASSWORD 0x5a000000
 
-void reboot();
-void reboot(int tick);
+[[noreturn]] void reboot(int tick = 0);
 void reset(int tick);
 void cancel_reset();
