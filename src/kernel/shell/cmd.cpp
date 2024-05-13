@@ -1,7 +1,6 @@
 #include "shell/cmd.hpp"
 
 #include "io.hpp"
-#include "reloc.hpp"
 #include "shell/args.hpp"
 #include "string.hpp"
 
@@ -98,14 +97,14 @@ int runcmd(const char* buf, int len) {
   const Cmd* cmd = nullptr;
   for (int i = 0; i < ncmd; i++) {
     auto it = &cmds[i];
-    if (!strcmp(args[0], reloc(it->name))) {
+    if (!strcmp(args[0], it->name)) {
       cmd = it;
       break;
     }
   }
 
   if (cmd != nullptr) {
-    return reloc(cmd->fp)(args.size, args.array);
+    return cmd->fp(args.size, args.array);
   } else {
     kprintf("command not found: %s\n", buf);
     return -1;
