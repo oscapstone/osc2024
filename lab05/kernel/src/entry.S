@@ -29,7 +29,7 @@
     .if \el == 0                // using two distinct stack pointers for EL0 and EL1
         mrs x21, sp_el0
     .else
-        add x21, sp, 16*17
+        add x21, sp, 16*17      // using the same stack pointer for EL1 & sp will be switched by the cpu_switch_to function
     .endif
 
     mrs x22, elr_el1
@@ -199,8 +199,14 @@ from_el1_to_el0:
 .global ret_from_fork   // entry point for executing the process
 ret_from_fork:
 	bl	schedule_tail
+    cbz x19, ret_to_user
 	mov	x0, x20
 	blr	x19 		//should never return
+
+ret_to_user:
+    bl disable_irq
+    load_all 0
+    eret
 
 el0_svc:
     adr    stbl, sys_call_table      // load syscall table pointer 

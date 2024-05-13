@@ -16,6 +16,8 @@
 #define TASK_RUNNING				0
 #define TASK_ZOMBIE				    1
 
+#define PF_KTHREAD 					2
+
 extern struct task_struct *current;
 extern struct task_struct * task[NR_TASKS];
 extern int nr_tasks;
@@ -42,6 +44,8 @@ struct task_struct {
 	long counter;
 	long priority;
 	long preempt_count;
+	unsigned long stack;
+	unsigned long flags;
 	int pid;
 };
 
@@ -55,10 +59,11 @@ extern void cpu_switch_to(struct task_struct* prev, struct task_struct* next);
 extern void enable_irq(void);
 extern void disable_irq(void);
 extern void kill_zombies(void);
+extern void exit_process(void);
 
 #define INIT_TASK \
 /*cpu_context*/	{ {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-/* state etc */	0,0,1, 0, 0 \
+/* state etc */	0,0,1, 0, 0, PF_KTHREAD, 0\
 }
 
 #endif

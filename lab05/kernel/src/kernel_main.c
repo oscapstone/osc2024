@@ -29,7 +29,8 @@ int main()
 
     printf("\nWelcome to Yuchang's Raspberry Pi 3!\n");
 
-    copy_process((unsigned long)(void*)&shell_loop, 0);
+    // copy_process((unsigned long)(void*)&shell_loop, 0);
+    copy_process(PF_KTHREAD, (unsigned long)(void*)&shell_loop, 0, 0);
 
     while(1){
         kill_zombies();

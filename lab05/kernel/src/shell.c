@@ -20,11 +20,17 @@ static void mailbox(int argc, char *argv[]);
 static void test_malloc(int argc, char *argv[]);
 static void reboot(int argc, char *argv[]);
 static void multiple_thread_test(int argc, char *argv[]);
+static void to_user_test(int argc, char *argv[]);
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
 extern void cpio_exec(int argc, char *argv[]);
+extern void print_flist(int argc, char *argv[]);
 
+// system call
+extern int getpid();
+extern int fork();
+extern void exit();
 
 int split_command(char* command, char *argv[]);
 
@@ -40,6 +46,8 @@ cmd cmds[] =
     {.name = "reboot",  .func = &reboot,     .help_msg = "\nreboot\t: reboot the device"},
     {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
     {.name = "multi_thread", .func = &multiple_thread_test, .help_msg = "\nmulti_thread\t: test multiple threads"},
+    {.name = "to_user", .func = &to_user_test, .help_msg = "\nto_user\t: test user mode"},
+    {.name = "print_flist", . func = &print_flist, .help_msg = "\nprint_flist\t: print free list"}
 };
 
 static void shell()
@@ -88,11 +96,57 @@ static void foo()
     while(1);
 }
 
+static void user_foo()
+{
+    // printf("Fork Test , pid : %d\n",getpid());
+    printf("\r\nFork Test, pid: "); printf_int(getpid());
+    uint32_t cnt = 1,ret=0;
+
+    if((ret=fork()) == 0){ //pid == 0 => child
+        printf("\r\n===== Child Process =====");
+        unsigned long cur_sp;
+        asm volatile("mov %0, sp" : "=r"(cur_sp));
+        // printf("first  child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+        printf("\r\nfirst child pid: "); printf_int(getpid()); printf(", cnt: "); printf_int(cnt);
+        printf(", ptr: "); printf_hex((unsigned long)&cnt); printf(", sp: "); printf_hex(cur_sp);
+        ++cnt;
+
+        if ((ret = fork() )!= 0){
+            asm volatile("mov %0, sp" : "=r"(cur_sp));
+            // printf("first  child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+            printf("\r\nfirst child pid: "); printf_int(getpid()); printf(", cnt: "); printf_int(cnt);
+            printf(", ptr: "); printf_hex((unsigned long)&cnt); printf(", sp: "); printf_hex(cur_sp);
+        }
+        else{
+            while (cnt < 5) {
+                asm volatile("mov %0, sp" : "=r"(cur_sp));
+                // printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
+                printf("\r\nsecond child pid: "); printf_int(getpid()); printf(", cnt: "); printf_int(cnt);
+                printf(", ptr: "); printf_hex((unsigned long)&cnt); printf(", sp: "); printf_hex(cur_sp);
+                delay(1000000);
+                ++cnt;
+            }
+        }
+        exit();
+    }
+    else{ //pid > 0 => parent
+        printf("\r\n===== Parent Process =====");
+        printf("\r\nParent Process, pid: "); printf_int(getpid());
+        printf(" child pid: "); printf_int(ret);
+        exit();
+    }
+}
+
 static void multiple_thread_test(int argc, char *argv[])
 {
     for(int i = 0; i < 5; ++i) {
-        copy_process((unsigned long)&foo, 0);
+        copy_process(PF_KTHREAD, (unsigned long)&foo, 0, 0);
     }
+}
+
+static void to_user_test(int argc, char *argv[])
+{
+    copy_process(PF_KTHREAD, (unsigned long)&kp_user_mode, (unsigned long)&user_foo, 0);
 }
 
 /* ===================================================================== */

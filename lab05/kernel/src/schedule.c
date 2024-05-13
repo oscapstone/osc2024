@@ -1,6 +1,7 @@
 #include "schedule.h"
 #include "irq.h"
 #include "alloc.h"
+#include "io.h"
 
 static struct task_struct init_task = INIT_TASK;
 struct task_struct *current = &(init_task);
@@ -86,7 +87,19 @@ void kill_zombies()
 		if (task[i] && task[i]->state == TASK_ZOMBIE) {
 			struct task_struct * p = task[i];
 			task[i] = 0;
+			printf("\r\n[KILL] zombies, pid: "); printf_int(p->pid);
 			bfree(p);
 		}
 	}
+}
+
+void exit_process()
+{
+	preempt_disable();
+	current->state = TASK_ZOMBIE;
+	// printf("\r\nProcess exit: "); printf_int(current->pid);
+	// printf("\r\nFree stack: "); printf_hex((unsigned long)current->stack);
+	bfree((void*)current->stack);
+	preempt_enable();
+	schedule();
 }
