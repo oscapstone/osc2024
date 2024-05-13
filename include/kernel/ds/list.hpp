@@ -2,6 +2,8 @@
 
 #include <concepts>
 
+#include "int/interrupt.hpp"
+
 struct ListItem {
   ListItem *prev, *next;
   ListItem() : prev(nullptr), next(nullptr) {}
@@ -78,9 +80,11 @@ class ListHead {
   }
 
   void insert(iterator it, T* node) {
+    save_DAIF_disable_interrupt();
     size_++;
     link(node, it->next);
     link(*it, node);
+    restore_DAIF();
   }
   void insert_before(iterator it, T* node) {
     insert(--it, node);
@@ -92,8 +96,10 @@ class ListHead {
     insert(tail_.prev, node);
   }
   void erase(iterator it) {
+    save_DAIF_disable_interrupt();
     size_--;
     unlink(*it);
+    restore_DAIF();
   }
 
   T* pop_front() {

@@ -28,6 +28,8 @@ Kthread* pop_dead();
 
 void kill_zombies();
 void schedule_init();
+void schedule_lock();
+void schedule_unlock();
 void schedule();
 void schedule_timer();
 void schedule_timer_callback(void*);

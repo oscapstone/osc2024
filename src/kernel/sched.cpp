@@ -56,9 +56,23 @@ void kill_zombies() {
   }
 }
 
+int schedule_nesting = 0;
+
 void schedule_init() {
   rq.init();
+  schedule_nesting = 0;
   schedule_timer();
+}
+
+void schedule_lock() {
+  save_DAIF_disable_interrupt();
+  schedule_nesting++;
+  restore_DAIF();
+}
+void schedule_unlock() {
+  save_DAIF_disable_interrupt();
+  schedule_nesting--;
+  restore_DAIF();
 }
 
 void schedule() {
@@ -66,22 +80,25 @@ void schedule() {
 
   save_DAIF_disable_interrupt();
 
-  auto cur = current_thread();
-  switch (cur->status) {
-    case KthreadStatus::kReady:
-      push_rq(cur);
-      break;
-    case KthreadStatus::kWaiting:
-      // TODO:
-      break;
-    case KthreadStatus::kDead:
-      push_dead(cur);
-      break;
+  if (schedule_nesting == 0) {
+    auto cur = current_thread();
+    switch (cur->status) {
+      case KthreadStatus::kReady:
+        push_rq(cur);
+        break;
+      case KthreadStatus::kWaiting:
+        // TODO:
+        break;
+      case KthreadStatus::kDead:
+        push_dead(cur);
+        break;
+    }
+    auto nxt = pop_rq();
+    if (cur != nxt)
+      switch_to(cur, nxt);
   }
-  auto nxt = pop_rq();
 
   restore_DAIF();
-  switch_to(cur, nxt);
 }
 
 void schedule_timer() {

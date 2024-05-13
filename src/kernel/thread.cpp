@@ -132,6 +132,7 @@ void kthread_init() {
 }
 
 void kthread_start() {
+  enable_interrupt();
   Kthread::fp func;
   void* ctx;
   asm volatile("mov %0, x19" : "=r"(func));
