@@ -87,7 +87,7 @@ void mini_uart_use_async(bool use) {
     mini_uart_getc_raw_fp = mini_uart_getc_raw_async;
     mini_uart_putc_raw_fp = mini_uart_putc_raw_async;
   } else {
-    // TODO: handle rbuf / wbuf
+    mini_uart_async_flush();
     set_aux_irq(false);
     set_ier_reg(false, RECEIVE_INT);
     set_ier_reg(false, TRANSMIT_INT);
@@ -143,6 +143,15 @@ void mini_uart_handler_fini() {
     set_ier_reg(true, RECEIVE_INT);
 }
 
+void mini_uart_async_flush() {
+  save_DAIF_disable_interrupt();
+  while (not wbuf.empty()) {
+    auto c = wbuf.pop();
+    mini_uart_putc_raw_sync(c);
+  }
+  restore_DAIF();
+}
+
 char mini_uart_getc_raw_async() {
   auto c = rbuf.pop(true);
   return c;
@@ -155,6 +164,8 @@ void mini_uart_putc_raw_async(char c) {
 }
 
 char mini_uart_getc_raw_sync() {
+  if (not rbuf.empty())
+    return rbuf.pop();
   while ((get32(AUX_MU_LSR_REG) & 1) == 0)
     NOP;
   return get32(AUX_MU_IO_REG) & MASK(8);
