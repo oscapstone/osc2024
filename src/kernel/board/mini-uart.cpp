@@ -27,8 +27,8 @@ volatile bool enable = false;
 char* buffer;
 int length, r;
 
-bool _impl(decltype(&mini_uart_putc_raw) putc,
-           decltype(&mini_uart_getc_raw) getc) {
+bool impl(decltype(&mini_uart_putc_raw) putc,
+          decltype(&mini_uart_getc_raw) getc) {
   auto c = getc();
   if (c == (char)-1)
     return false;
@@ -67,14 +67,6 @@ bool _impl(decltype(&mini_uart_putc_raw) putc,
     }
     return true;
   }
-}
-
-bool impl(decltype(&mini_uart_putc_raw) putc,
-          decltype(&mini_uart_getc_raw) getc) {
-  save_DAIF_disable_interrupt();
-  auto res = _impl(putc, getc);
-  restore_DAIF();
-  return res;
 }
 
 };  // namespace getline_echo
