@@ -15,6 +15,7 @@ extern char __kernel_start__, __kernel_end__;
 void buddy_init();
 void mem_pool_init();
 U32 mem_buddy_alloc(U8 order);
+void mem_buddy_free(U32 frame_index);
 int mem_put_free(U32 frame_index, U8 order);
 void mem_memory_reserve(UPTR start, UPTR end);
 
@@ -225,6 +226,7 @@ void mem_chunk_free(void* ptr) {
 
     // chunk has no reference, free chunk
     if (chunk_info->ref_count == 0) {
+        NS_DPRINT("[MEMORY][TRACE] No more reference, free the chunk. index: %d\n", chunk_info->frame_index);
         mem_buddy_free(chunk_info->frame_index);
 
         frame_info->flag &= ~MEM_FRAME_FLAG_CHUNK;
@@ -451,7 +453,7 @@ int mem_put_free(U32 frame_index, U8 order) {
  * 
 */
 U32 mem_buddy_alloc(U8 order) {
-
+    NS_DPRINT("[MEMORY][TRACE] allocating buddy for order: %d\n", order);
     // search for current free list
     U32 frame_index = mem_get_free(order);
 
@@ -626,9 +628,15 @@ void mem_memory_reserve(UPTR start, UPTR end) {
 }
 
 void* kmalloc(U64 size) {
+    if (size == 0)
+        return NULL;
     
     if (size > MEM_MIN_OBJECT_SIZE * MEM_MEMORY_POOL_ORDER) {
-        U8 order = (U8)utils_highestOneBit(size);
+        U64 page_size = size / MEM_FRAME_SIZE;
+        U8 order = (U8)(utils_highestOneBit(page_size));
+        if (page_size - (1 << (order)) > 0) {
+            order++;
+        }
         return MEM_INDEX_TO_ADDR(mem_buddy_alloc(order));
     }
 

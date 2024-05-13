@@ -164,17 +164,21 @@ void shell() {
 			uart_set_transmit_int();
 		 } else if (utils_strncmp(cmd_space, "mem ", 4) == 0) {
 			printf("Memory base address: 0x%x\n", mem_manager.base_ptr);
-			printf("Memory size:         0x%x\n", mem_manager.size);
-			printf("Levels             : %d\n", mem_manager.levels);
+			printf("Memory size        : 0x%x\n", mem_manager.size);
+			printf("Total Levels       : %d\n", mem_manager.levels);
+
+			U64 free_size = 0;
 			for (U32 level = 0; level < mem_manager.levels; level++) {
 				FREE_INFO* info = &mem_manager.free_list[level];
-				printf("Level %d\n", level);
+				//printf("Level %d\n", level);
 				for(int i = 0;i < info->size;i++) {
 					if (info->info[i] == -1)
 						break;
-					printf("    frame idx     : %d\n", info->info[i]);
+					//printf("    frame idx     : %d\n", info->info[i]);
+					free_size += (1 << level) * MEM_FRAME_SIZE;
 				}
 			}
+			printf("Free space         : %u bytes\n", free_size);
 		 } else if (utils_strncmp(cmd_space, "memtest", 7) == 0) {
 			printf("Memory management test\n");
 			char* ptr1 = kmalloc(16);

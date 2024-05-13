@@ -1,59 +1,90 @@
-[MEMORY][TRACE] Total frames: 180224
+[MEMORY][TRACE] Total frames: 245760
+[MEMORY][TRACE] Device tree reserve. offset: 8200000, size: 88456
+DTB magic correct
+
+reading information ...
+
+struct pointer: 0000000008200048
+
+strings pointer: 000000000820781C
+
+DTB total size: 0000000000015988
+
+Parsing token...
+
+[MEMORY][TRACE] initramfs reserve. offset: 8000000, size: 8010e00
 [TRACE] init each buddy level
 [TRACE] Current level: 17
 [MEMORY][TRACE] free list init. level: 17, space: 2
-[MEMORY][TRACE] free info insered. count: 1, frame offset: 131072
 [TRACE] Current level: 16
-[MEMORY][TRACE] free list init. level: 16, space: 3
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 131072
+[MEMORY][TRACE] free list init. level: 16, space: 4
 [TRACE] Current level: 15
-[MEMORY][TRACE] free list init. level: 15, space: 6
-[MEMORY][TRACE] free info insered. count: 1, frame offset: 163840
+[MEMORY][TRACE] free list init. level: 15, space: 8
 [TRACE] Current level: 14
-[MEMORY][TRACE] free list init. level: 14, space: 12
-[MEMORY][TRACE] free info insered. count: 1, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 14, space: 16
 [TRACE] Current level: 13
-[MEMORY][TRACE] free list init. level: 13, space: 23
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 13, space: 31
 [TRACE] Current level: 12
-[MEMORY][TRACE] free list init. level: 12, space: 45
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 12, space: 61
 [TRACE] Current level: 11
-[MEMORY][TRACE] free list init. level: 11, space: 89
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 11, space: 121
 [TRACE] Current level: 10
-[MEMORY][TRACE] free list init. level: 10, space: 177
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 10, space: 241
 [TRACE] Current level: 9
-[MEMORY][TRACE] free list init. level: 9, space: 353
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 9, space: 481
 [TRACE] Current level: 8
-[MEMORY][TRACE] free list init. level: 8, space: 705
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 8, space: 961
 [TRACE] Current level: 7
-[MEMORY][TRACE] free list init. level: 7, space: 1409
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 7, space: 1921
 [TRACE] Current level: 6
-[MEMORY][TRACE] free list init. level: 6, space: 2817
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 6, space: 3841
 [TRACE] Current level: 5
-[MEMORY][TRACE] free list init. level: 5, space: 5633
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 5, space: 7681
 [TRACE] Current level: 4
-[MEMORY][TRACE] free list init. level: 4, space: 11265
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 4, space: 15361
 [TRACE] Current level: 3
-[MEMORY][TRACE] free list init. level: 3, space: 22529
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 3, space: 30721
 [TRACE] Current level: 2
-[MEMORY][TRACE] free list init. level: 2, space: 45057
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 2, space: 61441
 [TRACE] Current level: 1
-[MEMORY][TRACE] free list init. level: 1, space: 90113
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 1, space: 122881
 [TRACE] Current level: 0
-[MEMORY][TRACE] free list init. level: 0, space: 180225
-[MEMORY][TRACE] free info insered. count: 0, frame offset: 180224
+[MEMORY][TRACE] free list init. level: 0, space: 245761
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 68
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 100
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 116
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 124
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 128
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 24712
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 28808
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 30856
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 31880
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 32392
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 32648
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 32712
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 32744
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 32760
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 32768
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 33041
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 33169
+[MEMORY][TRACE] free info insered. count: 2, frame offset: 33233
+[MEMORY][TRACE] free info insered. count: 2, frame offset: 33265
+[MEMORY][TRACE] free info insered. count: 2, frame offset: 33273
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 33277
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 33279
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 33280
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 164374
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 229910
+[MEMORY][TRACE] free info insered. count: 0, frame offset: 238102
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 242198
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 244246
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 245270
+[MEMORY][TRACE] free info insered. count: 2, frame offset: 245526
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 245654
+[MEMORY][TRACE] free info insered. count: 3, frame offset: 245718
+[MEMORY][TRACE] free info insered. count: 3, frame offset: 245750
+[MEMORY][TRACE] free info insered. count: 3, frame offset: 245758
+[MEMORY][TRACE] free info insered. count: 1, frame offset: 245760
 DTB magic correct
 
 reading information ...
@@ -67,207 +98,124 @@ DTB total size: 0000000000015988
 Parsing token...
 
 # mem 
-Memory base address: 0x10000000
-Memory size:         0x2c000000
+Memory base address: 0x0
+Memory size:         0x3c000000
 Levels             : 18
 Level 0
+    frame idx     : 33279
 Level 1
+    frame idx     : 33277
+    frame idx     : 245758
 Level 2
+    frame idx     : 124
+    frame idx     : 33273
 Level 3
+    frame idx     : 116
+    frame idx     : 32760
+    frame idx     : 33265
+    frame idx     : 245750
 Level 4
+    frame idx     : 100
+    frame idx     : 32744
 Level 5
+    frame idx     : 68
+    frame idx     : 32712
+    frame idx     : 33233
+    frame idx     : 245718
 Level 6
+    frame idx     : 4
+    frame idx     : 32648
+    frame idx     : 33169
+    frame idx     : 245654
 Level 7
+    frame idx     : 33041
+    frame idx     : 245526
 Level 8
+    frame idx     : 32392
+    frame idx     : 32785
+    frame idx     : 245270
 Level 9
+    frame idx     : 31880
 Level 10
+    frame idx     : 30856
+    frame idx     : 244246
 Level 11
+    frame idx     : 28808
+    frame idx     : 242198
 Level 12
+    frame idx     : 24712
+    frame idx     : 238102
 Level 13
+    frame idx     : 229910
 Level 14
-    frame idx     : 163840
-    frame size exp: 14
+    frame idx     : 8328
 Level 15
-    frame idx     : 131072
-    frame size exp: 15
 Level 16
+    frame idx     : 164374
 Level 17
-    frame idx     : 0
-    frame size exp: 17
+    frame idx     : 33302
 # memtest
 Memory management test
-[MEMORY][DEBUG] Found buddy, order: 14 Start frame: 163840
-[MEMORY][TRACE] Allocating larger block. index: 163840, order: 14
-[MEMORY][TRACE] Put redundant memory block index: 172032, order: 13
-[MEMORY][TRACE] Put redundant memory block index: 167936, order: 12
-[MEMORY][TRACE] Put redundant memory block index: 165888, order: 11
-[MEMORY][TRACE] Put redundant memory block index: 164864, order: 10
-[MEMORY][TRACE] Put redundant memory block index: 164352, order: 9
-[MEMORY][TRACE] Put redundant memory block index: 164096, order: 8
-[MEMORY][TRACE] Put redundant memory block index: 163968, order: 7
-[MEMORY][TRACE] Put redundant memory block index: 163904, order: 6
-[MEMORY][TRACE] Put redundant memory block index: 163872, order: 5
-[MEMORY][TRACE] Put redundant memory block index: 163856, order: 4
-[MEMORY][TRACE] Put redundant memory block index: 163848, order: 3
-[MEMORY][TRACE] Put redundant memory block index: 163844, order: 2
-[MEMORY][TRACE] Put redundant memory block index: 163842, order: 1
-[MEMORY][TRACE] Put redundant memory block index: 163841, order: 0
+[MEMORY][DEBUG] Found buddy, order: 0 Start frame: 33279
+[MEMORY][TRACE] No need to find larger block. index: 33279, order: 0
 [MEMORY][TRACE] New chunk allocated
-[MEMORY][TRACE] chunk slot allocated. index: 163840, offset: 0
-[MEMORY][TRACE] chunk slot allocated. index: 163840, offset: 1
-[MEMORY][DEBUG] Found buddy, order: 0 Start frame: 163841
-[MEMORY][TRACE] No need to find larger block. index: 163841, order: 0
+[MEMORY][TRACE] chunk slot allocated. index: 33279, offset: 0
+[MEMORY][TRACE] chunk slot allocated. index: 33279, offset: 1
+[MEMORY][DEBUG] Found buddy, order: 1 Start frame: 245758
+[MEMORY][TRACE] Allocating larger block. index: 245758, order: 1
+[MEMORY][TRACE] Put redundant memory block back to free list. index: 245759, order: 0
 [MEMORY][TRACE] New chunk allocated
-[MEMORY][TRACE] chunk slot allocated. index: 163841, offset: 0
-[MEMORY][DEBUG] Found buddy, order: 1 Start frame: 163842
-[MEMORY][TRACE] Allocating larger block. index: 163842, order: 1
-[MEMORY][TRACE] Put redundant memory block index: 163843, order: 0
+[MEMORY][TRACE] chunk slot allocated. index: 245758, offset: 0
+[MEMORY][DEBUG] Found buddy, order: 0 Start frame: 245759
+[MEMORY][TRACE] No need to find larger block. index: 245759, order: 0
 [MEMORY][TRACE] New chunk allocated
-[MEMORY][TRACE] chunk slot allocated. index: 163842, offset: 0
-kmalloc(16). ptr: 38000000
-kmalloc(16). ptr: 38000010
-kmalloc(32). ptr: 38001000
-kmalloc(40). ptr: 38002000
+[MEMORY][TRACE] chunk slot allocated. index: 245759, offset: 0
+kmalloc(16). ptr: 81ff000
+kmalloc(16). ptr: 81ff010
+kmalloc(32). ptr: 3bffe000
+kmalloc(40). ptr: 3bfff000
+[MEMORY][TRACE] buddy partner is not free. buddy: 245758
+[MEMORY][TRACE] buddy free. index:245759, order: 0
+[MEMORY][TRACE] free chunk memory successfully, ptr:3bfff000
 [MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163843, order: 0
-[MEMORY][TRACE] buddy partner is not free. buddy: 163840
-[MEMORY][TRACE] buddy free. index:163842, order: 1
-[MEMORY][TRACE] free chunk memory successfully, ptr:38002000
-[MEMORY][TRACE] buddy partner is not free. buddy: 163840
-[MEMORY][TRACE] buddy free. index:163841, order: 0
-[MEMORY][TRACE] free chunk memory successfully, ptr:38001000
-[MEMORY][TRACE] free chunk memory successfully, ptr:38000010
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163841, order: 0
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163842, order: 1
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163844, order: 2
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163848, order: 3
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163856, order: 4
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163872, order: 5
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163904, order: 6
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163968, order: 7
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 164096, order: 8
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 164352, order: 9
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 164864, order: 10
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 165888, order: 11
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 167936, order: 12
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 172032, order: 13
-[MEMORY][TRACE] the other buddy is not in memory, index: 180224
-[MEMORY][TRACE] buddy free. index:163840, order: 14
-[MEMORY][TRACE] free chunk memory successfully, ptr:38000000
-# mem 
-Memory base address: 0x10000000
-Memory size:         0x2c000000
-Levels             : 18
-Level 0
-Level 1
-Level 2
-Level 3
-Level 4
-Level 5
-Level 6
-Level 7
-Level 8
-Level 9
-Level 10
-Level 11
-Level 12
-Level 13
-Level 14
-    frame idx     : 163840
-    frame size exp: 14
-Level 15
-    frame idx     : 131072
-    frame size exp: 15
-Level 16
-Level 17
-    frame idx     : 0
-    frame size exp: 17
+[MEMORY][TRACE] buddy partner index: 245759, order: 0
+[MEMORY][TRACE] buddy partner is free but not the same order
+[MEMORY][TRACE] buddy free. index:245758, order: 1
+[MEMORY][TRACE] free chunk memory successfully, ptr:3bffe000
+[MEMORY][TRACE] free chunk memory successfully, ptr:81ff010
+[MEMORY][TRACE] buddy partner is free but not the same order
+[MEMORY][TRACE] buddy free. index:33279, order: 0
+[MEMORY][TRACE] free chunk memory successfully, ptr:81ff000
 # memtest
 Memory management test
-[MEMORY][DEBUG] Found buddy, order: 14 Start frame: 163840
-[MEMORY][TRACE] Allocating larger block. index: 163840, order: 14
-[MEMORY][TRACE] Put redundant memory block index: 172032, order: 13
-[MEMORY][TRACE] Put redundant memory block index: 167936, order: 12
-[MEMORY][TRACE] Put redundant memory block index: 165888, order: 11
-[MEMORY][TRACE] Put redundant memory block index: 164864, order: 10
-[MEMORY][TRACE] Put redundant memory block index: 164352, order: 9
-[MEMORY][TRACE] Put redundant memory block index: 164096, order: 8
-[MEMORY][TRACE] Put redundant memory block index: 163968, order: 7
-[MEMORY][TRACE] Put redundant memory block index: 163904, order: 6
-[MEMORY][TRACE] Put redundant memory block index: 163872, order: 5
-[MEMORY][TRACE] Put redundant memory block index: 163856, order: 4
-[MEMORY][TRACE] Put redundant memory block index: 163848, order: 3
-[MEMORY][TRACE] Put redundant memory block index: 163844, order: 2
-[MEMORY][TRACE] Put redundant memory block index: 163842, order: 1
-[MEMORY][TRACE] Put redundant memory block index: 163841, order: 0
+[MEMORY][DEBUG] Found buddy, order: 0 Start frame: 33279
+[MEMORY][TRACE] No need to find larger block. index: 33279, order: 0
 [MEMORY][TRACE] New chunk allocated
-[MEMORY][TRACE] chunk slot allocated. index: 163840, offset: 0
-[MEMORY][TRACE] chunk slot allocated. index: 163840, offset: 1
-[MEMORY][DEBUG] Found buddy, order: 0 Start frame: 163841
-[MEMORY][TRACE] No need to find larger block. index: 163841, order: 0
+[MEMORY][TRACE] chunk slot allocated. index: 33279, offset: 0
+[MEMORY][TRACE] chunk slot allocated. index: 33279, offset: 1
+[MEMORY][DEBUG] Found buddy, order: 1 Start frame: 245758
+[MEMORY][TRACE] Allocating larger block. index: 245758, order: 1
+[MEMORY][TRACE] Put redundant memory block back to free list. index: 245759, order: 0
 [MEMORY][TRACE] New chunk allocated
-[MEMORY][TRACE] chunk slot allocated. index: 163841, offset: 0
-[MEMORY][DEBUG] Found buddy, order: 1 Start frame: 163842
-[MEMORY][TRACE] Allocating larger block. index: 163842, order: 1
-[MEMORY][TRACE] Put redundant memory block index: 163843, order: 0
+[MEMORY][TRACE] chunk slot allocated. index: 245758, offset: 0
+[MEMORY][DEBUG] Found buddy, order: 0 Start frame: 245759
+[MEMORY][TRACE] No need to find larger block. index: 245759, order: 0
 [MEMORY][TRACE] New chunk allocated
-[MEMORY][TRACE] chunk slot allocated. index: 163842, offset: 0
-kmalloc(16). ptr: 38000000
-kmalloc(16). ptr: 38000010
-kmalloc(32). ptr: 38001000
-kmalloc(40). ptr: 38002000
+[MEMORY][TRACE] chunk slot allocated. index: 245759, offset: 0
+kmalloc(16). ptr: 81ff000
+kmalloc(16). ptr: 81ff010
+kmalloc(32). ptr: 3bffe000
+kmalloc(40). ptr: 3bfff000
+[MEMORY][TRACE] buddy partner is not free. buddy: 245758
+[MEMORY][TRACE] buddy free. index:245759, order: 0
+[MEMORY][TRACE] free chunk memory successfully, ptr:3bfff000
 [MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163843, order: 0
-[MEMORY][TRACE] buddy partner is not free. buddy: 163840
-[MEMORY][TRACE] buddy free. index:163842, order: 1
-[MEMORY][TRACE] free chunk memory successfully, ptr:38002000
-[MEMORY][TRACE] buddy partner is not free. buddy: 163840
-[MEMORY][TRACE] buddy free. index:163841, order: 0
-[MEMORY][TRACE] free chunk memory successfully, ptr:38001000
-[MEMORY][TRACE] free chunk memory successfully, ptr:38000010
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163841, order: 0
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163842, order: 1
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163844, order: 2
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163848, order: 3
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163856, order: 4
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163872, order: 5
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163904, order: 6
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 163968, order: 7
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 164096, order: 8
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 164352, order: 9
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 164864, order: 10
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 165888, order: 11
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 167936, order: 12
-[MEMORY][TRACE] buddy partner is free and match start merging
-[MEMORY][TRACE] buddy partner index: 172032, order: 13
-[MEMORY][TRACE] the other buddy is not in memory, index: 180224
-[MEMORY][TRACE] buddy free. index:163840, order: 14
-[MEMORY][TRACE] free chunk memory successfully, ptr:38000000
+[MEMORY][TRACE] buddy partner index: 245759, order: 0
+[MEMORY][TRACE] buddy partner is free but not the same order
+[MEMORY][TRACE] buddy free. index:245758, order: 1
+[MEMORY][TRACE] free chunk memory successfully, ptr:3bffe000
+[MEMORY][TRACE] free chunk memory successfully, ptr:81ff010
+[MEMORY][TRACE] buddy partner is free but not the same order
+[MEMORY][TRACE] buddy free. index:33279, order: 0
+[MEMORY][TRACE] free chunk memory successfully, ptr:81ff000
 # 
