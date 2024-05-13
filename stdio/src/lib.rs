@@ -4,8 +4,8 @@ pub mod macros;
 use driver::uart;
 
 fn send(c: u8) {
-    // uart::send(c);
-    uart::send_async(c);
+    uart::send(c);
+    // uart::send_async(c);
 }
 
 fn _recv() -> u8 {

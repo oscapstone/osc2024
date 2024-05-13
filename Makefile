@@ -11,6 +11,9 @@ BOOTLOADER_IMG = $(BUILD_DIR)/bootloader.img
 
 PROG_IMG = prog/prog.img
 
+PROGRAM_ELF = target/$(TARGET)/release/program
+PROGRAM_IMG = $(BUILD_DIR)/program.img
+
 INITRAMFS_CPIO = $(BUILD_DIR)/initramfs.cpio
 
 DTB = $(RPI3_DIR)/bcm2710-rpi-3-b-plus.dtb
@@ -27,12 +30,12 @@ QEMU = qemu-system-aarch64
 
 export dir_guard=@mkdir -p $(@D)
 
-OUTPUT_FILES := $(KERNEL_ELF) $(BOOTLOADER_ELF)
+OUTPUT_ELFS := $(KERNEL_ELF) $(BOOTLOADER_ELF) $(PROGRAM_ELF)
 SENTINEL_FILE := .done
 
 .PHONY: all clean run debug size FORCE
 
-all: $(KERNEL_IMG) $(BOOTLOADER_IMG) $(INITRAMFS_CPIO) size
+all: $(KERNEL_IMG) $(BOOTLOADER_IMG) $(INITRAMFS_CPIO) $(PROGRAM_IMG) size
 
 clean:
 	$(MAKE) -C prog clean
@@ -42,7 +45,7 @@ clean:
 
 FORCE:
 
-$(OUTPUT_FILES): $(SENTINEL_FILE)
+$(OUTPUT_ELFS): $(SENTINEL_FILE)
 
 $(SENTINEL_FILE): FORCE
 	$(CARGO) build $(CARGO_FLAGS)
@@ -56,12 +59,17 @@ $(BOOTLOADER_IMG): $(BOOTLOADER_ELF) FORCE
 	$(dir_guard)
 	$(OBJCOPY) -O binary $< $@
 
+$(PROGRAM_IMG): $(PROGRAM_ELF) FORCE
+	$(dir_guard)
+	$(OBJCOPY) -O binary $< $@
+
 $(PROG_IMG): FORCE
 	$(MAKE) -C prog
 
-$(INITRAMFS_CPIO): $(wildcard initramfs/*) $(PROG_IMG)
+$(INITRAMFS_CPIO): $(wildcard initramfs/*) $(PROG_IMG) $(PROGRAM_IMG)
 	$(dir_guard)
 	cp $(PROG_IMG) initramfs/
+	cp $(PROGRAM_IMG) initramfs/
 	cd initramfs && find . | cpio -o -H newc > ../$@
 
 run: all
@@ -74,6 +82,7 @@ run: all
 debug: all size
 	$(OBJDUMP) -D $(KERNEL_ELF) > $(BUILD_DIR)/kernel.S
 	$(OBJDUMP) -D $(BOOTLOADER_ELF) > $(BUILD_DIR)/bootloader.S
+	$(OBJDUMP) -D $(PROGRAM_ELF) > $(BUILD_DIR)/program.S
 	$(QEMU) -M raspi3b \
 		-serial null -serial pty \
 		-kernel $(BOOTLOADER_IMG) \

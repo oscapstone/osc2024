@@ -1,7 +1,7 @@
 .global switch_to
 
 
-save_cpu_status:
+context_switch:
     stp x19, x20, [x0, 16 * 0]
     stp x21, x22, [x0, 16 * 1]
     stp x23, x24, [x0, 16 * 2]

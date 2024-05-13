@@ -18,7 +18,7 @@ pub fn init() {
     }
     let tm = get();
     tm.add_timer(
-        Duration::from_secs(2),
+        Duration::from_days(1000),
         Box::new(|| {
             println!("First boot timer expired!");
         }),
@@ -108,7 +108,7 @@ impl TimerManager {
         }
     }
 
-    fn get_current(&self) -> u64 {
+    pub fn get_current(&self) -> u64 {
         let mut now: u64;
         unsafe {
             asm!(
@@ -119,7 +119,7 @@ impl TimerManager {
         now
     }
 
-    fn get_frequency(&self) -> u64 {
+    pub fn get_frequency(&self) -> u64 {
         let mut freq: u64;
         unsafe {
             asm!(
@@ -131,10 +131,16 @@ impl TimerManager {
     }
 
     fn compute_delay(&self, duration: Duration) -> u64 {
+        let now = self.get_current() as f64;
+        let freq = self.get_frequency() as f64;
+        let delay = duration.as_secs_f64();
+        (now + (delay * freq)) as u64
+    }
+
+    pub fn current_time(&self) -> Duration {
         let now = self.get_current();
         let freq = self.get_frequency();
-        let delay = duration.as_secs() as u64;
-        now + (delay * freq)
+        Duration::from_millis(now / (freq / 1000))
     }
 
     pub fn print(&self) {

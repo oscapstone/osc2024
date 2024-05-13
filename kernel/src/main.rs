@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(allocator_api)]
 #![feature(btreemap_alloc)]
+#![feature(duration_constructors)]
 
 extern crate alloc;
 
@@ -12,9 +13,11 @@ mod exception;
 mod kernel;
 mod panic;
 mod scheduler;
+mod syscall;
 mod thread;
 mod timer;
 
+use crate::thread::test_func;
 use alloc::boxed::Box;
 use allocator::buddy::BUDDY_SYSTEM;
 use core::arch::asm;
@@ -25,25 +28,31 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 
 fn main() -> ! {
     boot();
+    scheduler::init();
     println!("Kernel booted successfully!");
-    let scheduler = scheduler::get();
-    for _ in 0..4 {
-        scheduler.create_thread(thread::test_func, 0 as *mut u8);
-    }
-    let tm = timer::manager::get();
-    tm.add_timer(
-        Duration::from_millis(1000),
-        Box::new(|| {
-            let sched = scheduler::get();
-            sched.schedule();
-            println!("Scheduler scheduled!");
-        }),
-    );
-    loop {}
-    // kernel_shell();
+    // let scheduler = scheduler::get();
+    // for i in 0..1 {
+    // scheduler.create_thread(kernel_main, 0 as *mut u8);
+    // scheduler.create_thread(test_func, 1 as *mut u8);
+    // }
+
+    // scheduler.schedule();
+
+    // unsafe {
+    //     let mut sp: u64;
+    //     asm!("mov {}, sp", out(reg) sp);
+    //     println!("Main thread sp: {:x}", sp);
+    // }
+    // allocator::utils::toggle_dynamic_verbose();
+    commands::exec::exec(b"exec program.img");
+    kernel_shell();
 }
 
-#[allow(dead_code)]
+extern "C" fn kernel_main(_: *mut u8) {
+    println!("Kernel main thread started!");
+    kernel_shell();
+}
+
 fn kernel_shell() -> ! {
     const MAX_COMMAND_LEN: usize = 0x100;
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
@@ -60,7 +69,6 @@ fn boot() {
     initramfs_init();
     buddy_init();
     timer::manager::init();
-    scheduler::init();
     print_boot_time();
 }
 
@@ -113,6 +121,10 @@ fn buddy_init() {
         BUDDY_SYSTEM.init();
     }
     buddy_reserve_memory();
+    allocator::utils::toggle_bump_verbose();
+    unsafe {
+        BUDDY_SYSTEM.print_info();
+    }
 }
 
 fn buddy_reserve_memory() {
@@ -124,6 +136,7 @@ fn buddy_reserve_memory() {
     }
 
     unsafe {
+        BUDDY_SYSTEM.reserve_by_addr_range(0x0_0000, 0x8_0000); //
         BUDDY_SYSTEM.reserve_by_addr_range(0x6_0000, 0x8_0000); // kernel stack reserved
         BUDDY_SYSTEM.reserve_by_addr_range(0x8_0000, 0x10_0000); // kernel code reserved
     }
@@ -145,18 +158,10 @@ fn buddy_reserve_memory() {
 }
 
 fn print_boot_time() {
-    // Get current timer value
-    unsafe {
-        let mut freq: u64;
-        let mut now: u64;
-        asm!(
-            "mrs {freq}, cntfrq_el0",
-            "mrs {now}, cntpct_el0",
-            freq = out(reg) freq,
-            now = out(reg) now,
-        );
-        println!("Current time: {}", now);
-        println!("Frequency: {} Hz", freq);
-        println!("Boot time: {} ms", now / (freq / 1000));
-    }
+    let tm = crate::timer::manager::get();
+    let now = tm.get_current();
+    let freq = tm.get_frequency();
+    println!("Frequency: {} Hz", freq);
+    println!("Current time: {}", now);
+    println!("Boot time: {} ms", now / (freq / 1000));
 }

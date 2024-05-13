@@ -3,12 +3,17 @@ use core::arch::asm;
 use filesystem::cpio::CpioArchive;
 use stdio::println;
 
-const PROGRAM_ENTRY: *const u8 = 0x30010000 as *const u8;
+const PROGRAM_ENTRY: *const u8 = 0x30000000 as *const u8;
 
 pub fn exec(command: &[u8]) {
     let rootfs = CpioArchive::load(unsafe { INITRAMFS_ADDR } as *const u8);
     let filename = &command[5..];
     if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
+        println!(
+            "Executing program: {}",
+            core::str::from_utf8(filename).unwrap()
+        );
+        println!("Program size: {} bytes", data.len());
         unsafe {
             core::ptr::copy(data.as_ptr(), PROGRAM_ENTRY as *mut u8, data.len());
             asm!(
@@ -22,6 +27,7 @@ pub fn exec(command: &[u8]) {
                 in(reg) PROGRAM_ENTRY as u64 - 0x1000,
             );
         }
+        loop {}
     } else {
         println!(
             "File not found: {}",
