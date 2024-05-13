@@ -1,8 +1,10 @@
 #include "uart.h"
 #include "allocator.h"
 #include "timer.h"
-#include "schedule.h"
+#include "cpio.h"
 #include "exception.h"
+#include "utils.h"
+#include "schedule.h"
 
 task_list run_queue;
 int task_id = 0;
@@ -19,7 +21,7 @@ void sched_init()
 
 void run_queue_push(task_struct *new_task, int priority)
 {
-    if (run_queue.head[priority] == NULL)
+    if (run_queue.head[priority] == NULL) // the head is empty
         run_queue.head[priority] = new_task;
     else
     {
@@ -73,8 +75,12 @@ task_struct *task_create(void (*start_routine)(void), int priority)
 void task_exit()
 {
     task_struct *cur_task = get_current_task();
-    cur_task->state = EXIT;
-    schedule();
+
+    disable_interrupt();
+    cur_task->state = EXIT; // set the task state to EXIT
+    enable_interrupt();
+
+    schedule(); // yield the CPU
 }
 
 void zombie_reaper()
@@ -88,6 +94,7 @@ void zombie_reaper()
 
 void kill_zombies()
 {
+    disable_interrupt();
     for (int i = 0; i < 10; i++)
     {
         task_struct *cur = run_queue.head[i];
@@ -96,33 +103,25 @@ void kill_zombies()
             task_struct *del = cur;
             cur = cur->next;
 
-            disable_interrupt();
-            run_queue_remove(del, i);
-            enable_interrupt();
+            run_queue_remove(del, i); // remove zombie task
 
-            kfree(del->kstack);
+            kfree(del->kstack); // free the space
             kfree(del->ustack);
             kfree(del);
         }
     }
+    enable_interrupt();
 }
 
 void schedule()
 {
     task_struct *cur = get_current_task()->next;
-    /*uart_puts("cur task ");
-    uart_dec(get_current_task()->id);
-    uart_puts("\n");*/
-
     while (cur != NULL && cur->state == IDLE)
         cur = cur->next;
 
     if (cur == NULL)
         cur = run_queue.head[0];
-
-    /*uart_puts("schuedle to task ");
-    uart_dec(cur->id);
-    uart_puts("\n");*/
+    
     context_switch(cur);
 }
 
@@ -138,14 +137,47 @@ void context_switch(struct task_struct *next)
 void check_need_schedule()
 {
     struct task_struct *cur = get_current_task();
-    if (cur->need_sched == 1)
-    {
+    if (cur->need_sched == 1) // if the need_sched flag of thecurrent task is set, then call schedle()
+    {   
+        disable_interrupt();
         cur->need_sched = 0;
+        enable_interrupt();
+
         schedule();
     }
 }
 
-void do_exec(void (*func)(void))
+void do_exec(const char *name, char *const argv[])
+{
+    for (int i = 0; i < file_num; i++)
+    {
+        if (my_strcmp(file_arr[i].path_name, name) == 0) // find the file in the init ramdisk
+        {
+            char *content = file_arr[i].file_content;
+            int size = given_size_hex_atoi(file_arr[i].file_header->c_filesize, 8);
+            char *target = kmalloc(size);
+            char *copy = target;
+
+            while (size--) // move the file content to memory
+                *copy++ = *content++;
+
+            task_struct *cur = get_current_task();
+            cur->priority = 1;
+            // set sp_el0 to user stack, sp_el1 to kernels stack, elr_el1 to the file content
+            asm volatile(
+                "msr sp_el0, %0\n"
+                "msr elr_el1, %1\n"
+                "mov x10, 0\n"
+                "msr spsr_el1, x10\n"
+                "mov sp, %2\n"
+                "eret\n"
+                :
+                : "r"(cur->ustack), "r"(target), "r"(cur->kstack));
+        }
+    }
+}
+
+void exec_fun(void (*func)(void))
 {
     task_struct *cur = get_current_task();
     cur->priority = 1;

@@ -6,6 +6,8 @@
 #define SYS_EXEC 3
 #define SYS_FORK 4
 #define SYS_EXIT 5
+#define SYS_MBOX_CALL 6
+#define SYS_KILL 7
 
 .global getpid
 getpid:
@@ -41,3 +43,16 @@ fork:
 exit:
     mov x8, SYS_EXIT
     svc #0
+    b halt
+
+.global mbox_call
+mbox_call:
+    mov x8, SYS_MBOX_CALL
+    svc #0
+    ret
+
+.global kill
+kill:
+    mov x8, SYS_KILL
+    svc #0
+    ret

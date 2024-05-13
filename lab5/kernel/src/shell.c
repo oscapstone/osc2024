@@ -11,99 +11,9 @@
 
 #define buf_size 1024
 
-void fork_test()
+void exec_syscall_img()
 {
-    uartwrite("\nFork Test, pid ", my_strlen("\nFork Test, pid "));
-    uart_dec(getpid());
-    uartwrite("\n", 1);
-
-    int cnt = 1;
-    int ret = 0;
-    if ((ret = fork()) == 0)
-    { // child
-        long long cur_sp;
-        asm volatile("mov %0, sp" : "=r"(cur_sp));
-
-        uart_puts("first child pid:");
-        uart_dec(getpid());
-        uart_puts(", cnt: ");
-        uart_dec(cnt);
-        uart_puts(", ptr: ");
-        uart_hex_lower_case(&cnt);
-        uart_puts(", sp: ");
-        uart_hex_lower_case(cur_sp);
-        uart_puts("\n");
-
-        ++cnt;
-        if ((ret = fork()) != 0)
-        {
-            asm volatile("mov %0, sp" : "=r"(cur_sp));
-            uart_puts("first child pid:");
-            uart_dec(getpid());
-            uart_puts(", cnt: ");
-            uart_dec(cnt);
-            uart_puts(", ptr: ");
-            uart_hex_lower_case(&cnt);
-            uart_puts(", sp: ");
-            uart_hex_lower_case(cur_sp);
-            uart_puts("\n");
-        }
-        else
-        {
-            while (cnt < 5)
-            {
-                asm volatile("mov %0, sp" : "=r"(cur_sp));
-                uart_puts("second child pid:");
-                uart_dec(getpid());
-                uart_puts(", cnt: ");
-                uart_dec(cnt);
-                uart_puts(", ptr: ");
-                uart_hex_lower_case(&cnt);
-                uart_puts(", sp: ");
-                uart_hex_lower_case(cur_sp);
-                uart_puts("\n");
-
-                int count = 1000000;
-                while (count--)
-                    asm volatile("nop");
-                ++cnt;
-            }
-        }
-        exit(0);
-        uart_puts("Should not be printed\n");
-    }
-    else
-    {
-        uart_puts("parent here, pid ");
-        uart_dec(getpid());
-        uart_puts(", child: ");
-        uart_dec(ret);
-        uart_puts("\n");
-        exit(0);
-        uart_puts("Should not be printed\n");
-    }
-    exit(0);
-}
-
-void user_goo()
-{
-    do_exec(fork_test);
-}
-
-void kernel_tese()
-{
-    unsigned long long cntpct_el0 = 0;
-    asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
-    unsigned long long cntfrq_el0 = 0;
-    asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
-
-    timer temp;
-    temp.callback = re_shedule;
-    temp.expire = cntpct_el0 + (cntfrq_el0 >> 5);
-    add_timer(temp);
-
-    task_create(user_goo, 0);
-    zombie_reaper();
+    do_exec("syscall.img", NULL);
 }
 
 void shell_cmd(char *cmd)
@@ -145,12 +55,25 @@ void shell_cmd(char *cmd)
     {
         uart_puts("\n");
         uart_puts("exc user program\n");
-        exec_program("user.img");
-    }
-    else if (my_strcmp(cmd, "test syscall") == 0)
-    {
-        uart_puts("\n");
-        kernel_tese();
+
+        // set EL0PCTEN to 1, EL0 can accesses to the frequency register and physical counter register without trap.
+        unsigned long long tmp;
+        asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+        tmp |= 1;
+        asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+
+        unsigned long long cntpct_el0 = 0;
+        asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
+        unsigned long long cntfrq_el0 = 0;
+        asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
+
+        timer temp;
+        temp.callback = re_shedule;
+        temp.expire = cntpct_el0 + (cntfrq_el0 >> 5);
+        add_timer(temp);
+
+        task_create(exec_syscall_img, 0);
+        zombie_reaper();
     }
     else
         uart_puts("\n");

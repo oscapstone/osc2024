@@ -35,7 +35,7 @@ void add_timer(timer t)
 
 void re_shedule(void *data, int executed_time)
 {
-    get_current_task()->need_sched = 1;
+    get_current_task()->need_sched = 1; // set the need_sched flag of the current task
 
     unsigned long long cntpct_el0 = 0;
     asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
@@ -45,7 +45,7 @@ void re_shedule(void *data, int executed_time)
     timer temp;
     temp.callback = re_shedule;
     temp.expire = cntpct_el0 + (cntfrq_el0 >> 5);
-    add_timer(temp);
+    add_timer(temp); // set timer
 }
 
 void core_timer_enable()

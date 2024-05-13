@@ -1,7 +1,9 @@
 #ifndef __THREAD_H
 #define __THREAD_H
 
-struct cpu_context
+#define NULL 0
+
+struct cpu_context // callee saved
 {
     unsigned long long x19;
     unsigned long long x20;
@@ -61,7 +63,8 @@ void kill_zombies();
 void schedule();
 void context_switch(struct task_struct *next);
 void check_need_schedule();
-void do_exec(void (*func)(void));
+void do_exec(const char *name, char *const argv[]);
+void exec_fun(void (*func)(void));
 
 void foo();
 

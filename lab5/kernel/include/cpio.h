@@ -35,6 +35,5 @@ extern unsigned long long cpio_address;
 void build_file_arr();
 void traverse_file();
 void look_file_content(char *pathname);
-void exec_program(char *pathname);
 
 #endif

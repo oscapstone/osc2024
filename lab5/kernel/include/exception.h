@@ -21,5 +21,7 @@ void sys_uartwrite(struct trapframe* trapframe);
 void sys_exec(struct trapframe* trapframe);
 void sys_fork(struct trapframe* trapframe);
 void sys_exit(struct trapframe* trapframe);
+void sys_mbox_call(struct trapframe *trapframe);
+void sys_kill(struct trapframe *trapframe);
 
 #endif

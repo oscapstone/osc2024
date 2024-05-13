@@ -52,30 +52,3 @@ void look_file_content(char *pathname)
         }
     }
 }
-
-void exec_program(char *pathname)
-{
-    for (int i = 0; i < file_num; i++)
-    {
-        if (my_strcmp(file_arr[i].path_name, pathname) == 0)
-        {
-            char *content = file_arr[i].file_content;
-            int size = given_size_hex_atoi(file_arr[i].file_header->c_filesize, 8);
-            char *target = kmalloc(size);
-            char *cur = target;
-            char* stack = (char* )kmalloc(4096 * 2) + 4096 * 2;
-
-            while (size--)
-                *cur++ = *content++;
-
-            asm volatile(
-                "mov x10, 0x0\n"
-                "msr spsr_el1, x10\n"
-                "msr elr_el1, %0\n"
-                "msr sp_el0, %1\n"
-                "eret\n"
-                : 
-                :"r"(target), "r"(stack));
-        }
-    }
-}

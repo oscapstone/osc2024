@@ -3,6 +3,7 @@
 #include "task.h"
 #include "timer.h"
 #include "schedule.h"
+#include "mailbox.h"
 #include "exception.h"
 
 #define AUX_MU_IO ((volatile unsigned int *)(MMIO_BASE + 0x00215040))
@@ -68,7 +69,7 @@ void sync_handler_entry()
 
 void el0_svc_handler_entry(struct trapframe *trapframe)
 {
-    disable_interrupt();
+    enable_interrupt(); // to enable nested interrupts in system call, because the interrupt may be closed when go into synchronous handler?
 
     int get_syscall_no = trapframe->x[8];
     if (get_syscall_no == SYS_GET_PID)
@@ -83,8 +84,12 @@ void el0_svc_handler_entry(struct trapframe *trapframe)
         sys_fork(trapframe);
     else if (get_syscall_no == SYS_EXIT)
         sys_exit(trapframe);
-        
-    enable_interrupt();
+    else if (get_syscall_no == SYS_MBOX_CALL)
+        sys_mbox_call(trapframe);
+    else if (get_syscall_no == SYS_KILL)
+        sys_kill(trapframe);
+
+    disable_interrupt();
 }
 
 void irq_handler_entry()
@@ -204,8 +209,9 @@ void sys_uartwrite(struct trapframe *trapframe)
 
 void sys_exec(struct trapframe *trapframe)
 {
-    void (*func)() = (void (*)())trapframe->x[0];
-    do_exec(func);
+    const char *name = (const char *)trapframe->x[0];
+    char **const argv = (char **const)trapframe->x[1];
+    do_exec(name, argv);
     trapframe->x[0] = -1; // if do_exec is falut
 }
 
@@ -239,4 +245,29 @@ void sys_fork(struct trapframe *trapframe)
 void sys_exit(struct trapframe *trapframe)
 {
     task_exit();
+}
+
+void sys_mbox_call(struct trapframe *trapframe)
+{
+    unsigned char ch = (unsigned char)trapframe->x[0];
+    unsigned int *mbox = (unsigned int *)trapframe->x[1];
+    for (int i = 0; i < 36; i++)
+        mailbox[i] = mbox[i];
+
+    trapframe->x[0] = mailbox_call(ch);
+
+    for (int i = 0; i < 36; i++)
+        mbox[i] = mailbox[i];
+}
+
+void sys_kill(struct trapframe *trapframe)
+{
+    int pid = (int)trapframe->x[0];
+    for (task_struct *cur = run_queue.head[0]; cur != NULL; cur = cur->next) // find the task and set its state to EXIT
+        if (cur->id == pid)
+        {
+            disable_interrupt();
+            cur->state = EXIT;
+            enable_interrupt();
+        }
 }
