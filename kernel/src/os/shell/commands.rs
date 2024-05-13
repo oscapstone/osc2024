@@ -1,13 +1,12 @@
-use crate::os::{allocator, timer};
 use crate::os::stdio::{get_line, print, println_now};
+use crate::os::{allocator, thread, timer};
 use crate::println;
-use core::alloc::Layout;
-use core::fmt::Display;
-use core::arch::asm;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-
+use core::alloc::Layout;
+use core::arch::asm;
+use core::fmt::Display;
 
 use super::INITRAMFS;
 
@@ -24,8 +23,9 @@ impl Display for command {
 }
 
 fn set_next_timer() {
-    println!("Timer expired");
-    timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
+    println!("Context switching...");
+    thread::context_switching();
+    timer::add_timer_ms(1000, Box::new(|| set_next_timer()));
 }
 
 impl command {
@@ -79,33 +79,51 @@ pub fn cat(args: Vec<String>) {
         initramfs.print_file_content(arg);
     }
 }
+
 pub fn exec(args: Vec<String>) {
     let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
-    let filename = args.get(1).unwrap_or(&String::new()).clone();
-    match initramfs.load_file_to_memory(filename.as_str(), 0x2001_0000 as *mut u8) {
-        true => println!("File loaded to memory"),
-        false => {
-            println!("File not found");
-            return;
+    let mut first_pid = None;
+
+    for filename in args.iter().skip(1) {
+        let filesize = match initramfs.get_filesize_by_name(filename.as_str()) {
+            Some(size) => size as usize,
+            None => {
+                println!("File not found");
+                return;
+            }
+        };
+        let stack_size = 4096;
+
+        let program_ptr =
+            unsafe { alloc::alloc::alloc(Layout::from_size_align(filesize, 4).unwrap()) };
+        let program_stack_ptr =
+            unsafe { alloc::alloc::alloc(Layout::from_size_align(stack_size, 4).unwrap()) };
+
+        for i in 0..filesize {
+            unsafe {
+                core::ptr::write(program_ptr.add(i), 0);
+            }
         }
-    }
 
+        match initramfs.load_file_to_memory(filename.as_str(), program_ptr) {
+            true => println!("File loaded to memory"),
+            false => {
+                println!("File not found");
+                return;
+            }
+        }
+        
+        let pid = thread::create_thread(program_ptr, filesize, program_stack_ptr, stack_size);
+        if first_pid.is_none() {
+            first_pid = Some(pid);
+        }
+        println!("PID: {}", pid);
+        println!("PC: {:X?}", program_ptr);
+    }
     timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
+    thread::run_thread(first_pid.unwrap());
 
-    unsafe {
-        asm!(
-            "mov {tmp}, 0x200",
-            "msr spsr_el1, {tmp}",
-            "ldr {tmp}, =0x20010000", // Program counter
-            "msr elr_el1, {tmp}",
-            "ldr {tmp}, =0x2000F000", // Stack pointer
-            "msr sp_el0, {tmp}",
-            "eret",
-            tmp = out(reg) _,
-        );
-
-        println!("Should not reach here");
-    }
+    panic!("Should not reach here");
 }
 
 pub fn set_timeout(args: Vec<String>) {
@@ -184,4 +202,12 @@ pub fn test_memory(args: Vec<String>) {
             println!("Unknown command");
         }
     }
+}
+
+pub fn current_el(args: Vec<String>) {
+    let current_el: u64;
+    unsafe {
+        asm!("mrs {0}, CurrentEL", out(reg) current_el);
+    }
+    println!("CurrentEL: {}", (current_el >> 2) & 0b11);
 }

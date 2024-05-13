@@ -75,11 +75,21 @@ impl CpioArchive {
         println("File not found");
     }
 
+    pub fn get_filesize_by_name(&self, filename: &str) -> Option<u32> {
+        match self.get_file_content_by_name(filename) {
+            Some(content) => Some(content.len() as u32),
+            None => None,
+        }
+    }
+
     pub fn load_file_to_memory(&self, filename: &str, addr: *mut u8) -> bool {
+        println!("Loading file to memory: {:X?}", addr as u64);
         match self.get_file_content_by_name(filename) {
             Some(content) => {
                 unsafe {
-                    core::ptr::copy_nonoverlapping(content.as_ptr(), addr, content.len());
+                    for i in 0..content.len() {
+                        core::ptr::write(addr.add(i), content[i]);
+                    }
                 }
                 true
             }

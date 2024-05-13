@@ -1,6 +1,6 @@
 use crate::cpu::{device_tree::DeviceTree, mailbox, uart};
 use crate::os::stdio::{print_hex_now, println_now};
-use crate::os::{allocator, shell, timer};
+use crate::os::{allocator, shell, timer, thread};
 use crate::println;
 use alloc::boxed::Box;
 use core::arch::{asm, global_asm};
@@ -11,6 +11,7 @@ global_asm!(include_str!("boot.s"));
 pub unsafe fn _start_rust() {
     uart::initialize();
     timer::init();
+    thread::init();
     allocator::init();
     allocator::reserve(0x0000_0000 as *mut u8, 0x0000_1000); // Device reserved memory
     allocator::reserve(0x0003_0000 as *mut u8, 0x0004_0000); // Stack

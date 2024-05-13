@@ -1,6 +1,6 @@
 use core::ptr::{read_volatile, write_volatile};
 
-pub enum TrapFrameRegister {
+pub enum Register {
     X0 = 0,
     X1 = 1,
     X2 = 2,
@@ -32,14 +32,17 @@ pub enum TrapFrameRegister {
     X28 = 28,
     X29 = 29,
     X30 = 30,
+    X31 = 31,
+    PC = 32,
+    SP = 33,
 }
 
-pub unsafe fn get(trap_frame_ptr: *mut u64, reg: TrapFrameRegister) -> u64 {
+pub unsafe fn get(trap_frame_ptr: *mut u64, reg: Register) -> u64 {
     let reg_ptr = trap_frame_ptr.add(reg as usize);
     read_volatile(reg_ptr as *const u64)
 }
 
-pub unsafe fn set(trap_frame_ptr: *mut u64, reg: TrapFrameRegister, value: u64) {
+pub unsafe fn set(trap_frame_ptr: *mut u64, reg: Register, value: u64) {
     let reg_ptr = trap_frame_ptr.add(reg as usize);
     write_volatile(reg_ptr as *mut u64, value);
 }

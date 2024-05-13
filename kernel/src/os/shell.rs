@@ -59,6 +59,11 @@ fn push_all_commands(commands: &mut Vec<commands::command>) {
         "Test buddy allocator",
         commands::test_memory,
     ));
+    commands.push(commands::command::new(
+        "current_el",
+        "Print current exception level",
+        commands::current_el,
+    ));
 }
 
 fn get_input(commands: &Vec<commands::command>) -> String {
