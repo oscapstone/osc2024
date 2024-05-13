@@ -1,11 +1,18 @@
 #include "board/pm.hpp"
 
+#include "int/interrupt.hpp"
+#include "int/timer.hpp"
 #include "io.hpp"
 #include "util.hpp"
 
 void reboot() {
+  reboot(freq_of_timer);
+}
+
+void reboot(int tick) {
+  disable_interrupt();
   kputs_sync("rebooting .");
-  reset(0x50);
+  reset(0x50 + tick);
   for (;;) {
     kputc_sync('.');
   }

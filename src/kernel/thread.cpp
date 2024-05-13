@@ -1,6 +1,8 @@
 #include "thread.hpp"
 
+#include "board/pm.hpp"
 #include "int/interrupt.hpp"
+#include "int/timer.hpp"
 #include "io.hpp"
 #include "sched.hpp"
 
@@ -28,7 +30,10 @@ Kthread::Kthread()
       exit_code(0),
       item(new KthreadItem(this)),
       signal{this} {
-  signal.setall([](int) { klog("init thread can't killed!!\n"); });
+  signal.setall([](int) {
+    klog("kill init cause reboot!\n");
+    reboot();
+  });
   klog("init thread %d @ %p\n", tid, this);
   add_list(this);
 }

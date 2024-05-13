@@ -99,7 +99,6 @@ void segv_handler(int el, const char* reason) {
 
 void panic(const char* reason) {
   klog("kernel panic: %s\n", reason);
-  delay(freq_of_timer);
   reboot();
 }
 
