@@ -10,7 +10,7 @@
 void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
 
-static int nested_interrupted_task = -1; 
+static unsigned int nested_interrupted_task = 0; 
 
 static void show_exception_info()
 {
@@ -36,10 +36,18 @@ void exception_invalid_handler()
 	enable_interrupt();
 }
 
-void except_handler_c() 
+void except_el0_sync_handler() 
 {
 	disable_interrupt();
 	uart_send_string("---In exception_el0_sync_handler---\r\n");
+	show_exception_info();
+	enable_interrupt();
+}
+
+void except_el1_sync_handler() 
+{
+	disable_interrupt();
+	uart_send_string("---In exception_el1_sync_handler---\r\n");
 	show_exception_info();
 	enable_interrupt();
 }
@@ -118,9 +126,9 @@ void exception_el1_irq_handler()
 {
 	disable_interrupt();
 	nested_interrupted_task++;
-	uart_send_string("Before handler: # of nested interrupted event: ");
-	uart_hex(nested_interrupted_task);
-	uart_send_string("\r\n");
+	// uart_send_string("Before handler: # of nested interrupted event: ");
+	// // uart_hex(nested_interrupted_task);
+	// uart_send_string("\r\n");
 	struct task_event *event = NULL;
 	if (*CORE0_INTERRUPT_SOURCE & 0x2) {
 		disable_timer_interrupt();
@@ -144,9 +152,9 @@ void exception_el1_irq_handler()
 
 	task_event_add_queue(event);
 	exec_task();
-	uart_send_string("After handler: # of nested interrupted event: ");
-	uart_hex(nested_interrupted_task);
-	uart_send_string("\r\n");
+	// uart_send_string("After handler: # of nested interrupted event: ");
+	// uart_hex(nested_interrupted_task);
+	// uart_send_string("\r\n");
 	nested_interrupted_task--;
 	enable_interrupt();
 }

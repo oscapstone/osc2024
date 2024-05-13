@@ -125,9 +125,9 @@ uint8_t uart_async_recv()
 		asm volatile ("nop");
 	}
 
-	// disable_irq_interrupts();
+	disable_aux_interrupts();
 	uint8_t c = read_buffer_get();
-	// enable_irq_interrupts();
+	enable_aux_interrupts();
 	return c;
 }
 
@@ -139,17 +139,17 @@ uint8_t uart_async_recv()
 
 void uart_rx_handler()
 {
-	disable_aux_interrupts();
+	// disable_aux_interrupts();
 	read_buffer_add(uart_recv());
-	enable_aux_interrupts();
+	// enable_aux_interrupts();
 	// clr_rx_interrupts();
 }
 
 void uart_tx_handler()
 {
-	disable_aux_interrupts();
+	// disable_aux_interrupts();
 	while (!write_buffer_empty()) {
-		delay(1 << 28);                // (1 << 28) for qemu
+		delay(1 << 21);                // (1 << 28) for qemu
 		uint8_t c = write_buffer_get();
 		uart_send(c);
 	}

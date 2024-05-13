@@ -137,7 +137,7 @@ void timer_interrupt_handler()
     // uart_send_string("\r\n");
 
     // add delay time
-    delay((uint64_t)1 << 30);
+    delay((uint64_t)1 << 22);
     event->callback(event->message);
 
     uart_send_string("Command time: ");

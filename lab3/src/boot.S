@@ -144,13 +144,13 @@ exception_invalid:
 
 el0_sync:
     save_all
-    bl except_handler_c
+    bl except_el0_sync_handler
     load_all
     eret
 
 el1_sync:
     save_all
-    bl except_handler_c
+    bl except_el1_sync_handler
     load_all
     eret
 
