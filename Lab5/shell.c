@@ -226,7 +226,7 @@ void exception_entry() {
 }
 
 void async_uart_io(){
-    uart_interrupt();
+    //uart_interrupt();
     while(1){}
 }
 

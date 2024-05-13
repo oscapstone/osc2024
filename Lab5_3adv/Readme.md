@@ -60,4 +60,7 @@ TOMORO
 3. 把 fork 改成阿倫的試試看 (同邏輯)
 4. 不然可能就得試試看別人的 memory allocator
 
-因為打字才會動，加上有從handler檢查，應該是進入interrupt在等輸入，所以開啟可以nested
+會自動disable其他的interruptt，劉timer，要關然後開
+(之前print的時候發現一直進去timer)
+
+發現是 read 的 interrupt 被觸發了所以timer被disable，要enable

@@ -12,7 +12,7 @@
 #define AUX_MU_BAUD     ((volatile unsigned int*)(MMIO_BASE+0x00215068))
 
 void uart_init();
-//void uart_interrupt();
+void uart_interrupt();
 void uart_send(unsigned int c);
 char uart_getc();
 void uart_puts(char *s);

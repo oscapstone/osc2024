@@ -45,11 +45,11 @@ void uart_init()
     *AUX_MU_CNTL = 3;      // enable Tx, Rx
 }
 
-// void uart_interrupt(){
-//     *AUX_MU_IER = 1;
-//     //*AUX_MU_IER |= 0x02;
-//     *IRQS1 |= 1 << 29;
-// }
+void uart_interrupt(){
+    *AUX_MU_IER = 1;
+    //*AUX_MU_IER |= 0x02;
+    *IRQS1 |= 1 << 29;
+}
 
 /**
  * Send a character
