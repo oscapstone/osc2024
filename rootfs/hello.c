@@ -31,7 +31,7 @@ int exec(const char buf[]) {
 }
 
 char getc() {
-  char c;
+  char c = 0;
   uartread(&c, 1);
   return c;
 }
