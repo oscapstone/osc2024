@@ -27,6 +27,12 @@ void kernel_main(uint64_t x0)
 	uart_send_string("The address of cpio: ");
 	uart_hex((uint64_t)cpio_addr);
 	uart_send_string("\r\n");
+
+	/* test of printf function */
+	printf( "Hello %s!\n"
+            "This is character '%c', a hex number: %x and in decimal: %d\n"
+            "Padding test: '%8x', '%8d'\n",
+            "World", 'A', 32767, 32767, 0x7FFF, -123);
 	
 	enable_interrupt();
 	shell();

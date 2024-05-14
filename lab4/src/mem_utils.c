@@ -23,7 +23,7 @@ void *malloc(unsigned int size)
     // unsigned int now_index = HEAP_OFFSET;
     // HEAP_OFFSET += size;
     // return &HEAP_USE[now_index];
-    static char *HEAP_ADDR = &bss_end;
+    static char *HEAP_ADDR = &bss_end + 256;
     
     if ((HEAP_ADDR - &bss_end) + size >= HEAP_SIZE)
         return NULL;

@@ -2,7 +2,11 @@
 #include "../include/peripherals/mini_uart.h"
 #include "../include/peripherals/gpio.h"
 #include "../include/mini_uart.h"
+#include "../include/sprintf.h"
 #include <stdint.h>
+
+// get address from linker
+extern volatile unsigned char bss_end;
 
 /* for async part*/
 #define BUFFER_MAX_SIZE 0x100
@@ -116,6 +120,25 @@ void uart_hex(unsigned int d) {
     }
 }
 
+/**
+ * Display a string
+ */
+void printf(char *fmt, ...) {
+    __builtin_va_list args;
+    __builtin_va_start(args, fmt);
+    // we don't have memory allocation yet, so we
+    // simply place our string after our code
+    char *s = (char*)&bss_end;
+    // use sprintf to format our string
+    vsprintf(s,fmt,args);
+    // print out as usual
+    while(*s) {
+        /* convert newline to carrige return + newline */
+        if(*s=='\n')
+            uart_send('\r');
+        uart_send(*s++);
+    }
+}
 
 /* for aync part */
 uint8_t uart_async_recv()
