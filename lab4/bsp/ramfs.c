@@ -15,7 +15,7 @@ void init_ramfs_callback(void *addr) {
     uart_puts("[INFO] Initrd is mounted at ");
     uart_hex((uint64_t)addr);
     uart_send('\n');
-    ramfs_base = (uint32_t *)addr;
+    ramfs_base = addr;
 }
 
 static FileList file_list;
@@ -34,7 +34,7 @@ FileList *ramfs_get_file_list() {
         uint32_t copy_length =
             namesize < MAX_FILENAME_LENGTH ? namesize : MAX_FILENAME_LENGTH - 1;
 
-        memncpy(file_list.file_names[file_list.file_count], file_name,
+        memcpy(file_list.file_names[file_list.file_count], file_name,
                 copy_length);
         file_list.file_names[file_list.file_count][copy_length] = '\0';
         file_list.file_count++;
@@ -60,7 +60,7 @@ char *ramfs_get_file_contents(char *file_name) {
         uint32_t datasize = align4(filesize);
 
         if (strcmp((void *)fptr + sizeof(cpio_t), file_name) == 0) {
-            memncpy(file_buf, (void *)fptr + headsize, filesize);
+            memcpy(file_buf, (void *)fptr + headsize, filesize);
             return file_buf;
         } 
 
@@ -91,10 +91,9 @@ static int hextoi(char *s, int n) {
         r = r << 4;
         if (*s >= 'A')
             r += *s++ - 'A' + 10;
-        else if (*s >= 0)
+        else if (*s >= '0')
             r += *s++ - '0';
     }
     return r;
 }
-
 
