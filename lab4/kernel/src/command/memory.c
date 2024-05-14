@@ -19,7 +19,7 @@ void _test_malloc_command(int argc, char **argv) {
     }
 
     print_string("\nMalloc address: ");
-    print_h((unsigned int)ptr);
+    print_h((uintptr_t)ptr);
     print_string("\n");
 }
 
@@ -59,7 +59,7 @@ void _test_kfree_command(int argc, char **argv) {
         print_string("\nUsage: test_kfree <address>\n");
         return;
     }
-    unsigned int addr = atoi(argv[1]);
+    uintptr_t addr = atoi(argv[1]);
     kfree((void *)addr);
     print_string("\nFree address: ");
     print_h(addr);

@@ -13,7 +13,7 @@ static int hextoi(char *s, int n);
 
 void init_ramfs_callback(void *addr) {
     uart_puts("[INFO] Initrd is mounted at ");
-    uart_hex((uint32_t)addr);
+    uart_hex((uint64_t)addr);
     uart_send('\n');
     ramfs_base = (uint32_t *)addr;
 }
