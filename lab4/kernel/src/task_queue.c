@@ -66,7 +66,7 @@ void add_task(void (*func)(void), int priority) {
         }
     }
 
-#ifdef DEBUG
+#ifdef TASK_DEBUG
     print_string("\[] ");
     print_string("Task added");
     print_task_queue();

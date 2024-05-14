@@ -14,14 +14,14 @@ static timer_t *head = (timer_t *)0;
 
 void set_timeout(void (*callback)(void *), void *arg, int delay) {
     timer_t *timer = (timer_t *)simple_malloc(sizeof(timer_t));
-#ifdef DEBUG
+#ifdef TIMER_DEBUG
     print_string("\n[set_timeout] timer_t allocated at ");
     print_h((unsigned long)timer);
     print_string("\n");
     print_string("[set_timeout] head: ");
     print_h((unsigned long)head);
     print_string("\n");
-#endif /* ifdef DEBUG */
+#endif /* ifdef TIMER_DEBUG */
 
     timer->func = callback;
     timer->arg = arg;
