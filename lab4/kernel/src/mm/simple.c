@@ -8,7 +8,7 @@ extern uint64_t __heap_start;
 static char *heap_top;
 
 void init_memory() {
-    heap_top = (&__heap_start);
+    heap_top = (char *)(&__heap_start);
     // heap_top++;
 }
 
@@ -16,7 +16,7 @@ void *simple_malloc(unsigned int size) {
     if (size == 0) {
         return NULL;
     }
-    if (heap_top + size >= HEAP_MAX) {
+    if (heap_top + size >= (char *)HEAP_MAX) {
         print_string("Out of memory\n");
         return NULL;
     }

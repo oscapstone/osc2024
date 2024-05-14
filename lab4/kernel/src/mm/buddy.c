@@ -67,6 +67,12 @@ void buddy_init(phys_addr_t start, phys_addr_t end) {
     print_string("\n");
 
     mem_map = simple_malloc(num_of_pages * sizeof(page_t));
+    
+    if(mem_map == NULL) {
+        print_string("Failed to allocate memory for mem_map\n");
+        return;
+    }
+
     for (int i = num_of_pages - 1; i >= 0; i--) {
         mem_map[i].order = MAX_ORDER;
         mem_map[i].status = PAGE_FREE;
@@ -111,17 +117,17 @@ void free_pages(page_t *page, unsigned long order) {
         uint32_t buddy_pfn = (page - mem_map) ^ (1 << cur_order);
         page_t *buddy = &mem_map[buddy_pfn];
 
-        print_string("\ni: ");
-        print_d(cur_order);
-        print_string("----------\n");
-        print_string("Page: ");
-        print_h((uint64_t)get_addr_by_page(page));
-        print_string("\nBuddy: ");
-        print_h((uint64_t)get_addr_by_page(buddy));
-        print_string("\nbuddy_order: ");
-        print_d(buddy->order);
-        print_string("\nbuddy_status: ");
-        print_d(buddy->status);
+        // print_string("\ni: ");
+        // print_d(cur_order);
+        // print_string("----------\n");
+        // print_string("Page: ");
+        // print_h((uint64_t)get_addr_by_page(page));
+        // print_string("\nBuddy: ");
+        // print_h((uint64_t)get_addr_by_page(buddy));
+        // print_string("\nbuddy_order: ");
+        // print_d(buddy->order);
+        // print_string("\nbuddy_status: ");
+        // print_d(buddy->status);
 
         if (buddy->order != cur_order || buddy->status != PAGE_FREE) {
             break;
@@ -135,11 +141,11 @@ void free_pages(page_t *page, unsigned long order) {
 
     page->status = PAGE_FREE;
     page->order = cur_order;
-    print_string("\nPush page: ");
-    print_h((uint64_t)get_addr_by_page(page));
-    print_string("\nTo order ");
-    print_d(cur_order);
-    print_string("\n");
+    // print_string("\nPush page: ");
+    // print_h((uint64_t)get_addr_by_page(page));
+    // print_string("\nTo order ");
+    // print_d(cur_order);
+    // print_string("\n");
     __push_page(&free_areas[cur_order], page);
 }
 
@@ -149,15 +155,10 @@ void print_free_areas() {
         print_string("Order ");
         print_d(i);
         print_string(": ");
-        int count = 0;
         while (page) {
             print_h((uint64_t)get_addr_by_page(page));
             print_string(" -> ");
             page = page->next;
-
-            // if (count++ > 100) {
-                // break;
-            // }
         }
         print_string("NULL\n");
     }
@@ -189,7 +190,7 @@ void memory_reserve(phys_addr_t start, phys_addr_t end) {
             page_t *next_page = page->next;
 
             phys_addr_t page_addr = get_addr_by_page(page);
-            phys_addr_t page_end = (void*)page_addr + (1 << (cur_order + PAGE_SHIFT)) - 1;
+            phys_addr_t page_end = page_addr + (1 << (cur_order + PAGE_SHIFT)) - 1;
 
             if(cur_order == 0) {
                 if(!(page_end < start || page_addr > end)) {

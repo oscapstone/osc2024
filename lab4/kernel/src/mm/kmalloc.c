@@ -43,9 +43,10 @@ void init_kmalloc() {
     memory_reserve((phys_addr_t)0x80000,
                    (phys_addr_t)&__heap_start);  // Kernel code and data
 
-    memory_reserve((phys_addr_t)&__heap_start,
-                   (phys_addr_t)((void *)&__heap_start + 0x100000));  // Startup allocator
-    
+    memory_reserve(
+        (phys_addr_t)&__heap_start,
+        (phys_addr_t)((void *)&__heap_start + 0x100000));  // Startup allocator
+
     print_free_areas();
 
     memory_reserve((phys_addr_t)fdt_get_initrd_start(),
@@ -61,7 +62,7 @@ void print_kmalloc_caches() {
         print_d(i);
         print_string(": ");
         while (cache != NULL) {
-            print_h((uint32_t)cache);
+            print_h((uint64_t)cache);
             print_string(" -> ");
             cache = cache->next;
         }
@@ -75,6 +76,11 @@ void *kmem_cache_alloc(uint32_t order) {
     }
     if (kmalloc_caches[order] == NULL) {
         page_t *page = alloc_pages(0);
+
+        if (page == NULL) {
+            return NULL;
+        }
+
         page->status = PAGE_CACHE;  // mark as cache page
         uint32_t cache_size = 1 << (order + KMEM_CACHE_MIN_ORDER);
         for (int i = 0; i < PAGE_SIZE; i += cache_size) {
@@ -112,19 +118,19 @@ void *kmalloc(uint32_t size) {
 
     if (order == 0) {
         if (size >= (1 << KMEM_CACHE_MAX_ORDER)) {
-            return get_addr_by_page(alloc_pages(order));
+            return (void *)get_addr_by_page(alloc_pages(order));
         }
 
         uint32_t cache_order = get_cache_order_by_size(size);
         return kmem_cache_alloc(cache_order);
     }
 
-    return get_addr_by_page(alloc_pages(order));
+    return (void *)get_addr_by_page(alloc_pages(order));
 }
 
 void kfree(void *ptr) {
     if ((uintptr_t)ptr % PAGE_SIZE == 0) {
-        page_t *page = get_page_by_addr(ptr);
+        page_t *page = get_page_by_addr((phys_addr_t)ptr);
         free_pages(page, page->order);
         return;
     }

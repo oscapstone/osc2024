@@ -119,7 +119,6 @@ set_exception_vector_table:
     msr vbar_el1, x0                // set the base address of the exception vector table
     ret
 
-
 // page 2107
 .global from_el2_to_el1
 from_el2_to_el1:
