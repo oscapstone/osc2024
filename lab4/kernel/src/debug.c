@@ -5,9 +5,9 @@ void print_log_level()
 {
 #if _DEBUG >= 0 && _DEBUG <= 3
 #ifdef QEMU
-	puts("┌───────────────┐\r\n");
-	puts("│ Logging level │\r\n");
-	puts("├───────────────┤\n");
+	uart_puts("┌───────────────┐\r\n");
+	uart_puts("│ Logging level │\r\n");
+	uart_puts("├───────────────┤\n");
 	ERROR_BLOCK({
 		uart_puts("│ ");
 		ERROR("      │\r\n");
@@ -24,11 +24,11 @@ void print_log_level()
 		uart_puts("│ ");
 		DEBUG("      │\r\n");
 	});
-	puts("└───────────────┘\r\n\r\n");
+	uart_puts("└───────────────┘\r\n\r\n");
 #elif RPI
-	puts("|===============|\r\n");
-	puts("| Logging level |\r\n");
-	puts("|---------------|\n");
+	uart_puts("|===============|\r\n");
+	uart_puts("| Logging level |\r\n");
+	uart_puts("|---------------|\n");
 	ERROR_BLOCK({
 		uart_puts("| ");
 		ERROR("      |\r\n");
@@ -45,7 +45,7 @@ void print_log_level()
 		uart_puts("| ");
 		DEBUG("      |\r\n");
 	});
-	puts("|---------------|\r\n\r\n");
+	uart_puts("|---------------|\r\n\r\n");
 #endif
 #endif
 }

@@ -1,8 +1,7 @@
-#include "stdint.h"
-
 #ifndef _DTB_H_
 #define _DTB_H_
 
+#include "stdint.h"
 
 // manipulate device tree with dtb file format
 // linux kernel fdt.h
@@ -20,4 +19,4 @@ void traverse_device_tree(dtb_callback callback); // traverse dtb tree
 void dtb_callback_show_tree(uint32_t node_type, char *name, void *value, uint32_t name_size);
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size);
 
-#endif
+#endif /* _DTB_H_ */

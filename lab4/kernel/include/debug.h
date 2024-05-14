@@ -1,3 +1,6 @@
+#ifndef _DEBUG_H_
+#define _DEBUG_H_
+
 #include "uart1.h"
 #include "ANSI.h"
 
@@ -64,4 +67,7 @@
 #define DEBUG_BLOCK(content) NOTHING_TO_DO()
 #endif
 
+
 void print_log_level();
+
+#endif /* _DEBUG_H_ */
