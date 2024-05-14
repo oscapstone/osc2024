@@ -156,7 +156,8 @@ void disable_core_timer() {
 }
 
 void timer_handler() {
-    //asm volatile("msr DAIFSet, 0xf");
+    uart_puts("\n\rIn timer handler\n\r");
+    ei();
     unsigned long cur_time = get_current_time();
     unsigned long next = 9999;
     for(int i=0;i<MAX_TIMER;i++){
@@ -172,10 +173,13 @@ void timer_handler() {
                 next = timers[i].expires;
         }
     }
-    disable_core_timer();
     if(next != 9999){
+        di();
         set_timer_interrupt(next - cur_time);
+        ei();
         //uart_puts("resetted another timer\n");
+    }
+    while(1){
     }
     //asm volatile("msr DAIFClr, 0xf");
 }

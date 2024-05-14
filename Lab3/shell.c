@@ -18,6 +18,14 @@ unsigned int write_cur = 0;
 
 char async_cmd[BUFFER_SIZE];
 
+void di(){
+    asm volatile("msr DAIFSet, 0xf");
+}
+
+void ei(){
+    asm volatile("msr DAIFClr, 0xf");
+}
+
 static char *cpio_base;
 
 void initramfs_callback(char *address)
@@ -35,12 +43,14 @@ void strcpy(char *s1, char *s2){
 }
 
 void uart_write_handler(){
+    ei();
     //*AUX_MU_IER |= 0x02;
     //uart_puts("hi\n");
     //*AUX_MU_IER &= ~(0x02);
     //asm volatile("msr DAIFSet, 0xf");
     char ch = '\0';
     if(write_cur < write_idx){
+        di();
         *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
         ch = uart_write_buffer[write_cur];
         write_cur++;
@@ -48,6 +58,7 @@ void uart_write_handler(){
         *AUX_MU_IER |= (0x02);
     }
     else{
+        di();
         *AUX_MU_IER |= (0x01);
         //*AUX_MU_IER &= ~(0x02);
     }
@@ -64,29 +75,35 @@ void uart_write_handler(){
 
 void uart_read_handler() {
     //asm volatile("msr DAIFSet, 0xf");
+    ei();
     //*AUX_MU_IER &= ~(0x01); //stop read interrupt
     char ch = (char)(*AUX_MU_IO);
     if(ch == '\r'){ //command
         //uart_send('\n');
+        di();
         uart_read_buffer[read_idx] = '\0';
         read_idx = 0;
         strcpy(uart_read_buffer, async_cmd);
         //uart_puts(uart_read_buffer);
         uart_write_buffer[write_idx] = '\n';
         write_idx++;
-        create_task(uart_write_handler,2);
+        //create_task(uart_write_handler,2);
         uart_write_buffer[write_idx] = '\r';
         write_idx++;
+        ei();
         //shell(uart_read_buffer);
         //uart_read_buffer[read_idx] = '\0';
     }
     else{
+        di();
         uart_read_buffer[read_idx] = ch;
         uart_write_buffer[write_idx] = ch; 
         //uart_send(uart_read_buffer[read_idx]);
         read_idx++;
         write_idx++;
+        ei();
     }
+    di();
     *AUX_MU_IER |= 0x01; //start
     *AUX_MU_IER |= 0x02;
     
@@ -337,6 +354,7 @@ void interrupt_handler_entry(){
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
+        disable_core_timer();
         create_task(timer_handler, 3);
         execute_task();
         // timer_handler();
@@ -353,6 +371,4 @@ void interrupt_handler_entry(){
             execute_task();
         }
     }
-    
-    //asm volatile("msr DAIFClr, 0xf");
 }

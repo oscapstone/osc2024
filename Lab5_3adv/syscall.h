@@ -1,1 +1,0 @@
-void sync_exception_entry();
