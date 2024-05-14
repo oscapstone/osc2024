@@ -16,7 +16,8 @@
         "thread.h": "c",
         "syscall.h": "c",
         "kernel_task.h": "c",
-        "schedule.h": "c"
+        "schedule.h": "c",
+        "signal.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

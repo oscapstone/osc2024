@@ -4,6 +4,7 @@
 #include "timer.h"
 #include "schedule.h"
 #include "mailbox.h"
+#include "allocator.h"
 #include "exception.h"
 
 #define AUX_MU_IO ((volatile unsigned int *)(MMIO_BASE + 0x00215040))
@@ -67,27 +68,50 @@ void sync_handler_entry()
     uart_puts("Into sync handler\n");
 }
 
-void el0_svc_handler_entry(struct trapframe *trapframe)
+void el0_svc_handler_entry(struct ucontext *trapframe)
 {
     enable_interrupt(); // to enable nested interrupts in system call, because the interrupt may be closed when go into synchronous handler?
 
     int get_syscall_no = trapframe->x[8];
-    if (get_syscall_no == SYS_GET_PID)
+    switch (get_syscall_no)
+    {
+    case SYS_GET_PID:
         sys_getpid(trapframe);
-    else if (get_syscall_no == SYS_UART_READ)
+        break;
+    case SYS_UART_READ:
         sys_uartread(trapframe);
-    else if (get_syscall_no == SYS_UART_WRITE)
+        break;
+    case SYS_UART_WRITE:
         sys_uartwrite(trapframe);
-    else if (get_syscall_no == SYS_EXEC)
+        break;
+    case SYS_EXEC:
         sys_exec(trapframe);
-    else if (get_syscall_no == SYS_FORK)
+        break;
+    case SYS_FORK:
         sys_fork(trapframe);
-    else if (get_syscall_no == SYS_EXIT)
+        break;
+    case SYS_EXIT:
         sys_exit(trapframe);
-    else if (get_syscall_no == SYS_MBOX_CALL)
+        break;
+    case SYS_MBOX_CALL:
         sys_mbox_call(trapframe);
-    else if (get_syscall_no == SYS_KILL)
+        break;
+    case SYS_KILL:
         sys_kill(trapframe);
+        break;
+    case SYS_SIGNAL:
+        sys_signal(trapframe);
+        break;
+    case SYS_SIGNAL_KILL:
+        sys_signal_kill(trapframe);
+        break;
+    case SYS_SIGRETURN:
+        sys_sigreturn(trapframe);
+        break;
+
+    default:
+        break;
+    }
 
     disable_interrupt();
 }
@@ -179,12 +203,12 @@ void timer_task()
         core_timer_disable();
 }
 
-void sys_getpid(struct trapframe *trapframe)
+void sys_getpid(struct ucontext *trapframe)
 {
     trapframe->x[0] = get_current_task()->id;
 }
 
-void sys_uartread(struct trapframe *trapframe)
+void sys_uartread(struct ucontext *trapframe)
 {
     char *buf = (char *)trapframe->x[0];
     int size = trapframe->x[1];
@@ -196,7 +220,7 @@ void sys_uartread(struct trapframe *trapframe)
     trapframe->x[0] = size;
 }
 
-void sys_uartwrite(struct trapframe *trapframe)
+void sys_uartwrite(struct ucontext *trapframe)
 {
     char *buf = (char *)trapframe->x[0];
     int size = trapframe->x[1];
@@ -207,7 +231,7 @@ void sys_uartwrite(struct trapframe *trapframe)
     trapframe->x[0] = size;
 }
 
-void sys_exec(struct trapframe *trapframe)
+void sys_exec(struct ucontext *trapframe)
 {
     const char *name = (const char *)trapframe->x[0];
     char **const argv = (char **const)trapframe->x[1];
@@ -215,7 +239,7 @@ void sys_exec(struct trapframe *trapframe)
     trapframe->x[0] = -1; // if do_exec is falut
 }
 
-void sys_fork(struct trapframe *trapframe)
+void sys_fork(struct ucontext *trapframe)
 {
     task_struct *parent = get_current_task();
     task_struct *child = task_create(0, 0);
@@ -230,24 +254,30 @@ void sys_fork(struct trapframe *trapframe)
     for (int i = 0; i < ustack_offset; i++) // copy ustack content
         *((char *)child->ustack - i) = *((char *)parent->ustack - i);
 
+    for (int i = 0; i < SIG_NUM; i++) // copy signal handler
+    {
+        child->is_default_signal_handler[i] = parent->is_default_signal_handler[i];
+        child->signal_handler[i] = parent->signal_handler[i];
+    }
+
     child->cpu_context = parent->cpu_context;
     child->cpu_context.sp = (unsigned long long)child->kstack - kstack_offset; // revise the right kernel stack pointer
     child->cpu_context.fp = (unsigned long long)child->kstack;
     child->cpu_context.lr = (unsigned long long)return_from_fork;
 
-    struct trapframe *child_trapframe = (struct trapframe *)child->cpu_context.sp; // revise the right user pointer
-    child_trapframe->sp_el0 = (unsigned long long)child->ustack - ustack_offset;
+    struct ucontext *child_trapframe = (struct ucontext *)child->cpu_context.sp;
+    child_trapframe->sp_el0 = (unsigned long long)child->ustack - ustack_offset; // revise the right user stack pointer
 
     trapframe->x[0] = child->id; // return child's id
     child_trapframe->x[0] = 0;
 }
 
-void sys_exit(struct trapframe *trapframe)
+void sys_exit(struct ucontext *trapframe)
 {
     task_exit();
 }
 
-void sys_mbox_call(struct trapframe *trapframe)
+void sys_mbox_call(struct ucontext *trapframe)
 {
     unsigned char ch = (unsigned char)trapframe->x[0];
     unsigned int *mbox = (unsigned int *)trapframe->x[1];
@@ -260,14 +290,51 @@ void sys_mbox_call(struct trapframe *trapframe)
         mbox[i] = mailbox[i];
 }
 
-void sys_kill(struct trapframe *trapframe)
+void sys_kill(struct ucontext *trapframe)
 {
     int pid = (int)trapframe->x[0];
-    for (task_struct *cur = run_queue.head[0]; cur != NULL; cur = cur->next) // find the task and set its state to EXIT
+    for (task_struct *cur = run_queue.head[0]; cur != NULL; cur = cur->next) // find the task
         if (cur->id == pid)
         {
             disable_interrupt();
             cur->state = EXIT;
             enable_interrupt();
         }
+}
+
+void sys_signal(struct ucontext *trapframe)
+{
+    int SIGNAL = (int)trapframe->x[0];
+    void (*handler)() = (void (*)())trapframe->x[1];
+
+    task_struct *cur = get_current_task();
+
+    disable_interrupt();
+    cur->is_default_signal_handler[SIGNAL] = 0;
+    cur->signal_handler[SIGNAL] = handler;
+    enable_interrupt();
+}
+
+void sys_signal_kill(struct ucontext *trapframe)
+{
+    int pid = (int)trapframe->x[0];
+    int SIGNAL = (int)trapframe->x[1];
+    for (task_struct *cur = run_queue.head[0]; cur != NULL; cur = cur->next) // find the task
+        if (cur->id == pid)
+        {
+            disable_interrupt();
+            cur->received_signal = SIGNAL;
+            enable_interrupt();
+        }
+}
+
+void sys_sigreturn(struct ucontext *trapframe)
+{
+    task_struct *cur = get_current_task();
+
+    for (int i = 0; i < 34; i++)
+        *((unsigned long long *)trapframe + i) = *((unsigned long long *)cur->signal_stack - i);
+
+    kfree(cur->signal_stack);
+    cur->signal_stack = NULL;
 }

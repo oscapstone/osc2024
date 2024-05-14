@@ -27,6 +27,7 @@ int main()
     asm volatile(
         "mov x0, 1\n"
         "msr cntp_ctl_el0, x0\n"); // enable core0 timer
+
     simple_shell();
 
     return 0;

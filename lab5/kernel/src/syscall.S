@@ -8,6 +8,9 @@
 #define SYS_EXIT 5
 #define SYS_MBOX_CALL 6
 #define SYS_KILL 7
+#define SYS_SIGNAL 8
+#define SYS_SIGNAL_KILL 9
+#define SYS_SIGRETURN 10
 
 .global getpid
 getpid:
@@ -54,5 +57,23 @@ mbox_call:
 .global kill
 kill:
     mov x8, SYS_KILL
+    svc #0
+    ret
+
+.global signal
+signal:
+    mov x8, SYS_SIGNAL
+    svc #0
+    ret
+
+.global signal_kill
+signal_kill:
+    mov x8, SYS_SIGNAL_KILL
+    svc #0
+    ret
+
+.global sigreturn
+sigreturn:
+    mov x8, SYS_SIGRETURN
     svc #0
     ret

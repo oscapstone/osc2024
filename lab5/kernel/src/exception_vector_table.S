@@ -105,13 +105,17 @@ irq_handler:
   save_all
   bl irq_handler_entry
   bl check_need_schedule
+  mov x0, sp // pass signal frame
+  bl check_signal
   load_all
   eret
 
 el0_svc_handler:
   save_all
-  mov x0, sp
+  mov x0, sp // pass trap frame
   bl el0_svc_handler_entry
+  mov x0, sp // pass signal frame
+  bl check_signal
   load_all
   eret
 

@@ -57,11 +57,21 @@ task_struct *task_create(void (*start_routine)(void), int priority)
     new_task->priority = priority;
     new_task->kstack = (void *)((char *)kmalloc(4096 * 2) + 4096 * 2); // malloc space for kernel stack
     new_task->ustack = (void *)((char *)kmalloc(4096 * 2) + 4096 * 2); // malloc space for user stack
+    new_task->signal_stack = NULL;
     new_task->cpu_context.sp = (unsigned long long)(new_task->kstack); // set stack pointer
     new_task->cpu_context.fp = (unsigned long long)(new_task->kstack); // set frame pointer
     new_task->cpu_context.lr = (unsigned long long)start_routine;      // set linker register
     new_task->state = RUNNING;
     new_task->need_sched = 0;
+    new_task->received_signal = NOSIG;
+
+    for (int i = 0; i < SIG_NUM; i++)
+    {
+        new_task->is_default_signal_handler[i] = 1;
+        new_task->signal_handler[i] = NULL;
+    }
+    new_task->signal_handler[9] = default_SIGKILL_handler;
+
     new_task->prev = NULL;
     new_task->next = NULL;
 
@@ -115,13 +125,21 @@ void kill_zombies()
 
 void schedule()
 {
+    /*uart_puts("cur task id: ");
+    uart_dec(get_current_task()->id);
+    uart_puts("\n");*/
+
     task_struct *cur = get_current_task()->next;
     while (cur != NULL && cur->state == IDLE)
         cur = cur->next;
 
     if (cur == NULL)
         cur = run_queue.head[0];
-    
+
+    /*uart_puts("next task id: ");
+    uart_dec(cur->id);
+    uart_puts("\n");*/
+
     context_switch(cur);
 }
 
@@ -138,12 +156,32 @@ void check_need_schedule()
 {
     struct task_struct *cur = get_current_task();
     if (cur->need_sched == 1) // if the need_sched flag of thecurrent task is set, then call schedle()
-    {   
+    {
         disable_interrupt();
         cur->need_sched = 0;
         enable_interrupt();
 
         schedule();
+    }
+}
+
+void check_signal(struct ucontext *sigframe)
+{
+    struct task_struct *cur = get_current_task();
+    int SIGNAL = cur->received_signal;
+
+    if (SIGNAL != NOSIG)
+    {
+        if (cur->is_default_signal_handler[SIGNAL] == 1)
+        {
+            cur->received_signal = NOSIG;
+            cur->signal_handler[SIGNAL]();
+        }
+        else
+        {
+            cur->received_signal = NOSIG;
+            do_signal(sigframe, cur->signal_handler[SIGNAL]);
+        }
     }
 }
 

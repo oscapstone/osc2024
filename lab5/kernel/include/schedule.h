@@ -1,6 +1,9 @@
 #ifndef __THREAD_H
 #define __THREAD_H
 
+#include "signal.h"
+#include "syscall.h"
+
 #define NULL 0
 
 struct cpu_context // callee saved
@@ -29,13 +32,17 @@ enum task_state
 
 typedef struct task_struct
 {
-    struct cpu_context cpu_context; // task context
-    int id;                         // task id
-    int priority;                   // task priority
-    void *kstack;                   // stack for kernel
-    void *ustack;                   // stack for user
-    enum task_state state;          // task state
-    int need_sched;                 // Do this task need to yield cpu ?
+    struct cpu_context cpu_context;         // task context
+    int id;                                 // task id
+    int priority;                           // task priority
+    void *kstack;                           // stack for kernel
+    void *ustack;                           // stack for user
+    void *signal_stack;                     // stack for signal handler;
+    enum task_state state;                  // task state
+    int need_sched;                         // Do this task need to yield cpu ?
+    int received_signal;                    // the signal that the process received
+    int is_default_signal_handler[SIG_NUM]; // check if is the default signal handler
+    void (*signal_handler[SIG_NUM])(void);  // signal handler
     struct task_struct *prev, *next;
 } task_struct;
 
@@ -63,9 +70,8 @@ void kill_zombies();
 void schedule();
 void context_switch(struct task_struct *next);
 void check_need_schedule();
+void check_signal(struct ucontext *sigframe);
 void do_exec(const char *name, char *const argv[]);
 void exec_fun(void (*func)(void));
-
-void foo();
 
 #endif
