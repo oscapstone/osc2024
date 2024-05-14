@@ -21,6 +21,3 @@ void mini_uart_setup();
 
 char mini_uart_getc_raw_sync();
 void mini_uart_putc_raw_sync(char c);
-
-// TODO: move to io
-int mini_uart_getline_echo(char* buffer, int size);

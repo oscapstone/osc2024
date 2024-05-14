@@ -22,55 +22,6 @@ const bool& mini_uart_is_async = _mini_uart_is_async;
 RingBuffer rbuf, wbuf;
 int mini_uart_delay = 0;
 
-namespace getline_echo {
-volatile bool enable = false;
-char* buffer;
-int length, r;
-
-bool impl(decltype(&mini_uart_putc_raw) putc,
-          decltype(&mini_uart_getc_raw) getc) {
-  auto c = getc();
-  if (c == (char)-1)
-    return false;
-  if (c == '\r' or c == '\n') {
-    putc('\r');
-    putc('\n');
-    buffer[r] = '\0';
-    enable = false;
-    return false;
-  } else {
-    switch (c) {
-      case 8:     // ^H
-      case 0x7f:  // backspace
-        if (r > 0) {
-          buffer[r--] = 0;
-          putc('\b');
-          putc(' ');
-          putc('\b');
-        }
-        break;
-      case 0x15:  // ^U
-        while (r > 0) {
-          buffer[r--] = 0;
-          putc('\b');
-          putc(' ');
-          putc('\b');
-        }
-        break;
-      case '\t':  // skip \t
-        break;
-      default:
-        if (r + 1 < length) {
-          buffer[r++] = c;
-          putc(c);
-        }
-    }
-    return true;
-  }
-}
-
-};  // namespace getline_echo
-
 void set_ier_reg(bool enable, int bit) {
   SET_CLEAR_BIT(enable, AUX_MU_IER_REG, bit);
 }
@@ -125,13 +76,6 @@ void mini_uart_handler(void*) {
     auto cur = get_current_tick();
     while (get_current_tick() - cur < delay * freq_of_timer)
       NOP;
-  }
-
-  while (getline_echo::enable and not rbuf.empty()) {
-    using namespace getline_echo;
-    auto putc = [](char c) { wbuf.push(c); };
-    auto getc = []() { return rbuf.pop(); };
-    impl(putc, getc);
   }
 }
 
@@ -227,34 +171,4 @@ char mini_uart_getc_raw() {
 }
 void mini_uart_putc_raw(char c) {
   return mini_uart_putc_raw_fp(c);
-}
-
-int mini_uart_getline_echo(char* buffer, int length) {
-  if (length <= 0)
-    return -1;
-
-  using namespace getline_echo;
-
-  if (enable)
-    return -1;
-
-  save_DAIF_disable_interrupt();
-  getline_echo::buffer = buffer;
-  getline_echo::length = length;
-  enable = true;
-  r = 0;
-  restore_DAIF();
-
-  if (mini_uart_is_async) {
-    while (enable and not rbuf.empty())
-      impl(&mini_uart_putc_raw_async, &mini_uart_getc_raw_async);
-    while (enable)
-      NOP;
-  } else {
-    while (enable)
-      while (impl(&mini_uart_putc_raw_sync, &mini_uart_getc_raw_sync))
-        ;
-  }
-
-  return r;
 }

@@ -23,6 +23,8 @@ void kprint_hex(string_view view);
 void kprint_str(string_view view);
 void kprint(string_view view);
 
+int kgetline_echo(char* buffer, int size);
+
 unsigned kread(char buf[], unsigned size);
 unsigned kwrite(const char buf[], unsigned size);
 

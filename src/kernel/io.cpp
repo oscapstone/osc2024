@@ -94,6 +94,49 @@ void kprint(string_view view) {
     kprint_hex(view);
 }
 
+int kgetline_echo(char* buffer, int size) {
+  if (size <= 0)
+    return -1;
+
+  int r = 0;
+
+  while (true) {
+    auto c = kgetc();
+    if (c == (char)-1)
+      return false;
+    if (c == '\r' or c == '\n') {
+      kputs("\r\n");
+      buffer[r] = '\0';
+      break;
+    } else {
+      switch (c) {
+        case 8:     // ^H
+        case 0x7f:  // backspace
+          if (r > 0) {
+            buffer[r--] = 0;
+            kputs("\b \b");
+          }
+          break;
+        case 0x15:  // ^U
+          while (r > 0) {
+            buffer[r--] = 0;
+            kputs("\b \b");
+          }
+          break;
+        case '\t':  // skip \t
+          break;
+        default:
+          if (r + 1 < size) {
+            buffer[r++] = c;
+            kputc(c);
+          }
+      }
+    }
+  }
+
+  return r;
+}
+
 unsigned kread(char buf[], unsigned size) {
   for (unsigned i = 0; i < size; i++)
     buf[i] = kgetc();
