@@ -1,5 +1,5 @@
 #include "debug.h"
-#include "stdio.h"
+#include "uart1.h"
 
 void print_log_level()
 {
@@ -9,19 +9,19 @@ void print_log_level()
 	puts("│ Logging level │\r\n");
 	puts("├───────────────┤\n");
 	ERROR_BLOCK({
-		puts("│ ");
+		uart_puts("│ ");
 		ERROR("      │\r\n");
 	});
 	WARNING_BLOCK({
-		puts("│ ");
+		uart_puts("│ ");
 		WARNING("    │\r\n");
 	});
 	INFO_BLOCK({
-		puts("│ ");
+		uart_puts("│ ");
 		INFO("       │\r\n");
 	});
 	DEBUG_BLOCK({
-		puts("│ ");
+		uart_puts("│ ");
 		DEBUG("      │\r\n");
 	});
 	puts("└───────────────┘\r\n\r\n");
@@ -30,19 +30,19 @@ void print_log_level()
 	puts("| Logging level |\r\n");
 	puts("|---------------|\n");
 	ERROR_BLOCK({
-		puts("| ");
+		uart_puts("| ");
 		ERROR("      |\r\n");
 	});
 	WARNING_BLOCK({
-		puts("| ");
+		uart_puts("| ");
 		WARNING("    |\r\n");
 	});
 	INFO_BLOCK({
-		puts("| ");
+		uart_puts("| ");
 		INFO("       |\r\n");
 	});
 	DEBUG_BLOCK({
-		puts("| ");
+		uart_puts("| ");
 		DEBUG("      |\r\n");
 	});
 	puts("|---------------|\r\n\r\n");

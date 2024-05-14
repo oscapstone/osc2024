@@ -8,6 +8,7 @@
 #include "dtb.h"
 #include "timer.h"
 #include "uart1.h"
+#include "ANSI.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "cat", .help = "concatenate files and print on the standard output", .func = do_cmd_cat},
@@ -35,9 +36,9 @@ int start_shell()
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
 #ifdef QEMU
-        puts("[ ─=≡Σ((( つ•̀ω•́)つ @ QEMU ] $ ");
+        puts("[ " BLU "─=≡Σ((( つ•̀ω•́)つ " GRN "@ QEMU" CRESET " ] $ ");
 #elif RPI
-        puts("[ d[^_^]b @ RPI ] $ ");
+        puts("[ " HBLU "d[^_^]b " HGRN "@ RPI" CRESET " ] $ ");
 #endif
         cli_cmd_read(input_buffer);
         cli_cmd_exec(input_buffer);
