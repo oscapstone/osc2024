@@ -94,7 +94,7 @@ void initrd_exec(const char *target)
             memcpy(program, fptr + headsize, filesize);
             struct task_struct *task = kthread_create((void *)program);
             asm volatile("msr tpidr_el1, %0;" ::"r"(task));
-            asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
+            asm volatile("msr spsr_el1, %0" ::"r"(0x340));
             asm volatile("msr elr_el1, %0" ::"r"(task->context.lr));
             asm volatile("msr sp_el0, %0" ::"r"(task->user_stack + STACK_SIZE));
             asm volatile("mov sp, %0" ::"r"(task->stack + STACK_SIZE));

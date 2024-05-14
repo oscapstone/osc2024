@@ -160,7 +160,7 @@ void fork_test()
 
 void run_fork_test()
 {
-    asm volatile("msr spsr_el1, %0" ::"r"(0x3C0));
+    asm volatile("msr spsr_el1, %0" ::"r"(0x340));
     asm volatile("msr elr_el1, %0" ::"r"(fork_test));
     asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
     asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));

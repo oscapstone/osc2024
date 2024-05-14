@@ -98,7 +98,7 @@ exception_vector_table:
     ventry invalid_exc_handler
     // EL0 (AArch64) -> EL1
     ventry exception_handler
-    ventry invalid_exc_handler
+    ventry irq_handler
     ventry invalid_exc_handler
     ventry invalid_exc_handler
     // EL0 (AArch32) -> EL1

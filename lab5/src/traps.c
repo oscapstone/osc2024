@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "irq.h"
 #include "sched.h"
 #include "syscall.h"
 #include "traps.h"
@@ -18,6 +19,7 @@ void print_registers(uint64_t elr, uint64_t esr, uint64_t spsr)
 
 void exception_entry(trap_frame *tf)
 {
+    enable_interrupt();
     switch (tf->x8) {
     case 0:
         tf->x0 = sys_getpid();
