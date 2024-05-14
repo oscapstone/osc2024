@@ -9,26 +9,21 @@
 // extern void disable_irq();
 
 //get elsel1, elrel1 and sp (Trapframe * = sp)
-//typedef struct thread thread;
 extern thread * thread_pool[];
 extern thread * get_current();
 extern void fork_return();
 
 struct trapframe {
-    unsigned long x[32];	// x0-x30, 16bytes align, exp.S
+    unsigned long x[32]; // x0-x30, 16bytes align (x[31] dummy)
 	unsigned long spsr_el1;
 	unsigned long elr_el1;
 	unsigned long sp_el0;
-	unsigned long Dummy;	
 };
 
 typedef struct trapframe trapframe;
 
 void getpid(trapframe * sp){
-    sp -> x[0] =  get_current() -> pid;//get_pid();
-    // uart_puts("Current Thread: ");
-    // uart_int(sp -> x[0]);
-    // newline();
+    sp -> x[0] =  get_current() -> pid;
 }
 
 void exec(trapframe * sp){
@@ -36,7 +31,7 @@ void exec(trapframe * sp){
     struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base ;
     char *current = (char *)cpio_base ;
     int sz;
-    while (1) {
+    while (1) { //cpio in lab3
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
         int file_size = hex_to_int(fs->c_filesize, 8);
@@ -59,47 +54,38 @@ void exec(trapframe * sp){
             current += (4 - (current - (char *)fs) % 4);
     }
     uart_puts("found user program\n");
-    //uart_int(sz);
+
+    //copy program to allocated place
     char *new_program_pos = (char *)allocate_page(sz);
     for (int i = 0; i < sz; i++) {
-        //hi();
         *(new_program_pos+i) = *(current+i);
     }
-    // for (int i = 0; i < sz; i++) {
-    //     if(*(new_program_pos+i) != *(current+i)){
-    //         uart_int("BUG!!!!!!!\n");
-    //     }
-    // }
-    // delay(100000);
+
     // current is the file address
-    asm volatile ("mov x0, 0x0"); 
+    asm volatile ("mov x0, 0x0"); //need to check
     asm volatile ("msr spsr_el1, x0");
     asm volatile ("msr elr_el1, %0": :"r" (new_program_pos));
-    asm volatile ("mov x0, %0": : "r"(get_current() -> sp_el0));
+    asm volatile ("mov x0, %0": : "r"(get_current() -> sp_el0));// user space stack
     asm volatile ("msr sp_el0, x0");
     asm volatile ("eret");
     sp -> x[0] = 0;
 }
 
 void exit(trapframe * sp){
-    int status = sp -> x[0];
-    thread_exit();
+    int status = sp -> x[0]; //no use
+    thread_exit(); //simply go to exit
 }
 
 void kill(trapframe * sp){
+    //make state of pid to -1
     int pid = sp -> x[0];
     thread_pool[pid] -> state = -1;
     thread_pool[pid] -> priority = 999;
     update_min_priority();
 }
 
-//int en;
-
 void uartread(trapframe *sp) {
-    // if(en == 0){
-    enable_irq();
-    //    en += 1;
-    // }
+    enable_irq(); //blocking read, enable irq for preempt
     
     char *buf = (char *)sp->x[0];
     int size = (int)sp->x[1];
@@ -141,31 +127,31 @@ void fork(trapframe *sp){
     t -> sp_el1 = ((unsigned long)allocate_page(4096)) + 4096;//((unsigned long)t + 4096); //sp start from bottom
     t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096;
     // t -> funct = fork_return;
-    
-    // copy register x19~28, lr, fp, sp
+
+    // copy register x19~28
     for(int i = 0; i< sizeof(struct registers); i++){
         ((char*)(&(t -> regs)))[i] = ((char*)(&(get_current() -> regs)))[i]; 
     }
-    t -> regs.lr = fork_return; // lr first time in thread will go there
+    
+    t -> regs.lr = fork_return; //need to load all and eret for child
 
-    //update sp
-    unsigned long sp_offset = (char *)(get_current() -> sp_el1) - (char*)sp;
-    unsigned long ustack_offset = (char *)get_current()->sp_el0 - (char *)sp->sp_el0;
+    //update user and kernel stack pointer
+    unsigned long sp_offset = (char *)(get_current() -> sp_el1) - (char*)sp; //bottom of stack minus top of trapframe(top of stack)
+    unsigned long sp_el0_offset = (char *)get_current()->sp_el0 - (char *)sp->sp_el0; //bottom of stack minus top of user stack saved by trapframe
 
     for(int i = 1; i<= sp_offset; i++){
         *((char *)(t -> sp_el1 - i)) = *((char *)(get_current() -> sp_el1 - i));
     }
    
-    // user stack pls, then interrupt
-    for(int i = 1; i <= ustack_offset; i++){
+    for(int i = 1; i <= sp_el0_offset; i++){
         *((char *)(t -> sp_el0 - i)) = *((char *)(get_current() -> sp_el0 - i));
     }
 
     // modify sp for load all
-    t -> regs.sp = t -> sp_el1 - sp_offset;
-    ((trapframe*)(t -> regs.sp)) -> sp_el0 = t -> sp_el0 - ustack_offset;
+    t -> regs.sp = t -> sp_el1 - sp_offset; //set to the same position: top of the trapframe
+    ((trapframe*)(t -> regs.sp)) -> sp_el0 = t -> sp_el0 - sp_el0_offset; //user stack point to the same position
 
-    ((trapframe*)(t -> regs.sp)) -> x[0] = 0;
+    ((trapframe*)(t -> regs.sp)) -> x[0] = 0; //return 0 for child
     thread_pool[pid] = t;
     update_min_priority();
     sp -> x[0] = pid;
@@ -174,6 +160,7 @@ void fork(trapframe *sp){
 void sys_mbox_call(trapframe * sp){
     unsigned char ch = (unsigned char) sp -> x[0];
     unsigned int * mbox = (unsigned int *) sp -> x[1];
+    //lab1 mbox call
     sp -> x[0] = mbox_call(ch, mbox);
 }
 
@@ -208,15 +195,16 @@ void sys_call(trapframe * sp){
 }
 
 void sync_exception_entry(unsigned long esr_el1, unsigned long elr_el1, trapframe* sp){
-    int ec = (esr_el1 >> 26) & 0b111111;
+    int ec = (esr_el1 >> 26) & 0b111111; //see 31:26 (esr_el1 spec)
     //sp is the place of "save_all"
-    //x0, x1 here is the new for function input
+    //x0, x1 here is the new ones for function input
 
     if (ec == 0b010101) { //system call see lab3
         sys_call(sp);
     }
     else{
         /*
+        just for debug (old exception handler)
         0b100101
         Data Abort taken without a change in Exception level.
         Used for MMU faults generated by data accesses, alignment faults 
@@ -244,7 +232,6 @@ void sync_exception_entry(unsigned long esr_el1, unsigned long elr_el1, trapfram
 }
 
 void timer_scheduler(){
-    //hi();
     unsigned long cntfrq_el0;
     asm volatile ("mrs %0, cntfrq_el0":"=r" (cntfrq_el0));
     asm volatile ("lsr %0, %0, #5":"=r" (cntfrq_el0) :"r"(cntfrq_el0)); // 1/32 second tick

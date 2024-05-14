@@ -71,11 +71,11 @@ from_el2_to_el1:
 	mrs	    x29, elr_el1
 	stp 	x28, x29, [sp ,16 * 16]
 	mrs	    x28, sp_el0	// For fork
-	stp	    x28, x0, [sp, 16 * 17]
+	str	    x28, [sp, 16 * 17]
 .endm
 
 .macro load_all
-	ldp	    x28, x0, [sp, 16 * 17]
+	ldr	    x28, [sp, 16 * 17]
 	msr	    sp_el0, x28
 	ldp 	x28, x29, [sp ,16 * 16]
 	msr	    spsr_el1, x28
@@ -213,7 +213,7 @@ fork_return:
 
 .globl enable_irq
 enable_irq:
-	msr DAIFClr, #2 // IRQ mask bit
+	msr DAIFClr, 0xf // IRQ mask bit
 	ret
 
 .globl disable_irq

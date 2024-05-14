@@ -18,10 +18,10 @@ struct registers {
 struct thread{
     struct registers regs;
     int pid;
-    int state; //run queue, running, wait queue... 0: created
+    int state; //run queue, running, wait queue, zombie... (run/wait not implemented yet) 
     int parent; //-1: no parent
-    int priority; //2 normal
-    void (*funct)(void);
+    int priority;
+    void (*funct)(void); //task
     unsigned long sp_el1;
 	unsigned long sp_el0;
 };

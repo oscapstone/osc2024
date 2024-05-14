@@ -1,10 +1,10 @@
 DEMO TODOs:
 * 搞懂那些 switch to, 關東東在幹嘛
-* 搞懂為啥read的時候要enable (可能要問)
-* 複習各個code怎麼寫的，還有那個lr怎麼運作
-* 搞懂為啥PID 0不會觸發
 * 各system call, sp複習
 * 把 fork 再改的好看一點，也比較好demo解釋(補註解)
+* 搞懂 caller, callee 意義還有為啥 trap要存全部，moveto只要存callee，還有複習各regsister在幹啥的細節(elr啥的那些，tp啥地寫進readme)
+* 想清楚lab3 advanced的流程並在板板上嘗試
+* 搞懂daif在幹嘛還有那個usr prgram轉過去的0x確認一下，還有timer interrutp複習
 
 exec 的時候，可以 malloc 然後複製一個檔案過去
 sp 用給定的就好
@@ -47,12 +47,6 @@ fork return 時 trapframe 是否也需要被複製，還是只要返回值對就
 
 elrel1那些是0，好像怪怪的，可以檢查一下 那些正常的質應該要是多少
 
-問題s: 
-1. fork完有看到 program 要 mbox_call，應該算複製成功? 還是這樣還是有可能影片撥不出來QQ
-2. 沒有 timer interrupt 的情況下，他應該要是黑屏嗎?
-3. 有了 timer interrupt 以後發現，進去 user program 以後就又沒有了? (推測跟 read 有關)
-4. 在 read 的地方加了 disable 以後就正常，但是 fork 完去到另一邊就又沒有 interrupt 了
-5. 影片跑不出來但有看到 mbox ok，能不能拿一半QAQ 還有前一題能不能拿
 
 TOMORO
 1. 試跑 fork_test
@@ -61,3 +55,4 @@ TOMORO
 4. 不然可能就得試試看別人的 memory allocator
 
 因為打字才會動，加上有從handler檢查，應該是進入interrupt在等輸入，所以開啟可以nested
+https://blog.csdn.net/boildoctor/article/details/123379261
