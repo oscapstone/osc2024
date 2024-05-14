@@ -17,39 +17,15 @@ mod syscall;
 mod thread;
 mod timer;
 
-use crate::thread::test_func;
-use alloc::boxed::Box;
 use allocator::buddy::BUDDY_SYSTEM;
-use core::arch::asm;
-use core::time::Duration;
 use stdio::{debug, gets, print, println};
 
 pub static mut INITRAMFS_ADDR: u32 = 0;
 
 fn main() -> ! {
     boot();
-    scheduler::init();
     println!("Kernel booted successfully!");
-    // let scheduler = scheduler::get();
-    // for i in 0..1 {
-    // scheduler.create_thread(kernel_main, 0 as *mut u8);
-    // scheduler.create_thread(test_func, 1 as *mut u8);
-    // }
-
-    // scheduler.schedule();
-
-    // unsafe {
-    //     let mut sp: u64;
-    //     asm!("mov {}, sp", out(reg) sp);
-    //     println!("Main thread sp: {:x}", sp);
-    // }
-    // allocator::utils::toggle_dynamic_verbose();
-    commands::exec::exec(b"exec program.img");
-    kernel_shell();
-}
-
-extern "C" fn kernel_main(_: *mut u8) {
-    println!("Kernel main thread started!");
+    commands::execute(b"exec program.img  program.img");
     kernel_shell();
 }
 
@@ -59,7 +35,7 @@ fn kernel_shell() -> ! {
     loop {
         print!("> ");
         gets(&mut buf);
-        execute_command(&buf);
+        commands::execute(&buf);
     }
 }
 
@@ -70,35 +46,7 @@ fn boot() {
     buddy_init();
     timer::manager::init();
     print_boot_time();
-}
-
-fn execute_command(command: &[u8]) {
-    if command.starts_with(b"\x00") {
-        return;
-    } else if command.starts_with(b"hello") {
-        commands::hello::exec();
-    } else if command.starts_with(b"help") {
-        commands::help::exec();
-    } else if command.starts_with(b"reboot") {
-        commands::reboot::exec();
-    } else if command.starts_with(b"ls") {
-        commands::ls::exec();
-    } else if command.starts_with(b"cat") {
-        commands::cat::exec(&command);
-    } else if command.starts_with(b"exec") {
-        commands::exec::exec(&command);
-    } else if command.starts_with(b"echo") {
-        commands::echo::exec(&command);
-    } else if command.starts_with(b"setTimeOut") {
-        commands::set_time_out::exec(&command);
-    } else if command.starts_with(b"buddy") {
-        commands::buddy::exec();
-    } else {
-        println!(
-            "Unknown command: {}",
-            core::str::from_utf8(command).unwrap()
-        );
-    }
+    scheduler::init();
 }
 
 fn print_mailbox_info() {

@@ -1,16 +1,15 @@
-
-
 .macro EXCEPTION_WITH_TYPE type handler
+    msr DAIFSet, 0xf
     save_all
     mov x0, \type
     mov x1, sp
-    add x1, x1, 32 * 8
     bl \handler
     b exception_restore_context
 .endm
 
 exception_restore_context:
     load_all
+    msr DAIFClr, 0xf
     eret
 
 
@@ -45,7 +44,7 @@ exception_vector_table:
     EXCEPTION_WITH_TYPE 8, svc_handler
 
     .align 7
-    EXCEPTION_WITH_TYPE 9, unknown_exception_handler
+    EXCEPTION_WITH_TYPE 9, irq_handler
 
     .align 7
     EXCEPTION_WITH_TYPE 10, unknown_exception_handler

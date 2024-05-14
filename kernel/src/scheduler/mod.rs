@@ -1,15 +1,16 @@
-use crate::{exception, thread::Thread};
+use crate::exception::trap_frame::TRAP_FRAME;
+use crate::thread::Thread;
 use alloc::boxed::Box;
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
 use core::arch::asm;
 use core::time::Duration;
-use stdio::{debug, println};
-
+use stdio::println;
 pub struct Scheduler {
     pub current: Option<usize>,
     pub threads: Vec<Option<Box<Thread>>>,
     pub ready_queue: VecDeque<usize>,
+    #[allow(dead_code)]
     pub zombie_queue: VecDeque<usize>,
 }
 
@@ -23,7 +24,7 @@ impl Scheduler {
         }
     }
 
-    pub fn add(&mut self, thread: Box<Thread>) {
+    fn add(&mut self, thread: Box<Thread>) {
         let pos = self.threads.iter().position(|t| t.is_none());
         match pos {
             Some(index) => {
@@ -36,49 +37,47 @@ impl Scheduler {
             }
         }
     }
-    pub fn schedule(&mut self) {
-        self.sched_timer();
 
+    pub fn schedule(&mut self) {
         if self.current.is_none() {}
 
-        println!("{} threads in ready queue", self.ready_queue.len());
+        // println!("{} threads in ready queue", self.ready_queue.len());
         if self.ready_queue.is_empty() {
             println!("No thread to schedule");
             return;
         }
-        if self.current.is_none() {
-            let next = self.ready_queue.pop_front().unwrap();
-            self.current = Some(next);
-            println!("Switching to {}", next);
-            unsafe {
-                exception::enable_interrupt();
-                let next: *const Thread = self.threads[next].as_ref().unwrap().as_ref();
-                asm!("mov x1, {}", in(reg) next, out("x1") _);
-                asm!("bl context_switch");
-                exception::disable_interrupt();
-            }
-            return;
-        }
+        assert!(self.current.is_some());
         let current = self.current.unwrap();
-        let next = self.ready_queue.pop_front().unwrap();
-        if let Some(_) = self.threads[next].as_ref() {
-            self.ready_queue.push_back(current);
-            self.current = Some(next);
-            println!("Switching from {} to {}", current, next);
-            unsafe {
-                exception::enable_interrupt();
-                let prev: *const Thread = self.threads[current].as_ref().unwrap().as_ref();
-                let next: *const Thread = self.threads[next].as_ref().unwrap().as_ref();
-                asm!("mov x0, {}", in(reg) prev, out("x0") _);
-                asm!("mov x1, {}", in(reg) next, out("x1") _);
-                asm!("bl context_switch");
-                exception::disable_interrupt();
+        let range = self.threads[current].as_ref().unwrap().code_range;
+        let pc = unsafe { TRAP_FRAME.as_ref().unwrap().state.pc };
+        if range.0 <= pc && pc < range.1 {
+            let next = self.ready_queue.pop_front().unwrap();
+            if let Some(_) = self.threads[next].as_ref() {
+                self.ready_queue.push_back(current);
+                self.current = Some(next);
+                // println!("Switching from {} to {}", current, next);
+                unsafe {
+                    self.threads[current].as_mut().unwrap().cpu_state =
+                        TRAP_FRAME.as_ref().unwrap().state;
+                    TRAP_FRAME.as_mut().unwrap().state =
+                        self.threads[next].as_ref().unwrap().cpu_state;
+                }
+            } else {
+                panic!("Thread {} is not available", next);
             }
+        } else {
+            println!("Thread {} pc (0x{:x}) is not in range", current, pc);
         }
     }
 
-    pub fn create_thread(&mut self, entry: extern "C" fn(*mut u8), args: *mut u8) {
-        let thread = Box::new(Thread::new(self.threads.len() as u32, 0x2000, entry, args));
+    pub fn create_thread(&mut self, entry: extern "C" fn(), entry_size: usize, args: *mut u8) {
+        let thread = Box::new(Thread::new(
+            self.threads.len() as u32,
+            0x2000,
+            entry,
+            entry_size,
+            args,
+        ));
         println!("Created thread {}", thread.id);
         self.add(thread);
         println!("Number of threads: {}", self.threads.len());
@@ -87,11 +86,37 @@ impl Scheduler {
     pub fn sched_timer(&mut self) {
         let tm = crate::timer::manager::get();
         tm.add_timer(
-            Duration::from_secs_f64(1 as f64 / (1 << 2) as f64),
+            Duration::from_secs_f64(1 as f64 / (1 << 5) as f64),
             Box::new(|| {
                 get().schedule();
+                get().sched_timer();
             }),
         );
+    }
+
+    pub fn run_threads(&mut self) {
+        self.sched_timer();
+        assert!(self.current.is_none());
+        assert!(!self.ready_queue.is_empty());
+        let next = self.ready_queue.pop_front().unwrap();
+        self.current = Some(next);
+        println!("Switching to {}", next);
+        let entry = self.threads[next].as_ref().unwrap().entry;
+        let stack_pointer = self.threads[next].as_ref().unwrap().stack as usize
+            + self.threads[next].as_ref().unwrap().stack_size;
+        unsafe {
+            asm!(
+                // "mov {0}, 0x3c0",
+                "mov {0}, 0x200",
+                "msr spsr_el1, {0}",
+                "msr elr_el1, {1}",
+                "msr sp_el0, {2}",
+                "eret",
+                out(reg) _,
+                in(reg) entry,
+                in(reg) stack_pointer,
+            );
+        }
     }
 }
 
@@ -107,14 +132,9 @@ pub extern "C" fn get_current() -> *mut Thread {
 pub extern "C" fn thread_wrapper() {
     let thread = get_current();
     let thread = unsafe { &mut *thread };
-    (thread.entry)(thread.args);
+    (thread.entry)();
     println!("Thread {} exited", thread.id);
     panic!("Thread exited");
-    loop {
-        unsafe {
-            asm!("wfe");
-        }
-    }
 }
 
 static mut SCHEDULER: Option<Scheduler> = None;
@@ -126,37 +146,5 @@ pub fn get() -> &'static mut Scheduler {
 pub fn init() {
     unsafe {
         SCHEDULER = Some(Scheduler::new());
-    }
-    // let tm = crate::timer::manager::get();
-    // tm.add_timer(
-    //     Duration::from_millis(1000),
-    //     Box::new(|| {
-    //         get().sched_timer();
-    //         println!("Switching to {}", get().current.unwrap());
-    //         unsafe {
-    //             let current: *const Thread = get().threads[get().current.unwrap()]
-    //                 .as_ref()
-    //                 .unwrap()
-    //                 .as_ref();
-    //             exception::enable_interrupt();
-    //             asm!("mov x1, {}", in(reg) current, out("x1") _);
-    //             asm!("bl load_cpu_status");
-    //             exception::disable_interrupt();
-    //             return;
-    //         }
-    //     }),
-    // );
-    // assert!(get().ready_queue.is_empty());
-    // assert!(get().current.is_none());
-    // get().create_thread(idle, 0 as *mut u8);
-    // get().current = Some(0);
-}
-
-extern "C" fn idle(_: *mut u8) {
-    println!("Idle thread");
-    loop {
-        unsafe {
-            asm!("wfe");
-        }
     }
 }

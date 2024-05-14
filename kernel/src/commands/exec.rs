@@ -1,37 +1,38 @@
+use crate::scheduler;
 use crate::INITRAMFS_ADDR;
-use core::arch::asm;
+use alloc::alloc::alloc;
+use alloc::alloc::Layout as layout;
+use alloc::string::String;
+use alloc::vec::Vec;
 use filesystem::cpio::CpioArchive;
 use stdio::println;
 
-const PROGRAM_ENTRY: *const u8 = 0x30000000 as *const u8;
-
-pub fn exec(command: &[u8]) {
+pub fn exec(args: Vec<String>) {
+    println!("Executing exec command with args: {:?}", args);
     let rootfs = CpioArchive::load(unsafe { INITRAMFS_ADDR } as *const u8);
-    let filename = &command[5..];
-    if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
-        println!(
-            "Executing program: {}",
-            core::str::from_utf8(filename).unwrap()
-        );
-        println!("Program size: {} bytes", data.len());
-        unsafe {
-            core::ptr::copy(data.as_ptr(), PROGRAM_ENTRY as *mut u8, data.len());
-            asm!(
-                "mov {0}, 0x3c0",
-                "msr spsr_el1, {0}",
-                "msr elr_el1, {1}",
-                "msr sp_el0, {2}",
-                "eret",
-                out(reg) _,
-                in(reg) PROGRAM_ENTRY,
-                in(reg) PROGRAM_ENTRY as u64 - 0x1000,
+    for filename in args.iter().skip(1) {
+        let filename = filename.as_bytes();
+        if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
+            let program_entry =
+                unsafe { alloc(layout::from_size_align(data.len(), 0x100).unwrap()) };
+            println!(
+                "Executing program: {}",
+                core::str::from_utf8(filename).unwrap()
+            );
+            println!("Program size: 0x{:x} bytes", data.len());
+            println!("Program entry: {:p}", program_entry);
+            let program_entry: extern "C" fn() = unsafe { core::mem::transmute(program_entry) };
+            scheduler::get().create_thread(program_entry, data.len(), 0 as *mut u8);
+            unsafe {
+                core::ptr::copy(data.as_ptr(), program_entry as *mut u8, data.len());
+            }
+        } else {
+            println!(
+                "File not found: {}",
+                core::str::from_utf8(filename).unwrap()
             );
         }
-        loop {}
-    } else {
-        println!(
-            "File not found: {}",
-            core::str::from_utf8(filename).unwrap()
-        );
     }
+    assert!(!scheduler::get().ready_queue.is_empty());
+    scheduler::get().run_threads();
 }

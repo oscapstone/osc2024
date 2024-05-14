@@ -1,17 +1,20 @@
 use driver::uart::send;
 
+#[allow(dead_code)]
 pub fn print(s: &str) {
     for c in s.chars() {
         send(c as u8);
     }
 }
 
+#[allow(dead_code)]
 pub fn println(s: &str) {
     print(s);
     send(b'\r');
     send(b'\n');
 }
 
+#[allow(dead_code)]
 pub fn print_u64(name: &str, n: u64) {
     print(name);
     print(": ");
@@ -23,6 +26,7 @@ pub fn print_u64(name: &str, n: u64) {
     send(b'\n');
 }
 
+#[allow(dead_code)]
 pub fn print_hex(n: u64) {
     let mut s = [0u8; 16];
     let mut i = 0;
@@ -45,7 +49,8 @@ pub fn print_hex(n: u64) {
     }
 }
 
-fn print_dec(n: u64) {
+#[allow(dead_code)]
+pub fn print_dec(n: u64) {
     let mut s = [0u8; 20];
     let mut i = 0;
     let mut n = n;
@@ -63,7 +68,8 @@ fn print_dec(n: u64) {
     }
 }
 
-fn print_bin(n: u64) {
+#[allow(dead_code)]
+pub fn print_bin(n: u64) {
     let mut s = [0u8; 64];
     let mut i = 0;
     let mut n = n;

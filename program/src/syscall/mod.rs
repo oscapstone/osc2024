@@ -4,9 +4,9 @@ pub fn get_pid() -> u64 {
     let pid: u64;
     unsafe {
         asm!(
-            "mov x8, 0",
             "svc 0",
-            out("x8") pid,
+            in("x8") 0,
+            out("x0") pid,
         );
     }
     pid

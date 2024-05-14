@@ -137,12 +137,14 @@ impl TimerManager {
         (now + (delay * freq)) as u64
     }
 
+    #[allow(dead_code)]
     pub fn current_time(&self) -> Duration {
         let now = self.get_current();
         let freq = self.get_frequency();
         Duration::from_millis(now / (freq / 1000))
     }
 
+    #[allow(dead_code)]
     pub fn print(&self) {
         for timer in self.pq.iter() {
             debug!(
