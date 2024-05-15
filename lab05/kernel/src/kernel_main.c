@@ -17,6 +17,8 @@ extern void fdt_traverse(void (*callback)(void*));
 
 static void multiple_init();
 
+extern struct task_struct *current;
+
 int main()
 {
     multiple_init();

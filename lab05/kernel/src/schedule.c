@@ -97,8 +97,6 @@ void exit_process()
 {
 	preempt_disable();
 	current->state = TASK_ZOMBIE;
-	// printf("\r\nProcess exit: "); printf_int(current->pid);
-	// printf("\r\nFree stack: "); printf_hex((unsigned long)current->stack);
 	bfree((void*)current->stack);
 	preempt_enable();
 	schedule();

@@ -15,6 +15,7 @@
 
 #define TASK_RUNNING				0
 #define TASK_ZOMBIE				    1
+#define TASK_STOPPED				2
 
 #define PF_KTHREAD 					2
 

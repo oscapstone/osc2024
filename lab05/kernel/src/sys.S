@@ -4,6 +4,8 @@
 // the such warpper functions are not inlcuded in the real linux kernel
 // they often are packed in the different language's standard library, such as glibc
 
+// svc #0 is used to generate synchronous exception
+
 .global getpid
 getpid:
     mov w8, #SYS_GETPID_NUM

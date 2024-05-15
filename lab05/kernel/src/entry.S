@@ -9,6 +9,7 @@
 
 // save general registers to stack
 .macro save_all el
+    //bl save_all_debug
     sub sp, sp, 16*17
     stp x0, x1, [sp ,16 * 0]    // storing the contents of x0 and x1 to the address pointed by the stack pointer sp with an offset of 16 bytes
     stp x2, x3, [sp ,16 * 1]    // stp: Store Pair and it's used to store a pair of 64-bit (8-byte) registers to memory
@@ -41,6 +42,7 @@
 
 // load general registers from stack
 .macro load_all el
+    //bl load_all_debug
     ldp x22, x23, [sp ,16 * 16]
     ldp x30, x21, [sp ,16 * 15]
 
@@ -198,7 +200,7 @@ from_el1_to_el0:
 
 .global ret_from_fork   // entry point for executing the process
 ret_from_fork:
-	bl	schedule_tail
+	bl	schedule_tail   // preemptive enable
     cbz x19, ret_to_user
 	mov	x0, x20
 	blr	x19 		//should never return

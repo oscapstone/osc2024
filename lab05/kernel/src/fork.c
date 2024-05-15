@@ -44,14 +44,21 @@ int copy_process(
 	else
 	{
 		struct pt_regs *cur_regs = task_pt_regs(current);
-		// printf("\r\ncurrent pid: "); printf_int(current->pid);
+
+		// copy the current process state to the new process
 		for(int i=0; i<sizeof(struct pt_regs); i++)
 			((char*)childregs)[i] = ((char*)cur_regs)[i];
 
 		childregs->regs[0] = 0; // child process return value
 		// next sp for the new task is set to the top of the new user stack
 		// save the stack pointer to cleanup the stack when task finishes
-		childregs->sp =  stack + THREAD_SIZE;
+		unsigned long stack_used = current->stack + THREAD_SIZE - cur_regs->sp;
+
+		// copy the stack to the new process
+		childregs->sp =  stack + THREAD_SIZE - stack_used;
+		for(int i=0; i<stack_used; i++)
+			((char*)childregs->sp)[i] = ((char*)cur_regs->sp)[i];
+
 		p->stack = stack;
 	}
 	p->flags = flags;
@@ -62,7 +69,6 @@ int copy_process(
 
 	
 	p->cpu_context.pc = (unsigned long)ret_from_fork;   // for the first time, pc is set to ret_from_fork
-	// p->cpu_context.sp = (unsigned long)p + THREAD_SIZE;
 	p->cpu_context.sp = (unsigned long)childregs;
 	
 	task[pid] = p;
@@ -76,7 +82,7 @@ finish:
 int move_to_user_mode(unsigned long pc)
 {
     struct pt_regs *regs = task_pt_regs(current);	// get current process state
-    memzero_asm((unsigned long)regs, sizeof(struct pt_regs));
+    // memzero_asm((unsigned long)regs, sizeof(struct pt_regs));
 
     regs->pc = pc;	// point to the function that need to be executed in user mode
     regs->pstate = PSR_MODE_EL0t;	// EL0t is user state
@@ -84,7 +90,6 @@ int move_to_user_mode(unsigned long pc)
     unsigned long stack = (unsigned long)balloc(THREAD_SIZE); //allocate new user stack
 	memzero_asm(stack, THREAD_SIZE);
 
-	// printf("\r\n[INFO] User stack from: "); printf_hex(stack); printf(" to "); printf_hex(stack + THREAD_SIZE);
     if (!stack) {	// if stack allocation failed
         return -1;
     }

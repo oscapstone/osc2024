@@ -26,6 +26,7 @@ extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
 extern void cpio_exec(int argc, char *argv[]);
 extern void print_flist(int argc, char *argv[]);
+extern void start_video(int argc, char *argv[]);
 
 // system call
 extern int getpid();
@@ -47,7 +48,7 @@ cmd cmds[] =
     {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
     {.name = "multi_thread", .func = &multiple_thread_test, .help_msg = "\nmulti_thread\t: test multiple threads"},
     {.name = "to_user", .func = &to_user_test, .help_msg = "\nto_user\t: test user mode"},
-    {.name = "print_flist", . func = &print_flist, .help_msg = "\nprint_flist\t: print free list"}
+    {.name = "start_video", .func = &start_video, .help_msg = "\nstart_video\t: start video"},
 };
 
 static void shell()
@@ -133,6 +134,10 @@ static void user_foo()
         printf("\r\n===== Parent Process =====");
         printf("\r\nParent Process, pid: "); printf_int(getpid());
         printf(" child pid: "); printf_int(ret);
+        unsigned long cur_sp;
+        asm volatile("mov %0, sp" : "=r"(cur_sp));
+        printf(" cnt: "); printf_int(cnt); printf(" , ptr: "); printf_hex((unsigned long)&cnt);
+        printf(" , sp: "); printf_hex(cur_sp);
         exit();
     }
 }
