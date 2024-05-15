@@ -16,7 +16,7 @@ void do_signal(struct ucontext *sigframe, void (*signal_handler)(void))
     unsigned long long *sp_ptr = cur->signal_stack;
 
     for (int i = 0; i < 34; i++)
-        *(sp_ptr - i) = *((unsigned long long *)sigframe + i);
+        *(sp_ptr - i) = *((unsigned long long *)sigframe + i); // push sigframe to signal stack
 
     sp_ptr -= 34;
 
@@ -25,7 +25,7 @@ void do_signal(struct ucontext *sigframe, void (*signal_handler)(void))
         "msr elr_el1, %1\n"
         "mov x10, 0\n"
         "msr spsr_el1, x10\n"
-        "mov lr, %2\n"
+        "mov lr, %2\n" // set lr to sigreturn to restore context
         "mov sp, %3\n"
         "eret\n"
         :
