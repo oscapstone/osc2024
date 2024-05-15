@@ -1,5 +1,3 @@
-use crate::exception::disable_interrupt;
-use crate::exception::enable_interrupt;
 use core::arch::asm;
 use core::ptr::write_volatile;
 use stdio::{debug, println};
@@ -46,7 +44,6 @@ impl Syscall {
 
 #[no_mangle]
 unsafe fn svc_handler(eidx: u64, sp: u64) {
-    // disable_interrupt();
     match eidx {
         4 => el1_interrupt(sp),
         8 => syscall_handler(sp),
@@ -55,7 +52,6 @@ unsafe fn svc_handler(eidx: u64, sp: u64) {
             println!("Unknown exception");
         }
     }
-    // enable_interrupt();
 }
 
 unsafe fn el1_interrupt(sp: u64) {

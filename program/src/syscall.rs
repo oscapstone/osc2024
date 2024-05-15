@@ -1,5 +1,6 @@
 use core::arch::asm;
 
+#[allow(dead_code)]
 pub fn get_pid() -> u64 {
     let pid: u64;
     unsafe {
@@ -12,6 +13,7 @@ pub fn get_pid() -> u64 {
     pid
 }
 
+#[allow(dead_code)]
 pub fn read(buf: *const u8, size: usize) -> usize {
     let read: usize;
     unsafe {
@@ -25,6 +27,7 @@ pub fn read(buf: *const u8, size: usize) -> usize {
     read
 }
 
+#[allow(dead_code)]
 pub fn write(buf: *const u8, size: usize) -> usize {
     let written: usize;
     unsafe {

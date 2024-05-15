@@ -1,6 +1,8 @@
 use crate::mmio::regs::AuxReg::*;
 use crate::mmio::regs::GpioReg::*;
+#[allow(unused_imports)]
 use crate::mmio::regs::IrqReg::*;
+#[allow(unused_imports)]
 use crate::mmio::regs::MmioReg::{Aux, Gpio, Irq};
 use crate::mmio::Mmio;
 
