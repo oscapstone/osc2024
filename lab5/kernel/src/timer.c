@@ -3,6 +3,8 @@
 #include "memory.h"
 #include "string.h"
 #include "uart1.h"
+#include "stddef.h"
+#include "callback_adapter.h"
 
 #define STR(x) #x
 #define XSTR(s) STR(s)
@@ -52,8 +54,8 @@ void core_timer_handler()
 void timer_event_callback(timer_event_t *timer_event)
 {
     list_del_entry((struct list_head *)timer_event);              // delete the event in queue
-    ((void (*)(char *))timer_event->callback)(timer_event->args); // call the event
-    kfree(timer_event->args);                                     // free the event's space
+    ((void (*)(char *))timer_event->callback)(timer_event->args_struct); // call the event
+    kfree(timer_event->args_struct);                                     // free the event's space
     kfree(timer_event);
 
     list_head_t *curr;
@@ -93,16 +95,15 @@ void timer_set2sAlert()
     }
 
     uart_puts("[Interrupt][el1_irq] %d seconds after booting\n", cntpct_el0 / cntfrq_el0);
-    add_timer(timer_set2sAlert, 2, "2sAlert");
+    add_timer(adapter_timer_set2sAlert, 2, NULL);
 }
 
-void add_timer(void *callback, unsigned long long timeout, char *args)
+void add_timer(void *callback, unsigned long long timeout, void *args_struct)
 {
-    INFO("Add timer event: %s, %d\r\n", args, timeout);
+    INFO("Add timer event: %d\r\n", timeout);
     timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
-    the_timer_event->args = kmalloc(strlen(args) + 1);
-    strcpy(the_timer_event->args, args);
+    the_timer_event->args_struct = args_struct;
     the_timer_event->interrupt_time = get_tick_plus_s(timeout);
     the_timer_event->callback = callback;
     INIT_LIST_HEAD(&the_timer_event->listhead);
@@ -126,6 +127,37 @@ void add_timer(void *callback, unsigned long long timeout, char *args)
     set_core_timer_interrupt_by_tick(((timer_event_t *)timer_event_list->next)->interrupt_time);
     core_timer_enable();
 }
+
+// void add_timer(void *callback, unsigned long long timeout, char *args)
+// {
+//     INFO("Add timer event: %s, %d\r\n", args, timeout);
+//     timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
+//     // store all the related information in timer_event
+//     the_timer_event->args = kmalloc(strlen(args) + 1);
+//     strcpy(the_timer_event->args, args);
+//     the_timer_event->interrupt_time = get_tick_plus_s(timeout);
+//     the_timer_event->callback = callback;
+//     INIT_LIST_HEAD(&the_timer_event->listhead);
+
+//     // add the timer_event into timer_event_list (sorted)
+//     struct list_head *curr;
+//     list_for_each(curr, timer_event_list)
+//     {
+//         if (((timer_event_t *)curr)->interrupt_time > the_timer_event->interrupt_time)
+//         {
+//             list_add(&the_timer_event->listhead, curr->prev); // add this timer at the place just before the bigger one (sorted)
+//             break;
+//         }
+//     }
+//     // if the timer_event is the biggest, run this code block
+//     if (list_is_head(curr, timer_event_list))
+//     {
+//         list_add_tail(&the_timer_event->listhead, timer_event_list);
+//     }
+//     // set interrupt to first event
+//     set_core_timer_interrupt_by_tick(((timer_event_t *)timer_event_list->next)->interrupt_time);
+//     core_timer_enable();
+// }
 
 // get cpu tick add some second
 unsigned long long get_tick_plus_s(unsigned long long second)

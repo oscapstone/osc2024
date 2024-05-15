@@ -2,6 +2,7 @@
 #include "mbox.h"
 #include "power.h"
 #include "stdio.h"
+#include "stddef.h"
 #include "string.h"
 #include "cpio.h"
 #include "memory.h"
@@ -9,6 +10,7 @@
 #include "timer.h"
 #include "uart1.h"
 #include "ANSI.h"
+#include "callback_adapter.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "cat", .help = "concatenate files and print on the standard output", .func = do_cmd_cat},
@@ -403,12 +405,12 @@ int do_cmd_exec(int argc, char **argv)
 
 int do_cmd_setTimeout(int argc, char **argv)
 {
-    char *msg;
+    puts_args_struct_t *args_struct = kmalloc(sizeof(puts_args_struct_t));
     int64_t sec;
     if (argc == 2)
     {
-        // strcpy(msg, argv[0]);
-        msg = argv[0];
+        args_struct->str = kmalloc(strlen(argv[0]) + 1);
+        strcpy(args_struct->str, argv[0]);
         sec = atoi(argv[1]);
     }
     else
@@ -416,7 +418,7 @@ int do_cmd_setTimeout(int argc, char **argv)
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    add_timer(puts, sec, msg);
+    add_timer(adapter_puts, sec, args_struct);
     return 0;
 }
 
@@ -427,6 +429,6 @@ int do_cmd_set2sAlert(int argc, char **argv)
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    add_timer(timer_set2sAlert, 2, "2sAlert");
+    add_timer(adapter_timer_set2sAlert, 2, NULL);
     return 0;
 }
