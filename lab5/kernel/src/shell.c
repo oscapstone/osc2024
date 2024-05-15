@@ -29,16 +29,19 @@ extern void *CPIO_START;
 int start_shell()
 {
     char input_buffer[CMD_MAX_LEN] = {0};
+#if _DEBUG < 3
     cli_print_banner();
     print_log_level();
-
+#endif
     while (1)
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
+#if _DEBUG < 3
 #ifdef QEMU
         puts("[ " BLU "─=≡Σ((( つ•̀ω•́)つ " GRN "@ QEMU" CRESET " ] $ ");
 #elif RPI
         puts("[ " HBLU "d[^_^]b " HGRN "@ RPI" CRESET " ] $ ");
+#endif
 #endif
         cli_cmd_read(input_buffer);
         cli_cmd_exec(input_buffer);
