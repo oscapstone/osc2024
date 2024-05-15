@@ -25,7 +25,7 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
-    commands::execute(b"exec program.img  program.img");
+    // commands::execute(b"exec syscall.img");
     kernel_shell();
 }
 
@@ -34,7 +34,8 @@ fn kernel_shell() -> ! {
     let mut buf: [u8; MAX_COMMAND_LEN] = [0; MAX_COMMAND_LEN];
     loop {
         print!("> ");
-        gets(&mut buf);
+        let len = gets(&mut buf);
+        assert_eq!(buf[len], 0);
         commands::execute(&buf);
     }
 }
@@ -91,7 +92,7 @@ fn buddy_reserve_memory() {
 
     unsafe {
         // initramfs reserved
-        BUDDY_SYSTEM.reserve_by_addr_range(INITRAMFS_ADDR, INITRAMFS_ADDR + 0x1_0000);
+        BUDDY_SYSTEM.reserve_by_addr_range(INITRAMFS_ADDR, INITRAMFS_ADDR + 0x4_0000);
 
         // bump allocator reserved
         BUDDY_SYSTEM.reserve_by_addr_range(

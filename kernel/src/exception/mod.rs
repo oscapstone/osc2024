@@ -10,7 +10,7 @@ global_asm!(include_str!("exception_table.S"));
 
 #[no_mangle]
 unsafe fn unknown_exception_handler(eidx: u64) {
-    disable_interrupt();
+    // disable_interrupt();
     let esr_el1: u64;
     let elr_el1: u64;
     asm!(
@@ -19,9 +19,9 @@ unsafe fn unknown_exception_handler(eidx: u64) {
     asm!(
         "mrs {0}, elr_el1", out(reg) elr_el1,
     );
-    debug!("Unknown exception {}", eidx);
     debug!("ESR_EL1: 0x{:x}", esr_el1);
     debug!("ELR_EL1: 0x{:x}", elr_el1);
+    panic!("Unknown exception {}", eidx);
 }
 
 #[allow(dead_code)]

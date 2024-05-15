@@ -19,14 +19,18 @@
     str x30, [sp, 16 * 15]
     mrs x0, elr_el1
     mrs x1, sp_el0
+    mrs x2, spsr_el1
     stp x0, x1, [sp, 16 * 16]
+    str x2, [sp, 16 * 17]
 .endm
 
 // load general registers from stack
 .macro load_all
     ldp x0, x1, [sp, 16 * 16]
+    ldr x2, [sp, 16 * 17]
     msr elr_el1, x0
     msr sp_el0, x1
+    msr spsr_el1, x2
     ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
     ldp x4, x5, [sp ,16 * 2]

@@ -19,7 +19,6 @@ pub fn execute(command: &[u8]) {
         .split_whitespace()
         .map(|s| s.to_string())
         .collect();
-
     if command.starts_with(b"\x00") {
         return;
     } else if command.starts_with(b"hello") {

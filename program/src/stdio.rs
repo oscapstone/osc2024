@@ -1,4 +1,9 @@
-use driver::uart::send;
+// use driver::uart::send;
+use crate::syscall::write;
+
+fn send(c: u8) {
+    write(&c as *const u8, 1);
+}
 
 #[allow(dead_code)]
 pub fn print(s: &str) {

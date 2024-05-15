@@ -1,7 +1,8 @@
 use crate::exception::disable_interrupt;
 use crate::exception::enable_interrupt;
+use core::arch::asm;
 use core::ptr::write_volatile;
-use stdio::println;
+use stdio::{debug, println};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -45,46 +46,59 @@ impl Syscall {
 
 #[no_mangle]
 unsafe fn svc_handler(eidx: u64, sp: u64) {
-    disable_interrupt();
+    // disable_interrupt();
     match eidx {
-        // 4 => {
-        //     let syscall = Syscall::new(sp);
-        //     debug!("Syscall idx: {}", syscall.idx);
-        //     println!("syscall: {:?}", syscall);
-        //     let esr_el1: u64;
-        //     asm!(
-        //         "mrs {0}, esr_el1", out(reg) esr_el1,
-        //     );
-        //     debug!("Exception {}", eidx);
-        //     debug!("ESR_EL1: 0x{:x}", esr_el1);
-        //     let elr_el1: u64;
-        //     asm!(
-        //         "mrs {0}, elr_el1", out(reg) elr_el1,
-        //     );
-        //     debug!("ELR_EL1: 0x{:x}", elr_el1);
-        //     panic!("Segmentation fault");
-        // }
-        4 | 8 => {
-            let syscall = Syscall::new(sp);
-            // debug!("Syscall idx: {}", syscall.idx);
-            // println!("syscall: {:?}", syscall);
-            match syscall.idx {
-                0 => {
-                    // println!("Syscall get_pid");
-                    let pid = crate::syscall::get_pid();
-                    write_volatile(sp as *mut u64, pid);
-                    // println!("PID: {}", pid);
-                }
-                _ => {
-                    println!("Unknown syscall: 0x{:x}", syscall.idx);
-                    panic!("Unknown syscall");
-                }
-            }
-        }
+        4 => el1_interrupt(sp),
+        8 => syscall_handler(sp),
         _ => {
             println!("Exception {}", eidx);
             println!("Unknown exception");
         }
     }
-    enable_interrupt();
+    // enable_interrupt();
+}
+
+unsafe fn el1_interrupt(sp: u64) {
+    let syscall = Syscall::new(sp);
+    let esr_el1: u64;
+    asm!(
+        "mrs {0}, esr_el1", out(reg) esr_el1,
+    );
+    debug!("ESR_EL1: 0x{:x}", esr_el1);
+    let elr_el1: u64;
+    asm!(
+        "mrs {0}, elr_el1", out(reg) elr_el1,
+    );
+    debug!("ELR_EL1: 0x{:x}", elr_el1);
+    if esr_el1 == 0x5600_0000 {
+        debug!("Syscall idx: {}", syscall.idx);
+        println!("syscall: {:?}", syscall);
+    }
+    panic!("Segmentation fault");
+}
+
+unsafe fn syscall_handler(sp: u64) {
+    let syscall = Syscall::new(sp);
+    // debug!("Syscall idx: {}", syscall.idx);
+    // println!("syscall: {:?}", syscall);
+    match syscall.idx {
+        0 => {
+            // println!("Syscall get_pid");
+            let pid = crate::syscall::get_pid();
+            write_volatile(sp as *mut u64, pid);
+            // println!("PID: {}", pid);
+        }
+        2 => {
+            // println!("Syscall write");
+            let buf = syscall.arg0 as *const u8;
+            let size = syscall.arg1 as usize;
+            let written = crate::syscall::write(buf, size);
+            write_volatile(sp as *mut u64, written as u64);
+            // println!("Written: {}", written);
+        }
+        _ => {
+            println!("Unknown syscall: 0x{:x}", syscall.idx);
+            panic!("Unknown syscall");
+        }
+    }
 }
