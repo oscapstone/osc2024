@@ -86,6 +86,11 @@ int get_pid(){
     return get_current() -> pid;//no runnning thread
 }
 
+void print_pid(){
+    uart_int(get_current()->pid);
+    newline();
+}
+
 void kill_zombies(){
     //free all alocated memory for zombie threads and set thread pid to NULL
     for(int i=0;i<MAX_TASK;i++){
@@ -130,6 +135,10 @@ void schedule(){
         thread * from = get_current();
         thread * to = thread_pool[next];
         switch_to(from, to); //x0: from, x1: to, store regs to struct and load regs from struct
+        // uart_puts("In PID: ");
+        // print_pid();
+        // uart_puts("after switch\n\r");
+        // newline();
     }
 }
 
@@ -142,7 +151,7 @@ void idle(){
 }
 
 void thread_init(){
-    //make main process as a thread
+    //make main process as a thread, will be placed in thread 0
     min_priority = 10;
     thread * t = allocate_page(sizeof(thread));
     for(int i = 0; i< sizeof(thread); i++){

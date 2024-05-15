@@ -96,7 +96,7 @@ void uartread(trapframe *sp) {
 }
 
 void uartwrite(trapframe *sp) {
-    const char *buf = (const char *)sp->x[0];
+    char *buf = (char *)sp->x[0];
     int size = (int)sp->x[1];
     for (int i = 0; i < size; i++) {
         uart_send(*(buf + i));

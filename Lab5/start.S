@@ -215,8 +215,3 @@ fork_return:
 enable_irq:
 	msr DAIFClr, 0xf // IRQ mask bit
 	ret
-
-.globl disable_irq
-disable_irq:
-	msr	DAIFSet, #2
-	ret

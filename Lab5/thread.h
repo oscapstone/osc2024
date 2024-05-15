@@ -35,3 +35,4 @@ void idle();
 void thread_init();
 void thread_execute();
 void thread_exit();
+void print_pid();

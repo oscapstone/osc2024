@@ -178,8 +178,8 @@ void memory_reserve(unsigned long start, unsigned long end) {
 void frames_init(){
     // get the start and end address of useable memory
     get_memory(dtb_start);
-    // memory_start = 0x000;
-    // memory_end = 0x3C000000;
+    memory_start = 0x000;
+    memory_end = 0x3C000000;
     split_line();
     frame_count = (memory_end - memory_start) / PAGE_SIZE;
     // startup allocation, allocate after the kernel

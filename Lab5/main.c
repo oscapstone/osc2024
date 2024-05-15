@@ -19,6 +19,13 @@ void foo(){
     }
 }
 
+void foo2(){
+    uart_puts("infoooooooo");
+    uart_int(get_pid());
+    newline();
+    while(1){}
+}
+
 void test_svc(){
     char* usr = "syscall.img";
     asm volatile("mov x0, %0" : : "r" (usr));
@@ -65,6 +72,7 @@ void main(void* dtb)
     //     create_thread(foo, 2);
     // }
     create_thread(test_svc, 3);
+
     // create_thread(foo, 4);
     // create_thread(foo, 4);
     uart_puts("-----PRESS ANY KEY TO START USER PROGRAM-----\n\r");
