@@ -45,7 +45,7 @@ static inline size_t frame_to_index(frame_t *frame)
 
 static inline frame_t *phy_addr_to_frame(void *ptr)
 {
-    return (frame_t *)&frame_array[(unsigned long)ptr / PAGE_FRAME_SIZE];
+    return (frame_t *)&frame_array[(uint64_t)ptr / PAGE_FRAME_SIZE];
 }
 
 static inline void *frame_addr_to_phy_addr(frame_t *frame)
@@ -330,7 +330,7 @@ size_t get_memory_size()
     pt[5] = 0;
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
+    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((uint64_t)&pt)))
         return (size_t)pt[6];
     else
         return 0;

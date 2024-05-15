@@ -1,5 +1,6 @@
 #include "timer.h"
 #include "stdio.h"
+#include "stdint.h"
 #include "memory.h"
 #include "string.h"
 #include "uart1.h"
@@ -79,11 +80,11 @@ void timer_event_callback(timer_event_t *timer_event)
 
 void timer_set2sAlert()
 {
-    unsigned long long cntpct_el0;
+    uint64_t cntpct_el0;
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t" : "=r"(cntpct_el0)); // tick auchor
-    unsigned long long cntfrq_el0;
+    uint64_t cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0)); // tick frequency
-    uart_puts("\r\n[Start Alert]\r\n");
+    printf("\r\n[Start Alert]\r\n");
 
 #ifdef QEMU
     for (int i = 0; i < 1000000000; i++) // qemu
@@ -94,11 +95,11 @@ void timer_set2sAlert()
         // do nothing
     }
 
-    uart_puts("[Interrupt][el1_irq] %d seconds after booting\n", cntpct_el0 / cntfrq_el0);
+    printf("[Interrupt][el1_irq] %d seconds after booting\n", cntpct_el0 / cntfrq_el0);
     add_timer(adapter_timer_set2sAlert, 2, NULL);
 }
 
-void add_timer(void *callback, unsigned long long timeout, void *args_struct)
+void add_timer(void *callback, uint64_t timeout, void *args_struct)
 {
     INFO("Add timer event: %d\r\n", timeout);
     timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
@@ -128,7 +129,7 @@ void add_timer(void *callback, unsigned long long timeout, void *args_struct)
     core_timer_enable();
 }
 
-// void add_timer(void *callback, unsigned long long timeout, char *args)
+// void add_timer(void *callback, uint64_t timeout, char *args)
 // {
 //     INFO("Add timer event: %s, %d\r\n", args, timeout);
 //     timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
@@ -160,18 +161,18 @@ void add_timer(void *callback, unsigned long long timeout, void *args_struct)
 // }
 
 // get cpu tick add some second
-unsigned long long get_tick_plus_s(unsigned long long second)
+uint64_t get_tick_plus_s(uint64_t second)
 {
-    unsigned long long cntpct_el0 = 0;
+    uint64_t cntpct_el0 = 0;
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t" : "=r"(cntpct_el0)); // tick auchor
     DEBUG("cntpct_el0: %d\r\n", cntpct_el0);
-    unsigned long long cntfrq_el0 = 0;
+    uint64_t cntfrq_el0 = 0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0)); // tick frequency
     return (cntpct_el0 + cntfrq_el0 * second);
 }
 
 // set timer interrupt time to [expired_time] seconds after now (relatively)
-void set_core_timer_interrupt(unsigned long long expired_time)
+void set_core_timer_interrupt(uint64_t expired_time)
 {
     __asm__ __volatile__(
         "mrs x1, cntfrq_el0\n\t"    // cntfrq_el0 -> frequency of the timer
@@ -181,7 +182,7 @@ void set_core_timer_interrupt(unsigned long long expired_time)
 }
 
 // directly set timer interrupt time to a cpu tick  (directly)
-void set_core_timer_interrupt_by_tick(unsigned long long tick)
+void set_core_timer_interrupt_by_tick(uint64_t tick)
 {
     __asm__ __volatile__(
         "msr cntp_cval_el0, %0\n\t" // cntp_cval_el0 -> absolute timer

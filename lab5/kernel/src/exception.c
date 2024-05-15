@@ -5,6 +5,7 @@
 #include "timer.h"
 #include "memory.h"
 #include "stdio.h"
+#include "stdint.h"
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable()
@@ -17,7 +18,7 @@ void el1_interrupt_disable()
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
-static unsigned long long int lock_counter = 0;
+static uint64_t lock_counter = 0;
 
 void lock()
 {
@@ -78,11 +79,11 @@ void el1h_irq_router()
 
 void el0_sync_router()
 {
-    unsigned long long spsr_el1;
+    uint64_t spsr_el1;
     __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r"(spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
-    unsigned long long elr_el1;
+    uint64_t elr_el1;
     __asm__ __volatile__("mrs %0, ELR_EL1\n\t" : "=r"(elr_el1)); // ELR_EL1 holds the address if return to EL1
-    unsigned long long esr_el1;
+    uint64_t esr_el1;
     __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r"(esr_el1)); // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
     uart_puts("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\r\n", spsr_el1, elr_el1, esr_el1);
 }
@@ -116,7 +117,7 @@ void el0_irq_64_router()
     uart_puts("Hello world! el0_irq_64_router!\r\n");
 }
 
-void invalid_exception_router(unsigned long long x0)
+void invalid_exception_router(uint64_t x0)
 {
     ERROR("invalid exception router: %d\r\n", x0);
     while (1)
@@ -142,7 +143,7 @@ void irqtask_list_init()
     INIT_LIST_HEAD(task_list);
 }
 
-void irqtask_add(void *task_function, unsigned long long priority)
+void irqtask_add(void *task_function, uint64_t priority)
 {
     if(task_function == uart_r_irq_handler)
         DEBUG("irqtask_add uart_r_irq_handler, kmalloc\r\n");

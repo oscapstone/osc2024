@@ -3,6 +3,7 @@
 #include "cpio.h"
 #include "string.h"
 #include "stdio.h"
+#include "stdint.h"
 
 extern char *CPIO_START;
 extern char *CPIO_END;
@@ -62,7 +63,7 @@ void traverse_device_tree(dtb_callback callback)
 		{
 			callback(token_type, pointer, 0, 0);
 			pointer += strlen(pointer);
-			pointer += 4 - (unsigned long long)pointer % 4; // alignment 4 byte
+			pointer += 4 - (uint64_t)pointer % 4; // alignment 4 byte
 		}
 		else if (token_type == FDT_END_NODE)
 		{
@@ -76,8 +77,8 @@ void traverse_device_tree(dtb_callback callback)
 			pointer += 4;
 			callback(token_type, name, pointer, len);
 			pointer += len;
-			if ((unsigned long long)pointer % 4 != 0)
-				pointer += 4 - (unsigned long long)pointer % 4; // alignment 4 byte
+			if ((uint64_t)pointer % 4 != 0)
+				pointer += 4 - (uint64_t)pointer % 4; // alignment 4 byte
 		}
 		else if (token_type == FDT_NOP)
 		{
@@ -130,10 +131,10 @@ void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_
 	// linux,initrd-start will be assigned by start.elf based on config.txt
 	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-start") == 0)
 	{
-		CPIO_START = (void *)(unsigned long long)uint32_endian_big2little(*(uint32_t *)value);
+		CPIO_START = (void *)(uint64_t)uint32_endian_big2little(*(uint32_t *)value);
 	}
 	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0)
 	{
-		CPIO_END = (void *)(unsigned long long)uint32_endian_big2little(*(uint32_t *)value);
+		CPIO_END = (void *)(uint64_t)uint32_endian_big2little(*(uint32_t *)value);
 	}
 }

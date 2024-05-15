@@ -219,7 +219,7 @@ int do_cmd_info(int argc, char **argv)
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
 
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
+    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((uint64_t)&pt)))
     {
         puts("Hardware Revision\t: 0x");
         // put_hex(pt[6]);
@@ -236,7 +236,7 @@ int do_cmd_info(int argc, char **argv)
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
 
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
+    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((uint64_t)&pt)))
     {
         puts("ARM Memory Base Address\t: 0x");
         put_hex(pt[5]);

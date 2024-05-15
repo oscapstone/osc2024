@@ -1,5 +1,6 @@
 #include "uart1.h"
 #include "stdio.h"
+#include "stdint.h"
 
 char getchar()
 {
@@ -69,7 +70,7 @@ void put_hex(unsigned int num)
 
 unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args)
 {
-	long int arg;
+	int64_t arg;
 	int len, sign, i;
 	char *p, *orig = dst, tmpstr[19];
 
@@ -157,7 +158,7 @@ unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args)
 				}
 				else if (*fmt == 'x')
 				{
-					arg = __builtin_va_arg(args, long int);
+					arg = __builtin_va_arg(args, int64_t);
 					i = 16;
 					tmpstr[i] = 0;
 					do

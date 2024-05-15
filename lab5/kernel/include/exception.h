@@ -2,6 +2,7 @@
 #define	_EXCEPTION_H_
 
 #include "list.h"
+#include "stdint.h"
 
 #define UART_IRQ_PRIORITY  1
 #define TIMER_IRQ_PRIORITY 0
@@ -9,11 +10,11 @@
 typedef struct irqtask
 {
     struct list_head listhead;
-    unsigned long long priority; // store priority (smaller number is more preemptive)
+    uint64_t priority; // store priority (smaller number is more preemptive)
     void *task_function;         // task function pointer
 } irqtask_t;
 
-void irqtask_add(void *task_function, unsigned long long priority);
+void irqtask_add(void *task_function, uint64_t priority);
 void irqtask_run(irqtask_t *the_task);
 void irqtask_run_preemptive();
 void irqtask_list_init();
@@ -36,7 +37,7 @@ void el1h_irq_router();
 void el0_sync_router();
 void el0_irq_64_router();
 
-void invalid_exception_router(unsigned long long x0); // exception_handler.S
+void invalid_exception_router(uint64_t x0); // exception_handler.S
 
 
 #endif /*_EXCEPTION_H_*/

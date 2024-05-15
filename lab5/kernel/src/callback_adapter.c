@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <timer.h>
 
 typedef struct puts_args_struct
 {
