@@ -159,11 +159,11 @@ pub fn create_thread(
             stack_size,
             state: ThreadState::Waiting(ThreadContext {
                 pc: program as usize,
-                sp: stack as usize + program_size,
+                sp: stack as usize + stack_size,
                 ..Default::default()
             }),
         });
-        println!("Stack: {:X?}", stack as usize + stack_size);
+        println!("Stack SP: {:X?}", stack as usize + stack_size);
         println!("Thread created: {}", id);
         id
     }
@@ -197,18 +197,30 @@ pub fn run_thread(id: usize) {
         });
         threads.insert(target_thread.clone());
 
+        // uint64_t tmp;
+        // asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+        // tmp |= 1;
+        // asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+
         if let ThreadState::Running(context) = &target_thread.state {
             asm!(
-                "mov {tmp}, 0x200",
-                "msr spsr_el1, {tmp}",
-                "mov {tmp}, {pc}",
-                "msr elr_el1, {tmp}",
-                "mov {tmp}, {sp}",
-                "msr sp_el0, {tmp}",
+                "mrs {tmp}, cntkctl_el1",
+                "orr {tmp}, {tmp}, 1",
+                "msr cntkctl_el1, {tmp}",
+                tmp = out(reg) _,
+            );
+
+            asm!(
+                "mov x0, 0",
+                "msr spsr_el1, xzr",
+                "mov x0, {pc}",
+                "msr elr_el1, x0",
+                "mov x0, {sp}",
+                "msr sp_el0, x0",
                 "eret",
                 pc = in(reg) context.pc,
                 sp = in(reg) context.sp,
-                tmp = out(reg) _,
+                options(noreturn),
             );
         }
     }
@@ -517,10 +529,16 @@ pub fn context_switching() {
 
         restore_context(trap_frame_ptr);
 
+        // asm!("msr spsr_el1, xzr");
+
         // println!("Context switched");
         // println!(
         //     "{:X?}",
         //     trap_frame::get(trap_frame_ptr, trap_frame::Register::PC)
+        // );
+        // println!(
+        //     "{:X?}",
+        //     trap_frame::get(trap_frame_ptr, trap_frame::Register::SP)
         // );
     }
 }

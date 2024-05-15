@@ -1,6 +1,6 @@
 // save general registers to stack
 .macro save_all
-    sub sp, sp, 34 * 8
+    sub sp, sp, 36 * 8
     stp x0, x1, [sp ,16 * 0]
     stp x2, x3, [sp ,16 * 1]
     stp x4, x5, [sp ,16 * 2]
@@ -20,10 +20,14 @@
     mrs x0, elr_el1
     mrs x1, sp_el0
     stp x0, x1, [sp, 16 * 16]
+    mrs x0, spsr_el1
+    stp x0, xzr, [sp, 16 * 17]
 .endm
 
 // load general registers from stack
 .macro load_all
+    ldp x0, x1, [sp, 16 * 17]
+    msr spsr_el1, x0
     ldp x0, x1, [sp, 16 * 16]
     msr elr_el1, x0
     msr sp_el0, x1
@@ -43,7 +47,7 @@
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
     ldp x30, x31, [sp, 16 * 15]
-    add sp, sp, 34 * 8
+    add sp, sp, 36 * 8
 .endm
 
 # Dummy handlers

@@ -23,7 +23,7 @@ impl Display for command {
 }
 
 fn set_next_timer() {
-    println!("Context switching...");
+    // println!("Context switching...");
     thread::context_switching();
     timer::add_timer_ms(1000, Box::new(|| set_next_timer()));
 }
@@ -95,9 +95,9 @@ pub fn exec(args: Vec<String>) {
         let stack_size = 4096;
 
         let program_ptr =
-            unsafe { alloc::alloc::alloc(Layout::from_size_align(filesize, 4).unwrap()) };
+            unsafe { alloc::alloc::alloc(Layout::from_size_align(filesize, 32).unwrap()) };
         let program_stack_ptr =
-            unsafe { alloc::alloc::alloc(Layout::from_size_align(stack_size, 4).unwrap()) };
+            unsafe { alloc::alloc::alloc(Layout::from_size_align(stack_size, 32).unwrap()) };
 
         for i in 0..filesize {
             unsafe {
