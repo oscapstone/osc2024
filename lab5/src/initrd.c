@@ -98,7 +98,7 @@ void initrd_exec(const char *target)
             asm volatile("msr elr_el1, %0" ::"r"(task->context.lr));
             asm volatile("msr sp_el0, %0" ::"r"(task->user_stack + STACK_SIZE));
             asm volatile("mov sp, %0" ::"r"(task->stack + STACK_SIZE));
-            asm volatile("eret;");
+            asm volatile("eret");
             return;
         }
         fptr += headsize + datasize;

@@ -70,7 +70,7 @@ int sys_mbox_call(unsigned char ch, unsigned int *mbox)
 
 void sys_kill(int pid)
 {
-    kill(pid);
+    kthread_stop(pid);
 }
 
 /* System Call Test */
@@ -164,5 +164,5 @@ void run_fork_test()
     asm volatile("msr elr_el1, %0" ::"r"(fork_test));
     asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
     asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));
-    asm volatile("eret;");
+    asm volatile("eret");
 }

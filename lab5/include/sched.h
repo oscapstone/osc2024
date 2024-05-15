@@ -43,9 +43,9 @@ extern struct task_struct *get_current();
 void kthread_init();
 struct task_struct *kthread_create(void (*func)());
 void kthread_exit();
+void kthread_stop(int pid);
 void schedule();
 void idle();
-void kill(int pid);
 
 void display_run_queue();
 void thread_test();

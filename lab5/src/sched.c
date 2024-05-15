@@ -49,17 +49,15 @@ void schedule()
 
 void kill_zombies()
 {
-    struct task_struct *task = run_queue;
-    do { // TODO: extract *next out from the if statement
+    struct task_struct *next, *task = run_queue;
+    do {
+        next = task->next;
         if (task->state == EXIT_ZOMBIE) {
-            struct task_struct *next = task->next;
             remove(&run_queue, task);
             kfree(task->stack);
             kfree(task->user_stack);
-            task = next;
-            continue;
         }
-        task = task->next;
+        task = next;
     } while (task != run_queue);
 }
 
@@ -69,20 +67,6 @@ void idle()
         kill_zombies();
         schedule();
     }
-}
-
-void kill(int pid)
-{
-    // TODO: Should remove the task from the run_queue
-    struct task_struct *next, *task = run_queue;
-    do {
-        next = task->next;
-        if (task->pid == pid)
-            task->state = EXIT_ZOMBIE;
-        task = next;
-    } while (task != run_queue);
-    kill_zombies();
-    schedule();
 }
 
 void kthread_init()
@@ -108,6 +92,17 @@ struct task_struct *kthread_create(void (*func)())
 void kthread_exit()
 {
     get_current()->state = EXIT_ZOMBIE;
+    schedule();
+}
+
+void kthread_stop(int pid)
+{
+    struct task_struct *task = run_queue;
+    do {
+        if (task->pid == pid)
+            task->state = EXIT_ZOMBIE;
+        task = task->next;
+    } while (task != run_queue);
     schedule();
 }
 
