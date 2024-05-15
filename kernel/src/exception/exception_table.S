@@ -1,5 +1,4 @@
 .macro EXCEPTION_WITH_TYPE type handler
-    msr DAIFSet, 0xf
     save_all
     mov x0, \type
     mov x1, sp

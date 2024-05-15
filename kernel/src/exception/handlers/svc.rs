@@ -1,4 +1,3 @@
-use crate::exception::disable_interrupt;
 use crate::exception::trap_frame;
 use core::arch::asm;
 use stdio::{debug, println};
@@ -45,7 +44,6 @@ impl Syscall {
 
 #[no_mangle]
 unsafe fn svc_handler(eidx: u64, sp: u64) {
-    disable_interrupt();
     trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
     match eidx {
         4 => el1_interrupt(sp),
@@ -60,7 +58,11 @@ unsafe fn svc_handler(eidx: u64, sp: u64) {
 }
 
 unsafe fn el1_interrupt(sp: u64) {
-    let syscall = Syscall::new(sp);
+    let current_el: u64;
+    asm!(
+        "mrs {0}, CurrentEL", out(reg) current_el,
+    );
+    debug!("CurrentEL: 0x{:x}", current_el);
     let esr_el1: u64;
     asm!(
         "mrs {0}, esr_el1", out(reg) esr_el1,
@@ -72,6 +74,7 @@ unsafe fn el1_interrupt(sp: u64) {
     );
     debug!("ELR_EL1: 0x{:x}", elr_el1);
     if esr_el1 == 0x5600_0000 {
+        let syscall = Syscall::new(sp);
         debug!("Syscall idx: {}", syscall.idx);
         println!("syscall: {:?}", syscall);
     }

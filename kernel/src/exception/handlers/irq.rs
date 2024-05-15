@@ -1,4 +1,3 @@
-use crate::exception::disable_interrupt;
 use crate::exception::trap_frame;
 use crate::exception::Mmio;
 use core::ptr::read_volatile;
@@ -9,7 +8,6 @@ use stdio::{debug, println};
 
 #[no_mangle]
 unsafe fn irq_handler(eidx: u64, sp: u64) {
-    disable_interrupt();
     trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
     match eidx {
         5 | 9 => {
