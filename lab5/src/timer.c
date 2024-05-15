@@ -1,5 +1,6 @@
 #include "timer.h"
 #include "alloc.h"
+#include "sched.h"
 #include "string.h"
 #include "uart.h"
 
@@ -14,35 +15,37 @@ static timer_t *head = 0;
 
 void timer_init()
 {
-    // TODO: Move the core timer initialization code to here
-    uint64_t tmp;
-    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
-    tmp |= 1;
-    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+    asm volatile("mov x0, 1;"
+                 "msr cntp_ctl_el0, x0;");
+    timer_enable_interrupt();
+    asm volatile("mrs x0, cntfrq_el0;"
+                 "msr cntp_tval_el0, x0;");
+    asm volatile("mrs x0, cntkctl_el1;"
+                 "orr x0, x0, 1;"
+                 "msr cntkctl_el1, x0;");
 }
 
 void timer_enable_interrupt()
 {
-    asm volatile("mov x0, 1;"
-                 "msr cntp_ctl_el0, x0;" // Enable
-                 "mrs x0, cntfrq_el0;"
-                 "msr cntp_tval_el0, x0;" // Set expired time
-                 "mov x0, 2;"
+    // Unmask the timer interrupt
+    asm volatile("mov x0, 2;"
                  "ldr x1, =0x40000040;"
-                 "str w0, [x1];"); // Unmask timer interrupt
+                 "str w0, [x1];");
 }
 
 void timer_disable_interrupt()
 {
+    // Mask the timer interrupt
     asm volatile("mov x0, 0;"
                  "ldr x1, =0x40000040;"
-                 "str w0, [x1];"); // Mask timer interrupt
+                 "str w0, [x1];");
 }
 
 void timer_irq_handler()
 {
-    // Set up 1 second core timer interrupt
+    // Set up the next timer interrupt (frequency >> 5)
     asm volatile("mrs x0, cntfrq_el0;"
+                 "lsr x0, x0, 5;"
                  "msr cntp_tval_el0, x0;");
 
     // Check the timer queue

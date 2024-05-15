@@ -16,7 +16,6 @@ int main()
     alloc_init();
     enable_interrupt();
     timer_init();
-    timer_enable_interrupt();
     fdt_traverse(initrd_callback);
     mem_init();
     kthread_init();

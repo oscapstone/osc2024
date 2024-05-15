@@ -66,9 +66,6 @@ void kill_zombies()
 void idle()
 {
     while (1) {
-        for (int i = 0; i < 1000000; i++)
-            ;
-        uart_puts("idle...\n");
         kill_zombies();
         schedule();
     }

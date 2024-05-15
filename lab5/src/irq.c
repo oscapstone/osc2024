@@ -1,5 +1,6 @@
 #include "irq.h"
 #include "alloc.h"
+#include "sched.h"
 #include "timer.h"
 #include "uart.h"
 
@@ -75,6 +76,10 @@ void irq_entry()
             break;
         }
     } else if (*CORE0_INTERRUPT_SOURCE & 0x2) { // Core timer interrupt
+        // Schedule processes
+        if (get_current() != get_current()->next)
+            schedule();
+
         timer_disable_interrupt();
         irq_add_task(timer_irq_handler, 1);
     }
