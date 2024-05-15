@@ -17,7 +17,7 @@ void el1_interrupt_disable()
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
-unsigned long long int lock_counter = 0;
+static unsigned long long int lock_counter = 0;
 
 void lock()
 {
@@ -57,7 +57,7 @@ void el1h_irq_router()
         }
         else if (*AUX_MU_IER_REG & 1)
         {
-            *AUX_MU_IER_REG &= ~(1); // disable read interrupt
+            *AUX_MU_IER_REG &= ~(1); // Re-enable core timer interrupt when entering core_timer_handler or add_timer
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive();
@@ -65,11 +65,10 @@ void el1h_irq_router()
     }
     else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
-        core_timer_disable();
+        core_timer_disable(); // enable core timer interrupt when entering the handler
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         unlock();
         irqtask_run_preemptive();
-        core_timer_enable();
     }
     else
     {
@@ -113,7 +112,6 @@ void el0_irq_64_router()
     //     core_timer_disable();
     //     irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
     //     irqtask_run_preemptive();
-    //     core_timer_enable();
     // }
     uart_puts("Hello world! el0_irq_64_router!\r\n");
 }
@@ -146,6 +144,12 @@ void irqtask_list_init()
 
 void irqtask_add(void *task_function, unsigned long long priority)
 {
+    if(task_function == uart_r_irq_handler)
+        DEBUG("irqtask_add uart_r_irq_handler, kmalloc\r\n");
+    else if(task_function == uart_w_irq_handler)
+        DEBUG("irqtask_add uart_w_irq_handler, kmalloc\r\n");
+    else if(task_function == core_timer_handler)
+        DEBUG("irqtask_add core_timer_handler, kmalloc\r\n");
     irqtask_t *the_task = kmalloc(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
     // store all the related information into irqtask node
     // manually copy the device's buffer
