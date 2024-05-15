@@ -9,7 +9,6 @@
 
 exception_restore_context:
     load_all
-    msr DAIFClr, 0xf
     eret
 
 

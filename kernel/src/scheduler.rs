@@ -1,4 +1,5 @@
 use crate::exception::trap_frame::TRAP_FRAME;
+use crate::thread::state;
 use crate::thread::Thread;
 use alloc::boxed::Box;
 use alloc::collections::VecDeque;
@@ -10,7 +11,6 @@ pub struct Scheduler {
     pub current: Option<usize>,
     pub threads: Vec<Option<Box<Thread>>>,
     pub ready_queue: VecDeque<usize>,
-    #[allow(dead_code)]
     pub zombie_queue: VecDeque<usize>,
 }
 
@@ -38,15 +38,32 @@ impl Scheduler {
         }
     }
 
-    pub fn schedule(&mut self) {
-        if self.current.is_none() {}
-
-        // println!("{} threads in ready queue", self.ready_queue.len());
+    pub fn exit(&mut self, status: u64) {
+        let current = self.current.unwrap();
+        self.threads[current].as_mut().unwrap().state = state::State::Zombie;
+        self.zombie_queue.push_back(current);
+        println!("Thread {} exited with status {}", current, status);
+        self.current = None;
+        self.sched_timer();
         if self.ready_queue.is_empty() {
-            println!("No thread to schedule");
+            panic!("All threads exited");
+        }
+        if let Some(next) = self.ready_queue.pop_front() {
+            self.current = Some(next);
+            println!("Thread {} is scheduled", next);
+            unsafe {
+                TRAP_FRAME.as_mut().unwrap().state = self.threads[next].as_ref().unwrap().cpu_state;
+            }
+        }
+    }
+
+    pub fn schedule(&mut self) {
+        // println!("{} threads in ready queue", self.ready_queue.len());
+        assert!(self.current.is_some());
+        if self.ready_queue.is_empty() {
+            // println!("No thread to schedule");
             return;
         }
-        assert!(self.current.is_some());
         let current = self.current.unwrap();
         let range = self.threads[current].as_ref().unwrap().code_range;
         let pc = unsafe { TRAP_FRAME.as_ref().unwrap().state.pc };
@@ -55,7 +72,7 @@ impl Scheduler {
             if let Some(_) = self.threads[next].as_ref() {
                 self.ready_queue.push_back(current);
                 self.current = Some(next);
-                // println!("Switching from {} to {}", current, next);
+                println!("Switching from {} to {}", current, next);
                 unsafe {
                     self.threads[current].as_mut().unwrap().cpu_state =
                         TRAP_FRAME.as_ref().unwrap().state;
@@ -66,7 +83,7 @@ impl Scheduler {
                 panic!("Thread {} is not available", next);
             }
         } else {
-            println!("Thread {} pc (0x{:x}) is not in range", current, pc);
+            panic!("Thread {} pc (0x{:x}) is not in range", current, pc);
         }
     }
 

@@ -1,5 +1,6 @@
+use crate::exception::disable_interrupt;
+use crate::exception::trap_frame;
 use core::arch::asm;
-use core::ptr::write_volatile;
 use stdio::{debug, println};
 
 #[repr(C)]
@@ -44,6 +45,8 @@ impl Syscall {
 
 #[no_mangle]
 unsafe fn svc_handler(eidx: u64, sp: u64) {
+    disable_interrupt();
+    trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
     match eidx {
         4 => el1_interrupt(sp),
         8 => syscall_handler(sp),
@@ -52,6 +55,8 @@ unsafe fn svc_handler(eidx: u64, sp: u64) {
             println!("Unknown exception");
         }
     }
+    trap_frame::TRAP_FRAME.unwrap().restore();
+    trap_frame::TRAP_FRAME = None;
 }
 
 unsafe fn el1_interrupt(sp: u64) {
@@ -75,22 +80,30 @@ unsafe fn el1_interrupt(sp: u64) {
 
 unsafe fn syscall_handler(sp: u64) {
     let syscall = Syscall::new(sp);
-    // debug!("Syscall idx: {}", syscall.idx);
-    // println!("syscall: {:?}", syscall);
+    assert!(trap_frame::TRAP_FRAME.is_some());
     match syscall.idx {
         0 => {
             // println!("Syscall get_pid");
             let pid = crate::syscall::get_pid();
-            write_volatile(sp as *mut u64, pid);
-            // println!("PID: {}", pid);
+            trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
+        }
+        1 => {
+            // println!("Syscall read");
+            let buf = syscall.arg0 as *mut u8;
+            let size = syscall.arg1 as usize;
+            let read = crate::syscall::read(buf, size);
+            trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = read as u64;
         }
         2 => {
             // println!("Syscall write");
             let buf = syscall.arg0 as *const u8;
             let size = syscall.arg1 as usize;
             let written = crate::syscall::write(buf, size);
-            write_volatile(sp as *mut u64, written as u64);
-            // println!("Written: {}", written);
+            trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = written as u64;
+        }
+        5 => {
+            // println!("Syscall exit");
+            crate::syscall::exit(syscall.arg0);
         }
         _ => {
             println!("Unknown syscall: 0x{:x}", syscall.idx);

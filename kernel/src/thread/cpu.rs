@@ -4,9 +4,10 @@ use core::ptr::write_volatile;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct State {
-    x: [u64; 31],
+    pub x: [u64; 31],
     pub pc: u64,
     sp: u64,
+    spsr: u64,
 }
 
 impl State {
@@ -14,10 +15,12 @@ impl State {
         let sp = stack as u64 + stack_size as u64;
         let mut x = [0; 31];
         x[30] = entry as u64;
+        let spsr = 0x200;
         State {
             x,
             pc: entry as u64,
             sp,
+            spsr,
         }
     }
 
@@ -28,7 +31,8 @@ impl State {
         }
         let pc = unsafe { read_volatile((addr + 32 * 8) as *const u64) };
         let sp = unsafe { read_volatile((addr + 33 * 8) as *const u64) };
-        State { x, pc, sp }
+        let spsr = unsafe { read_volatile((addr + 34 * 8) as *const u64) };
+        State { x, pc, sp, spsr }
     }
 
     pub fn store(&self, addr: u64) {
@@ -37,6 +41,7 @@ impl State {
         }
         unsafe { write_volatile((addr + 32 * 8) as *mut u64, self.pc) };
         unsafe { write_volatile((addr + 33 * 8) as *mut u64, self.sp) };
+        unsafe { write_volatile((addr + 34 * 8) as *mut u64, self.spsr) };
     }
 }
 

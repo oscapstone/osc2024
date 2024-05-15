@@ -40,3 +40,14 @@ pub fn write(buf: *const u8, size: usize) -> usize {
     }
     written
 }
+
+#[allow(dead_code)]
+pub fn exit(status: u64) {
+    unsafe {
+        asm!(
+            "svc 0",
+            in("x0") status,
+            in("x8") 5,
+        );
+    }
+}

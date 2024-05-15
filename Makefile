@@ -83,11 +83,11 @@ debug: all size
 	$(OBJDUMP) -D $(KERNEL_ELF) > $(BUILD_DIR)/kernel.S
 	$(OBJDUMP) -D $(BOOTLOADER_ELF) > $(BUILD_DIR)/bootloader.S
 	$(OBJDUMP) -D $(PROGRAM_ELF) > $(BUILD_DIR)/program.S
-	$(QEMU) -M raspi3b \
-		-serial null -serial pty \
-		-kernel $(BOOTLOADER_IMG) \
-		-initrd $(INITRAMFS_CPIO) \
-		-dtb $(DTB) -S -s
+	# $(QEMU) -M raspi3b \
+	# 	-serial null -serial pty \
+	# 	-kernel $(BOOTLOADER_IMG) \
+	# 	-initrd $(INITRAMFS_CPIO) \
+	# 	-dtb $(DTB) -S -s
 
 size: $(KERNEL_IMG) $(BOOTLOADER_IMG) $(PROG_IMG)
 	@printf "Kernel: %d (0x%x) bytes\n" `stat -c %s $(KERNEL_IMG)` `stat -c %s $(KERNEL_IMG)`

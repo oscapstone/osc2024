@@ -13,9 +13,9 @@ pub fn init() {
     unsafe {
         TIMER_MANAGER = Some(TimerManager::new());
     }
-    unsafe {
-        crate::exception::enable_interrupt();
-    }
+    // unsafe {
+    //     crate::exception::enable_interrupt();
+    // }
     let tm = get();
     tm.add_timer(
         Duration::from_days(1000),

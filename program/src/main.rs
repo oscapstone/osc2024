@@ -18,5 +18,6 @@ fn main(_: isize, _: *const *const u8) -> isize {
         print_dec(i);
         println("");
     }
+    syscall::exit(0);
     return 0;
 }
