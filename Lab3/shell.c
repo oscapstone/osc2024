@@ -4,6 +4,17 @@
 #include "task_queue.h"
 
 #define BUFFER_SIZE 1024
+#define MAX_TIMER 10
+
+typedef void (*timer_callback_t)(char* data);
+
+struct timer{
+    timer_callback_t callback;
+    char data[BUFFER_SIZE];
+    unsigned long expires;
+};
+
+struct timer timers[MAX_TIMER];
 
 // unsigned long timer_times[MAX_TIMER];
 // char timer_msgs[MAX_TIMER][1024];
@@ -18,21 +29,6 @@ unsigned int write_cur = 0;
 
 char async_cmd[BUFFER_SIZE];
 
-void di(){
-    asm volatile("msr DAIFSet, 0xf");
-}
-
-void ei(){
-    asm volatile("msr DAIFClr, 0xf");
-}
-
-static char *cpio_base;
-
-void initramfs_callback(char *address)
-{
-    cpio_base = address;
-}
-
 void strcpy(char *s1, char *s2){
     while(*s1){
         *s2 = *s1;
@@ -43,26 +39,16 @@ void strcpy(char *s1, char *s2){
 }
 
 void uart_write_handler(){
-    ei();
     //*AUX_MU_IER |= 0x02;
     //uart_puts("hi\n");
     //*AUX_MU_IER &= ~(0x02);
     //asm volatile("msr DAIFSet, 0xf");
     char ch = '\0';
     if(write_cur < write_idx){
-        di();
         *AUX_MU_IO=uart_write_buffer[write_cur]; // i think need interrupt here so cannot asm
         ch = uart_write_buffer[write_cur];
         write_cur++;
-        *AUX_MU_IER |= (0x01);
-        *AUX_MU_IER |= (0x02);
     }
-    else{
-        di();
-        *AUX_MU_IER |= (0x01);
-        //*AUX_MU_IER &= ~(0x02);
-    }
-    
     if(ch == '\r'){
         shell(async_cmd);
         write_cur = 0;
@@ -75,40 +61,32 @@ void uart_write_handler(){
 
 void uart_read_handler() {
     //asm volatile("msr DAIFSet, 0xf");
-    ei();
-    //*AUX_MU_IER &= ~(0x01); //stop read interrupt
+    *AUX_MU_IER &= ~(0x01); //stop read interrupt
     char ch = (char)(*AUX_MU_IO);
     if(ch == '\r'){ //command
         //uart_send('\n');
-        di();
         uart_read_buffer[read_idx] = '\0';
         read_idx = 0;
         strcpy(uart_read_buffer, async_cmd);
         //uart_puts(uart_read_buffer);
         uart_write_buffer[write_idx] = '\n';
         write_idx++;
-        //create_task(uart_write_handler,2);
+        create_task(uart_write_handler,2);
         uart_write_buffer[write_idx] = '\r';
         write_idx++;
-        ei();
         //shell(uart_read_buffer);
         //uart_read_buffer[read_idx] = '\0';
     }
     else{
-        di();
         uart_read_buffer[read_idx] = ch;
         uart_write_buffer[write_idx] = ch; 
         //uart_send(uart_read_buffer[read_idx]);
         read_idx++;
         write_idx++;
-        ei();
     }
-    di();
     *AUX_MU_IER |= 0x01; //start
-    *AUX_MU_IER |= 0x02;
-    
     //asm volatile("msr DAIFClr, 0xf");
-    //create_task(uart_write_handler,2);
+    create_task(uart_write_handler,2);
 }
 
 struct cpio_newc_header {
@@ -137,9 +115,9 @@ int strcmp(char *s1, char *s2) {
     return (*(unsigned char *)s1) - (*(unsigned char *)s2);
 }
 
-long str2int(char* s) {
-    long result = 0;
-    long sign = 1; // This is to handle negative numbers
+int str2int(char* s) {
+    int result = 0;
+    int sign = 1; // This is to handle negative numbers
 
     // Check for negative number
     if (*s == '-') {
@@ -175,8 +153,8 @@ int hex_to_int(char *p, int len) {
 }
 
 void run_user_program(){
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base; //switch between qemu and rpi
-    char *current = (char *)cpio_base;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)0x20000000;
+    char *current = (char *)0x20000000;
     while (1) {
         fs = (struct cpio_newc_header *)current;
         int name_size = hex_to_int(fs->c_namesize, 8);
@@ -199,8 +177,7 @@ void run_user_program(){
             current += (4 - (current - (char *)fs) % 4);
     }
     uart_puts("found user.img\n");
-    uart_hex(current);
-    uart_send('\n');
+
     // current is the file address
     asm volatile ("mov x0, 0x3c0"); 
     asm volatile ("msr spsr_el1, x0"); 
@@ -231,91 +208,115 @@ void async_uart_io(){
     while(1){}
 }
 
-int parse_cmd(char * cmd){
-    char * run = cmd;
-    char name[100];
-    char msg[100];
-    char time[100];
-    int idx = 0;
-    while(*run){
-        if(*run == ' '){
-            name[idx] = '\0';
-            run++;
-            break;
-        }
-        name[idx] = *run;
-        run++;
-        idx++;
-    }
-
-    if(!*run)
-        return -1;
-    
-    if(strcmp(name, "st") == 0 || strcmp(name, "setTimeout") == 0){
-    }
-    else
-        return -1;
-    
-    idx = 0;
-    while(*run){
-        if(*run == ' '){
-            msg[idx] = '\0';
-            run++;
-            break;
-        }
-        msg[idx] = *run;
-        run++;
-        idx++;
-    }
-    
-    if(!*run)
-        return -1;
-
-    idx = 0;
-    while(*run){
-        time[idx] = *run;
-        run++;
-        idx++;
-    }
-    time[idx] = '\0';
-
-    unsigned long wait = str2int(time);
-    if(wait <= 0){
-        uart_puts("\rINVALID TIME\n");
-        return 1;
-    }
-    
-    add_timer(setTimeout_callback, msg, wait);
-    return 1;
-}
-
-void test_daif(){
-    unsigned long spsrel1;
-    uart_puts("Before test\n");
-    asm volatile ("mrs %0, SPSR_EL1" : "=r" (spsrel1));
-    uart_puts("SPSR_EL1: 0x");
-    uart_hex_long(spsrel1);
-    uart_puts("\n");
-    int r;
+void add_timer(timer_callback_t callback, char* data, unsigned long after){
+    //uart_int(after);
     asm volatile("msr DAIFSet, 0xf");
-    uart_puts("in test\n");
-    asm volatile ("mrs %0, SPSR_EL1" : "=r" (spsrel1));
-    uart_puts("SPSR_EL1: 0x");
-    uart_hex_long(spsrel1);
+    int i;
+    int allocated = 0;
+    // if(after == 67){
+    //     after = 3;
+    // }
+    unsigned long cur_time = get_current_time();
+    unsigned long print_time = cur_time + after;
+    for(i=0; i<MAX_TIMER; i++){
+        if(timers[i].expires == 0){
+            timers[i].expires = print_time;
+            int j = 0;
+            while(*data != '\0'){
+                timers[i].data[j] = *data;
+                data++;
+                j++;
+            }
+            timers[i].data[j] = '\0';
+            //uart_puts("timer data: ");
+            //uart_puts(timers[i].data[j]);
+            timers[i].callback = callback;
+            allocated = 1;
+            break;
+        }
+    }
+
+    if(allocated == 0){
+        uart_puts("Timer Busy\n");
+    }
+
+    int new_irq = 1;
+    unsigned long min_time = print_time;
+    for(int i=0; i<MAX_TIMER; i++){
+        if(timers[i].expires < min_time && timers[i].expires > 0){
+            new_irq = 0;
+            break;
+        }
+    }
+
+    if(new_irq){
+        // uart_puts("New Interrupt Set in timer ");
+        // uart_int(i);
+        // uart_puts("\n");
+        set_timer_interrupt(print_time - cur_time);
+        //asm volatile ("msr cntp_tval_el0, %0" : : "r" (cntfrq));
+    }
+    uart_puts("\rSeconds to print: ");
+    uart_int(print_time);
     uart_puts("\n");
     asm volatile("msr DAIFClr, 0xf");
-    uart_puts("After test\n");
-    asm volatile ("mrs %0, SPSR_EL1" : "=r" (spsrel1));
-    uart_puts("SPSR_EL1: 0x");
-    uart_hex_long(spsrel1);
-    uart_puts("\n");
-    uart_puts("--------------------------------\n");
 }
 
-int shell(char * cmd){
-    if(parse_cmd(cmd) == 1){
-        return 1;
+
+void setTimeout_callback(char* data) {
+    // Convert data back to the appropriate type and print the message
+    uart_puts(data);
+    uart_puts("\n");
+    uart_send('\r');
+    uart_puts("# ");
+}
+
+void setTimeout_cmd(){
+    uart_puts("\rMESSAGE: ");
+    char in_char;
+    char message[100];
+    int idx = 0;
+    while(1){
+        in_char = uart_getc();
+        uart_send(in_char);
+        if(in_char == '\n'){
+            message[idx] = '\0';
+            idx = 0;
+            break;
+        }
+        else{
+            message[idx] = in_char;
+            idx++;
+        }
     }
+    uart_puts("\rSECONDS: ");
+    idx = 0;
+    char countDown[100];
+    while(1){
+        in_char = uart_getc();
+        uart_send(in_char);
+        if(in_char == '\n'){
+            countDown[idx] = '\0';
+            idx = 0;
+            break;
+        }
+        else{
+            countDown[idx] = in_char;
+            idx++;
+        }
+    }
+    unsigned long cur_time, print_time;
+    int wait = str2int(countDown);
+    if(wait <= 0){
+        uart_puts("\rINVALID TIME\n");
+        return;
+    }
+    
+    add_timer(setTimeout_callback, message, wait);
+}
+
+
+int shell(char * cmd){
     if(strcmp(cmd, "help") == 0){
         uart_send('\r');
         uart_puts("Lab3 Exception and Interrupt\n");
@@ -341,34 +342,58 @@ int shell(char * cmd){
     else if(strcmp(cmd, "buf") == 0){
         show_buffer();
     }
-    else if(strcmp(cmd, "test") == 0){
-        test_daif();
-    }
     else
         return 0;
     return 1;
 }
 
+void timer_handler() {
+    asm volatile("msr DAIFClr, 0xf");
+    uart_puts("\nIn timer handler\n\r");
+    //asm volatile("msr DAIFSet, 0xf");
+    unsigned long cur_time = get_current_time();
+    unsigned long next = 9999;
+    for(int i=0;i<MAX_TIMER;i++){
+        if(timers[i].expires == cur_time){
+            uart_puts("\n[TIMER] ");
+            uart_int(cur_time);
+            uart_puts(" : ");
+            timers[i].callback(timers[i].data);
+            timers[i].expires = 0;
+        }
+        else if(timers[i].expires > cur_time){
+            if(next > timers[i].expires)
+                next = timers[i].expires;
+        }
+    }
+    disable_core_timer();
+    if(next != 9999){
+        asm volatile("msr DAIFSet, 0xf");
+        set_timer_interrupt(next - cur_time);
+        asm volatile("msr DAIFClr, 0xf");
+        //uart_puts("resetted another timer\n");
+    }
+    while(1){}
+    //asm volatile("msr DAIFClr, 0xf");
+}
+
 void interrupt_handler_entry(){
     //asm volatile("msr DAIFSet, 0xf"); add here will boom, check how to add
+
     int core0_irq = *CORE0_INTERRUPT_SOURCE;
     int iir = *AUX_MU_IIR;
     if (core0_irq & 2){
         disable_core_timer();
         create_task(timer_handler, 3);
-        execute_task();
         // timer_handler();
     }
     else{
-        *AUX_MU_IER &= ~(0x01);
-        *AUX_MU_IER &= ~(0x02);
         if ((iir & 0x06) == 0x04){
             create_task(uart_read_handler,1);
-            execute_task();
         }
-        else{
-            create_task(uart_write_handler,2);
-            execute_task();
-        }
+        // else
+        //     create_task(uart_write_handler,2);
     }
+    execute_task();
+    //asm volatile("msr DAIFClr, 0xf");
 }

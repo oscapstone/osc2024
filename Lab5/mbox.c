@@ -1,7 +1,7 @@
 #include "gpio.h"
 
 /* mailbox message buffer */
-// volatile unsigned int  __attribute__((aligned(16))) mailbox[36];
+// volatile unsigned int mailbox[36];
 
 #define VIDEOCORE_MBOX  (MMIO_BASE+0x0000B880)
 #define MBOX_READ       ((volatile unsigned int*)(VIDEOCORE_MBOX+0x0))

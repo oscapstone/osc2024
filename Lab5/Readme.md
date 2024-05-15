@@ -1,58 +1,97 @@
-DEMO TODOs:
-* 搞懂那些 switch to, 關東東在幹嘛
-* 各system call, sp複習
-* 把 fork 再改的好看一點，也比較好demo解釋(補註解)
-* 搞懂 caller, callee 意義還有為啥 trap要存全部，moveto只要存callee，還有複習各regsister在幹啥的細節(elr啥的那些，tp啥地寫進readme)
-* 想清楚lab3 advanced的流程並在板板上嘗試
-* 搞懂daif在幹嘛還有那個usr prgram轉過去的0x確認一下，還有timer interrutp複習
+# OSC2024 Lab5
 
-exec 的時候，可以 malloc 然後複製一個檔案過去
-sp 用給定的就好
+## Thread
+### Registers
+* tpidr_el1: A register to save the address of current thread. During initialization, place thread[0] to tpidr_el1 ensures that when switching, main process will be saved to the thread structure.
+* sp: the place of current stack (sp_el0 in el0 and sp_el1 in el1)
+* fp: the function frame address for local variable, set by function call (backtrace) (or the top of stack, I think replaced by sp, I've tried not to save and works)
+* lr: the address to jump to when ret is called (return address of function)
+* elr_el1: the address to return after exception handling (usually next instruction before svc)
+* ret: jump to lr
+* eret: execption return, jump to elr_el1
+* spsr_elx: Saved Program Status Register (DAIF, select el, stack)
+* sp_elx: the stack pointer address for specific el
+* esr_el1: determine the exception source (recall lab3, EC[31:26] -> 010101: svc)
 
-user program 從現在的thread開始跑，可以寫一個test thread 裡面CALL EXEC 專門FOR這個的
+### Caller vs Callee vs Others
+* caller: the one to call other function
+* callee: the function to be called
+#### Caller Saved
+* x0~x7: parameter and result registers
+* x8: complex return value / svc code
 
-TODOS:
-1. uartread, uartwrite V
-2. fork V (probably)
-3. update thread for user stack (and exec to let the program run correctly) V
+#### Corruptible Registers
+* x9~x15: can be used freely without saving them
+* x16, x17: for linker/compiler
 
-NEW TODO!
-1. TIMER INTERRUPT
-2. PREEMMIT DISABLE IN CRITICAL SECTION
-3. GOOD VIDEO (pls QAQ)
-4. MBOX CALL V
+#### Callee Saved
+* x19~x28: callee has to save before use and restore while return
+* x29: frame pointer
+* x30: lr
 
-因為 saveall 才把東西存進來，load all會再跳回去
+#### Others
+* x18: Platform Register
 
-syscall裡面傳進去的sp
-sp 是在 sp_el0 還是 sp_el1 (整個複製以後 load all 才會對?)
-el0 只有存地址，然後 sp 是在 trapframe 上面，所以應該是把整個sp以後複製過去，再把過去的x[0]變成0，並且 child sp正確位置是加上 trapframe 之後
+### switch_to
+Save all callee registers and sp to save and restore thread state.
 
-compile完登入以後從 linker 的 0x80000開始，是一個 thread 嗎?
+* x0 is from (store from register to thread struct)
+* x1 is to (load from thread to register)
+```
+.global switch_to
+switch_to:
+    stp x19, x20, [x0, 16 * 0]
+    stp x21, x22, [x0, 16 * 1]
+    stp x23, x24, [x0, 16 * 2]
+    stp x25, x26, [x0, 16 * 3]
+    stp x27, x28, [x0, 16 * 4]
+    stp fp, lr, [x0, 16 * 5]
+    mov x9, sp
+    str x9, [x0, 16 * 6]
 
+    ldp x19, x20, [x1, 16 * 0]
+    ldp x21, x22, [x1, 16 * 1]
+    ldp x23, x24, [x1, 16 * 2]
+    ldp x25, x26, [x1, 16 * 3]
+    ldp x27, x28, [x1, 16 * 4]
+    ldp fp, lr, [x1, 16 * 5]
+    ldr x9, [x1, 16 * 6]
+    mov sp,  x9
+    msr tpidr_el1, x1
+    ret
 
-所以fork完要
-把 kernel 跟 user stack 都放對地方
+.global get_current
+get_current:
+    mrs x0, tpidr_el1
+    ret
+```
+[ ] : get the value of the address, ex: ldr x0, [x1] -> load from address(address is value of x1)
+switch_to: no exception handling -> use lr
+eret: need exception return -> use elr_el1
 
-x8,...那些 register 原本是在 user 還是 kernel stack，複製的時候可以直接複製嗎，還是他們慧根地址有相依姓
+x1, 16*n -> x1 + 16 * n -> offset
 
-fork return 時 trapframe 是否也需要被複製，還是只要返回值對就好?
+Note: before switch to will be timer interrupt, so the exit syscall can directly use switch_to, it will go back to handler and eret. 
 
+## User Process and System Call
+Trapframe: the connection between user process and kernel space (send and return value)
 
-要用load all的話 sp要在存的東西之上 (不用的話好像沒辦法給那些值?)
+**Implementation:** see code.
 
-先把save all跟load all改成可以用 trapframe 包起來的，再來想其他東西，檢查x9還是x10
+### Timer
+Enable user program to directly access timer
+```
+uint64_t tmp;
+asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+tmp |= 1;
+asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+```
 
-真的不行就先準備 thread，然後問 video player 播不出來能不能拿一半QAQ
-
-elrel1那些是0，好像怪怪的，可以檢查一下 那些正常的質應該要是多少
-
-
-TOMORO
-1. 試跑 fork_test
-2. 可能可以試試 blr 跟 run thread
-3. 把 fork 改成阿倫的試試看 (同邏輯)
-4. 不然可能就得試試看別人的 memory allocator
-
-因為打字才會動，加上有從handler檢查，應該是進入interrupt在等輸入，所以開啟可以nested
-https://blog.csdn.net/boildoctor/article/details/123379261
+## Reference
+* lr, ret: https://blog.csdn.net/boildoctor/article/details/123379261
+* esr_el1: https://developer.arm.com/documentation/ddi0601/2020-12/AArch64-Registers/ESR-EL1--Exception-Syndrome-Register--EL1-
+* spsr_el1: https://developer.arm.com/documentation/ddi0601/2024-03/AArch64-Registers/SPSR-EL1--Saved-Program-Status-Register--EL1-
+* cntkctl_el1: https://developer.arm.com/documentation/ddi0601/2024-03/AArch64-Registers/CNTKCTL-EL1--Counter-timer-Kernel-Control-Register
+* caller, callee: https://developer.arm.com/documentation/102374/0101/Procedure-Call-Standard
+* mailbox: https://nycu-caslab.github.io/OSC2024/labs/hardware/mailbox.html#mailbox
+* fp: https://www.csie.ntu.edu.tw/~sprout/algo2021/homework/hand07.pdf

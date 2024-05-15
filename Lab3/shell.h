@@ -26,8 +26,6 @@ void cpio_ls();
 int shell(char * cmd);
 void interrupt_handler_entry();
 void core_timer_handler();
-void initramfs_callback();
-void di();
-void ei();
+
 
 #endif // SHELL_H

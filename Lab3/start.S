@@ -52,7 +52,7 @@ from_el2_to_el1:
 
 // save general registers to stack
 .macro save_all
-	sub	    sp, sp, 16 * 18
+	sub	    sp, sp, 16 * 17
 	stp 	x0, x1, [sp ,16 * 0]
 	stp 	x2, x3, [sp ,16 * 1]
 	stp 	x4, x5, [sp ,16 * 2]
@@ -72,13 +72,9 @@ from_el2_to_el1:
 	mrs	    x28, spsr_el1
 	mrs	    x29, elr_el1
 	stp 	x28, x29, [sp ,16 * 16]
-	mrs	    x28, sp_el0	// For fork
-	stp	    x28, x0, [sp, 16 * 17]
 .endm
 
 .macro load_all
-	ldp	    x28, x0, [sp, 16 * 17]
-	msr	    sp_el0, x28
 	ldp 	x28, x29, [sp ,16 * 16]
 	msr	    spsr_el1, x28
 	msr	    elr_el1, x29
@@ -98,7 +94,7 @@ from_el2_to_el1:
 	ldp 	x26, x27, [sp ,16 * 13]
 	ldp 	x28, x29, [sp ,16 * 14]
 	ldr 	x30, [sp, 16 * 15]
-	add 	sp, sp, 16 * 18
+	add 	sp, sp, 16 * 17
 .endm
 
 exception_handler:
