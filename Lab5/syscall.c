@@ -74,6 +74,14 @@ void exec(trapframe * sp){
 void exit(trapframe * sp){
     int status = sp -> x[0]; //no use
     thread_exit(); //simply go to exit
+
+    /* 
+    //ensure eret version:
+    thread * cur = get_current();
+    cur -> state = -1; //end
+    cur -> priority = 999;
+    update_min_priority();
+    */
 }
 
 void kill(trapframe * sp){
