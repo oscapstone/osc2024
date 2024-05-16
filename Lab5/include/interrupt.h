@@ -32,6 +32,7 @@ void core_timer_disable();
 
 // int core_timer_handler();
 int timer_irq_handler();
+int lower_timer_handler();
 int mini_uart_irq_handler();
 
 int uart_rx_handler();

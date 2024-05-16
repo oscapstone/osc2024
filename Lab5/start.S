@@ -5,9 +5,9 @@
 _start:
 
 /* get cpu id */
-//mrs x1, mpidr_el1
-//and x1, x1, #3
-//cbnz x1, halt // halt if cpu id != 0
+  mrs x1, mpidr_el1
+  and x1, x1, #3
+  cbnz x1, halt // halt if cpu id != 0
 
   bl from_el2_to_el1
 

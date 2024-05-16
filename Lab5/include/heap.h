@@ -2,7 +2,7 @@
 #define __HEAP_H__
 
 #include <stddef.h>
-#define STACK_SIZE 1024
+#define STACK_SIZE 4096
 
 extern int bss_end;
 extern void* heap_end;

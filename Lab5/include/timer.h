@@ -6,13 +6,14 @@
 typedef struct timer{
   uint64_t time;
   void (*callback)(void*);
-  char msg[256];
-  // void *msg;
+  // char msg[256];
+  void *data;
   struct timer* next;
 }timer_t;
 
 extern timer_t *timer_head;
 
+uint64_t get_time_s();
 uint64_t get_time();
 uint64_t get_freq();
 

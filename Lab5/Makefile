@@ -20,10 +20,10 @@ kernel8.img: linker.ld $(OBJS)
 	$(GNUARM)-objcopy -O binary kernel8.elf kernel8.img
 
 qemu:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bootloader/bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bootloader/bcm2710-rpi-3-b-plus.dtb
 
-boot:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio
+int:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bootloader/bcm2710-rpi-3-b-plus.dtb -d int
 debug:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bootloader/bcm2710-rpi-3-b-plus.dtb -S -s
 

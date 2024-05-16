@@ -89,10 +89,18 @@ int memcmp(const void *s1, const void *s2, int n){
   return 0;
 }
 
-void memset(void* ptr, int value, int n) {
+void memset(void* ptr, int value, int n){
     unsigned char* p = (unsigned char*)ptr;
     for (size_t i = 0; i < n; ++i) {
         p[i] = (unsigned char)value;
+    }
+    return;
+}
+
+void memcpy(void* ptr1, void *ptr2, int n){
+
+    for (size_t i = 0; i < n; ++i) {
+        *((char*)ptr1+i) = *((char*)ptr2+i);
     }
     return;
 }

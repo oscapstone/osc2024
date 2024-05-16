@@ -5,11 +5,12 @@
 
 static void *archive_start = (void *)0x0; //0x08000000
 static void *archive_end = (void *)0x0;
+static int exec_size = 0;
 
 void initrd_list(){
   char *current = (char*)archive_start;
   cpio_header* head;
-  
+
   while(!memcmp(current,"070701",6) && memcmp(current+sizeof(cpio_header),"TRAILER!!!",10)){
     char filename[256];
     head = (cpio_header*)current;
@@ -17,7 +18,7 @@ void initrd_list(){
     int namesize = hstr2int(head->c_namesize,8);
     // uart_sends("hi\n");
     int padding = (4 - ((filesize+namesize+sizeof(cpio_header))%4))%4;
-    
+
     for(int i = 0; i < namesize; i++){
       filename[i] = *(current+sizeof(cpio_header)+i);
     }
@@ -33,7 +34,7 @@ void initrd_list(){
 void initrd_cat(char *filename){
   char *current = (char*)archive_start;
   cpio_header* head;
-  
+
   while(!memcmp(current,"070701",6) && memcmp(current+sizeof(cpio_header),"TRAILER!!!",10)){
     head = (cpio_header*)current;
     int filesize = hstr2int(head->c_filesize,8);
@@ -69,7 +70,7 @@ void initramfs_callback(void *node, char *propname){
 void *fetch_exec(char *filename){
   char *current = (char*)archive_start;
   cpio_header* head;
-  
+
   while(!memcmp(current,"070701",6) && memcmp(current+sizeof(cpio_header),"TRAILER!!!",10)){
     head = (cpio_header*)current;
     int filesize = hstr2int(head->c_filesize,8);
@@ -79,6 +80,7 @@ void *fetch_exec(char *filename){
 
     if(!strcmp(filename, current+sizeof(cpio_header))){
       // exec_file = (void *)(current+sizeof(cpio_header)+namesize+n_padding);
+      exec_size = filesize;
       return (void *)(current+sizeof(cpio_header)+namesize+n_padding);
     }
     current += (filesize+namesize+sizeof(cpio_header)+n_padding+f_padding);
@@ -86,10 +88,14 @@ void *fetch_exec(char *filename){
   return ((void*)0);
 }
 
-void *get_initrd_start(){ 
+void *get_initrd_start(){
   return archive_start;
 }
 
-void *get_initrd_end(){ 
+void *get_initrd_end(){
   return archive_end;
+}
+
+int get_exec_size(){
+  return exec_size; // size of the executable file
 }

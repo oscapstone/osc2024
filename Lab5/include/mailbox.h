@@ -11,7 +11,7 @@
 #define MAILBOX_EMPTY   0x40000000
 #define MAILBOX_FULL    0x80000000
 
-#define CHANNEL8 0x8 //8?
+#define CHANNEL8 (unsigned char)0x8 //8?
 
 #define GET_BOARD_REVISION 0x00010002
 #define GET_ARM_MEMORY     0x00010005
@@ -21,7 +21,7 @@
 #define TAG_REQUEST_CODE   0x00000000
 #define END_TAG             0x00000000
 
-int mailbox_call(volatile unsigned int* message);
+int mailbox_call(unsigned char ch, volatile unsigned int* message);
 void get_board_revision();
 void get_arm_memory();
 

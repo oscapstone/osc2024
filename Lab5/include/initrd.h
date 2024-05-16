@@ -25,5 +25,6 @@ void* get_initrd_start();
 void* get_initrd_end();
 void initramfs_callback(void *node, char *propname);
 void* fetch_exec(char *filename);
+int get_exec_size();
 
 #endif

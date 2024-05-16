@@ -1,9 +1,9 @@
 #include "mailbox.h"
 #include "mini_uart.h"
 
-int mailbox_call(volatile unsigned int *message){
+int mailbox_call(unsigned char ch, volatile unsigned int *message){
 
-  unsigned int msg = (unsigned int)(((unsigned long)message & ~0xf) | CHANNEL8);
+  unsigned int msg = (unsigned int)(((unsigned long)message & ~0xf) | (ch & 0xf));
 
   while(*MAILBOX_STATUS & MAILBOX_FULL);
 
@@ -30,7 +30,7 @@ void get_board_revision(){
   // tags end
   mailbox[6] = END_TAG;
 
-  if(mailbox_call(mailbox)){
+  if(mailbox_call(CHANNEL8, mailbox)){
     uart_sends("broad revision\t: ");
     uart_sendh(mailbox[5]);
     uart_sendc('\n');
@@ -47,7 +47,7 @@ void get_arm_memory(){
   mailbox[5] = 0; // value buffer
   mailbox[6] = 0; // value buffer
   mailbox[7] = END_TAG;
-  if(mailbox_call(mailbox)){
+  if(mailbox_call(CHANNEL8, mailbox)){
     uart_sends("Arm memory base address\t: ");
     uart_sendh(mailbox[5]);
     uart_sends("\nArm memory size\t: ");

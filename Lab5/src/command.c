@@ -1,10 +1,14 @@
 #include "command.h"
 #include "mini_uart.h"
 #include "mailbox.h"
+#include "memory.h"
 #include "initrd.h"
 #include "string.h"
 #include "heap.h"
+#include "interrupt.h"
 #include "timer.h"
+#include "thread.h"
+#include "syscall.h"
 
 Command commands[] = {
     {"help", "print all available commands.", help},
@@ -15,7 +19,7 @@ Command commands[] = {
     {"cat", "print on the standard output", cat},
     {"exec", "excution a user program", exec},
     {"settimeout", "prints MESSAGE after SECONDS with the current time and the command executed time", setTimeout},
-    {"test", "test async read and write", test}
+    {"test", "demo test", test}
 };
 
 int help(void* args[]){
@@ -69,18 +73,18 @@ int exec(void* args[]){
   char filename[257];
   strcpy(filename, args[1]);
   void* exec_data = fetch_exec(filename);
-
   if(exec_data){
-
-    void *stack = simple_malloc(STACK_SIZE);
-    void *stack_top = stack + STACK_SIZE;
-
+    void *p = kmalloc(get_exec_size());
+    memcpy(p, exec_data, get_exec_size());
+    thread *t = thread_create(p);
     asm volatile(
-      "mov x4, 0x3c0;" // 001111000000 
+      "msr tpidr_el1, %0;"
+      "mov x4, 0x0;" // 001111000000
       "msr spsr_el1, x4;" // spsr_el1 bit[9:6] are D, A, I, and F; bit[3:0]: el0t
-      "msr elr_el1, %0;"
-      "msr sp_el0, %1;"
-      "eret;" :: "r" (exec_data), "r" (stack_top) // :: is for input; : for output
+      "msr elr_el1, %1;"
+      "msr sp_el0, %2;"
+      "mov sp, %3;"
+      "eret;" :: "r" (t), "r" (t->regs.lr), "r" (t->regs.sp), "r" (t->kernel_stack+0x1000) // :: is for input; : for output
     );
   }
   else{
@@ -100,6 +104,24 @@ int setTimeout(void* args[]){
 }
 
 int test(void* args[]){
-  uart_async_test();
+  uart_sends("demo option:\n");
+  uart_sends("1. uart_async_test\n");
+  uart_sends("2. thread_test\n");
+  uart_sends("3. fork_test\n");
+  uart_sends("> ");
+  char opt[256];
+  gets(opt);
+  switch(atoi(opt)){
+    case 1:
+      uart_async_test();
+      break;
+    case 2:
+      thread_test();
+      break;
+    case 3:
+      sys_fork_test();
+      break;
+  }
+
   return 0;
 }

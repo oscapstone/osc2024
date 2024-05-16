@@ -1,7 +1,7 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
-#define MAX_ORDER 5
+#define MAX_ORDER 10
 #define FRAME_CNT 0x3c000 // 0x3c000000 / 0x1000 = 0x3c000
 // #define FRAME_CNT 1024 // 0x3c000000 / 0x1000 = 0x3c000
 #define PAGE_SIZE 0x1000 // 4KB
