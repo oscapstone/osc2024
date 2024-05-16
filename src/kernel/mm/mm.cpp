@@ -36,19 +36,26 @@ void mm_init() {
 
   mm_page.init();
   heap_init();
-  set_new_delete_handler(kmalloc, kfree);
+  set_new_delete_handler(kcalloc, kfree);
 }
 
 // TODO: handle alignment
 void* kmalloc(uint64_t size, uint64_t align) {
-  void* res = nullptr;
+  void* addr = nullptr;
   save_DAIF_disable_interrupt();
   if (size > max_chunk_size or align == PAGE_SIZE)
-    res = mm_page.alloc(size);
+    addr = mm_page.alloc(size);
   else
-    res = heap_malloc(size);
+    addr = heap_malloc(size);
   restore_DAIF();
-  return res;
+  return addr;
+}
+
+void* kcalloc(uint64_t size, uint64_t align) {
+  void* addr = kmalloc(size, align);
+  if (addr)
+    memset(addr, 0, size);
+  return addr;
 }
 
 void kfree(void* ptr) {

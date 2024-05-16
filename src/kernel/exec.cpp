@@ -37,6 +37,10 @@ int exec(ExecCtx* ctx) {
 
   memcpy(thread->user_text.addr, file.data(), file.size());
   thread->reset_kernel_stack();
+  thread->user_stack.clean();
+
+  klog("exec_user_prog: text %p stack %p\n", thread->user_text.addr,
+       thread->user_stack.end(0x10));
   exec_user_prog(thread->user_text.addr, thread->user_stack.end(0x10),
                  thread->regs.sp);
 

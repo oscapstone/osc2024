@@ -83,4 +83,8 @@ struct Mem {
   operator bool() const {
     return addr != nullptr;
   }
+
+  void clean() {
+    memset(addr, 0, size);
+  }
 };
