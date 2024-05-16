@@ -6,8 +6,14 @@ ASMOPS = -Iinclude
 BUILD_DIR = build
 SRC_DIR = src
 
-
 all: clean makedir kernel8.img
+
+
+ifdef DEBUG
+COPS += -DDEBUG
+endif
+# DEBUG: COPS += -DDEBUG
+# DEBUG: all
 
 .PHONY: clean
 clean:
@@ -46,5 +52,3 @@ gdb: all
 
 QEMU: COPS += -DQEMU
 QEMU: run
-DEBUG: COPS += -DDEBUG -DQEMU
-DEBUG: run
