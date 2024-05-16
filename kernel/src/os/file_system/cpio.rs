@@ -3,6 +3,7 @@ use crate::println;
 use crate::os::stdio::*;
 use alloc::vec::Vec;
 
+#[allow(dead_code)]
 pub enum CpioHeaderField {
     Magic,
     Ino,

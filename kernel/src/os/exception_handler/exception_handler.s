@@ -74,3 +74,40 @@ svc_handler:
     bl enable_irq
     load_all
     eret
+
+// .section .text.exception_vector_table
+.align 11
+.global exception_vector_table
+exception_vector_table:
+    b svc_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b svc_handler
+    .align 7
+    b irq_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b svc_handler
+    .align 7
+    b irq_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7

@@ -1,4 +1,4 @@
-use crate::os::stdio::{get_line, print, println_now};
+use crate::os::stdio::{get_line, println_now};
 use crate::os::{allocator, thread, timer};
 use crate::println;
 use alloc::boxed::Box;
@@ -10,7 +10,7 @@ use core::fmt::Display;
 
 use super::INITRAMFS;
 
-const CONTEXT_SWITCHING_DELAY: u64 = 1000/32;
+const CONTEXT_SWITCHING_DELAY: u64 = 1000 / 32;
 
 pub struct command {
     name: &'static str,
@@ -113,7 +113,7 @@ pub fn exec(args: Vec<String>) {
                 return;
             }
         }
-        
+
         let pid = thread::create_thread(program_ptr, filesize, program_stack_ptr, stack_size);
         println!("PID: {}", pid);
         println!("PC: {:X?}", program_ptr);

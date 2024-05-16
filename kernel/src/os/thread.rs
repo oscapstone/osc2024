@@ -153,7 +153,7 @@ pub fn run_thread(id: Option<usize>) {
     unsafe {
         let threads = THREADS.as_mut().unwrap();
 
-        let mut target_thread = match id {
+        let target_thread = match id {
             Some(id) => {
                 threads
                     .iter_mut()
@@ -223,7 +223,7 @@ pub fn get_id_by_pc(pc: usize) -> Option<usize> {
 pub fn save_context(trap_frame_ptr: *mut u64) -> bool {
     unsafe {
         let threads = THREADS.as_mut().unwrap();
-        let mut current_thread = threads
+        let current_thread = threads
             .iter_mut()
             .find(|thread| {
                 if let ThreadState::Running(_) = &thread.state {
@@ -486,7 +486,7 @@ pub fn context_switching() {
     //     }
     // );
 
-    let mut next_thread = next_thread.unwrap();
+    let next_thread = next_thread.unwrap();
 
     next_thread.state = match next_thread.state.clone() {
         ThreadState::Waiting(context) => ThreadState::Running(context),
@@ -515,7 +515,7 @@ pub fn context_switching() {
 #[inline(never)]
 pub fn fork() -> Option<usize> {
     let threads = unsafe { THREADS.as_mut().unwrap() };
-    let mut current_thread = threads.iter().find(|thread| match &thread.state {
+    let current_thread = threads.iter().find(|thread| match &thread.state {
         ThreadState::Running(_) => true,
         _ => false,
     });
@@ -581,7 +581,7 @@ pub fn fork() -> Option<usize> {
 
 pub fn exec(program_name: String, program_args: Vec<String>) {
     let threads = unsafe { THREADS.as_mut().unwrap() };
-    let mut current_thread = threads.iter_mut().find(|thread| match &thread.state {
+    let current_thread = threads.iter_mut().find(|thread| match &thread.state {
         ThreadState::Running(_) => true,
         _ => false,
     });
@@ -641,7 +641,7 @@ pub fn exec(program_name: String, program_args: Vec<String>) {
 pub fn kill(id: usize) {
     let threads = unsafe { THREADS.as_mut().unwrap() };
 
-    let mut target_thread = threads
+    let target_thread = threads
         .iter_mut()
         .find(|thread| thread.id == id)
         .expect("Thread not found");
@@ -652,7 +652,7 @@ pub fn kill(id: usize) {
 pub fn switch_to_thread(id: Option<usize>, trap_frame_ptr: *mut u64) {
     let threads = unsafe { THREADS.as_mut().unwrap() };
 
-    let mut target_thread = match id {
+    let target_thread = match id {
         Some(id) => {
             threads
                 .iter_mut()
