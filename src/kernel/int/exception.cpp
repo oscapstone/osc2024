@@ -1,7 +1,6 @@
 #include "int/exception.hpp"
 
 #include "arm.hpp"
-#include "board/pm.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
 #include "syscall.hpp"
@@ -80,7 +79,8 @@ void sync_handler(TrapFrame* frame, int type) {
       break;
 
     default:
-      kprintf_sync("unknown ESR_ELx_EC %06b / %d %d\n", ec, type, el);
+      kprintf_sync("unknown ESR_ELx_EC %06b\n type %d el %d @ 0x%lx\n", ec,
+                   type, el, read_sysreg(ELR_EL1));
       segv_handler(el, "unknown");
       prog_hang();
   }
@@ -90,8 +90,7 @@ void segv_handler(int el, const char* reason) {
   if (el != 0) {
     panic("%s", reason);
   } else {
-    klog("thread %d: %s @ 0x%lx\n", current_thread()->tid, reason,
-         read_sysreg(ELR_EL1));
+    klog("thread %d: %s\n", current_thread()->tid, reason);
     kthread_exit(-1);
   }
 }

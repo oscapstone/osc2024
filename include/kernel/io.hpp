@@ -28,9 +28,8 @@ int kgetline_echo(char* buffer, int size);
 unsigned kread(char buf[], unsigned size);
 unsigned kwrite(const char buf[], unsigned size);
 
-#define panic(reason, ...)                                                \
-  do {                                                                    \
-    klog("kernel panic: " reason " @ 0x%lx\n" __VA_OPT__(, ) __VA_ARGS__, \
-         read_sysreg(ELR_EL1));                                           \
-    reboot();                                                             \
+#define panic(reason, ...)                                         \
+  do {                                                             \
+    klog("kernel panic: " reason "\n" __VA_OPT__(, ) __VA_ARGS__); \
+    reboot();                                                      \
   } while (0)
