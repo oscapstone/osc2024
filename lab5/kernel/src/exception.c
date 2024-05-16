@@ -70,8 +70,6 @@ void sync_handler_entry()
 
 void el0_svc_handler_entry(struct ucontext *trapframe)
 {
-    enable_interrupt(); // to enable nested interrupts in system call, because the interrupt may be closed when go into synchronous handler?
-
     int get_syscall_no = trapframe->x[8];
     switch (get_syscall_no)
     {
@@ -112,8 +110,6 @@ void el0_svc_handler_entry(struct ucontext *trapframe)
     default:
         break;
     }
-
-    disable_interrupt();
 }
 
 void irq_handler_entry()
@@ -210,6 +206,8 @@ void sys_getpid(struct ucontext *trapframe)
 
 void sys_uartread(struct ucontext *trapframe)
 {
+    enable_interrupt(); // to enable nested interrupts in system call, because the interrupt may be closed when go into synchronous handler?
+
     char *buf = (char *)trapframe->x[0];
     int size = trapframe->x[1];
 
@@ -218,6 +216,8 @@ void sys_uartread(struct ucontext *trapframe)
 
     buf[size] = '\0';
     trapframe->x[0] = size;
+
+    disable_interrupt();
 }
 
 void sys_uartwrite(struct ucontext *trapframe)
@@ -243,6 +243,8 @@ void sys_fork(struct ucontext *trapframe)
 {
     task_struct *parent = get_current_task();
     task_struct *child = task_create(0, 0);
+    disable_interrupt();
+
     child->priority++;
 
     int kstack_offset = parent->kstack - (void *)trapframe;
@@ -295,11 +297,7 @@ void sys_kill(struct ucontext *trapframe)
     int pid = (int)trapframe->x[0];
     for (task_struct *cur = run_queue.head[0]; cur != NULL; cur = cur->next) // find the task
         if (cur->id == pid)
-        {
-            disable_interrupt();
             cur->state = EXIT;
-            enable_interrupt();
-        }
 }
 
 void sys_signal(struct ucontext *trapframe)
@@ -309,10 +307,8 @@ void sys_signal(struct ucontext *trapframe)
 
     task_struct *cur = get_current_task();
 
-    disable_interrupt();
     cur->is_default_signal_handler[SIGNAL] = 0;
     cur->signal_handler[SIGNAL] = handler;
-    enable_interrupt();
 }
 
 void sys_signal_kill(struct ucontext *trapframe)
@@ -321,11 +317,7 @@ void sys_signal_kill(struct ucontext *trapframe)
     int SIGNAL = (int)trapframe->x[1];
     for (task_struct *cur = run_queue.head[0]; cur != NULL; cur = cur->next) // find the task
         if (cur->id == pid)
-        {
-            disable_interrupt();
             cur->received_signal = SIGNAL;
-            enable_interrupt();
-        }
 }
 
 void sys_sigreturn(struct ucontext *trapframe)
@@ -335,6 +327,6 @@ void sys_sigreturn(struct ucontext *trapframe)
     for (int i = 0; i < 34; i++)
         *((unsigned long long *)trapframe + i) = *((unsigned long long *)cur->signal_stack - i);
 
-    kfree(cur->signal_stack);
+    kfree((char *)cur->signal_stack - 4096 * 2);
     cur->signal_stack = NULL;
 }

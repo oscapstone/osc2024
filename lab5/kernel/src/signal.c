@@ -1,6 +1,7 @@
 #include "uart.h"
 #include "schedule.h"
 #include "allocator.h"
+#include "exception.h"
 #include "signal.h"
 
 void default_SIGKILL_handler()
@@ -11,7 +12,10 @@ void default_SIGKILL_handler()
 void do_signal(struct ucontext *sigframe, void (*signal_handler)(void))
 {
     task_struct *cur = get_current_task();
-    cur->signal_stack = kmalloc(2 * 4096); // malloc a stack's space to deal with signal
+
+    disable_interrupt();
+    cur->signal_stack = (void *)((char *)kmalloc(4096 * 2) + 4096 * 2); // malloc a stack's space to deal with signal
+    enable_interrupt();
 
     unsigned long long *sp_ptr = cur->signal_stack;
 

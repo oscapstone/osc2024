@@ -51,6 +51,8 @@ void run_queue_remove(task_struct *remove_task, int priority)
 
 task_struct *task_create(void (*start_routine)(void), int priority)
 {
+    disable_interrupt();
+
     // create new task and initialize it.
     task_struct *new_task = kmalloc(sizeof(task_struct));
     new_task->id = task_id++;
@@ -75,8 +77,8 @@ task_struct *task_create(void (*start_routine)(void), int priority)
     new_task->prev = NULL;
     new_task->next = NULL;
 
-    disable_interrupt();
     run_queue_push(new_task, priority);
+
     enable_interrupt();
 
     return new_task;
@@ -85,10 +87,7 @@ task_struct *task_create(void (*start_routine)(void), int priority)
 void task_exit()
 {
     task_struct *cur_task = get_current_task();
-
-    disable_interrupt();
     cur_task->state = EXIT; // set the task state to EXIT
-    enable_interrupt();
 
     schedule(); // yield the CPU
 }
@@ -104,41 +103,40 @@ void zombie_reaper()
 
 void kill_zombies()
 {
-    disable_interrupt();
     for (int i = 0; i < 10; i++)
     {
         task_struct *cur = run_queue.head[i];
-        while (cur != NULL && cur->state == EXIT)
+        while (cur != NULL)
         {
-            task_struct *del = cur;
-            cur = cur->next;
+            if (cur->state == EXIT)
+            {
+                task_struct *del = cur;
+                cur = cur->next;
 
-            run_queue_remove(del, i); // remove zombie task
+                disable_interrupt();
 
-            kfree(del->kstack); // free the space
-            kfree(del->ustack);
-            kfree(del);
+                run_queue_remove(del, i); // remove zombie task
+
+                kfree((char *)del->kstack - 4096 * 2); // free the space
+                kfree((char *)del->ustack - 4096 * 2);
+                kfree(del);
+
+                enable_interrupt();
+            }
+            else
+                cur = cur->next;
         }
     }
-    enable_interrupt();
 }
 
 void schedule()
 {
-    /*uart_puts("cur task id: ");
-    uart_dec(get_current_task()->id);
-    uart_puts("\n");*/
-
     task_struct *cur = get_current_task()->next;
     while (cur != NULL && cur->state == IDLE)
         cur = cur->next;
 
     if (cur == NULL)
         cur = run_queue.head[0];
-
-    /*uart_puts("next task id: ");
-    uart_dec(cur->id);
-    uart_puts("\n");*/
 
     context_switch(cur);
 }
@@ -148,7 +146,9 @@ void context_switch(struct task_struct *next)
     struct task_struct *prev = get_current_task();
     if (prev != next)
     {
+        disable_interrupt();
         switch_to(prev, next);
+        enable_interrupt();
     }
 }
 
@@ -157,22 +157,19 @@ void check_need_schedule()
     struct task_struct *cur = get_current_task();
     if (cur->need_sched == 1) // if the need_sched flag of thecurrent task is set, then call schedle()
     {
-        disable_interrupt();
         cur->need_sched = 0;
-        enable_interrupt();
-
         schedule();
     }
 }
 
-void check_signal(struct ucontext *sigframe)
+void check_signal(struct ucontext *sigframe) // the sigframe is the user context
 {
     struct task_struct *cur = get_current_task();
     int SIGNAL = cur->received_signal;
 
     if (SIGNAL != NOSIG)
     {
-        if (cur->is_default_signal_handler[SIGNAL] == 1)
+        if (cur->is_default_signal_handler[SIGNAL] == 1) // the signal handler is default, and run in kernel mode.
         {
             cur->received_signal = NOSIG;
             cur->signal_handler[SIGNAL]();
@@ -180,7 +177,7 @@ void check_signal(struct ucontext *sigframe)
         else
         {
             cur->received_signal = NOSIG;
-            do_signal(sigframe, cur->signal_handler[SIGNAL]);
+            do_signal(sigframe, cur->signal_handler[SIGNAL]); // the signal handler is user-defined, so run in user mode.
         }
     }
 }
@@ -193,14 +190,18 @@ void do_exec(const char *name, char *const argv[])
         {
             char *content = file_arr[i].file_content;
             int size = given_size_hex_atoi(file_arr[i].file_header->c_filesize, 8);
-            char *target = kmalloc(size);
-            char *copy = target;
 
+            disable_interrupt();
+            char *target = kmalloc(size);
+            enable_interrupt();
+
+            char *copy = target;
             while (size--) // move the file content to memory
                 *copy++ = *content++;
 
             task_struct *cur = get_current_task();
             cur->priority = 1;
+
             // set sp_el0 to user stack, sp_el1 to kernels stack, elr_el1 to the file content
             asm volatile(
                 "msr sp_el0, %0\n"
