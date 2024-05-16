@@ -10,6 +10,8 @@ use core::fmt::Display;
 
 use super::INITRAMFS;
 
+const CONTEXT_SWITCHING_DELAY: u64 = 1000/32;
+
 pub struct command {
     name: &'static str,
     description: &'static str,
@@ -23,9 +25,9 @@ impl Display for command {
 }
 
 fn set_next_timer() {
-    // println!("Context switching...");
+    // println!("Timer context switching");
     thread::context_switching();
-    timer::add_timer_ms(1000, Box::new(|| set_next_timer()));
+    timer::add_timer_ms(CONTEXT_SWITCHING_DELAY, Box::new(|| set_next_timer()));
 }
 
 impl command {
@@ -82,7 +84,6 @@ pub fn cat(args: Vec<String>) {
 
 pub fn exec(args: Vec<String>) {
     let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
-    let mut first_pid = None;
 
     for filename in args.iter().skip(1) {
         let filesize = match initramfs.get_filesize_by_name(filename.as_str()) {
@@ -114,14 +115,11 @@ pub fn exec(args: Vec<String>) {
         }
         
         let pid = thread::create_thread(program_ptr, filesize, program_stack_ptr, stack_size);
-        if first_pid.is_none() {
-            first_pid = Some(pid);
-        }
         println!("PID: {}", pid);
         println!("PC: {:X?}", program_ptr);
     }
-    timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
-    thread::run_thread(first_pid.unwrap());
+    timer::add_timer_ms(CONTEXT_SWITCHING_DELAY, Box::new(|| set_next_timer()));
+    thread::run_thread(None);
 
     panic!("Should not reach here");
 }
