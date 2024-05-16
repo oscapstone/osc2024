@@ -1,10 +1,10 @@
 use crate::os::stdio::{print_hex_now, println_now};
 
-use super::exception_handler::trap_frame;
-use alloc::collections::BTreeSet;
-use core::arch::asm;
+use super::{exception_handler::trap_frame, shell::INITRAMFS};
+use alloc::{alloc::dealloc, string::String, vec::Vec};
+use core::{alloc::Layout, arch::asm};
 
-static mut THREADS: Option<BTreeSet<Thread>> = None;
+static mut THREADS: Option<Vec<Thread>> = None;
 pub static mut TRAP_FRAME_PTR: Option<*mut u64> = None;
 
 #[derive(Clone)]
@@ -43,6 +43,7 @@ struct ThreadContext {
     x31: usize,
     pc: usize,
     sp: usize,
+    spsr: usize,
 }
 
 impl Default for ThreadContext {
@@ -82,6 +83,7 @@ impl Default for ThreadContext {
             x31: 0,
             pc: 0,
             sp: 0,
+            spsr: 0,
         }
     }
 }
@@ -116,29 +118,9 @@ impl Default for Thread {
     }
 }
 
-impl Ord for Thread {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        self.id.cmp(&other.id)
-    }
-}
-
-impl PartialOrd for Thread {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for Thread {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl Eq for Thread {}
-
 pub fn init() {
     unsafe {
-        THREADS = Some(BTreeSet::new());
+        THREADS = Some(Vec::new());
     }
 }
 
@@ -148,59 +130,54 @@ pub fn create_thread(
     stack: *mut u8,
     stack_size: usize,
 ) -> usize {
-    unsafe {
-        let threads = THREADS.as_mut().unwrap();
-        let id = threads.len();
-        threads.insert(Thread {
-            id,
-            program,
-            program_size,
-            stack,
-            stack_size,
-            state: ThreadState::Waiting(ThreadContext {
-                pc: program as usize,
-                sp: stack as usize + stack_size,
-                ..Default::default()
-            }),
-        });
-        println!("Stack SP: {:X?}", stack as usize + stack_size);
-        println!("Thread created: {}", id);
-        id
-    }
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+    let id = threads.len();
+    threads.push(Thread {
+        id,
+        program,
+        program_size,
+        stack,
+        stack_size,
+        state: ThreadState::Waiting(ThreadContext {
+            pc: program as usize,
+            sp: stack as usize + stack_size,
+            ..Default::default()
+        }),
+    });
+    println!("Stack SP: {:X?}", stack as usize + stack_size);
+    println!("Thread created: {}", id);
+    id
 }
 
-pub fn run_thread(id: usize) {
+pub fn run_thread(id: Option<usize>) {
     unsafe {
         let threads = THREADS.as_mut().unwrap();
-        let mut target_thread = match threads.get(&Thread {
-            id,
-            ..Default::default()
-        }) {
-            Some(thread) => thread.clone(),
+
+        let mut target_thread = match id {
+            Some(id) => {
+                threads
+                    .iter_mut()
+                    .find(|thread| thread.id == id)
+                    .expect("Thread not found")
+            }
             None => {
-                println!("Thread not found");
-                return;
+                threads
+                    .iter_mut()
+                    .find(|thread| match &thread.state {
+                        ThreadState::Waiting(_) => true,
+                        _ => false,
+                    })
+                    .expect("No running thread")
             }
         };
 
-        target_thread.state = match target_thread.state {
-            ThreadState::Waiting(context) => ThreadState::Running(context),
+        target_thread.state = match &target_thread.state {
+            ThreadState::Waiting(context) => ThreadState::Running(context.clone()),
             _ => {
                 println!("Thread is not in waiting state");
                 return;
             }
         };
-
-        threads.remove(&Thread {
-            id,
-            ..Default::default()
-        });
-        threads.insert(target_thread.clone());
-
-        // uint64_t tmp;
-        // asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
-        // tmp |= 1;
-        // asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
 
         if let ThreadState::Running(context) = &target_thread.state {
             asm!(
@@ -211,13 +188,14 @@ pub fn run_thread(id: usize) {
             );
 
             asm!(
-                "mov x0, 0",
-                "msr spsr_el1, xzr",
+                "mov x0, {spsr}",
+                "msr spsr_el1, x0",
                 "mov x0, {pc}",
                 "msr elr_el1, x0",
                 "mov x0, {sp}",
                 "msr sp_el0, x0",
                 "eret",
+                spsr = in(reg) context.spsr,
                 pc = in(reg) context.pc,
                 sp = in(reg) context.sp,
                 options(noreturn),
@@ -227,44 +205,37 @@ pub fn run_thread(id: usize) {
 }
 
 pub fn get_id_by_pc(pc: usize) -> Option<usize> {
-    unsafe {
-        let threads = THREADS.as_ref().unwrap();
-        for thread in threads.iter() {
+    let threads = unsafe { THREADS.as_ref().unwrap() };
+
+    threads
+        .iter()
+        .find(|thread| {
             if let ThreadState::Running(context) = &thread.state {
-                if (thread.program as usize) <= pc
+                (thread.program as usize) <= pc
                     && pc < (thread.program as usize + thread.program_size)
-                {
-                    return Some(thread.id);
-                }
+            } else {
+                false
             }
-        }
-        None
-    }
+        })
+        .map(|thread| thread.id)
 }
 
-fn save_context(trap_frame_ptr: *mut u64) -> bool {
+pub fn save_context(trap_frame_ptr: *mut u64) -> bool {
     unsafe {
         let threads = THREADS.as_mut().unwrap();
-        let mut current_thread = None;
-
-        for thread in threads.iter() {
-            if let ThreadState::Running(context) = &thread.state {
-                current_thread = Some(thread.clone());
-                let current_pc = trap_frame::get(trap_frame_ptr, trap_frame::Register::PC) as usize;
-                if !((current_thread.as_ref().unwrap()).program as usize <= current_pc
-                    && current_pc
-                        < current_thread.as_ref().unwrap().program as usize
-                            + current_thread.as_ref().unwrap().program_size)
-                {
-                    current_thread = None;
+        let mut current_thread = threads
+            .iter_mut()
+            .find(|thread| {
+                if let ThreadState::Running(_) = &thread.state {
+                    true
+                } else {
+                    false
                 }
-            }
-        }
+            })
+            .expect("SAVE_CONTEXT: No running thread");
 
-        if current_thread.is_some() {
-            threads.remove(current_thread.as_ref().unwrap());
-
-            if let ThreadState::Running(ref mut context) = current_thread.as_mut().unwrap().state {
+        current_thread.state =
+            if let ThreadState::Running(mut context) = current_thread.state.clone() {
                 context.x0 = trap_frame::get(trap_frame_ptr, trap_frame::Register::X0) as usize;
                 context.x1 = trap_frame::get(trap_frame_ptr, trap_frame::Register::X1) as usize;
                 context.x2 = trap_frame::get(trap_frame_ptr, trap_frame::Register::X2) as usize;
@@ -299,16 +270,18 @@ fn save_context(trap_frame_ptr: *mut u64) -> bool {
                 context.x31 = trap_frame::get(trap_frame_ptr, trap_frame::Register::X31) as usize;
                 context.pc = trap_frame::get(trap_frame_ptr, trap_frame::Register::PC) as usize;
                 context.sp = trap_frame::get(trap_frame_ptr, trap_frame::Register::SP) as usize;
-            }
-            threads.insert(current_thread.unwrap());
-            true
-        } else {
-            false
-        }
+                context.spsr = trap_frame::get(trap_frame_ptr, trap_frame::Register::SPSR) as usize;
+
+                ThreadState::Running(context)
+            } else {
+                ThreadState::Dead
+            };
+
+        true
     }
 }
 
-fn restore_context(trap_frame_ptr: *mut u64) {
+pub fn restore_context(trap_frame_ptr: *mut u64) {
     let threads = unsafe { THREADS.as_mut().unwrap() };
     let mut current_thread = threads.iter().next().unwrap().clone();
 
@@ -443,102 +416,267 @@ fn restore_context(trap_frame_ptr: *mut u64) {
             );
             trap_frame::set(trap_frame_ptr, trap_frame::Register::PC, context.pc as u64);
             trap_frame::set(trap_frame_ptr, trap_frame::Register::SP, context.sp as u64);
+            trap_frame::set(
+                trap_frame_ptr,
+                trap_frame::Register::SPSR,
+                context.spsr as u64,
+            );
         }
     }
 }
 
 #[no_mangle]
 pub fn context_switching() {
-    unsafe {
-        let threads = THREADS.as_mut().unwrap();
-        let trap_frame_ptr = TRAP_FRAME_PTR.unwrap();
+    // println!("Context switching");
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+    let trap_frame_ptr = unsafe { TRAP_FRAME_PTR.unwrap() };
 
-        if !save_context(trap_frame_ptr) {
-            return;
-        }
+    if !save_context(trap_frame_ptr) {
+        println_now("CONTEXT_SWITCHING: Failed to save context");
+        return;
+    }
 
-        let mut current_thread_iter = threads.iter();
-        let mut next_thread;
+    let mut current_thread_iter = threads.iter_mut();
+    let mut current_thread;
+    let mut next_thread;
 
-        loop {
-            let mut current_thread = match current_thread_iter.next() {
-                Some(thread) => thread.clone(),
-                None => {
-                    next_thread = threads.iter().next().unwrap().clone();
-                    break;
-                }
-            };
-
-            if let ThreadState::Running(_) = current_thread.state {
-                // println!("Current thread: {}", current_thread.id);
-                // println!(
-                //     "Current thread state: {:?}",
-                //     match current_thread.state {
-                //         ThreadState::Running(_) => "Running",
-                //         ThreadState::Waiting(_) => "Waiting",
-                //         ThreadState::Dead => "Dead",
-                //     }
-                // );
-                // println!(
-                //     "Current thread PC: {:X?}",
-                //     match &current_thread.state {
-                //         ThreadState::Running(context) => context.pc,
-                //         ThreadState::Waiting(context) => context.pc,
-                //         ThreadState::Dead => 0,
-                //     }
-                // );
-                next_thread = match current_thread_iter.next() {
-                    Some(thread) => thread.clone(),
-                    None => threads.iter().next().unwrap().clone(),
-                };
-                assert!(threads.remove(&current_thread));
-                current_thread.state = match current_thread.state {
-                    ThreadState::Running(context) => ThreadState::Waiting(context),
-                    _ => ThreadState::Dead,
-                };
-                assert!(threads.insert(current_thread));
+    loop {
+        current_thread = match current_thread_iter.next() {
+            Some(thread) => thread,
+            None => {
                 break;
             }
+        };
+
+        if let ThreadState::Running(context) = &current_thread.state {
+            current_thread.state = ThreadState::Waiting(context.clone());
+            break;
+        }
+    }
+
+    next_thread = current_thread_iter.find(|thread| match &thread.state {
+        ThreadState::Waiting(_) => true,
+        _ => false,
+    });
+
+
+    if next_thread.is_none() {
+        next_thread = threads.iter_mut().find(|thread| match &thread.state {
+            ThreadState::Waiting(_) => true,
+            _ => false,
+        });
+        assert!(next_thread.is_some(), "No thread to switch");
+    }
+
+    // println!("Next thread: {}", next_thread.id);
+    // println!(
+    //     "Next thread state: {:?}",
+    //     match next_thread.state {
+    //         ThreadState::Running(_) => "Running",
+    //         ThreadState::Waiting(_) => "Waiting",
+    //         ThreadState::Dead => "Dead",
+    //     }
+    // );
+    // println!(
+    //     "Next thread PC: {:X?}",
+    //     match &next_thread.state {
+    //         ThreadState::Running(context) => context.pc,
+    //         ThreadState::Waiting(context) => context.pc,
+    //         ThreadState::Dead => 0,
+    //     }
+    // );
+
+    let mut next_thread = next_thread.unwrap();
+
+    next_thread.state = match next_thread.state.clone() {
+        ThreadState::Waiting(context) => ThreadState::Running(context),
+        ThreadState::Running(context) => ThreadState::Running(context),
+        _ => ThreadState::Dead,
+    };
+
+    assert!(matches!(next_thread.state, ThreadState::Running(_)));
+
+    let next_thread_id = next_thread.id;
+
+    restore_context(trap_frame_ptr);
+
+    // println!("Context switched: {}", next_thread_id);
+    // println!(
+    //     "{:X?}",
+    //     trap_frame::get(trap_frame_ptr, trap_frame::Register::PC)
+    // );
+    // println!(
+    //     "{:X?}",
+    //     trap_frame::get(trap_frame_ptr, trap_frame::Register::SP)
+    // );
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn fork() -> Option<usize> {
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+    let mut current_thread = threads.iter().find(|thread| match &thread.state {
+        ThreadState::Running(_) => true,
+        _ => false,
+    });
+
+    if current_thread.is_some() {
+        let current_thread = current_thread.unwrap();
+        let current_thread_context = match &current_thread.state {
+            ThreadState::Running(context) => context,
+            _ => {
+                println_now("FORK: Current thread is not running");
+                return None;
+            }
+        };
+
+        let new_pid = threads.len();
+        let program_ptr = unsafe {
+            alloc::alloc::alloc(Layout::from_size_align(current_thread.program_size, 32).unwrap())
+        };
+        let stack_ptr = unsafe {
+            alloc::alloc::alloc(Layout::from_size_align(current_thread.stack_size, 32).unwrap())
+        };
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                current_thread.program,
+                program_ptr,
+                current_thread.program_size,
+            );
+            core::ptr::copy_nonoverlapping(
+                current_thread.stack,
+                stack_ptr,
+                current_thread.stack_size,
+            );
         }
 
-        // println!("Next thread: {}", next_thread.id);
-        // println!(
-        //     "Next thread state: {:?}",
-        //     match next_thread.state {
-        //         ThreadState::Running(_) => "Running",
-        //         ThreadState::Waiting(_) => "Waiting",
-        //         ThreadState::Dead => "Dead",
-        //     }
-        // );
-        // println!(
-        //     "Next thread PC: {:X?}",
-        //     match &next_thread.state {
-        //         ThreadState::Running(context) => context.pc,
-        //         ThreadState::Waiting(context) => context.pc,
-        //         ThreadState::Dead => 0,
-        //     }
-        // );
+        let pc = current_thread_context.pc - current_thread.program as usize + program_ptr as usize;
+        let sp = current_thread_context.sp - current_thread.stack as usize + stack_ptr as usize;
 
-        assert!(threads.remove(&next_thread));
-        next_thread.state = match next_thread.state {
-            ThreadState::Waiting(context) => ThreadState::Running(context),
-            ThreadState::Running(context) => ThreadState::Running(context),
-            _ => ThreadState::Dead,
+        let new_thread = Thread {
+            id: new_pid,
+            program: program_ptr,
+            program_size: current_thread.program_size,
+            stack: stack_ptr,
+            stack_size: current_thread.stack_size,
+            state: ThreadState::Waiting(ThreadContext {
+                pc,
+                sp,
+                x0: 0,
+                ..*current_thread_context
+            }),
         };
-        assert!(threads.insert(next_thread));
+        // print_hex_now(program_ptr as u32);
+        // print_hex_now(pc as u32);
+        // print_hex_now(stack_ptr as u32);
+        // print_hex_now(sp as u32);
 
-        restore_context(trap_frame_ptr);
-
-        // asm!("msr spsr_el1, xzr");
-
-        // println!("Context switched");
-        // println!(
-        //     "{:X?}",
-        //     trap_frame::get(trap_frame_ptr, trap_frame::Register::PC)
-        // );
-        // println!(
-        //     "{:X?}",
-        //     trap_frame::get(trap_frame_ptr, trap_frame::Register::SP)
-        // );
+        threads.push(new_thread);
+        Some(new_pid)
+    } else {
+        println_now("No running thread to fork");
+        None
     }
+}
+
+pub fn exec(program_name: String, program_args: Vec<String>) {
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+    let mut current_thread = threads.iter_mut().find(|thread| match &thread.state {
+        ThreadState::Running(_) => true,
+        _ => false,
+    });
+
+    if current_thread.is_none() {
+        panic!("No running thread to exec");
+    }
+
+    let current_thread = current_thread.unwrap();
+    let stack_size = 4096;
+
+    unsafe {
+        let filesize = match crate::os::shell::INITRAMFS
+            .as_ref()
+            .unwrap()
+            .get_filesize_by_name(program_name.as_str())
+        {
+            Some(size) => size as usize,
+            None => {
+                println_now("File not found");
+                return;
+            }
+        };
+
+        alloc::alloc::dealloc(
+            current_thread.program,
+            Layout::from_size_align(current_thread.program_size, 32).expect("Layout error"),
+        );
+        alloc::alloc::dealloc(
+            current_thread.stack,
+            Layout::from_size_align(current_thread.stack_size, 32).expect("Layout error"),
+        );
+
+        current_thread.program =
+            alloc::alloc::alloc(Layout::from_size_align(filesize, 32).expect("Layout error"));
+        current_thread.stack =
+            alloc::alloc::alloc(Layout::from_size_align(4096, 32).expect("Layout error"));
+
+        core::ptr::write_bytes(current_thread.program, 0, current_thread.program_size);
+
+        INITRAMFS
+            .as_ref()
+            .unwrap()
+            .load_file_to_memory(program_name.as_str(), current_thread.program);
+
+        current_thread.program_size = filesize;
+        current_thread.stack_size = stack_size;
+    }
+
+    current_thread.state = ThreadState::Running(ThreadContext {
+        pc: current_thread.program as usize,
+        sp: current_thread.stack as usize + stack_size,
+        ..ThreadContext::default()
+    });
+}
+
+pub fn kill(id: usize) {
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+
+    let mut target_thread = threads
+        .iter_mut()
+        .find(|thread| thread.id == id)
+        .expect("Thread not found");
+
+    target_thread.state = ThreadState::Dead;
+}
+
+pub fn switch_to_thread(id: Option<usize>, trap_frame_ptr: *mut u64) {
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+
+    let mut target_thread = match id {
+        Some(id) => {
+            threads
+                .iter_mut()
+                .find(|thread| thread.id == id)
+                .expect("Thread not found")
+        }
+        None => {
+            threads
+                .iter_mut()
+                .find(|thread| match &thread.state {
+                    ThreadState::Waiting(_) => true,
+                    _ => false,
+                })
+                .expect("No running thread")
+        }
+    };
+
+    target_thread.state = match &target_thread.state {
+        ThreadState::Waiting(context) => ThreadState::Running(context.clone()),
+        ThreadState::Running(context) => ThreadState::Running(context.clone()),
+        _ => ThreadState::Dead,
+    };
+
+    assert!(matches!(target_thread.state, ThreadState::Running(_)));
+
+    restore_context(trap_frame_ptr);
 }

@@ -35,6 +35,7 @@ pub enum Register {
     X31 = 31,
     PC = 32,
     SP = 33,
+    SPSR = 34,
 }
 
 pub unsafe fn get(trap_frame_ptr: *mut u64, reg: Register) -> u64 {

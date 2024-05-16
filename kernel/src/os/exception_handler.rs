@@ -1,6 +1,10 @@
+use alloc::{
+    string::String,
+    vec::Vec,
+};
+
 use crate::os::{
-    stdio::{self, println},
-    thread,
+    file_system::cpio, stdio::{self, println}, thread::{self, context_switching, get_id_by_pc, restore_context}
 };
 
 use super::{
@@ -51,26 +55,40 @@ unsafe extern "C" fn svc_handler_rust(trap_frame_ptr: *mut u64) {
         // println!("System call number: {}", system_call_num);
         match system_call_num {
             0 => {
+                // Get PID
                 let pid = thread::get_id_by_pc(elr_el1 as usize).unwrap();
-                // println!("SVC-PID: {}", pid);
+
                 trap_frame::set(trap_frame_ptr, trap_frame::Register::X0, pid as u64);
             }
             1 => {
+                // Read from UART
                 let buf = trap_frame::get(trap_frame_ptr, trap_frame::Register::X0) as *mut u8;
                 let size = trap_frame::get(trap_frame_ptr, trap_frame::Register::X1) as usize;
 
                 let mut idx = 0;
                 while idx < size {
                     match uart::recv_async() {
-                        Some(byte) => write_volatile(buf.add(idx), byte),
-                        None => break,
+                        Some(byte) => {
+                            write_volatile(buf.add(idx), byte);
+                            idx += 1;
+                        }
+                        None => {
+                            if idx == 0 {
+                                let pc = trap_frame::get(trap_frame_ptr, trap_frame::Register::PC);
+                                trap_frame::set(trap_frame_ptr, trap_frame::Register::PC, pc - 4);
+                                thread::context_switching();
+                            }
+                            break;
+                        },
                     }
-                    idx += 1;
+                    // write_volatile(buf.add(idx), uart::recv());
+                    // idx += 1;
                 }
 
                 trap_frame::set(trap_frame_ptr, trap_frame::Register::X0, idx as u64);
             }
             2 => {
+                // Write to UART
                 let buf = trap_frame::get(trap_frame_ptr, trap_frame::Register::X0) as *const u8;
                 let size = trap_frame::get(trap_frame_ptr, trap_frame::Register::X1) as usize;
 
@@ -80,8 +98,73 @@ unsafe extern "C" fn svc_handler_rust(trap_frame_ptr: *mut u64) {
 
                 trap_frame::set(trap_frame_ptr, trap_frame::Register::X0, size as u64);
             }
-            _ => (),
+            3 => {
+                // exec
+                let mut program_name_ptr = trap_frame::get(trap_frame_ptr, trap_frame::Register::X0) as *mut u8;
+                let program_args_ptr = trap_frame::get(trap_frame_ptr, trap_frame::Register::X1) as *mut u8;
+
+                let mut program_name = String::new();
+                loop {
+                    let byte = read_volatile(program_name_ptr);
+                    if byte == 0 {
+                        break;
+                    }
+                    program_name.push(byte as char);
+                    program_name_ptr = program_name_ptr.add(1);
+                }
+
+                thread::exec(program_name, Vec::new());
+                restore_context(trap_frame_ptr);
+            }
+            4 => {
+                // fork
+                thread::save_context(trap_frame_ptr);
+                match thread::fork() {
+                    Some(pid) => trap_frame::set(trap_frame_ptr, trap_frame::Register::X0, pid as u64),
+                    None => panic!("Fork failed"),
+                }
+                println_now("Forked");
+            }
+            5 => {
+                // exit
+                let pc = trap_frame::get(trap_frame_ptr, trap_frame::Register::PC) as usize;
+                let pid = get_id_by_pc(pc).expect("Failed to get PID");
+                thread::kill(pid);
+                thread::switch_to_thread(None, trap_frame_ptr);
+            }
+            6 => {
+                // mail box
+                let channel = trap_frame::get(trap_frame_ptr, trap_frame::Register::X0) as u8;
+                let mbox_ptr = trap_frame::get(trap_frame_ptr, trap_frame::Register::X1) as *mut u32;
+
+                crate::cpu::mailbox::mailbox_call(channel, mbox_ptr);
+                
+                trap_frame::set(trap_frame_ptr, trap_frame::Register::X0, 1);
+            }
+            7 => {
+                // kill
+                let pc = trap_frame::get(trap_frame_ptr, trap_frame::Register::PC) as usize;
+                let my_pid = get_id_by_pc(pc).expect("Failed to get PID");
+                let pid = trap_frame::get(trap_frame_ptr, trap_frame::Register::X0) as usize;
+                if my_pid != pid {
+                    thread::kill(pid);
+                } else {
+                    println!("Cannot kill itself");
+                }
+                // thread::switch_to_thread(None, trap_frame_ptr);
+            }
+            _ => {
+                println_now("Unknown system call number: ");
+                print_hex_now(system_call_num as u32);
+                loop{}
+                panic!("Unknown system call number: {}", system_call_num);
+            },
         }
+    } else {
+        println!("Unknown exception: {:08x}", esr_el1);
+        println!("ELR_EL1: {:08x}", elr_el1);
+        println!("SP_EL0: {:08x}", sp_el0);
+        loop {}
     }
 
     thread::TRAP_FRAME_PTR = None;
