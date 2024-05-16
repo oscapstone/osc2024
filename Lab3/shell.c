@@ -433,7 +433,12 @@ void timer_handler() {
         asm volatile("msr DAIFClr, 0xf");
         //uart_puts("resetted another timer\n");
     }
-    while(1){}
+    while(1){
+        // for(int i=0;i<1000000000;i++){
+        //     asm volatile("nop");
+        // }
+        // uart_puts("Still here!\n\r");
+    }
     //asm volatile("msr DAIFClr, 0xf");
 }
 

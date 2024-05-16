@@ -14,3 +14,4 @@ typedef struct {
 void create_task(task_func_t callback, unsigned int priority);
 void execute_task();
 void show_buffer();
+void init_task_queue();

@@ -75,7 +75,7 @@ int create_thread(void * function, int priority){
     //add 4096(PAGE_SIZE) because stack grows up
     t -> sp_el1 = ((unsigned long)allocate_page(4096)) + 4096; //kernel stack for sp, trapframe
     t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096; //user stack for user program
-    t -> regs.lr = thread_execute; // ret jumps to lr
+    t -> regs.lr = thread_execute; // ret jumps to lr -> switch to will load lr and call ret
     t -> regs.sp = t -> sp_el1;
     update_min_priority();
     thread_pool[pid] = t; 
@@ -86,7 +86,7 @@ int get_pid(){
     return get_current() -> pid;//no runnning thread
 }
 
-void print_pid(){
+void print_pid(){//debug
     uart_int(get_current()->pid);
     newline();
 }
