@@ -42,6 +42,19 @@ pub fn write(buf: *const u8, size: usize) -> usize {
 }
 
 #[allow(dead_code)]
+pub fn fork() -> u64 {
+    let pid: u64;
+    unsafe {
+        asm!(
+            "svc 0",
+            out("x0") pid,
+            in("x8") 4,
+        );
+    }
+    pid
+}
+
+#[allow(dead_code)]
 pub fn exit(status: u64) {
     unsafe {
         asm!(

@@ -104,9 +104,19 @@ unsafe fn syscall_handler(sp: u64) {
             let written = crate::syscall::write(buf, size);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = written as u64;
         }
+        4 => {
+            // println!("Syscall fork");
+            let pid = crate::syscall::fork();
+            trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
+        }
         5 => {
             // println!("Syscall exit");
             crate::syscall::exit(syscall.arg0);
+        }
+        6 => {
+            // println!("Syscall mbox_call");
+            let buf = syscall.arg0 as *mut u8;
+            let size = syscall.arg1 as usize;
         }
         _ => {
             println!("Unknown syscall: 0x{:x}", syscall.idx);

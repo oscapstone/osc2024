@@ -6,7 +6,7 @@ use core::ptr::write_volatile;
 pub struct State {
     pub x: [u64; 31],
     pub pc: u64,
-    sp: u64,
+    pub sp: u64,
     spsr: u64,
 }
 

@@ -25,35 +25,20 @@ impl Scheduler {
     }
 
     fn add(&mut self, thread: Box<Thread>) {
-        let pos = self.threads.iter().position(|t| t.is_none());
-        match pos {
-            Some(index) => {
-                self.threads[index] = Some(thread);
-                self.ready_queue.push_back(index);
-            }
-            None => {
-                self.threads.push(Some(thread));
-                self.ready_queue.push_back(self.threads.len() - 1);
-            }
+        self.threads.push(Some(thread));
+        self.ready_queue.push_back(self.threads.len() - 1);
+    }
+
+    fn save_current(&mut self) {
+        let current = self.current.unwrap();
+        unsafe {
+            self.threads[current].as_mut().unwrap().cpu_state = TRAP_FRAME.as_ref().unwrap().state;
         }
     }
 
-    pub fn exit(&mut self, status: u64) {
-        let current = self.current.unwrap();
-        self.threads[current].as_mut().unwrap().state = state::State::Zombie;
-        self.zombie_queue.push_back(current);
-        println!("Thread {} exited with status {}", current, status);
-        self.current = None;
-        self.sched_timer();
-        if self.ready_queue.is_empty() {
-            panic!("All threads exited");
-        }
-        if let Some(next) = self.ready_queue.pop_front() {
-            self.current = Some(next);
-            println!("Thread {} is scheduled", next);
-            unsafe {
-                TRAP_FRAME.as_mut().unwrap().state = self.threads[next].as_ref().unwrap().cpu_state;
-            }
+    fn restore_next(&mut self, next: usize) {
+        unsafe {
+            TRAP_FRAME.as_mut().unwrap().state = self.threads[next].as_ref().unwrap().cpu_state;
         }
     }
 
@@ -73,12 +58,8 @@ impl Scheduler {
                 self.ready_queue.push_back(current);
                 self.current = Some(next);
                 println!("Switching from {} to {}", current, next);
-                unsafe {
-                    self.threads[current].as_mut().unwrap().cpu_state =
-                        TRAP_FRAME.as_ref().unwrap().state;
-                    TRAP_FRAME.as_mut().unwrap().state =
-                        self.threads[next].as_ref().unwrap().cpu_state;
-                }
+                self.save_current();
+                self.restore_next(next);
             } else {
                 panic!("Thread {} is not available", next);
             }
@@ -130,6 +111,46 @@ impl Scheduler {
                 in(reg) entry,
                 in(reg) stack_pointer,
             );
+        }
+    }
+    pub fn fork(&mut self) -> u64 {
+        self.save_current();
+        let current = self.current.unwrap();
+        let mut new_thread = self.threads[current].as_ref().unwrap().clone();
+        new_thread.id = self.threads.len() as u32;
+        new_thread.stack = unsafe {
+            alloc::alloc::alloc(
+                alloc::alloc::Layout::from_size_align(new_thread.stack_size, 16).unwrap(),
+            ) as *mut u8
+        };
+        println!(
+            "Thread {} stack: 0x{:x} ~ 0x{:x}",
+            new_thread.id,
+            new_thread.stack as u64,
+            new_thread.stack as u64 + new_thread.stack_size as u64
+        );
+        new_thread.cpu_state.x[0] = 0;
+        new_thread.cpu_state.sp = (self.threads[current].as_ref().unwrap().cpu_state.sp
+            - self.threads[current].as_ref().unwrap().stack as u64
+            + new_thread.stack as u64) as u64;
+        self.add(new_thread);
+        self.threads.last().unwrap().as_ref().unwrap().id as u64
+    }
+
+    pub fn exit(&mut self, status: u64) {
+        let current = self.current.unwrap();
+        self.threads[current].as_mut().unwrap().state = state::State::Zombie;
+        self.zombie_queue.push_back(current);
+        println!("Thread {} exited with status {}", current, status);
+        self.current = None;
+        self.sched_timer();
+        if self.ready_queue.is_empty() {
+            panic!("All threads exited");
+        }
+        if let Some(next) = self.ready_queue.pop_front() {
+            self.current = Some(next);
+            println!("Thread {} is scheduled", next);
+            self.restore_next(next);
         }
     }
 }

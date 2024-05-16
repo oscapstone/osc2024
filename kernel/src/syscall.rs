@@ -1,6 +1,5 @@
-use stdio::println;
-
 use crate::scheduler;
+use stdio::println;
 pub fn get_pid() -> u64 {
     let pid = scheduler::get().current.unwrap() as u64;
     pid
@@ -30,6 +29,10 @@ pub fn write(buf: *const u8, size: usize) -> usize {
     written
 }
 
+pub fn fork() -> u64 {
+    let pid = scheduler::get().fork();
+    pid
+}
 pub fn exit(status: u64) {
     println!("exit: {}", status);
     crate::scheduler::get().exit(status);
