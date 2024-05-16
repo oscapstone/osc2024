@@ -315,8 +315,68 @@ void setTimeout_cmd(){
     add_timer(setTimeout_callback, message, wait);
 }
 
+int parse_cmd(char * cmd){
+    char * run = cmd;
+    char name[100];
+    char msg[100];
+    char time[100];
+    int idx = 0;
+    while(*run){
+        if(*run == ' '){
+            name[idx] = '\0';
+            run++;
+            break;
+        }
+        name[idx] = *run;
+        run++;
+        idx++;
+    }
+
+    if(!*run)
+        return -1;
+    
+    if(strcmp(name, "st") == 0 || strcmp(name, "setTimeout") == 0){
+    }
+    else
+        return -1;
+    
+    idx = 0;
+    while(*run){
+        if(*run == ' '){
+            msg[idx] = '\0';
+            run++;
+            break;
+        }
+        msg[idx] = *run;
+        run++;
+        idx++;
+    }
+    
+    if(!*run)
+        return -1;
+
+    idx = 0;
+    while(*run){
+        time[idx] = *run;
+        run++;
+        idx++;
+    }
+    time[idx] = '\0';
+
+    unsigned long wait = str2int(time);
+    if(wait <= 0){
+        uart_puts("\rINVALID TIME\n");
+        return 1;
+    }
+    
+    add_timer(setTimeout_callback, msg, wait);
+    return 1;
+}
 
 int shell(char * cmd){
+    if(parse_cmd(cmd) == 1){
+        return 1;
+    }
     if(strcmp(cmd, "help") == 0){
         uart_send('\r');
         uart_puts("Lab3 Exception and Interrupt\n");

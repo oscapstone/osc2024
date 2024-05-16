@@ -55,8 +55,6 @@ void execute_task(){
         for(int i=0; i<MAX_TASKS;i++){
             if(task_queue.tasks[i].priority == task_queue.min_priority && task_queue.tasks[i].state == 0){
                 // asm volatile("msr DAIFSet, 0xf");
-                exec_buffer[exec_idx] = task_queue.tasks[i].priority + '0';
-                exec_idx++;
                 task_queue.task_count--;
                 task_queue.tasks[i].state = 1;
                 task_queue.running = i;
@@ -71,13 +69,11 @@ void execute_task(){
                     next_min = task_queue.tasks[i].priority;
             }
         }
-        if(next_min!=999 && task_queue.running == -1)
+        if(next_min!=999 && task_queue.running == -1) //higher priority task running
             task_queue.min_priority = next_min;
-        // else
-        //     task_queue.min_priority = 0;
+        else
+            break;
     }
-    exec_buffer[exec_idx] = ' ';
-    exec_idx++;
 }
 
 void show_buffer(){
