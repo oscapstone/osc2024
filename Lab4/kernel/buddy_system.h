@@ -67,8 +67,8 @@ void insert_alloc_list(allocate_info* info);
 // Free the allocated memory depending on the starting frame.
 void remove_alloc_list(int start_ind);
 void free_allocated_mem(int start_ind);
-void show_alloc_list(void);
+void show_alloc_list2(void);
 void merge_buddy(int ind, int free_list_ind);
-void memory_reserve(uint64_t start, uint64_t end);
+// void memory_reserve(uint64_t start, uint64_t end);
 
 #endif

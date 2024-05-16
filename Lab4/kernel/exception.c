@@ -57,6 +57,7 @@ void handle_sync_el0_64(void) {
     uart_send_string("elr_el1: ");
     uart_send_uint(elr_el1);
     uart_send_string("\r\n");
+
     /*
      * For assembly user code, it showed 0x56000000.
      * [31:26] 0b010101 -> SVC instruction execution in AArch64 state.
@@ -179,7 +180,7 @@ void handle_irq_el1h(uint64_t sp) {
 void handle_sync_el1h(void) {
     
     //disable_el1_interrupt();
-    uart_send_string("In handler: handle_sync_el1h\r\n");
+    // uart_send_string("In handler: handle_sync_el1h\r\n");
     unsigned long spsr_el1, elr_el1, esr_el1, sp_el0;
 
     asm volatile (
@@ -195,18 +196,18 @@ void handle_sync_el1h(void) {
         : "x0", "x1", "x2"
     );
 
-    uart_send_string("spsr_el1: ");
-    uart_send_uint(spsr_el1);
-    uart_send_string("\r\n");
-    uart_send_string("elr_el1: ");
-    uart_send_uint(elr_el1);
-    uart_send_string("\r\n");
-    uart_send_string("esr_el1: ");
-    uart_send_uint(esr_el1);
-    uart_send_string("\r\n");
-    uart_send_string("sp_el0: ");
-    uart_send_uint(sp_el0);
-    uart_send_string("\r\n");
+    // uart_send_string("spsr_el1: ");
+    // uart_send_uint(spsr_el1);
+    // uart_send_string("\r\n");
+    // uart_send_string("elr_el1: ");
+    // uart_send_uint(elr_el1);
+    // uart_send_string("\r\n");
+    // uart_send_string("esr_el1: ");
+    // uart_send_uint(esr_el1);
+    // uart_send_string("\r\n");
+    // uart_send_string("sp_el0: ");
+    // uart_send_uint(sp_el0);
+    // uart_send_string("\r\n");
     //enable_el1_interrupt();
     
 }

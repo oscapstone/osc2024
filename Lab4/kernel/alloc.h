@@ -4,7 +4,7 @@
 #include "../peripherals/utils.h"
 #include <stdint.h>
 
-#define HEAP_SIZE 1024 * 128 // Define 128KB heap size.
+#define HEAP_SIZE 1024 * 1024 * 16 // Define 16MB heap size.
 #define ALIGNMENT 8         // Align the heap pointer to the multiple of 8 before allocating.
 #define ALIGN(x, align) (((x) + ((align) - 1)) & ~((align) - 1))
 

@@ -35,12 +35,6 @@ void init_frame_freelist(void) {
         alloc_mem_list[i] = NULL;
     }
 
-
-
-
-
-
-
     // Initialize the empty list with maximum chunk size(free_list_tail).
     int chunk_cnt = free_mem_size / get_chunk_size(FREE_BLOCK_LIST_SIZE - 1);
 
@@ -248,7 +242,7 @@ void insert_alloc_list(allocate_info* info) {
     uart_send_string("Maximum allocation reached! Failed to allocated memory!\r\n");
 }
 
-void show_alloc_list(void) {
+void show_alloc_list2(void) {
     uart_send_string("\r\n---------------------------------------\r\n");
     uart_send_string("Allocated Memory Info\r\n");
     uart_send_string("---------------------------------------\r\n");
@@ -283,7 +277,7 @@ int find_chunk_exp(uint64_t size) {
     return exp;
 }
 
-int find_buddy(int ind, int exp) {
+int find_bud(int ind, int exp) {
     return ind ^ (1 << exp);
 }
 
@@ -332,7 +326,7 @@ void merge_buddy(int ind, int free_list_ind) {
         return;
     }
 
-    int buddy_ind = find_buddy(ind, free_list_ind);
+    int buddy_ind = find_bud(ind, free_list_ind);
 
     // Find whether buddy exists.
     while (cur_block != NULL) {
@@ -442,6 +436,7 @@ void init_rsv_mem_list(void) {
 }
 
 // Reserve the memory block.(From start to end)
+/*
 void memory_reserve(uint64_t start, uint64_t end) {
     int start_ind = start / BLOCK_SIZE;
     int end_ind = end / BLOCK_SIZE;
@@ -499,3 +494,4 @@ void memory_reserve(uint64_t start, uint64_t end) {
         cur = cur->next;
     }
 }
+*/

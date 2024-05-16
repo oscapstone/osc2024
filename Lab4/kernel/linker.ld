@@ -1,7 +1,7 @@
-# Define 16MB for heap.
-HEAP_SIZE = 0x1000000;
+# Define 32MB for heap.
+HEAP_SIZE = 0x2000000;
 
-STACK_PTR = 0x1295B88;
+STACK_PTR = 0x2295B88;
 
 SECTIONS
 {

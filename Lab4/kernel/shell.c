@@ -6,8 +6,8 @@
 #include "initramdisk.h"
 #include "user.h"
 #include "timer.h"
-#include "buddy_system.h"
-#include "memory_alloc.h"
+#include "buddy_system_2.h"
+#include "dynamic_alloc.h"
 
 // List of commands.
 char cmd_list[COMMAND_COUNT][SHELL_BUF_MAXSIZE] = {
@@ -22,12 +22,13 @@ char cmd_list[COMMAND_COUNT][SHELL_BUF_MAXSIZE] = {
     "loaduser",
     "setTimeout",
     "bootTime",
-    "allocate-mem",
-    "free-mem",
-    "show-allocated-mem",
-    "check-free-mem",
+    "allocate-page",
+    "free-page",
+    "show-allocated-page",
+    "freelist",
     // Dynamic allocator
     "dalloc",
+    "dfree",
     "rsv_mem"
 };
 
@@ -210,29 +211,31 @@ void handle_command(char* cmd) {
         // Allocate page frames.
         case 11:
             if (arg_cnt > 1) {
-                uart_send_string("  allocateMem: too many arguments\r\n");
+                uart_send_string("  allocate-mem: too many arguments\r\n");
                 break;
             } else if (arg_cnt < 1) {
-                uart_send_string("  allocateMem: not enough arguments\r\n");
+                uart_send_string("  allocate-mem: not enough arguments\r\n");
                 break;
             }
             uint64_t size = str2Int(arg[0], strlen(arg[0]));
             uart_send_string("size: ");
             uart_send_int(size);
             uart_send_string("\r\n");
-            allocate_info* info = allocate_frame(size * 1024);
+
+            // allocate_info* info = allocate_frame(size * 1024);
+            int ind = alloc_page(size * 1024);
 
             uart_send_string("Allocate frames for ");
             uart_send_int(size);
             uart_send_string(" KB\r\n");
 
-            if (info == NULL) {
-                uart_send_string("Request exceed free memory limit!\r\n");
+            if (ind == -1) {
+                uart_send_string("allocate-mem failed!\r\n");
                 break;
             }
 
             uart_send_string("Allocated frames: ");
-            for (int i = info->start_frame; i <= info->last_frame; i++) {
+            for (int i = alloc_frame_list[ind]->head->ind; i <= alloc_frame_list[ind]->tail->ind; i++) {
                 uart_send_int(i);
                 uart_send_string(" ");
             }
@@ -241,24 +244,24 @@ void handle_command(char* cmd) {
             break;
         case 12:
             if (arg_cnt > 1) {
-                uart_send_string("  free-mem: too many arguments\r\n");
+                uart_send_string("  free-page: too many arguments\r\n");
                 break;
             } else if (arg_cnt < 1) {
-                uart_send_string("  free-mem: not enough arguments\r\n");
+                uart_send_string("  free-page: not enough arguments\r\n");
                 break;
             }
             int frame = str2Int(arg[0], strlen(arg[0]));
-            free_allocated_mem(frame);
+            free_page(frame);
             break;
         case 13:
             show_alloc_list();
             break;
         case 14:
             if (arg_cnt > 0) {
-                uart_send_string("  check-free-mem: too many arguments\r\n");
+                uart_send_string("  freelist: too many arguments\r\n");
                 break;
             }
-            check_list();
+            show_free_list();
             break;
         case 15:
             if (arg_cnt > 1) {
@@ -270,13 +273,26 @@ void handle_command(char* cmd) {
             }
 
             size = str2Int(arg[0], strlen(arg[0]));
-            uint64_t allocated_addr = dynamic_malloc(size);
+            uint64_t allocated_addr = dynamic_alloc(size);
             uart_send_string("Allocated physical address: 0x");
             uart_send_uint(allocated_addr);
             uart_send_string("\r\n");
             break;
         // Check reserved memory.
         case 16:
+            if (arg_cnt > 1) {
+                uart_send_string("  dfree: too many arguments\r\n");
+                break;
+            } else if (arg_cnt < 1) {
+                uart_send_string("  dfree: not enough arguments\r\n");
+                break;
+            }
+
+            uint64_t free_addr = str2Int(arg[0], strlen(arg[0]));
+            dynamic_free(free_addr);
+
+            break;
+        case 17:
             if (arg_cnt > 2) {
                 uart_send_string("  rsv_mem: too many arguments\r\n");
                 break;
@@ -287,7 +303,7 @@ void handle_command(char* cmd) {
 
             uint64_t start = str2Int(arg[0], strlen(arg[0]));
             uint64_t end = str2Int(arg[1], strlen(arg[1]));
-            memory_reserve(start, end);
+            // memory_reserve(start, end);
 
         default:
             break;

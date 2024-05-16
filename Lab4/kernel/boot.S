@@ -30,10 +30,8 @@ master:
 
   
   //  Initialize stack pointer.
-  //  Heap end address: 0x1195B88
-  //  Allocate 1MB for stack: 0x1195B88 + 0x100000 = 0x1295B88
   //  Align to 16-byte boundary.
-  ldr x0, =0x1295B90
+  ldr x0, =0xC298390
   mov sp, x0
     
   // Calculate the size of the bss section(stores uninitialized data)

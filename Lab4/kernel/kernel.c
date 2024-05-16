@@ -5,7 +5,8 @@
 #include "irq.h"
 #include "timer.h"
 #include "task.h"
-#include "memory_alloc.h"
+#include "dynamic_alloc.h"
+#include "buddy_system_2.h"
 
 
 /*
@@ -45,9 +46,11 @@ void kernel_main(uintptr_t dtb_address)
     core_timer_enable();
     init_heap();
     init_heap2();
-    init_frame_freelist();
+    // init_frame_freelist();
     init_task_queue();
-    init_memory_pool();
+    // init_buddy_system();
+    init_dynamic_alloc();
+    //init_memory_pool();
     fdt_traverse(get_initrd_address, dtb_address);
     if (parse_reserved_memory(dtb_address + myHeader.off_mem_rsvmap) != 0) {
         uart_send_string("Error parsing memory reservation block!\r\n");
