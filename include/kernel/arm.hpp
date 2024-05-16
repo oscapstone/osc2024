@@ -34,3 +34,23 @@
 #define ESR_ELx_EC_DABT_LOW (0b100100)
 #define ESR_ELx_EC_DABT_CUR (0b100101)
 #define ESR_ELx_EC_SP_ALIGN (0b100110)
+
+// D8.2.82 TCR_EL1, Translation Control Register(EL1)
+
+#define TCR_CONFIG_REGION_48bit (((64 - 48) << 0) | ((64 - 48) << 16))
+#define TCR_CONFIG_4KB          ((0b00 << 14) | (0b10 << 30))
+#define TCR_CONFIG_DEFAULT      (TCR_CONFIG_REGION_48bit | TCR_CONFIG_4KB)
+
+// D5.5.2 Memory region attributes
+// D8.2.61 MAIR_EL1, Memory Attribute Indirection Register (EL1)
+
+#define MAIR_DEVICE_nGnRnE      0b00000000
+#define MAIR_NORMAL_NOCACHE     0b01000100
+#define MAIR_IDX_DEVICE_nGnRnE  0
+#define MAIR_IDX_NORMAL_NOCACHE 1
+
+#define PD_TABLE      0b11
+#define PD_BLOCK      0b01
+#define PD_ACCESS     (1 << 10)
+#define BOOT_PGD_ATTR PD_TABLE
+#define BOOT_PUD_ATTR (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)
