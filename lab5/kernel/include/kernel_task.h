@@ -1,0 +1,66 @@
+#ifndef __THREAD_H
+#define __THREAD_H
+
+struct cpu_context
+{
+    unsigned long long x19;
+    unsigned long long x20;
+    unsigned long long x21;
+    unsigned long long x22;
+    unsigned long long x23;
+    unsigned long long x24;
+    unsigned long long x25;
+    unsigned long long x26;
+    unsigned long long x27;
+    unsigned long long x28;
+    unsigned long long fp;
+    unsigned long long lr;
+    unsigned long long sp;
+};
+
+enum task_state
+{
+    RUNNING,
+    IDLE,
+    EXIT
+};
+
+typedef struct task_struct
+{
+    struct cpu_context cpu_context; // task context
+    void *kstack;                   // stack for kernel
+    void *ustack;                   // stack for user
+    int id;                         // task id
+    int priority;                   // task priority
+    enum task_state state;          // task state
+    int need_sched;                 // Do this task need to yield cpu ?
+    struct task_struct *prev, *next;
+} task_struct;
+
+typedef struct task_list
+{
+    task_struct *head[10];
+} task_list;
+
+extern task_list run_queue;
+
+extern task_struct *get_current_task();
+extern void switch_to(task_struct *prev, task_struct *next);
+
+void task_init();
+
+void run_queue_push(task_struct *new_task, int priority);
+void run_queue_remove(task_struct *remove_task, int priority);
+
+int task_create(void (*start_routine)(void), int priority);
+void task_exit();
+
+void idle();
+void kill_zombies();
+void schedule();
+void context_switch(struct task_struct *next);
+void check_need_schedule();
+
+void foo();
+
+#endif

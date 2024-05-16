@@ -5,9 +5,16 @@
 #include "timer.h"
 #include "allocator.h"
 #include "exception.h"
+#include "schedule.h"
+#include "syscall.h"
 #include "shell.h"
 
 #define buf_size 1024
+
+void exec_syscall_img()
+{
+    do_exec("syscall.img", NULL);
+}
 
 void shell_cmd(char *cmd)
 {
@@ -48,80 +55,25 @@ void shell_cmd(char *cmd)
     {
         uart_puts("\n");
         uart_puts("exc user program\n");
-        exec_program("user.img");
-    }
-    else if (my_strcmp(cmd, "timer") == 0)
-    {
-        uart_puts("\n");
-        periodic_timer(0, 0);
-        while (1)
-        {
-            char c = uart_read();
-            if (c == '\n')
-            {
-                core_timer_disable();
-                while (timer_hp->size > 0)
-                    timer_heap_extractMin(timer_hp);
-                core_timer_enable();
-                break;
-            }
-        }
-    }
-    else if (my_strcmp(cmd, "asyn") == 0)
-    {
-        uart_puts("\n");
-        while (1)
-            uart_asyn_write(uart_asyn_read());
-    }
-    else if (my_strncmp(cmd, "setTimeout", 10) == 0)
-    {
-        uart_puts("\n");
-        char *message_start = cmd + 11, *message_end = cmd + 11;
-        while (*message_end != ' ')
-            message_end++;
 
-        int size = message_end - message_start + 1;
-        char *message = kmalloc(sizeof(char) * size); // malloc for message
-        for (int i = 0; i < size; i++)
-            message[i] = message_start[i];
-        message[size - 1] = '\0';
+        // set EL0PCTEN to 1, EL0 can accesses to the frequency register and physical counter register without trap.
+        unsigned long long tmp;
+        asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+        tmp |= 1;
+        asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
 
-        int second = atoi(message_end + 1);
-        setTimeout(message, second);
-    }
-    else if (my_strcmp(cmd, "test preemption") == 0)
-    {
-        uart_puts("\n");
-        test_preemption();
-        int count = 100000; // wait for interrupt
-        while (count--)
-            asm volatile("nop\n");
-    }
-    else if (my_strcmp(cmd, "test block") == 0)
-    {
-        uart_puts("\n");
-        print_free_area();
-        char *ptr = kmalloc(5000);
-        ptr = kmalloc(5000);
-        ptr = kmalloc(4000);
-        uart_puts("-----------------------------------------------------\n");
-        uart_puts("-----------------------------------------------------\n");
-        kfree(ptr);
-    }
-    else if (my_strcmp(cmd, "test object") == 0)
-    {
-        uart_puts("\n");
-        print_free_object();
-        char *ptr_arr[64];
+        unsigned long long cntpct_el0 = 0;
+        asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0)); // get timer’s current count.
+        unsigned long long cntfrq_el0 = 0;
+        asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
 
-        for (int i = 0; i < 65; i++)
-            ptr_arr[i] = kmalloc(60);
+        timer temp;
+        temp.callback = re_shedule;
+        temp.expire = cntpct_el0 + (cntfrq_el0 >> 5);
+        add_timer(temp);
 
-        uart_puts("-----------------------------------------------------\n");
-        uart_puts("-----------------------------------------------------\n");
-        
-        kfree(ptr_arr[50]);
-        kfree(ptr_arr[0]);
+        task_create(exec_syscall_img, 0);
+        zombie_reaper();
     }
     else
         uart_puts("\n");
