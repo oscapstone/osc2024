@@ -23,13 +23,14 @@ fn main(_: isize, _: *const *const u8) -> isize {
 }
 
 fn thread_test() {
-    println("Thread Test");
-    for i in 0..100 {
-        let pid = syscall::get_pid();
-        print_u64("PID", pid);
-        print("  ");
-        print_u64("i", i);
-        println("");
+    // println("Thread Test");
+    for i in 0..10000 {
+        let mut pid = syscall::get_pid();
+        pid += 1;
+        // print_u64("PID", pid);
+        // print("  ");
+        // print_u64("i", i);
+        // println("");
 
         delay(100000);
     }
