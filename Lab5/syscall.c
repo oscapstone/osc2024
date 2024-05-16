@@ -135,6 +135,7 @@ void fork(trapframe *sp){
     t -> priority = get_current() -> priority;
     t -> sp_el1 = ((unsigned long)allocate_page(4096)) + 4096;// sp start from bottom
     t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096;
+    t -> preempt = 1;
     // t -> funct = fork_return;
 
     // copy callee registers

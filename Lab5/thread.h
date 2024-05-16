@@ -24,6 +24,7 @@ struct thread{
     void (*funct)(void); //task
     unsigned long sp_el1;
 	unsigned long sp_el0;
+	int preempt;
 };
 
 typedef struct thread thread;
@@ -35,4 +36,3 @@ void idle();
 void thread_init();
 void thread_execute();
 void thread_exit();
-void print_pid();

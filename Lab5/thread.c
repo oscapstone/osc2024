@@ -77,6 +77,7 @@ int create_thread(void * function, int priority){
     t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096; //user stack for user program
     t -> regs.lr = thread_execute; // ret jumps to lr -> switch to will load lr and call ret
     t -> regs.sp = t -> sp_el1;
+    t -> preempt = 1;
     update_min_priority();
     thread_pool[pid] = t; 
     return pid;
@@ -84,11 +85,6 @@ int create_thread(void * function, int priority){
 
 int get_pid(){
     return get_current() -> pid;//no runnning thread
-}
-
-void print_pid(){//debug
-    uart_int(get_current()->pid);
-    newline();
 }
 
 void kill_zombies(){
@@ -109,6 +105,9 @@ void kill_zombies(){
 }
 
 void schedule(){
+    if(get_current() -> preempt == 0 && get_current() -> state == 1)
+        return;
+    get_current() -> preempt = 0;
     update_min_priority();
     int next = get_current() -> pid;
 
@@ -140,6 +139,7 @@ void schedule(){
         // uart_puts("after switch\n\r");
         // newline();
     }
+    get_current() -> preempt = 1; //ex: selected the to thread, but preemptted and to has been modified
 }
 
 void idle(){
@@ -161,7 +161,7 @@ void thread_init(){
     t -> state = 1;
     t -> parent = -1;
     t -> priority = 10;
+    t -> preempt = 1; //enabled
     thread_pool[0] = t;
     asm volatile ("msr tpidr_el1, %0"::"r"((unsigned long)thread_pool[0]));
-	asm volatile ("msr sp_el0, %0"::"r"(thread_pool[0] -> sp_el0)); //the stack pointer for user program in el0
 }
