@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "initrd.h"
+#include "irq.h"
 #include "mbox.h"
 #include "mm.h"
 #include "sched.h"
@@ -40,6 +41,7 @@ int sys_exec(const char *name, char *const argv[])
 
 int sys_fork(trap_frame *tf)
 {
+    disable_interrupt();
     struct task_struct *parent = get_current();
     struct task_struct *child = kthread_create(0);
 
@@ -60,6 +62,7 @@ int sys_fork(trap_frame *tf)
     child_trap_frame->sp_el0 = (unsigned long)child->user_stack + sp_el0_off;
     child_trap_frame->x0 = 0;
 
+    enable_interrupt();
     return child->pid;
 }
 
