@@ -58,7 +58,7 @@ void disable_interrupt()
     asm volatile("msr DAIFSet, 0xF;");
 }
 
-void irq_entry()
+void irq_entry(trap_frame *tf)
 {
     // Enter the critical section ->
     // temporarily disable interrupts
@@ -106,4 +106,6 @@ void irq_entry()
             head = task->next;
         enable_interrupt();
     }
+
+    do_signal(tf);
 }

@@ -58,3 +58,11 @@ void *memcpy(void *dest, const void *src, int n)
         *d++ = *s++;
     return dest;
 }
+
+void *memset(void *s, int c, int n)
+{
+    unsigned char *p = s;
+    while (n--)
+        *p++ = (unsigned char)c;
+    return s;
+}

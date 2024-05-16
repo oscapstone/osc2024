@@ -57,6 +57,7 @@ exception_handler:
 
 irq_handler:
     save_all
+    mov x0, sp
     bl irq_entry // defined in irq.c
     load_all
     eret
@@ -74,6 +75,11 @@ invalid_exc_handler:
 child_ret_from_fork:
     load_all
     eret
+
+.global sigreturn
+sigreturn:
+    mov x8, 139
+    svc 0
 
 .macro ventry label
     b \label

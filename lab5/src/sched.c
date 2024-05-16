@@ -1,5 +1,6 @@
 #include "sched.h"
 #include "mm.h"
+#include "string.h"
 #include "uart.h"
 
 static int thread_count = 0;
@@ -69,6 +70,17 @@ void idle()
     }
 }
 
+struct task_struct *get_task(int pid)
+{
+    struct task_struct *task = run_queue;
+    do {
+        if (task->pid == pid)
+            return task;
+        task = task->next;
+    } while (task != run_queue);
+    return 0;
+}
+
 void kthread_init()
 {
     kthread_create(idle);
@@ -82,6 +94,9 @@ struct task_struct *kthread_create(void (*func)())
     task->state = TASK_RUNNING;
     task->stack = kmalloc(STACK_SIZE);
     task->user_stack = kmalloc(STACK_SIZE);
+    memset(task->sighand, 0, sizeof(task->sighand));
+    task->sigpending = 0;
+    task->sighandling = 0;
     task->context.lr = (unsigned long)func;
     task->context.sp = (unsigned long)task->user_stack + STACK_SIZE;
     task->context.fp = (unsigned long)task->user_stack + STACK_SIZE;
@@ -114,7 +129,7 @@ void thread_test()
         uart_puts(" ");
         uart_hex(i);
         uart_puts("\n");
-        for (int i = 0; i < 500000000; i++)
+        for (int i = 0; i < 1000000; i++)
             ;
         schedule();
     }

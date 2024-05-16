@@ -1,6 +1,9 @@
 #ifndef SCHED_H
 #define SCHED_H
 
+#include "signal.h"
+#include "traps.h"
+
 #define STACK_SIZE 4096
 
 struct thread_struct {
@@ -30,6 +33,11 @@ struct task_struct {
     enum task_state state;
     void *stack;
     void *user_stack;
+    void (*sighand[NSIG + 1])();
+    int sigpending;
+    int sighandling;
+    trap_frame sigframe;
+    void *sig_stack;
     struct task_struct *prev;
     struct task_struct *next;
 };
@@ -40,6 +48,7 @@ typedef struct task_queue_t {
 } task_queue_t;
 
 extern struct task_struct *get_current();
+struct task_struct *get_task(int pid);
 void kthread_init();
 struct task_struct *kthread_create(void (*func)());
 void kthread_exit();

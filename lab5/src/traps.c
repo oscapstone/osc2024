@@ -19,6 +19,16 @@ void print_registers(uint64_t elr, uint64_t esr, uint64_t spsr)
 
 void exception_entry(trap_frame *tf)
 {
+    unsigned long elr, esr, spsr;
+    asm volatile("mrs %0, elr_el1" : "=r"(elr));
+    asm volatile("mrs %0, esr_el1" : "=r"(esr));
+    asm volatile("mrs %0, spsr_el1" : "=r"(spsr));
+    if (esr != 0x56000000) {
+        print_registers(elr, esr, spsr);
+        while (1)
+            ;
+    }
+
     enable_interrupt();
     switch (tf->x8) {
     case 0:
@@ -46,6 +56,15 @@ void exception_entry(trap_frame *tf)
         break;
     case 7:
         sys_kill(tf->x0);
+        break;
+    case 8:
+        sys_signal(tf->x0, (void (*)())tf->x1);
+        break;
+    case 9:
+        sys_sigkill(tf->x0, tf->x1);
+        break;
+    case 139:
+        sys_sigreturn(tf);
         break;
     default:
         uart_puts("[ERROR] Invalid system call\n");

@@ -120,6 +120,8 @@ void initrd_sys_exec(const char *target)
         if (!strcmp(target, pathname)) {
             void *program = kmalloc(filesize);
             memcpy(program, fptr + headsize, filesize);
+            get_current()->sigpending = 0;
+            memset(get_current()->sighand, 0, sizeof(get_current()->sighand));
             get_current()->context.lr = (unsigned long)program;
             return;
         }

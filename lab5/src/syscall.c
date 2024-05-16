@@ -1,7 +1,9 @@
 #include "syscall.h"
 #include "initrd.h"
 #include "mbox.h"
+#include "mm.h"
 #include "sched.h"
+#include "signal.h"
 #include "string.h"
 #include "traps.h"
 #include "uart.h"
@@ -45,6 +47,9 @@ int sys_fork(trap_frame *tf)
     memcpy(child->stack, parent->stack, STACK_SIZE);
     memcpy(child->user_stack, parent->user_stack, STACK_SIZE);
 
+    // Copy signal handlers
+    memcpy(child->sighand, parent->sighand, sizeof(parent->sighand));
+
     unsigned long sp_off = (unsigned long)tf - (unsigned long)parent->stack;
     trap_frame *child_trap_frame = (trap_frame *)(child->stack + sp_off);
 
@@ -71,6 +76,25 @@ int sys_mbox_call(unsigned char ch, unsigned int *mbox)
 void sys_kill(int pid)
 {
     kthread_stop(pid);
+}
+
+void sys_signal(int signum, void (*handler)())
+{
+    signal(signum, handler);
+}
+
+void sys_sigkill(int pid, int sig)
+{
+    kill(pid, sig);
+}
+
+void sys_sigreturn(trap_frame *regs)
+{
+    // Restore the sigframe
+    memcpy(regs, &get_current()->sigframe, sizeof(trap_frame));
+    kfree(get_current()->sig_stack);
+    get_current()->sighandling = 0;
+    return; // Jump to the previous context (user program) after eret
 }
 
 /* System Call Test */
@@ -142,7 +166,7 @@ void fork_test()
                 uart_puts(", sp: ");
                 uart_hex(cur_sp);
                 uart_puts("\n");
-                for (int i = 0; i < 500000000; i++)
+                for (int i = 0; i < 1000000; i++)
                     ;
                 cnt++;
             }

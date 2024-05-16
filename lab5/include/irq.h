@@ -2,6 +2,7 @@
 #define IRQ_H
 
 #include "gpio.h"
+#include "traps.h"
 
 // ARM Interrupt Registers
 #define IRQ_BASIC_PENDING      (volatile unsigned int *)(MMIO_BASE + 0x0000B200)
@@ -18,6 +19,6 @@
 
 void enable_interrupt();
 void disable_interrupt();
-void irq_entry();
+void irq_entry(trap_frame *tf);
 
 #endif // IRQ_H

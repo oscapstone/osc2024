@@ -7,5 +7,6 @@ char *strncpy(char *dest, const char *src, int n);
 int strlen(const char *str);
 char *strcat(char *dest, const char *src);
 void *memcpy(void *dest, const void *src, int n);
+void *memset(void *s, int c, int n);
 
 #endif // STRING_H
