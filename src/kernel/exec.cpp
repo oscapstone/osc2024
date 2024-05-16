@@ -3,7 +3,13 @@
 #include "fs/initramfs.hpp"
 #include "io.hpp"
 #include "string.hpp"
+#include "syscall.hpp"
 #include "thread.hpp"
+
+SYSCALL_DEFINE2(exec, const char*, name, char** const, argv) {
+  auto ctx = new ExecCtx{name, argv};
+  return exec(ctx);
+}
 
 int exec(ExecCtx* ctx) {
   // TODO: args, envp

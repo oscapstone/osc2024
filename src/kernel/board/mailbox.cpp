@@ -1,5 +1,12 @@
 #include "board/mailbox.hpp"
 
+#include "syscall.hpp"
+
+SYSCALL_DEFINE2(mbox_call, unsigned char, ch, message_t*, mbox) {
+  mailbox_call(ch, mbox);
+  return 1;  // TODO ???
+}
+
 void mailbox_call(uint8_t ch, message_t* mailbox) {
   uint32_t data = (((uint32_t)(unsigned long)mailbox) & ~0xf) | ch;
   while ((get32(MAILBOX_STATUS) & MAILBOX_FULL) != 0)

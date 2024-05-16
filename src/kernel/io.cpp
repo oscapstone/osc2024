@@ -4,6 +4,15 @@
 #include "ds/timeval.hpp"
 #include "int/timer.hpp"
 #include "nanoprintf.hpp"
+#include "syscall.hpp"
+
+SYSCALL_DEFINE2(uartread, char*, buf, unsigned, size) {
+  return kread(buf, size);
+}
+
+SYSCALL_DEFINE2(uartwrite, const char*, buf, unsigned, size) {
+  return kwrite(buf, size);
+}
 
 char kgetc() {
   auto c = mini_uart_getc_raw();

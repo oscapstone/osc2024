@@ -1,6 +1,17 @@
 #include "signal.hpp"
 
+#include "syscall.hpp"
 #include "thread.hpp"
+
+SYSCALL_DEFINE2(signal, int, signal, signal_handler, handler) {
+  current_thread()->signal.regist(signal, handler);
+  return 0;
+}
+
+SYSCALL_DEFINE2(signal_kill, int, pid, int, signal) {
+  signal_kill(pid, signal);
+  return 0;
+}
 
 Signal::Signal(Kthread* thread) : cur(thread), list{}, stack{} {
   setall(signal_handler_nop);

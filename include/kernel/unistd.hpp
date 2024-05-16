@@ -1,4 +1,4 @@
-#define __NR_syscalls 11
+#define NR_syscalls 11
 
 #ifndef __SYSCALL
 #define __SYSCALL(x, y)

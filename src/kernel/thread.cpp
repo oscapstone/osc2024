@@ -5,6 +5,25 @@
 #include "int/timer.hpp"
 #include "io.hpp"
 #include "sched.hpp"
+#include "syscall.hpp"
+
+SYSCALL_DEFINE0(getpid) {
+  return current_thread()->tid;
+}
+
+SYSCALL_DEFINE0(fork) {
+  return kthread_fork();
+}
+
+SYSCALL_DEFINE1(exit, int, status) {
+  kthread_exit(status);
+  return -1;
+}
+
+SYSCALL_DEFINE1(kill, int, pid) {
+  kthread_kill(pid);
+  return 0;
+}
 
 ListHead<Kthread> kthreads;
 
