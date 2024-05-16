@@ -4,12 +4,11 @@
 .global core_timer_enable
 
 _start:  
-    // read cpu id, stop slave cores
     mov x28, x0
+    // read cpu id, stop slave cores
     bl      set_exception_vector_table
     bl      from_el2_to_el1
     //bl      core_timer_enable
-    
 
     mrs     x1, mpidr_el1 //get cpu num
     and     x1, x1, #3 //see if cpu num is 0
@@ -44,15 +43,14 @@ _start:
 from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
-    mov x0, 0x345 // 3c5 EL1h (SPSel = 1) with interrupt disabled, 345 enable interrupt
+    mov x0, 0x5 // 3c5 EL1h (SPSel = 1) with interrupt disabled, 345 enable interrupt
     msr spsr_el2, x0
     msr elr_el2, lr
     eret // return to EL1
 
 
-// save general registers to stack
 .macro save_all
-	sub	    sp, sp, 16 * 17
+	sub	    sp, sp, 16 * 18
 	stp 	x0, x1, [sp ,16 * 0]
 	stp 	x2, x3, [sp ,16 * 1]
 	stp 	x4, x5, [sp ,16 * 2]
@@ -72,9 +70,13 @@ from_el2_to_el1:
 	mrs	    x28, spsr_el1
 	mrs	    x29, elr_el1
 	stp 	x28, x29, [sp ,16 * 16]
+	mrs	    x28, sp_el0	// For fork
+	str	    x28, [sp, 16 * 17]
 .endm
 
 .macro load_all
+	ldr	    x28, [sp, 16 * 17]
+	msr	    sp_el0, x28
 	ldp 	x28, x29, [sp ,16 * 16]
 	msr	    spsr_el1, x28
 	msr	    elr_el1, x29
@@ -94,7 +96,7 @@ from_el2_to_el1:
 	ldp 	x26, x27, [sp ,16 * 13]
 	ldp 	x28, x29, [sp ,16 * 14]
 	ldr 	x30, [sp, 16 * 15]
-	add 	sp, sp, 16 * 17
+	add 	sp, sp, 16 * 18
 .endm
 
 exception_handler:
@@ -103,6 +105,14 @@ exception_handler:
     load_all
     eret
 
+sync_exception_handler:
+    save_all
+    mrs x0, esr_el1 // to decide is syscall or not
+    mrs x1, elr_el1 // the address return to 
+    mov x2, sp      // trapframe
+    bl sync_exception_entry
+    load_all
+    eret
 
 .align 11 // vector table should be aligned to 0x800
 .global exception_vector_table
@@ -116,7 +126,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b exception_handler
+  b sync_exception_handler //el1 to el1 (debug)
   .align 7
   b interrupt_handler //uart, timer
   .align 7
@@ -125,7 +135,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b exception_handler //el0 exception
+  b sync_exception_handler //el0 to el1 (user program)
   .align 7
   b interrupt_handler //el0 interrupt
   .align 7
@@ -154,6 +164,7 @@ core_timer_enable:
     mov x0, 1
     msr cntp_ctl_el0, x0 // enable
     mrs x0, cntfrq_el0
+    lsr x0, x0, #5
     msr cntp_tval_el0, x0 // set expired time
     mov x0, 2
     ldr x1, =CORE0_TIMER_IRQ_CTRL
@@ -162,6 +173,45 @@ core_timer_enable:
 
 interrupt_handler:
     save_all
-    bl interrupt_handler_entry
+    bl timer_scheduler//interrupt_handler_entry
     load_all
     eret
+
+
+.global switch_to
+switch_to:
+    stp x19, x20, [x0, 16 * 0]
+    stp x21, x22, [x0, 16 * 1]
+    stp x23, x24, [x0, 16 * 2]
+    stp x25, x26, [x0, 16 * 3]
+    stp x27, x28, [x0, 16 * 4]
+    stp fp, lr, [x0, 16 * 5]
+    mov x9, sp
+    str x9, [x0, 16 * 6]
+
+    ldp x19, x20, [x1, 16 * 0]
+    ldp x21, x22, [x1, 16 * 1]
+    ldp x23, x24, [x1, 16 * 2]
+    ldp x25, x26, [x1, 16 * 3]
+    ldp x27, x28, [x1, 16 * 4]
+    ldp fp, lr, [x1, 16 * 5]
+    ldr x9, [x1, 16 * 6]
+    mov sp,  x9
+    msr tpidr_el1, x1
+    ret
+
+.global get_current
+get_current:
+    mrs x0, tpidr_el1
+    ret
+
+.global fork_return
+fork_return:
+    load_all
+    eret
+
+
+.globl enable_irq
+enable_irq:
+	msr DAIFClr, 0xf // IRQ mask bit
+	ret
