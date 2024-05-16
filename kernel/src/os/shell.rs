@@ -6,7 +6,7 @@ use crate::println;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use core::arch::asm;
-mod commands;
+pub mod commands;
 use alloc::vec::Vec;
 
 fn print_time(time: u64) {
@@ -16,7 +16,7 @@ fn print_time(time: u64) {
     // set_next_timer(2000);
 }
 
-static mut INITRAMFS: Option<cpio::CpioArchive> = None;
+pub static mut INITRAMFS: Option<cpio::CpioArchive> = None;
 
 fn push_all_commands(commands: &mut Vec<commands::command>) {
     commands.push(commands::command::new(
