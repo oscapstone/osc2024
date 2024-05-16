@@ -20,18 +20,18 @@ void el1_interrupt_disable()
 
 static uint64_t lock_counter = 0;
 
-void lock()
+void lock_interrupt()
 {
     el1_interrupt_disable();
     lock_counter++;
 }
 
-void unlock()
+void unlock_interrupt()
 {
     lock_counter--;
     if (lock_counter < 0)
     {
-        ERROR("lock counter error");
+        ERROR("lock_interrupt counter error");
         while (1)
             ;
     }
@@ -43,7 +43,7 @@ void unlock()
 
 void el1h_irq_router(trapframe_t* tpf)
 {
-    lock();
+    lock_interrupt();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -53,14 +53,14 @@ void el1h_irq_router(trapframe_t* tpf)
         {
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            unlock();
+            unlock_interrupt();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IER_REG & 1)
         {
             *AUX_MU_IER_REG &= ~(1); // Re-enable core timer interrupt when entering core_timer_handler or add_timer
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-            unlock();
+            unlock_interrupt();
             irqtask_run_preemptive();
         }
     }
@@ -68,7 +68,7 @@ void el1h_irq_router(trapframe_t* tpf)
     {
         core_timer_disable(); // enable core timer interrupt when entering the handler
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
-        unlock();
+        unlock_interrupt();
         irqtask_run_preemptive();
     }
     else
@@ -182,7 +182,7 @@ void irqtask_run_preemptive()
 {
     while (!list_empty(task_list))
     {
-        lock();
+        lock_interrupt();
         irqtask_t *the_task = (irqtask_t *)task_list->next;
         // struct list_head *curr;
         // uart_puts("---------------------- list for each ----------------------\r\n");
@@ -199,22 +199,22 @@ void irqtask_run_preemptive()
         // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
-            unlock();
+            unlock_interrupt();
             break;
         }
         list_del_entry((struct list_head *)the_task);
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
 
-        unlock();
+        unlock_interrupt();
 
         irqtask_run(the_task);
 
-        lock();
+        lock_interrupt();
 
         curr_task_priority = prev_task_priority;
         kfree(the_task);
-        unlock();
+        unlock_interrupt();
     }
 }
 

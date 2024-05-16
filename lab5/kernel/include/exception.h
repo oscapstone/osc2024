@@ -68,8 +68,8 @@ void irqtask_list_init();
 void el1_interrupt_enable();
 void el1_interrupt_disable();
 
-void lock();
-void unlock();
+void lock_interrupt();
+void unlock_interrupt();
 
 void el1h_irq_router(trapframe_t* tpf);
 void el0_sync_router(trapframe_t* tpf);

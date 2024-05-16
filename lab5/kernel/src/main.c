@@ -9,7 +9,7 @@
 
 void main(char *arg)
 {
-    lock();
+    lock_interrupt();
 
     dtb_init(arg);
 
@@ -25,7 +25,7 @@ void main(char *arg)
     //     ;
     core_timer_enable();
 
-    unlock();
+    unlock_interrupt();
     // el1_interrupt_enable(); // enable interrupt in EL1 -> EL1
 
     start_shell();
