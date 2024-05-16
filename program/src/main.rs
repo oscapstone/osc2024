@@ -6,10 +6,37 @@ mod stdio;
 mod syscall;
 
 use core::arch::asm;
-use stdio::{print, print_dec, print_hex, println};
+use stdio::{print, print_dec, print_hex, print_u64, println};
 
+fn delay(n: u64) {
+    for _ in 0..n {
+        unsafe {
+            asm!("nop");
+        }
+    }
+}
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
+    thread_test();
+    syscall::exit(0);
+    return 0;
+}
+
+fn thread_test() {
+    println("Thread Test");
+    for i in 0..100 {
+        let pid = syscall::get_pid();
+        print_u64("PID", pid);
+        print("  ");
+        print_u64("i", i);
+        println("");
+
+        delay(100000);
+    }
+}
+
+#[allow(dead_code)]
+fn fork_test() {
     let mut cnt = 0;
     println("[program] Hello, world!");
     let pid = syscall::get_pid();
@@ -70,8 +97,6 @@ fn main(_: isize, _: *const *const u8) -> isize {
         print_hex(child_pid);
         println("");
     }
-    syscall::exit(0);
-    return 0;
 }
 
 // void fork_test(){

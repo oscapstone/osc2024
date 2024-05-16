@@ -24,21 +24,38 @@ impl Scheduler {
         }
     }
 
-    fn add(&mut self, thread: Box<Thread>) {
-        self.threads.push(Some(thread));
-        self.ready_queue.push_back(self.threads.len() - 1);
+    fn add_thread(&mut self, mut thread: Box<Thread>) -> usize {
+        let pos = self.threads.iter().position(|t| t.is_none());
+        match pos {
+            Some(index) => {
+                thread.id = index;
+                self.threads[index] = Some(thread);
+                index
+            }
+            None => {
+                thread.id = self.threads.len();
+                self.threads.push(Some(thread));
+                self.threads.len() - 1
+            }
+        }
     }
 
-    fn save_current(&mut self) {
+    fn save_current(&mut self) -> usize {
         let current = self.current.unwrap();
         unsafe {
             self.threads[current].as_mut().unwrap().cpu_state = TRAP_FRAME.as_ref().unwrap().state;
         }
+        current
     }
 
-    fn restore_next(&mut self, next: usize) {
-        unsafe {
-            TRAP_FRAME.as_mut().unwrap().state = self.threads[next].as_ref().unwrap().cpu_state;
+    fn restore_next(&mut self) -> usize {
+        if let Some(next) = self.ready_queue.pop_front() {
+            unsafe {
+                TRAP_FRAME.as_mut().unwrap().state = self.threads[next].as_ref().unwrap().cpu_state;
+            }
+            next
+        } else {
+            panic!("No thread to restore");
         }
     }
 
@@ -49,35 +66,18 @@ impl Scheduler {
             // println!("No thread to schedule");
             return;
         }
-        let current = self.current.unwrap();
-        let range = self.threads[current].as_ref().unwrap().code_range;
-        let pc = unsafe { TRAP_FRAME.as_ref().unwrap().state.pc };
-        if range.0 <= pc && pc < range.1 {
-            let next = self.ready_queue.pop_front().unwrap();
-            if let Some(_) = self.threads[next].as_ref() {
-                self.ready_queue.push_back(current);
-                self.current = Some(next);
-                println!("Switching from {} to {}", current, next);
-                self.save_current();
-                self.restore_next(next);
-            } else {
-                panic!("Thread {} is not available", next);
-            }
-        } else {
-            panic!("Thread {} pc (0x{:x}) is not in range", current, pc);
-        }
+        let current = self.save_current();
+        let next = self.restore_next();
+        self.current = Some(next);
+        self.ready_queue.push_back(current);
+        println!("Switching from {} to {}", current, next);
     }
 
-    pub fn create_thread(&mut self, entry: extern "C" fn(), entry_size: usize, args: *mut u8) {
-        let thread = Box::new(Thread::new(
-            self.threads.len() as u32,
-            0x2000,
-            entry,
-            entry_size,
-            args,
-        ));
+    pub fn create_thread(&mut self, entry: extern "C" fn()) {
+        let thread = Box::new(Thread::new(0x2000, entry));
         println!("Created thread {}", thread.id);
-        self.add(thread);
+        let tid = self.add_thread(thread);
+        self.ready_queue.push_back(tid);
         println!("Number of threads: {}", self.threads.len());
     }
 
@@ -99,9 +99,9 @@ impl Scheduler {
         let next = self.ready_queue.pop_front().unwrap();
         self.current = Some(next);
         println!("Switching to {}", next);
-        let entry = self.threads[next].as_ref().unwrap().entry;
-        let stack_pointer = self.threads[next].as_ref().unwrap().stack as usize
-            + self.threads[next].as_ref().unwrap().stack_size;
+        let thread = self.threads[next].as_ref().unwrap();
+        let entry = thread.entry;
+        let sp = thread.stack as usize + thread.stack_size;
         unsafe {
             asm!(
                 "msr spsr_el1, xzr",
@@ -109,32 +109,17 @@ impl Scheduler {
                 "msr sp_el0, {1}",
                 "eret",
                 in(reg) entry,
-                in(reg) stack_pointer,
+                in(reg) sp,
             );
         }
     }
+
     pub fn fork(&mut self) -> u64 {
         self.save_current();
         let current = self.current.unwrap();
         let mut new_thread = self.threads[current].as_ref().unwrap().clone();
-        new_thread.id = self.threads.len() as u32;
-        new_thread.stack = unsafe {
-            alloc::alloc::alloc(
-                alloc::alloc::Layout::from_size_align(new_thread.stack_size, 16).unwrap(),
-            ) as *mut u8
-        };
-        println!(
-            "Thread {} stack: 0x{:x} ~ 0x{:x}",
-            new_thread.id,
-            new_thread.stack as u64,
-            new_thread.stack as u64 + new_thread.stack_size as u64
-        );
         new_thread.cpu_state.x[0] = 0;
-        new_thread.cpu_state.sp = (self.threads[current].as_ref().unwrap().cpu_state.sp
-            - self.threads[current].as_ref().unwrap().stack as u64
-            + new_thread.stack as u64) as u64;
-        self.add(new_thread);
-        self.threads.last().unwrap().as_ref().unwrap().id as u64
+        self.add_thread(new_thread) as u64
     }
 
     pub fn exit(&mut self, status: u64) {
@@ -147,11 +132,8 @@ impl Scheduler {
         if self.ready_queue.is_empty() {
             panic!("All threads exited");
         }
-        if let Some(next) = self.ready_queue.pop_front() {
-            self.current = Some(next);
-            println!("Thread {} is scheduled", next);
-            self.restore_next(next);
-        }
+        let next = self.restore_next();
+        self.current = Some(next);
     }
 }
 

@@ -22,7 +22,7 @@ pub fn exec(args: Vec<String>) {
             println!("Program size: 0x{:x} bytes", data.len());
             println!("Program entry: {:p}", program_entry);
             let program_entry: extern "C" fn() = unsafe { core::mem::transmute(program_entry) };
-            scheduler::get().create_thread(program_entry, data.len(), 0 as *mut u8);
+            scheduler::get().create_thread(program_entry);
             unsafe {
                 core::ptr::copy(data.as_ptr(), program_entry as *mut u8, data.len());
             }

@@ -27,8 +27,6 @@ pub fn print_u64(name: &str, n: u64) {
     print(" (0x");
     print_hex(n);
     print(")");
-    send(b'\r');
-    send(b'\n');
 }
 
 #[allow(dead_code)]

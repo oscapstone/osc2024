@@ -9,6 +9,7 @@ pub fn read(buf: *mut u8, size: usize) -> usize {
     let mut read = 0;
     for i in 0..size {
         unsafe {
+            // let c = stdio::recv();
             let c = driver::uart::recv();
             *buf.add(i) = c;
         }
@@ -22,6 +23,7 @@ pub fn write(buf: *const u8, size: usize) -> usize {
     for i in 0..size {
         unsafe {
             let c = *buf.add(i);
+            // stdio::send(c);
             driver::uart::send(c);
         }
         written += 1;
