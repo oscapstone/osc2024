@@ -3,7 +3,7 @@
 #![feature(allocator_api)]
 #![feature(btreemap_alloc)]
 #![feature(duration_constructors)]
-
+#![feature(ptr_metadata)]
 extern crate alloc;
 
 mod allocator;
@@ -26,8 +26,8 @@ fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
     // commands::execute(b"exec program.img");
-    commands::execute(b"exec program.img program.img");
-    // commands::execute(b"exec syscall.img");
+    // commands::execute(b"exec program.img program.img");
+    commands::execute(b"exec syscall.img");
     kernel_shell();
 }
 

@@ -45,6 +45,10 @@ impl Syscall {
 #[no_mangle]
 unsafe fn svc_handler(eidx: u64, sp: u64) {
     trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
+    // let syscall = Syscall::new(sp);
+    // println!("Exception {}", eidx);
+    // debug!("Syscall idx: {}", syscall.idx);
+    // debug!("Syscall {:?}", syscall);
     match eidx {
         4 => el1_interrupt(sp),
         8 => syscall_handler(sp),
@@ -86,7 +90,7 @@ unsafe fn syscall_handler(sp: u64) {
     assert!(trap_frame::TRAP_FRAME.is_some());
     match syscall.idx {
         0 => {
-            // println!("Syscall get_pid");
+            println!("Syscall get_pid");
             let pid = crate::syscall::get_pid();
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
         }
@@ -95,7 +99,12 @@ unsafe fn syscall_handler(sp: u64) {
             let buf = syscall.arg0 as *mut u8;
             let size = syscall.arg1 as usize;
             let read = crate::syscall::read(buf, size);
-            trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = read as u64;
+            assert!(size == 1);
+            if read == 0 {
+                trap_frame::TRAP_FRAME.as_mut().unwrap().state.pc -= 4;
+            } else {
+                trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = read as u64;
+            }
         }
         2 => {
             // println!("Syscall write");
@@ -103,6 +112,12 @@ unsafe fn syscall_handler(sp: u64) {
             let size = syscall.arg1 as usize;
             let written = crate::syscall::write(buf, size);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = written as u64;
+        }
+        3 => {
+            // println!("Syscall exec");
+            let name = syscall.arg0 as *const u8;
+            let ret = crate::syscall::exec(name);
+            trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret;
         }
         4 => {
             // println!("Syscall fork");
@@ -115,8 +130,10 @@ unsafe fn syscall_handler(sp: u64) {
         }
         6 => {
             // println!("Syscall mbox_call");
-            let buf = syscall.arg0 as *mut u8;
-            let size = syscall.arg1 as usize;
+            let channel = syscall.arg0 as u8;
+            let mbox = syscall.arg1 as *mut u32;
+            let ret = crate::syscall::mbox_call(channel, mbox);
+            trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret as u64;
         }
         _ => {
             println!("Unknown syscall: 0x{:x}", syscall.idx);

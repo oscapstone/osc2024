@@ -9,9 +9,20 @@ use core::arch::asm;
 use stdio::{print, print_dec, print_hex, print_u64, println};
 
 fn delay(n: u64) {
-    for _ in 0..n {
-        unsafe {
-            asm!("nop");
+    unsafe {
+        let frq: u64;
+        asm!("mrs {}, cntfrq_el0", out(reg) frq);
+        let pct: u64;
+        asm!("mrs {}, cntpct_el0", out(reg) pct);
+        print("frq=");
+        print_hex(frq);
+        print(", pct=");
+        print_hex(pct);
+        println("");
+
+        let mut cur: u64 = 0;
+        while pct + n * frq / 1000 > cur {
+            asm!("mrs {}, cntpct_el0", out(reg) cur);
         }
     }
 }
@@ -22,17 +33,71 @@ fn main(_: isize, _: *const *const u8) -> isize {
     return 0;
 }
 
-fn thread_test() {
-    // println("Thread Test");
-    for i in 0..10000 {
-        let mut pid = syscall::get_pid();
-        pid += 1;
-        // print_u64("PID", pid);
-        // print("  ");
-        // print_u64("i", i);
-        // println("");
+#[allow(dead_code)]
+fn mailbox_test() {
+    println("Printing mailbox info...");
+    let revision = get_board_revision();
+    print("Board revision: ");
+    print_hex(revision);
+    println("");
+    let (lb, ub) = get_arm_memory();
+    print("ARM memory: ");
+    print_hex(lb);
+    print(" - ");
+    print_hex(ub);
+    println("");
+    delay(100);
+}
 
-        delay(100000);
+pub fn get_board_revision() -> u64 {
+    let mut mailbox = [0; 7];
+    mailbox[0] = 7 * 4; // Buffer size in bytes
+    mailbox[1] = 0; // Request/response code
+    mailbox[2] = 0x0001_0002; // Tag: Get board revision
+    mailbox[3] = 4; // Buffer size in bytes
+    mailbox[4] = 0; // Tag request code
+    mailbox[5] = 0; // Value buffer
+    mailbox[6] = 0x0000_0000; // End tag
+    let mut mailbox = MailBox::new(&mailbox);
+    assert!(mailbox.call(8), "Failed to get board revision");
+    mailbox.get(5)
+}
+
+pub fn get_arm_memory() -> (u64, u64) {
+    let mut mailbox = [0; 8];
+    mailbox[0] = 8 * 4; // Buffer size in bytes
+    mailbox[1] = 0; // Request/response code
+    mailbox[2] = 0x0001_0005; // Tag: Get ARM memory
+    mailbox[3] = 8; // Buffer size in bytes
+    mailbox[4] = 0; // Tag request code
+    mailbox[5] = 0; // Value buffer
+    mailbox[6] = 0; // Value buffer
+    mailbox[7] = 0x0000_0000; // End tag
+    let mut mailbox = MailBox::new(&mailbox);
+    assert!(mailbox.call(8), "Failed to get ARM memory");
+    (mailbox.get(5), mailbox.get(6))
+}
+
+#[allow(dead_code)]
+fn fork_bump() {
+    let pid = syscall::fork();
+    if pid == 0 {
+        println("I'm the child");
+    } else {
+        println("I'm the parent");
+    }
+}
+
+#[allow(dead_code)]
+fn thread_test() {
+    println("Thread Test");
+    for i in 0..10000000 {
+        let pid = syscall::get_pid();
+        print_u64("PID", pid);
+        print("  ");
+        print_u64("i", i);
+        println("");
+        delay(1);
     }
 }
 
@@ -44,7 +109,6 @@ fn fork_test() {
     print("[program] PID=");
     print_hex(pid);
     println("");
-
     let child_pid = syscall::fork();
     if child_pid == 0 {
         println("[Child] I'm the child");
@@ -92,6 +156,7 @@ fn fork_test() {
         unsafe {
             asm!("mov {}, sp", out(reg) sp);
         }
+        delay(10000000000);
         print("[Parent] SP=");
         print_hex(sp);
         print(", child PID=");
@@ -128,3 +193,31 @@ fn fork_test() {
 //         printf("parent here, pid %d, child %d\n", get_pid(), ret);
 //     }
 // }
+
+#[repr(C, align(16))]
+pub struct MailBox {
+    buffer: [u32; 36],
+    pub len: u32,
+}
+
+impl MailBox {
+    pub fn new(buf: &[u32]) -> Self {
+        let mut buffer = [0; 36];
+        let len = buf[0] as usize / 4;
+        for i in 0..len {
+            buffer[i] = buf[i] as u32;
+        }
+        MailBox {
+            buffer,
+            len: len as u32,
+        }
+    }
+
+    pub fn call(&mut self, channel: u8) -> bool {
+        syscall::mbox_call(channel, self.buffer.as_mut_ptr()) == 1
+    }
+
+    pub fn get(&self, index: usize) -> u64 {
+        self.buffer[index] as u64
+    }
+}

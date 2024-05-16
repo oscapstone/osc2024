@@ -1,8 +1,6 @@
 use crate::mmio::regs::AuxReg::*;
 use crate::mmio::regs::GpioReg::*;
-#[allow(unused_imports)]
 use crate::mmio::regs::IrqReg::*;
-#[allow(unused_imports)]
 use crate::mmio::regs::MmioReg::{Aux, Gpio, Irq};
 use crate::mmio::Mmio;
 
@@ -14,9 +12,9 @@ pub fn init() {
     Mmio::write_reg(Aux(MuCntl), 0);
 
     // Configure UART
-    Mmio::write_reg(Aux(MuIer), 0);
-    // Mmio::write_reg(Aux(MuIer), 3);
-    // Mmio::write_reg(Irq(S1), 1 << 29);
+    // Mmio::write_reg(Aux(MuIer), 0);
+    Mmio::write_reg(Aux(MuIer), 3);
+    Mmio::write_reg(Irq(S1), 1 << 29);
 
     Mmio::write_reg(Aux(MuLcr), 3); // Set the data size to 8 bit
     Mmio::write_reg(Aux(MuMcr), 0); // No auto flow control

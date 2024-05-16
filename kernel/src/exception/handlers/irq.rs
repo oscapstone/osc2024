@@ -3,8 +3,6 @@ use crate::exception::Mmio;
 use core::ptr::read_volatile;
 use driver::mmio::regs::AuxReg;
 use driver::mmio::regs::MmioReg;
-#[allow(unused_imports)]
-use stdio::{debug, println};
 
 #[no_mangle]
 unsafe fn irq_handler(eidx: u64, sp: u64) {

@@ -14,18 +14,23 @@ pub fn exec(args: Vec<String>) {
         let filename = filename.as_bytes();
         if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
             let program_entry =
-                unsafe { alloc(layout::from_size_align(data.len(), 0x100).unwrap()) };
+                unsafe { alloc(layout::from_size_align(data.len(), 0x1000).unwrap()) };
+            unsafe {
+                core::ptr::write_bytes(program_entry, 0, data.len());
+            }
             println!(
-                "Executing program: {}",
-                core::str::from_utf8(filename).unwrap()
+                "Executing program: {} at 0x{:x}-0x{:x}",
+                core::str::from_utf8(filename).unwrap(),
+                program_entry as usize,
+                program_entry as usize + data.len()
             );
             println!("Program size: 0x{:x} bytes", data.len());
             println!("Program entry: {:p}", program_entry);
             let program_entry: extern "C" fn() = unsafe { core::mem::transmute(program_entry) };
-            scheduler::get().create_thread(program_entry);
             unsafe {
                 core::ptr::copy(data.as_ptr(), program_entry as *mut u8, data.len());
             }
+            scheduler::get().create_thread(program_entry);
         } else {
             println!(
                 "File not found: {}",

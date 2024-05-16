@@ -64,3 +64,17 @@ pub fn exit(status: u64) {
         );
     }
 }
+
+#[allow(dead_code)]
+pub fn mbox_call(channel: u8, mbox: *mut u32) -> u64 {
+    let ret: u64;
+    unsafe {
+        asm!(
+            "svc 0",
+            inout("x0") channel as u64 => ret,
+            in("x1") mbox,
+            in("x8") 6,
+        );
+    }
+    ret
+}
