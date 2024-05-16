@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 #include "ds/list.hpp"
 #include "ds/mem.hpp"
 #include "mm/mm.hpp"

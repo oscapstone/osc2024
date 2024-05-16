@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "util.hpp"
 struct Kthread;
 
 struct __attribute__((__packed__)) Regs {

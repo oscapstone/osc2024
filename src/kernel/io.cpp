@@ -77,6 +77,10 @@ int klog(const char* format, ...) {
   return size;
 }
 
+void kflush() {
+  mini_uart_async_flush();
+}
+
 void kputs(const char* s) {
   for (char c; (c = *s); s++)
     kputc(c);

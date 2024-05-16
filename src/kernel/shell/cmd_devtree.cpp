@@ -1,6 +1,7 @@
 #include "fdt.hpp"
 #include "io.hpp"
 #include "shell/cmd.hpp"
+#include "string.hpp"
 
 int cmd_devtree(int argc, char* argv[]) {
   if (argc <= 1) {

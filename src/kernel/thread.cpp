@@ -2,7 +2,6 @@
 
 #include "board/pm.hpp"
 #include "int/interrupt.hpp"
-#include "int/timer.hpp"
 #include "io.hpp"
 #include "sched.hpp"
 #include "syscall.hpp"

@@ -1,7 +1,6 @@
 #include "exec.hpp"
 #include "io.hpp"
 #include "shell/cmd.hpp"
-#include "string.hpp"
 #include "thread.hpp"
 
 int cmd_run(int argc, char* argv[]) {

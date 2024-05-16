@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "util.hpp"
 
 constexpr uint64_t PAGE_SIZE = 0x1000;
 

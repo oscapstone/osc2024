@@ -1,6 +1,5 @@
 #include "mm/page.hpp"
 
-#include "board/mini-uart.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
 #include "math.hpp"

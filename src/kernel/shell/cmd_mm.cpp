@@ -1,5 +1,6 @@
 #include "io.hpp"
 #include "mm/heap.hpp"
+#include "mm/mm.hpp"
 #include "mm/page.hpp"
 #include "mm/startup.hpp"
 #include "shell/cmd.hpp"

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <new.hpp>
 
 #include "ds/list.hpp"

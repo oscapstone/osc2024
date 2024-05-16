@@ -1,6 +1,5 @@
 #include "shell/shell.hpp"
 
-#include "board/mini-uart.hpp"
 #include "io.hpp"
 #include "shell/cmd.hpp"
 #include "string.hpp"

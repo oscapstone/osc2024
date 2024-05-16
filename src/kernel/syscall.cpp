@@ -2,6 +2,7 @@
 
 #include "int/interrupt.hpp"
 #include "io.hpp"
+#include "util.hpp"
 
 void syscall_handler(TrapFrame* frame) {
   uint64_t syscallno = frame->X[8];

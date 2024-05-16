@@ -1,5 +1,6 @@
 #include "exec.hpp"
 
+#include "ds/mem.hpp"
 #include "fs/initramfs.hpp"
 #include "io.hpp"
 #include "string.hpp"

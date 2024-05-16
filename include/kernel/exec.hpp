@@ -3,6 +3,7 @@
 #include "mm/mm.hpp"
 #include "shell/args.hpp"
 #include "string.hpp"
+#include "util.hpp"
 
 constexpr uint64_t USER_STACK_SIZE = PAGE_SIZE;
 

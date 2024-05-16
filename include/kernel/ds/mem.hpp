@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstdint>
+#include <new.hpp>
 
 #include "mm/mm.hpp"
-#include "new.hpp"
+#include "util.hpp"
 
 struct Mem {
   char* addr;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 extern "C" {
 extern char __stack_end[];
 

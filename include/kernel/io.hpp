@@ -17,6 +17,7 @@ int PRINTF_FORMAT(1, 2) kprintf_sync(const char* format, ...);
 
 int PRINTF_FORMAT(1, 2) klog(const char* format, ...);
 
+void kflush();
 void kputs(const char* s);
 void kputs_sync(const char* s);
 void kprint_hex(string_view view);

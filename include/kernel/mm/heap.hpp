@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "util.hpp"
 
 constexpr uint32_t chunk_size[] = {
     0x10, 0x30, 0x50, 0xf0, 0x110, 0x330, 0x550,
