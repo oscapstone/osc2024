@@ -8,10 +8,11 @@
 #include "dtb.h"
 #include "memory.h"
 #include "timer.h"
+#include "schedule.h"
 
-extern char* dtb_ptr;
-extern void* CPIO_START;
-
+extern char *dtb_ptr;
+extern void *CPIO_START;
+extern int uart_recv_echo_flag;
 
 void cmd_clear(char *buffer, int len)
 {
@@ -85,11 +86,24 @@ void cmd_exec(char *buffer)
     {
         cmd_memory();
     }
+    else if (strcmp(cmd, "s_allocator") == 0)
+    {
+        cmd_sallocate();
+    }
+    else if (strcmp(cmd, "run") == 0)
+    {
+        cmd_user_program(argvs);
+    }
     else if (strcmp(cmd, "el") == 0)
     {
         cmd_el();
     }
-    else{
+    else if (strcmp(cmd, "thread") == 0)
+    {
+        cmd_thread();
+    }
+    else
+    {
         cmd_error(cmd);
     }
 }
@@ -143,7 +157,7 @@ void cmd_info()
 void cmd_help()
 {
     uart_sendline("help list:\n");
-    uart_sendline("hello:\t\t\tprint Hello World\n"); 
+    uart_sendline("hello:\t\t\tprint Hello World\n");
     uart_sendline("help:\t\t\tprint all available command\n");
     uart_sendline("info:\t\t\tprint information of the board\n");
     uart_sendline("reboot:\t\t\treboot in 5 seconds\n");
@@ -154,6 +168,9 @@ void cmd_help()
     uart_sendline("set2stimeout:\t\tevery 2 seconds print current time\n");
     uart_sendline("settimeout:\t\tsettimeout [seconde] [message] set an alert with message\n");
     uart_sendline("memory:\t\t\ttest memory\n");
+    uart_sendline("s_allocator:\t\tsimple allocator\n");
+    uart_sendline("run:\t\trun [image name] execute user program\n");
+    uart_sendline("thread:\t\ttest thread create by foo\n");
 }
 
 void cmd_dtb()
@@ -163,15 +180,14 @@ void cmd_dtb()
 
 void cmd_ls()
 {
-    char* filepath;
-    char* filecontent;
+    char *filepath;
+    char *filecontent;
     unsigned int filesize;
     struct cpio_newc_header *head_ptr = CPIO_START;
 
     while (head_ptr != 0)
     {
-        int error = cpio_newc_parse(head_ptr, &filepath, &filesize, &filecontent, &head_ptr);
-        if (error)
+        if (cpio_newc_parse(head_ptr, &filepath, &filesize, &filecontent, &head_ptr))
         {
             uart_sendline("cpio parse error");
             break;
@@ -214,7 +230,7 @@ void cmd_cat(char *file)
 
 void cmd_2stimeout()
 {
-    add_timer(timer_2s, 2, "2stimer");
+    add_timer(timer_2s, 2, "2stimer", 0);
 }
 
 void cmd_timeout(char *sec, char *message)
@@ -222,7 +238,7 @@ void cmd_timeout(char *sec, char *message)
     char res[20];
     strcpy(res, strcat("Timeout message: ", message));
 
-    add_timer(uart_sendline, atoi(sec), res);
+    add_timer(uart_sendline, atoi(sec), res, 0);
 }
 
 void cmd_reboot()
@@ -246,27 +262,80 @@ void cmd_memory()
     kfree(c);
     kfree(d);
 
-    char *e = kmalloc(4096);    
-    char *f = kmalloc(4096);    
-    char *g = kmalloc(4096);   
-    char *h = kmalloc(4096); 
-    char *i = kmalloc(300000); 
+    char *e = kmalloc(4096); // 2^0 page
+    char *f = kmalloc(4096); // 2^1 pages
+    char *g = kmalloc(4096); // 2^2 pages
+    char *h = kmalloc(4096); // over
 
     kfree(e);
     kfree(f);
     kfree(g);
     kfree(h);
-    kfree(i);
 }
 
-void cmd_error(char * cmd){
+void cmd_sallocate()
+{
+    // test malloc
+    char *test1 = s_allocator(0x18);
+    memcpy(test1, "test malloc1", sizeof("test malloc1"));
+    uart_sendline("%s\n", test1);
+
+    char *test2 = s_allocator(0x20);
+    memcpy(test2, "test malloc2", sizeof("test malloc2"));
+    uart_sendline("%s\n", test2);
+
+    char *test3 = s_allocator(0x28);
+    memcpy(test3, "test malloc3", sizeof("test malloc3"));
+    uart_sendline("%s\n", test3);
+}
+
+void cmd_error(char *cmd)
+{
     uart_sendline("No '");
     uart_sendline(cmd);
     uart_sendline("' command\n");
 }
 
+void cmd_user_program(char *file)
+{
+    char *filepath;
+    char *filecontent;
+    unsigned int filesize;
+    struct cpio_newc_header *head_ptr = CPIO_START;
+
+    while (head_ptr != 0)
+    {
+        if (cpio_newc_parse(head_ptr, &filepath, &filesize, &filecontent, &head_ptr))
+        {
+            uart_sendline("cpio parse error");
+            break;
+        }
+
+        if (strcmp(filepath, file) == 0)
+        {
+            uart_recv_echo_flag = 0; // prevent print 2 times
+            //give space to user program
+            char *start = kmalloc(filesize);
+            start = filecontent;
+            exec_thread(start, filesize);
+        }
+
+        if (head_ptr == 0)
+        {
+            uart_sendline("No such file or directory: %s\n", file);
+        }
+    }
+}
+
 void cmd_el(){
     unsigned long el;
     asm volatile("mrs %0, CurrentEL" : "=r"(el));
-    uart_sendline("Current EL is: %d\n", el);
+    uart_sendline("Current EL is: %d", (el>>2)&3);
+}
+
+void cmd_thread(){
+    for(int i = 0; i < 5; ++i){
+        thread_create(foo);
+    }
+    idle();
 }
