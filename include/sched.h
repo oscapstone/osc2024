@@ -44,7 +44,7 @@ struct task_state_segment {
     uint64_t fp; // x29, frame pointer
     uint64_t lr; // x30, link register
     uint64_t sp; // sp_el1
-    uint64_t pc;
+    uint64_t sp_backup; // for signal handling
 };
 
 struct task_struct {
@@ -55,7 +55,7 @@ struct task_struct {
 
     int pending; // pending signal
     int process_sig; // signal that is being processed
-    struct sighandler *sighand;
+    struct sighandler sighand;
 
     int exit_state;
     struct task_state_segment tss; // because context switch occurs in kernel mode,sp are in el1 (sp_el1);

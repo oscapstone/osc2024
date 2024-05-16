@@ -11,7 +11,9 @@ void no_sighandler(void) {
 void default_sigkill(void) {
     int pid = get_taskid();
 
-    printf("[default_sigkill] default SIGKILL handler in user space, task %d be killed.\n", pid);
+    task_pool[pid].state = TASK_STOPPED;
+    task_pool[pid].exit_state = 0;
+    num_running_task--;
 
     return;
 }

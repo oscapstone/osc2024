@@ -175,7 +175,7 @@ int sys_signal(struct trapframe *trapframe)
     }
 
     handler = (void *) trapframe->x[1];
-    current->sighand->action[signum] = handler;
+    current->sighand.action[signum] = handler;
     return SYSCALL_SUCCESS;
 }
 
@@ -211,12 +211,8 @@ int sys_sigreturn(struct trapframe *trapframe)
     /* Free the signal stack. */
     kfree((void *) trapframe->sp);
 
-    if (current->process_sig == SIGKILL) {
-        current->state = TASK_STOPPED;
-        current->exit_state = 1;
-        num_running_task--;
-    }
-
+    /* Restore the previous stack (before signal handling) */
+    current->tss.sp = current->tss.sp_backup;
     sig_restore_context(&current->tss);
     return SYSCALL_SUCCESS;
 }

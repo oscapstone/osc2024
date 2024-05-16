@@ -24,7 +24,7 @@ void task_init()
         task_pool[i].task_id = i;
         task_pool[i].pending = 0;
         task_pool[i].process_sig = 0;
-        task_pool[i].sighand = &default_sighandler;
+        task_pool[i].sighand = default_sighandler;
     }
 
     // TODO: Understand how to deal with the task[0] (kernel). At linux 0.11, it is a special task.
@@ -37,7 +37,9 @@ void task_init()
     update_current(&task_pool[0]);
     num_running_task = 1;
     // TODO: the task 0's stack are not in kstack_pool[0] and ustack_pool[0]. It is in the stack that start.S set up.
-    context_switch(&task_pool[0]);
+    task_pool[0].tss.lr = (uint64_t) do_shell;
+    task_pool[0].tss.sp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
+    task_pool[0].tss.fp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
 }
 
 /* Do context switch. */
@@ -57,9 +59,10 @@ void context_switch(struct task_struct *next)
 
         current->process_sig = current->pending;
         current->pending = 0;
+        current->tss.sp_backup = current->tss.sp;
 
         asm volatile("msr spsr_el1, xzr");
-        asm volatile("msr elr_el1, %0" ::"r" (current->sighand->action[current->process_sig]));
+        asm volatile("msr elr_el1, %0" ::"r" (current->sighand.action[current->process_sig]));
         asm volatile("msr sp_el0, %0" ::"r" (sig_stack + USTACK_SIZE - 16));
         asm volatile("mov lr, %0" ::"r" (sigreturn));
         asm volatile("eret");
@@ -109,7 +112,7 @@ void schedule(void)
 {
     int i = NR_TASKS, c = -1, next = 0;
     while (1) {
-        while (--i) { // With `while (--i)`, the task 0 won't be selected.
+        while ((--i) >= 0) { // With `while (--i)`, the task 0 won't be selected.
             if (task_pool[i].state == TASK_RUNNING && task_pool[i].counter > c) {
                 c = task_pool[i].counter;
                 next = i;
@@ -130,15 +133,10 @@ void sched_init()
 {
     task_init();
 
-    /* Demo osc2024 lab 5: fork test. */
-    // privilege_task_create(demo_fork_test, 200);
-
-    /* Create the shell process. */
-    privilege_task_create(do_shell, 1); // 1 for the task execute 1 ticks per time.
-
     /* We enable interrupt here. Because we want timer interrupt at EL1. */
     enable_interrupt();
-
     core_timer_enable();
-    schedule();
+
+    /* Start task 0 */
+    sig_restore_context(&current->tss);
 }
