@@ -1,16 +1,20 @@
+use core::arch::asm;
 use core::time::Duration;
 
 use aarch64_cpu::registers::*;
-use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{boxed::Box, format};
 use cpio::CPIOArchive;
-use cpu::cpu;
-use library::{console, format, print, println, sync::mutex::Mutex};
+use library::{console, print, println, sync::mutex::Mutex};
 
+use crate::scheduler::current;
 use crate::{
     driver::{self, mailbox},
     memory,
 };
+
+pub static mut SLAB_ALLOCATOR_DEBUG_ENABLE: bool = false;
 
 pub struct Shell {
     input: String,
@@ -36,7 +40,7 @@ impl Shell {
     pub fn run(&mut self) -> ! {
         self.shell_hint();
         loop {
-            if let Some(c) = console::console().read_char_async() {
+            if let Some(c) = console::console().read_char() {
                 match c {
                     '\r' | '\n' => {
                         self.execute_command();
@@ -61,6 +65,7 @@ impl Shell {
         println!("run-program\t: run a program (image)");
         println!("switch-2s-alert\t: enable/disable 2s alert");
         println!("set-timeout\t: print a message after period of time");
+        println!("switch-slab-debug-mode\t: switch slab allocator debug mode");
     }
 
     fn reboot(&self) {
@@ -100,6 +105,7 @@ impl Shell {
                 "test" => self.test(),
                 "switch-2s-alert" => self.switch_2s_alert(),
                 "set-timeout" => self.set_timeout(args),
+                "switch-slab-debug-mode" => self.switch_slab_debug_mode(),
                 "" => (),
                 cmd => println!("{}: command not found", cmd),
             }
@@ -194,17 +200,19 @@ impl Shell {
                             property_value.try_into().unwrap(),
                         ) as usize)
                     };
+
                     while let Some(file) = cpio_archive.read_next() {
                         if file.name != filename {
                             continue;
                         }
-                        const STACK_SIZE: usize = 0x1000;
-                        let stack = Box::new([0u8; STACK_SIZE]);
-                        let stack_end = stack.as_ptr() as u64 + STACK_SIZE as u64;
-                        println!("{:#018x}", file.content.as_ptr() as u64);
-                        unsafe { cpu::run_user_code(stack_end, file.content.as_ptr() as u64) };
+                        let mut code = Vec::from(file.content).into_boxed_slice();
+                        let code_start = code.as_ptr();
+                        Box::into_raw(code);
+                        unsafe { &mut *current() }.run_user_program(code_start as *const fn() -> !);
+                        return Ok(());
                     }
                     println!("run-program: {}: No such file or directory", filename);
+
                     return Ok(());
                 }
                 Ok(())
@@ -263,6 +271,10 @@ impl Shell {
                 Ok(())
             }),
         )
+    }
+
+    fn switch_slab_debug_mode(&self) {
+        unsafe { SLAB_ALLOCATOR_DEBUG_ENABLE = !SLAB_ALLOCATOR_DEBUG_ENABLE };
     }
 }
 

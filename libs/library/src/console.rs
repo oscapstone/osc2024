@@ -1,11 +1,19 @@
 use crate::sync::mutex::Mutex;
 use core::fmt;
 
-static CUR_CONSOLE: Mutex<&'static (dyn AsyncReadWrite + Sync)> = Mutex::new(&NULL_CONSOLE);
+static CUR_CONSOLE: Mutex<&'static (dyn Console + Sync)> = Mutex::new(&NULL_CONSOLE);
 static NULL_CONSOLE: NullConsole = NullConsole {};
 
+pub enum ConsoleMode {
+    Sync,
+    Async,
+}
+
 pub trait Read {
-    fn read_char(&self) -> char;
+    /**
+     * In Sync mode, it should block the thread and always return Some.
+     */
+    fn read_char(&self) -> Option<char>;
 }
 
 pub trait Write {
@@ -20,30 +28,13 @@ pub trait Write {
     fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result;
 }
 
-pub trait AsyncRead {
-    fn read_char_async(&self) -> Option<char>;
-}
-
-pub trait AsyncWrite {
-    fn write_char_async(&self, c: char);
-
-    fn write_str_async(&self, s: &str) {
-        for c in s.chars() {
-            self.write_char_async(c);
-        }
-    }
-    fn write_fmt_async(&self, args: fmt::Arguments) -> fmt::Result;
-}
-
 pub trait ReadWrite: Read + Write {}
-
-pub trait AsyncReadWrite: AsyncRead + AsyncWrite {}
 
 struct NullConsole {}
 
 impl Read for NullConsole {
-    fn read_char(&self) -> char {
-        ' '
+    fn read_char(&self) -> Option<char> {
+        None
     }
 }
 
@@ -63,27 +54,19 @@ impl Write for NullConsole {
 
 impl ReadWrite for NullConsole {}
 
-impl AsyncRead for NullConsole {
-    fn read_char_async(&self) -> Option<char> {
-        None
-    }
+impl Console for NullConsole {
+    fn change_mode(&self, mode: ConsoleMode) {}
 }
 
-impl AsyncWrite for NullConsole {
-    fn write_char_async(&self, c: char) {}
-
-    fn write_fmt_async(&self, args: fmt::Arguments) -> fmt::Result {
-        Ok(())
-    }
+pub trait Console: ReadWrite {
+    fn change_mode(&self, mode: ConsoleMode);
 }
 
-impl AsyncReadWrite for NullConsole {}
-
-pub fn register_console(new_console: &'static (dyn AsyncReadWrite + Sync)) {
+pub fn register_console(new_console: &'static (dyn Console + Sync)) {
     let mut cur_console = CUR_CONSOLE.lock().unwrap();
     *cur_console = new_console;
 }
 
-pub fn console() -> &'static (dyn AsyncReadWrite + Sync) {
+pub fn console() -> &'static (dyn Console + Sync) {
     *CUR_CONSOLE.lock().unwrap()
 }

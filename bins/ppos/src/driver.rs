@@ -82,3 +82,7 @@ pub fn mailbox() -> &'static Mailbox {
 pub fn timer() -> &'static Timer {
     &TIMER
 }
+
+pub fn mini_uart() -> &'static MiniUart {
+    &MINI_UART
+}

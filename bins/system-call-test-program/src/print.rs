@@ -1,9 +1,9 @@
-use crate::console;
+use core::fmt::{Arguments, Write};
 
-use core::fmt::Arguments;
+use crate::console::console;
 
 pub fn _print(args: Arguments) {
-    console::console().write_fmt(args).unwrap();
+    console().write_fmt(args).unwrap();
 }
 
 #[macro_export]

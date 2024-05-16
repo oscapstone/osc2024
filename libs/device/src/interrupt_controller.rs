@@ -139,6 +139,15 @@ impl<'a> InterruptController<'a> {
     }
 
     fn check_and_do_interrupt(&self) {
+        if self
+            .pending_interrupt_queue
+            .queue
+            .lock()
+            .unwrap()
+            .is_empty()
+        {
+            return;
+        }
         let next_priority = self
             .pending_interrupt_queue
             .queue

@@ -1,4 +1,3 @@
-use alloc::collections::LinkedList;
 use library::sync::mutex::Mutex;
 
 use crate::interrupt_controller::InterruptNumber;

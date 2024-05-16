@@ -1,6 +1,7 @@
 use core::fmt;
 use core::fmt::Write;
 
+use alloc::collections::VecDeque;
 use tock_registers::{
     interfaces::{ReadWriteable, Readable, Writeable},
     register_bitfields, register_structs,
@@ -14,12 +15,17 @@ use crate::{
 };
 
 use super::device_driver::DeviceDriver;
-use library::{collections::ring_buffer::RingBuffer, console, sync::mutex::Mutex};
+use library::{
+    collections::ring_buffer::RingBuffer,
+    console::{self, ConsoleMode},
+    sync::mutex::Mutex,
+};
 
 struct MiniUartInner {
     registers: MMIODerefWrapper<Registers>,
-    read_buffer: RingBuffer<{ Self::BUFFER_SIZE }>,
-    write_buffer: RingBuffer<{ Self::BUFFER_SIZE }>,
+    read_buffer: VecDeque<u8>,
+    write_buffer: VecDeque<u8>,
+    mode: ConsoleMode,
 }
 
 pub struct MiniUart {
@@ -143,8 +149,9 @@ impl MiniUartInner {
     pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
             registers: MMIODerefWrapper::new(mmio_start_addr),
-            read_buffer: RingBuffer::new(),
-            write_buffer: RingBuffer::new(),
+            read_buffer: VecDeque::new(),
+            write_buffer: VecDeque::new(),
+            mode: ConsoleMode::Sync,
         }
     }
 
@@ -199,12 +206,16 @@ impl MiniUartInner {
     }
 
     fn read_byte(&mut self) -> u8 {
-        while !self.is_readable() {}
+        while !self.is_readable() {
+            core::hint::spin_loop();
+        }
         self.registers.data.get() as u8
     }
 
     fn write_byte(&mut self, value: u8) {
-        while !self.is_writable() {}
+        while !self.is_writable() {
+            core::hint::spin_loop();
+        }
         self.registers.data.set(value as u32);
     }
 
@@ -212,7 +223,7 @@ impl MiniUartInner {
         // critical section
         // read buffer is shared between interrupt handlers
         self.disable_read_interrupt();
-        let c = self.read_buffer.pop();
+        let c = self.read_buffer.pop_front();
         self.enable_read_interrupt();
         c
     }
@@ -221,7 +232,7 @@ impl MiniUartInner {
         // critical section
         // write buffer is shared between interrupt handlers
         self.disable_write_interrupt();
-        self.write_buffer.push(value);
+        self.write_buffer.push_back(value);
         self.enable_write_interrupt();
     }
 
@@ -261,17 +272,19 @@ impl MiniUartInner {
         {
             Some(AUX_MU_IIR::INTERRUPT_ID_BITS::Value::NO_INTERRUPT) => (),
             Some(AUX_MU_IIR::INTERRUPT_ID_BITS::Value::TRANSMIT_HOLDING_REGISTER_EMPTY) => {
-                if let Some(byte) = self.write_buffer.pop() {
+                // if nothing to write, disable write interrupt
+                // or it will keep firing and racing cpu
+                self.disable_write_interrupt();
+                if let Some(byte) = self.write_buffer.pop_front() {
                     self.write_byte(byte);
-                } else {
-                    // nothing to write, disable write interrupt
-                    // or it will keep firing and racing cpu
-                    self.disable_write_interrupt();
+                    self.enable_write_interrupt();
                 }
             }
             Some(AUX_MU_IIR::INTERRUPT_ID_BITS::Value::RECEIVER_HOLDS_VAILD_BYTE) => {
+                self.disable_read_interrupt();
                 let byte = self.read_byte();
-                self.read_buffer.push(byte);
+                self.read_buffer.push_back(byte);
+                self.enable_read_interrupt();
             }
             None => panic!("Invalid interrupt"),
         }
@@ -310,24 +323,29 @@ impl MiniUart {
 
 impl fmt::Write for MiniUartInner {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        for c in s.chars() {
-            self.write_byte_async(c as u8);
+        match self.mode {
+            ConsoleMode::Sync => {
+                for c in s.chars() {
+                    self.write_byte(c as u8);
+                }
+            }
+            ConsoleMode::Async => {
+                for c in s.chars() {
+                    self.write_byte_async(c as u8);
+                }
+            }
         }
         Ok(())
-    }
-}
-
-impl console::Read for MiniUart {
-    fn read_char(&self) -> char {
-        let mut inner = self.inner.lock().unwrap();
-        inner.read_byte() as char
     }
 }
 
 impl console::Write for MiniUart {
     fn write_char(&self, c: char) {
         let mut inner = self.inner.lock().unwrap();
-        inner.write_byte(c as u8);
+        match inner.mode {
+            ConsoleMode::Sync => inner.write_byte(c as u8),
+            ConsoleMode::Async => inner.write_byte_async(c as u8),
+        }
     }
 
     fn write_fmt(&self, args: fmt::Arguments) -> fmt::Result {
@@ -336,29 +354,23 @@ impl console::Write for MiniUart {
     }
 }
 
+impl console::Read for MiniUart {
+    fn read_char(&self) -> Option<char> {
+        let mut inner = self.inner.lock().unwrap();
+        match inner.mode {
+            ConsoleMode::Sync => Some(inner.read_byte() as char),
+            ConsoleMode::Async => inner.read_byte_async().map(|byte| byte as char),
+        }
+    }
+}
+
 impl console::ReadWrite for MiniUart {}
 
-impl console::AsyncRead for MiniUart {
-    fn read_char_async(&self) -> Option<char> {
-        let mut inner = self.inner.lock().unwrap();
-        inner.read_byte_async().map(|byte| byte as char)
+impl console::Console for MiniUart {
+    fn change_mode(&self, mode: ConsoleMode) {
+        self.inner.lock().unwrap().mode = mode;
     }
 }
-
-impl console::AsyncWrite for MiniUart {
-    fn write_char_async(&self, c: char) {
-        let mut inner = self.inner.lock().unwrap();
-        // inner.write_byte(c as u8);
-        inner.write_byte_async(c as u8);
-    }
-
-    fn write_fmt_async(&self, args: fmt::Arguments) -> fmt::Result {
-        let mut inner = self.inner.lock().unwrap();
-        inner.write_fmt(args)
-    }
-}
-
-impl console::AsyncReadWrite for MiniUart {}
 
 impl InterruptPrehook for MiniUart {
     fn prehook(&self) -> Result<(), &'static str> {

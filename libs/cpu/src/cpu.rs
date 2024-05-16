@@ -48,3 +48,8 @@ pub unsafe fn enable_kernel_space_interrupt() {
 pub unsafe fn disable_kernel_space_interrupt() {
     DAIF.write(DAIF::I::Masked);
 }
+
+#[inline(always)]
+pub fn current_task() -> u64 {
+    TPIDR_EL1.get()
+}

@@ -10,6 +10,7 @@ members = [
   "bins/bootloader",
   "bins/kernel-transfer",
   "bins/ppos",
+  "bins/system-call-test-program",
   "bins/user-space-test-program",
 ]
 resolver = "2"

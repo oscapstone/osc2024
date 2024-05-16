@@ -4,9 +4,14 @@
 
 use aarch64_cpu::registers::*;
 use core::fmt;
+use cpu::cpu::enable_kernel_space_interrupt;
 use device::interrupt_manager;
-use library::println;
 use tock_registers::{interfaces::Readable, registers::InMemoryRegister};
+
+use crate::{
+    scheduler::{current, scheduler},
+    system_call::system_call,
+};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -19,7 +24,7 @@ struct EsrEL1(InMemoryRegister<u64, ESR_EL1::Register>);
 
 /// The exception context as it is stored on the stack on exception entry.
 #[repr(C)]
-struct ExceptionContext {
+pub struct ExceptionContext {
     /// General Purpose Registers.
     gpr: [u64; 30],
 
@@ -34,6 +39,18 @@ struct ExceptionContext {
 
     /// Exception syndrome register.
     esr_el1: EsrEL1,
+}
+
+impl ExceptionContext {
+    #[inline(always)]
+    pub fn set_return_value(&mut self, value: u64) {
+        self.gpr[0] = value;
+    }
+
+    #[inline(always)]
+    pub fn system_call_number(&self) -> u64 {
+        self.gpr[8]
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -80,6 +97,9 @@ extern "C" fn current_elx_synchronous(e: &mut ExceptionContext) {
 #[no_mangle]
 extern "C" fn current_elx_irq(e: &mut ExceptionContext) {
     interrupt_manager::interrupt_manager().handle_pending_interrupt();
+    if scheduler().initialized() {
+        (unsafe { &mut *current() }).do_pending_signal();
+    }
 }
 
 #[no_mangle]
@@ -93,14 +113,37 @@ extern "C" fn current_elx_serror(e: &mut ExceptionContext) {
 
 #[no_mangle]
 extern "C" fn lower_aarch64_synchronous(e: &mut ExceptionContext) {
-    println!("SPSR_EL1: {:#010x}", e.spsr_el1.0.get());
-    println!("ELR_EL1: {:#018x}", e.elr_el1);
-    println!("ESR_EL1: {:#010x}", e.esr_el1.0.get());
+    unsafe { enable_kernel_space_interrupt() };
+    match e.esr_el1.exception_class() {
+        Some(ESR_EL1::EC::Value::SVC64) => {
+            if e.esr_el1.0.read(ESR_EL1::ISS) as u16 == 0 {
+                system_call(
+                    e,
+                    e.gpr[0] as usize,
+                    e.gpr[1] as usize,
+                    e.gpr[2] as usize,
+                    e.gpr[3] as usize,
+                    e.gpr[4] as usize,
+                    e.gpr[5] as usize,
+                )
+            } else {
+                panic!("unknown ISS")
+            }
+        }
+        Some(_) => default_exception_handler(e),
+        None => default_exception_handler(e),
+    }
+    if scheduler().initialized() {
+        (unsafe { &mut *current() }).do_pending_signal();
+    }
 }
 
 #[no_mangle]
 extern "C" fn lower_aarch64_irq(e: &mut ExceptionContext) {
     interrupt_manager::interrupt_manager().handle_pending_interrupt();
+    if scheduler().initialized() {
+        (unsafe { &mut *current() }).do_pending_signal();
+    }
 }
 
 #[no_mangle]

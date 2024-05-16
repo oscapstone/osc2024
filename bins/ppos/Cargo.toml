@@ -12,6 +12,7 @@ cpio = { path = "../../libs/cpio" }
 cpu = { path = "../../libs/cpu" }
 device = { path = "../../libs/device" }
 devicetree = { path = "../../libs/devicetree" }
+hashbrown = "0.14"  
 library = { path = "../../libs/library" }
 tock-registers = "0.8.1"
 vfs = { path = "../../libs/vfs" }

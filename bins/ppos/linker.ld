@@ -40,8 +40,8 @@ SECTIONS
     . = ALIGN(16);
     __bss_end = .;
   } : segment_data
-  __heap_begin = .;
   .heap (NOLOAD) : ALIGN(PAGE_SIZE) {
+    __heap_begin = .;
     . += 16 * 1024 * 1024;
   } : segment_heap
   __heap_end = .;

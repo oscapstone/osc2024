@@ -90,7 +90,9 @@ impl MailboxInner {
 
     fn read(&self, channel: u8) -> *mut u32 {
         loop {
-            while !self.is_readable() {}
+            while !self.is_readable() {
+                core::hint::spin_loop();
+            }
             let tmp = self.registers.read.get();
             let data = tmp & !(0b1111);
             let data_channel = (tmp & 0b1111) as u8;
@@ -102,15 +104,17 @@ impl MailboxInner {
     }
 
     fn write(&self, channel: u8, buffer_addr: *mut u32) {
-        while !self.is_writable() {}
+        while !self.is_writable() {
+            core::hint::spin_loop();
+        }
         // use 28 MSB
         let message_addr = buffer_addr as u32 & !(0b1111);
         self.registers.write.set(message_addr | channel as u32);
     }
 
-    fn call(&self, buffer_addr: *mut u32) -> *mut u32 {
-        self.write(8, buffer_addr);
-        self.read(8)
+    fn call(&self, channel: u8, buffer_addr: *mut u32) -> *mut u32 {
+        self.write(channel, buffer_addr);
+        self.read(channel)
     }
 
     fn get_board_revision(&self) -> u32 {
@@ -133,7 +137,7 @@ impl MailboxInner {
         buffer.inner[5] = 0;
         // set end tag bits
         buffer.inner[6] = 0;
-        self.call(buffer.inner.as_mut_ptr());
+        self.call(8, buffer.inner.as_mut_ptr());
         buffer.inner[5]
     }
 
@@ -158,7 +162,7 @@ impl MailboxInner {
         buffer.inner[6] = 0;
         // set end tag bits
         buffer.inner[7] = 0;
-        self.call(buffer.inner.as_mut_ptr());
+        self.call(8, buffer.inner.as_mut_ptr());
         ARMMemoryInfo {
             base_address: buffer.inner[5],
             size: buffer.inner[6],
@@ -188,6 +192,10 @@ impl Mailbox {
 
     pub fn get_arm_memory(&self) -> ARMMemoryInfo {
         self.inner.lock().unwrap().get_arm_memory()
+    }
+
+    pub fn call(&self, channel: u8, buffer_addr: *mut u32) -> *mut u32 {
+        self.inner.lock().unwrap().call(channel, buffer_addr)
     }
 }
 

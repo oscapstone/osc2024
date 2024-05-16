@@ -4,6 +4,7 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
+#[derive(Debug)]
 pub struct Mutex<T: ?Sized> {
     data: UnsafeCell<T>,
 }

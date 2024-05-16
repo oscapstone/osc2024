@@ -150,5 +150,6 @@ __exception_restore_context:
 
 	eret
 
+.global __exception_vector_start
 .size	__exception_restore_context, . - __exception_restore_context
 .type	__exception_restore_context, function

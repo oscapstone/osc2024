@@ -4,3 +4,4 @@ target
 rootfs
 *.cpio
 *.dtb
+*.bak

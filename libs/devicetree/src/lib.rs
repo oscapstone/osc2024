@@ -97,6 +97,23 @@ impl FlattenedDevicetreeProperty {
     }
 }
 
+#[repr(packed)]
+#[derive(Debug)]
+struct FlattenedDevicetreeReserveMemoryEntry {
+    address: u64,
+    size: u64,
+}
+
+impl FlattenedDevicetreeReserveMemoryEntry {
+    pub const fn address(&self) -> u64 {
+        u64::from_be(self.address)
+    }
+
+    pub const fn size(&self) -> u64 {
+        u64::from_be(self.size)
+    }
+}
+
 pub struct FlattenedDevicetree {
     start_addr: usize,
     current: usize,
@@ -169,6 +186,28 @@ impl FlattenedDevicetree {
         }
     }
 
+    pub fn traverse_reserved_memory(
+        &self,
+        reserve_memory_callback: &impl Fn(u64, u64) -> Result<(), &'static str>,
+    ) -> Result<(), &'static str> {
+        let header = unsafe { &*(self.start_addr as *const FlattenedDevicetreeHeader) };
+        if header.magic() != DEVICETREE_MAGIC {
+            return Err("Not a valid Flattened Devicetree");
+        }
+        let mut reserve_entry_ptr = (self.start_addr + header.memory_reserve_offset() as usize)
+            as *const FlattenedDevicetreeReserveMemoryEntry;
+        unsafe {
+            while (*reserve_entry_ptr).address() != 0 || (*reserve_entry_ptr).size() != 0 {
+                reserve_memory_callback(
+                    (*reserve_entry_ptr).address(),
+                    (*reserve_entry_ptr).size(),
+                )?;
+                reserve_entry_ptr = reserve_entry_ptr.add(1);
+            }
+        }
+        Ok(())
+    }
+
     fn parse_device_name(&mut self) -> &'static str {
         let device_name_start_addr = self.current as *const u8;
         let mut len = 0;
@@ -206,5 +245,9 @@ impl FlattenedDevicetree {
             self.current += (self.current as *const u8).align_offset(align_of::<u32>());
             property_value
         }
+    }
+
+    pub fn header(&self) -> &FlattenedDevicetreeHeader {
+        unsafe { &*(self.start_addr as *const FlattenedDevicetreeHeader) }
     }
 }
