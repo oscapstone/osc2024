@@ -418,7 +418,7 @@ int do_cmd_setTimeout(int argc, char **argv)
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    add_timer(adapter_puts, sec, args_struct);
+    add_timer_by_sec(sec, adapter_puts, args_struct);
     return 0;
 }
 
@@ -429,6 +429,6 @@ int do_cmd_set2sAlert(int argc, char **argv)
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    add_timer(adapter_timer_set2sAlert, 2, NULL);
+    add_timer_by_sec(2, adapter_timer_set2sAlert, NULL);
     return 0;
 }
