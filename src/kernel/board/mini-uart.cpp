@@ -57,11 +57,16 @@ void mini_uart_enqueue() {
   set_ier_reg(false, TRANSMIT_INT);
   if (iir & (1 << 1)) {
     // Transmit holding register empty
-    if (not wbuf.empty())
-      set32(AUX_MU_IO_REG, wbuf.pop());
+    if (not wbuf.empty()) {
+      auto c = wbuf.pop();
+      set32(AUX_MU_IO_REG, c);
+    }
   } else if (iir & (1 << 2)) {
     // Receiver holds valid byte
-    rbuf.push(get32(AUX_MU_IO_REG) & MASK(8));
+    if (not rbuf.full()) {
+      auto c = get32(AUX_MU_IO_REG) & MASK(8);
+      rbuf.push(c);
+    }
   }
   waiting = true;
   irq_add_task(9, mini_uart_handler, nullptr, mini_uart_handler_fini);

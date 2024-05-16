@@ -1,13 +1,13 @@
 #include "ds/ringbuffer.hpp"
 
 #include "int/interrupt.hpp"
-#include "util.hpp"
+#include "sched.hpp"
 
 void RingBuffer::push(char c, bool wait) {
   if (not wait and full())
     return;
   while (full())
-    NOP;
+    schedule();
   save_DAIF_disable_interrupt();
   buf[tail] = c;
   tail = ntail();
@@ -18,7 +18,7 @@ char RingBuffer::pop(bool wait) {
   if (not wait and empty())
     return -1;
   while (empty())
-    NOP;
+    schedule();
   save_DAIF_disable_interrupt();
   auto c = buf[head];
   head = nhead();
