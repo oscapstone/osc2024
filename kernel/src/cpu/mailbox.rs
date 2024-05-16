@@ -1,5 +1,5 @@
 use core::{ptr::{read_volatile, write_volatile}, usize};
-use crate::os::stdio::*;
+use crate::{os::stdio::*, println};
 
 const MAILBOX_BASE: u32 = 0x3F00_B880;
 const MAILBOX_READ: u32 = MAILBOX_BASE + 0x00;
@@ -23,9 +23,9 @@ pub enum MailboxTag {
 }
 
 #[inline(never)]
-fn mailbox_call(mailbox: &mut [u32]) {
-    let mut mailbox_addr = mailbox.as_ptr() as u32;
-    mailbox_addr = mailbox_addr & !0xF | 8;
+pub fn mailbox_call(channel: u8, mailbox: *mut u32) {
+    let mut mailbox_addr = mailbox as u32;
+    mailbox_addr = mailbox_addr & !0xF | (channel as u32 & 0xF);
 
     unsafe {
         while (read_volatile(MAILBOX_STATUS as *const u32) & MAILBOX_FULL) != 0 {}
@@ -39,7 +39,6 @@ fn mailbox_call(mailbox: &mut [u32]) {
             }
         }
     }
-    
 }
 
 pub fn get(tag: MailboxTag) -> (u32, u32) {
@@ -64,7 +63,10 @@ pub fn get(tag: MailboxTag) -> (u32, u32) {
     mailbox[start_idx + 5] = 0; // value buffer
     mailbox[start_idx + 6] = END_TAG;
 
-    mailbox_call(&mut mailbox[start_idx..start_idx + 7]);
+    unsafe {
+        mailbox_call(8, mailbox.as_mut_ptr().add(start_idx) as *mut u32);
+
+    }
 
     match tag {
         MailboxTag::GetBoardRevision => {
