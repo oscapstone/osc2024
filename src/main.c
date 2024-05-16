@@ -22,6 +22,9 @@ void main()
     mm_init();
     sched_init();
 
+    do_shell_user();
+    // do_shell();
+
     /* sched_init() will make kernel be the task 0, then run shell in user mode. So there should not be returned. */
     while (1);
 }

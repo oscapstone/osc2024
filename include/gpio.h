@@ -29,7 +29,9 @@
 
 #define __IO            volatile
 
-#define MMIO_BASE       0x3F000000
+#ifndef MMIO_BASE
+#define MMIO_BASE               (0x3F000000)
+#endif // MMIO_BASE
 #define GPIO_BASE       (MMIO_BASE + 0x00200000)
 #define AUX_BASE        (MMIO_BASE + 0x00215000)
 #define IRQ_BASE        (MMIO_BASE + 0x0000B000)

@@ -8,16 +8,14 @@
 #include "memblock.h"
 #include "kernel.h"
 
-extern uint64_t __dtb_address;
-
 fdt_header *dtb_address;
 
 /* Initialize the device tree blob and cpio base address. */
 void fdt_init()
 {
-    uint64_t *tmp_pointer = (uint64_t *) &__dtb_address;
-    dtb_address = (fdt_header *) *tmp_pointer;
-    // dtb_address = 0x8200000;
+    uint64_t __dtb_address;
+    asm volatile("mov %0, x18   \n\t":"=r"(__dtb_address)::);
+    dtb_address = (fdt_header *) __dtb_address;
 
     fdt_traverse(initramfs_callback);
     printf("==== init: DTB & INITRD\n");
