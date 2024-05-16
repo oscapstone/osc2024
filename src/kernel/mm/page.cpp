@@ -24,11 +24,11 @@ void PageSystem::info() {
 #pragma GCC diagnostic ignored "-Wformat"
       // flag '0' results in undefined behavior with 'p' conversion specifier
       if (reserved) {
-        kprintf("  frame %010p ~ %010p: %s\n", vpn2addr(r), vpn2addr(i),
+        kprintf("  frame %010p ~ %010p: %s\n", pfn2addr(r), pfn2addr(i),
                 str(FRAME_TYPE::RESERVED));
         reserved = false;
       }
-      kprintf("  frame %010p ~ %010p: %s\n", vpn2addr(i), vpn2end(i),
+      kprintf("  frame %010p ~ %010p: %s\n", pfn2addr(i), pfn2end(i),
               str(array_[i].type));
 #pragma GCC diagnostic pop
     }
@@ -67,8 +67,8 @@ void PageSystem::reserve(void* p_start, void* p_end) {
   MM_INFO("reserve: %p ~ %p\n", p_start, p_end);
   auto start = align<PAGE_SIZE, false>(p_start);
   auto end = align<PAGE_SIZE>(p_end);
-  auto vs = addr2vpn_safe(start);
-  auto ve = addr2vpn_safe(end);
+  auto vs = addr2pfn_safe(start);
+  auto ve = addr2pfn_safe(end);
   for (uint64_t i = vs; i < ve; i++)
     if (0 <= i and i < length_)
       array_[i] = {.type = FRAME_TYPE::RESERVED};
@@ -78,7 +78,7 @@ void PageSystem::init() {
   log = false;
   for (uint64_t i = 0; i < length_; i++) {
     if (array_[i].allocated())
-      release(vpn2addr(i));
+      release(pfn2addr(i));
   }
   log = true;
 #if MM_LOG_LEVEL >= 3
@@ -87,68 +87,68 @@ void PageSystem::init() {
 }
 
 void PageSystem::release(PageSystem::AllocatedPage apage) {
-  auto vpn = addr2vpn(apage);
-  auto order = array_[vpn].order;
+  auto pfn = addr2pfn(apage);
+  auto order = array_[pfn].order;
   if (log)
     MM_VERBOSE("release: page %p order %d\n", apage, order);
-  auto fpage = vpn2freepage(vpn);
+  auto fpage = pfn2freepage(pfn);
   free_list_[order].push_back(fpage);
   merge(fpage);
 }
 
 PageSystem::AllocatedPage PageSystem::alloc(PageSystem::FreePage* fpage,
                                             bool head) {
-  auto vpn = addr2vpn(fpage);
-  auto order = array_[vpn].order;
+  auto pfn = addr2pfn(fpage);
+  auto order = array_[pfn].order;
   free_list_[order].erase(fpage);
   if (head) {
     if (log)
       MM_VERBOSE("alloc(+): page %p order %d\n", fpage, order);
-    array_[vpn].type = FRAME_TYPE::ALLOCATED;
+    array_[pfn].type = FRAME_TYPE::ALLOCATED;
     auto apage = AllocatedPage(fpage);
     return apage;
   } else {
-    array_[vpn].type = FRAME_TYPE::NOT_HEAD;
+    array_[pfn].type = FRAME_TYPE::NOT_HEAD;
     return nullptr;
   }
 }
 
 PageSystem::AllocatedPage PageSystem::split(AllocatedPage apage) {
-  auto vpn = addr2vpn(apage);
-  auto o = --array_[vpn].order;
-  auto bvpn = buddy(vpn);
-  array_[bvpn] = {.type = FRAME_TYPE::ALLOCATED, .order = o};
-  auto bpage = vpn2addr(bvpn);
+  auto pfn = addr2pfn(apage);
+  auto o = --array_[pfn].order;
+  auto bpfn = buddy(pfn);
+  array_[bpfn] = {.type = FRAME_TYPE::ALLOCATED, .order = o};
+  auto bpage = pfn2addr(bpfn);
   MM_VERBOSE("split: %p + %p\n", apage, bpage);
   return bpage;
 }
 
 void PageSystem::truncate(AllocatedPage apage, int8_t order) {
-  auto vpn = addr2vpn(apage);
-  while (array_[vpn].order > order) {
+  auto pfn = addr2pfn(apage);
+  while (array_[pfn].order > order) {
     auto bpage = split(apage);
     release(bpage);
   }
 }
 
 void PageSystem::merge(FreePage* apage) {
-  auto avpn = addr2vpn(apage);
-  while (array_[avpn].order + 1 < total_order_) {
-    auto bvpn = buddy(avpn);
-    if (buddy(bvpn) != avpn or not array_[avpn].free() or
-        not array_[bvpn].free())
+  auto apfn = addr2pfn(apage);
+  while (array_[apfn].order + 1 < total_order_) {
+    auto bpfn = buddy(apfn);
+    if (buddy(bpfn) != apfn or not array_[apfn].free() or
+        not array_[bpfn].free())
       break;
-    auto bpage = vpn2freepage<true>(bvpn);
-    if (avpn > bvpn) {
-      std::swap(avpn, bvpn);
+    auto bpage = pfn2freepage<true>(bpfn);
+    if (apfn > bpfn) {
+      std::swap(apfn, bpfn);
       std::swap(apage, bpage);
     }
     if (log)
       MM_VERBOSE("merge: %p + %p\n", apage, bpage);
     alloc(bpage, false);
-    auto o = array_[avpn].order;
+    auto o = array_[apfn].order;
     free_list_[o].erase(apage);
-    array_[avpn].order = ++o;
+    array_[apfn].order = ++o;
     free_list_[o].push_back(apage);
   }
 }

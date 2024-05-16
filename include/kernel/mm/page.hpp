@@ -63,32 +63,32 @@ class PageSystem {
   void truncate(AllocatedPage apage, int8_t order);
   void merge(FreePage* fpage);
 
-  void* vpn2addr(uint64_t vpn) {
-    return (void*)(start_ + vpn * PAGE_SIZE);
+  void* pfn2addr(uint64_t pfn) {
+    return (void*)(start_ + pfn * PAGE_SIZE);
   }
-  void* vpn2end(uint64_t vpn) {
-    return (void*)(start_ + (vpn + (1 << array_[vpn].order)) * PAGE_SIZE);
+  void* pfn2end(uint64_t pfn) {
+    return (void*)(start_ + (pfn + (1 << array_[pfn].order)) * PAGE_SIZE);
   }
-  uint64_t addr2vpn(void* addr) {
+  uint64_t addr2pfn(void* addr) {
     return ((uint64_t)addr - start_) / PAGE_SIZE;
   }
-  uint64_t addr2vpn_safe(void* addr) {
+  uint64_t addr2pfn_safe(void* addr) {
     if ((uint64_t)addr < start_)
       return 0;
     if (end_ < (uint64_t)addr)
       return (end_ - start_) / PAGE_SIZE;
     return ((uint64_t)addr - start_) / PAGE_SIZE;
   }
-  uint64_t buddy(uint64_t vpn) {
-    return vpn ^ (1 << array_[vpn].order);
+  uint64_t buddy(uint64_t pfn) {
+    return pfn ^ (1 << array_[pfn].order);
   }
   template <bool assume = false>
-  FreePage* vpn2freepage(uint64_t vpn) {
-    auto addr = vpn2addr(vpn);
-    if (assume or array_[vpn].free()) {
+  FreePage* pfn2freepage(uint64_t pfn) {
+    auto addr = pfn2addr(pfn);
+    if (assume or array_[pfn].free()) {
       return (FreePage*)addr;
     } else {
-      array_[vpn].type = FRAME_TYPE::FREE;
+      array_[pfn].type = FRAME_TYPE::FREE;
       return new (addr) FreePage;
     }
   }
