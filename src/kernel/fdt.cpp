@@ -40,15 +40,11 @@ void FDT::init(void* addr, bool debug) {
 
   klog("DTB addr       : %p ~ %p\n", startp(), endp());
 
-  if (fdt_magic(base) != FDT_MAGIC) {
-    klog("invalid dtb header 0x%x != 0x%x\n", fdt_magic(base), FDT_MAGIC);
-    prog_hang();
-  }
-  if (fdt_last_comp_version(base) > LAST_COMP_VERSION) {
-    klog("Unsupport dtb v%d > v%d\n", fdt_last_comp_version(base),
-         LAST_COMP_VERSION);
-    prog_hang();
-  }
+  if (fdt_magic(base) != FDT_MAGIC)
+    panic("invalid dtb header 0x%x != 0x%x", fdt_magic(base), FDT_MAGIC);
+  if (fdt_last_comp_version(base) > LAST_COMP_VERSION)
+    panic("Unsupport dtb v%d > v%d", fdt_last_comp_version(base),
+          LAST_COMP_VERSION);
 
   if (debug) {
     kprintf("magic             %x\n", fdt_magic(base));

@@ -1,10 +1,8 @@
 #include "exec.hpp"
-#include "fs/initramfs.hpp"
 #include "io.hpp"
 #include "shell/cmd.hpp"
-
-extern char __user_text[];
-extern char __user_stack[];
+#include "string.hpp"
+#include "thread.hpp"
 
 int cmd_run(int argc, char* argv[]) {
   if (argc != 2) {
@@ -13,21 +11,10 @@ int cmd_run(int argc, char* argv[]) {
     return -1;
   }
 
-  auto name = argv[1];
-  auto hdr = initramfs.find(name);
-  if (hdr == nullptr) {
-    kprintf("%s: %s: No such file or directory\n", argv[0], name);
-    return -1;
-  }
-  if (hdr->isdir()) {
-    kprintf("%s: %s: Is a directory\n", argv[0], name);
-    return -1;
-  }
-
-  auto file = hdr->file();
-  memcpy(__user_text, file.data(), file.size());
-
-  exec_user_prog(__user_text, __user_stack);
+  auto ctx = new ExecCtx{argv[1], argv + 1};
+  auto th = kthread_create(exec_new_user_prog, (void*)ctx);
+  auto tid = th->tid;
+  kthread_wait(tid);
 
   return 0;
 }

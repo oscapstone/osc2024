@@ -9,14 +9,18 @@
 #include "int/timer.hpp"
 #include "io.hpp"
 #include "mm/mm.hpp"
+#include "sched.hpp"
 #include "shell/shell.hpp"
+#include "thread.hpp"
+
+extern char __kernel_end[];
 
 void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   timer_init();
 
   klog("Hello Kernel!\n");
-  klog("Kernel start   : %p\n", _start);
+  klog("Kernel start   : %p ~ %p\n", _start, __kernel_end);
   klog("Exception level: %d\n", get_el());
   klog("freq_of_timer  : %ld\n", freq_of_timer);
   klog("boot time      : " PRTval "s\n", FTval(tick2timeval(boot_timer_tick)));
@@ -38,9 +42,13 @@ void kernel_main(void* dtb_addr) {
   mm_init();
 
   irq_init();
+  kthread_init();
+  schedule_init();
   enable_interrupt();
 
   mini_uart_use_async(true);
 
-  shell();
+  kthread_create(shell);
+
+  idle();
 }

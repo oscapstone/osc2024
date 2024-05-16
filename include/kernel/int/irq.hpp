@@ -3,10 +3,6 @@
 #include "ds/list.hpp"
 #include "int/exception.hpp"
 
-extern "C" {
-void irq_handler(ExceptionContext* context, int type);
-}
-
 struct Task : ListItem {
   bool running;
   int prio;  // high priority task = high number

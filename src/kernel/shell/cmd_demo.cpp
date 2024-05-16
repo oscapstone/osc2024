@@ -3,8 +3,10 @@
 #include "int/timer.hpp"
 #include "io.hpp"
 #include "mm/page.hpp"
+#include "sched.hpp"
 #include "shell/cmd.hpp"
 #include "string.hpp"
+#include "thread.hpp"
 
 bool show_timer = false;
 int timer_delay = 0;
@@ -80,6 +82,19 @@ int demo_page(int argc, char* argv[]) {
   return 0;
 }
 
+int demo_thread(int /*argc*/, char* /*argv*/[]) {
+  auto foo = +[](void*) {
+    for (int i = 0; i < 10; ++i) {
+      kprintf("Thread id: %d %d\n", current_thread()->tid, i);
+      delay(1000000);
+      schedule();
+    }
+  };
+  for (int i = 0; i < 2; ++i)
+    kthread_create(foo);
+  return 0;
+}
+
 int cmd_demo(int argc, char* argv[]) {
   if (argc <= 1) {
     kprintf("%s: require at least one argument\n", argv[0]);
@@ -102,6 +117,9 @@ int cmd_demo(int argc, char* argv[]) {
 
   if (!strcmp(cmd, "page"))
     return demo_page(argc - 1, argv + 1);
+
+  if (!strcmp(cmd, "thread"))
+    return demo_thread(argc - 1, argv + 1);
 
   kprintf("demo: task '%s' not found\n", cmd);
   return -1;

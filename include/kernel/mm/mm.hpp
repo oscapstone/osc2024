@@ -21,4 +21,5 @@ void mm_preinit();
 void mm_init();
 
 void* kmalloc(uint64_t size, uint64_t align = 1);
+void* kcalloc(uint64_t size, uint64_t align = 1);
 void kfree(void* ptr);

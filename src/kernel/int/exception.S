@@ -7,8 +7,8 @@ set_exception_vector_table:
     ret
 
 // save general registers to stack
-.macro save_all
-    sub     sp, sp, 17 * 16
+.macro save_all el
+    sub     sp, sp, 16 * 17
     stp     x0, x1, [sp ,16 * 0]
     stp     x2, x3, [sp ,16 * 1]
     stp     x4, x5, [sp ,16 * 2]
@@ -25,18 +25,24 @@ set_exception_vector_table:
     stp     x26, x27, [sp ,16 * 13]
     stp     x28, x29, [sp ,16 * 14]
     mrs     x0, SPSR_EL1
-    mrs     x1, ELR_EL1
-    mrs     x2, ESR_EL1
     stp     lr, x0, [sp, 16 * 15]
+    mrs     x1, ELR_EL1
+    .if \el == 0
+    mrs     x2, SP_EL0
+    .else
+    mov     x2, xzr
+    .endif
     stp     x1, x2, [sp, 16 * 16]
 .endm
 
 // load general registers from stack
-.macro load_all
+.macro load_all el
     ldp     x1, x2, [sp, 16 * 16]
-    ldp     lr, x0, [sp, 16 * 15]
-    msr     ESR_EL1, x2
+    .if \el == 0
+    msr     SP_EL0, x2
+    .endif
     msr     ELR_EL1, x1
+    ldp     lr, x0, [sp, 16 * 15]
     msr     SPSR_EL1, x0
     ldp     x28, x29, [sp ,16 * 14]
     ldp     x26, x27, [sp ,16 * 13]
@@ -53,15 +59,27 @@ set_exception_vector_table:
     ldp     x4, x5, [sp ,16 * 2]
     ldp     x2, x3, [sp ,16 * 1]
     ldp     x0, x1, [sp ,16 * 0]
-    add     sp, sp, 17 * 16
+    add     sp, sp, 16 * 17
 .endm
 
 .macro CALL_WITH_CONTEXT type handler
-    save_all
+    .if \type < 8
+    save_all 1
+    .else
+    save_all 0
+    .endif
     mov     x1, \type
     mov     x0, sp
     bl      \handler
-    b       exception_restore_context
+    .if \type >= 8
+    mov     x0, sp
+    bl      return_to_user
+    .endif
+    .if \type < 8
+    b       exception_restore_context_EL1
+    .else
+    b       exception_restore_context_EL0
+    .endif
 .endm
 
 // D1.10.2 Exception vectors
@@ -80,7 +98,7 @@ exception_vector_table:
     CALL_WITH_CONTEXT 3 print_exception
 
     .org 0x200
-    CALL_WITH_CONTEXT 4 print_exception
+    CALL_WITH_CONTEXT 4 sync_handler
     .org 0x280
     CALL_WITH_CONTEXT 5 irq_handler
     .org 0x300
@@ -89,7 +107,7 @@ exception_vector_table:
     CALL_WITH_CONTEXT 7 print_exception
 
     .org 0x400
-    CALL_WITH_CONTEXT 8 print_exception
+    CALL_WITH_CONTEXT 8 sync_handler
     .org 0x480
     CALL_WITH_CONTEXT 9 irq_handler
     .org 0x500
@@ -107,6 +125,10 @@ exception_vector_table:
     CALL_WITH_CONTEXT 15 print_exception
     .org 0x800
 
-exception_restore_context:
-    load_all
+exception_restore_context_EL0:
+    load_all 0
+    eret
+
+exception_restore_context_EL1:
+    load_all 1
     eret

@@ -1,47 +1,68 @@
 #include <stdint.h>
 typedef volatile char* addr_t;
 
-#define MMIO_BASE      0x3F000000
-#define AUX_MU_IO_REG  ((addr_t)(MMIO_BASE + 0x00215040))
-#define AUX_MU_LSR_REG ((addr_t)(MMIO_BASE + 0x00215054))
-#define NOP            asm volatile("nop")
-
 int main();
 void _start() {
   main();
 }
 
-void set32(addr_t address, uint32_t value) {
-  asm volatile("str %w[v],[%[a]]" ::[a] "r"(address), [v] "r"(value));
-}
-uint32_t get32(addr_t address) {
-  uint32_t value;
-  asm volatile("ldr %w[v],[%[a]]" : [v] "=r"(value) : [a] "r"(address));
-  return value;
-}
-
-void mini_uart_putc_raw(char c) {
-  while ((get32(AUX_MU_LSR_REG) & (1 << 5)) == 0)
-    NOP;
-  set32(AUX_MU_IO_REG, c);
+int uartread(const char buf[], unsigned size) {
+  register uint64_t x0 asm("x0") = (uint64_t)buf;
+  register long x1 asm("x1") = size;
+  register int x8 asm("x8") = 1;
+  asm volatile("svc\t0" : "=r"(x0) : "r"(x0), "r"(x1), "r"(x8));
+  return x0;
 }
 
-void mini_uart_putc(char c) {
-  if (c == '\n')
-    mini_uart_putc_raw('\r');
-  mini_uart_putc_raw(c);
+int uartwrite(const char buf[], unsigned size) {
+  register uint64_t x0 asm("x0") = (uint64_t)buf;
+  register long x1 asm("x1") = size;
+  register int x8 asm("x8") = 2;
+  asm volatile("svc\t0" : "=r"(x0) : "r"(x0), "r"(x1), "r"(x8));
+  return x0;
 }
 
-void mini_uart_puts(const char* s) {
-  for (char c; (c = *s); s++)
-    mini_uart_putc(c);
+int exec(const char buf[]) {
+  register uint64_t x0 asm("x0") = (uint64_t)buf;
+  register uint64_t x1 asm("x1") = (uint64_t)0;
+  register int x8 asm("x8") = 3;
+  asm volatile("svc\t0" : "=r"(x0) : "r"(x0), "r"(x1), "r"(x8));
+  return x0;
+}
+
+char getc() {
+  char c = 0;
+  uartread(&c, 1);
+  return c;
+}
+
+void putc(char c) {
+  uartwrite(&c, 1);
+}
+
+void exit(int x) {
+  register uint64_t x0 asm("x0") = (uint64_t)x;
+  register int x8 asm("x8") = 5;
+  asm volatile("svc\t0" : "=r"(x0) : "r"(x0), "r"(x8));
 }
 
 int main() {
-  mini_uart_puts("Hello from EL0.\n");
+  char str[] = "Hello from EL0.\n";
+  /* mini_uart_puts(str); */
+  uartwrite(str, sizeof(str));
 
-  for (;;)
-    ;
+  for (;;) {
+    char c = getc();
+    putc(c);
+    if (c == 'h')
+      exec("hello.img");
+    if (c == 'f')
+      exec("fork.img");
+    if (c == 's')
+      exec("syscall.img");
+    if (c == 'e')
+      exit(0);
+  }
 
   return 0;
 }

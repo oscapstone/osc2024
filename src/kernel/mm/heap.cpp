@@ -27,7 +27,7 @@ inline int chunk_idx(uint64_t size) {
   return -1;
 }
 
-static_assert(max_chunk_size <= PAGE_SIZE);
+static_assert(max_chunk_size < PAGE_SIZE);
 
 struct FreeChunk : ListItem {};
 
@@ -54,7 +54,7 @@ struct Info {
 
   void split_page(PageHeader* hdr) {
     auto sz = chunk_size[idx];
-    for (uint32_t off = PAGE_SIZE; off >= sizeof(PageHeader) + sz; off -= sz)
+    for (uint32_t off = PAGE_SIZE - sizeof(PageHeader); off >= sz; off -= sz)
       free(&hdr->data[off - sz]);
   }
 
@@ -74,7 +74,7 @@ struct Info {
 
   void free(void* ptr) {
     auto chk = new (ptr) FreeChunk;
-    list.insert_front(chk);
+    list.push_front(chk);
   }
 
   void print() {
@@ -109,12 +109,13 @@ void heap_init() {
 }
 
 void* heap_malloc(uint64_t req_size) {
-  save_DAIF_disable_interrupt();
-
   auto idx = chunk_idx(req_size);
+  if (idx == -1)
+    return nullptr;
+
+  save_DAIF_disable_interrupt();
   // MM_DEBUG("alloc 0x%lx -> 0x%x\n", req_size, chunk_size[idx]);
   auto ptr = info[idx].alloc();
-
   restore_DAIF();
 
   return ptr;

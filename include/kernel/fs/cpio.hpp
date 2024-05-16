@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fs/path.hpp"
 #include "string.hpp"
 #include "util.hpp"
 
@@ -133,7 +134,7 @@ class CPIO {
   }
   const cpio_newc_header* find(const char* name) const {
     for (auto it = begin(); it != end(); it++) {
-      if (it->name() == name)
+      if (path_equal(it->name(), name))
         return *it;
     }
     return nullptr;

@@ -11,10 +11,8 @@
 pair<uint32_t, uint32_t> mm_range() {
   auto path = "/memory/reg";
   auto [found, view] = fdt.find(path);
-  if (!found) {
-    klog("mm: device %s not found\n", path);
-    prog_hang();
-  }
+  if (!found)
+    panic("mm: device %s not found", path);
   auto value = fdt_ld64(view.data());
   uint32_t start = value >> 32;
   uint32_t end = value & MASK(32);
@@ -38,22 +36,31 @@ void mm_init() {
 
   mm_page.init();
   heap_init();
-  set_new_delete_handler(kmalloc, kfree);
+  set_new_delete_handler(kcalloc, kfree);
 }
 
 // TODO: handle alignment
-void* kmalloc(uint64_t size, uint64_t /* align */) {
-  void* res = nullptr;
+void* kmalloc(uint64_t size, uint64_t align) {
+  void* addr = nullptr;
   save_DAIF_disable_interrupt();
-  if (size > max_chunk_size)
-    res = mm_page.alloc(size);
+  if (size > max_chunk_size or align == PAGE_SIZE)
+    addr = mm_page.alloc(size);
   else
-    res = heap_malloc(size);
+    addr = heap_malloc(size);
   restore_DAIF();
-  return res;
+  return addr;
+}
+
+void* kcalloc(uint64_t size, uint64_t align) {
+  void* addr = kmalloc(size, align);
+  if (addr)
+    memset(addr, 0, size);
+  return addr;
 }
 
 void kfree(void* ptr) {
+  if (ptr == nullptr or is_startup(ptr))
+    return;
   save_DAIF_disable_interrupt();
   if (isPageAlign(ptr))
     mm_page.free(ptr);

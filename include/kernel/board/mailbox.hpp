@@ -25,7 +25,7 @@ struct __attribute__((aligned(0x10))) __attribute__((packed)) Message {
   volatile uint32_t value_buf[];            // value buffer
 };
 
-void mailbox_call(message_t* mailbox);
+void mailbox_call(uint8_t ch, message_t* mailbox);
 uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx);
 uint32_t get_board_revision();
 uint32_t get_arm_memory(int idx);

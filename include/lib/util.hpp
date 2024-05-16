@@ -1,7 +1,9 @@
 #pragma once
 
-#define MASK(bits) ((1ll << bits) - 1)
-#define NOP        asm volatile("nop")
+#ifndef MASK
+#define MASK(bits) ((1ULL << bits) - 1)
+#endif
+#define NOP asm volatile("nop")
 
 // ref: https://github.com/v8/v8/blob/12.5.71/src/base/compiler-specific.h#L26
 #if defined(__GNUC__)
@@ -10,6 +12,11 @@
 #else
 #define PRINTF_FORMAT(format_param, dots_param)
 #endif
+
+// ref:
+// https://github.com/bminor/glibc/blob/glibc-2.35/include/libc-symbols.h#L140-L144
+#define STRONG_ALIAS(name, aliasname) \
+  extern __typeof(name) aliasname __attribute__((alias(#name)));
 
 #include <cstdint>
 using addr_t = volatile char*;
@@ -31,7 +38,7 @@ inline uint32_t get32(addr_t address) {
   asm volatile("ldr %w[v],[%[a]]" : [v] "=r"(value) : [a] "r"(address));
   return value;
 }
-inline void wait_cycle(unsigned cycle) {
+inline void delay(uint64_t cycle) {
   while (cycle--)
     NOP;
 }

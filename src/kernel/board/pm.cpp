@@ -1,11 +1,15 @@
 #include "board/pm.hpp"
 
+#include "board/mini-uart.hpp"
+#include "int/interrupt.hpp"
 #include "io.hpp"
 #include "util.hpp"
 
-void reboot() {
+void reboot(int tick) {
+  disable_interrupt();
+  mini_uart_async_flush();
   kputs_sync("rebooting .");
-  reset(0x50);
+  reset(0x50 + tick);
   for (;;) {
     kputc_sync('.');
   }

@@ -50,6 +50,14 @@ int cmd_mm(int argc, char* argv[]) {
       kprintf("mm: heap action '%s' not match\n", argv[2]);
       return -1;
     }
+  } else if (0 == strcmp(argv[1], "alloc") and argc >= 3) {
+    auto size = strtol(argv[2]);
+    auto ptr = kmalloc(size);
+    kprintf("kmalloc(0x%lx) = %p\n", size, ptr);
+  } else if (0 == strcmp(argv[1], "free") and argc >= 3) {
+    auto ptr = (void*)strtol(argv[2]);
+    kprintf("kfree(%p)\n", ptr);
+    kfree(ptr);
   } else {
     kprintf("%s: '%s' not found\n", argv[0], argv[1]);
     return -1;

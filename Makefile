@@ -13,6 +13,7 @@ FS_DIR 		= rootfs
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
 			  -mcpu=cortex-a53 -mgeneral-regs-only \
+			  -mno-unaligned-access \
 			  --target=aarch64-unknown-none-elf \
 			  -D_LIBCPP_HAS_NO_THREADS \
 			  -D_LIBCPP_DISABLE_AVAILABILITY \
@@ -26,7 +27,7 @@ CFLAGS 		+= --sysroot=/usr/aarch64-linux-gnu \
 			   -I/usr/aarch64-linux-gnu/include/c++/12/aarch64-linux-gnu/
 endif
 
-QEMU_FLAGS 	= -display none -smp cpus=4 \
+QEMU_FLAGS 	= -smp cpus=4 \
 			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb \
 			  $(QEMU_EXT_FLAGS)
 
@@ -45,12 +46,12 @@ else
 	QEMU_FLAGS 	+= -serial null -serial pty
 endif
 
-LIB_SRC_DIR  	= $(SRC_DIR)/lib
-CFLAGS 			+= -Iinclude/lib
-
 TARGET_BUILD_DIR 	= $(BUILD_DIR)/$(TARGET)
 TARGET_SRC_DIR  	= $(SRC_DIR)/$(TARGET)
 CFLAGS 				+= -Iinclude/$(TARGET)
+
+LIB_SRC_DIR  	= $(SRC_DIR)/lib
+CFLAGS 			+= -Iinclude/lib
 
 KERNEL_ELF 	= $(BUILD_DIR)/$(TARGET).elf
 KERNEL_BIN 	= $(DISK_DIR)/$(TARGET).img
