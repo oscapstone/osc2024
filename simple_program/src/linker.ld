@@ -23,7 +23,7 @@ SECTIONS
     * Code
     ***********************************************************************************************/
     .text : {
-        KEEP(*(.text._start))
+        KEEP(*(.text.main))
         *(.text*)
         /* *(.text.exception_vector_table) */
     } :segment_code

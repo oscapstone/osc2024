@@ -6,7 +6,7 @@ binary_name = sp
 all: build
 
 target/aarch64-unknown-none-softfloat/release/$(project_name):
-	cargo rustc --release
+	cargo rustc --release -- -Crelocation-model=pic 
 
 $(binary_name): target/aarch64-unknown-none-softfloat/release/$(project_name)
 	# aarch64-linux-gnu-objcopy -O binary target/aarch64-unknown-none-softfloat/release/$(project_name) $(binary_name)

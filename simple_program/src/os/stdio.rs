@@ -10,23 +10,25 @@ pub fn println(s: &str) {
     print("\r\n");
 }
 
-fn print_hex(val: u64) {
-    let mut buf = [0u8; 16];
-    
+#[no_mangle]
+#[inline(never)]
+pub fn print_hex(val: u64) {
+    let mut buf = [0u8; 18];
+    buf[16] = b'\r';
+    buf[17] = b'\n';
+
+    let mut idx = 0;
     for i in 0..16 {
-        let shift = (15 - i) * 4;
-        let digit = (val >> shift) & 0xF;
-        let ascii = if digit < 10 {
-            b'0' + digit as u8
-        } else {
-            b'A' + (digit - 10) as u8
+        let nibble = (val >> (60 - i * 4)) & 0xF;
+        buf[idx] = match nibble {
+            0..=9 => (nibble + 48) as u8,
+            10..=15 => (nibble + 87) as u8,
+            _ => 0,
         };
-        buf[i] = ascii;
+        idx += 1;
     }
 
-    for i in 0..16 {
-        uart_write(&buf[i], 1);
-    }
+    uart_write(buf.as_ptr(), 18);
 }
 
 // // format println macro
