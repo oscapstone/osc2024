@@ -19,10 +19,12 @@
     str x30, [sp, 16 * 15]
     // information for nested interrupt
     mrs x0, spsr_el1
-    str x0, [sp, 16 * 16]
+    str x0, [sp, 16 * 15 + 8]
     mrs x0, elr_el1
-    str x0, [sp, 16 * 17]
-    ldp x0, x1, [sp ,16 * 0]  // restore x0 instead of elr_el1
+    str x0, [sp, 16 * 16]
+    mrs x0, sp_el0
+    str x0, [sp, 16 * 16 + 8]
+    ldp x0, x1, [sp, 16 * 0]
 .endm
 
 // load general registers from stack
@@ -44,13 +46,16 @@
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
     // information for nested interrupt
-    ldr x0, [sp, 16 * 16]
+    ldr x0, [sp, 16 * 15 + 8]
     msr spsr_el1,x0
-    ldr x0, [sp, 16 * 17]
+    ldr x0, [sp, 16 * 16]
     msr elr_el1, x0
+    ldr x0, [sp, 16 * 16 + 8]
+    msr sp_el0, x0
     ldp x0, x1, [sp ,16 * 0]  // restore x0 instead of elr_el1
     add sp, sp, 32 * 9
 .endm
+
 
 .macro    ventry    label
     .align    7   // entry should be aligned to 0x80 (2^7)
@@ -112,7 +117,8 @@ el1t_error_invalid:
     bl invalid_exception_router
     load_all
     eret
-    
+
+
 el1h_sync:
     save_all
     mov x0,4
@@ -121,7 +127,7 @@ el1h_sync:
     eret
 el1h_irq:
     save_all
-    mov x0,5
+    mov x0, sp
     bl el1h_irq_router
     load_all
     eret
@@ -140,13 +146,13 @@ el1h_error_invalid:
 
 el0_sync_64:
     save_all
-    mov x0,8
+    mov x0, sp
     bl el0_sync_router
     load_all
     eret
 el0_irq_64:
     save_all
-    mov x0,9
+    mov x0, sp
     bl el0_irq_64_router
     load_all
     eret

@@ -41,7 +41,7 @@ void unlock()
     }
 }
 
-void el1h_irq_router()
+void el1h_irq_router(trapframe_t* tpf)
 {
     lock();
     // decouple the handler into irqtask queue
@@ -77,7 +77,7 @@ void el1h_irq_router()
     }
 }
 
-void el0_sync_router()
+void el0_sync_router(trapframe_t* tpf)
 {
     uint64_t spsr_el1;
     __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r"(spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
@@ -88,7 +88,7 @@ void el0_sync_router()
     uart_puts("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\r\n", spsr_el1, elr_el1, esr_el1);
 }
 
-void el0_irq_64_router()
+void el0_irq_64_router(trapframe_t* tpf)
 {
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
