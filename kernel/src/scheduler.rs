@@ -123,13 +123,10 @@ impl Scheduler {
             + self.threads[next].as_ref().unwrap().stack_size;
         unsafe {
             asm!(
-                // "mov {0}, 0x3c0",
-                "mov {0}, 0x200",
-                "msr spsr_el1, {0}",
-                "msr elr_el1, {1}",
-                "msr sp_el0, {2}",
+                "msr spsr_el1, xzr",
+                "msr elr_el1, {0}",
+                "msr sp_el0, {1}",
                 "eret",
-                out(reg) _,
                 in(reg) entry,
                 in(reg) stack_pointer,
             );

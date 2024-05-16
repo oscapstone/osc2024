@@ -26,7 +26,7 @@ fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
     // commands::execute(b"exec program.img program.img");
-    commands::execute(b"exec syscall.img");
+    // commands::execute(b"exec syscall.img");
     kernel_shell();
 }
 
