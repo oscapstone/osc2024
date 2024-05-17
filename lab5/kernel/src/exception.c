@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "stdio.h"
 #include "stdint.h"
+#include "syscall.h"
 
 extern int8_t need_to_schedule;
 
@@ -86,13 +87,47 @@ void el1h_irq_router(trapframe_t *tpf)
 
 void el0_sync_router(trapframe_t *tpf)
 {
-    uint64_t spsr_el1;
-    __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r"(spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
-    uint64_t elr_el1;
-    __asm__ __volatile__("mrs %0, ELR_EL1\n\t" : "=r"(elr_el1)); // ELR_EL1 holds the address if return to EL1
-    uint64_t esr_el1;
-    __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r"(esr_el1)); // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
-    uart_puts("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\r\n", spsr_el1, elr_el1, esr_el1);
+    // Basic #3 - Based on System Call Format in Video Player’s Test Program
+    uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
+
+    // only work with GCC
+    void *syscall_router[] = {&&__getpid_label, &&__uart_read_label, &&__uart_write_label, &&__exec_label,
+                              &&__fork_label, &&__exit_label, &&__mbox_call_label, &&__invalid_syscall_label};
+
+    goto *syscall_router[syscall_no];
+
+__getpid_label:
+    tpf->x0 = syscall_getpid(tpf, (char *)tpf->x0, tpf->x1);
+    return;
+
+__uart_read_label:
+    tpf->x0 = syscall_uart_read(tpf, (char *)tpf->x0, tpf->x1);
+    return;
+
+__uart_write_label:
+    tpf->x0 = syscall_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
+    return;
+
+__exec_label:
+    tpf->x0 = syscall_exec(tpf, (char *)tpf->x0, (char **)tpf->x1);
+    return;
+
+__fork_label:
+    tpf->x0 = syscall_fork(tpf);
+    return;
+
+__exit_label:
+    tpf->x0 = syscall_exit(tpf, tpf->x0);
+    return;
+
+__mbox_call_label:
+    tpf->x0 = syscall_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
+    return;
+
+__invalid_syscall_label:
+    ERROR("Invalid system call number: %d\r\n", syscall_no);
+    return;
+    
 }
 
 void el0_irq_64_router(trapframe_t *tpf)

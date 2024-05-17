@@ -18,12 +18,12 @@ switch_to: // (prev, next) = (x0, x1)
     ldp fp, lr, [x1, 16 * 5]   // load sp, fp, lr
     ldr x9, [x1, 16 * 6]
     mov sp,  x9
-    msr tpidr_el1, x1          // update current thread id
+    msr tpidr_el1, x1          // update current thread context address
     ret
 
-.global get_current
-get_current:
-    mrs x0, tpidr_el1          // get the current thread id
+.global get_current_thread_context
+get_current_thread_context:
+    mrs x0, tpidr_el1          // get the current thread context address
     ret
 
 .global store_context

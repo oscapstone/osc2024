@@ -81,7 +81,7 @@ unsigned int padding_4byte(unsigned int size)
 }
 
 /* Get filesize and filedata by filepath */
-int cpio_get_file(char *filepath, unsigned int *c_filesize, char **c_filedata)
+int cpio_get_file(const char *filepath, unsigned int *c_filesize, char **c_filedata)
 {
     char *c_filepath;
     int error;

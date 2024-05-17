@@ -9,10 +9,26 @@
 
 struct list_head *run_queue;
 
-thread_t *threads[PIDMAX + 1];
-thread_t *curr_thread;
 static int64_t pid_history = 0;
 int8_t need_to_schedule = 0;
+
+static inline thread_t *child_node_to_thread(child_node_t *node)
+{
+	return threads[(node)->pid];
+}
+
+static inline int free_thread(int64_t pid)
+{
+	if(pid >= MAX_PID){
+		return -1;
+	}
+	thread_t *thread = threads[pid];
+	kfree(thread->user_stack_base);
+	kfree(thread->kernel_stack_base);
+	kfree(thread);
+	threads[pid] = NULL;
+	return 0;
+}
 
 void init_thread_sched()
 {
@@ -76,45 +92,20 @@ int64_t wait()
 		unlock_interrupt();
 		schedule();
 		lock_interrupt();
-		struct list_head *curr;
-		// uart_puts("---------------------- child list for each ----------------------\r\n");
-		// list_for_each(curr, (list_head_t *)curr_thread->child_list)
-		// {
-		// 	list_head_t *curr_child = (list_head_t *)threads[((child_node_t *)curr)->pid];
-
-		// 	uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr_child, curr_child->next, curr_child->prev, ((thread_t *)curr_child)->name, ((thread_t *)curr_child)->pid, ((thread_t *)curr_child)->ppid);
-		// 	switch (((thread_t *)curr_child)->status)
-		// 	{
-		// 	case THREAD_RUNNING:
-		// 		uart_puts(", thread->status: THREAD_RUNNING\r\n");
-		// 		break;
-		// 	case THREAD_READY:
-		// 		uart_puts(", thread->status: THREAD_READY\r\n");
-		// 		break;
-		// 	case THREAD_BLOCKED:
-		// 		uart_puts(", thread->status: THREAD_BLOCKED\r\n");
-		// 		break;
-		// 	case THREAD_ZOMBIE:
-		// 		uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
-		// 		break;
-		// 	}
-		// }
-		// uart_puts("----------------------------- end ------------------------------\r\n");
+		DEBUG({
+			dump_chile_thread(curr_thread);
+		});
+		struct list_head *curr_child_node;
 		list_head_t *n;
-		list_for_each_safe(curr, n, (list_head_t *)curr_thread->child_list)
+		list_for_each_safe(curr_child_node, n, (list_head_t *)curr_thread->child_list)
 		{
-			thread_t *curr_child = threads[((child_node_t *)curr)->pid];
-			if (((thread_t *)curr_child)->status == THREAD_ZOMBIE)
+			thread_t *child_thread = child_node_to_thread((child_node_t *)curr_child_node);
+			if (child_thread->status == THREAD_ZOMBIE)
 			{
-				int pid = ((thread_t *)curr_child)->pid;
-				DEBUG("wait user_stack_base kfree\n");
-				kfree(((thread_t *)curr_child)->user_stack_base);
-				DEBUG("wait kernel_stack_base kfree\n");
-				kfree(((thread_t *)curr_child)->kernel_stack_base);
+				int64_t pid = child_thread->pid;
 				DEBUG("wait thread kfree\n");
-				kfree(curr_child);
-				list_del_entry(curr);
-				threads[pid] = NULL;
+				free_thread(pid);
+				list_del_entry(curr_child_node);
 				unlock_interrupt();
 				return pid;
 			}
@@ -141,32 +132,14 @@ void thread_exit()
 	list_head_t *n;
 	list_for_each_safe(curr, n, (list_head_t *)exit_thread->child_list)
 	{
-		thread_t *curr_child = threads[((child_node_t *)curr)->pid];
+		thread_t *curr_child = child_node_to_thread((child_node_t *)curr);
 		curr_child->ppid = 1;
 		list_del_entry(curr);
 		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
 	}
-	// uart_puts("---------------------- list for each ----------------------\r\n");
-	// list_for_each(curr, run_queue)
-	// {
-	// 	uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr, curr->next, curr->prev, ((thread_t *)curr)->name, ((thread_t *)curr)->pid, ((thread_t *)curr)->ppid);
-	// 	switch (((thread_t *)curr)->status)
-	// 	{
-	// 	case THREAD_RUNNING:
-	// 		uart_puts(", thread->status: THREAD_RUNNING\r\n");
-	// 		break;
-	// 	case THREAD_READY:
-	// 		uart_puts(", thread->status: THREAD_READY\r\n");
-	// 		break;
-	// 	case THREAD_BLOCKED:
-	// 		uart_puts(", thread->status: THREAD_BLOCKED\r\n");
-	// 		break;
-	// 	case THREAD_ZOMBIE:
-	// 		uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
-	// 		break;
-	// 	}
-	// }
-	// uart_puts("--------------------------- end ---------------------------\r\n");
+	DEBUG({
+		dump_run_queue();
+	});
 	unlock_interrupt();
 	schedule();
 }
@@ -187,7 +160,7 @@ thread_t *thread_create(void *start, char *name)
 	thread_t *r;
 	int64_t new_pid = -1;
 	// find usable PID, don't use the previous one
-	for (int i = 1; i < PIDMAX; i++)
+	for (int i = 1; i < MAX_PID; i++)
 	{
 		if (threads[pid_history + i] == NULL)
 		{
@@ -225,28 +198,10 @@ thread_t *thread_create(void *start, char *name)
 
 	DEBUG("add new thread: %d, run_que: 0x%x\n", r->pid, run_queue);
 	list_add((list_head_t *)r, run_queue);
-	// struct list_head *curr;
-	// uart_puts("---------------------- list for each ----------------------\r\n");
-	// list_for_each(curr, run_queue)
-	// {
-	// 	uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr, curr->next, curr->prev, ((thread_t *)curr)->name, ((thread_t *)curr)->pid, ((thread_t *)curr)->ppid);
-	// 	switch (((thread_t *)curr)->status)
-	// 	{
-	// 	case THREAD_RUNNING:
-	// 		uart_puts(", thread->status: THREAD_RUNNING\r\n");
-	// 		break;
-	// 	case THREAD_READY:
-	// 		uart_puts(", thread->status: THREAD_READY\r\n");
-	// 		break;
-	// 	case THREAD_BLOCKED:
-	// 		uart_puts(", thread->status: THREAD_BLOCKED\r\n");
-	// 		break;
-	// 	case THREAD_ZOMBIE:
-	// 		uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
-	// 		break;
-	// 	}
-	// }
-	// uart_puts("--------------------------- end ---------------------------\r\n");
+	DEBUG({
+		dump_run_queue();
+	});
+
 	DEBUG("add new thread: %d\n", r->pid);
 	unlock_interrupt();
 	return r;
@@ -262,30 +217,11 @@ void schedule()
 	} while (list_is_head((list_head_t *)curr_thread, run_queue) || (curr_thread->status == THREAD_ZOMBIE)); // find a runnable thread
 	curr_thread->status = THREAD_RUNNING;
 	DEBUG("%d switch to %d\n", prev_thread->pid, curr_thread->pid);
-	// struct list_head *curr;
-	// uart_puts("---------------------- run queue list for each ----------------------\r\n");
-	// list_for_each(curr, (list_head_t *)run_queue)
-	// {
-	// 	uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr, curr->next, curr->prev, ((thread_t *)curr)->name, ((thread_t *)curr)->pid, ((thread_t *)curr)->ppid);
-	// 	switch (((thread_t *)curr)->status)
-	// 	{
-	// 	case THREAD_RUNNING:
-	// 		uart_puts(", thread->status: THREAD_RUNNING\r\n");
-	// 		break;
-	// 	case THREAD_READY:
-	// 		uart_puts(", thread->status: THREAD_READY\r\n");
-	// 		break;
-	// 	case THREAD_BLOCKED:
-	// 		uart_puts(", thread->status: THREAD_BLOCKED\r\n");
-	// 		break;
-	// 	case THREAD_ZOMBIE:
-	// 		uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
-	// 		break;
-	// 	}
-	// }
-	// uart_puts("--------------------------------- end -------------------------------\r\n");
+	DEBUG({
+		dump_run_queue();
+	});
 	unlock_interrupt();
-	switch_to(get_current(), &(curr_thread->context));
+	switch_to(get_current_thread_context(), &(curr_thread->context));
 }
 
 void foo()
@@ -306,4 +242,58 @@ void foo()
 	}
 	INFO("%s exit\n", curr_thread->name);
 	thread_exit();
+}
+
+void dump_run_queue()
+{
+	struct list_head *curr;
+	uart_puts("---------------------- run queue list for each ----------------------\r\n");
+	list_for_each(curr, (list_head_t *)run_queue)
+	{
+		uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr, curr->next, curr->prev, ((thread_t *)curr)->name, ((thread_t *)curr)->pid, ((thread_t *)curr)->ppid);
+		switch (((thread_t *)curr)->status)
+		{
+		case THREAD_RUNNING:
+			uart_puts(", thread->status: THREAD_RUNNING\r\n");
+			break;
+		case THREAD_READY:
+			uart_puts(", thread->status: THREAD_READY\r\n");
+			break;
+		case THREAD_BLOCKED:
+			uart_puts(", thread->status: THREAD_BLOCKED\r\n");
+			break;
+		case THREAD_ZOMBIE:
+			uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
+			break;
+		}
+	}
+	uart_puts("--------------------------------- end -------------------------------\r\n");
+}
+
+void dump_chile_thread(thread_t *thread)
+{
+	list_head_t *curr;
+	uart_puts("---------------------- child list for each ----------------------\r\n");
+	list_for_each(curr, (list_head_t *)thread->child_list)
+	{
+		list_head_t *curr_child = (list_head_t *)threads[((child_node_t *)curr)->pid];
+
+		uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr_child, curr_child->next, curr_child->prev, ((thread_t *)curr_child)->name, ((thread_t *)curr_child)->pid, ((thread_t *)curr_child)->ppid);
+		switch (((thread_t *)curr_child)->status)
+		{
+		case THREAD_RUNNING:
+			uart_puts(", thread->status: THREAD_RUNNING\r\n");
+			break;
+		case THREAD_READY:
+			uart_puts(", thread->status: THREAD_READY\r\n");
+			break;
+		case THREAD_BLOCKED:
+			uart_puts(", thread->status: THREAD_BLOCKED\r\n");
+			break;
+		case THREAD_ZOMBIE:
+			uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
+			break;
+		}
+	}
+	uart_puts("----------------------------- end ------------------------------\r\n");
 }

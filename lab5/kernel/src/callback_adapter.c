@@ -13,7 +13,8 @@ void adapter_puts(void *args_struct)
 	puts(puts_args_struct->str);
 }
 
-void adapter_timer_set2sAlert(void *args_struct){
+void adapter_timer_set2sAlert(void *args_struct)
+{
 	timer_set2sAlert();
 }
 

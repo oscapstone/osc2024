@@ -38,8 +38,8 @@ void main(char *arg)
         thread_create(foo, str);
         DEBUG("create foo_%d\r\n", i);
     }
-    str = kmalloc(6);
-    sprintf(str, "shell");
+    str = kmalloc(7);
+    sprintf(str, "kshell");
     thread_create(start_shell, str);
     schedule_timer();
     core_timer_enable();

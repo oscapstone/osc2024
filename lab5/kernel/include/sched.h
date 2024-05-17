@@ -4,13 +4,16 @@
 #include "list.h"
 #include "stdint.h"
 
-#define PIDMAX 32768
+#define MAX_PID 32768
 #define USTACK_SIZE 0x10000
 #define KSTACK_SIZE 0x10000
 #define SIGNAL_MAX  64
 
+thread_t *threads[MAX_PID + 1];
+thread_t *curr_thread;
+
 extern void  switch_to(void *curr_context, void *next_context);
-extern void* get_current();
+extern void* get_current_thread_context();
 extern void  store_context(void *curr_context);
 extern void  load_context(void *curr_context);
 
@@ -71,6 +74,8 @@ void schedule();
 void thread_exit();
 thread_t *thread_create(void *start, char *name);
 int exec_thread(char *data, unsigned int filesize);
+void dump_run_queue();
+void dump_chile_thread(thread_t *thread);
 
 void foo();
 

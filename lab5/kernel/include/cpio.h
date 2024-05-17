@@ -72,6 +72,6 @@ int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer,
                            struct cpio_newc_header **next_header_pointer);
 
 unsigned int padding_4byte(unsigned int size);
-int cpio_get_file(char *filepath, unsigned int *c_filesize, char **c_filedata);
+int cpio_get_file(const char *filepath, unsigned int *c_filesize, char **c_filedata);
 
 #endif /* _CPIO_H_ */
