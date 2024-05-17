@@ -48,8 +48,8 @@ primary_cpu_el1:
     )
     msr     MAIR_EL1, x0
 
-    mov     x0, 0 // PGD's page frame at 0x0
-    mov     x1, 0x1000 // PUD's page frame at 0x1000
+    ldr     x0, =__phy_upper_PGD // PGD's page frame
+    ldr     x1, =__phy_upper_PUD // PUD's page frame
 
     ldr     x2, =BOOT_PGD_ATTR
     orr     x2, x1, x2 // combine the physical address of next level page with attribute.
@@ -79,6 +79,9 @@ primary_cpu_el1:
 boot_rest:
     ADR_REL x0, __stack_end
     mov     sp, x0
+
+    mov     x0, xzr
+    msr     TTBR0_EL1, x0
 
     bl      set_exception_vector_table
 

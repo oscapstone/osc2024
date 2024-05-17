@@ -1,5 +1,6 @@
 #include "board/peripheral.hpp"
 
+#include "mm/mmu.hpp"
 #include "util.hpp"
 
 void set_peripheral_irq(bool enable, int bit) {
@@ -10,7 +11,7 @@ void set_peripheral_irq(bool enable, int bit) {
     addr = PERIPHERAL_ENABLE_IRQs_2;
     bit -= 32;
   }
-  SET_CLEAR_BIT(enable, addr, bit);
+  SET_CLEAR_BIT(enable, pa2va(addr), bit);
 }
 
 void set_aux_irq(bool enable) {

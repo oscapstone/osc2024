@@ -3,9 +3,10 @@
 #include "board/mini-uart.hpp"
 #include "int/interrupt.hpp"
 #include "int/timer.hpp"
+#include "mm/mmu.hpp"
 
 void irq_handler(TrapFrame* /* frame */, int /* type */) {
-  auto irq_source = get32(CORE0_IRQ_SOURCE);
+  auto irq_source = get32(pa2va(CORE0_IRQ_SOURCE));
   if ((irq_source & CNTPNSIRQ_INT) == CNTPNSIRQ_INT)
     timer_enqueue();
   if ((irq_source & GPU_INT) == GPU_INT)

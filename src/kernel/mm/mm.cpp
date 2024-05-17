@@ -3,6 +3,7 @@
 #include "fdt.hpp"
 #include "int/interrupt.hpp"
 #include "mm/heap.hpp"
+#include "mm/mmu.hpp"
 #include "mm/new.hpp"
 #include "mm/page.hpp"
 #include "mm/startup.hpp"
@@ -32,7 +33,7 @@ void mm_reserve_p(void* start, void* end) {
 
 void mm_init() {
   // startup allocator
-  mm_reserve(__heap_start, __heap_end);
+  mm_reserve(va2pa(__heap_start), va2pa(__heap_end));
 
   mm_page.init();
   heap_init();

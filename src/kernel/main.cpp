@@ -9,10 +9,14 @@
 #include "int/timer.hpp"
 #include "io.hpp"
 #include "mm/mm.hpp"
+#include "mm/mmu.hpp"
 #include "sched.hpp"
 #include "shell/shell.hpp"
 #include "thread.hpp"
+#include "util.hpp"
 
+extern char __phy_upper_PGD[];
+extern char __phy_upper_end[];
 extern char __kernel_end[];
 
 void kernel_main(void* dtb_addr) {
@@ -25,7 +29,7 @@ void kernel_main(void* dtb_addr) {
   klog("freq_of_timer  : %ld\n", freq_of_timer);
   klog("boot time      : " PRTval "s\n", FTval(tick2timeval(boot_timer_tick)));
 
-  fdt.init(dtb_addr);
+  fdt.init(pa2va(dtb_addr));
   initramfs_init();
 
   mm_preinit();
@@ -33,11 +37,13 @@ void kernel_main(void* dtb_addr) {
   // spin tables for multicore boot
   mm_reserve(0x0000, 0x1000);
   // kernel code & bss & kernel stack
-  mm_reserve(_start, __stack_end);
+  mm_reserve(va2pa(_start), va2pa(__stack_end));
   // initramfs
-  mm_reserve(initramfs.startp(), initramfs.endp());
+  mm_reserve(va2pa(initramfs.startp()), va2pa(initramfs.endp()));
   // flatten device tree
-  mm_reserve(fdt.startp(), fdt.endp());
+  mm_reserve(va2pa(fdt.startp()), va2pa(fdt.endp()));
+  // upper page table
+  mm_reserve(__phy_upper_PGD, __phy_upper_end);
 
   mm_init();
 

@@ -4,6 +4,7 @@
 
 #include "ds/list.hpp"
 #include "mm/mm.hpp"
+#include "mm/mmu.hpp"
 #include "util.hpp"
 
 class PageSystem {
@@ -84,7 +85,7 @@ class PageSystem {
   }
   template <bool assume = false>
   FreePage* pfn2freepage(uint64_t pfn) {
-    auto addr = pfn2addr(pfn);
+    auto addr = pa2va(pfn2addr(pfn));
     if (assume or array_[pfn].free()) {
       return (FreePage*)addr;
     } else {
