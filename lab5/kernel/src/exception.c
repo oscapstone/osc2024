@@ -7,6 +7,8 @@
 #include "stdio.h"
 #include "stdint.h"
 
+extern int8_t need_to_schedule;
+
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable()
 {
@@ -41,7 +43,7 @@ void unlock_interrupt()
     }
 }
 
-void el1h_irq_router(trapframe_t* tpf)
+void el1h_irq_router(trapframe_t *tpf)
 {
     lock_interrupt();
     // decouple the handler into irqtask queue
@@ -75,9 +77,14 @@ void el1h_irq_router(trapframe_t* tpf)
     {
         uart_puts("Hello World el1 64 router other interrupt!\r\n");
     }
+    if (need_to_schedule == 1)
+    {
+        need_to_schedule = 0;
+        schedule();
+    }
 }
 
-void el0_sync_router(trapframe_t* tpf)
+void el0_sync_router(trapframe_t *tpf)
 {
     uint64_t spsr_el1;
     __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r"(spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
@@ -88,7 +95,7 @@ void el0_sync_router(trapframe_t* tpf)
     uart_puts("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\r\n", spsr_el1, elr_el1, esr_el1);
 }
 
-void el0_irq_64_router(trapframe_t* tpf)
+void el0_irq_64_router(trapframe_t *tpf)
 {
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
@@ -145,11 +152,11 @@ void irqtask_list_init()
 
 void irqtask_add(void *task_function, uint64_t priority)
 {
-    if(task_function == uart_r_irq_handler)
+    if (task_function == uart_r_irq_handler)
         DEBUG("irqtask_add uart_r_irq_handler, kmalloc\r\n");
-    else if(task_function == uart_w_irq_handler)
+    else if (task_function == uart_w_irq_handler)
         DEBUG("irqtask_add uart_w_irq_handler, kmalloc\r\n");
-    else if(task_function == core_timer_handler)
+    else if (task_function == core_timer_handler)
         DEBUG("irqtask_add core_timer_handler, kmalloc\r\n");
     irqtask_t *the_task = kmalloc(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
     // store all the related information into irqtask node
@@ -199,6 +206,7 @@ void irqtask_run_preemptive()
         // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
+            DEBUG("irqtask_run_preemptive early return\r\n");
             unlock_interrupt();
             break;
         }
@@ -206,13 +214,14 @@ void irqtask_run_preemptive()
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
 
+        DEBUG("irqtask_run\r\n");
         unlock_interrupt();
-
         irqtask_run(the_task);
 
         lock_interrupt();
 
         curr_task_priority = prev_task_priority;
+        DEBUG("irqtask_run_preemptive kfree\r\n");
         kfree(the_task);
         unlock_interrupt();
     }

@@ -1,5 +1,6 @@
-#include <stdio.h>
-#include <timer.h>
+#include "stdio.h"
+#include "timer.h"
+#include "sched.h"
 
 typedef struct puts_args_struct
 {
@@ -14,4 +15,9 @@ void adapter_puts(void *args_struct)
 
 void adapter_timer_set2sAlert(void *args_struct){
 	timer_set2sAlert();
+}
+
+void adapter_schedule_timer(void *args_struct)
+{
+	schedule_timer();
 }

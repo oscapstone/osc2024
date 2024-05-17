@@ -4,8 +4,8 @@
 #include "list.h"
 #include "stdint.h"
 
-#define UART_IRQ_PRIORITY 1
-#define TIMER_IRQ_PRIORITY 0
+#define UART_IRQ_PRIORITY 2
+#define TIMER_IRQ_PRIORITY 1
 
 typedef struct trapframe
 {

@@ -5,7 +5,9 @@
 #include "timer.h"
 #include "memory.h"
 #include "exception.h"
-
+#include "sched.h"
+#include "debug.h"
+#include "string.h"
 
 void main(char *arg)
 {
@@ -21,12 +23,25 @@ void main(char *arg)
 
     irqtask_list_init();
     timer_list_init();
+    init_thread_sched();
     // while (1)
     //     ;
-    core_timer_enable();
 
-    unlock_interrupt();
     // el1_interrupt_enable(); // enable interrupt in EL1 -> EL1
-
-    start_shell();
+    char *str;
+    // start_shell();
+    DEBUG("thread test\r\n");
+    for (int i = 0; i < 5; ++i)
+    { // N should > 2
+        str = kmalloc(6);
+        sprintf(str, "foo_%d", i);
+        thread_create(foo, str);
+        DEBUG("create foo_%d\r\n", i);
+    }
+    str = kmalloc(6);
+    sprintf(str, "shell");
+    thread_create(start_shell, str);
+    schedule_timer();
+    core_timer_enable();
+    unlock_interrupt();
 }

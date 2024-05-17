@@ -21,7 +21,8 @@ typedef struct timer_event {
 void timer_event_callback(timer_event_t * timer_event);
 void add_timer_by_sec(uint64_t sec, void *callback, void *args_struct);
 void add_timer_by_tick(uint64_t tick, void *callback, void *args_struct);
-uint64_t get_tick_plus_s(uint64_t second);
+uint64_t get_tick_plus_t(uint64_t tick);
+uint64_t sec_to_tick(uint64_t second);
 void set_core_timer_interrupt(uint64_t expired_time);
 void set_core_timer_interrupt_by_tick(uint64_t tick);
 void timer_set2sAlert();

@@ -7,3 +7,4 @@ typedef struct puts_args_struct
 
 void adapter_puts(void *args_struct);
 void adapter_timer_set2sAlert(void *args_struct);
+void adapter_schedule_timer(void *args_struct);

@@ -100,6 +100,7 @@ char uart_async_recv()
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx)
     {
         unlock_interrupt();
+        // DEBUG("uart_async_recv buffer empty\r\n");
         *AUX_MU_IER_REG |= 1; // enable read interrupt
         lock_interrupt();
     }
