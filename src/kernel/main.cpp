@@ -15,9 +15,11 @@
 #include "thread.hpp"
 #include "util.hpp"
 
-extern char __phy_upper_PGD[];
-extern char __phy_upper_end[];
 extern char __kernel_end[];
+extern char __stack_beg[];
+extern char __stack_end[];
+extern char __upper_PGD[];
+extern char __upper_end[];
 
 void kernel_main(void* dtb_addr) {
   mini_uart_setup();
@@ -35,15 +37,16 @@ void kernel_main(void* dtb_addr) {
   mm_preinit();
 
   // spin tables for multicore boot
-  mm_reserve(0x0000, 0x1000);
+  mm_reserve(pa2va(0x0000), pa2va(0x1000));
   // kernel code & bss & kernel stack
-  mm_reserve(va2pa(_start), va2pa(__stack_end));
+  mm_reserve(_start, __kernel_end);
+  mm_reserve(__stack_beg, __stack_end);
   // initramfs
-  mm_reserve(va2pa(initramfs.startp()), va2pa(initramfs.endp()));
+  mm_reserve(initramfs.startp(), initramfs.endp());
   // flatten device tree
-  mm_reserve(va2pa(fdt.startp()), va2pa(fdt.endp()));
+  mm_reserve(fdt.startp(), fdt.endp());
   // upper page table
-  mm_reserve(__phy_upper_PGD, __phy_upper_end);
+  mm_reserve(__upper_PGD, __upper_end);
 
   mm_init();
 

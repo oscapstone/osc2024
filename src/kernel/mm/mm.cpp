@@ -7,9 +7,8 @@
 #include "mm/new.hpp"
 #include "mm/page.hpp"
 #include "mm/startup.hpp"
-#include "pair.hpp"
 
-pair<uint32_t, uint32_t> mm_range() {
+pair<uint64_t, uint64_t> mm_range() {
   auto path = "/memory/reg";
   auto [found, view] = fdt.find(path);
   if (!found)
@@ -24,7 +23,7 @@ void mm_preinit() {
   startup_alloc_init();
 
   auto [start, end] = mm_range();
-  mm_page.preinit(start, end);
+  mm_page.preinit(pa2va(start), pa2va(end));
 }
 
 void mm_reserve_p(void* start, void* end) {
@@ -33,7 +32,7 @@ void mm_reserve_p(void* start, void* end) {
 
 void mm_init() {
   // startup allocator
-  mm_reserve(va2pa(__heap_start), va2pa(__heap_end));
+  mm_reserve(__heap_start, __heap_end);
 
   mm_page.init();
   heap_init();

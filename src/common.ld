@@ -15,3 +15,6 @@ __heap_end      = __kernel_space + __phy_heap_end  ;
 __kernel        = __kernel_space + __phy_kernel    ;
 __stack_beg     = __kernel_space + __phy_stack_beg ;
 __stack_end     = __kernel_space + __phy_stack_end ;
+__upper_PGD     = __kernel_space + __phy_upper_PGD ;
+__upper_PUD     = __kernel_space + __phy_upper_PUD ;
+__upper_end     = __kernel_space + __phy_upper_end ;

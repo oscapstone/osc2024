@@ -1,18 +1,22 @@
 #pragma once
 
+#include <type_traits>
+
 #include "util.hpp"
 
 constexpr uint64_t ADDRESS_SPACE_TAG = 0xFFFF000000000000;
 constexpr uint64_t KERNEL_SPACE = 0xFFFF000000000000;
 constexpr uint64_t USER_SPACE = 0;
 
-template <typename T>
-inline T va2pa(T x) {
-  return (T)((uint64_t)x - KERNEL_SPACE);
+template <typename T,
+          typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
+inline R va2pa(T x) {
+  return (R)((uint64_t)x - KERNEL_SPACE);
 }
-template <typename T>
-inline T pa2va(T x) {
-  return (T)((uint64_t)x + KERNEL_SPACE);
+template <typename T,
+          typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
+inline R pa2va(T x) {
+  return (R)((uint64_t)x + KERNEL_SPACE);
 }
 
 template <typename T>

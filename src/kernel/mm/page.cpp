@@ -78,7 +78,7 @@ void PageSystem::init() {
   log = false;
   for (uint64_t i = 0; i < length_; i++) {
     if (array_[i].allocated())
-      release(pa2va(pfn2addr(i)));
+      release(pfn2addr(i));
   }
   log = true;
 #if MM_LOG_LEVEL >= 3
@@ -87,7 +87,7 @@ void PageSystem::init() {
 }
 
 void PageSystem::release(PageSystem::AllocatedPage apage) {
-  auto pfn = addr2pfn(va2pa(apage));
+  auto pfn = addr2pfn(apage);
   auto order = array_[pfn].order;
   if (log)
     MM_VERBOSE("release: page %p order %d\n", apage, order);
@@ -98,7 +98,7 @@ void PageSystem::release(PageSystem::AllocatedPage apage) {
 
 PageSystem::AllocatedPage PageSystem::alloc(PageSystem::FreePage* fpage,
                                             bool head) {
-  auto pfn = addr2pfn(va2pa(fpage));
+  auto pfn = addr2pfn(fpage);
   auto order = array_[pfn].order;
   free_list_[order].erase(fpage);
   if (head) {
@@ -114,17 +114,17 @@ PageSystem::AllocatedPage PageSystem::alloc(PageSystem::FreePage* fpage,
 }
 
 PageSystem::AllocatedPage PageSystem::split(AllocatedPage apage) {
-  auto pfn = addr2pfn(va2pa(apage));
+  auto pfn = addr2pfn(apage);
   auto o = --array_[pfn].order;
   auto bpfn = buddy(pfn);
   array_[bpfn] = {.type = FRAME_TYPE::ALLOCATED, .order = o};
-  auto bpage = pa2va(pfn2addr(bpfn));
+  auto bpage = pfn2addr(bpfn);
   MM_VERBOSE("split: %p + %p\n", apage, bpage);
   return bpage;
 }
 
 void PageSystem::truncate(AllocatedPage apage, int8_t order) {
-  auto pfn = addr2pfn(va2pa(apage));
+  auto pfn = addr2pfn(apage);
   while (array_[pfn].order > order) {
     auto bpage = split(apage);
     release(bpage);
@@ -132,7 +132,7 @@ void PageSystem::truncate(AllocatedPage apage, int8_t order) {
 }
 
 void PageSystem::merge(FreePage* apage) {
-  auto apfn = addr2pfn(va2pa(apage));
+  auto apfn = addr2pfn(apage);
   while (array_[apfn].order + 1 < total_order_) {
     auto bpfn = buddy(apfn);
     if (buddy(bpfn) != apfn or not array_[apfn].free() or
