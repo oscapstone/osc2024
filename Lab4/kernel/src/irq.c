@@ -7,10 +7,15 @@
 #include "mini_uart.h"
 #include "peripheral/mini_uart.h"
 #include "peripheral/timer.h"
+#include "slab.h"
 #include "timer.h"
 #include "utils.h"
 
+#define alloc_irq()   (irq_task_t*)kmem_cache_alloc(irq)
+#define free_irq(ptr) kmem_cache_free(irq, (ptr))
+
 static LIST_HEAD(irq_task_head);
+static struct kmem_cache* irq;
 
 typedef struct irq_task {
     irq_callback handler;    // irq task handler
@@ -19,9 +24,18 @@ typedef struct irq_task {
     struct list_head list;   // list node
 } irq_task_t;
 
+
+int irq_init(void)
+{
+    irq = kmem_cache_create("irq", sizeof(irq_task_t), -1);
+    if (!irq)
+        return -1;
+    return 0;
+}
+
 static irq_task_t* create_irq_task(irq_callback handler, unsigned long priority)
 {
-    irq_task_t* new_irq_task = (irq_task_t*)mem_alloc(sizeof(irq_task_t));
+    irq_task_t* new_irq_task = alloc_irq();
 
     if (!new_irq_task)
         return NULL;
@@ -63,7 +77,7 @@ static void run_irq_task(void)
         disable_all_exception();
 
         list_del_init(&first_task->list);
-        mem_free(first_task);
+        free_irq(first_task);
     }
 }
 

@@ -16,5 +16,6 @@ extern void disable_all_exception(void);
 
 typedef void (*irq_callback)(void);
 
+int irq_init(void);
 
 #endif /* IRQ_H */

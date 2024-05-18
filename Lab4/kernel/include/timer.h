@@ -15,7 +15,7 @@ extern void set_core_timer_timeout_secs(unsigned long seconds);
 
 typedef void (*timer_callback)(char* msg);
 
-void timer_init(void);
+int timer_init(void);
 
 void print_msg(char* msg);
 

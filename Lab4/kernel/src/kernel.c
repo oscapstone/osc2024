@@ -33,7 +33,11 @@ void kernel_main(uintptr_t dtb_ptr)
 
     slabinfo();
 
-    timer_init();
+    if (irq_init())
+        goto inf_loop;
+
+    if (timer_init())
+        goto inf_loop;
 
     slabinfo();
 

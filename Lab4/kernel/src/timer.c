@@ -23,9 +23,12 @@ typedef struct timeout_event {
     struct list_head list;    // list node
 } timeout_event_t;
 
-void timer_init(void)
+int timer_init(void)
 {
     timer = kmem_cache_create("timer", sizeof(timeout_event_t), -1);
+    if (!timer)
+        return -1;
+    return 0;
 }
 
 static timeout_event_t* create_timeout_event(timer_callback cb,
@@ -33,9 +36,6 @@ static timeout_event_t* create_timeout_event(timer_callback cb,
                                              unsigned long duration,
                                              bool is_periodic)
 {
-    // timeout_event_t* new_timeout_event =
-    //     (timeout_event_t*)mem_alloc(sizeof(timeout_event_t));
-
     timeout_event_t* new_timeout_event = alloc_timer();
     if (!new_timeout_event)
         return NULL;
@@ -47,7 +47,7 @@ static timeout_event_t* create_timeout_event(timer_callback cb,
     new_timeout_event->callback = cb;
     new_timeout_event->is_periodic = is_periodic;
 
-    new_timeout_event->msg = mem_alloc(sizeof(char) * MSG_SIZE);
+    new_timeout_event->msg = kmalloc(sizeof(char) * MSG_SIZE);
 
     if (!new_timeout_event->msg)
         return NULL;
@@ -119,7 +119,7 @@ void core_timer_handle_irq(void)
         first_event->reg_time = current_ticks;
         insert_timeout_event(first_event);
     } else {
-        mem_free(first_event->msg);
+        kfree(first_event->msg);
         free_timer(first_event);
     }
 
