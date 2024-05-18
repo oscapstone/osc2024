@@ -3,11 +3,16 @@
 #include "list.h"
 #include "memory.h"
 #include "mini_uart.h"
+#include "slab.h"
 #include "string.h"
 
-#define MSG_SIZE 32
+#define MSG_SIZE        32
+#define alloc_timer()   (timeout_event_t*)kmem_cache_alloc(timer)
+#define free_timer(ptr) kmem_cache_free(timer, (ptr));
 
 static LIST_HEAD(timeout_event_head);
+static struct kmem_cache* timer;
+
 
 typedef struct timeout_event {
     unsigned long reg_time;   // register time, represent by ticks
@@ -18,14 +23,20 @@ typedef struct timeout_event {
     struct list_head list;    // list node
 } timeout_event_t;
 
+void timer_init(void)
+{
+    timer = kmem_cache_create("timer", sizeof(timeout_event_t), -1);
+}
+
 static timeout_event_t* create_timeout_event(timer_callback cb,
                                              char* msg,
                                              unsigned long duration,
                                              bool is_periodic)
 {
-    timeout_event_t* new_timeout_event =
-        (timeout_event_t*)mem_alloc(sizeof(timeout_event_t));
+    // timeout_event_t* new_timeout_event =
+    //     (timeout_event_t*)mem_alloc(sizeof(timeout_event_t));
 
+    timeout_event_t* new_timeout_event = alloc_timer();
     if (!new_timeout_event)
         return NULL;
 
@@ -81,7 +92,6 @@ void add_timer(timer_callback cb,
 
 void core_timer_handle_irq(void)
 {
-
     unsigned long current_ticks = get_current_ticks();
     unsigned long freq = get_freq();
 
@@ -108,11 +118,9 @@ void core_timer_handle_irq(void)
     if (first_event->is_periodic) {
         first_event->reg_time = current_ticks;
         insert_timeout_event(first_event);
-    }
-    else
-    {
+    } else {
         mem_free(first_event->msg);
-        mem_free(first_event);
+        free_timer(first_event);
     }
 
     if (!list_empty(&timeout_event_head)) {

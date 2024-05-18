@@ -154,14 +154,15 @@ void parse_command(char* cmd)
     } else if (!str_cmp(cmd_name, "alloc_page")) {
         char* size = str_tok(NULL, " ");
         if (!size)
-            uart_send_string("Usage: alloc_page <size>\n");
-        int request = decstr2int(size);
-        if (request < 0) {
+            uart_send_string("Usage: alloc_page <order>\n");
+        int order = decstr2int(size);
+        if (order < 0) {
             uart_send_string("Invalid size\n");
             return;
         }
-        uint8_t* page_ptr = alloc_pages((size_t)request * PAGE_SIZE);
-        uart_printf("pages allocated at 0x%x\n", (uintptr_t)page_ptr);
+        struct page* page_ptr = alloc_pages(order);
+        uart_printf("%d pages allocated at 0x%x\n", 1 << order,
+                    (uintptr_t)page_ptr);
 
     } else if (!str_cmp(cmd_name, "test_page_alloc")) {
         test_page_alloc();

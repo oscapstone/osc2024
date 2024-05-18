@@ -57,4 +57,4 @@ emu: kernel8.img
 
 .PHONY: gdb
 gdb: $(BUILD_DIR)/kernel8.elf
-	$(DB) $<
+	$(DB) --tui -q $<
