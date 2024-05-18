@@ -87,3 +87,15 @@ void irq_restore(U64 flag) {
     utils_write_sysreg(DAIF, flag);
 }
 
+
+static U64 int_lock_count = 0;
+void lock_interrupt() {
+    disable_interrupt();
+    int_lock_count++;
+}
+
+void unlock_interrupt() {
+    int_lock_count--;
+    if (int_lock_count == 0)
+        enable_interrupt();
+}

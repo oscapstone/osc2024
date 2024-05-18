@@ -3,6 +3,7 @@
 
 #include "base.h"
 #include "arm/mmu.h"
+#include "proc/task.h"
 
 #define MEM_FREE_INFO_UNUSED        ((U32)-1)
 
@@ -36,6 +37,7 @@ typedef struct _FRAME_INFO {
     U8 flag;
     U8 order;           // the order of the frame in buddy system
     U8 pool_order;     // if used by chunk where is the order pool
+    U8 ref_count;       // this frame reference count
 }FRAME_INFO;
 
 #define MEM_FRAME_INFO_SIZE         sizeof(FRAME_INFO)
@@ -89,11 +91,21 @@ typedef struct _MEMORY_MANAGER {
 #define MEM_FRAME_SIZE          PD_PAGE_SIZE
 
 void mm_init();
+
+U64 mem_addr2idx(x);
+UPTR mem_idx2addr(x);
+
 void* kmalloc(U64 size);
 void kfree(void* ptr);
+/**
+ * Allocate and zero the memory
+*/
+void* kzalloc(U64 size);
+
 
 // mmutiilASM
 void memzero(void* src, U32 n);
+void memcpy(const void* src, void* dst, size_t size);
 
 
 

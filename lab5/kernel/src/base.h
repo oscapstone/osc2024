@@ -6,6 +6,9 @@ typedef unsigned short              U16;
 typedef unsigned int                U32;
 typedef unsigned long long          U64;
 
+typedef unsigned long long          pd_t;
+
+typedef unsigned long long          size_t;
 
 typedef volatile U32                REG32;
 

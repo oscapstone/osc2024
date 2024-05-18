@@ -69,6 +69,8 @@ regs Kusti, 23.10.2004
 #ifndef __TFP_PRINTF__
 #define __TFP_PRINTF__
 
+#define PRINTF_SUPPORT_LONG
+
 #include <stdarg.h>
 //typedef char* va_list;
 

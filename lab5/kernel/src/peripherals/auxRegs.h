@@ -1,6 +1,5 @@
 #pragma once
 
-#include "base.h"
 #include "bcm2837base.h"
 
 // on BCM2837 arm peripheral pg.8

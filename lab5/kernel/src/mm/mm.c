@@ -7,6 +7,9 @@
 #include "utils/utils.h"
 #include "peripherals/mailbox.h"
 #include "io/dtb.h"
+#include "peripherals/irq.h"
+#include "proc/task.h"
+#include "arm/sysregs.h"
 
 extern void* _dtb_ptr;
 extern char __static_mem_start__, __static_mem_end__;
@@ -22,9 +25,6 @@ void mem_memory_reserve(UPTR start, UPTR end);
 // the base of memory
 
 MEMORY_MANAGER mem_manager;
-
-#define MEM_ADDR_TO_INDEX(x)    ((((UPTR)x & -MEM_FRAME_SIZE) - mem_manager.base_ptr) / MEM_FRAME_SIZE)
-#define MEM_INDEX_TO_ADDR(x)    ((x * MEM_FRAME_SIZE) + (char*)mem_manager.base_ptr)
 
 U64* smalloc_ptr;
 U64* smalloc_end_ptr;
@@ -75,7 +75,9 @@ void mm_init() {
 
     mem_manager.number_of_frames = mem_manager.size / MEM_FRAME_SIZE;
     NS_DPRINT("[MEMORY][TRACE] Total frames: %d\n", mem_manager.number_of_frames);
-    mem_manager.frames = smalloc(mem_manager.number_of_frames * sizeof(MEM_FRAME_INFO_SIZE));
+    mem_manager.frames = smalloc(mem_manager.number_of_frames * MEM_FRAME_INFO_SIZE);
+
+    memzero(mem_manager.frames, mem_manager.number_of_frames * MEM_FRAME_INFO_SIZE);
 
     mem_manager.levels = utils_highestOneBit(mem_manager.number_of_frames);
 
@@ -155,7 +157,7 @@ void* mem_chunk_alloc(U32 size) {
                 slot->flag |= MEM_CHUNK_SLOT_FLAG_USED;
                 chunk_info->ref_count++;
 
-                char* return_addr = MEM_INDEX_TO_ADDR(chunk_info->frame_index);
+                char* return_addr = mem_idx2addr(chunk_info->frame_index);
                 return_addr = return_addr + (j * order_pool->obj_size);
 
                 NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", chunk_info->frame_index, j);
@@ -178,14 +180,14 @@ void* mem_chunk_alloc(U32 size) {
     NS_DPRINT("[MEMORY][TRACE] New chunk allocated\n");
     NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", new_chunk->frame_index, 0);
 
-    return (void*)MEM_INDEX_TO_ADDR(new_chunk->frame_index);
+    return (void*)mem_idx2addr(new_chunk->frame_index);
 }
 
 /**
  * A clumsy approach to Linux slab
 */
 void mem_chunk_free(void* ptr) {
-    U32 frame_index = MEM_ADDR_TO_INDEX(ptr);
+    U32 frame_index = mem_addr2idx(ptr);
 
     FRAME_INFO* frame_info = &mem_manager.frames[frame_index];
 
@@ -213,7 +215,7 @@ void mem_chunk_free(void* ptr) {
         return;
     }
 
-    char* offset_ptr = (char*)ptr - MEM_INDEX_TO_ADDR(frame_index);
+    char* offset_ptr = (char*)ptr - mem_idx2addr(frame_index);
     UPTR slot_offset = (UPTR)offset_ptr / pool->obj_size;
 
     CHUNK_SLOT* slot = &chunk_info->slots[slot_offset];
@@ -496,10 +498,12 @@ U32 mem_buddy_alloc(U8 order) {
     mem_manager.frames[frame_index].flag |= MEM_FRAME_FLAG_USED;
     mem_manager.frames[frame_index].flag &= ~MEM_FRAME_FLAG_CONTINUE;
     mem_manager.frames[frame_index].order = order;
+    mem_manager.frames[frame_index].ref_count++;
     U64 number_of_frames_in_block = (1 << order);
     for (U64 i = 1; i < number_of_frames_in_block; i++) {
         mem_manager.frames[frame_index + i].flag |= MEM_FRAME_FLAG_USED | MEM_FRAME_FLAG_CONTINUE;
         mem_manager.frames[frame_index + i].order = order;
+        mem_manager.frames[frame_index + i].ref_count++;                // 老實說至應該用不到
     }
 
     return frame_index;
@@ -518,6 +522,16 @@ void mem_buddy_free(U32 frame_index) {
     // check if it is free space
     if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_USED)) {
         printf("[MEMORY][ERROR] This block already free. index: %d, order: %d\n", frame_index, mem_manager.frames[frame_index].order);
+        return;
+    }
+
+    if (mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CONTINUE) {
+        printf("[MEMORY][ERROR] This frame is not the first frame of a block. index: %d, order: %d\n", frame_index, mem_manager.frames[frame_index].order);
+        return;
+    }
+
+    if (mem_manager.frames[frame_index].ref_count > 1) {
+        printf("[MEMORY][WARN] This block has more then 1 reference, cannot be free. index: %d, order: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].order, mem_manager.frames[frame_index].ref_count);
         return;
     }
 
@@ -606,11 +620,13 @@ void mem_buddy_free(U32 frame_index) {
 
     mem_manager.frames[frame_index].flag &= ~(MEM_FRAME_FLAG_USED | MEM_FRAME_FLAG_CONTINUE);
     mem_manager.frames[frame_index].order = order;
+    mem_manager.frames[frame_index].ref_count = 0;
     U64 number_of_frames_in_block = (1 << order);
     for (U64 i = 1; i < number_of_frames_in_block; i++) {
         mem_manager.frames[frame_index + i].flag &= ~MEM_FRAME_FLAG_USED;
         mem_manager.frames[frame_index + i].flag |= MEM_FRAME_FLAG_CONTINUE;
         mem_manager.frames[frame_index + i].order = order;
+        mem_manager.frames[frame_index + i].ref_count = 0;
     }
     NS_DPRINT("[MEMORY][TRACE] buddy free. index:%d, order: %d\n", frame_index, order);
 
@@ -618,8 +634,8 @@ void mem_buddy_free(U32 frame_index) {
 
 void mem_memory_reserve(UPTR start, UPTR end) {
 
-    U32 start_frame = MEM_ADDR_TO_INDEX(start);
-    U32 end_frame = MEM_ADDR_TO_INDEX(end);
+    U32 start_frame = mem_addr2idx(start);
+    U32 end_frame = mem_addr2idx(end);
 
     for(U32 i = start_frame; i <= end_frame; i++) {
         mem_manager.frames[i].flag |= MEM_FRAME_FLAG_CANT_USE;
@@ -627,27 +643,107 @@ void mem_memory_reserve(UPTR start, UPTR end) {
 
 }
 
+U64 mem_addr2idx(x) {
+    return ((((UPTR)x & -MEM_FRAME_SIZE) - mem_manager.base_ptr) / MEM_FRAME_SIZE);
+}
+
+UPTR mem_idx2addr(x) {
+    return ((x * MEM_FRAME_SIZE) + (char*)mem_manager.base_ptr);
+}
+
 void* kmalloc(U64 size) {
     if (size == 0)
         return NULL;
     
+    U64 flag = irq_disable();
+
+    void* ptr = NULL;
+
     if (size > MEM_MIN_OBJECT_SIZE * MEM_MEMORY_POOL_ORDER) {
         U64 page_size = size / MEM_FRAME_SIZE;
         U8 order = (U8)(utils_highestOneBit(page_size));
         if (page_size - (1 << (order)) > 0) {
             order++;
         }
-        return MEM_INDEX_TO_ADDR(mem_buddy_alloc(order));
+        ptr = mem_idx2addr(mem_buddy_alloc(order));
     }
 
-    return mem_chunk_alloc(size);
+    if (ptr == NULL) {
+        ptr = mem_chunk_alloc(size);
+    }
+    
+    irq_restore(flag);
+    return ptr;
 }
 
 void kfree(void* ptr) {
-    U32 frame_index = MEM_ADDR_TO_INDEX(ptr);
+    
+    U32 frame_index = mem_addr2idx(ptr);
     if (mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CHUNK) {
         mem_chunk_free(ptr);
     } else {
         mem_buddy_free(frame_index);
+    }
+}
+
+void* kzalloc(U64 size) {
+    void* ptr = kmalloc(size);
+    if (ptr == NULL)
+        return ptr;
+    
+    memzero(ptr, size);
+
+    return ptr;
+}
+
+/**
+ * Reference a memory in buddy system (I tired to do the seperate reference in buddy system)
+ * Also, if reference happen, the buddy_free will failed if this block has multiple reference
+*/
+void mem_refernce(UPTR p_addr) {
+    U64 frame_index = mem_addr2idx(p_addr);
+
+    if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_USED)) {
+        printf("[MEMORY][ERROR] this block is not been allocated. cannot reference. index: %d\n", frame_index);
+        return;
+    }
+    if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CONTINUE)) {
+        printf("[MEMORY][ERROR] this frame is not the first frame in block. cannot reference. index: %d\n", frame_index);
+        return;
+    }
+
+    U8 order = mem_manager.frames[frame_index].order;
+    mem_manager.frames[frame_index].ref_count++;
+    U64 number_of_frames_in_block = (1 << order);
+    for (U64 i = 1; i < number_of_frames_in_block; i++) {
+        mem_manager.frames[frame_index + i].ref_count++;
+    }
+}
+/**
+ * Dereference a memory in buddy system
+ * if ref_count == 1, free the memory
+*/
+void mem_dereference(UPTR p_addr) {
+    U64 frame_index = mem_addr2idx(p_addr);
+
+    if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_USED)) {
+        printf("[MEMORY][ERROR] this block is not been allocated. cannot dereference. index: %d\n", frame_index);
+        return;
+    }
+    if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CONTINUE)) {
+        printf("[MEMORY][ERROR] this frame is not the first frame in block. cannot dereference. index: %d\n", frame_index);
+        return;
+    }
+    U8 ref_count = mem_manager.frames[frame_index].ref_count;
+    if (ref_count == 1) {           // there only one reference, free the block
+        mem_buddy_free(frame_index);
+        return;
+    }
+
+    U8 order = mem_manager.frames[frame_index].order;
+    mem_manager.frames[frame_index].ref_count--;
+    U64 number_of_frames_in_block = (1 << order);
+    for (U64 i = 1; i < number_of_frames_in_block; i++) {
+        mem_manager.frames[frame_index + i].ref_count--;
     }
 }

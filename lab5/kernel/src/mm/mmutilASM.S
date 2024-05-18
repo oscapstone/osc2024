@@ -14,7 +14,8 @@ memcpy:
     ldr     x3, [x0], #8
     str     x3, [x1], #8
     sub     x2, x2, #8
-    cbnz    x2, memcpy
+    cmp     x2, xzr
+    bgt     memcpy
     ret
 
 // memset(void* src, U8 c, size_t size);

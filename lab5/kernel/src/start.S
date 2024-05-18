@@ -67,6 +67,9 @@ el1_entry:
     mov 	x0, fp
     orr 	fp, x0, x1
 
+	ldr		x2, =kernel_main
+	br		x2
+
 kernel_main:
 	bl		main					// branch label: will link in linking state
 	b		halt

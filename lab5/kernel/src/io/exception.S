@@ -43,12 +43,12 @@
 .endm
 
 .macro kernel_entry el
-    save_all        // save all general register
+    save_all        // save all general register in kernel
 
     // save the current exception register
     sub     sp, sp, 2 * 16
     
-    // if is user space
+    // if is user mode, save the user mode stack
     .if \el == 0
     mrs     x0, sp_el0
     str     x0, [sp, 16 * 0]
@@ -67,6 +67,7 @@
     msr     spsr_el1, x1 
     msr     elr_el1, x0 
 
+    // if is user mode, restore the user mode stack
     .if \el == 0
     ldr     x0, [sp, 16 * 0]
     msr     sp_el0, x0
@@ -101,13 +102,13 @@ exception_vector:
     ventry      fiq_invalid_el1t
     ventry      error_invalid_el1t
 
-    ventry      sync_invalid_el1h
+    ventry      handle_el1_sync
     ventry      handle_el1_irq
     ventry      fiq_invalid_el1h
     ventry      error_invalid_el1h
 
     ventry      handle_el0_64_sync
-    ventry      irq_invalid_el0_64
+    ventry      irq_el0_handler
     ventry      fiq_invalid_el0_64
     ventry      error_invalid_el0_64
 
@@ -125,8 +126,11 @@ fiq_invalid_el1t:
 error_invalid_el1t:
     handle_invalid_entry ERROR_INVALID_EL1t
 
-sync_invalid_el1h:
-    handle_invalid_entry SYNC_INVALID_EL1h
+handle_el1_sync:
+    kernel_entry 1
+    bl exception_sync_el0_handler // test
+    kernel_exit 1
+    eret
 
 handle_el1_irq:
     kernel_entry 1
@@ -139,14 +143,18 @@ fiq_invalid_el1h:
 error_invalid_el1h:
     handle_invalid_entry ERROR_INVALID_EL1h
 
+// handle user mode system call
 handle_el0_64_sync:
     kernel_entry 0
     bl exception_sync_el0_handler
     kernel_exit 0
-    eret
+    eret                // back to el0
 
-irq_invalid_el0_64:
-    handle_invalid_entry IRQ_INVALID_EL0_64
+irq_el0_handler:
+    kernel_entry 0
+    bl handle_irq
+    kernel_exit 0
+    eret                // back to el0
 fiq_invalid_el0_64:
     handle_invalid_entry FIQ_INVALID_EL0_64
 error_invalid_el0_64:

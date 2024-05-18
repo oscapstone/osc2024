@@ -67,3 +67,10 @@ U64 utils_highestOneBit(U64 number) {
     // Position of highest 1 bit
     return position + 1;
 }
+
+void utils_char_fill(char* dst, char* content, U64 size) {
+
+    for (U64 i = 0; i < size; i++) {
+        dst[i] = content[i];
+    }
+}

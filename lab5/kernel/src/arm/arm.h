@@ -2,6 +2,8 @@
 
 #include "base.h"
 
+#include "mmu.h"
+
 // QA7_rev3.4 pg. 7
 struct arm_core_regs {
     REG32 control;
@@ -31,7 +33,7 @@ struct arm_core_regs {
 };
 
 
-#define REGS_ARM_CORE ((struct arm_core_regs*)(0x40000000))
+#define REGS_ARM_CORE ((struct arm_core_regs*)(MMU_PHYS_TO_VIRT(0x40000000)))
 
 // armv8 pg. 1899
 // EC,bits[31:26]
@@ -44,3 +46,6 @@ struct arm_core_regs {
 #define ESR_ELx_EC_SVC64                0x15
 #define ESR_ELx_EC_DABT_LOW             0x24
 #define ESR_ELx_EC_IABT_LOW             0x20
+
+// kernel space
+#define PHYS_OFFSET 0xffff000000000000L
