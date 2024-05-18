@@ -49,6 +49,7 @@ from_el2_to_el1:
   msr elr_el2, lr
   eret
 
+/*
 from_el1_to_el0:
   mov x0, 0x340 
   msr spsr_el1, x0
@@ -56,6 +57,7 @@ from_el1_to_el0:
   msr sp_el0, x0
   msr elr_el1, lr
   eret
+ */
 
 // save general registers to stack
 .macro save_all
@@ -111,9 +113,18 @@ from_el1_to_el0:
     add sp, sp, 32 * 9 
 .endm
 
+.macro irq_on
+	msr DAIFclr, 0xf
+.endm
+
+.macro irq_off
+	msr DAIFset, 0xf
+.endm
+
 
 exception_handler:
   save_all
+  mov x0, sp
   bl exception_entry 
   load_all
   eret
@@ -128,6 +139,10 @@ core_timer_enable:
   mov x0, 2
   ldr x1, =CORE0_TIMER_IRQ_CTRL
   str w0, [x1]
+  mrs x0, cntkctl_el1
+  orr x0, x0, #1
+  msr cntkctl_el1, x0
+
   ret
 
 core_timer_handler:
@@ -141,6 +156,13 @@ general_irq_handler:
   bl c_general_irq_handler
   load_all
   eret
+
+system_call_handler:
+	save_all
+	mov x0, sp
+	bl c_system_call_handler
+	load_all
+	eret
 
 undefined_exception:
 	bl c_undefined_exception
@@ -157,7 +179,7 @@ exception_vector_table:
   b undefined_exception
   .align 7
 
-  b undefined_exception
+  b system_call_handler 
   .align 7
   b general_irq_handler 
   .align 7
@@ -166,7 +188,7 @@ exception_vector_table:
   b undefined_exception
   .align 7
 
-  b exception_handler 
+  b system_call_handler 
   .align 7
   b general_irq_handler 
   .align 7
@@ -189,6 +211,7 @@ set_exception_vector_table:
 	msr vbar_el1, x0
 	ret
 
+/*
 .global to_el0_with_timer
 to_el0_with_timer:
 	mov x29, lr
@@ -197,6 +220,7 @@ to_el0_with_timer:
 	b proc_hang
 	mov lr, x29
 	ret
+*/
 
 .global switch_to
 switch_to:
@@ -218,9 +242,20 @@ switch_to:
     ldr x9, [x1, 16 * 6]
     mov sp,  x9
     msr tpidr_el1, x1
+	
+	irq_on
+
     ret
 
 .global get_current
 get_current:
     mrs x0, tpidr_el1
     ret
+
+.global ret_from_fork_child
+ret_from_fork_child:
+	add sp, sp, 16 * 3 
+	// I believe thread_func_handler sub the sp for 16 * 3 
+	load_all
+	// bl get_elr_el1
+	eret

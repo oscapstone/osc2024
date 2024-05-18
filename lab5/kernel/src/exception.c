@@ -5,6 +5,8 @@
 #include "DEFINE.h"
 #include "timer.h"
 #include "task.h"
+#include "system_call.h"
+#include "thread.h"
 
 #include <stddef.h>
 
@@ -85,10 +87,13 @@ void simple_core_timer_entry() {
     );
 	uart_printf ("Now is %d\r\n", cur_cnt / cnt_freq);
 
-	asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq * 2));
+	asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq));
 	unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
 	*address = 2;
+
 	irq(1);
+	schedule(1);
+	// uart_printf ("I'm back\r\n");
 }
 
 
@@ -122,4 +127,32 @@ void c_general_irq_handler(){
 void c_undefined_exception() {
 	uart_printf("This is a undefined exception. Proc hang\r\n");
 	while (1);
+}
+
+void c_system_call_handler(trapframe_t* tf) {
+	int id = tf -> x[8];
+	if (id == 0) {
+		tf -> x[0] = do_getpid();
+	}
+	else if (id == 1) {
+		tf -> x[0] = do_uart_read(tf -> x[0], tf -> x[1]);
+	}
+	else if (id == 2) {
+		tf -> x[0] = do_uart_write(tf -> x[0], tf -> x[1]);
+	}
+	else if (id == 3) {
+		tf -> x[0] = do_exec(tf -> x[0], tf -> x[1]);
+	}
+	else if (id == 4) {
+		tf -> x[0] = do_fork(tf);
+	}
+	else if (id == 5) {
+		do_exit();
+	}
+	else if (id == 6) {
+		tf -> x[0] = do_mbox_call(tf -> x[0], tf -> x[1]);
+	}
+	else if (id == 7) {
+		do_kill(tf -> x[0]);	
+	}
 }

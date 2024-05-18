@@ -22,6 +22,7 @@ struct cpio_newc_header {
 void cpio_parse_ls();
 void cpio_parse_cat(char*);
 void cpio_load(char*);
+void* cpio_find(char*);
 
 char* get_cpio_end();
 

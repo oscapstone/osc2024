@@ -45,3 +45,7 @@ void strcpy(char* from, char* to, int size) {
 		to[i] = from[i];
 	}
 }
+
+void delay (unsigned long long t) {
+	while (t --);
+}

@@ -20,3 +20,4 @@
 
 unsigned int get_board_revision();
 int get_arm_memory(unsigned int*);
+int mailbox_call(unsigned int*, unsigned char);

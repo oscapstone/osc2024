@@ -120,7 +120,7 @@ void cpio_load(char* str) {
 	void* stack = my_malloc(4096);
 	stack += 4096 - 1;
 	void* code = my_malloc(4096);
-	strcpy(pos, code, 4096 * (64 / 8));
+	strcpy(pos, code, 4096);
 	
 	uart_printf("Running code from %x...\n", pos);
 	asm volatile(

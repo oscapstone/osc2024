@@ -13,7 +13,7 @@ void kernel_begin(char* fdt) {
 
 	fdt_traverse(get_initramfs_addr, fdt); // also set _cpio_file
 	manage_init(fdt);
-	core_timer_enable();
+	// core_timer_enable();
 
 	thread_init();
 

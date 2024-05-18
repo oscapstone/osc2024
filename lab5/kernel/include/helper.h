@@ -9,5 +9,6 @@ int strlen(char*);
 void strcpy(char*, char*, int);
 
 unsigned long stoi(char*);
+void delay (unsigned long long);
 
 #endif

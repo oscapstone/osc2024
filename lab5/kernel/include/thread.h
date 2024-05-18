@@ -17,5 +17,7 @@ void thread_test();
 void kill_zombies();
 void idle();
 void schedule();
+int thread_create(void*);
+void kill_thread(int);
 
 #endif

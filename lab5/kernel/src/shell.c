@@ -10,8 +10,11 @@
 #include "timer.h"
 #include "exception.h"
 #include "thread.h"
+#include "system_call.h"
 
 char buf[1024];
+
+extern void core_timer_enable();
 
 void help() {
 	uart_printf("help         : print this help menu\r\n");
@@ -110,7 +113,6 @@ void malloc_test() {
 void shell_begin(char* fdt)
 {
 	while (1) {
-		uart_printf("# ");
 		uart_recv_string(buf);
 		uart_printf("\r\n");
 		if (same(buf, "hello")) {
@@ -192,6 +194,12 @@ void shell_begin(char* fdt)
 		}
 		else if (same(buf, "thread")) {
 			thread_test();
+		}
+		else if (same(buf, "fork")) {
+			from_el1_to_fork_test();
+		}
+		else if (same(buf, "timer")) {
+			core_timer_enable();
 		}
 		else {
 			uart_printf("Command not found\n");
