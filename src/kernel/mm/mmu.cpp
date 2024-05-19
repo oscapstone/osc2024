@@ -21,8 +21,8 @@ PageTable::PageTable(PageTableEntry entry, uint64_t entry_size) {
   }
 }
 
-PageTableEntry& PageTable::walk(char* table_start, uint64_t entry_size,
-                                char* addr, uint64_t size) {
+PageTableEntry& PageTable::walk(uint64_t table_start, uint64_t entry_size,
+                                uint64_t addr, uint64_t size) {
   uint64_t idx = (addr - table_start) / entry_size;
   auto& entry = entries[idx];
   if (entry_size == size) {
@@ -35,16 +35,15 @@ PageTableEntry& PageTable::walk(char* table_start, uint64_t entry_size,
   return nxt_table->walk(nxt_table_start, nxt_entry_size, addr, size);
 }
 
-void PageTable::walk(char* table_start, uint64_t entry_size, char* start,
-                     char* end, CB callback) {
+void PageTable::walk(uint64_t table_start, uint64_t entry_size, uint64_t start,
+                     uint64_t end, CB callback) {
   start = align<PAGE_SIZE, false>(start);
   end = align<PAGE_SIZE>(end);
   uint64_t size = entry_size;
   while ((uint64_t)start % size != 0 or (uint64_t) end % size != 0)
     size /= TABLE_SIZE_4K;
   for (auto it = start; it < end; it += size) {
-    auto& entry =
-        walk((char*)KERNEL_SPACE, PMD_ENTRY_SIZE, (char*)it, entry_size);
+    auto& entry = walk(KERNEL_SPACE, PMD_ENTRY_SIZE, it, entry_size);
     callback(entry);
   }
 }
@@ -64,7 +63,7 @@ void PageTable::walk(CB callback) {
 }
 
 // TODO: remove -mno-unaligned-access
-void map_kernel_as_normal(void* kernel_start, void* kernel_end) {
+void map_kernel_as_normal(uint64_t kernel_start, uint64_t kernel_end) {
   PageTableEntry PMD_entry{
       .PXN = false,
       .output_address = 0,
@@ -75,9 +74,9 @@ void map_kernel_as_normal(void* kernel_start, void* kernel_end) {
   };
   auto PMD = new PageTable(PMD_entry, PMD_ENTRY_SIZE);
 
-  PMD->walk(0, PMD_ENTRY_SIZE, (char*)mm_page.start(), (char*)mm_page.end(),
+  PMD->walk(0, PMD_ENTRY_SIZE, mm_page.start(), mm_page.end(),
             [](auto& entry) { entry.AttrIdx = MAIR_NORMAL_NOCACHE; });
-  PMD->walk(0, PMD_ENTRY_SIZE, (char*)kernel_start, (char*)kernel_end,
+  PMD->walk(0, PMD_ENTRY_SIZE, kernel_start, kernel_end,
             [](auto& entry) { entry.RDONLY = true; });
   PMD->walk([](auto& entry) { entry.PXN = true; });
 

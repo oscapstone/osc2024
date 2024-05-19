@@ -3,6 +3,7 @@
 #include "fdt.hpp"
 #include "int/interrupt.hpp"
 #include "mm/heap.hpp"
+#include "mm/mmu.hpp"
 #include "mm/new.hpp"
 #include "mm/page.hpp"
 #include "mm/startup.hpp"

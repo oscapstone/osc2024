@@ -83,14 +83,18 @@ struct PageTable {
   PageTableEntry entries[TABLE_SIZE_4K];
   PageTable();
   PageTable(PageTableEntry entry, uint64_t entry_size);
-  PageTableEntry& walk(char* table_start, uint64_t entry_size, char* addr,
+  PageTableEntry& walk(uint64_t table_start, uint64_t entry_size, uint64_t addr,
                        uint64_t size);
   using CB = void(PageTableEntry&);
-  void walk(char* table_start, uint64_t entry_size, char* start, char* end,
-            CB callback);
+  void walk(uint64_t table_start, uint64_t entry_size, uint64_t start,
+            uint64_t end, CB callback);
   void walk(CB callback);
+  template <typename T, typename U>
+  void walk(T start, U end, CB callback) {
+    walk(0, PGD_ENTRY_SIZE, (uint64_t)start, (uint64_t)end, callback);
+  }
 };
 
 static_assert(sizeof(PageTable) == PAGE_SIZE);
 
-void map_kernel_as_normal(void* kernel_start, void* kernel_end);
+void map_kernel_as_normal(uint64_t kernel_start, uint64_t kernel_end);
