@@ -112,6 +112,7 @@ typedef struct _TASK_MANAGER {
 void task_init();
 void task_schedule();
 
+void task_run_to_el0(TASK* task);
 void task_run(TASK* task);
 TASK* task_create(const char* name, U32 flags);
 void task_exit();
@@ -127,4 +128,3 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size);
 void task_asm_switch_to(TASK* current, TASK* next);
 void task_asm_store_context(TASK* current);
 TASK* task_get_current_el1();
-TASK* task_get_current_ks();

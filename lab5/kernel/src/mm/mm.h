@@ -92,8 +92,8 @@ typedef struct _MEMORY_MANAGER {
 
 void mm_init();
 
-U64 mem_addr2idx(x);
-UPTR mem_idx2addr(x);
+U64 mem_addr2idx(UPTR x);
+UPTR mem_idx2addr(U32 x);
 
 void* kmalloc(U64 size);
 void kfree(void* ptr);

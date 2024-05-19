@@ -17,9 +17,6 @@ extern char* _dtb_ptr;
 extern MEMORY_MANAGER mem_manager;
 extern TASK_MANAGER* task_manager;
 
-// for memory testing
-U32 mem_buddy_alloc(U8 order);
-void mem_buddy_free(U32 frame_index);
 
 char* cpio_addr;
 
@@ -156,19 +153,8 @@ void shell() {
 			// TODO: executing application
 			// copy to 0x90000
 			void* program_alloc = kmalloc(contentSize);
-			U64 virtual_offset = (0xffff << 12);
-			void* virtaul_addr = (void*)MMU_PHYS_TO_VIRT((char*)program_alloc);
-			memcpy((void*)filePtr, virtaul_addr, contentSize);
-			NS_DPRINT("[SHELL][DEBUG] program map pointer: %x\n", program_alloc);
-			// Success! but will remove one day because it is ugly to run a program
-			/**
-			 * Need to set the page table pointer to EL0 (ttbr0_el1)
-			*/
-			elutil_from_el1_to_el0(virtaul_addr);
-			//asm volatile("mov x0, %0" : : "r"(virtaul_addr));
-			//asm volatile("mov ")
-			//asm volatile("br x0");
-			kfree(program_alloc);
+			memcpy((void*)filePtr, program_alloc, contentSize);
+			// TODO
 		}
 		 else if (utils_strncmp(cmd_space, "async", 5) == 0) {
 			printf("This will transmit A character for async uart\n");

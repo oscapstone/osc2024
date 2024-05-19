@@ -643,11 +643,11 @@ void mem_memory_reserve(UPTR start, UPTR end) {
 
 }
 
-U64 mem_addr2idx(x) {
+U64 mem_addr2idx(UPTR x) {
     return ((((UPTR)x & -MEM_FRAME_SIZE) - mem_manager.base_ptr) / MEM_FRAME_SIZE);
 }
 
-UPTR mem_idx2addr(x) {
+UPTR mem_idx2addr(U32 x) {
     return ((x * MEM_FRAME_SIZE) + (char*)mem_manager.base_ptr);
 }
 
@@ -672,6 +672,7 @@ void* kmalloc(U64 size) {
         ptr = mem_chunk_alloc(size);
     }
     
+    ptr = MMU_PHYS_TO_VIRT((U64)ptr);
     irq_restore(flag);
     return ptr;
 }

@@ -8,8 +8,8 @@
 #define MMU_USER_KERNEL_BASE        0x00000000L
 #define MMU_USER_STACK_BASE         0xfffffffff000L
 
-#define MMU_PHYS_TO_VIRT(x)   (x + 0xffff000000000000)
-#define MMU_VIRT_TO_PHYS(x)   (x - 0xffff000000000000)
+#define MMU_PHYS_TO_VIRT(x)   (x + 0xffff000000000000L)
+#define MMU_VIRT_TO_PHYS(x)   (x - 0xffff000000000000L)
 /**
  * For ARM MMU
  * 
@@ -42,11 +42,12 @@
  *     +-------------------------------------------+
  *     |11  | 10     |9     8|7  6|5   |4        2|
  * 
- *      AP[7:6]
- *          00 | None
- *          01 | Read-only
- *          10 | Write-only
- *          11 | RW
+ *      AP[7:6] Data access premission
+ *             | EL0            | EL1/2/3
+ *          00 | None           | RW
+ *          01 | RW             | RW
+ *          10 | None           | Read-only
+ *          11 | Read-only      | Read-only
  * 
  * Bits [47:12]. This is the place where the address that a descriptor points to is stored. As I mentioned previously, only bits [47:12] of the address need to be stored, because all other bits are always 0.
  * Bits [63:48] Another set of attributes.
@@ -72,10 +73,9 @@
 // kernel pud attribute
 #define PD_KERNEL_PUD_ATTR  (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)
 
-#define MMU_AP_NONE         (0)
-#define MMU_AP_READ_ONLY    (0x1 << 6)
-#define MMU_AP_WRITE_ONLY   (0x2 << 6)
-#define MMU_AP_READ_WRITE   (0x3 << 6) 
+#define MMU_AP_EL0_NONE         (0)
+#define MMU_AP_EL0_READ_ONLY    (0x3 << 6)
+#define MMU_AP_EL0_READ_WRITE   (0x1 << 6) 
 
 #define PD_PGD_SHIFT        39
 #define PD_PUD_SHIFT        30

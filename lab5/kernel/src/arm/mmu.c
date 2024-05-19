@@ -54,7 +54,7 @@ void setup_kernel_space_mapping() {
      *          |-p1
      * three level paging each block 2MB
     */
-    pd_t* p0 = kzalloc(PD_PAGE_SIZE);
+    pd_t* p0 = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
 
     /**
      * 504 * 2MB = 0x3f000000
@@ -75,7 +75,7 @@ void setup_kernel_space_mapping() {
     /**
      * 0x40000000 ~ 0x80000000
     */
-    pd_t* p1 = kzalloc(PD_PAGE_SIZE);
+    pd_t* p1 = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
     for (int i = 0; i < 512; i++) {
         p1[i] = 0x40000000 | (i << 21) | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK;
     }
@@ -106,7 +106,7 @@ pd_t mmu_map_table(pd_t* table, U64 shift, U64 v_addr, BOOL* gen_new_table) {
     index = index & (PD_PTRS_PER_TABLE - 1);
     if (!table[index]) {        // no entry
         *gen_new_table = TRUE;
-        U64 next_level_table = mem_idx2addr(mem_buddy_alloc(0));
+        U64 next_level_table = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
         U64 entry = next_level_table | PD_ACCESS | PD_TABLE;        // it is a table entry
         table[index] = entry;
         return next_level_table;
@@ -118,7 +118,7 @@ pd_t mmu_map_table(pd_t* table, U64 shift, U64 v_addr, BOOL* gen_new_table) {
 U64 mmu_get_pte(TASK* task, U64 v_addr) {
     U64 pgd;
     if (!task->cpu_regs.pgd) {
-        task->cpu_regs.pgd = mem_idx2addr(mem_buddy_alloc(0));
+        task->cpu_regs.pgd = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = task->cpu_regs.pgd;
     }
     pgd = task->cpu_regs.pgd;
@@ -136,14 +136,6 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = pte;
     }
     return pte;
-}
-
-void mmu_map_io(TASK* task) {
-    U64 offset = 0;
-    while (MMU_PERIPHERAL_START + offset < MMU_PERIPHERAL_END) {
-        U64 pte = mmu_get_pte(task, MMU_PERIPHERAL_START + offset);
-        mmu_map_table_entry((pd_t*)(pte + 0), MMU_PERIPHERAL_START + offset, MMU_PERIPHERAL_START + offset, MMU_AP_READ_WRITE);
-    }
 }
 
 /**
@@ -166,11 +158,10 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
     U64 pte = mmu_get_pte(task, v_addr);
     mmu_map_table_entry((pd_t*)(pte + 0), v_addr, page, flags);
     U8 user_flags = 0;
-    if (flags & MMU_AP_READ_ONLY) {
+    if (flags & MMU_AP_EL0_READ_ONLY) {
         user_flags |= TASK_USER_PAGE_INFO_FLAGS_READ;
-    }
-    if (flags & MMU_AP_WRITE_ONLY) {
-        user_flags |= TASK_USER_PAGE_INFO_FLAGS_WRITE;
+    } else if (flags & MMU_AP_EL0_READ_WRITE) {
+        user_flags |= TASK_USER_PAGE_INFO_FLAGS_WRITE | TASK_USER_PAGE_INFO_FLAGS_READ;
     }
     if (flags & (1 << 53)) {
         user_flags |= TASK_USER_PAGE_INFO_FLAGS_EXEC;
@@ -189,12 +180,12 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
 void mmu_task_init(TASK* task) {
 
     // initalize the user mode stack for user page table
-    U64 stack_ptr = (U64)task->user_stack;
+    U64 stack_ptr = (U64)MMU_VIRT_TO_PHYS((U64)task->user_stack);
 
     U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
     for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
         U64 pte = mmu_get_pte(task, stack_v_addr);
-        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_READ_WRITE | MMU_PXN/* 還沒看懂到底要不要家 */);
+        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_READ_WRITE | MMU_PXN/* 還沒看懂到底要不要家 */);
         stack_v_addr += PD_PAGE_SIZE;
     }
     return;
@@ -233,13 +224,13 @@ void mmu_delete_mm(TASK* task) {
 
     // delete table descriptors
     for (U64 i = 0; i < task->mm.kernel_pages_count; i++) {
-        kfree(mem_addr2idx(task->mm.kernel_pages[i]));
+        kfree(task->mm.kernel_pages[i]);
     }
     task->mm.kernel_pages_count = 0;
     
     // delete block descriptors
     for (U64 i = 0; i < task->mm.user_pages_count; i++) {
-        kfree(mem_addr2idx(task->mm.user_pages[i]));
+        kfree(task->mm.user_pages[i].p_addr);
     }
     task->mm.user_pages_count = 0;
     task->cpu_regs.pgd = NULL;
@@ -261,7 +252,7 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
         if (user_page->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC) {
             mmu_flags |= (0x60000000000000); // UXN & PXN
         }
-        mmu_flags |= MMU_AP_READ_ONLY;
+        mmu_flags |= MMU_AP_EL0_READ_ONLY;
         USER_PAGE_INFO* new_task_user_page = mmu_map_page(new_task, user_page->v_addr, user_page->p_addr, mmu_flags);
         // if this page it writable then later the page fault handler will know this and do the copy on write instead of segementation fault.
         new_task_user_page->flags = user_page->flags;

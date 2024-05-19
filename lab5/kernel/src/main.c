@@ -13,6 +13,9 @@
 #include "lib/fork.h"
 #include "lib/getpid.h"
 
+// in exception.S
+void set_exception_vector_table();
+
 void putc(void *p, char c) {
 	if (c == '\n') {
 		uart_send_char('\r');
@@ -78,15 +81,15 @@ void main() {
 	// task_run(task_a);
 	TASK* task_b = task_create("task_b", NULL);
 	NS_DPRINT("task b pid = %d\n", task_b->pid);
-	task_copy_program(task_b, &func_task_b, (char*)&func_task_c - (char*)&func_task_b);
-	task_run(task_b);
+	task_copy_program(task_b, func_task_b, (U64)&func_task_c - (U64)&func_task_b);
+	task_run_to_el0(task_b);
 	// TASK* task_c = task_create("task_c", TASK_FLAGS_KERNEL, &func_task_c);
 	// NS_DPRINT("task c pid = %d\n", task_c->pid);
 	// task_run(task_c);
 
 	// init idle
 	while (1) {
-		//printf("A\n");
+		printf("A\n");
 		task_kill_dead();
 		task_schedule();
 	}

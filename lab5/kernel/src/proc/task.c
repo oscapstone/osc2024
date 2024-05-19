@@ -75,7 +75,7 @@ void task_schedule() {
     if (current_task == task_manager->running_queue[0]) {
         return;
     }
-    task_switch_to(task_get_current_el1(), MMU_PHYS_TO_VIRT(task_manager->running_queue[0]));
+    task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
 }
 
 void task_switch_to(TASK* current, TASK* next) {
@@ -83,7 +83,7 @@ void task_switch_to(TASK* current, TASK* next) {
 }
 
 
-void task_run(TASK* task) {
+void task_run_to_el0(TASK* task) {
     // 先這樣
     lock_interrupt();
     task->flags |= TASK_FLAGS_RUNNING;
@@ -113,11 +113,39 @@ void task_run(TASK* task) {
     task_switch_to(task_get_current_el1(), task);
 }
 
+void task_run(TASK* task) {
+    // 先這樣
+    lock_interrupt();
+    task->flags |= TASK_FLAGS_RUNNING;
+    task->preempt = task->priority;
+
+    for (U32 i = 0; i < task_manager->running; i++) {
+        TASK* run_task = task_manager->running_queue[i];
+        if (run_task->preempt > task->preempt) {
+            TASK* tmp_task = run_task;
+            task_manager->running_queue[i] = task;
+            for (U32 j = i; j < task_manager->running; j++) {
+                TASK* next_task = task_manager->running_queue[j + 1];
+                task_manager->running_queue[j + 1] = tmp_task;
+                tmp_task = next_task;
+            }
+            //NS_DPRINT("[TASK][TRACE] adding task to running queue[%d], pid = %d\n", i, task->pid);
+            task_manager->running++;
+            return;
+        }
+    }
+    task_manager->running_queue[task_manager->running] = task;
+    //NS_DPRINT("[TASK][TRACE] adding task to running queue[%d], pid = %d\n", task_manager->running, task->pid);
+    task_manager->running++;
+    unlock_interrupt();
+    NS_DPRINT("[TASK][TRACE] new task running. pid = %d\n", task->pid);
+}
+
 void task_to_user_func() {
 
     lock_interrupt();
-    task_get_current_ks()->cpu_regs.sp = MMU_USER_STACK_BASE;
-    task_get_current_ks()->cpu_regs.fp = MMU_USER_STACK_BASE;
+    task_get_current_el1()->cpu_regs.sp = MMU_USER_STACK_BASE;
+    task_get_current_el1()->cpu_regs.fp = MMU_USER_STACK_BASE;
     unlock_interrupt();
 
     asm("msr tpidr_el1, %0\n\t"
@@ -134,9 +162,9 @@ void task_to_user_func() {
         :
         :   "r"(task_get_current_el1()),
             "r"(0x0),
-            "r"(task_get_current_ks()->cpu_regs.sp),
-            "r"(MMU_PHYS_TO_VIRT(task_get_current_ks()->kernel_stack) + TASK_STACK_SIZE),
-            "r"(task_get_current_ks()->cpu_regs.pgd)
+            "r"(task_get_current_el1()->cpu_regs.sp),
+            "r"(task_get_current_el1()->kernel_stack + TASK_STACK_SIZE),
+            "r"(task_get_current_el1()->cpu_regs.pgd)
         );
 }
 
@@ -193,10 +221,8 @@ void task_kill(TASK* task) {
 }
 
 void task_delete(TASK* task) {
-    // TODO: MMU free page table
-    // TODO: delete VAM struct
     lock_interrupt();
-    mmu_delete_mm(task);
+    mmu_delete_mm(task);            // free page table
     kfree(task->kernel_stack);
     kfree(task->user_stack);
     task->flags = 0;
@@ -236,7 +262,7 @@ TASK* task_create(const char* name, U32 flags) {
     mmu_task_init(task);
 
     task->cpu_regs.lr = 0;
-    task->cpu_regs.sp = (U64)MMU_PHYS_TO_VIRT(((char*)task->kernel_stack + TASK_STACK_SIZE));
+    task->cpu_regs.sp = (U64)((char*)task->kernel_stack + TASK_STACK_SIZE);
     task->cpu_regs.fp = task->cpu_regs.sp;
     task->priority = 0;              // default value
     task->preempt = task->priority;              // default value
@@ -255,15 +281,11 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size) {
         size_t size = offset + PD_PAGE_SIZE > program_size ? program_size - offset : PD_PAGE_SIZE;
         printf("current size: %d\n", size);
         U64 page = kzalloc(PD_PAGE_SIZE);
-        mmu_map_page(task, offset, page, MMU_AP_READ_WRITE);
+        mmu_map_page(task, offset, MMU_VIRT_TO_PHYS(page), MMU_AP_EL0_READ_WRITE);
         NS_DPRINT("program offset: %x\n", program_start + offset);
         memcpy((char*)program_start + offset, (void*)page, size);
         offset += size;
         NS_DPRINT("[TASK][DEBUG] task copying offset: %d\n", offset);
     }
-    task->cpu_regs.lr = 0;
     NS_DPRINT("[TASK][DEBUG] Task copied. pid = %d\n", task->pid);
-}
-TASK* task_get_current_ks() {
-    return (TASK*)MMU_PHYS_TO_VIRT((U64)task_get_current_el1());
 }
