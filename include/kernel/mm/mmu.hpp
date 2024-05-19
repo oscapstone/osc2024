@@ -26,12 +26,16 @@ inline R pa2va(T x) {
 }
 
 template <typename T>
+uint64_t addressSpace(T x) {
+  return (uint64_t)x & ADDRESS_SPACE_TAG;
+}
+template <typename T>
 inline bool isKernelSpace(T x) {
-  return ((uint64_t)x & ADDRESS_SPACE_TAG) == KERNEL_SPACE;
+  return addressSpace(x) == KERNEL_SPACE;
 }
 template <typename T>
 inline bool isUserSpace(T x) {
-  return ((uint64_t)x & ADDRESS_SPACE_TAG) == USER_SPACE;
+  return addressSpace(x) == USER_SPACE;
 }
 
 struct PageTable;
@@ -40,6 +44,9 @@ constexpr uint64_t PTE_ENTRY_SIZE = PAGE_SIZE;
 constexpr uint64_t PMD_ENTRY_SIZE = PTE_ENTRY_SIZE * TABLE_SIZE_4K;
 constexpr uint64_t PUD_ENTRY_SIZE = PMD_ENTRY_SIZE * TABLE_SIZE_4K;
 constexpr uint64_t PGD_ENTRY_SIZE = PUD_ENTRY_SIZE * TABLE_SIZE_4K;
+constexpr uint64_t ENTRY_SIZE[] = {PGD_ENTRY_SIZE, PUD_ENTRY_SIZE,
+                                   PMD_ENTRY_SIZE, PTE_ENTRY_SIZE};
+constexpr int PGD_LEVEL = 0, PUD_LEVEL = 1, PMD_LEVEL = 2, PTE_LEVEL = 3;
 
 struct PageTableEntry {
   uint64_t upper_atributes : 10 = 0;
@@ -82,16 +89,24 @@ static_assert(sizeof(PageTableEntry) == sizeof(uint64_t));
 struct PageTable {
   PageTableEntry entries[TABLE_SIZE_4K];
   PageTable();
-  PageTable(PageTableEntry entry, uint64_t entry_size);
-  PageTableEntry& walk(uint64_t table_start, uint64_t entry_size, uint64_t addr,
-                       uint64_t size);
-  using CB = void(PageTableEntry&);
-  void walk(uint64_t table_start, uint64_t entry_size, uint64_t start,
-            uint64_t end, CB callback);
-  void walk(CB callback);
+  PageTable(PageTableEntry entry, int level);
+  PageTable* copy();
+  PageTable(PageTable* table);
+  ~PageTable();
+  PageTableEntry& walk(uint64_t start, int level, uint64_t va_start,
+                       int va_level);
+  using CB = void(PageTableEntry& entry, uint64_t start, int level);
+  void walk(uint64_t start, int level, uint64_t va_start, uint64_t va_end,
+            int va_level, CB cb_entry);
   template <typename T, typename U>
-  void walk(T start, U end, CB callback) {
-    walk(0, PGD_ENTRY_SIZE, (uint64_t)start, (uint64_t)end, callback);
+  void walk(T va_start, U va_end, CB cb_entry) {
+    walk(USER_SPACE, PGD_LEVEL, (uint64_t)va_start, (uint64_t)va_end, PTE_LEVEL,
+         cb_entry);
+  }
+
+  void traverse(uint64_t start, int level, CB cb_entry, CB cb_table);
+  void traverse(CB cb_entry, CB cb_table = nullptr) {
+    return traverse(USER_SPACE, PGD_LEVEL, cb_entry, cb_table);
   }
 };
 

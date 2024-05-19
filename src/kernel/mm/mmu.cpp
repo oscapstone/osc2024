@@ -11,54 +11,60 @@ PageTable::PageTable() {
   }
 }
 
-PageTable::PageTable(PageTableEntry entry, uint64_t entry_size) {
-  if (entry_size == PTE_ENTRY_SIZE and entry.type == PD_BLOCK)
+PageTable::PageTable(PageTableEntry entry, int level) {
+  if (level == PTE_LEVEL and entry.type == PD_BLOCK)
     entry.type = PD_ENTRY;
-  uint64_t offset = entry_size / PAGE_SIZE;
+  uint64_t offset = ENTRY_SIZE[level] / PAGE_SIZE;
   for (uint64_t i = 0; i < TABLE_SIZE_4K; i++) {
     entries[i] = entry;
     entry.output_address += offset;
   }
 }
 
-PageTableEntry& PageTable::walk(uint64_t table_start, uint64_t entry_size,
-                                uint64_t addr, uint64_t size) {
-  uint64_t idx = (addr - table_start) / entry_size;
+PageTableEntry& PageTable::walk(uint64_t start, int level, uint64_t va_start,
+                                int va_level) {
+  if (addressSpace(start) != addressSpace(va_start))
+    panic("page table walk address space mismatch");
+  uint64_t idx = (va_start - start) / ENTRY_SIZE[level];
   auto& entry = entries[idx];
-  if (entry_size == size) {
+  if (level == va_level) {
     return entry;
   }
-  auto nxt_table_start = table_start + idx * entry_size;
-  auto nxt_entry_size = entry_size / TABLE_SIZE_4K;
-  PageTable* nxt_table = new PageTable(entry, nxt_entry_size);
+  auto nxt_start = start + idx * ENTRY_SIZE[level];
+  auto nxt_level = level + 1;
+  PageTable* nxt_table = new PageTable(entry, nxt_level);
   entry.set_table(nxt_table);
-  return nxt_table->walk(nxt_table_start, nxt_entry_size, addr, size);
+  return nxt_table->walk(nxt_start, nxt_level, va_start, va_level);
 }
 
-void PageTable::walk(uint64_t table_start, uint64_t entry_size, uint64_t start,
-                     uint64_t end, CB callback) {
-  start = align<PAGE_SIZE, false>(start);
-  end = align<PAGE_SIZE>(end);
-  uint64_t size = entry_size;
-  while ((uint64_t)start % size != 0 or (uint64_t) end % size != 0)
-    size /= TABLE_SIZE_4K;
-  for (auto it = start; it < end; it += size) {
-    auto& entry = walk(KERNEL_SPACE, PMD_ENTRY_SIZE, it, entry_size);
-    callback(entry);
+void PageTable::walk(uint64_t start, int level, uint64_t va_start,
+                     uint64_t va_end, int va_level, CB cb_entry) {
+  va_start = align<PAGE_SIZE, false>(va_start);
+  va_end = align<PAGE_SIZE>(va_end);
+  while (va_start % ENTRY_SIZE[va_level] != 0 or
+         va_end % ENTRY_SIZE[va_level] != 0)
+    va_level++;
+  for (auto it = va_start; it < va_end; it += ENTRY_SIZE[va_level]) {
+    auto& entry = walk(start, level, it, va_level);
+    cb_entry(entry, it, va_level);
   }
 }
 
-void PageTable::walk(CB callback) {
-  for (auto& entry : entries) {
+void PageTable::traverse(uint64_t start, int level, CB cb_entry, CB cb_table) {
+  auto nxt_start = start;
+  auto nxt_level = level + 1;
+  for (uint64_t idx = 0; idx < TABLE_SIZE_4K; idx++) {
+    auto& entry = entries[idx];
     switch (entry.type) {
       case PD_TABLE:
-        entry.table()->walk(callback);
+        cb_table(entry, nxt_start, nxt_level);
         break;
       case PD_BLOCK:
       case PD_ENTRY:
-        callback(entry);
+        cb_entry(entry, nxt_start, level);
         break;
     }
+    nxt_start += ENTRY_SIZE[level];
   }
 }
 
@@ -72,13 +78,14 @@ void map_kernel_as_normal(uint64_t kernel_start, uint64_t kernel_end) {
       .AttrIdx = MAIR_IDX_DEVICE_nGnRnE,
       .type = PD_BLOCK,
   };
-  auto PMD = new PageTable(PMD_entry, PMD_ENTRY_SIZE);
+  auto PMD = new PageTable(PMD_entry, PMD_LEVEL);
 
-  PMD->walk(0, PMD_ENTRY_SIZE, mm_page.start(), mm_page.end(),
-            [](auto& entry) { entry.AttrIdx = MAIR_NORMAL_NOCACHE; });
-  PMD->walk(0, PMD_ENTRY_SIZE, kernel_start, kernel_end,
-            [](auto& entry) { entry.RDONLY = true; });
-  PMD->walk([](auto& entry) { entry.PXN = true; });
+  PMD->walk(
+      KERNEL_SPACE, PMD_LEVEL, mm_page.start(), mm_page.end(), PMD_LEVEL,
+      [](auto& entry, auto, auto) { entry.AttrIdx = MAIR_NORMAL_NOCACHE; });
+  PMD->walk(KERNEL_SPACE, PMD_LEVEL, kernel_start, kernel_end, PMD_LEVEL,
+            [](auto& entry, auto, auto) { entry.RDONLY = true; });
+  PMD->traverse([](auto& entry, auto, auto) { entry.PXN = true; });
 
   auto PUD = (PageTable*)__upper_PUD;
   PUD->entries[0].set_table(PMD);
