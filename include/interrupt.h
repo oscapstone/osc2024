@@ -3,11 +3,13 @@
 
 #include "peripherals/mmio.h"
 #include "types.h"
+#include "vm_macro.h"
 
-#define CORE0_INT_SRC     \
-  ((volatile unsigned int \
-        *)0x40000060)  // The interrupt source register which
-                       // shows what the source bits are for IRQ/FIQ
+#define CORE0_INT_SRC             \
+  ((volatile unsigned int         \
+        *)((uint32_t)0x40000060 | \
+           KERNEL_VIRT_BASE))  // The interrupt source register which
+                               // shows what the source bits are for IRQ/FIQ
 #define CORE_INT_SRC_TIMER (1 << 1)
 #define CORE_INT_SRC_GPU (1 << 8)
 

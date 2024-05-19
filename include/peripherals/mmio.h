@@ -1,11 +1,13 @@
 #ifndef MMIO_H
 #define MMIO_H
+#include "vm_macro.h"
 
-#define MMIO_BASE 0x3F000000  // 0x3B400000 ~ 0x3F000000 is for VideoCore GPU
+#define MMIO_BASE (KERNEL_VIRT_BASE | 0x3F000000)
 
 #endif
 
 /*
+0x3B400000 ~ 0x3F000000 is for VideoCore GPU
 All peripherals communicate in memory with CPU. Each has it's dedicated memory
 address starting from 0x3F000000.
 0x3F003000 - System Timer 0x3F00B000 - Interrupt controller

@@ -3,9 +3,10 @@
 #include "string.h"
 #include "uart1.h"
 #include "utli.h"
+#include "vm_macro.h"
 
-char *cpio_start_addr;
-char *cpio_end_addr;
+void *cpio_start_addr;
+void *cpio_end_addr;
 
 static uint32_t cpio_atoi(const char *s, int32_t char_size) {
   uint32_t num = 0;
@@ -24,7 +25,7 @@ static uint32_t cpio_atoi(const char *s, int32_t char_size) {
 }
 
 void cpio_ls() {
-  char *addr = cpio_start_addr;
+  void *addr = cpio_start_addr;
   while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     cpio_header *header = (cpio_header *)addr;
     uint32_t filename_size =
@@ -43,7 +44,7 @@ void cpio_ls() {
 }
 
 char *findFile(const char *name) {
-  char *addr = cpio_start_addr;
+  void *addr = cpio_start_addr;
   while (strcmp((char *)(addr + sizeof(cpio_header)), "TRAILER!!!") != 0) {
     if (!strcmp((char *)(addr + sizeof(cpio_header)), name)) {
       return addr;
@@ -84,7 +85,7 @@ void cpio_cat(const char *filename) {
 }
 
 char *cpio_load(const char *filename, uint32_t *file_sz) {
-  char *file = findFile(filename);
+  char *file = (void *)(KERNEL_VIRT_BASE | (uint64_t)findFile(filename));
   if (file) {
     cpio_header *header = (cpio_header *)file;
     uint32_t filename_size =

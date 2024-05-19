@@ -4,11 +4,12 @@
 #include "string.h"
 #include "uart1.h"
 #include "utli.h"
+#include "vm_macro.h"
 
 void *_dtb_ptr_start;  // should be 0x2EFF7A00
 void *_dtb_ptr_end;
-extern char *cpio_start_addr;  // should be 0x20000000
-extern char *cpio_end_addr;
+extern void *cpio_start_addr;  // should be 0x20000000
+extern void *cpio_end_addr;
 
 static uint32_t dtb_strlen(const char *s) {
   uint32_t i = 0;
@@ -116,10 +117,11 @@ void get_cpio_addr(int32_t token, const char *name, const void *data,
   UNUSED(size);
 
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-start")) {
-    cpio_start_addr = (char *)(uint64_t)fdt_u32_le2be(data);
+    cpio_start_addr =
+        (void *)((uint64_t)fdt_u32_le2be(data) | KERNEL_VIRT_BASE);
   }
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-end")) {
-    cpio_end_addr = (char *)(uint64_t)fdt_u32_le2be(data);
+    cpio_end_addr = (void *)((uint64_t)fdt_u32_le2be(data) | KERNEL_VIRT_BASE);
   }
   return;
 }

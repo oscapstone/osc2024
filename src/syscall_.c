@@ -9,7 +9,6 @@
 #include "uart1.h"
 #include "utli.h"
 
-extern task_struct* current_thread;
 extern task_struct* threads;
 
 uint64_t sys_getpid(trapframe_t* tpf) {
@@ -17,7 +16,7 @@ uint64_t sys_getpid(trapframe_t* tpf) {
   return tpf->x[0];
 }
 
-uint32_t sys_uartread(trapframe_t* tpf, char buf[], uint32_t size) {
+uint32_t sys_uartread(trapframe_t* tpf, char* buf, uint32_t size) {
   uint32_t i;
   for (i = 0; i < size; i++) {
     buf[i] = uart_read_async();
@@ -26,7 +25,7 @@ uint32_t sys_uartread(trapframe_t* tpf, char buf[], uint32_t size) {
   return i;
 }
 
-uint32_t sys_uartwrite(trapframe_t* tpf, const char buf[], uint32_t size) {
+uint32_t sys_uartwrite(trapframe_t* tpf, const char* buf, uint32_t size) {
   uint32_t i;
   for (i = 0; i < size; i++) {
     uart_write_async(buf[i]);

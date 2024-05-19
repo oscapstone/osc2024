@@ -28,4 +28,5 @@ void print_el1_sys_reg();
 void exec_in_el0(void *prog_st_addr, void *stk_ptr);
 void enable_EL0VCTEN();
 void print_DAIF();
+void print_ttbr0_el1();
 #endif

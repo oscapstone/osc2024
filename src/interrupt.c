@@ -9,6 +9,8 @@
 
 int32_t lock_cnt = 0;
 
+void check_check() { uart_puts("check_check"); }
+
 void invaild_exception_handler() {
   uart_puts("invaild exception handler!");
   uart_puts("Rebooting...");
@@ -54,7 +56,9 @@ void el0_64_sync_interrupt_handler(trapframe_t *tpf) {
       sig_return();
       break;
     default:
-      uart_puts("err: undefiend syscall number");
+      uart_send_string("err: undefiend syscall number: ");
+      uart_int(syscall_num);
+      uart_send_string("\r\n");
       break;
   }
 }

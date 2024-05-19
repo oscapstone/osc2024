@@ -2,17 +2,14 @@
 #define _MEM_H
 
 #include "types.h"
+#include "vm_macro.h"
 
 #define MAX_ORDER 16
 
-// #define MEM_START 0x10000000  // 256MB memory space & 4KB frame
-// #define MEM_END 0x20000000    // -> # of frames = 2^16
-
-// advanced part II
-#define MEM_START 0x00
-#define MEM_END 0x3C000000
-#define SPIN_TABLE_START ((void*)0x0000)
-#define SPIN_TABLE_END ((void*)0x1000)
+#define MEM_START (KERNEL_VIRT_BASE | 0x00)
+#define MEM_END (KERNEL_VIRT_BASE | 0x3C000000)
+#define SPIN_TABLE_START (void*)(KERNEL_VIRT_BASE | 0x0000)
+#define SPIN_TABLE_END (void*)(KERNEL_VIRT_BASE | 0x1000)
 
 #define FREE 0
 #define ALLOCATED 1

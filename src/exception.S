@@ -1,3 +1,5 @@
+#include "vm_macro.h"
+
 .macro save_all			              // save general registers to stack
   sub sp, sp, 16 * 17
   stp x0, x1, [sp ,16 * 0]		    // store pair of registers to sp+16*0
@@ -44,7 +46,7 @@
   ldp x6, x7, [sp ,16 * 3]
   ldp x4, x5, [sp ,16 * 2]
   ldp x2, x3, [sp ,16 * 1]
-  ldp x0, x1, [sp ,16 * 0]		      //store pair of registers to sp+16*0
+  ldp x0, x1, [sp ,16 * 0]  // store pair of registers to sp+16*0
   add sp, sp, 16 * 17
 .endm
 
@@ -68,6 +70,8 @@ disable_interrupt:          // DAIFset: used to set any or all of DAIF to 1 (mod
 .global set_exception_vector_table			// use as function
 set_exception_vector_table:
   adr x0, exception_vector_table
+  ldr x1, =KERNEL_VIRT_BASE
+  orr x0, x0, x1
   msr vbar_el1, x0                // Vector Base Address Register for EL1: Holds the exception base address for any exception that is taken to EL1.
   ret                             // Bits[10:0] in the vbar reg is reserved, while bits[63:11] is the vector base address,
                                   // so the vector table address should be aligned to 0x800.
@@ -76,16 +80,16 @@ set_exception_vector_table:
 .global exception_vector_table  // 16 exception handlers (4 exception levels multiplied by 4 execution states)
 exception_vector_table:
 
-  //Exception from the current EL while using SP_EL0
-  ventry	sync_el1t			// Synchronous EL1t
-  ventry	irq_el1t			// IRQ EL1t
-  ventry	fiq_el1t			// FIQ EL1t
+  // Exception from the current EL while using SP_EL0
+  ventry	sync_el1t			  // Synchronous EL1t
+  ventry	irq_el1t			  // IRQ EL1t
+  ventry	fiq_el1t			  // FIQ EL1t
   ventry	error_el1t			// Error EL1t
   
   // Exception from the current EL while using SP_ELx
-  ventry	sync_el1h			// Synchronous EL1h	
+  ventry	sync_el1h			  // Synchronous EL1h	
   ventry	irq_el1h		    // IRQ EL1h	
-  ventry	fiq_el1h			// FIQ EL1h
+  ventry	fiq_el1h			  // FIQ EL1h
   ventry	error_el1h			// Error EL1h
 
   // Exception from a lower EL and at least one lower EL is AArch64
@@ -94,7 +98,7 @@ exception_vector_table:
   ventry	fiq_el0_64			// FIQ 64-bit EL0
   ventry	error_el0_64		// Error 64-bit EL0
 
-  //Exception from a lower EL and at least all lower EL are AArch32
+  // Exception from a lower EL and at least all lower EL are AArch32
   ventry	sync_el0_32			// Synchronous 32-bit EL0
   ventry	irq_el0_32			// IRQ 32-bit EL0
   ventry	fiq_el0_32			// FIQ 32-bit EL0
@@ -126,7 +130,9 @@ error_el1t:
 
 sync_el1h:
   save_all
-  bl  invaild_exception_handler
+  mov x0, sp // for trapframe
+  bl  el0_64_sync_interrupt_handler
+  bl  check_signal
   load_all
   eret
   

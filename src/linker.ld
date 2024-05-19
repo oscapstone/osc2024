@@ -1,9 +1,17 @@
 SECTIONS
-{
-	. = 0x80000;
+{	
+	. = 0xffff000000000000; 
+  	. += 0x80000; 
 	__kernel_start = .;
 	.text : { KEEP(*(.text.boot)) *(.text .text.*) }
 	.data : { *(.data) }
+	. = ALIGN(0x1000);
+	__pt_start = .;
+	.data.pgd :
+ 	{
+    	. += (515 * 4096); /* (PGD * 1) + (PUD * 1) + (PMD * 1) + (PTE * 512) */
+  	}
+	__pt_end = .;
 	. = ALIGN(16);
 	.bss (NOLOAD) : 
 	{ 

@@ -199,3 +199,11 @@ void print_DAIF() {
   uart_hex_64(tmp);
   uart_send_string("\r\n");
 }
+
+void print_ttbr0_el1() {
+  uint64_t tmp;
+  asm volatile("mrs %0, ttbr0_el1" : "=r"(tmp));
+  uart_send_string("ttbr0_el1: ");
+  uart_hex_64(tmp);
+  uart_send_string("\r\n");
+}

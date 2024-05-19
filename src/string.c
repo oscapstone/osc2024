@@ -56,7 +56,7 @@ void memcpy(void *dest, const void *src, uint64_t len) {
 }
 
 void memset(void *dest, uint8_t val, uint64_t len) {
-  char *d = dest;
+  uint8_t *d = dest;
   while (len--) {
     *d++ = val;
   }

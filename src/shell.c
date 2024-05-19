@@ -141,8 +141,7 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "reboot")) {
     uart_puts("Rebooting...");
     reset(1000);
-    while (1)
-      ;  // hang until reboot
+    while (1);  // hang until reboot
   } else if (!strcmp(cmd, "poweroff")) {
     uart_puts("Shutdown the board...");
     power_off();
