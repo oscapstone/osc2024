@@ -49,8 +49,26 @@
 #define MAIR_IDX_DEVICE_nGnRnE  0
 #define MAIR_IDX_NORMAL_NOCACHE 1
 
-#define PD_TABLE      0b11
-#define PD_BLOCK      0b01
-#define PD_ACCESS     (1 << 10)
+// D5.4.1 VMSAv8-64 translation table zero-level, first-level, and second-level
+// descriptor formats
+// Armv8-A Address Translation - 4.1 AArch64 descriptor format
+
+#define PD_TABLE   0b11
+#define PD_BLOCK   0b01
+#define PD_ENTRY   0b10
+#define PD_INVALID 0b00
+
+// D5.4.3 Memory attribute fields in the VMSAv8-64 translation table format
+// descriptors
+// Armv8-A Address Translation - 4.5 Memory attributes
+
+#define PD_UXN    (1 << 54)
+#define PD_PXN    (1 << 53)
+#define PD_ACCESS (1 << 10)
+#define PD_RDWR   (0 << 7)
+#define PD_RDONLY (1 << 7)
+#define PD_USER   (0 << 6)
+#define PD_KERNEL (1 << 6)
+
 #define BOOT_PGD_ATTR PD_TABLE
 #define BOOT_PUD_ATTR (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)

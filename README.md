@@ -72,3 +72,4 @@ make disk
 - [Device Tree for Dummies](https://bootlin.com/pub/conferences/2013/elce/petazzoni-device-tree-dummies/petazzoni-device-tree-dummies.pdf)
 - [ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile](https://developer.arm.com/documentation/ddi0487/aa/?lang=en)
 - [ARM Exception model](https://developer.arm.com/-/media/Arm%20Developer%20Community/PDF/Learn%20the%20Architecture/Exception%20model.pdf)
+- [ARMv8-A Address Translation](https://developer.arm.com/documentation/100940/0101)

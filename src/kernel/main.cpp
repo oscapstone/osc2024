@@ -48,6 +48,7 @@ void kernel_main(void* dtb_addr) {
   mm_reserve(__upper_PGD, __upper_end);
 
   mm_init();
+  map_kernel_as_normal(__kernel_beg, __kernel_end);
 
   irq_init();
   kthread_init();
