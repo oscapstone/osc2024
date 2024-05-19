@@ -14,7 +14,7 @@ extern "C" {
 // sched.S
 void switch_to_regs(Regs* prev, Regs* next, Kthread* nthread);
 void save_regs(Regs* r);
-void load_regs(Regs* r);
+void load_regs(Regs* r, Kthread* nthread);
 }
 
 void switch_to(Kthread* prev, Kthread* next);
