@@ -1,5 +1,6 @@
 #include "board/mailbox.hpp"
 
+#include "mm/mmu.hpp"
 #include "syscall.hpp"
 
 SYSCALL_DEFINE2(mbox_call, unsigned char, ch, message_t*, mbox) {
@@ -9,12 +10,12 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, message_t*, mbox) {
 
 void mailbox_call(uint8_t ch, message_t* mailbox) {
   uint32_t data = (((uint32_t)(unsigned long)mailbox) & ~0xf) | ch;
-  while ((get32(MAILBOX_STATUS) & MAILBOX_FULL) != 0)
+  while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_FULL) != 0)
     NOP;
-  set32(MAILBOX_WRITE, data);
-  while ((get32(MAILBOX_STATUS) & MAILBOX_EMPTY) != 0)
+  set32(pa2va(MAILBOX_WRITE), data);
+  while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_EMPTY) != 0)
     NOP;
-  while (get32(MAILBOX_READ) != data)
+  while (get32(pa2va(MAILBOX_READ)) != data)
     NOP;
 }
 

@@ -4,6 +4,10 @@
 
 #include "util.hpp"
 
+extern char __upper_PGD[];
+extern char __upper_PUD[];
+extern char __upper_end[];
+
 constexpr uint64_t ADDRESS_SPACE_TAG = 0xFFFF000000000000;
 constexpr uint64_t KERNEL_SPACE = 0xFFFF000000000000;
 constexpr uint64_t USER_SPACE = 0;

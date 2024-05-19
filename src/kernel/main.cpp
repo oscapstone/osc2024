@@ -15,18 +15,17 @@
 #include "thread.hpp"
 #include "util.hpp"
 
+extern char __kernel_beg[];
 extern char __kernel_end[];
 extern char __stack_beg[];
 extern char __stack_end[];
-extern char __upper_PGD[];
-extern char __upper_end[];
 
 void kernel_main(void* dtb_addr) {
   mini_uart_setup();
   timer_init();
 
   klog("Hello Kernel!\n");
-  klog("Kernel start   : %p ~ %p\n", _start, __kernel_end);
+  klog("Kernel start   : %p ~ %p\n", __kernel_beg, __kernel_end);
   klog("Exception level: %d\n", get_el());
   klog("freq_of_timer  : %ld\n", freq_of_timer);
   klog("boot time      : " PRTval "s\n", FTval(tick2timeval(boot_timer_tick)));
@@ -39,7 +38,7 @@ void kernel_main(void* dtb_addr) {
   // spin tables for multicore boot
   mm_reserve(pa2va(0x0000), pa2va(0x1000));
   // kernel code & bss & kernel stack
-  mm_reserve(_start, __kernel_end);
+  mm_reserve(__kernel_beg, __kernel_end);
   mm_reserve(__stack_beg, __stack_end);
   // initramfs
   mm_reserve(initramfs.startp(), initramfs.endp());

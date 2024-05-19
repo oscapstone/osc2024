@@ -4,6 +4,7 @@ ENTRY(__kernel)
 
 SECTIONS {
     . = __kernel;
+    __kernel_beg = .;
 
     .text : {
         KEEP(*(.text._start))

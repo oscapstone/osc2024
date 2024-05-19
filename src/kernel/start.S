@@ -56,10 +56,10 @@ primary_cpu_el1:
     str     x2, [x0]
 
     ldr     x2, =BOOT_PUD_ATTR
-    mov     x3, 0x00000000
+    mov     x3, #0x00000000
     orr     x3, x2, x3
     str     x3, [x1] // 1st 1GB mapped by the 1st entry of PUD
-    mov     x3, 0x40000000
+    mov     x3, #0x40000000
     orr     x3, x2, x3
     str     x3, [x1, 8] // 2nd 1GB mapped by the 2nd entry of PUD
 
@@ -70,7 +70,7 @@ primary_cpu_el1:
     // disable alignment fault checking
     bic     x0, x0, #2
     // enable MMU, cache remains disabled
-    orr     x0 , x0, 1
+    orr     x0 , x0, #1
     msr     SCTLR_EL1, x0
 
     ldr     x2, =boot_rest // indirect branch to the virtual address
