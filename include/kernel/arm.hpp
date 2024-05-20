@@ -55,7 +55,6 @@
 
 #define PD_TABLE   0b11
 #define PD_BLOCK   0b01
-#define PD_ENTRY   0b10
 #define PD_INVALID 0b00
 
 // D5.4.3 Memory attribute fields in the VMSAv8-64 translation table format

@@ -13,7 +13,6 @@ FS_DIR 		= rootfs
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
 			  -mcpu=cortex-a53 -mgeneral-regs-only \
-			  -mno-unaligned-access \
 			  --target=aarch64-unknown-none-elf \
 			  -D_LIBCPP_HAS_NO_THREADS \
 			  -D_LIBCPP_DISABLE_AVAILABILITY \

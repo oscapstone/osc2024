@@ -1,5 +1,6 @@
 #include "mm/mmu.hpp"
 
+#include "ds/bitmask_enum.hpp"
 #include "io.hpp"
 #include "mm/page.hpp"
 #include "sched.hpp"
@@ -11,11 +12,8 @@ void PT_Entry::print() const {
     kprintf("PXN ");
   if (AF)
     kprintf("AF ");
-  if (RDONLY)
-    kprintf("RDONLY ");
-  if (USER)
-    kprintf("USER ");
-  kprintf("addr %p Attr %d type %d\n", addr(), AttrIdx, type);
+  kprintf("%s %02lb addr 0x%08lx Attr %d type %s %s\n", apstr(), Underlying(AP),
+          (uint64_t)addr(), AttrIdx, typestr(), levelstr());
 }
 
 PT::PT() {
@@ -28,8 +26,9 @@ PT::PT() {
 }
 
 PT::PT(PT_Entry entry, int level) {
-  if (level == PTE_LEVEL and entry.type == PD_BLOCK)
-    entry.type = PD_ENTRY;
+  entry.level = level;
+  if (level == PTE_LEVEL)
+    entry.type = PD_TABLE;
   uint64_t offset = ENTRY_SIZE[level] / PAGE_SIZE;
   for (uint64_t i = 0; i < TABLE_SIZE_4K; i++) {
     entries[i] = entry;
@@ -42,7 +41,7 @@ PT_Entry& PT::walk(uint64_t start, int level, uint64_t va_start, int va_level) {
     panic("page table walk address space mismatch");
   uint64_t idx = (va_start - start) / ENTRY_SIZE[level];
   auto& entry = entries[idx];
-  if (level == va_level) {
+  if (level == va_level or entry.isPTE()) {
     return entry;
   }
   auto nxt_start = start + idx * ENTRY_SIZE[level];
@@ -76,18 +75,15 @@ void PT::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
   auto nxt_level = level + 1;
   for (uint64_t idx = 0; idx < TABLE_SIZE_4K; idx++) {
     auto& entry = entries[idx];
-    switch (entry.type) {
-      case PD_TABLE:
-        if (cb_table) {
-          cb_table(context, entry, nxt_start, nxt_level);
-        } else {
-          entry.table()->traverse(nxt_start, nxt_level, cb_entry, cb_table);
-        }
-        break;
-      case PD_BLOCK:
-      case PD_ENTRY:
-        cb_entry(context, entry, nxt_start, level);
-        break;
+    if (entry.isTable()) {
+      if (cb_table) {
+        cb_table(context, entry, nxt_start, nxt_level);
+      } else {
+        entry.table()->traverse(nxt_start, nxt_level, cb_entry, cb_table,
+                                context);
+      }
+    } else if (entry.isEntry()) {
+      cb_entry(context, entry, nxt_start, level);
     }
     nxt_start += ENTRY_SIZE[level];
   }
@@ -96,21 +92,22 @@ void PT::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
 void PT::print(const char* name, uint64_t start, int level) {
   kprintf("===== %s ===== \n", name);
   traverse(start, level, [](auto, auto entry, auto start, auto level) {
-    kprintf("%lx ~ %lx: ", start, start + ENTRY_SIZE[level]);
+    kprintf("%016lx ~ %016lx: ", start, start + ENTRY_SIZE[level]);
     entry.print();
   });
   kprintf("----------------------\n");
 }
 
-// TODO: remove -mno-unaligned-access
 void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   PT_Entry PMD_entry{
-      .PXN = false,
-      .output_address = 0,
-      .RDONLY = false,
-      .USER = false,
-      .AttrIdx = MAIR_IDX_DEVICE_nGnRnE,
       .type = PD_BLOCK,
+      .AttrIdx = MAIR_IDX_DEVICE_nGnRnE,
+      .AP = AP::KERNEL_RW,
+      .AF = true,
+      .output_address = MEM_START / PAGE_SIZE,
+      .PXN = true,
+      .UXN = true,
+      .level = PMD_LEVEL,
   };
   auto PMD = new PT(PMD_entry, PMD_LEVEL);
 
@@ -120,15 +117,19 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
             });
 
   PMD->walk(KERNEL_SPACE, PMD_LEVEL, (uint64_t)ktext_beg, (uint64_t)ktext_end,
-            PMD_LEVEL,
-            [](auto, auto entry, auto, auto) { entry.RDONLY = true; });
-
-  PMD->traverse(KERNEL_SPACE, PMD_LEVEL,
-                [](auto, auto entry, auto, auto) { entry.PXN = true; });
+            PMD_LEVEL, [](auto, auto entry, auto, auto) {
+              entry.AP = AP::KERNEL_RO;
+              entry.PXN = false;
+            });
 
   auto PUD = (PT*)__upper_PUD;
+  PUD->set_level(PUD_LEVEL);
+  auto PGD = (PT*)__upper_PGD;
+  PGD->set_level(PGD_LEVEL);
+
   PUD->entries[0].set_table(PMD);
   PUD->entries[1].PXN = true;
+  PUD->entries[1].UXN = true;
 
   reload_tlb();
 }
