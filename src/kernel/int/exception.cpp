@@ -87,8 +87,9 @@ void sync_handler(TrapFrame* frame, int type) {
 }
 
 void segv_handler(int el, unsigned iss, SEGV_TYPE type) {
+  klog("LR address   : 0x%lx\n", read_sysreg(ELR_EL1));
   klog("fault address: 0x%lx\n", read_sysreg(FAR_EL1));
-  klog("segv_handler: iss %025b\n", iss);
+  klog("segv_handler : iss %025b\n", iss);
   if (el != 0) {
     panic("%s", reason(type));
   } else {
