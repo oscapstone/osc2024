@@ -9,11 +9,9 @@
 #define KSTACK_SIZE 0x10000
 #define SIGNAL_MAX  64
 
-thread_t *threads[MAX_PID + 1];
-thread_t *curr_thread;
-
 extern void  switch_to(void *curr_context, void *next_context);
 extern void* get_current_thread_context();
+extern void* set_current_thread_context(void *curr_context);
 extern void  store_context(void *curr_context);
 extern void  load_context(void *curr_context);
 
@@ -53,8 +51,8 @@ typedef struct thread_struct
 {
     struct list_head    listhead;                          	// Freelist node
     thread_context_t 	context;                            // Thread registers
-    void*            	thread;								// Process itself
-    size_t				thread_size;						// Process size
+    void*            	code;								// Process itself
+    size_t				datasize;		    				// Process size
     int8_t             	status;                          	// Process statement
     int64_t            	pid;                               	// Process ID
     int64_t            	ppid;                               // Parent Process ID
@@ -69,13 +67,16 @@ void init_thread_sched();
 void _init_create_thread(char *name, int64_t pid, int64_t ppid, void *start);
 int64_t wait();
 void idle();
+void __init();
 void init();
 void schedule();
 void thread_exit();
+int8_t has_child(thread_t *thread);
 thread_t *thread_create(void *start, char *name);
 int exec_thread(char *data, unsigned int filesize);
 void dump_run_queue();
-void dump_chile_thread(thread_t *thread);
+void recursion_run_queue(thread_t *root, int64_t level);
+void dump_child_thread(thread_t *thread);
 
 void foo();
 

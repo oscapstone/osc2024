@@ -3,11 +3,15 @@
 #include "timer.h"
 #include "list.h"
 #include "stddef.h"
+#include "string.h"
 #include "exception.h"
 #include "callback_adapter.h"
 #include "uart1.h"
 
 struct list_head *run_queue;
+
+thread_t *threads[MAX_PID + 1];
+thread_t *curr_thread;
 
 static int64_t pid_history = 0;
 int8_t need_to_schedule = 0;
@@ -19,7 +23,8 @@ static inline thread_t *child_node_to_thread(child_node_t *node)
 
 static inline int free_thread(int64_t pid)
 {
-	if(pid >= MAX_PID){
+	if (pid >= MAX_PID)
+	{
 		return -1;
 	}
 	thread_t *thread = threads[pid];
@@ -39,9 +44,12 @@ void init_thread_sched()
 	char *thread_name = kmalloc(5);
 	strcpy(thread_name, "idle");
 	_init_create_thread(thread_name, 0, 0, idle);
+	set_current_thread_context(&(threads[0]->context));
 	thread_name = kmalloc(5);
 	strcpy(thread_name, "init");
 	curr_thread = thread_create(init, thread_name);
+	curr_thread->code = init;
+	curr_thread->datasize = 4000;
 	unlock_interrupt();
 }
 
@@ -66,6 +74,7 @@ void _init_create_thread(char *name, int64_t pid, int64_t ppid, void *start)
 
 void idle()
 {
+	DEBUG("idle process\r\n");
 	while (1)
 	{
 		// wait();
@@ -75,11 +84,50 @@ void idle()
 
 void init()
 {
+	DEBUG("init process\n");
 	while (1)
 	{
-		int c_pid = wait();
-		DEBUG("child process %d exit\n", c_pid);
+		// int c_pid = wait();
+		// char *name = kmalloc(13);
+		char *name = "syscall.img";
+		// strcpy(name, "syscall.img");
+		// DEBUG("init exec: %s\n", name);
+		// asm volatile(
+		// 	"mov x8, #3\n\t"
+		// 	"mov x0, %0\n\t"
+		// 	"svc 0\n\t"
+		// 	:
+		// 	: "r"(name) // 輸入操作數
+		// );
+		// DEBUG("exec\r\n");
+		while (1)
+		{
+			// DEBUG("user space\r\n");
+		}
+		// DEBUG("child process %d exit\n", c_pid);
 	}
+}
+
+void __init()
+{
+	DEBUG("__init process\n");
+	add_timer_by_sec(1, adapter_schedule_timer, NULL);
+	curr_thread->context.lr = (uint64_t)init;
+	DEBUG("init process: 0x%x\n", init);
+	// asm("msr elr_el1, %0\n\t"	// When el0 -> el1, store return address for el1 -> el0
+	// 	"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+	// 	"msr sp_el0, %1\n\t"	// el0 stack pointer for el1 process
+	// 	"eret\n\t"				// Return to el0
+	// 	:
+	// 	: "r"(init),
+	// 	  "r"(curr_thread->context.sp));
+	asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+		"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
+		"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+		"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
+		"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
+		"eret\n\t" ::"r"(&curr_thread->context),
+		"r"(curr_thread->context.lr), "r"(curr_thread->context.sp), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
 }
 
 int64_t wait()
@@ -89,12 +137,13 @@ int64_t wait()
 	curr_thread->status = THREAD_BLOCKED;
 	while (1)
 	{
+		// DEBUG("wait thread: %d\n", curr_thread->pid);
 		unlock_interrupt();
 		schedule();
 		lock_interrupt();
-		DEBUG({
-			dump_chile_thread(curr_thread);
-		});
+		// DEBUG_BLOCK({
+		// 	dump_child_thread(curr_thread);
+		// });
 		struct list_head *curr_child_node;
 		list_head_t *n;
 		list_for_each_safe(curr_child_node, n, (list_head_t *)curr_thread->child_list)
@@ -137,9 +186,6 @@ void thread_exit()
 		list_del_entry(curr);
 		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
 	}
-	DEBUG({
-		dump_run_queue();
-	});
 	unlock_interrupt();
 	schedule();
 }
@@ -147,7 +193,6 @@ void thread_exit()
 void schedule_timer()
 {
 	uint64_t cntfrq_el0;
-	DEBUG("schedule timer\n");
 	__asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0));
 	// 32 * default timer -> trigger next schedule timer
 	add_timer_by_tick(cntfrq_el0 >> 5, adapter_schedule_timer, NULL);
@@ -198,13 +243,39 @@ thread_t *thread_create(void *start, char *name)
 
 	DEBUG("add new thread: %d, run_que: 0x%x\n", r->pid, run_queue);
 	list_add((list_head_t *)r, run_queue);
-	DEBUG({
-		dump_run_queue();
-	});
 
 	DEBUG("add new thread: %d\n", r->pid);
 	unlock_interrupt();
 	return r;
+}
+
+// int exec_thread(char *code, char *filename, unsigned int filesize)
+// {
+// 	lock_interrupt();
+// 	thread_t *t = thread_create(code, filename);
+// 	t->code = kmalloc(filesize);
+// 	t->datasize = filesize;
+// 	t->context.lr = (uint64_t)t->code; // set return address to program if function call completes
+// 	// copy file into code
+// 	memcpy(t->code, code, filesize);
+
+// 	t->context.sp = (uint64_t)t->kernel_stack_base + KSTACK_SIZE;
+
+// 	// eret to exception level 0
+// 	asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+// 		"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
+// 		"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+// 		"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
+// 		"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
+// 		"eret\n\t" ::"r"(&t->context),
+// 		"r"(t->context.lr), "r"(t->context.sp), "r"(t->kernel_stack_alloced_ptr + KSTACK_SIZE));
+
+// 	return 0;
+// }
+
+int8_t has_child(thread_t *thread)
+{
+	return !list_empty((list_head_t *)thread->child_list);
 }
 
 void schedule()
@@ -215,11 +286,8 @@ void schedule()
 	{
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue) || (curr_thread->status == THREAD_ZOMBIE)); // find a runnable thread
+	// DEBUG("%d -> %d\n", prev_thread->pid, curr_thread->pid);
 	curr_thread->status = THREAD_RUNNING;
-	DEBUG("%d switch to %d\n", prev_thread->pid, curr_thread->pid);
-	DEBUG({
-		dump_run_queue();
-	});
 	unlock_interrupt();
 	switch_to(get_current_thread_context(), &(curr_thread->context));
 }
@@ -238,7 +306,6 @@ void foo()
 		{
 			asm volatile("nop");
 		}
-		// schedule();
 	}
 	INFO("%s exit\n", curr_thread->name);
 	thread_exit();
@@ -246,31 +313,66 @@ void foo()
 
 void dump_run_queue()
 {
-	struct list_head *curr;
-	uart_puts("---------------------- run queue list for each ----------------------\r\n");
-	list_for_each(curr, (list_head_t *)run_queue)
-	{
-		uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr, curr->next, curr->prev, ((thread_t *)curr)->name, ((thread_t *)curr)->pid, ((thread_t *)curr)->ppid);
-		switch (((thread_t *)curr)->status)
-		{
-		case THREAD_RUNNING:
-			uart_puts(", thread->status: THREAD_RUNNING\r\n");
-			break;
-		case THREAD_READY:
-			uart_puts(", thread->status: THREAD_READY\r\n");
-			break;
-		case THREAD_BLOCKED:
-			uart_puts(", thread->status: THREAD_BLOCKED\r\n");
-			break;
-		case THREAD_ZOMBIE:
-			uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
-			break;
-		}
-	}
-	uart_puts("--------------------------------- end -------------------------------\r\n");
+	recursion_run_queue(threads[1], 0);
 }
 
-void dump_chile_thread(thread_t *thread)
+void recursion_run_queue(thread_t *root, int64_t level)
+{
+	for (int i = 0; i < level; i++)
+		printf("   ");
+	printf(" |---");
+	dump_thread_info(root);
+	list_head_t *curr;
+	list_for_each(curr, (list_head_t *)root->child_list)
+	{
+		// INFO("child: %d\n", child_node_to_thread((child_node_t *)curr)->pid);
+		recursion_run_queue(child_node_to_thread((child_node_t *)curr), level + 1);
+		// ERROR("OVER");
+	}
+	// uart_puts("---------------------- run queue list for each ----------------------\r\n");
+	// list_for_each(curr, (list_head_t *)run_queue)
+	// {
+	// 	uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr, curr->next, curr->prev, ((thread_t *)curr)->name, ((thread_t *)curr)->pid, ((thread_t *)curr)->ppid);
+	// 	switch (((thread_t *)curr)->status)
+	// 	{
+	// 	case THREAD_RUNNING:
+	// 		uart_puts(", thread->status: THREAD_RUNNING\r\n");
+	// 		break;
+	// 	case THREAD_READY:
+	// 		uart_puts(", thread->status: THREAD_READY\r\n");
+	// 		break;
+	// 	case THREAD_BLOCKED:
+	// 		uart_puts(", thread->status: THREAD_BLOCKED\r\n");
+	// 		break;
+	// 	case THREAD_ZOMBIE:
+	// 		uart_puts(", thread->status: THREAD_ZOMBIE\r\n");
+	// 		break;
+	// 	}
+	// }
+	// uart_puts("--------------------------------- end -------------------------------\r\n");
+}
+
+void dump_thread_info(thread_t *thread)
+{
+	printf("%s\t%d\t%d\t", thread->name, thread->pid, thread->ppid);
+	switch (thread->status)
+	{
+	case THREAD_RUNNING:
+		printf("RUNNING\r\n");
+		break;
+	case THREAD_READY:
+		printf("READY\r\n");
+		break;
+	case THREAD_BLOCKED:
+		printf("BLOCKED\r\n");
+		break;
+	case THREAD_ZOMBIE:
+		printf("ZOMBIE\r\n");
+		break;
+	}
+}
+
+void dump_child_thread(thread_t *thread)
 {
 	list_head_t *curr;
 	uart_puts("---------------------- child list for each ----------------------\r\n");

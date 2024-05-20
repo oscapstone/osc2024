@@ -9,6 +9,9 @@
 #include "debug.h"
 #include "string.h"
 
+extern thread_t *curr_thread;
+extern thread_t *threads[];
+
 void main(char *arg)
 {
     lock_interrupt();
@@ -19,10 +22,13 @@ void main(char *arg)
     uart_interrupt_enable();
     uart_flush_FIFO();
 
+    DEBUG("memory init\r\n");
     memory_init();
-
+    DEBUG("irqtask_list_init\r\n");
     irqtask_list_init();
+    DEBUG("timer_list_init\r\n");
     timer_list_init();
+    DEBUG("sched_init\r\n");
     init_thread_sched();
     // while (1)
     //     ;
@@ -31,17 +37,26 @@ void main(char *arg)
     char *str;
     // start_shell();
     DEBUG("thread test\r\n");
-    for (int i = 0; i < 5; ++i)
-    { // N should > 2
-        str = kmalloc(6);
-        sprintf(str, "foo_%d", i);
-        thread_create(foo, str);
-        DEBUG("create foo_%d\r\n", i);
-    }
+    // DEBUG_BLOCK({
+    //     for (int i = 0; i < 5; ++i)
+    //     { // N should > 2
+    //         str = kmalloc(6);
+    //         sprintf(str, "foo_%d", i);
+    //         thread_create(foo, str);
+    //         DEBUG("create foo_%d\r\n", i);
+    //     }
+    // });
     str = kmalloc(7);
     sprintf(str, "kshell");
     thread_create(start_shell, str);
     schedule_timer();
     core_timer_enable();
     unlock_interrupt();
+    // while(1){
+    //     INFO("main loop\r\n");
+    // }
+    // DEBUG("switch to thread: %d\r\n", threads[1]->pid);
+    schedule();
+    // switch_to(get_current_thread_context(), &(threads[1]->context));
+    // start_shell();
 }

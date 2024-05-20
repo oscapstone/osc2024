@@ -10,6 +10,8 @@
 #include "timer.h"
 #include "uart1.h"
 #include "ANSI.h"
+#include "sched.h"
+#include "syscall.h"
 #include "callback_adapter.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
@@ -21,12 +23,14 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "info", .help = "get device information via mailbox", .func = do_cmd_info},
     {.command = "kmalloc", .help = "test kmalloc", .func = do_cmd_kmalloc},
     {.command = "ls", .help = "list directory contents", .func = do_cmd_ls},
+    {.command = "ps", .help = "print all threads", .func = do_cmd_ps},
     {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS]", .func = do_cmd_setTimeout},
     {.command = "set2sAlert", .help = "set core timer interrupt every 2 second", .func = do_cmd_set2sAlert},
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
 };
 
 extern void *CPIO_START;
+extern thread_t *curr_thread;
 
 int start_shell()
 {
@@ -389,18 +393,48 @@ int do_cmd_exec(int argc, char **argv)
         puts("cpio parse error\r\n");
         return -1;
     }
-    // exec c_filedata
-    char *ustack = kmalloc(USTACK_SIZE);
-    asm("msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
-        "mov x10, 0x3c0\n\t"    // EL1h (SPSel = 1) with interrupt disabled
-        "msr spsr_el1, x10\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
-        "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
-        "eret\n\t"              // Perform exception return. EL1 -> EL0
-        ::"r"(c_filedata),
-        "r"(ustack + USTACK_SIZE));
-    kfree(ustack);
-    // if this is TRAILER!!! (last of file)
-    return 0;
+
+    // thread_t *t = thread_create(c_filedata, filepath);
+    // t->code = kmalloc(c_filesize);
+    // t->datasize = c_filesize;
+    // t->context.lr = (uint64_t)t->code; // set return address to program if function call completes
+    // // copy file into code
+    // memcpy(t->code, c_filedata, c_filesize);
+    // eret to exception level 0
+    // if (kernel_fork() == 0)
+    // { // child process
+    lock_interrupt();
+        curr_thread->datasize = c_filesize;
+        curr_thread->code = kmalloc(c_filesize);
+        curr_thread->context.lr = (uint64_t)curr_thread->code; // set return address to program if function call completes
+        strcpy(curr_thread->name, filepath);
+        memcpy(curr_thread->code, c_filedata, c_filesize);
+        DEBUG("c_filedata: 0x%x\r\n", c_filedata);
+        DEBUG("child process, pid: %d\r\n", curr_thread->pid);
+        DEBUG("curr_thread->code: 0x%x\r\n", curr_thread->code);
+
+        asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+            "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
+            "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+            "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process
+            "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
+            ::"r"(&curr_thread->context),
+            "r"(curr_thread->context.lr), "r"(curr_thread->context.sp), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
+
+        unlock_interrupt();
+
+        asm("eret\n\t");
+    // }
+    // else
+    // {
+    //     while (1)
+    //     {
+    //         schedule();
+    //         // dump_run_queue();
+    //         // DEBUG("kshell while loop curr_thread->pid: %d\r\n", curr_thread->pid);
+    //     }
+    // }
+    // return 0;
 }
 
 int do_cmd_setTimeout(int argc, char **argv)
@@ -430,5 +464,16 @@ int do_cmd_set2sAlert(int argc, char **argv)
         return -1;
     }
     add_timer_by_sec(2, adapter_timer_set2sAlert, NULL);
+    return 0;
+}
+
+int do_cmd_ps(int argc, char **argv)
+{
+    if (argc != 0)
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    dump_run_queue();
     return 0;
 }

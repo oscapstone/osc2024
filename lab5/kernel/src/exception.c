@@ -27,11 +27,13 @@ void lock_interrupt()
 {
     el1_interrupt_disable();
     lock_counter++;
+    // DEBUG("lock_interrupt counter: %d\r\n", lock_counter);
 }
 
 void unlock_interrupt()
 {
     lock_counter--;
+    // DEBUG("unlock_interrupt counter: %d\r\n", lock_counter);
     if (lock_counter < 0)
     {
         ERROR("lock_interrupt counter error");
@@ -85,11 +87,92 @@ void el1h_irq_router(trapframe_t *tpf)
     }
 }
 
+#define ESR_EL1_EC_SHIFT 26
+#define ESR_EL1_EC_MASK  0x3F
+#define ESR_EL1_EC_SVC64 0x15
+
+// 定義異常類型名稱
+const char *exception_type[] = {
+    "Unknown reason",
+    "Trapped WFI or WFE instruction execution",
+    "Trapped MCR or MRC access with (coproc==0b1111) (AArch32)",
+    "Trapped MCRR or MRRC access with (coproc==0b1111) (AArch32)",
+    "Trapped MCR or MRC access with (coproc==0b1110) (AArch32)",
+    "Trapped LDC or STC access (AArch32)",
+    "Trapped FP access",
+    "Trapped VMRS access",
+    "Trapped PSTATE (AArch32)",
+    "Instruction Abort from a lower Exception level",
+    "Instruction Abort taken without a change in Exception level",
+    "PC alignment fault",
+    "Data Abort from a lower Exception level",
+    "Data Abort taken without a change in Exception level",
+    "SP alignment fault",
+    "Trapped floating-point exception",
+    "SError interrupt",
+    "Breakpoint from a lower Exception level",
+    "Breakpoint taken without a change in Exception level",
+    "Software Step from a lower Exception level",
+    "Software Step taken without a change in Exception level",
+    "Watchpoint from a lower Exception level",
+    "Watchpoint taken without a change in Exception level",
+    "BKPT instruction execution (AArch32)",
+    "Vector Catch exception (AArch32)",
+    "BRK instruction execution (AArch64)"
+};
+
+// 讀取ESR_EL1暫存器的值
+static inline uint64_t read_esr_el1(void) {
+    uint64_t value;
+    asm volatile ("mrs %0, esr_el1" : "=r" (value));
+    return value;
+}
+
+// 讀取ELR_EL1暫存器的值
+static inline uint64_t read_elr_el1(void) {
+    uint64_t value;
+    asm volatile ("mrs %0, elr_el1" : "=r" (value));
+    return value;
+}
+
+// 讀取SPSR_EL1暫存器的值
+static inline uint64_t read_spsr_el1(void) {
+    uint64_t value;
+    asm volatile ("mrs %0, spsr_el1" : "=r" (value));
+    return value;
+}
+
+// 判斷異常是否由EL0觸發的syscall
+static inline int is_el0_syscall(void) {
+    uint64_t esr_el1 = read_esr_el1();
+    uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
+    if (ec == ESR_EL1_EC_SVC64) {
+        return 1;
+    }
+    return 0;
+}
+
+// 獲取異常類型名稱
+const char* get_exception_name(uint64_t esr_el1) {
+    uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
+    if (ec < sizeof(exception_type) / sizeof(exception_type[0])) {
+        return exception_type[ec];
+    }
+    return "Unknown exception";
+}
+
 void el0_sync_router(trapframe_t *tpf)
 {
+    uint64_t esr_el1 = read_esr_el1();
+    if (!is_el0_syscall()) {
+        const char* exception_name = get_exception_name(esr_el1);
+        ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
+        while (1);
+        return;
+    }
     // Basic #3 - Based on System Call Format in Video Player’s Test Program
     uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
-
+    // DEBUG("syscall_no: %d\r\n", syscall_no);
     // only work with GCC
     void *syscall_router[] = {&&__getpid_label, &&__uart_read_label, &&__uart_write_label, &&__exec_label,
                               &&__fork_label, &&__exit_label, &&__mbox_call_label, &&__invalid_syscall_label};
@@ -97,73 +180,94 @@ void el0_sync_router(trapframe_t *tpf)
     goto *syscall_router[syscall_no];
 
 __getpid_label:
-    tpf->x0 = syscall_getpid(tpf, (char *)tpf->x0, tpf->x1);
+    DEBUG("syscall_getpid\r\n");
+    tpf->x0 = syscall_getpid(tpf);
     return;
 
 __uart_read_label:
+    DEBUG("syscall_uart_read\r\n");
     tpf->x0 = syscall_uart_read(tpf, (char *)tpf->x0, tpf->x1);
     return;
 
 __uart_write_label:
+    DEBUG("syscall_uart_write\r\n");
     tpf->x0 = syscall_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
     return;
 
 __exec_label:
+    DEBUG("syscall_exec\r\n");
     tpf->x0 = syscall_exec(tpf, (char *)tpf->x0, (char **)tpf->x1);
     return;
 
 __fork_label:
+    DEBUG("syscall_fork\r\n");
     tpf->x0 = syscall_fork(tpf);
     return;
 
 __exit_label:
+    DEBUG("syscall_exit\r\n");
     tpf->x0 = syscall_exit(tpf, tpf->x0);
     return;
 
 __mbox_call_label:
+    DEBUG("syscall_mbox_call\r\n");
     tpf->x0 = syscall_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
     return;
 
 __invalid_syscall_label:
     ERROR("Invalid system call number: %d\r\n", syscall_no);
     return;
-    
 }
 
 void el0_irq_64_router(trapframe_t *tpf)
 {
+    lock_interrupt();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
-    // if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
-    // {
-    //     if (*AUX_MU_IIR_REG & (0b01 << 1))
-    //     {
-    //         *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-    //         irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-    //         irqtask_run_preemptive();
-    //     }
-    //     else if (*AUX_MU_IIR_REG & (0b10 << 1))
-    //     {
-    //         *AUX_MU_IER_REG &= ~(1); // disable read interrupt
-    //         irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-    //         irqtask_run_preemptive();
-    //     }
-    // }
-    // else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
-    // {
-    //     core_timer_disable();
-    //     irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
-    //     irqtask_run_preemptive();
-    // }
-    uart_puts("Hello world! el0_irq_64_router!\r\n");
+    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
+    {
+        if (*AUX_MU_IER_REG & 2)
+        {
+            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
+            irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+            unlock_interrupt();
+            irqtask_run_preemptive(); // run the queued task before returning to the program.
+        }
+        else if (*AUX_MU_IER_REG & 1)
+        {
+            *AUX_MU_IER_REG &= ~(1); // Re-enable core timer interrupt when entering core_timer_handler or add_timer
+            irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            unlock_interrupt();
+            irqtask_run_preemptive();
+        }
+    }
+    else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
+    {
+        core_timer_disable(); // enable core timer interrupt when entering the handler
+        irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock_interrupt();
+        irqtask_run_preemptive();
+    }
+    else
+    {
+        uart_puts("Hello world! el0_irq_64_router other interrupt!\r\n");
+    }
+    if (need_to_schedule == 1)
+    {
+        need_to_schedule = 0;
+        schedule();
+    }
 }
 
 void invalid_exception_router(uint64_t x0)
 {
-    ERROR("invalid exception router: %d\r\n", x0);
-    while (1)
-        ;
+    static int count = 0;
+    if (count == 0)
+    {
+        ERROR("invalid exception router: %d\r\n", x0);
+        count++;
+    }
 }
 
 // ------------------------------------------------------------------------------------------
@@ -187,12 +291,12 @@ void irqtask_list_init()
 
 void irqtask_add(void *task_function, uint64_t priority)
 {
-    if (task_function == uart_r_irq_handler)
-        DEBUG("irqtask_add uart_r_irq_handler, kmalloc\r\n");
-    else if (task_function == uart_w_irq_handler)
-        DEBUG("irqtask_add uart_w_irq_handler, kmalloc\r\n");
-    else if (task_function == core_timer_handler)
-        DEBUG("irqtask_add core_timer_handler, kmalloc\r\n");
+    // if (task_function == uart_r_irq_handler)
+    //     DEBUG("irqtask_add uart_r_irq_handler, kmalloc\r\n");
+    // else if (task_function == uart_w_irq_handler)
+    //     DEBUG("irqtask_add uart_w_irq_handler, kmalloc\r\n");
+    // else if (task_function == core_timer_handler)
+    //     DEBUG("irqtask_add core_timer_handler, kmalloc\r\n");
     irqtask_t *the_task = kmalloc(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
     // store all the related information into irqtask node
     // manually copy the device's buffer
@@ -241,7 +345,7 @@ void irqtask_run_preemptive()
         // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
-            DEBUG("irqtask_run_preemptive early return\r\n");
+            // DEBUG("irqtask_run_preemptive early return\r\n");
             unlock_interrupt();
             break;
         }
@@ -249,14 +353,14 @@ void irqtask_run_preemptive()
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
 
-        DEBUG("irqtask_run\r\n");
+        // DEBUG("irqtask_run\r\n");
         unlock_interrupt();
         irqtask_run(the_task);
 
         lock_interrupt();
 
         curr_task_priority = prev_task_priority;
-        DEBUG("irqtask_run_preemptive kfree\r\n");
+        // DEBUG("irqtask_run_preemptive kfree\r\n");
         kfree(the_task);
         unlock_interrupt();
     }

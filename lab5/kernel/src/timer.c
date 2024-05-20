@@ -24,7 +24,7 @@ void timer_list_init()
 
 void core_timer_enable()
 {
-    DEBUG("core_timer_enable\r\n");
+    //DEBUG("core_timer_enable\r\n");
     __asm__ __volatile__(
         "mov x1, 1\n\t"
         "msr cntp_ctl_el0, x1\n\t" // cntp_ctl_el0[0]: enable, Control register for the EL1 physical timer.
@@ -37,7 +37,7 @@ void core_timer_enable()
 
 void core_timer_disable()
 {
-    DEBUG("core_timer_disable\r\n");
+    //DEBUG("core_timer_disable\r\n");
     __asm__ __volatile__(
         "mov x2, 0\n\t"
         "ldr x1, =" XSTR(CORE0_TIMER_IRQ_CTRL) "\n\t"
@@ -47,7 +47,7 @@ void core_timer_disable()
 
 void core_timer_handler()
 {
-    DEBUG("core_timer_handler\r\n");
+    //DEBUG("core_timer_handler\r\n");
     // if the queue is empty, do nothing, otherwise, do callback and enable interrupt
     if (list_empty(timer_event_list))
     {
@@ -81,7 +81,7 @@ void timer_event_callback(timer_event_t *timer_event)
     {
         set_core_timer_interrupt_by_tick(((timer_event_t *)timer_event_list->next)->interrupt_time);
     }
-    DEBUG("timer_event_callback end\r\n");
+    //DEBUG("timer_event_callback end\r\n");
 }
 
 void timer_set2sAlert()
@@ -113,12 +113,12 @@ void add_timer_by_sec(uint64_t sec, void *callback, void *args_struct)
 
 void add_timer_by_tick(uint64_t tick, void *callback, void *args_struct)
 {
-    DEBUG("add_timer_by_tick: %d\r\n", tick);
+    // DEBUG("add_timer_by_tick: %d\r\n", tick);
     timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
     the_timer_event->args_struct = args_struct;
     the_timer_event->interrupt_time = get_tick_plus_t(tick);
-    DEBUG("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
+    // DEBUG("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
     the_timer_event->callback = callback;
     INIT_LIST_HEAD(&the_timer_event->listhead);
 
@@ -163,7 +163,7 @@ uint64_t get_tick_plus_t(uint64_t tick)
 {
     uint64_t cntpct_el0 = 0;
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t" : "=r"(cntpct_el0)); // tick auchor
-    DEBUG("cntpct_el0: %d\r\n", cntpct_el0);
+    //DEBUG("cntpct_el0: %d\r\n", cntpct_el0);
     return (cntpct_el0 + tick);
 }
 

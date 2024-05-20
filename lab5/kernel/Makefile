@@ -4,10 +4,12 @@ OBJCOPY := aarch64-linux-gnu-objcopy
 GDB := gdb-multiarch
 QEMU := qemu-system-aarch64
 KILL_QEMU := killall $(QEMU)
+SESSION_NAME := my-os
+KILL_TMUX := tmux kill-session -t $(SESSION_NAME)
 
 COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only $(cops)
 ASMOPS = -Iinclude 
-QOPS = -M raspi3b -kernel $(NAME).img -dtb ../bcm2710-rpi-3-b-plus.dtb -initrd ../initramfs.cpio  -display none
+QOPS = -M raspi3b -kernel $(NAME).img -dtb ../bcm2710-rpi-3-b-plus.dtb -initrd ../initramfs.cpio  
 GDBOPS = --init-eval-command="file $(BUILD_DIR)/$(NAME).elf" --init-eval-command="target remote :1234"
 
 RED=\033[0;31m
@@ -23,11 +25,16 @@ ifdef DEBUG
 COPS+=-D_DEBUG=$(DEBUG)
 endif
 
+ifeq (,$(findstring display,$(MAKECMDGOALS)))
+QOPS+=-display none
+endif
+
+
 ifneq (,$(findstring pi,$(MAKECMDGOALS)))
-COPS+=-DRPI
+COPS+= -DRPI
 FINISH_STR = "\r\n-------------------------------------------------------------\r\n The $(CYAN)kernel8.img$(RESET) intended for the $(BLUE)Raspberry Pi 3B+$(RESET) is ready.\r\n-------------------------------------------------------------"
 else # Default to QEMU 
-COPS += -DQEMU
+COPS+= -DQEMU
 FINISH_STR = "\r\n-------------------------------------------------\r\n The $(CYAN)kernel8.img$(RESET) intended for the $(BLUE)QEMU$(RESET) is ready.\r\n-------------------------------------------------"
 endif
 
@@ -35,7 +42,6 @@ NAME = kernel8
 BUILD_DIR = build
 SRC_DIR = src
 LK_SCRIPT = linker.ld
-SESSION_NAME := my-os
 
 .PHONY: all
 all : $(NAME).img
@@ -70,6 +76,9 @@ $(NAME).img: $(SRC_DIR)/$(LK_SCRIPT) $(OBJ_FILES)
 run: clean  $(NAME).img
 	$(QEMU) $(QOPS) -serial null -serial stdio
 
+.PHONY: display
+display:
+
 # This target compiles kernel.img to run on a QEMU.
 .PHONY: qemu
 qemu: clean  $(NAME).img
@@ -86,4 +95,5 @@ debug: clean $(NAME).img
 # This target will kill the QEMU session.
 .PHONY: kill
 kill: 
-	$(KILL_QEMU)
+	$(KILL_QEMU) &\
+	$(KILL_TMUX)

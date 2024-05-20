@@ -99,7 +99,7 @@ static void *startup_malloc(size_t size)
     // │  fill zero 0x8 bytes │ size 0x8 bytes │ size padding to 0x16 │
     // └──────────────────────┴────────────────┴──────────────────────┘
     //
-    DEBUG("begin khtop_ptr: 0x%x\n", khtop_ptr);
+    // DEBUG("begin khtop_ptr: 0x%x\n", khtop_ptr);
     void *sp;
     asm("mov %0, sp" : "=r"(sp));
     // 0x10 for heap_block header
@@ -108,7 +108,7 @@ static void *startup_malloc(size_t size)
     size = 0x10 + size - size % 0x10;
     *(uint64_t *)(r - 0x8) = size;
     khtop_ptr += size;
-    DEBUG("khtop_ptr: 0x%x, sp: 0x%x\n", khtop_ptr, sp);
+    // DEBUG("khtop_ptr: 0x%x, sp: 0x%x\n", khtop_ptr, sp);
     return r;
 }
 
@@ -176,7 +176,7 @@ void *kmalloc(size_t size)
     if (size >= PAGE_FRAME_SIZE / 2)
     {
         void *ptr = page_malloc(size);
-        DEBUG("use page_malloc: ptr: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, phy_addr_to_frame(ptr)->order, phy_addr_to_frame(ptr)->cache_used_count, phy_addr_to_frame(ptr)->val);
+        // DEBUG("use page_malloc: ptr: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, phy_addr_to_frame(ptr)->order, phy_addr_to_frame(ptr)->cache_used_count, phy_addr_to_frame(ptr)->val);
         unlock_interrupt();
         return ptr;
     }
@@ -185,7 +185,7 @@ void *kmalloc(size_t size)
     {
         order++;
     }
-    DEBUG("kmalloc: size: 0x%x, order: %d, cache_size: 0x%x\n", size, order, order_to_size(order));
+    // DEBUG("kmalloc: size: 0x%x, order: %d, cache_size: 0x%x\n", size, order, order_to_size(order));
     struct list_head *curr;
     if (!list_empty(cache_freelist[(size_t)order])) // find the exact size
     {
@@ -193,14 +193,14 @@ void *kmalloc(size_t size)
         list_del_entry(curr);
         curr->next = curr->prev = curr;
         phy_addr_to_frame(curr)->cache_used_count++;
-        DEBUG("kmalloc: find the exact size, cache address: 0x%x, frame->cache_used_count: %d, frame->val: %d, frame address: 0x%x\n", curr, phy_addr_to_frame(curr)->cache_used_count, phy_addr_to_frame(curr)->val, phy_addr_to_frame(curr));
+        // DEBUG("kmalloc: find the exact size, cache address: 0x%x, frame->cache_used_count: %d, frame->val: %d, frame address: 0x%x\n", curr, phy_addr_to_frame(curr)->cache_used_count, phy_addr_to_frame(curr)->val, phy_addr_to_frame(curr));
         unlock_interrupt();
         return (void *)curr;
     }
 
     void *ptr = page_malloc(PAGE_FRAME_SIZE);
     frame_t *frame = phy_addr_to_frame(ptr);
-    DEBUG("kmalloc: split a new frame, ptr address: 0x%x\n", ptr);
+    // DEBUG("kmalloc: split a new frame, ptr address: 0x%x\n", ptr);
     frame->order = order;
     frame->cache_used_count = 1;
     size_t order_size = order_to_size(order);
@@ -216,21 +216,21 @@ void kfree(void *ptr)
 {
     lock_interrupt();
     frame_t *frame = cache_to_frame(ptr);
-    DEBUG("kfree: address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
+    // DEBUG("kfree: address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
     if (frame->order == NOT_CACHE)
     {
-        DEBUG("kfree: page_free: 0x%x\n", ptr);
+        // DEBUG("kfree: page_free: 0x%x\n", ptr);
         page_free(ptr);
         unlock_interrupt();
         return;
     }
     frame->cache_used_count--;
-    DEBUG("kfree: cache address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
+    // DEBUG("kfree: cache address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
     size_t order_size = order_to_size(frame->order);
     if (frame->cache_used_count == 0)
     {
-        DEBUG("kfree: cache_used_count == 0, free frame: 0x%x\n", frame);
-        DEBUG("remove the cache with the same frame from freelist\r\n");
+        // DEBUG("kfree: cache_used_count == 0, free frame: 0x%x\n", frame);
+        // DEBUG("remove the cache with the same frame from freelist\r\n");
         for (size_t i = 1; i < PAGE_FRAME_SIZE / order_size; i++)
         {
             list_del_entry((list_head_t *)((void *)frame_addr_to_phy_addr(frame) + i * order_size));
@@ -240,9 +240,9 @@ void kfree(void *ptr)
         unlock_interrupt();
         return;
     }
-    DEBUG("kfree: cache_used_count != 0, add to cache_freelist: 0x%x\n", ptr);
+    // DEBUG("kfree: cache_used_count != 0, add to cache_freelist: 0x%x\n", ptr);
     list_add((list_head_t *)ptr, cache_freelist[(size_t)frame->order]);
-    DEBUG("add finish\r\n");
+    // DEBUG("add finish\r\n");
     unlock_interrupt();
     return;
 }
@@ -374,7 +374,7 @@ void memory_init()
     allocate_frame();
     init_cache();
 
-    INFO_BLOCK(test_memory(););
+    // INFO_BLOCK(test_memory(););
     memory_reserve(0x0000, 0x1000); // Spin tables for multicore boot (0x0000 - 0x1000)
     INFO("_start: 0x%x, _end: 0x%x\n", &_start, &_end);
     memory_reserve((size_t)&_start, (size_t)&_end);
@@ -382,10 +382,10 @@ void memory_init()
     memory_reserve((size_t)CPIO_START, (size_t)CPIO_END);
     INFO("DTB_START: 0x%x, DTB_END: 0x%x\n", DTB_START, DTB_END);
     memory_reserve((size_t)DTB_START, (size_t)DTB_END);
-    DEBUG_BLOCK({
-        dump_frame();
-        dump_cache();
-    });
+    // DEBUG_BLOCK({
+    //      dump_frame();
+    //      dump_cache();
+    //  });
 }
 
 void init_cache()
