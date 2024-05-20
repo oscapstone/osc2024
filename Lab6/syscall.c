@@ -4,6 +4,8 @@
 #include "dtb.h"
 #include "utils.h"
 #include "mbox.h"
+#include "mmu_regs.h"
+#include "mmu.h"
 
 // extern void enable_irq();
 // extern void disable_irq();
@@ -28,8 +30,8 @@ void getpid(trapframe * sp){
 
 void exec(trapframe * sp){
     char * prog = (char *) sp -> x[0];
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base ;
-    char *current = (char *)cpio_base ;
+    struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base + VT_OFFSET;
+    char *current = (char *)cpio_base + VT_OFFSET;
     int sz;
     while (1) { //cpio in lab3
         fs = (struct cpio_newc_header *)current;
@@ -53,19 +55,47 @@ void exec(trapframe * sp){
         if((current - (char *)fs) % 4 != 0)
             current += (4 - (current - (char *)fs) % 4);
     }
+
     uart_puts("found user program\n");
 
     //copy program to allocated place
+    //weird, allocate page generates physical address here (only in syscall)
     char *new_program_pos = (char *)allocate_page(sz);
+    if(((unsigned long) (new_program_pos)) < VT_OFFSET)
+        new_program_pos += VT_OFFSET;
+    
     for (int i = 0; i < sz; i++) {
         *(new_program_pos+i) = *(current+i);
     }
 
+    unsigned long user_code = 0x0;
+    unsigned long sp_el0 = 0xfffffffff000;
+    char* pgd = allocate_page(4096) + VT_OFFSET;
+    if(((unsigned long)(pgd)) < VT_OFFSET)
+        pgd += VT_OFFSET;
+
+    get_current() -> regs.pgd = (unsigned long *) pgd;
+    for(int i = 0; i< 4096; i++){
+        ((char*) (get_current() -> regs.pgd)) [i] = 0;
+    }
+    
+    //get_current() -> sp_el0 = sp_el0;
+
+    //map stack and user_program
+    map_pages(get_current() -> regs.pgd, 0xffffffffb000, 0x4000, get_current() -> sp_el0 - VT_OFFSET);
+    map_pages(get_current() -> regs.pgd, 0x0, sz, new_program_pos - VT_OFFSET);
+
+    asm volatile("dsb ish");
+    asm volatile("msr ttbr0_el1, %0" : : "r"(get_current() -> regs.pgd));
+    asm volatile("tlbi vmalle1is");
+    asm volatile("dsb ish");
+    asm volatile("isb");
+
     // current is the file address
     asm volatile ("mov x0, 0x340"); //switch to el0 with interrupt enabled
     asm volatile ("msr spsr_el1, x0");
-    asm volatile ("msr elr_el1, %0": :"r" (new_program_pos)); // eret address
-    asm volatile ("mov x0, %0": : "r"(get_current() -> sp_el0));// user space stack
+    asm volatile ("msr elr_el1, %0": :"r" (0x0)); // eret address
+    asm volatile ("mov x0, %0": : "r"(sp_el0));// user space stack
     asm volatile ("msr sp_el0, x0");
     asm volatile ("eret");
     sp -> x[0] = 0;

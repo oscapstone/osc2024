@@ -370,13 +370,9 @@ void* allocate_page(unsigned long size){
                 insert_into_freelist(&frames[buddy_index], frame->order); // Add buddy to the free list
                 //merge_free(&frames[buddy_index], 1);
             }
-
-            // uart_puts("Allocated at index ");
-            // uart_int(frame->index);
-            // uart_puts(" of order ");
-            // uart_int(frame->order);
-            // uart_puts("\n");
-            // uart_send('\r');
+            // void * to_ret = memory_start + frame->index * PAGE_SIZE;
+            // uart_hex_long(to_ret);
+            // newline();
             return (void*)(memory_start + frame->index * PAGE_SIZE);
         }
     }

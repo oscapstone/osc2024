@@ -13,6 +13,7 @@ struct registers {
 	unsigned long fp;
 	unsigned long lr;
 	unsigned long sp;
+	unsigned long * pgd; // for setting ttbr0_el1
 };
 
 struct thread{

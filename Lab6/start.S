@@ -1,4 +1,4 @@
-#include "mmu.h"
+#include "mmu_regs.h"
 
 .section ".text.boot"
 
@@ -8,7 +8,6 @@
 _start:  
     mov x28, x0
     // read cpu id, stop slave cores
-    bl      set_exception_vector_table
     bl      from_el2_to_el1
 
 setup_tcr_el1:
@@ -50,6 +49,7 @@ setup_tcr_el1:
     br x2
 
 boot_rest:
+    bl      set_exception_vector_table
     mrs     x1, mpidr_el1 //get cpu num
     and     x1, x1, #3 //see if cpu num is 0
     cbz     x1, 2f //cpu 0 jump to 2f (others wfe)
@@ -237,8 +237,13 @@ switch_to:
     ldp x25, x26, [x1, 16 * 3]
     ldp x27, x28, [x1, 16 * 4]
     ldp fp, lr, [x1, 16 * 5]
-    ldr x9, [x1, 16 * 6]
+    ldp x9, x0, [x1, 16 * 6]
     mov sp,  x9
+    dsb ish // ensure write has completed
+    msr ttbr0_el1, x0 // switch translation based address.
+    tlbi vmalle1is // invalidate all TLB entries
+    dsb ish // ensure completion of TLB invalidatation
+    isb // clear pipeline
     msr tpidr_el1, x1
     ret
 
