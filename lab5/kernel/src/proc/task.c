@@ -187,6 +187,9 @@ void task_exit() {
     }
     task_manager->running--;
     task_manager->dead_list[task_manager->dead_count++] = task;
+
+    // TODO: Signal the parent task to know by waiting
+
     unlock_interrupt();
     NS_DPRINT("[TASK][TRACE] task exited. pid = %d\n", task->pid);
     task_schedule();
@@ -241,7 +244,7 @@ void task_kill_dead() {
     enable_interrupt();
 }
 
-TASK* task_create(const char* name, U32 flags) {
+TASK* task_create_user(const char* name, U32 flags) {
 
     TASK* task = NULL;
     for (U32 i = 0; i < TASK_MAX_TASKS; i++) {
@@ -260,6 +263,37 @@ TASK* task_create(const char* name, U32 flags) {
 
     // map the stack to
     mmu_task_init(task);
+
+    task->cpu_regs.lr = 0;
+    task->cpu_regs.sp = (U64)((char*)task->kernel_stack + TASK_STACK_SIZE);
+    task->cpu_regs.fp = task->cpu_regs.sp;
+    task->priority = 0;              // default value
+    task->preempt = task->priority;              // default value
+    utils_char_fill(task->name, name, utils_strlen(name));
+
+    task_manager->count++;
+    NS_DPRINT("[TASK][TRACE] task allocated. pid = %d\n", task->pid);
+
+    return task;
+}
+
+TASK* task_create(const char* name, U32 flags) {
+
+    TASK* task = NULL;
+    for (U32 i = 0; i < TASK_MAX_TASKS; i++) {
+        if (!(task_manager->tasks[i].flags & TASK_FLAGS_ALLOC)) {
+            task = &task_manager->tasks[i];
+            break;
+        }
+    }
+    if (task == NULL) {
+        printf("[TASK][ERROR] Failed to create task.\n");
+        return NULL;
+    }
+    task->flags = TASK_FLAGS_ALLOC | flags; // only allocate, not running
+    task->user_stack = kzalloc(TASK_STACK_SIZE);
+    task->kernel_stack = kzalloc(TASK_STACK_SIZE); // allocate the stack
+    task->cpu_regs.pgd = PD_KERNEL_ENTRY;           // kernel process using just kernel paging
 
     task->cpu_regs.lr = 0;
     task->cpu_regs.sp = (U64)((char*)task->kernel_stack + TASK_STACK_SIZE);

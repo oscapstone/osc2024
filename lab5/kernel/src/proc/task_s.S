@@ -46,6 +46,18 @@ task_asm_store_context:
     str x9, [x0, 16 * 6]
     ret
 
+.global task_asm_load_context
+task_asm_load_context:
+    ldp x19, x20, [x0, 16 * 0]
+    ldp x21, x22, [x0, 16 * 1]
+    ldp x23, x24, [x0, 16 * 2]
+    ldp x25, x26, [x0, 16 * 3]
+    ldp x27, x28, [x0, 16 * 4]
+    ldp fp, lr, [x0, 16 * 5]
+    ldr x9, [x0, 16 * 6]
+    mov sp,  x9
+    ret
+
 .globl task_get_current_el1
 task_get_current_el1:
     mrs x0, tpidr_el1

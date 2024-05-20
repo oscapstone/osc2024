@@ -150,11 +150,12 @@ void shell() {
 
 			printf("Executing %s\n", fileName);
 
-			// TODO: executing application
-			// copy to 0x90000
-			void* program_alloc = kmalloc(contentSize);
-			memcpy((void*)filePtr, program_alloc, contentSize);
-			// TODO
+			TASK* user_task = task_create_user(fileName, NULL);
+			task_copy_program(user_task, filePtr, contentSize);
+			task_run_to_el0(user_task);
+
+			// TODO: wait task
+
 		}
 		 else if (utils_strncmp(cmd_space, "async", 5) == 0) {
 			printf("This will transmit A character for async uart\n");

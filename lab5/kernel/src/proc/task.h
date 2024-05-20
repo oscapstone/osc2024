@@ -114,7 +114,8 @@ void task_schedule();
 
 void task_run_to_el0(TASK* task);
 void task_run(TASK* task);
-TASK* task_create(const char* name, U32 flags);
+TASK* task_create(const char* name, U32 flags);             // create kernel process
+TASK* task_create_user(const char* name, U32 flags);        // create user process
 void task_exit();
 void task_kill(TASK* task);
 void task_kill_dead();

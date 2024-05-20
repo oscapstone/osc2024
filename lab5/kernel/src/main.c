@@ -74,22 +74,20 @@ void main() {
 
 	// enabling the interrupt
 	enable_interrupt();
-	// TASK* task_a = task_create("task_a", TASK_FLAGS_KERNEL, &func_task_a);
-	// NS_DPRINT("task a pid = %d\n", task_a->pid);
-	// //task_assign_vma_region(task_a, 0, 0x100000, VMA_FLAGS_EXEC | VMA_FLAGS_READ | VMA_FLAGS_WRITE);
-	// //mem_map_page(task_a, 0, kzalloc(PD_PAGE_SIZE));
-	// task_run(task_a);
-	TASK* task_b = task_create("task_b", NULL);
-	NS_DPRINT("task b pid = %d\n", task_b->pid);
-	task_copy_program(task_b, func_task_b, (U64)&func_task_c - (U64)&func_task_b);
-	task_run_to_el0(task_b);
+	TASK* task_a = task_create("task_a", TASK_FLAGS_KERNEL);
+	task_a->cpu_regs.lr = func_task_a;
+	NS_DPRINT("task a pid = %d\n", task_a->pid);
+	task_run(task_a);
+	// TASK* task_b = task_create_user("task_b", NULL);
+	// NS_DPRINT("task b pid = %d\n", task_b->pid);
+	// task_copy_program(task_b, func_task_b, (U64)&func_task_c - (U64)&func_task_b);
+	// task_run_to_el0(task_b);
 	// TASK* task_c = task_create("task_c", TASK_FLAGS_KERNEL, &func_task_c);
 	// NS_DPRINT("task c pid = %d\n", task_c->pid);
 	// task_run(task_c);
 
 	// init idle
 	while (1) {
-		printf("A\n");
 		task_kill_dead();
 		task_schedule();
 	}

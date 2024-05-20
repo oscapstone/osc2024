@@ -4,7 +4,8 @@ SECTIONS
     /* code section */
     .text :
     {
-        KEEP(*(.text))
+        KEEP(*(.text.boot))
+        *(.text .text.*  .gnu.linkonce.t*)
     }
     /* read only data section */
     .rodata :

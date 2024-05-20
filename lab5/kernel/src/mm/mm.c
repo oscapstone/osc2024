@@ -678,8 +678,8 @@ void* kmalloc(U64 size) {
 }
 
 void kfree(void* ptr) {
-    
-    U32 frame_index = mem_addr2idx(ptr);
+    ptr = (void*)MMU_VIRT_TO_PHYS((U64)ptr);
+    U32 frame_index = mem_addr2idx((UPTR)ptr);
     if (mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CHUNK) {
         mem_chunk_free(ptr);
     } else {

@@ -58,23 +58,43 @@
     mrs     x1, spsr_el1
     stp     x0, x1, [sp, 16 * 1]
 
-    // give the handler register info
-    mov     x0, sp
 .endm
 
 .macro kernel_exit el
-    ldp     x0, x1, [sp, 16 * 1]
-    msr     spsr_el1, x1 
-    msr     elr_el1, x0 
 
-    // if is user mode, restore the user mode stack
+    ldp     x8, x9, [sp, 16 * 1]
+    msr     elr_el1, x8
+    msr     spsr_el1, x9
+
     .if \el == 0
-    ldr     x0, [sp, 16 * 0]
-    msr     sp_el0, x0
+    ldr     x9, [sp, 16 * 0]
+    msr     sp_el0, x9
+    ldr     x0, [sp, 16 * 2]
     .endif
 
     add     sp, sp, 2 * 16
-    load_all
+
+    .if \el == 0
+    ldr x1, [sp, 16 * 0 + 8]
+    .else
+    ldp x0, x1, [sp ,16 * 0]
+    .endif
+    ldp x2, x3, [sp ,16 * 1]
+    ldp x4, x5, [sp ,16 * 2]
+    ldp x6, x7, [sp ,16 * 3]
+    ldp x8, x9, [sp ,16 * 4]
+    ldp x10, x11, [sp ,16 * 5]
+    ldp x12, x13, [sp ,16 * 6]
+    ldp x14, x15, [sp ,16 * 7]
+    ldp x16, x17, [sp ,16 * 8]
+    ldp x18, x19, [sp ,16 * 9]
+    ldp x20, x21, [sp ,16 * 10]
+    ldp x22, x23, [sp ,16 * 11]
+    ldp x24, x25, [sp ,16 * 12]
+    ldp x26, x27, [sp ,16 * 13]
+    ldp x28, x29, [sp ,16 * 14]
+    ldr x30, [sp, 16 * 15]
+    add sp, sp, #32 * 8
 .endm
 
 .macro handle_invalid_entry type
@@ -146,6 +166,8 @@ error_invalid_el1h:
 // handle user mode system call
 handle_el0_64_sync:
     kernel_entry 0
+    // give the handler register info
+    mov     x0, sp
     bl exception_sync_el0_handler
     kernel_exit 0
     eret                // back to el0

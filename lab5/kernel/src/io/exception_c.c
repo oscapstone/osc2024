@@ -7,6 +7,7 @@
 #include "utils/printf.h"
 
 #include "syscall/syscall.h"
+#include "peripherals/irq.h"
 
 void exception_sync_el0_handler(TRAP_FRAME* trap_frame) {
 
@@ -17,7 +18,10 @@ void exception_sync_el0_handler(TRAP_FRAME* trap_frame) {
     {
     // using svc instruction
     case ESR_ELx_EC_SVC64:
+    {
+        enable_interrupt();
         syscall_handler(trap_frame);
+    }
         break;
     case ESR_ELx_EC_DABT_LOW:
     case ESR_ELx_EC_IABT_LOW:

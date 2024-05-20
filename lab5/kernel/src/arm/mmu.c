@@ -95,7 +95,8 @@ void mmu_map_table_entry(pd_t* pte, U64 v_addr, U64 p_addr, U64 flags) {
     index = index & (PD_PTRS_PER_TABLE - 1);
     // TODO: modify the entry premission 
     U64 entry = p_addr | PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | flags | PD_TABLE;
-    pte[index] = entry;
+    pd_t* pte_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)pte);
+    pte_virt[index] = entry;
 }
 
 /**
@@ -104,15 +105,16 @@ void mmu_map_table_entry(pd_t* pte, U64 v_addr, U64 p_addr, U64 flags) {
 pd_t mmu_map_table(pd_t* table, U64 shift, U64 v_addr, BOOL* gen_new_table) {
     U64 index = v_addr >> shift;
     index = index & (PD_PTRS_PER_TABLE - 1);
-    if (!table[index]) {        // no entry
+    pd_t* table_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)table);
+    if (!table_virt[index]) {        // no entry
         *gen_new_table = TRUE;
         U64 next_level_table = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
         U64 entry = next_level_table | PD_ACCESS | PD_TABLE;        // it is a table entry
-        table[index] = entry;
+        table_virt[index] = entry;
         return next_level_table;
     }
     *gen_new_table = FALSE;
-    return table[index] & PD_PAGE_MASK;
+    return table_virt[index] & PD_PAGE_MASK;
 }
 
 U64 mmu_get_pte(TASK* task, U64 v_addr) {
@@ -249,9 +251,9 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
     for (U64 i = 0; i < src_task->mm.user_pages_count; i++) {
         USER_PAGE_INFO* user_page = &src_task->mm.user_pages[i];
         U64 mmu_flags = 0;
-        if (user_page->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC) {
-            mmu_flags |= (0x60000000000000); // UXN & PXN
-        }
+
+        // TODO: execution premission?
+
         mmu_flags |= MMU_AP_EL0_READ_ONLY;
         USER_PAGE_INFO* new_task_user_page = mmu_map_page(new_task, user_page->v_addr, user_page->p_addr, mmu_flags);
         // if this page it writable then later the page fault handler will know this and do the copy on write instead of segementation fault.
