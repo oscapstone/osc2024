@@ -17,6 +17,10 @@
 
 extern char __kernel_beg[];
 extern char __kernel_end[];
+extern char __kernel_text_beg[];
+extern char __kernel_text_end[];
+extern char __kernel_data_beg[];
+extern char __kernel_data_end[];
 extern char __stack_beg[];
 extern char __stack_end[];
 
@@ -48,7 +52,7 @@ void kernel_main(void* dtb_addr) {
   mm_reserve(__upper_PGD, __upper_end);
 
   mm_init();
-  map_kernel_as_normal((uint64_t)__kernel_beg, (uint64_t)__kernel_end);
+  map_kernel_as_normal(__kernel_text_beg, __kernel_text_end);
 
   irq_init();
   kthread_init();

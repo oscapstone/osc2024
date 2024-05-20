@@ -65,28 +65,35 @@ struct PageTableEntry {
   bool RDONLY : 1 = false;
   bool KERNEL : 1 = false;
   bool NS : 1 = false;
-  uint64_t AttrIdx : 3 = MAIR_DEVICE_nGnRnE;
+  uint64_t AttrIdx : 3 = MAIR_IDX_NORMAL_NOCACHE;
   uint64_t type : 2 = PD_INVALID;
 
-  bool isInvalid() {
+  void print() const;
+
+  bool isInvalid() const {
     return (type & 1) == 0;
   }
-  bool isBlock() {
-    return type == PD_BLOCK;
+  bool isEntry() const {
+    return type == PD_BLOCK or type == PD_ENTRY;
+  }
+  bool isTable() const {
+    return type == PD_TABLE;
   }
 
-  void* addr() {
+  void* addr() const {
     return (void*)(output_address * PAGE_SIZE);
   }
-  void set_addr(void* addr) {
-    output_address = (uint64_t)addr / PAGE_SIZE;
+  void set_addr(void* addr, uint64_t t) {
+    AF = true;
+    output_address = (uint64_t)va2pa(addr) / PAGE_SIZE;
+    type = t;
   }
 
-  PageTable* table() {
-    return (PageTable*)addr();
+  PageTable* table() const {
+    return (PageTable*)pa2va(addr());
   }
   void set_table(PageTable* table) {
-    set_addr((void*)table);
+    set_addr((void*)table, PD_TABLE);
   }
 };
 static_assert(sizeof(PageTableEntry) == sizeof(uint64_t));
@@ -109,12 +116,15 @@ struct PageTable {
          cb_entry);
   }
 
-  void traverse(uint64_t start, int level, CB cb_entry, CB cb_table);
+  void traverse(uint64_t start, int level, CB cb_entry, CB cb_table = nullptr);
   void traverse(CB cb_entry, CB cb_table = nullptr) {
     return traverse(USER_SPACE, PGD_LEVEL, cb_entry, cb_table);
   }
+
+  void print(uint64_t start = USER_SPACE, int level = PGD_LEVEL,
+             const char* name = "PageTable");
 };
 
 static_assert(sizeof(PageTable) == PAGE_SIZE);
 
-void map_kernel_as_normal(uint64_t kernel_start, uint64_t kernel_end);
+void map_kernel_as_normal(char* ktext_beg, char* ktext_end);

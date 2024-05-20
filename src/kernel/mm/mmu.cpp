@@ -1,6 +1,21 @@
 #include "mm/mmu.hpp"
 
+#include "io.hpp"
 #include "mm/page.hpp"
+
+void PageTableEntry::print() const {
+  if (UXN)
+    kprintf("UXN ");
+  if (PXN)
+    kprintf("PXN ");
+  if (AF)
+    kprintf("AF ");
+  if (RDONLY)
+    kprintf("RDONLY ");
+  if (KERNEL)
+    kprintf("KERNEL ");
+  kprintf("addr %p Attr %d type %d\n", addr(), AttrIdx, type);
+}
 
 PageTable::PageTable() {
   for (uint64_t i = 0; i < TABLE_SIZE_4K; i++) {
@@ -32,8 +47,13 @@ PageTableEntry& PageTable::walk(uint64_t start, int level, uint64_t va_start,
   }
   auto nxt_start = start + idx * ENTRY_SIZE[level];
   auto nxt_level = level + 1;
-  PageTable* nxt_table = new PageTable(entry, nxt_level);
-  entry.set_table(nxt_table);
+  PageTable* nxt_table;
+  if (entry.isTable()) {
+    nxt_table = entry.table();
+  } else {
+    nxt_table = new PageTable(entry, nxt_level);
+    entry.set_table(nxt_table);
+  }
   return nxt_table->walk(nxt_start, nxt_level, va_start, va_level);
 }
 
@@ -57,7 +77,11 @@ void PageTable::traverse(uint64_t start, int level, CB cb_entry, CB cb_table) {
     auto& entry = entries[idx];
     switch (entry.type) {
       case PD_TABLE:
-        cb_table(entry, nxt_start, nxt_level);
+        if (cb_table) {
+          cb_table(entry, nxt_start, nxt_level);
+        } else {
+          entry.table()->traverse(nxt_start, nxt_level, cb_entry, cb_table);
+        }
         break;
       case PD_BLOCK:
       case PD_ENTRY:
@@ -68,8 +92,17 @@ void PageTable::traverse(uint64_t start, int level, CB cb_entry, CB cb_table) {
   }
 }
 
+void PageTable::print(uint64_t start, int level, const char* name) {
+  kprintf("===== %s ===== \n", name);
+  traverse(start, level, [](auto& entry, auto start, auto level) {
+    kprintf("%lx ~ %lx: ", start, start + ENTRY_SIZE[level]);
+    entry.print();
+  });
+  kprintf("----------------------\n");
+}
+
 // TODO: remove -mno-unaligned-access
-void map_kernel_as_normal(uint64_t kernel_start, uint64_t kernel_end) {
+void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   PageTableEntry PMD_entry{
       .PXN = false,
       .output_address = 0,
@@ -83,11 +116,21 @@ void map_kernel_as_normal(uint64_t kernel_start, uint64_t kernel_end) {
   PMD->walk(
       KERNEL_SPACE, PMD_LEVEL, mm_page.start(), mm_page.end(), PMD_LEVEL,
       [](auto& entry, auto, auto) { entry.AttrIdx = MAIR_IDX_NORMAL_NOCACHE; });
-  PMD->walk(KERNEL_SPACE, PMD_LEVEL, kernel_start, kernel_end, PMD_LEVEL,
-            [](auto& entry, auto, auto) { entry.RDONLY = true; });
-  PMD->traverse([](auto& entry, auto, auto) { entry.PXN = true; });
+
+  PMD->walk(KERNEL_SPACE, PMD_LEVEL, (uint64_t)ktext_beg, (uint64_t)ktext_end,
+            PMD_LEVEL, [](auto& entry, auto, auto) { entry.RDONLY = true; });
+
+  PMD->traverse(KERNEL_SPACE, PMD_LEVEL,
+                [](auto& entry, auto, auto) { entry.PXN = true; });
 
   auto PUD = (PageTable*)__upper_PUD;
   PUD->entries[0].set_table(PMD);
   PUD->entries[1].PXN = true;
+
+  asm volatile(
+      "dsb ISH\n"         // ensure write has completed
+      "tlbi VMALLE1IS\n"  // invalidate all TLB entries
+      "dsb ISH\n"         // ensure completion of TLB invalidatation
+      "isb\n"             // clear pipeline
+  );
 }

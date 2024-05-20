@@ -81,7 +81,12 @@ boot_rest:
     mov     sp, x0
 
     mov     x0, xzr
+
+    dsb     ISH             // ensure write has completed
     msr     TTBR0_EL1, x0
+    tlbi    VMALLE1IS       // invalidate all TLB entries
+    dsb     ISH             // ensure completion of TLB invalidatation
+    isb                     // clear pipeline
 
     bl      set_exception_vector_table
 
