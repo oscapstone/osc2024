@@ -43,7 +43,7 @@ inline bool isUserSpace(T x) {
   return addressSpace(x) == USER_SPACE;
 }
 
-struct PageTable;
+struct PT;
 constexpr uint64_t TABLE_SIZE_4K = 512;
 constexpr uint64_t PTE_ENTRY_SIZE = PAGE_SIZE;
 constexpr uint64_t PMD_ENTRY_SIZE = PTE_ENTRY_SIZE * TABLE_SIZE_4K;
@@ -53,20 +53,25 @@ constexpr uint64_t ENTRY_SIZE[] = {PGD_ENTRY_SIZE, PUD_ENTRY_SIZE,
                                    PMD_ENTRY_SIZE, PTE_ENTRY_SIZE};
 constexpr int PGD_LEVEL = 0, PUD_LEVEL = 1, PMD_LEVEL = 2, PTE_LEVEL = 3;
 
-struct PageTableEntry {
-  uint64_t upper_atributes : 10 = 0;
-  bool UXN : 1 = false;
-  bool PXN : 1 = false;
-  bool Contiguous : 1 = false;
-  uint64_t output_address : 36 = 0;
-  bool nG : 1 = false;
-  bool AF : 1 = false;
-  bool SH : 1 = false;
-  bool RDONLY : 1 = false;
-  bool USER : 1 = true;
-  bool NS : 1 = false;
-  uint64_t AttrIdx : 3 = MAIR_IDX_NORMAL_NOCACHE;
-  uint64_t type : 2 = PD_INVALID;
+struct PT_Entry {
+  union {
+    struct {
+      uint64_t upper_atributes : 10 = 0;
+      bool UXN : 1 = false;
+      bool PXN : 1 = false;
+      bool Contiguous : 1 = false;
+      uint64_t output_address : 36 = 0;
+      bool nG : 1 = false;
+      bool AF : 1 = false;
+      bool SH : 1 = false;
+      bool RDONLY : 1 = false;
+      bool USER : 1 = true;
+      bool NS : 1 = false;
+      uint64_t AttrIdx : 3 = MAIR_IDX_NORMAL_NOCACHE;
+      uint64_t type : 2 = PD_INVALID;
+    };
+    uint64_t value;
+  };
 
   void print() const;
 
@@ -89,25 +94,24 @@ struct PageTableEntry {
     type = t;
   }
 
-  PageTable* table() const {
-    return (PageTable*)pa2va(addr());
+  PT* table() const {
+    return (PT*)pa2va(addr());
   }
-  void set_table(PageTable* table) {
+  void set_table(PT* table) {
     set_addr((void*)table, PD_TABLE);
   }
 };
-static_assert(sizeof(PageTableEntry) == sizeof(uint64_t));
+static_assert(sizeof(PT_Entry) == sizeof(uint64_t));
 
-struct PageTable {
-  PageTableEntry entries[TABLE_SIZE_4K];
-  PageTable();
-  PageTable(PageTableEntry entry, int level);
-  PageTable* copy();
-  PageTable(PageTable* table);
-  ~PageTable();
-  PageTableEntry& walk(uint64_t start, int level, uint64_t va_start,
-                       int va_level);
-  using CB = void(void*, PageTableEntry& entry, uint64_t start, int level);
+struct PT {
+  PT_Entry entries[TABLE_SIZE_4K];
+  PT();
+  PT(PT_Entry entry, int level);
+  PT* copy();
+  PT(PT* table);
+  ~PT();
+  PT_Entry& walk(uint64_t start, int level, uint64_t va_start, int va_level);
+  using CB = void(void*, PT_Entry& entry, uint64_t start, int level);
   void walk(uint64_t start, int level, uint64_t va_start, uint64_t va_end,
             int va_level, CB cb_entry, void* context = nullptr);
   template <typename T, typename U>
@@ -126,6 +130,6 @@ struct PageTable {
              int level = PGD_LEVEL);
 };
 
-static_assert(sizeof(PageTable) == PAGE_SIZE);
+static_assert(sizeof(PT) == PAGE_SIZE);
 
 void map_kernel_as_normal(char* ktext_beg, char* ktext_end);
