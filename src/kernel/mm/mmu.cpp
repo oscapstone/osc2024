@@ -12,8 +12,8 @@ void PageTableEntry::print() const {
     kprintf("AF ");
   if (RDONLY)
     kprintf("RDONLY ");
-  if (KERNEL)
-    kprintf("KERNEL ");
+  if (USER)
+    kprintf("USER ");
   kprintf("addr %p Attr %d type %d\n", addr(), AttrIdx, type);
 }
 
@@ -107,7 +107,7 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
       .PXN = false,
       .output_address = 0,
       .RDONLY = false,
-      .KERNEL = true,
+      .USER = false,
       .AttrIdx = MAIR_IDX_DEVICE_nGnRnE,
       .type = PD_BLOCK,
   };

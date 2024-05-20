@@ -63,7 +63,7 @@ struct PageTableEntry {
   bool AF : 1 = false;
   bool SH : 1 = false;
   bool RDONLY : 1 = false;
-  bool KERNEL : 1 = false;
+  bool USER : 1 = true;
   bool NS : 1 = false;
   uint64_t AttrIdx : 3 = MAIR_IDX_NORMAL_NOCACHE;
   uint64_t type : 2 = PD_INVALID;
