@@ -11,6 +11,7 @@
 #include "page_alloc.h"
 #include "peripheral/pm.h"
 #include "reboot.h"
+#include "slab.h"
 #include "string.h"
 #include "timer.h"
 #include "utils.h"
@@ -160,15 +161,17 @@ void parse_command(char* cmd)
             uart_send_string("Invalid size\n");
             return;
         }
-        struct page* page_ptr = alloc_pages(order);
+        struct page* page_ptr = alloc_pages(order, 0);
         uart_printf("%d pages allocated at 0x%x\n", 1 << order,
                     (uintptr_t)page_ptr);
 
     } else if (!str_cmp(cmd_name, "test_page_alloc")) {
         test_page_alloc();
 
-    } else if (!str_cmp(cmd_name, "print_freelist")) {
-        print_free_list();
+    } else if (!str_cmp(cmd_name, "buddyinfo")) {
+        buddyinfo();
+    } else if (!str_cmp(cmd_name, "slabinfo")) {
+        slabinfo();
     } else {
         uart_send_string("Command '");
         uart_send_string(cmd);

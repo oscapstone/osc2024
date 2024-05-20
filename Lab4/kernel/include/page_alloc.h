@@ -2,6 +2,7 @@
 #define PAGE_ALLOC_H
 
 #include "def.h"
+#include "gfp_types.h"
 #include "int.h"
 #include "list.h"
 
@@ -59,10 +60,11 @@ struct page {
 
 void buddy_init(void);
 size_t order_for_request(size_t request);
-struct page* alloc_pages(size_t order);
+struct page* alloc_pages(size_t order, gfp_t types);
 void free_pages(struct page* page_ptr, size_t order);
-void print_free_list(void);
+void buddyinfo(void);
 void test_page_alloc(void);
 struct page* get_page_from_ptr(void* ptr);
+struct page* get_compound_head(struct page* page);
 
 #endif /* PAGE_ALLOC_H */

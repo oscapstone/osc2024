@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "bool.h"
 #include "cpio.h"
+#include "def.h"
 #include "dtb.h"
 #include "list.h"
 #include "mini_uart.h"
@@ -53,4 +54,24 @@ void mem_free(void* ptr)
 {
     // TODO
     return;
+}
+
+
+void mem_set(void* b, int c, size_t len)
+{
+    size_t word_size = len / sizeof(void*);
+    size_t byte_size = len % sizeof(void*);
+    unsigned long* word_ptr = (unsigned long*)b;
+    unsigned char* byte_ptr = (unsigned char*)(word_ptr + word_size);
+    unsigned char ch = (unsigned char)c;
+    unsigned long byte = (unsigned long)ch;
+    unsigned long word = (byte << 56) | (byte << 48) | (byte << 40) |
+                         (byte << 32) | (byte << 24) | (byte << 16) |
+                         (byte << 8) | byte;
+
+    for (int i = 0; i < word_size; i++)
+        word_ptr[i] = word;
+
+    for (int i = 0; i < byte_size; i++)
+        byte_ptr[i] = ch;
 }

@@ -25,8 +25,8 @@ static uintptr_t usable_mem_end;
 // nearest higher power-of-2 memory region, and check if the address is beyond
 // the real upper bound while do some operation
 
-static size_t MAX_ALLOC, MAX_ALLOC_LOG2;
-static size_t MIN_ALLOC, MIN_ALLOC_LOG2;
+size_t MAX_ALLOC, MAX_ALLOC_LOG2;
+size_t MIN_ALLOC, MIN_ALLOC_LOG2;
 
 #define BUCKET_COUNT \
     (MAX_ALLOC_LOG2 - MIN_ALLOC_LOG2 + 1)  // How many order in total
@@ -82,7 +82,7 @@ static uint8_t* node_is_split;
 #define NODE_IS_RESERVED_SIZE ((1 << (BUCKET_COUNT - 1)) >> 3)
 static uint8_t* node_is_reserved;
 
-// if anything is reserved? this is used for `start_reserve_pages`.
+// if any page is reserved? this is used for `start_reserve_pages`.
 static bool reserve_flag;
 
 #define get_parent(index)      (((index) - 1) >> 1)
@@ -146,6 +146,12 @@ struct page* get_page_from_ptr(void* ptr)
                       base_ptr);
 }
 
+
+bool test_page_align(void* ptr)
+{
+    return !(((uintptr_t)ptr - (uintptr_t)base_ptr) & (PAGE_SIZE - 1));
+}
+
 /*
  * Given the requested size, return the index of the
  * smallest bucket that can satisfy the request. (Assume
@@ -192,6 +198,11 @@ static int update_max_ptr(uint8_t* new_val)
 }
 
 
+struct page* get_compound_head(struct page* page)
+{
+    return (struct page*)(page->compound_head & -2);
+}
+
 static inline void set_compound_head(struct page* page, struct page* head)
 {
     page->compound_head = (unsigned long)head + 1;
@@ -225,7 +236,7 @@ void prep_compound_page(struct page* page, unsigned int order)
 
 
 /* allocate pages from our page allocator */
-struct page* alloc_pages(size_t order)
+struct page* alloc_pages(size_t order, gfp_t flags)
 {
 #if defined(DEBUG)
     uart_printf("\n===================================\n");
@@ -352,8 +363,11 @@ struct page* alloc_pages(size_t order)
         uart_printf("Allocated %d pages at 0x%x\n", 1 << order, ptr);
 #endif
 
-        // prep_compound_page((struct page*)ptr, order);
         ((struct page*)ptr)->private = get_order_from_bucket(bucket);
+        ((struct page*)ptr)->flags = 0;
+
+        if (flags & __GFP_COMP)
+            prep_compound_page((struct page*)ptr, order);
 
         return (struct page*)ptr;
     }
@@ -369,11 +383,12 @@ void free_pages(struct page* page_ptr, size_t order)
     uart_printf("===================================\n");
 #endif
 
-    /* if the ptr is NULL of it exceed usable_mem_end, stop*/
-    if (!page_ptr || (uintptr_t)page_ptr >= usable_mem_end)
+    /* if the ptr is NULL or it exceed usable_mem_end, stop*/
+    if (!page_ptr || (uintptr_t)page_ptr >= usable_mem_end ||
+        !test_page_align(page_ptr) || PageTail(page_ptr))
         return;
 
-    uint8_t* ptr = (uint8_t*)get_page_from_ptr((void*)page_ptr);
+    uint8_t* ptr = (uint8_t*)page_ptr;
 
 #if defined(DEBUG)
     uart_printf("free address 0x%x with %d pages\n", (uintptr_t)ptr,
@@ -701,10 +716,10 @@ void buddy_init(void)
 
     start_init_pages();
 
-    print_free_list();
+    buddyinfo();
 }
 
-void print_free_list(void)
+void buddyinfo(void)
 {
     uart_printf("\n===================================\n");
     uart_printf("Free List layout\n");
@@ -723,35 +738,35 @@ void print_free_list(void)
 
 void test_page_alloc(void)
 {
-    struct page* ptr1 = alloc_pages(1);
+    struct page* ptr1 = alloc_pages(1, __GFP_COMP);
 
-    print_free_list();
+    buddyinfo();
 
-    struct page* ptr2 = alloc_pages(5);
+    struct page* ptr2 = alloc_pages(5, __GFP_COMP);
 
-    print_free_list();
+    buddyinfo();
 
     free_pages(ptr1, 1);
 
-    print_free_list();
+    buddyinfo();
 
-    struct page* ptr3 = alloc_pages(8);
+    struct page* ptr3 = alloc_pages(8, __GFP_COMP);
 
-    print_free_list();
+    buddyinfo();
 
     free_pages(ptr3, 8);
 
-    print_free_list();
+    buddyinfo();
 
-    struct page* ptr4 = alloc_pages(0);
+    struct page* ptr4 = alloc_pages(0, 0);
 
-    print_free_list();
+    buddyinfo();
 
     free_pages(ptr2, 5);
 
-    print_free_list();
+    buddyinfo();
 
     free_pages(ptr4, 0);
 
-    print_free_list();
+    buddyinfo();
 }

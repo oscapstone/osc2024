@@ -11,7 +11,7 @@
 #include "timer.h"
 #include "utils.h"
 
-#define alloc_irq()   (irq_task_t*)kmem_cache_alloc(irq)
+#define alloc_irq()   (irq_task_t*)kmem_cache_alloc(irq, 0)
 #define free_irq(ptr) kmem_cache_free(irq, (ptr))
 
 static LIST_HEAD(irq_task_head);

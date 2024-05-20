@@ -7,7 +7,7 @@
 #include "string.h"
 
 #define MSG_SIZE        32
-#define alloc_timer()   (timeout_event_t*)kmem_cache_alloc(timer)
+#define alloc_timer()   (timeout_event_t*)kmem_cache_alloc(timer, 0)
 #define free_timer(ptr) kmem_cache_free(timer, (ptr));
 
 static LIST_HEAD(timeout_event_head);
@@ -47,7 +47,7 @@ static timeout_event_t* create_timeout_event(timer_callback cb,
     new_timeout_event->callback = cb;
     new_timeout_event->is_periodic = is_periodic;
 
-    new_timeout_event->msg = kmalloc(sizeof(char) * MSG_SIZE);
+    new_timeout_event->msg = kmalloc(sizeof(char) * MSG_SIZE, 0);
 
     if (!new_timeout_event->msg)
         return NULL;

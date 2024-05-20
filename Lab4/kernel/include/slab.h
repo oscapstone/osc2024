@@ -2,16 +2,29 @@
 #define SLAB_H
 
 #include "def.h"
+#include "gfp_types.h"
 #include "int.h"
 #include "list.h"
+
+extern size_t MAX_ALLOC_LOG2;
 
 #define OO_SHIFT 16
 #define OO_MASK  ((1 << OO_SHIFT) - 1)
 
-#define KMALLOC_SHIFT_HIGH     (PAGE_SHIFT - 1)
-#define KMALLOC_SHIFT_LOW      3
-#define KMALLOC_MIN_SIZE       (1 << KMALLOC_SHIFT_LOW)
-#define KMALLOC_MAX_CACHE_SIZE (1 << KMALLOC_SHIFT_HIGH)
+#define KMALLOC_SHIFT_HIGH (PAGE_SHIFT + 1)
+#define KMALLOC_SHIFT_LOW  3
+#define KMALLOC_SHIFT_MAX  (MAX_ALLOC_LOG2 + PAGE_SHIFT - 1)
+
+/* Maximum allocatable size */
+#define KMALLOC_MAX_SIZE (1UL << KMALLOC_SHIFT_MAX)
+/* Maximum size for which we can actually use a slab cache */
+#define KMALLOC_MAX_CACHE_SIZE (1UL << KMALLOC_SHIFT_HIGH)
+/* Maximum order allocatable via the slab allocator */
+#define KMALLOC_MAX_ORDER (KMALLOC_SHIFT_MAX - PAGE_SHIFT)
+
+
+#define KMALLOC_MIN_SIZE (1UL << KMALLOC_SHIFT_LOW)
+
 
 struct kmem_cache_order_objects {
     /*
@@ -54,14 +67,23 @@ struct kmalloc_info_struct {
 };
 
 void kmem_cache_init(void);
+
 struct kmem_cache* kmem_cache_create(const char* name,
                                      size_t size,
                                      size_t align);
+
 void kmem_cache_destroy(struct kmem_cache* cachep);
-void* kmem_cache_alloc(struct kmem_cache* cachep);
+
+void* kmem_cache_alloc(struct kmem_cache* cachep, gfp_t flags);
+
+void* kmem_cache_zalloc(struct kmem_cache* cachep, gfp_t flags);
+
 void kmem_cache_free(struct kmem_cache* cachep, void* objp);
 
-void* kmalloc(size_t size);
+void* kmalloc(size_t size, gfp_t flags);
+
+void* kzmalloc(size_t size, gfp_t flags);
+
 void kfree(const void* x);
 
 void slabinfo(void);

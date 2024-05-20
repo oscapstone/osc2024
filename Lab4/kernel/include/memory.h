@@ -9,5 +9,6 @@ extern void* mem_align(void*, uint64_t);
 int mem_init(uintptr_t dtb_ptr);
 void* mem_alloc(uint64_t);
 void mem_free(void*);
+void mem_set(void* b, int c, size_t len);
 
 #endif /* MEMORY_H */

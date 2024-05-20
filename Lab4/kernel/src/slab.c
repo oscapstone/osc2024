@@ -30,6 +30,21 @@ const struct kmalloc_info_struct kmalloc_info[] = {
     {"kmalloc-512", 512},
     {"kmalloc-1k", 1024},
     {"kmalloc-2k", 2048},
+    {"kmalloc-4k", 4096},
+    {"kmalloc-8k", 8192},
+    {"kmalloc-16k", 16384},
+    {"kmalloc-32k", 32768},
+    {"kmalloc-64k", 65536},
+    {"kmalloc-128k", 131072},
+    {"kmalloc-256k", 262144},
+    {"kmalloc-512k", 524288},
+    {"kmalloc-1M", 1048576},
+    {"kmalloc-2M", 2097152},
+    {"kmalloc-4M", 4194304},
+    {"kmalloc-8M", 8388608},
+    {"kmalloc-16M", 16777216},
+    {"kmalloc-32M", 33554432},
+    {"kmalloc-64M", 67108864},
 };
 
 static uint8_t size_index[24] = {
@@ -97,15 +112,28 @@ static int allocate_slab(struct kmem_cache* slab_cache)
     if (!slab_cache)
         return 0;
 
-    struct page* new_slab = alloc_pages(oo_order(slab_cache->oo));
 
-    if (!new_slab)
-        new_slab = alloc_pages(oo_order(slab_cache->min));
+    uint16_t order = oo_order(slab_cache->oo);
+    gfp_t flags = 0;
+
+    if (order)
+        flags |= __GFP_COMP;
+
+    struct page* new_slab = alloc_pages(order, flags);
+
+    if (!new_slab) {
+        order = oo_order(slab_cache->min);
+        flags = 0;
+        if (order)
+            flags |= __GFP_COMP;
+        new_slab = alloc_pages(order, flags);
+    }
 
     if (!new_slab)
         return 0;
 
     SetPageSlab(new_slab);
+
 
     new_slab->freelist = (void*)ALIGN((uintptr_t)new_slab + sizeof(struct page),
                                       slab_cache->align);
@@ -114,16 +142,27 @@ static int allocate_slab(struct kmem_cache* slab_cache)
     new_slab->inuse = 0;
     new_slab->frozen = 0;
 
-    uint8_t* page_end = (uint8_t*)new_slab + (PAGE_SIZE << new_slab->private);
+    struct page* page = new_slab;
+    uint8_t* page_end = (uint8_t*)page + PAGE_SIZE;
     void *p, *next;
-    int idx;
-    for (idx = 0, p = new_slab->freelist;
-         idx < new_slab->objects - 1 && (uint8_t*)p < page_end; idx++) {
-        next = p + slab_cache->size;
-        set_freepointer(slab_cache, p, next);
-        p = next;
+    void* start = new_slab->freelist;
+
+    size_t nr_pages = 1 << order;
+    while (nr_pages--) {
+        p = start;
+        next = start + slab_cache->size;
+
+        for (; (uint8_t*)next < page_end; p = next, next += slab_cache->size)
+            set_freepointer(slab_cache, p, next);
+
+        page = (struct page*)page_end;
+        page_end += PAGE_SIZE;
+        start = (nr_pages == 1)
+                    ? NULL
+                    : (void*)ALIGN((uintptr_t)page + sizeof(struct page),
+                                   slab_cache->align);
+        set_freepointer(slab_cache, p, start);
     }
-    set_freepointer(slab_cache, p, NULL);
 
 
 
@@ -158,7 +197,7 @@ static void create_boot_cache(struct kmem_cache* s,
     INIT_LIST_HEAD(&s->node->partial);
 }
 
-void* kmem_cache_alloc(struct kmem_cache* cachep)
+void* kmem_cache_alloc(struct kmem_cache* cachep, gfp_t flags)
 {
     if (!cachep)
         return NULL;
@@ -182,7 +221,16 @@ found_object:
     object_addr = slab->freelist;
     slab->freelist = get_freepointer(cachep, object_addr);
     slab->inuse++;
+
+    if (flags & __GFP_ZERO)
+        mem_set(object_addr, 0, cachep->object_size);
+
     return object_addr;
+}
+
+void* kmem_cache_zalloc(struct kmem_cache* cachep, gfp_t flags)
+{
+    return kmem_cache_alloc(cachep, flags | __GFP_ZERO);
 }
 
 void kmem_cache_free(struct kmem_cache* cachep, void* objp)
@@ -190,18 +238,22 @@ void kmem_cache_free(struct kmem_cache* cachep, void* objp)
     if (!cachep || !objp)
         return;
 
-    struct page* slab = get_page_from_ptr(objp);
-    if (slab->slab_cache != cachep)
+    struct page* page = get_page_from_ptr(objp);
+    if (PageCompound(page))
+        page = get_compound_head(page);
+
+    if (page->slab_cache != cachep)
         return;
 
-    set_freepointer(cachep, objp, slab->freelist);
-    slab->freelist = objp;
-    slab->inuse--;
+    set_freepointer(cachep, objp, page->freelist);
+    page->freelist = objp;
+    page->inuse--;
 
-slab_empty:
-    if (slab->inuse == 0 && cachep->node->nr_partial >= cachep->min_partial) {
-        list_del_init(&slab->slab_list);
-        free_pages(slab, oo_order(cachep->oo));
+
+    /* slab empty */
+    if (page->inuse == 0 && cachep->node->nr_partial >= cachep->min_partial) {
+        list_del_init(&page->slab_list);
+        free_pages(page, oo_order(cachep->oo));
         cachep->node->nr_partial--;
     }
 }
@@ -216,10 +268,7 @@ struct kmem_cache* kmem_cache_create(const char* name,
     else if ((int32_t)align > MAX_ALIGN)
         align = MAX_ALIGN;
 
-    if (size + ALIGN(sizeof(struct page), align) > PAGE_SIZE)
-        return NULL;
-
-    struct kmem_cache* s = kmem_cache_alloc(&boot_kmem_cache);
+    struct kmem_cache* s = kmem_cache_zalloc(&boot_kmem_cache, 0);
 
     if (!s)
         return NULL;
@@ -246,7 +295,7 @@ struct kmem_cache* kmem_cache_create(const char* name,
     s->oo = oo_make(0, s->size);
     s->min = oo_make(0, s->size);
 
-    s->node = kmem_cache_alloc(&boot_kmem_cache_node);
+    s->node = kmem_cache_zalloc(&boot_kmem_cache_node, 0);
 
     if (!s->node) {
         kmem_cache_free(&boot_kmem_cache, s);
@@ -300,7 +349,7 @@ void slabinfo(void)
 static inline void* kmalloc_large(size_t size)
 {
     uint32_t order = order_for_request(size + sizeof(struct page));
-    return (void*)(alloc_pages(order) + 1);
+    return (void*)(alloc_pages(order, 0) + 1);
 }
 
 
@@ -332,13 +381,47 @@ static inline uint32_t kmalloc_index(size_t size)
         return 10;
     if (size <= 2 * 1024)
         return 11;
+    if (size <= 4 * 1024)
+        return 12;
+    if (size <= 8 * 1024)
+        return 13;
+    if (size <= 16 * 1024)
+        return 14;
+    if (size <= 32 * 1024)
+        return 15;
+    if (size <= 64 * 1024)
+        return 16;
+    if (size <= 128 * 1024)
+        return 17;
+    if (size <= 256 * 1024)
+        return 18;
+    if (size <= 512 * 1024)
+        return 19;
+    if (size <= 1024 * 1024)
+        return 20;
+    if (size <= 2 * 1024 * 1024)
+        return 21;
+    if (size <= 4 * 1024 * 1024)
+        return 22;
+    if (size <= 8 * 1024 * 1024)
+        return 23;
+    if (size <= 16 * 1024 * 1024)
+        return 24;
+    if (size <= 32 * 1024 * 1024)
+        return 25;
+    if (size <= 64 * 1024 * 1024)
+        return 26;
 
+    // should not get here
     return -1;
 }
 
-void* kmalloc(size_t size)
+void* kmalloc(size_t size, gfp_t flags)
 {
     uint32_t index;
+
+    if (size > KMALLOC_MAX_SIZE)
+        return NULL;
 
     if (size > KMALLOC_MAX_CACHE_SIZE)
         return kmalloc_large(size);
@@ -348,7 +431,12 @@ void* kmalloc(size_t size)
     if (!index)
         return NULL;
 
-    return kmem_cache_alloc(kmalloc_caches[index]);
+    return kmem_cache_alloc(kmalloc_caches[index], flags);
+}
+
+void* kzmalloc(size_t size, gfp_t flags)
+{
+    return kmalloc(size, flags | __GFP_ZERO);
 }
 
 static inline uint32_t size_index_elem(uint32_t bytes)
@@ -392,7 +480,6 @@ struct kmem_cache* create_kmalloc_cache(const char* name, uint32_t size)
 static void new_kmalloc_cache(int idx)
 {
     const char* name = kmalloc_info[idx].name;
-
     kmalloc_caches[idx] = create_kmalloc_cache(name, kmalloc_info[idx].size);
 }
 
@@ -421,16 +508,14 @@ void kfree(const void* x)
 
     page = get_page_from_ptr(object);
 
-    // if (PageCompound(page))
-    // page = get_compound_head(page);
-
-    // FIXME: we should use a flag to tell if the page is buddy alloc or
-    // slab alloc. (Also, may include compound page for better
-    // management and larger kmalloc size)
+    bool compound = PageCompound(page);
+    if (compound)
+        page = get_compound_head(page);
 
     // if it's buddy system allocated.
     if (!PageSlab(page)) {
-        free_pages(page, page->private);
+        size_t order = compound ? page->compound_order : page->private;
+        free_pages(page, order);
         return;
     }
 
