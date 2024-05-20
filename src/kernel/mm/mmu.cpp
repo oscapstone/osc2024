@@ -82,7 +82,7 @@ void map_kernel_as_normal(uint64_t kernel_start, uint64_t kernel_end) {
 
   PMD->walk(
       KERNEL_SPACE, PMD_LEVEL, mm_page.start(), mm_page.end(), PMD_LEVEL,
-      [](auto& entry, auto, auto) { entry.AttrIdx = MAIR_NORMAL_NOCACHE; });
+      [](auto& entry, auto, auto) { entry.AttrIdx = MAIR_IDX_NORMAL_NOCACHE; });
   PMD->walk(KERNEL_SPACE, PMD_LEVEL, kernel_start, kernel_end, PMD_LEVEL,
             [](auto& entry, auto, auto) { entry.RDONLY = true; });
   PMD->traverse([](auto& entry, auto, auto) { entry.PXN = true; });
