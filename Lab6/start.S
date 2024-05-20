@@ -21,8 +21,8 @@ setup_tcr_el1:
     )
     msr mair_el1, x0
 
-    mov x0, 0 // PGD's page frame at 0x0
-    mov x1, 0x1000 // PUD's page frame at 0x1000
+    mov x0, 0x1000 // PGD's page frame at 0x1000
+    mov x1, 0x2000 // PUD's page frame at 0x2000
 
     ldr x2, = BOOT_PGD_ATTR
     orr x2, x1, x2 // combine the physical address of next level page with attribute.
@@ -37,8 +37,10 @@ setup_tcr_el1:
     str x3, [x1, 8] // 2nd 1GB mapped by the 2nd entry of PUD
 
     msr ttbr0_el1, x0 // load PGD to the bottom translation-based register.
+    msr ttbr1_el1, x0 // also load PGD to the upper translation based register.
 
-    // bl do_something
+    mov sp, 0x3c000000
+    bl three_level_translation_init
 
     mrs x2, sctlr_el1
     orr x2 , x2, 1
@@ -46,7 +48,6 @@ setup_tcr_el1:
 
     ldr x2,= boot_rest
     br x2
-    //bl      core_timer_enable
 
 boot_rest:
     mrs     x1, mpidr_el1 //get cpu num

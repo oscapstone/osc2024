@@ -71,9 +71,9 @@ void main(char* dtb)
     el = el >> 2;
     thread_init();
     for(int i=0;i<5;i++){
-        create_thread(foo, 2);
+        create_thread(foo, 4);
     }
-    //create_thread(test_svc, 3);
+    // create_thread(test_svc, 3);
 
     // create_thread(foo, 4);
     // create_thread(foo, 4);

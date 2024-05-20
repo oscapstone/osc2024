@@ -10,7 +10,7 @@
 #define PD_TABLE 0b11
 #define PD_BLOCK 0b01
 #define PD_ACCESS (1 << 10)
+#define PD_KERNEL_USER_ACCESS (1 << 6)
 #define BOOT_PGD_ATTR PD_TABLE
 #define BOOT_PUD_ATTR (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)
 
-#define PHYS_TO_VIRT(x)   (x + 0xffff000000000000)
