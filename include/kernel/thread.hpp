@@ -3,6 +3,7 @@
 #include "ds/list.hpp"
 #include "ds/mem.hpp"
 #include "mm/mm.hpp"
+#include "mm/mmu.hpp"
 #include "sched.hpp"
 #include "signal.hpp"
 #include "util.hpp"
@@ -30,6 +31,7 @@ struct Kthread : ListItem {
   Mem kernel_stack, user_text, user_stack;
   KthreadItem* item;
   Signal signal;
+  PT* el0_pgd;
 
  private:
   Kthread();

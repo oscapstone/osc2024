@@ -2,6 +2,7 @@
 
 #include "io.hpp"
 #include "mm/page.hpp"
+#include "sched.hpp"
 
 void PT_Entry::print() const {
   if (UXN)
@@ -129,10 +130,5 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   PUD->entries[0].set_table(PMD);
   PUD->entries[1].PXN = true;
 
-  asm volatile(
-      "dsb ISH\n"         // ensure write has completed
-      "tlbi VMALLE1IS\n"  // invalidate all TLB entries
-      "dsb ISH\n"         // ensure completion of TLB invalidatation
-      "isb\n"             // clear pipeline
-  );
+  reload_tlb();
 }

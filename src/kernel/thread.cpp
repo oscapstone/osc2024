@@ -47,7 +47,8 @@ Kthread::Kthread()
       status(KthreadStatus::kReady),
       exit_code(0),
       item(new KthreadItem(this)),
-      signal{this} {
+      signal{this},
+      el0_pgd{nullptr} {
   signal.setall([](int) {
     klog("kill init cause reboot!\n");
     reboot();
@@ -65,7 +66,8 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
       exit_code(0),
       kernel_stack(KTHREAD_STACK_SIZE, true),
       item(new KthreadItem(this)),
-      signal{this} {
+      signal{this},
+      el0_pgd(new PT) {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
   add_list(this);
@@ -80,7 +82,9 @@ Kthread::Kthread(const Kthread& o)
       user_text(o.user_text),
       user_stack(o.user_stack),
       item(new KthreadItem(this)),
-      signal{this, o.signal} {
+      signal{this, o.signal},
+      // TODO: copy PGD
+      el0_pgd(o.el0_pgd) {
   fix(o, &regs, sizeof(regs));
   fix(o, kernel_stack);
   fix(o, user_stack);

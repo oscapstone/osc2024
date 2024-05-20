@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mm/mmu.hpp"
 #include "util.hpp"
 struct Kthread;
 
@@ -12,9 +13,11 @@ struct __attribute__((__packed__)) Regs {
 
 extern "C" {
 // sched.S
-void switch_to_regs(Regs* prev, Regs* next, Kthread* nthread);
+void switch_to_regs(Regs* prev, Regs* next, Kthread* nthread, PT* pgd);
 void save_regs(Regs* r);
-void load_regs(Regs* r, Kthread* nthread);
+void load_regs(Regs* r, Kthread* nthread, PT* pgd);
+void load_tlb(PT* pgd);
+void reload_tlb();
 }
 
 void switch_to(Kthread* prev, Kthread* next);
