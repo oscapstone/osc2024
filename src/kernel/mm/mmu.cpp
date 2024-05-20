@@ -58,7 +58,8 @@ PageTableEntry& PageTable::walk(uint64_t start, int level, uint64_t va_start,
 }
 
 void PageTable::walk(uint64_t start, int level, uint64_t va_start,
-                     uint64_t va_end, int va_level, CB cb_entry) {
+                     uint64_t va_end, int va_level, CB cb_entry,
+                     void* context) {
   va_start = align<PAGE_SIZE, false>(va_start);
   va_end = align<PAGE_SIZE>(va_end);
   while (va_start % ENTRY_SIZE[va_level] != 0 or
@@ -66,11 +67,12 @@ void PageTable::walk(uint64_t start, int level, uint64_t va_start,
     va_level++;
   for (auto it = va_start; it < va_end; it += ENTRY_SIZE[va_level]) {
     auto& entry = walk(start, level, it, va_level);
-    cb_entry(entry, it, va_level);
+    cb_entry(context, entry, it, va_level);
   }
 }
 
-void PageTable::traverse(uint64_t start, int level, CB cb_entry, CB cb_table) {
+void PageTable::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
+                         void* context) {
   auto nxt_start = start;
   auto nxt_level = level + 1;
   for (uint64_t idx = 0; idx < TABLE_SIZE_4K; idx++) {
@@ -78,23 +80,23 @@ void PageTable::traverse(uint64_t start, int level, CB cb_entry, CB cb_table) {
     switch (entry.type) {
       case PD_TABLE:
         if (cb_table) {
-          cb_table(entry, nxt_start, nxt_level);
+          cb_table(context, entry, nxt_start, nxt_level);
         } else {
           entry.table()->traverse(nxt_start, nxt_level, cb_entry, cb_table);
         }
         break;
       case PD_BLOCK:
       case PD_ENTRY:
-        cb_entry(entry, nxt_start, level);
+        cb_entry(context, entry, nxt_start, level);
         break;
     }
     nxt_start += ENTRY_SIZE[level];
   }
 }
 
-void PageTable::print(uint64_t start, int level, const char* name) {
+void PageTable::print(const char* name, uint64_t start, int level) {
   kprintf("===== %s ===== \n", name);
-  traverse(start, level, [](auto& entry, auto start, auto level) {
+  traverse(start, level, [](auto, auto entry, auto start, auto level) {
     kprintf("%lx ~ %lx: ", start, start + ENTRY_SIZE[level]);
     entry.print();
   });
@@ -113,15 +115,17 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   };
   auto PMD = new PageTable(PMD_entry, PMD_LEVEL);
 
-  PMD->walk(
-      KERNEL_SPACE, PMD_LEVEL, mm_page.start(), mm_page.end(), PMD_LEVEL,
-      [](auto& entry, auto, auto) { entry.AttrIdx = MAIR_IDX_NORMAL_NOCACHE; });
+  PMD->walk(KERNEL_SPACE, PMD_LEVEL, mm_page.start(), mm_page.end(), PMD_LEVEL,
+            [](auto, auto entry, auto, auto) {
+              entry.AttrIdx = MAIR_IDX_NORMAL_NOCACHE;
+            });
 
   PMD->walk(KERNEL_SPACE, PMD_LEVEL, (uint64_t)ktext_beg, (uint64_t)ktext_end,
-            PMD_LEVEL, [](auto& entry, auto, auto) { entry.RDONLY = true; });
+            PMD_LEVEL,
+            [](auto, auto entry, auto, auto) { entry.RDONLY = true; });
 
   PMD->traverse(KERNEL_SPACE, PMD_LEVEL,
-                [](auto& entry, auto, auto) { entry.PXN = true; });
+                [](auto, auto entry, auto, auto) { entry.PXN = true; });
 
   auto PUD = (PageTable*)__upper_PUD;
   PUD->entries[0].set_table(PMD);

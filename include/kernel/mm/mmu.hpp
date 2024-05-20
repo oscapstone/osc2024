@@ -107,22 +107,23 @@ struct PageTable {
   ~PageTable();
   PageTableEntry& walk(uint64_t start, int level, uint64_t va_start,
                        int va_level);
-  using CB = void(PageTableEntry& entry, uint64_t start, int level);
+  using CB = void(void*, PageTableEntry& entry, uint64_t start, int level);
   void walk(uint64_t start, int level, uint64_t va_start, uint64_t va_end,
-            int va_level, CB cb_entry);
+            int va_level, CB cb_entry, void* context = nullptr);
   template <typename T, typename U>
-  void walk(T va_start, U va_end, CB cb_entry) {
+  void walk(T va_start, U va_end, CB cb_entry, void* context = nullptr) {
     walk(USER_SPACE, PGD_LEVEL, (uint64_t)va_start, (uint64_t)va_end, PTE_LEVEL,
-         cb_entry);
+         cb_entry, context);
   }
 
-  void traverse(uint64_t start, int level, CB cb_entry, CB cb_table = nullptr);
-  void traverse(CB cb_entry, CB cb_table = nullptr) {
-    return traverse(USER_SPACE, PGD_LEVEL, cb_entry, cb_table);
+  void traverse(uint64_t start, int level, CB cb_entry, CB cb_table = nullptr,
+                void* context = nullptr);
+  void traverse(CB cb_entry, CB cb_table = nullptr, void* context = nullptr) {
+    return traverse(USER_SPACE, PGD_LEVEL, cb_entry, cb_table, context);
   }
 
-  void print(uint64_t start = USER_SPACE, int level = PGD_LEVEL,
-             const char* name = "PageTable");
+  void print(const char* name = "PageTable", uint64_t start = USER_SPACE,
+             int level = PGD_LEVEL);
 };
 
 static_assert(sizeof(PageTable) == PAGE_SIZE);
