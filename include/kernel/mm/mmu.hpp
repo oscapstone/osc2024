@@ -14,15 +14,20 @@ constexpr uint64_t ADDRESS_SPACE_TAG = 0xFFFF000000000000;
 constexpr uint64_t KERNEL_SPACE = 0xFFFF000000000000;
 constexpr uint64_t USER_SPACE = 0;
 
+template <typename T>
+inline uint64_t lower_addr(T x) {
+  return (uint64_t)x & (~ADDRESS_SPACE_TAG);
+}
+
 template <typename T,
           typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
 inline R va2pa(T x) {
-  return (R)((uint64_t)x - KERNEL_SPACE);
+  return (R)(lower_addr(x));
 }
 template <typename T,
           typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
 inline R pa2va(T x) {
-  return (R)((uint64_t)x + KERNEL_SPACE);
+  return (R)(lower_addr(x) | KERNEL_SPACE);
 }
 
 template <typename T>
