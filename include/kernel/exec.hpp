@@ -5,7 +5,10 @@
 #include "string.hpp"
 #include "util.hpp"
 
-constexpr uint64_t USER_STACK_SIZE = PAGE_SIZE;
+constexpr uint64_t USER_TEXT_START = 0;
+constexpr uint64_t USER_STACK_SIZE = PAGE_SIZE * 4;
+constexpr uint64_t USER_STACK_START = 0xffffffffb000;
+constexpr uint64_t USER_STACK_END = 0xfffffffff000;
 
 extern "C" {
 // exec.S

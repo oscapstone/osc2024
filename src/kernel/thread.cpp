@@ -79,15 +79,11 @@ Kthread::Kthread(const Kthread& o)
       status(o.status),
       exit_code(0),
       kernel_stack(o.kernel_stack),
-      user_text(o.user_text),
-      user_stack(o.user_stack),
       item(new KthreadItem(this)),
       signal{this, o.signal},
-      // TODO: copy PGD
-      el0_pgd(o.el0_pgd) {
+      el0_pgd(o.el0_pgd->copy()) {
   fix(o, &regs, sizeof(regs));
   fix(o, kernel_stack);
-  fix(o, user_stack);
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
   add_list(this);
 }
@@ -95,6 +91,7 @@ Kthread::Kthread(const Kthread& o)
 Kthread::~Kthread() {
   del_list(this);
   delete item;
+  delete el0_pgd;
 }
 
 void Kthread::fix(const Kthread& o, Mem& mem) {
@@ -103,31 +100,30 @@ void Kthread::fix(const Kthread& o, Mem& mem) {
 
 void Kthread::fix(const Kthread& o, void* faddr, uint64_t fsize) {
   kernel_stack.fix(o.kernel_stack, faddr, fsize);
-  user_text.fix(o.user_text, faddr, fsize);
-  user_stack.fix(o.user_stack, faddr, fsize);
 }
 
 void* Kthread::fix(const Kthread& o, void* ptr) {
   ptr = kernel_stack.fix(o.kernel_stack, ptr);
-  ptr = user_text.fix(o.user_text, ptr);
-  ptr = user_stack.fix(o.user_stack, ptr);
   return ptr;
 }
 
-int Kthread::alloc_user_text_stack(uint64_t text_size, uint64_t stack_size) {
-  user_text.dealloc();
-  user_stack.dealloc();
+int Kthread::alloc_user_pages(uint64_t addr, uint64_t size, ProtFlags prot) {
+  // TODO: handle address overlap
+  el0_pgd->walk(
+      addr, addr + size,
+      [](auto context, PT_Entry& entry, auto start, auto level) {
+        auto prot = cast_enum<ProtFlags>(context);
+        entry.alloc();
+        if (not has(prot, ProtFlags::WRITE))
+          entry.AP = AP::USER_RO;
 
-  if (not user_text.alloc(text_size, false)) {
-    klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
-         tid, text_size);
-    return -1;
-  }
+        klog("alloc_user_pages:  0x%016lx ~ 0x%016lx", start,
+             start + ENTRY_SIZE[level]);
+        entry.print();
+      },
+      (void*)prot);
 
-  if (not user_stack.alloc(stack_size, true)) {
-    klog("%s: can't alloc user_stack / size = %lx\n", __func__, stack_size);
-    return -1;
-  }
+  reload_tlb();
 
   return 0;
 }

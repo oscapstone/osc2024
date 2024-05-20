@@ -1,9 +1,7 @@
 #include "exec.hpp"
 
-#include "ds/mem.hpp"
 #include "fs/initramfs.hpp"
 #include "io.hpp"
-#include "string.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -30,19 +28,28 @@ int exec(ExecCtx* ctx) {
 
   auto file = hdr->file();
   auto thread = current_thread();
-  if (thread->alloc_user_text_stack(file.size(), USER_STACK_SIZE)) {
+  // TODO: RO TEXT
+  if (thread->alloc_user_pages(USER_TEXT_START, file.size(), ProtFlags::RWX)) {
+    klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
+         thread->tid, file.size());
+    return -1;
+  }
+  if (thread->alloc_user_pages(USER_STACK_START, USER_STACK_SIZE,
+                               ProtFlags::RW)) {
+    klog("%s: can't alloc user_stack for thread %d / size = %lx\n", __func__,
+         thread->tid, USER_STACK_SIZE);
     return -1;
   }
 
   delete ctx;
 
-  memcpy(thread->user_text.addr, file.data(), file.size());
-  thread->reset_kernel_stack();
-  thread->user_stack.clean();
+  // pa2va((PT*)read_sysreg(TTBR0_EL1))->print("TTBR0_EL1");
 
-  klog("exec_user_prog: text %p stack %p\n", thread->user_text.addr,
-       thread->user_stack.end(0x10));
-  exec_user_prog(thread->user_text.addr, thread->user_stack.end(0x10),
+  memcpy((void*)USER_TEXT_START, file.data(), file.size());
+  memzero((void*)USER_STACK_START, (void*)USER_STACK_END);
+  thread->reset_kernel_stack();
+
+  exec_user_prog((void*)USER_TEXT_START, (void*)USER_STACK_END,
                  thread->regs.sp);
 
   return 0;

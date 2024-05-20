@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "arm.hpp"
+#include "ds/bitmask_enum.hpp"
 #include "mm/mm.hpp"
 #include "util.hpp"
 
@@ -53,6 +54,16 @@ constexpr uint64_t PGD_ENTRY_SIZE = PUD_ENTRY_SIZE * TABLE_SIZE_4K;
 constexpr uint64_t ENTRY_SIZE[] = {PGD_ENTRY_SIZE, PUD_ENTRY_SIZE,
                                    PMD_ENTRY_SIZE, PTE_ENTRY_SIZE};
 constexpr int PGD_LEVEL = 0, PUD_LEVEL = 1, PMD_LEVEL = 2, PTE_LEVEL = 3;
+
+enum class ProtFlags {
+  NONE = 0,
+  READ = 1 << 0,
+  WRITE = 1 << 1,
+  EXEC = 1 << 2,
+  RW = READ | WRITE,
+  RWX = READ | WRITE | EXEC,
+  MARK_AS_BITMASK_ENUM(EXEC),
+};
 
 enum class AP : uint64_t {
   KERNEL_RW = 0b00,
@@ -157,6 +168,9 @@ struct PT_Entry {
   void set_table(PT* table) {
     set_addr((void*)table, PD_TABLE);
   }
+
+  void alloc();
+  PT_Entry copy() const;
 };
 static_assert(sizeof(PT_Entry) == sizeof(uint64_t));
 

@@ -1,6 +1,5 @@
 #include "mm/mmu.hpp"
 
-#include "ds/bitmask_enum.hpp"
 #include "io.hpp"
 #include "mm/page.hpp"
 #include "sched.hpp"
@@ -14,6 +13,21 @@ void PT_Entry::print() const {
     kprintf("AF ");
   kprintf("%s %02lb addr 0x%08lx Attr %d type %s %s\n", apstr(), Underlying(AP),
           (uint64_t)addr(), AttrIdx, typestr(), levelstr());
+}
+
+void PT_Entry::alloc() {
+  set_addr(kmalloc(PAGE_SIZE), PD_TABLE);
+}
+
+PT_Entry PT_Entry::copy() const {
+  auto new_entry = *this;
+  if (isTable()) {
+    new_entry.set_table(table()->copy());
+  } else if (isEntry()) {
+    // TODO: copy on write
+    panic("copy entry not implemented");
+  }
+  return new_entry;
 }
 
 PT::PT() {
@@ -34,6 +48,22 @@ PT::PT(PT_Entry entry, int level) {
     entries[i] = entry;
     entry.output_address += offset;
   }
+}
+
+PT* PT::copy() {
+  return new PT(this);
+}
+
+PT::PT(PT* o) {
+  // TODO: copy on write
+  for (uint64_t i = 0; i < TABLE_SIZE_4K; i++) {
+    entries[i] = o->entries[i].copy();
+  }
+}
+
+PT::~PT() {
+  this->traverse([](auto, auto entry, auto, auto) { kfree(entry.addr()); },
+                 [](auto, auto entry, auto, auto) { delete entry.table(); });
 }
 
 PT_Entry& PT::walk(uint64_t start, int level, uint64_t va_start, int va_level) {
