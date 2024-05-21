@@ -6,6 +6,7 @@
 #include "mbox.h"
 #include "mmu_regs.h"
 #include "mmu.h"
+#include "utils.h"
 
 // extern void enable_irq();
 // extern void disable_irq();
@@ -14,6 +15,9 @@
 extern thread * thread_pool[];
 extern thread * get_current();
 extern void fork_return();
+
+char * prog_gb;
+int sz_gb;
 
 struct trapframe {
     unsigned long x[32]; // x0-x30, 16bytes align (x[31] dummy)
@@ -70,7 +74,7 @@ void exec(trapframe * sp){
 
     unsigned long user_code = 0x0;
     unsigned long sp_el0 = 0xfffffffff000;
-    char* pgd = allocate_page(4096) + VT_OFFSET;
+    char* pgd = allocate_page(4096);
     if(((unsigned long)(pgd)) < VT_OFFSET)
         pgd += VT_OFFSET;
 
@@ -79,9 +83,12 @@ void exec(trapframe * sp){
         ((char*) (get_current() -> regs.pgd)) [i] = 0;
     }
     
-    //get_current() -> sp_el0 = sp_el0;
+    //get_current() -> sp_el0 is the kernel address of sp_el0;
+    sz_gb = sz;
+    prog_gb = new_program_pos - VT_OFFSET;
 
     //map stack and user_program
+    //map_pages(get_current() -> regs.pgd, 0x3C000000L, 0x3000000L, 0x3C000000L);
     map_pages(get_current() -> regs.pgd, 0xffffffffb000, 0x4000, get_current() -> sp_el0 - VT_OFFSET);
     map_pages(get_current() -> regs.pgd, 0x0, sz, new_program_pos - VT_OFFSET);
 
@@ -104,14 +111,6 @@ void exec(trapframe * sp){
 void exit(trapframe * sp){
     int status = sp -> x[0]; //no use
     thread_exit(); //simply go to exit
-
-    /* 
-    //ensure eret version:
-    thread * cur = get_current();
-    cur -> state = -1; //end
-    cur -> priority = 999;
-    update_min_priority();
-    */
 }
 
 void kill(trapframe * sp){
@@ -143,8 +142,15 @@ void uartwrite(trapframe *sp) {
 }
 
 void fork(trapframe *sp){
+    uart_int(get_current() -> pid);
+    newline();
     int pid;
-    thread * t = allocate_page(sizeof(thread));
+    char * temp = allocate_page(sizeof(thread));
+    if(((unsigned long)(temp)) < VT_OFFSET)
+        temp += VT_OFFSET;
+    
+    thread * t = (thread *) temp;
+
     for(int i=0; i< 64; i++){
         if(thread_pool[i] == 0){
             pid = i;
@@ -154,6 +160,7 @@ void fork(trapframe *sp){
             break;
         }
     }
+
     // memset 0 for the thread
     for(int i = 0; i< sizeof(thread); i++){
         ((char*)t)[i] = 0; 
@@ -166,43 +173,65 @@ void fork(trapframe *sp){
     t -> sp_el1 = ((unsigned long)allocate_page(4096)) + 4096;// sp start from bottom
     t -> sp_el0 = ((unsigned long)allocate_page(4096)) + 4096;
     t -> preempt = 1;
+
+    t -> sp_el1 = ensure_virtual(t -> sp_el1);
+    t -> sp_el0 = ensure_virtual(t -> sp_el0);
+    
     // t -> funct = fork_return;
 
     // copy callee registers
     for(int i = 0; i< sizeof(struct registers); i++){
         ((char*)(&(t -> regs)))[i] = ((char*)(&(get_current() -> regs)))[i]; 
     }
-    
+
     t -> regs.lr = fork_return; //need to load all and eret for child trapframe
 
     //update user and kernel stack pointer
     unsigned long sp_offset = (char *)(get_current() -> sp_el1) - (char*)sp; //bottom of stack minus top of trapframe(top of stack)
-    unsigned long sp_el0_offset = (char *)get_current()->sp_el0 - (char *)sp->sp_el0; //bottom of stack minus top of user stack saved by trapframe
+    unsigned long sp_el0_offset = (char *)0xfffffffff000 - (char *)sp->sp_el0; //bottom of stack minus top of user stack saved by trapframe
 
-    //copy both stacks
-    for(int i = 1; i<= sp_offset; i++){
+    //kernel stack as usual
+    for(int i = 1; i <= sp_offset; i++){
         *((char *)(t -> sp_el1 - i)) = *((char *)(get_current() -> sp_el1 - i));
     }
-   
+
+    //user stack: get_current()->sp_el0 is kernel address
     for(int i = 1; i <= sp_el0_offset; i++){
         *((char *)(t -> sp_el0 - i)) = *((char *)(get_current() -> sp_el0 - i));
     }
 
-    // modify sp for load all
+    // modify sp for load all (I think is the same)
     t -> regs.sp = t -> sp_el1 - sp_offset; //set to the same position: top of the trapframe
-    ((trapframe*)(t -> regs.sp)) -> sp_el0 = t -> sp_el0 - sp_el0_offset; //user stack point to the same position (copied trapframe)
+
+    //user stack need modify
+    ((trapframe*)(t -> regs.sp)) -> sp_el0 = sp -> sp_el0; //user stack point to the same position (copied trapframe)
 
     ((trapframe*)(t -> regs.sp)) -> x[0] = 0; //return 0 for child trapframe
+
+    // set pgd
+    t -> regs.pgd = ensure_virtual(allocate_page(4096));
+    memset(t -> regs.pgd, 4096);
+
+    map_pages(t -> regs.pgd, 0x3C000000L, 0x3000000L, 0x3C000000L);
+    map_pages(t -> regs.pgd, 0xffffffffb000, 0x4000, t -> sp_el0 - VT_OFFSET);
+    map_pages(t -> regs.pgd, 0x0, sz_gb, prog_gb);
+
     thread_pool[pid] = t;
-    update_min_priority();
     sp -> x[0] = pid;
 }
 
 void sys_mbox_call(trapframe * sp){
     unsigned char ch = (unsigned char) sp -> x[0];
     unsigned int * mbox = (unsigned int *) sp -> x[1];
-    //lab1 mbox call
-    sp -> x[0] = mbox_call(ch, mbox);
+    unsigned int * temp = ensure_virtual(allocate_page(4096));
+    for(int i=0; i<144;i++){
+        ((char *)temp)[i] = ((char *)mbox)[i]; 
+    }
+
+    sp -> x[0] = mbox_call(ch, temp);
+    for(int i=0; i<144;i++){
+        ((char *)mbox)[i] = ((char *)temp)[i]; 
+    }
 }
 
 void sys_call(trapframe * sp){
@@ -245,14 +274,15 @@ void sync_exception_entry(unsigned long esr_el1, unsigned long elr_el1, trapfram
     }
     else{
         /*
-        just for debug (lab3 exception handler)
-        0b100101
-        Data Abort taken without a change in Exception level.
-        Used for MMU faults generated by data accesses, alignment faults 
-        other than those caused by Stack Pointer misalignment, 
-        and synchronous External aborts, including synchronous 
-        parity or ECC errors. Not used for debug-related exceptions.
+        0b100100
+        Data Abort from a lower Exception level.
+        Used for MMU faults generated by data accesses, 
+        alignment faults other than those caused by Stack Pointer misalignment, 
+        and synchronous External aborts, 
+        including synchronous parity or ECC errors.
         */
+        split_line();
+        uart_puts("[ERROR] An exception occured!\n");
         split_line();
         uart_puts("In exception\n");
         unsigned long spsrel1, elrel1, esrel1;

@@ -53,8 +53,14 @@ void walk(unsigned long * pgd, unsigned long va, unsigned long pa){
     }
 }
 
-void map_pages(unsigned long * pgd, unsigned long va, int size, unsigned long pa){
-    for(int i = 0; i < size; i+=4096){
+void map_pages(unsigned long * pgd, unsigned long va, unsigned long size, unsigned long pa){
+    for(unsigned long i = 0; i < size; i+=4096){
         walk(pgd, va + i, pa + i);
     }
+}
+
+unsigned long ensure_virtual(unsigned long addr){
+    if(addr < VT_OFFSET)
+        addr += VT_OFFSET;
+    return addr;
 }
