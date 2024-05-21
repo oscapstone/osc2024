@@ -7,11 +7,11 @@
 #include "mbox.h"
 #include "bcm2837/rpi_mbox.h"
 
+// External references to the current thread and the thread array
 extern thread_t *curr_thread;
 extern thread_t *threads[];
 
-// Copy n bytes of memory from src to dest.
-// MEMCPY(void *dest, const void *src, size_t n)
+// Macro to copy n bytes of memory from src to dest
 #define MEMCPY(dest, src, n)                          \
 	do                                                \
 	{                                                 \
@@ -21,14 +21,28 @@ extern thread_t *threads[];
 		}                                             \
 	} while (0)
 
-// the function with sys_ prefix is the system call function that will be called by exception handler
-// the function without sys_ prefix is the wrapper function that will be called by user program
+// System call functions prefixed with sys_ are called by the exception handler
+// Wrapper functions without the sys_ prefix are called by the user program
 
+/**
+ * @brief Get the process ID of the current thread.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @return The process ID of the current thread.
+ */
 int sys_getpid(trapframe_t *tpf)
 {
 	return curr_thread->pid;
 }
 
+/**
+ * @brief Read from UART into a buffer.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param buf Buffer to store the read characters.
+ * @param size Number of characters to read.
+ * @return The number of characters read.
+ */
 size_t sys_uart_read(trapframe_t *tpf, char buf[], size_t size)
 {
 	char c;
@@ -40,6 +54,14 @@ size_t sys_uart_read(trapframe_t *tpf, char buf[], size_t size)
 	return size;
 }
 
+/**
+ * @brief Write a buffer to UART.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param buf Buffer containing characters to write.
+ * @param size Number of characters to write.
+ * @return The number of characters written.
+ */
 size_t sys_uart_write(trapframe_t *tpf, const char buf[], size_t size)
 {
 	for (int i = 0; i < size; i++)
@@ -49,6 +71,14 @@ size_t sys_uart_write(trapframe_t *tpf, const char buf[], size_t size)
 	return size;
 }
 
+/**
+ * @brief Load and execute a user program.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param name Name of the program to execute.
+ * @param argv Arguments to pass to the program.
+ * @return 0 on success, -1 on failure.
+ */
 int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 {
 	unsigned int filesize;
@@ -77,7 +107,6 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	curr_thread->name = filepath;
 	curr_thread->code = kmalloc(filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
-	// curr_thread->code = filedata;
 	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
 	tpf->elr_el1 = (uint64_t)curr_thread->code;
 	tpf->sp_el0 = (uint64_t)curr_thread->user_stack_base + USTACK_SIZE;
@@ -86,7 +115,7 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 }
 
 /**
- *  wrapper: run user task by curr_thread->code
+ * @brief Wrapper function to run the user task pointed to by curr_thread->code.
  */
 void run_user_task()
 {
@@ -102,7 +131,11 @@ void run_user_task()
 }
 
 /**
- * exec syscall in user space
+ * @brief User-space syscall to execute a program.
+ *
+ * @param name Name of the program to execute.
+ * @param argv Arguments to pass to the program.
+ * @return 0 on success, -1 on failure.
  */
 int exec(const char *name, char *const argv[])
 {
@@ -116,6 +149,12 @@ int exec(const char *name, char *const argv[])
 		: "x0", "x1", "x8");
 }
 
+/**
+ * @brief Fork the current process.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @return The child's PID in the parent, 0 in the child.
+ */
 int sys_fork(trapframe_t *tpf)
 {
 	lock_interrupt();
@@ -144,10 +183,9 @@ int sys_fork(trapframe_t *tpf)
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
 	store_context(get_current_thread_context());
-	// store_context(&(child->context));
 	DEBUG("child: 0x%x, parent: 0x%x\r\n", child, parent);
 
-	if (child->pid != curr_thread->pid) // process process
+	if (child->pid != curr_thread->pid) // Parent process
 	{
 		DEBUG("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
 		child->context = curr_thread->context;
@@ -156,7 +194,7 @@ int sys_fork(trapframe_t *tpf)
 		unlock_interrupt();
 		return child->pid;
 	}
-	else // child process
+	else // Child process
 	{
 		DEBUG("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
 		tpf = (trapframe_t *)((char *)tpf + (uint64_t)child->kernel_stack_base - (uint64_t)parent->kernel_stack_base); // move tpf
@@ -165,6 +203,11 @@ int sys_fork(trapframe_t *tpf)
 	}
 }
 
+/**
+ * @brief Wrapper function for fork syscall in user space.
+ *
+ * @return The child's PID in the parent, 0 in the child.
+ */
 int fork()
 {
 	int64_t pid;
@@ -176,14 +219,29 @@ int fork()
 		:
 		: "x8", "x0");
 
-	return 0;
+	return pid;
 }
 
+/**
+ * @brief Exit the current process.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param status Exit status.
+ * @return This function does not return.
+ */
 int sys_exit(trapframe_t *tpf, int status)
 {
 	thread_exit();
 }
 
+/**
+ * @brief Make a mailbox call.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param ch Mailbox channel.
+ * @param mbox Pointer to the mailbox buffer.
+ * @return Status code of the mailbox call.
+ */
 int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 {
 	lock_interrupt();
@@ -192,6 +250,11 @@ int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 	return status;
 }
 
+/**
+ * @brief Kernel function to fork the current process.
+ *
+ * @return The child's PID in the parent, 0 in the child.
+ */
 int kernel_fork()
 {
 	lock_interrupt();
@@ -211,21 +274,15 @@ int kernel_fork()
 	child->datasize = parent->datasize;
 	child->status = THREAD_READY;
 	child->code = parent->code;
-	// child->code = kmalloc(parent->datasize);
 	DEBUG("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
 	DEBUG("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
-	// MEMCPY(child->code, parent->code, parent->datasize);
-	DEBUG("fork child process, pid: %d, datasize: %d, code: 0x%x\r\n", child->pid, child->datasize, child->code);
 
 	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
 	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
-	// Because make a function call, so lr is the next instruction address
-	// When context switch, child process will start from the next instruction
 	store_context(get_current_thread_context());
-	// store_context(&(child->context));
 	DEBUG("child: 0x%x, parent: 0x%x\r\n", child, parent);
 
-	if (child->pid != curr_thread->pid) // process process
+	if (child->pid != curr_thread->pid) // Parent process
 	{
 		DEBUG("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
 		child->context = curr_thread->context;
@@ -234,13 +291,20 @@ int kernel_fork()
 		unlock_interrupt();
 		return child->pid;
 	}
-	else // child process
+	else // Child process
 	{
 		DEBUG("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
 		return 0;
 	}
 }
 
+/**
+ * @brief Kernel function to execute a program.
+ *
+ * @param name Name of the program to execute.
+ * @param argv Arguments to pass to the program.
+ * @return 0 on success, -1 on failure.
+ */
 int kernel_exec(const char *name, char *const argv[])
 {
 	unsigned int filesize;
@@ -272,11 +336,8 @@ int kernel_exec(const char *name, char *const argv[])
 	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d\r\n", name, curr_thread->code, filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
 
-	// curr_thread->code = filedata;
 	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
 
-	// add_timer_by_sec(1, adapter_schedule_timer, NULL);
-	// DEBUG("Start schedule timer after 1 sec\r\n");
 	curr_thread->context.lr = (uint64_t)run_user_task;
 	asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
 		"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
