@@ -5,8 +5,8 @@
 #include "stdint.h"
 
 #define MAX_PID 32768
-#define USTACK_SIZE 0x100000
-#define KSTACK_SIZE 0x100000
+#define USTACK_SIZE 0x10000
+#define KSTACK_SIZE 0x10000
 #define SIGNAL_MAX  64
 
 extern void  switch_to(void *curr_context, void *next_context);
@@ -62,6 +62,7 @@ typedef struct thread_struct
     char*            	name;                             	// Process name
 } thread_t;
 
+int8_t thread_code_can_free(thread_t *thread);
 void schedule_timer();
 void init_thread_sched();
 void _init_create_thread(char *name, int64_t pid, int64_t ppid, void *start);
@@ -73,7 +74,6 @@ void schedule();
 void thread_exit();
 int8_t has_child(thread_t *thread);
 thread_t *thread_create(void *start, char *name);
-int exec_thread(char *data, unsigned int filesize);
 void dump_run_queue();
 void recursion_run_queue(thread_t *root, int64_t level);
 void dump_child_thread(thread_t *thread);

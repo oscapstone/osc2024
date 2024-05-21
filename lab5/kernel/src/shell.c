@@ -394,47 +394,15 @@ int do_cmd_exec(int argc, char **argv)
         return -1;
     }
 
-    // thread_t *t = thread_create(c_filedata, filepath);
-    // t->code = kmalloc(c_filesize);
-    // t->datasize = c_filesize;
-    // t->context.lr = (uint64_t)t->code; // set return address to program if function call completes
-    // // copy file into code
-    // memcpy(t->code, c_filedata, c_filesize);
-    // eret to exception level 0
-    // if (kernel_fork() == 0)
-    // { // child process
-    lock_interrupt();
-        curr_thread->datasize = c_filesize;
-        curr_thread->code = kmalloc(c_filesize);
-        curr_thread->context.lr = (uint64_t)curr_thread->code; // set return address to program if function call completes
-        strcpy(curr_thread->name, filepath);
-        memcpy(curr_thread->code, c_filedata, c_filesize);
-        DEBUG("c_filedata: 0x%x\r\n", c_filedata);
-        DEBUG("child process, pid: %d\r\n", curr_thread->pid);
-        DEBUG("curr_thread->code: 0x%x\r\n", curr_thread->code);
-
-        asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
-            "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
-            "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-            "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process
-            "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-            ::"r"(&curr_thread->context),
-            "r"(curr_thread->context.lr), "r"(curr_thread->context.sp), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
-
-        unlock_interrupt();
-
-        asm("eret\n\t");
-    // }
-    // else
-    // {
-    //     while (1)
-    //     {
-    //         schedule();
-    //         // dump_run_queue();
-    //         // DEBUG("kshell while loop curr_thread->pid: %d\r\n", curr_thread->pid);
-    //     }
-    // }
-    // return 0;
+    if (kernel_fork() == 0)
+    { // child process
+        kernel_exec(filepath, NULL);
+    }
+    else
+    {
+       wait();
+    }
+    return 0;
 }
 
 int do_cmd_setTimeout(int argc, char **argv)

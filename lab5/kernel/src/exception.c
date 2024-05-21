@@ -184,43 +184,51 @@ void el0_sync_router(trapframe_t *tpf)
     // DEBUG("syscall_no: %d\r\n", syscall_no);
     // only work with GCC
     void *syscall_router[] = {&&__getpid_label, &&__uart_read_label, &&__uart_write_label, &&__exec_label,
-                              &&__fork_label, &&__exit_label, &&__mbox_call_label, &&__invalid_syscall_label};
+                              &&__fork_label, &&__exit_label, &&__mbox_call_label, &&__lock_interrupt, &&__unlock_interrupt, &&__invalid_syscall_label};
 
     goto *syscall_router[syscall_no];
 
 __getpid_label:
-    DEBUG("syscall_getpid\r\n");
-    tpf->x0 = syscall_getpid(tpf);
+    DEBUG("sys_getpid\r\n");
+    tpf->x0 = sys_getpid(tpf);
     return;
 
 __uart_read_label:
-    // DEBUG("syscall_uart_read\r\n");
-    tpf->x0 = syscall_uart_read(tpf, (char *)tpf->x0, tpf->x1);
+    // DEBUG("sys_uart_read\r\n");
+    tpf->x0 = sys_uart_read(tpf, (char *)tpf->x0, tpf->x1);
     return;
 
 __uart_write_label:
-    // DEBUG("syscall_uart_write\r\n");
-    tpf->x0 = syscall_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
+    // DEBUG("sys_uart_write\r\n");
+    tpf->x0 = sys_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
     return;
 
 __exec_label:
-    DEBUG("syscall_exec\r\n");
-    tpf->x0 = syscall_exec(tpf, (char *)tpf->x0, (char **)tpf->x1);
+    DEBUG("sys_exec\r\n");
+    tpf->x0 = sys_exec(tpf, (char *)tpf->x0, (char **)tpf->x1);
     return;
 
 __fork_label:
-    DEBUG("syscall_fork\r\n");
-    tpf->x0 = syscall_fork(tpf);
+    DEBUG("sys_fork\r\n");
+    tpf->x0 = sys_fork(tpf);
     return;
 
 __exit_label:
-    DEBUG("syscall_exit\r\n");
-    tpf->x0 = syscall_exit(tpf, tpf->x0);
+    DEBUG("sys_exit\r\n");
+    tpf->x0 = sys_exit(tpf, tpf->x0);
     return;
 
 __mbox_call_label:
-    DEBUG("syscall_mbox_call\r\n");
-    tpf->x0 = syscall_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
+    DEBUG("sys_mbox_call\r\n");
+    tpf->x0 = sys_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
+    return;
+
+__lock_interrupt:
+    lock_interrupt();
+    return;
+
+__unlock_interrupt:
+    unlock_interrupt();
     return;
 
 __invalid_syscall_label:

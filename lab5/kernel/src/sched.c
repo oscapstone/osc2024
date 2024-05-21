@@ -4,6 +4,7 @@
 #include "list.h"
 #include "stddef.h"
 #include "string.h"
+#include "syscall.h"
 #include "exception.h"
 #include "callback_adapter.h"
 #include "uart1.h"
@@ -12,9 +13,17 @@ struct list_head *run_queue;
 
 thread_t *threads[MAX_PID + 1];
 thread_t *curr_thread;
+extern char _start;
+extern char _end;
 
 static int64_t pid_history = 0;
 int8_t need_to_schedule = 0;
+
+static inline int8_t in_kernel_img_space(uint64_t addr)
+{
+	DEBUG("addr: 0x%x, _start: 0x%x, _end: 0x%x\n", addr, &_start, &_end);
+	return addr >= &_start && addr < &_end;
+}
 
 static inline thread_t *child_node_to_thread(child_node_t *node)
 {
@@ -28,11 +37,20 @@ static inline int free_thread(int64_t pid)
 		return -1;
 	}
 	thread_t *thread = threads[pid];
+	if (thread_code_can_free(thread))
+	{
+		kfree(thread->code);
+	}
 	kfree(thread->user_stack_base);
 	kfree(thread->kernel_stack_base);
 	kfree(thread);
 	threads[pid] = NULL;
 	return 0;
+}
+
+inline int8_t thread_code_can_free(thread_t *thread)
+{
+	return !in_kernel_img_space((uint64_t)thread->code);
 }
 
 void init_thread_sched()
@@ -47,8 +65,8 @@ void init_thread_sched()
 	set_current_thread_context(&(threads[0]->context));
 	thread_name = kmalloc(5);
 	strcpy(thread_name, "init");
-	curr_thread = thread_create(__init, thread_name);
-	curr_thread->code = __init;
+	curr_thread = thread_create(init, thread_name);
+	curr_thread->code = init;
 	curr_thread->datasize = 4000;
 	unlock_interrupt();
 }
@@ -84,68 +102,31 @@ void idle()
 
 void init()
 {
-	DEBUG("init process\n");
-
-	uint64_t sp, lr;
-	asm volatile(
-		"mov %0, sp\n"
-		"mov %1, lr\n"
-		: "=r"(sp), "=r"(lr));
-	DEBUG("pid: %d, user stack: 0x%x -> 0x%x, user_stack_base: 0x%x, &(curr_thread->user_stack_base): 0x%x\r\n", curr_thread->pid, sp, (uint64_t)curr_thread->user_stack_base + USTACK_SIZE, curr_thread->user_stack_base, &(curr_thread->user_stack_base));
-	DEBUG("sp: 0x%x, lr: 0x%x\r\n", sp, lr);
-	DEBUG("curr_thread->context.sp: 0x%x, curr_thread->context.lr: 0x%x\r\n", curr_thread->context.sp, curr_thread->context.lr);
+	// add_timer_by_sec(1, adapter_schedule_timer, NULL);
+	// DEBUG("Start schedule timer after 1 sec\r\n");
+	// curr_thread->context.lr = (uint64_t)__init;
+	// asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+	// 	"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
+	// 	"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+	// 	"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
+	// 	"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
+	// 	"eret\n\t" ::"r"(&curr_thread->context),
+	// 	"r"(curr_thread->context.lr), "r"(curr_thread->user_stack_base + USTACK_SIZE), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
 	while (1)
 	{
-		// int c_pid = wait();
-		// char *name = kmalloc(13);
-		char *name = "syscall.img";
-		// strcpy(name, "syscall.img");
-		DEBUG("init exec: %s\n", name);
-		asm volatile(
-			"mov x8, #3\n\t"
-			"mov x0, %0\n\t"
-			"svc 0\n\t"
-			:
-			: "r"(name) // 輸入操作數
-		);
-		// DEBUG("exec\r\n");
-		while (1)
-		{
-			// DEBUG("user space\r\n");
-		}
-		// DEBUG("child process %d exit\n", c_pid);
+		wait();
 	}
 }
 
 void __init()
 {
-	DEBUG("__init process\n");
-	add_timer_by_sec(1, adapter_schedule_timer, NULL);
-	curr_thread->context.lr = (uint64_t)init;
-	DEBUG("init process: 0x%x\n", init);
-	// asm("msr elr_el1, %0\n\t"	// When el0 -> el1, store return address for el1 -> el0
-	// 	"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-	// 	"msr sp_el0, %1\n\t"	// el0 stack pointer for el1 process
-	// 	"eret\n\t"				// Return to el0
-	// 	:
-	// 	: "r"(init),
-	// 	  "r"(curr_thread->context.sp));
-
-	uint64_t sp, lr;
-	asm volatile(
-		"mov %0, sp\n"
-		"mov %1, lr\n"
-		: "=r"(sp), "=r"(lr));
-	DEBUG("pid: %d, kernel stack: 0x%x -> 0x%x, kernel_stack_base: 0x%x, &(curr_thread->kernel_stack_base): 0x%x\r\n", curr_thread->pid, sp, curr_thread->kernel_stack_base + KSTACK_SIZE, curr_thread->kernel_stack_base, &(curr_thread->kernel_stack_base));
-	DEBUG("sp: 0x%x, lr: 0x%x\r\n", sp, lr);
-	DEBUG("curr_thread->context.sp: 0x%x, curr_thread->context.lr: 0x%x\r\n", curr_thread->context.sp, curr_thread->context.lr);
-	asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
-		"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
-		"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-		"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
-		"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-		"eret\n\t" ::"r"(&curr_thread->context),
-		"r"(curr_thread->context.lr), "r"(curr_thread->user_stack_base + USTACK_SIZE), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
+	DEBUG("user space init process\n");
+	while (1)
+	{
+		DEBUG("wait\n");
+		int c_pid = wait();
+		DEBUG("child process %d exit\n", c_pid);
+	}
 }
 
 int64_t wait()
@@ -254,6 +235,7 @@ thread_t *thread_create(void *start, char *name)
 	DEBUG("new_pid: %d, user_stack_base: 0x%x\n", new_pid, r->user_stack_base);
 	r->kernel_stack_base = kmalloc(KSTACK_SIZE);
 	DEBUG("new_pid: %d, kernel_stack_base: 0x%x\n", new_pid, r->kernel_stack_base);
+	r->code = start;
 	r->context.lr = (uint64_t)start;
 	r->context.sp = (uint64_t)r->kernel_stack_base + KSTACK_SIZE;
 	DEBUG("new_pid: %d, context.sp: 0x%x\n", new_pid, r->context.sp);
@@ -270,30 +252,6 @@ thread_t *thread_create(void *start, char *name)
 	unlock_interrupt();
 	return r;
 }
-
-// int exec_thread(char *code, char *filename, unsigned int filesize)
-// {
-// 	lock_interrupt();
-// 	thread_t *t = thread_create(code, filename);
-// 	t->code = kmalloc(filesize);
-// 	t->datasize = filesize;
-// 	t->context.lr = (uint64_t)t->code; // set return address to program if function call completes
-// 	// copy file into code
-// 	memcpy(t->code, code, filesize);
-
-// 	t->context.sp = (uint64_t)t->kernel_stack_base + KSTACK_SIZE;
-
-// 	// eret to exception level 0
-// 	asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
-// 		"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
-// 		"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-// 		"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
-// 		"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-// 		"eret\n\t" ::"r"(&t->context),
-// 		"r"(t->context.lr), "r"(t->context.sp), "r"(t->kernel_stack_alloced_ptr + KSTACK_SIZE));
-
-// 	return 0;
-// }
 
 int8_t has_child(thread_t *thread)
 {

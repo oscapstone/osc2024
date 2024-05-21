@@ -3,10 +3,11 @@
 
 USER_PROC_DIR := user_proc
 _USER_PROC_IMG := user_proc.img
+SYSCALL_IMG := syscall.img
 USER_PROC_IMG := rootfs/$(_USER_PROC_IMG)
 HELLO_FILE := rootfs/Hello
 WORLD_FILE := rootfs/World
-SYSTEM_FILES :=  $(HELLO_FILE) $(WORLD_FILE) $(USER_PROC_IMG)
+SYSTEM_FILES :=  $(HELLO_FILE) $(WORLD_FILE) $(USER_PROC_IMG) $(SYSCALL_IMG)
 SUBDIRS := $(USER_PROC_DIR)
 
 
@@ -26,6 +27,9 @@ rootfs/Hello: rootfs
 rootfs/World: rootfs
 	touch $@
 	echo "W\no\nr\nl\nd" > $@
+
+syscall.img: rootfs
+	cp syscall.img rootfs/
 
 $(SUBDIRS):
 	$(MAKE) -C $@
