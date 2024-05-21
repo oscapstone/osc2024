@@ -108,7 +108,7 @@ static void *startup_malloc(size_t size)
     size = 0x10 + size - size % 0x10;
     *(uint64_t *)(r - 0x8) = size;
     khtop_ptr += size;
-    // DEBUG("khtop_ptr: 0x%x, sp: 0x%x\n", khtop_ptr, sp);
+    DEBUG("khtop_ptr: 0x%x, sp: 0x%x\n", khtop_ptr, sp);
     return r;
 }
 

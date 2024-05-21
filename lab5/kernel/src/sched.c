@@ -47,8 +47,8 @@ void init_thread_sched()
 	set_current_thread_context(&(threads[0]->context));
 	thread_name = kmalloc(5);
 	strcpy(thread_name, "init");
-	curr_thread = thread_create(init, thread_name);
-	curr_thread->code = init;
+	curr_thread = thread_create(__init, thread_name);
+	curr_thread->code = __init;
 	curr_thread->datasize = 4000;
 	unlock_interrupt();
 }
@@ -67,7 +67,7 @@ void _init_create_thread(char *name, int64_t pid, int64_t ppid, void *start)
 	thread->user_stack_base = kmalloc(USTACK_SIZE);
 	thread->kernel_stack_base = kmalloc(KSTACK_SIZE);
 	thread->context.lr = (uint64_t)start;
-	thread->context.sp = (uint64_t)thread->user_stack_base + USTACK_SIZE;
+	thread->context.sp = (uint64_t)thread->kernel_stack_base + KSTACK_SIZE;
 	thread->context.fp = thread->context.sp; // frame pointer for local variable, which is also in stack.
 	list_add((list_head_t *)thread, run_queue);
 }
@@ -85,20 +85,29 @@ void idle()
 void init()
 {
 	DEBUG("init process\n");
+
+	uint64_t sp, lr;
+	asm volatile(
+		"mov %0, sp\n"
+		"mov %1, lr\n"
+		: "=r"(sp), "=r"(lr));
+	DEBUG("pid: %d, user stack: 0x%x -> 0x%x, user_stack_base: 0x%x, &(curr_thread->user_stack_base): 0x%x\r\n", curr_thread->pid, sp, (uint64_t)curr_thread->user_stack_base + USTACK_SIZE, curr_thread->user_stack_base, &(curr_thread->user_stack_base));
+	DEBUG("sp: 0x%x, lr: 0x%x\r\n", sp, lr);
+	DEBUG("curr_thread->context.sp: 0x%x, curr_thread->context.lr: 0x%x\r\n", curr_thread->context.sp, curr_thread->context.lr);
 	while (1)
 	{
 		// int c_pid = wait();
 		// char *name = kmalloc(13);
 		char *name = "syscall.img";
 		// strcpy(name, "syscall.img");
-		// DEBUG("init exec: %s\n", name);
-		// asm volatile(
-		// 	"mov x8, #3\n\t"
-		// 	"mov x0, %0\n\t"
-		// 	"svc 0\n\t"
-		// 	:
-		// 	: "r"(name) // 輸入操作數
-		// );
+		DEBUG("init exec: %s\n", name);
+		asm volatile(
+			"mov x8, #3\n\t"
+			"mov x0, %0\n\t"
+			"svc 0\n\t"
+			:
+			: "r"(name) // 輸入操作數
+		);
 		// DEBUG("exec\r\n");
 		while (1)
 		{
@@ -121,13 +130,22 @@ void __init()
 	// 	:
 	// 	: "r"(init),
 	// 	  "r"(curr_thread->context.sp));
+
+	uint64_t sp, lr;
+	asm volatile(
+		"mov %0, sp\n"
+		"mov %1, lr\n"
+		: "=r"(sp), "=r"(lr));
+	DEBUG("pid: %d, kernel stack: 0x%x -> 0x%x, kernel_stack_base: 0x%x, &(curr_thread->kernel_stack_base): 0x%x\r\n", curr_thread->pid, sp, curr_thread->kernel_stack_base + KSTACK_SIZE, curr_thread->kernel_stack_base, &(curr_thread->kernel_stack_base));
+	DEBUG("sp: 0x%x, lr: 0x%x\r\n", sp, lr);
+	DEBUG("curr_thread->context.sp: 0x%x, curr_thread->context.lr: 0x%x\r\n", curr_thread->context.sp, curr_thread->context.lr);
 	asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
 		"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
 		"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
 		"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
 		"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
 		"eret\n\t" ::"r"(&curr_thread->context),
-		"r"(curr_thread->context.lr), "r"(curr_thread->context.sp), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
+		"r"(curr_thread->context.lr), "r"(curr_thread->user_stack_base + USTACK_SIZE), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
 }
 
 int64_t wait()
@@ -215,6 +233,7 @@ thread_t *thread_create(void *start, char *name)
 	}
 	if (new_pid == -1)
 	{ // no available pid
+		ERROR("no available pid, fork error\n");
 		unlock_interrupt();
 		return NULL;
 	}
@@ -232,9 +251,12 @@ thread_t *thread_create(void *start, char *name)
 	INIT_LIST_HEAD((list_head_t *)r->child_list);
 	r->status = THREAD_READY;
 	r->user_stack_base = kmalloc(USTACK_SIZE);
+	DEBUG("new_pid: %d, user_stack_base: 0x%x\n", new_pid, r->user_stack_base);
 	r->kernel_stack_base = kmalloc(KSTACK_SIZE);
+	DEBUG("new_pid: %d, kernel_stack_base: 0x%x\n", new_pid, r->kernel_stack_base);
 	r->context.lr = (uint64_t)start;
-	r->context.sp = (uint64_t)r->user_stack_base + USTACK_SIZE;
+	r->context.sp = (uint64_t)r->kernel_stack_base + KSTACK_SIZE;
+	DEBUG("new_pid: %d, context.sp: 0x%x\n", new_pid, r->context.sp);
 	r->context.fp = r->context.sp; // frame pointer for local variable, which is also in stack.
 
 	child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));

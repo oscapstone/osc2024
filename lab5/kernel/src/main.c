@@ -46,17 +46,17 @@ void main(char *arg)
     //         DEBUG("create foo_%d\r\n", i);
     //     }
     // });
-    str = kmalloc(7);
-    sprintf(str, "kshell");
-    thread_create(start_shell, str);
-    schedule_timer();
+    // str = kmalloc(7);
+    // sprintf(str, "kshell");
+    // thread_create(start_shell, str);
+    // schedule_timer();
     core_timer_enable();
     unlock_interrupt();
     // while(1){
     //     INFO("main loop\r\n");
     // }
     // DEBUG("switch to thread: %d\r\n", threads[1]->pid);
-    schedule();
-    // switch_to(get_current_thread_context(), &(threads[1]->context));
+    // schedule();
+    switch_to(get_current_thread_context(), &(threads[1]->context));
     // start_shell();
 }

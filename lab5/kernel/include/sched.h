@@ -5,8 +5,8 @@
 #include "stdint.h"
 
 #define MAX_PID 32768
-#define USTACK_SIZE 0x10000
-#define KSTACK_SIZE 0x10000
+#define USTACK_SIZE 0x100000
+#define KSTACK_SIZE 0x100000
 #define SIGNAL_MAX  64
 
 extern void  switch_to(void *curr_context, void *next_context);

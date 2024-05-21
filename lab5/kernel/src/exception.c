@@ -88,7 +88,7 @@ void el1h_irq_router(trapframe_t *tpf)
 }
 
 #define ESR_EL1_EC_SHIFT 26
-#define ESR_EL1_EC_MASK  0x3F
+#define ESR_EL1_EC_MASK 0x3F
 #define ESR_EL1_EC_SVC64 0x15
 
 // 定義異常類型名稱
@@ -118,44 +118,50 @@ const char *exception_type[] = {
     "Watchpoint taken without a change in Exception level",
     "BKPT instruction execution (AArch32)",
     "Vector Catch exception (AArch32)",
-    "BRK instruction execution (AArch64)"
-};
+    "BRK instruction execution (AArch64)"};
 
 // 讀取ESR_EL1暫存器的值
-static inline uint64_t read_esr_el1(void) {
+static inline uint64_t read_esr_el1(void)
+{
     uint64_t value;
-    asm volatile ("mrs %0, esr_el1" : "=r" (value));
+    asm volatile("mrs %0, esr_el1" : "=r"(value));
     return value;
 }
 
 // 讀取ELR_EL1暫存器的值
-static inline uint64_t read_elr_el1(void) {
+static inline uint64_t read_elr_el1(void)
+{
     uint64_t value;
-    asm volatile ("mrs %0, elr_el1" : "=r" (value));
+    asm volatile("mrs %0, elr_el1" : "=r"(value));
     return value;
 }
 
 // 讀取SPSR_EL1暫存器的值
-static inline uint64_t read_spsr_el1(void) {
+static inline uint64_t read_spsr_el1(void)
+{
     uint64_t value;
-    asm volatile ("mrs %0, spsr_el1" : "=r" (value));
+    asm volatile("mrs %0, spsr_el1" : "=r"(value));
     return value;
 }
 
 // 判斷異常是否由EL0觸發的syscall
-static inline int is_el0_syscall(void) {
+static inline int is_el0_syscall(void)
+{
     uint64_t esr_el1 = read_esr_el1();
     uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
-    if (ec == ESR_EL1_EC_SVC64) {
+    if (ec == ESR_EL1_EC_SVC64)
+    {
         return 1;
     }
     return 0;
 }
 
 // 獲取異常類型名稱
-const char* get_exception_name(uint64_t esr_el1) {
+const char *get_exception_name(uint64_t esr_el1)
+{
     uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
-    if (ec < sizeof(exception_type) / sizeof(exception_type[0])) {
+    if (ec < sizeof(exception_type) / sizeof(exception_type[0]))
+    {
         return exception_type[ec];
     }
     return "Unknown exception";
@@ -163,11 +169,14 @@ const char* get_exception_name(uint64_t esr_el1) {
 
 void el0_sync_router(trapframe_t *tpf)
 {
+    static int count = 0;
     uint64_t esr_el1 = read_esr_el1();
-    if (!is_el0_syscall()) {
-        const char* exception_name = get_exception_name(esr_el1);
-        ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
-        while (1);
+    if (!is_el0_syscall())
+    {
+        const char *exception_name = get_exception_name(esr_el1);
+        if (count == 0)
+            ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
+        count++;
         return;
     }
     // Basic #3 - Based on System Call Format in Video Player’s Test Program
@@ -185,12 +194,12 @@ __getpid_label:
     return;
 
 __uart_read_label:
-    DEBUG("syscall_uart_read\r\n");
+    // DEBUG("syscall_uart_read\r\n");
     tpf->x0 = syscall_uart_read(tpf, (char *)tpf->x0, tpf->x1);
     return;
 
 __uart_write_label:
-    DEBUG("syscall_uart_write\r\n");
+    // DEBUG("syscall_uart_write\r\n");
     tpf->x0 = syscall_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
     return;
 
