@@ -2,6 +2,7 @@ use crate::exception::trap_frame::TRAP_FRAME;
 use crate::thread::Thread;
 use alloc::boxed::Box;
 use alloc::collections::VecDeque;
+use alloc::string::String;
 use alloc::vec::Vec;
 use core::arch::asm;
 use core::time::Duration;
@@ -126,6 +127,19 @@ impl Scheduler {
         }
     }
 
+    pub fn exec(&mut self, name: String) {
+        let current = self.current.unwrap();
+        let program =
+            filesystem::cpio::CpioArchive::load(unsafe { crate::INITRAMFS_ADDR } as *const u8);
+        if let Some(data) = program.get_file(name.as_str()) {
+            let program = alloc_prog(data);
+            let new_thread = Box::new(Thread::new(0x2000, program));
+            self.threads[current] = Some(new_thread);
+        } else {
+            println!("File not found: {}", name);
+        }
+    }
+
     pub fn fork(&mut self) -> u64 {
         let current = self.save_current();
         let mut new_thread = self.threads[current].as_ref().unwrap().clone();
@@ -162,4 +176,26 @@ pub fn init() {
     unsafe {
         SCHEDULER = Some(Scheduler::new());
     }
+}
+
+use alloc::alloc::alloc;
+use alloc::alloc::Layout;
+
+pub fn alloc_prog(data: &[u8]) -> extern "C" fn() {
+    let program_entry = unsafe { alloc(Layout::from_size_align(data.len(), 0x1000).unwrap()) };
+    unsafe {
+        core::ptr::write_bytes(program_entry, 0, data.len());
+    }
+    println!(
+        "Executing program at 0x{:x}-0x{:x}",
+        program_entry as usize,
+        program_entry as usize + data.len()
+    );
+    println!("Program size: 0x{:x} bytes", data.len());
+    println!("Program entry: {:p}", program_entry);
+    let program_entry: extern "C" fn() = unsafe { core::mem::transmute(program_entry) };
+    unsafe {
+        core::ptr::copy(data.as_ptr(), program_entry as *mut u8, data.len());
+    }
+    program_entry
 }

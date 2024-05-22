@@ -1,4 +1,5 @@
 use crate::scheduler;
+use alloc::string::String;
 use stdio::println;
 
 pub fn get_pid() -> u64 {
@@ -33,7 +34,23 @@ pub fn write(buf: *const u8, size: usize) -> usize {
 }
 
 pub fn exec(name: *const u8) -> u64 {
-    println!("exec: {:?}", name);
+    let name: String = {
+        let mut ret = String::new();
+        let mut i = 0;
+        loop {
+            unsafe {
+                let c = *name.add(i);
+                if c == 0 {
+                    break;
+                }
+                ret.push(c as char);
+            }
+            i += 1;
+        }
+        ret
+    };
+    println!("exec: {}", name);
+    scheduler::get().exec(name);
     0
 }
 
