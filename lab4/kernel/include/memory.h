@@ -7,7 +7,8 @@ void* malloc(unsigned int size);
 //lab4
 #include "u_list.h"
 #define BUDDY_MEMORY_BASE 0x10000000 // 0x10000000 - 0x20000000 (SPEC)
-#define PAGESIZE    0x1000     // 4KB
+#define PAGESIZE    0x1000      // 4KB
+#define CACHESIZE   0x20        // 32B
 #define MAX_PAGES   0x10000    // 65536 (Entries), PAGESIZE * MAX_PAGES = 0x10000000 (SPEC)
 
 

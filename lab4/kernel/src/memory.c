@@ -25,6 +25,7 @@ void* malloc(unsigned int size) {
 //lab4
 static frame_t*           frame_array;                    // store memory's statement and page's corresponding index
 static list_head_t        frame_freelist[FRAME_MAX_IDX];  // store available block for page
+static list_head_t        cache_list[CACHE_MAX_IDX];      // store available block for cache
 
 void init_allocator()
 {
@@ -46,6 +47,12 @@ void init_allocator()
         INIT_LIST_HEAD(&frame_freelist[i]);
     }
 
+    // init cache list
+    for (int i = CACHE_IDX_0; i<= CACHE_IDX_FINAL; i++)
+    {
+        INIT_LIST_HEAD(&cache_list[i]);
+    }
+
     for (int i = 0; i < MAX_PAGES; i++)
     {
         // init listhead for each frame
@@ -60,7 +67,20 @@ void init_allocator()
         }
     }
 
-    }
+    /* Startup reserving the following region:
+    Spin tables for multicore boot (0x0000 - 0x1000)
+    Devicetree (Optional, if you have implement it)
+    Kernel image in the physical memory
+    Your simple allocator (startup allocator) (Stack + Heap in my case)
+    Initramfs
+    */
+    // uart_sendline("\r\n* Startup Allocation *\r\n");
+    // uart_sendline("buddy system: usable memory region: 0x%x ~ 0x%x\n", BUDDY_MEMORY_BASE, BUDDY_MEMORY_BASE + BUDDY_MEMORY_PAGE_COUNT * PAGESIZE);
+    // dtb_find_and_store_reserved_memory(); // find spin tables in dtb
+    // memory_reserve((unsigned long long)&_start, (unsigned long long)&_end); // kernel
+    // memory_reserve((unsigned long long)&_heap_top, (unsigned long long)&_stack_top);  // heap & stack -> simple allocator
+    // memory_reserve((unsigned long long)CPIO_DEFAULT_START, (unsigned long long)CPIO_DEFAULT_END);
+}
 
 void* page_malloc(unsigned int size){
     uart_sendline("    [+] Allocate page - size : %d(0x%x)\r\n", size, size);
@@ -128,6 +148,56 @@ void* page_malloc(unsigned int size){
     return (void *) BUDDY_MEMORY_BASE + (PAGESIZE * (target_frame_ptr->idx));
 }
 
+void page2caches(int order)
+{
+    // make caches from a smallest-size page
+    char *page = page_malloc(PAGESIZE);
+    frame_t *pageframe_ptr = &frame_array[((unsigned long long)page - BUDDY_MEMORY_BASE) >> 12];
+    pageframe_ptr->cache_order = order;
+
+    // split page into a lot of caches and push them into cache_list
+    int cachesize = (CACHESIZE << order);
+    for (int i = 0; i < PAGESIZE; i += cachesize)
+    {
+        list_head_t *c = (list_head_t *)(page + i);
+        list_add(c, &cache_list[order]);
+    }
+    uart_sendline("        split page to caches <size:%4dB)> from 0x%x~0x%x.\n", cachesize, 
+                                BUDDY_MEMORY_BASE + (PAGESIZE*(pageframe_ptr->idx)),
+                                BUDDY_MEMORY_BASE + (PAGESIZE*(pageframe_ptr->idx + 1)));
+
+}
+
+void* cache_malloc(unsigned int size)
+{
+    uart_sendline("[+] Allocate cache - size : %d(0x%x)\r\n", size, size);
+    uart_sendline("    Before\r\n");
+    dump_cache_info();
+
+    // turn size into cache order: 32B * 2**order
+    int order;
+    for (int i = CACHE_IDX_0; i <= CACHE_IDX_FINAL; i++)
+    {
+        if (size <= (CACHESIZE << i)) 
+        { 
+            order = i; 
+            break; 
+        }
+    }
+
+    // if no available cache in list, assign one page for it
+    if (list_empty(&cache_list[order]))
+    {
+        page2caches(order);
+    }
+
+    list_head_t* r = cache_list[order].next;
+    list_del_entry(r); //malloc for the request
+    uart_sendline("    physical address : 0x%x\n", r);
+    uart_sendline("    After\r\n");
+    dump_cache_info();
+    return r;
+}
 
 // Split the frame
 // e.g. Request for order = 2, target_order = 4
@@ -237,6 +307,21 @@ void dump_page_info(){
     uart_sendline("|\r\n");
 }
 
+void dump_cache_info()
+{
+    unsigned int exp2 = 1;
+    uart_sendline("    -- [  Number of Available Cache Blocks ] --\r\n    | ");
+    for (int i = CACHE_IDX_0; i <= CACHE_IDX_FINAL; i++)
+    {
+        uart_sendline("%4dB(%1d) ", 32*exp2, i);
+        exp2 *= 2;
+    }
+    uart_sendline("|\r\n    | ");
+    for (int i = CACHE_IDX_0; i <= CACHE_IDX_FINAL; i++)
+        uart_sendline("   %5d ", list_size(&cache_list[i]));
+    uart_sendline("|\r\n");
+}
+
 void page_free(void* ptr)
 {
     frame_t *target_frame_ptr = &frame_array[((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12]; // MAX_PAGES * 64bit -> 0x1000 * 0x10000000
@@ -248,6 +333,18 @@ void page_free(void* ptr)
     list_add(&target_frame_ptr->listhead, &frame_freelist[target_frame_ptr->order]);
     uart_sendline("        After\r\n");
     dump_page_info();
+}
+
+void cache_free(void *ptr)
+{
+    list_head_t *c = (list_head_t *)ptr;
+    frame_t *pageframe_ptr = &frame_array[((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12];
+    uart_sendline("[+] Free cache: 0x%x, order = %d\r\n",ptr, pageframe_ptr->cache_order);
+    uart_sendline("    Before\r\n");
+    dump_cache_info();
+    list_add(c, &cache_list[pageframe_ptr->cache_order]);
+    uart_sendline("    After\r\n");
+    dump_cache_info();
 }
 
 void *kmalloc(unsigned int size)
@@ -262,6 +359,8 @@ void *kmalloc(unsigned int size)
         void *r = page_malloc(size);
         return r;
     }
+    void *r = cache_malloc(size);
+    return r;
 }
 
 void kfree(void *ptr)
@@ -276,4 +375,5 @@ void kfree(void *ptr)
         page_free(ptr);
         return;
     }
+    cache_free(ptr);
 }

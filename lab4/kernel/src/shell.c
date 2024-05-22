@@ -304,10 +304,15 @@ void do_cmd_memory_tester()
     char *a = kmalloc(0x10000);
     char *b = kmalloc(0x4000);
     char *c = kmalloc(0x1001); //malloc size = 8KB
+    char *d = kmalloc(0x10);   //malloc size = 32B
+    // char *e = kmalloc(0x800);   
+    // char *f = kmalloc(0x800);   
+    // char *g = kmalloc(0x800);   
 
     kfree(a);
     kfree(b);
     kfree(c);
+    kfree(d);
 
 }
 
