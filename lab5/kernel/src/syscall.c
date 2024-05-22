@@ -168,6 +168,7 @@ int sys_fork(trapframe_t *tpf)
 	DEBUG("curr_thread->context.sp: 0x%x, curr_thread->context.fp: 0x%x\r\n", curr_thread->context.sp, curr_thread->context.fp);
 	thread_t *parent = curr_thread;
 	char *new_name = kmalloc(strlen(parent->name) + 1);
+	strcpy(new_name, parent->name);
 	thread_t *child = thread_create(parent->code, new_name);
 	int64_t pid = child->pid;
 	DEBUG("child pid: %d\r\n", pid);
