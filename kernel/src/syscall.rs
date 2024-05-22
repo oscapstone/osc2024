@@ -1,5 +1,6 @@
 use crate::scheduler;
 use stdio::println;
+
 pub fn get_pid() -> u64 {
     scheduler::get().current.unwrap() as u64
 }
@@ -25,7 +26,6 @@ pub fn write(buf: *const u8, size: usize) -> usize {
         unsafe {
             let c = *buf.add(i);
             stdio::send(c);
-            // driver::uart::send(c);
         }
         written += 1;
     }

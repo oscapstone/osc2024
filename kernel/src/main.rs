@@ -25,8 +25,6 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
-    // commands::execute(b"exec program.img");
-    // commands::execute(b"exec program.img program.img");
     commands::execute(b"exec syscall.img");
     kernel_shell();
 }
@@ -87,7 +85,6 @@ fn buddy_reserve_memory() {
     }
 
     unsafe {
-        BUDDY_SYSTEM.reserve_by_addr_range(0x0_0000, 0x8_0000); //
         BUDDY_SYSTEM.reserve_by_addr_range(0x6_0000, 0x8_0000); // kernel stack reserved
         BUDDY_SYSTEM.reserve_by_addr_range(0x8_0000, 0x10_0000); // kernel code reserved
     }
