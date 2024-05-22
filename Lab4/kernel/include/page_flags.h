@@ -5,7 +5,7 @@
 #include "page_alloc.h"
 #include "utils.h"
 
-enum pageflags { PG_head, PG_slab };
+enum pageflags { PG_head, PG_slab, PG_reserved, PG_buddy };
 
 #define TESTPAGEFLAG(uname, lname)                   \
     static inline int Page##uname(struct page* page) \
@@ -25,7 +25,6 @@ enum pageflags { PG_head, PG_slab };
         return clear_bit(PG_##lname, &page->flags);        \
     }
 
-
 TESTPAGEFLAG(Slab, slab);
 SETPAGEFLAG(Slab, slab);
 CLEARPAGEFLAG(Slab, slab);
@@ -33,6 +32,14 @@ CLEARPAGEFLAG(Slab, slab);
 TESTPAGEFLAG(Head, head);
 SETPAGEFLAG(Head, head);
 CLEARPAGEFLAG(Head, head);
+
+TESTPAGEFLAG(Reserved, reserved);
+SETPAGEFLAG(Reserved, reserved);
+CLEARPAGEFLAG(Reserved, reserved);
+
+TESTPAGEFLAG(Buddy, buddy);
+SETPAGEFLAG(Buddy, buddy);
+CLEARPAGEFLAG(Buddy, buddy);
 
 static inline int PageTail(struct page* page)
 {

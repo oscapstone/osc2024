@@ -31,33 +31,14 @@ void kernel_main(uintptr_t dtb_ptr)
 
     kmem_cache_init();
 
-    slabinfo();
-
     if (irq_init())
         goto inf_loop;
 
     if (timer_init())
         goto inf_loop;
 
+    buddyinfo();
     slabinfo();
-
-    struct kmem_cache* fuck = kmem_cache_create("fuck", 10, -1);
-    uart_printf("fuck = 0x%x\n", (uintptr_t)fuck);
-    slabinfo();
-    void* ptr = kmem_cache_alloc(fuck, 0);
-    uart_printf("ptr = 0x%x\n", (uintptr_t)ptr);
-    slabinfo();
-    kmem_cache_free(fuck, ptr);
-    slabinfo();
-    kmem_cache_destroy(fuck);
-    slabinfo();
-
-
-    void* ptr1 = kmalloc(10 * sizeof(int), 0);
-    kfree(ptr1);
-
-    void* ptr2 = kmalloc(3 * 1024, 0);
-    kfree(ptr2);
 
     shell();
 

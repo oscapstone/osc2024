@@ -6,6 +6,9 @@
 #include "int.h"
 #include "list.h"
 
+#define ALIGN(x, a)    (((x) + (a) - 1) & ~((a) - 1))
+#define page_alignment 64
+
 struct zone {
     uint64_t managed_pages;        // total number of pages
     struct free_area* free_areas;  // free lists for different power-of-2 pages.
@@ -16,6 +19,7 @@ struct free_area {
     uint64_t nr_free;  // number of free block in the list
 };
 
+// 48-bytes
 struct page {
     uint64_t flags;
     union {
@@ -55,16 +59,31 @@ struct page {
             uint8_t compound_order;
         };
     };
-};
+} __attribute__((aligned(page_alignment)));
 
 
 void buddy_init(void);
-size_t order_for_request(size_t request);
 struct page* alloc_pages(size_t order, gfp_t types);
 void free_pages(struct page* page_ptr, size_t order);
 void buddyinfo(void);
+
 void test_page_alloc(void);
-struct page* get_page_from_ptr(void* ptr);
+
 struct page* get_compound_head(struct page* page);
+unsigned int get_compound_order(struct page* page);
+
+void* PAGE_ALIGN_DOWN(void* x);
+void* PAGE_ALIGN_UP(void* x);
+
+void* pfn_to_phys(size_t pfn);
+size_t phys_to_pfn(void* phys);
+
+struct page* pfn_to_page(size_t pfn);
+size_t page_to_pfn(struct page* page);
+
+void* page_to_phys(struct page* page);
+struct page* phys_to_page(void* phys);
+
+size_t get_order(size_t size);
 
 #endif /* PAGE_ALLOC_H */

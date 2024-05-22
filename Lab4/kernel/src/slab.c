@@ -9,13 +9,42 @@
 #include "page_flags.h"
 #include "string.h"
 
-#define ALIGN(x, a) (((x) + ((x) & ((a) - 1))) & ~((a) - 1))
-#define MIN_ALIGN   8
-#define MAX_ALIGN   (1 << 8)
+extern size_t MAX_ORDER;
+
+#define MIN_PARTIAL 5
+#define MAX_PARTIAL 10
+
+#define MAX_OBJS_PER_PAGE 32767  // since page.objects is u15
+
+#define OO_SHIFT 16
+#define OO_MASK  ((1 << OO_SHIFT) - 1)
+
+#define KMALLOC_SHIFT_HIGH (PAGE_SHIFT + 1)
+#define KMALLOC_SHIFT_LOW  3
+#define KMALLOC_SHIFT_MAX  (MAX_ORDER + PAGE_SHIFT - 1)
+
+/* Maximum allocatable size */
+#define KMALLOC_MAX_SIZE (1UL << KMALLOC_SHIFT_MAX)
+/* Maximum size for which we can actually use a slab cache */
+#define KMALLOC_MAX_CACHE_SIZE (1UL << KMALLOC_SHIFT_HIGH)
+/* Maximum order allocatable via the slab allocator */
+#define KMALLOC_MAX_ORDER (KMALLOC_SHIFT_MAX - PAGE_SHIFT)
+
+
+#define KMALLOC_MIN_SIZE (1UL << KMALLOC_SHIFT_LOW)
+
+#define PAGE_ALLOC_COSTLY_ORDER 3
+
+#define MIN_ALIGN 8
+#define MAX_ALIGN (1 << 8)
 
 static struct list_head slab_caches;
 static struct kmem_cache boot_kmem_cache, boot_kmem_cache_node;
 struct kmem_cache* kmalloc_caches[KMALLOC_SHIFT_HIGH + 1];
+
+static unsigned int slub_min_order;
+static unsigned int slub_max_order = PAGE_ALLOC_COSTLY_ORDER;
+static unsigned int slub_min_objects;
 
 const struct kmalloc_info_struct kmalloc_info[] = {
     {NULL, 0},
@@ -74,26 +103,115 @@ static uint8_t size_index[24] = {
     2  /* 192 */
 };
 
-static uint32_t order_objects(uint32_t order, uint32_t size)
+static inline uint32_t order_objects(uint32_t order, uint32_t size)
 {
     return (PAGE_SIZE << order) / size;
 }
 
-static struct kmem_cache_order_objects oo_make(uint32_t order, uint32_t size)
+static inline struct kmem_cache_order_objects oo_make(uint32_t order,
+                                                      uint32_t size)
 {
     struct kmem_cache_order_objects oo = {.x = (order << OO_SHIFT) +
                                                order_objects(order, size)};
     return oo;
 }
 
-static uint16_t oo_order(struct kmem_cache_order_objects oo)
+static inline uint16_t oo_order(struct kmem_cache_order_objects oo)
 {
     return oo.x >> OO_SHIFT;
 }
 
-static uint16_t oo_objects(struct kmem_cache_order_objects oo)
+static inline uint16_t oo_objects(struct kmem_cache_order_objects oo)
 {
     return oo.x & OO_MASK;
+}
+
+static inline unsigned int slab_order(unsigned int size,
+                                      unsigned int min_objects,
+                                      unsigned int max_order,
+                                      unsigned int fract_leftover)
+{
+    unsigned int min_order = slub_min_order;
+    unsigned int order;
+
+    if (order_objects(min_order, size) > MAX_OBJS_PER_PAGE)
+        return get_order(size * MAX_OBJS_PER_PAGE) - 1;
+
+    for (order = max(min_order, (unsigned int)get_order(min_objects * size));
+         order <= max_order; order++) {
+        unsigned int slab_size = (unsigned int)PAGE_SIZE << order;
+        unsigned int rem;
+        rem = slab_size % size;
+        if (rem <= slab_size / fract_leftover)
+            break;
+    }
+
+    return order;
+}
+
+static inline int calculate_order(unsigned int size)
+{
+    unsigned int order;
+    unsigned int min_objects;
+    unsigned int max_objects;
+
+    min_objects = slub_min_objects;
+    if (!min_objects)
+        min_objects = 4;
+
+    max_objects = order_objects(slub_max_order, size);
+    min_objects = min(min_objects, max_objects);
+
+    while (min_objects > 1) {
+        unsigned int fraction;
+
+        fraction = 16;
+        while (fraction >= 4) {
+            order = slab_order(size, min_objects, slub_max_order, fraction);
+            if (order <= slub_max_order)
+                return order;
+            fraction /= 2;
+        }
+        min_objects--;
+    }
+
+    order = slab_order(size, 1, MAX_ORDER, 1);
+    if (order < MAX_ORDER)
+        return order;
+
+    return -1;
+}
+
+static int calculate_sizes(struct kmem_cache* s, int forced_order)
+{
+    unsigned int size = s->object_size;
+    unsigned int order;
+
+    size = ALIGN(size, sizeof(void*));
+    s->inuse = size;
+    size = ALIGN(size, s->align);
+    s->size = size;
+
+    if (forced_order >= 0)
+        order = forced_order;
+    else
+        order = calculate_order(size);
+
+    if ((int)order < 0)
+        return 0;
+
+    s->allocflags = 0;
+
+    if (order)
+        s->allocflags |= __GFP_COMP;
+
+    s->oo = oo_make(order, size);
+    s->min = oo_make(get_order(size), size);
+
+    if (oo_objects(s->oo) > oo_objects(s->max))
+        s->max = s->oo;
+
+    return !!oo_objects(s->oo);
 }
 
 static inline void set_freepointer(struct kmem_cache* s, void* object, void* fp)
@@ -112,20 +230,16 @@ static int allocate_slab(struct kmem_cache* slab_cache)
     if (!slab_cache)
         return 0;
 
+    struct kmem_cache_order_objects oo = slab_cache->oo;
 
-    uint16_t order = oo_order(slab_cache->oo);
-    gfp_t flags = 0;
-
-    if (order)
-        flags |= __GFP_COMP;
+    uint16_t order = oo_order(oo);
+    gfp_t flags = slab_cache->allocflags;
 
     struct page* new_slab = alloc_pages(order, flags);
 
     if (!new_slab) {
-        order = oo_order(slab_cache->min);
-        flags = 0;
-        if (order)
-            flags |= __GFP_COMP;
+        oo = slab_cache->min;
+        order = oo_order(oo);
         new_slab = alloc_pages(order, flags);
     }
 
@@ -134,41 +248,57 @@ static int allocate_slab(struct kmem_cache* slab_cache)
 
     SetPageSlab(new_slab);
 
+    new_slab->freelist = page_to_phys(new_slab);
 
-    new_slab->freelist = (void*)ALIGN((uintptr_t)new_slab + sizeof(struct page),
-                                      slab_cache->align);
-
-    new_slab->objects = oo_objects(slab_cache->oo);
+    new_slab->objects = oo_objects(oo);
     new_slab->inuse = 0;
     new_slab->frozen = 0;
 
-    struct page* page = new_slab;
-    uint8_t* page_end = (uint8_t*)page + PAGE_SIZE;
+    int i;
     void *p, *next;
-    void* start = new_slab->freelist;
-
-    size_t nr_pages = 1 << order;
-    while (nr_pages--) {
-        p = start;
-        next = start + slab_cache->size;
-
-        for (; (uint8_t*)next < page_end; p = next, next += slab_cache->size)
-            set_freepointer(slab_cache, p, next);
-
-        page = (struct page*)page_end;
-        page_end += PAGE_SIZE;
-        start = (nr_pages == 1)
-                    ? NULL
-                    : (void*)ALIGN((uintptr_t)page + sizeof(struct page),
-                                   slab_cache->align);
-        set_freepointer(slab_cache, p, start);
+    for (i = 0, p = new_slab->freelist; i < new_slab->objects - 1; i++) {
+        next = p + slab_cache->size;
+        set_freepointer(slab_cache, p, next);
+        p = next;
     }
-
-
+    set_freepointer(slab_cache, p, NULL);
 
     new_slab->slab_cache = slab_cache;
+
+    INIT_LIST_HEAD(&new_slab->slab_list);
     list_add(&new_slab->slab_list, &slab_cache->node->partial);
     slab_cache->node->nr_partial++;
+
+    return 1;
+}
+
+static void free_slab(struct kmem_cache* slab_cache, struct page* slab)
+{
+    if (slab->slab_cache != slab_cache)
+        return;
+
+    size_t order = 0;
+    if (PageCompound(slab))
+        order = get_compound_order(slab);
+
+    list_del_init(&slab->slab_list);
+    ClearPageSlab(slab);
+    free_pages(slab, order);
+    slab_cache->node->nr_partial--;
+}
+
+static int init_kmem_cache_nodes(struct kmem_cache* s, bool boot)
+{
+    if (boot)
+        s->node = mem_alloc(sizeof(struct kmem_cache_node));
+    else
+        s->node = kmem_cache_zalloc(&boot_kmem_cache_node, 0);
+
+    if (!s->node)
+        return 0;
+
+    s->node->nr_partial = 0;
+    INIT_LIST_HEAD(&s->node->partial);
 
     return 1;
 }
@@ -177,24 +307,26 @@ static void create_boot_cache(struct kmem_cache* s,
                               const char* name,
                               uint32_t size)
 {
+    if (!s)
+        return;
+
     s->name = name;
     s->object_size = size;
-    s->align = 8;
+    s->align = MIN_ALIGN;
     s->refcount = -1;
     s->offset = 0;
+    s->min_partial = MIN_PARTIAL;
 
     INIT_LIST_HEAD(&s->list);
-    s->inuse = ALIGN(size, sizeof(void*));
-    s->size = ALIGN(s->inuse, s->align);
 
-    s->oo = oo_make(0, s->size);
-    s->min = oo_make(0, s->size);
+    if (!calculate_sizes(s, -1))
+        return;
 
-    s->min_partial = 10;
 
-    s->node = mem_alloc(sizeof(struct kmem_cache_node));
-    s->node->nr_partial = 0;
-    INIT_LIST_HEAD(&s->node->partial);
+    if (!init_kmem_cache_nodes(s, 1))
+        return;
+
+    list_add(&s->list, &slab_caches);
 }
 
 void* kmem_cache_alloc(struct kmem_cache* cachep, gfp_t flags)
@@ -238,9 +370,12 @@ void kmem_cache_free(struct kmem_cache* cachep, void* objp)
     if (!cachep || !objp)
         return;
 
-    struct page* page = get_page_from_ptr(objp);
-    if (PageCompound(page))
+    struct page* page = phys_to_page(PAGE_ALIGN_DOWN(objp));
+    if (PageTail(page))
         page = get_compound_head(page);
+
+    if (!PageHead(page))
+        return;
 
     if (page->slab_cache != cachep)
         return;
@@ -251,11 +386,8 @@ void kmem_cache_free(struct kmem_cache* cachep, void* objp)
 
 
     /* slab empty */
-    if (page->inuse == 0 && cachep->node->nr_partial >= cachep->min_partial) {
-        list_del_init(&page->slab_list);
-        free_pages(page, oo_order(cachep->oo));
-        cachep->node->nr_partial--;
-    }
+    if (page->inuse == 0 && cachep->node->nr_partial >= cachep->min_partial)
+        free_slab(cachep, page);
 }
 
 
@@ -263,6 +395,9 @@ struct kmem_cache* kmem_cache_create(const char* name,
                                      size_t size,
                                      size_t align)
 {
+    if (!name)
+        goto error;
+
     if ((int32_t)align < MIN_ALIGN)
         align = MIN_ALIGN;
     else if ((int32_t)align > MAX_ALIGN)
@@ -271,11 +406,9 @@ struct kmem_cache* kmem_cache_create(const char* name,
     struct kmem_cache* s = kmem_cache_zalloc(&boot_kmem_cache, 0);
 
     if (!s)
-        return NULL;
+        goto error;
 
     INIT_LIST_HEAD(&s->list);
-
-    list_add(&s->list, &slab_caches);
 
     s->name = name;
 
@@ -283,29 +416,25 @@ struct kmem_cache* kmem_cache_create(const char* name,
     s->align = align;
     s->offset = 0;
 
-    size = ALIGN(size, sizeof(void*));
-    s->inuse = size;
-
-    s->size = ALIGN(size, align);
-
     s->refcount = -1;
+    s->min_partial = MIN_PARTIAL;
 
-    s->min_partial = 10;
 
-    s->oo = oo_make(0, s->size);
-    s->min = oo_make(0, s->size);
+    if (!calculate_sizes(s, -1))
+        goto error;
 
-    s->node = kmem_cache_zalloc(&boot_kmem_cache_node, 0);
 
-    if (!s->node) {
-        kmem_cache_free(&boot_kmem_cache, s);
-        return NULL;
-    }
+    if (!init_kmem_cache_nodes(s, 0))
+        goto error;
 
-    INIT_LIST_HEAD(&s->node->partial);
-    s->node->nr_partial = 0;
+    list_add(&s->list, &slab_caches);
 
     return s;
+
+error:
+    if (s)
+        kmem_cache_free(&boot_kmem_cache, s);
+    return NULL;
 }
 
 void kmem_cache_destroy(struct kmem_cache* cachep)
@@ -319,9 +448,7 @@ void kmem_cache_destroy(struct kmem_cache* cachep)
         slab = list_entry(node, struct page, slab_list);
         if (slab->inuse != 0)
             return;
-        list_del_init(&slab->slab_list);
-        cachep->node->nr_partial--;
-        free_pages(slab, oo_order(cachep->oo));
+        free_slab(cachep, slab);
     }
 
     if (list_empty(&cachep->node->partial)) {
@@ -335,23 +462,12 @@ void kmem_cache_destroy(struct kmem_cache* cachep)
     }
 }
 
-
-void slabinfo(void)
-{
-    struct list_head* node;
-    list_for_each (node, &slab_caches) {
-        struct kmem_cache* s = list_entry(node, struct kmem_cache, list);
-        uart_printf("%s -> ", s->name);
-    }
-    uart_printf("\n");
-}
-
 static inline void* kmalloc_large(size_t size)
 {
-    uint32_t order = order_for_request(size + sizeof(struct page));
-    return (void*)(alloc_pages(order, 0) + 1);
+    size_t order = get_order(size);
+    struct page* page = alloc_pages(order, __GFP_COMP);
+    return page_to_phys(page);
 }
-
 
 static inline uint32_t kmalloc_index(size_t size)
 {
@@ -472,6 +588,9 @@ void setup_kmalloc_cache_index_table(void)
 struct kmem_cache* create_kmalloc_cache(const char* name, uint32_t size)
 {
     struct kmem_cache* s = kmem_cache_create(name, size, -1);
+    if (!s)
+        return NULL;
+
     s->refcount = 1;
     return s;
 }
@@ -500,21 +619,23 @@ void create_kmalloc_caches(void)
 
 void kfree(const void* x)
 {
-    struct page* page;
-    void* object = (void*)x;
-
     if (!x)
         return;
 
-    page = get_page_from_ptr(object);
+    struct page* page;
+    void* object = (void*)x;
 
-    bool compound = PageCompound(page);
-    if (compound)
+    page = phys_to_page(PAGE_ALIGN_DOWN(object));
+
+    if (PageTail(page))
         page = get_compound_head(page);
+
+    if (!PageHead(page))
+        return;
 
     // if it's buddy system allocated.
     if (!PageSlab(page)) {
-        size_t order = compound ? page->compound_order : page->private;
+        size_t order = page->compound_order;
         free_pages(page, order);
         return;
     }
@@ -524,15 +645,47 @@ void kfree(const void* x)
 
 void kmem_cache_init(void)
 {
+    INIT_LIST_HEAD(&slab_caches);
+
     create_boot_cache(&boot_kmem_cache_node, "kmem_cache_node",
                       sizeof(struct kmem_cache_node));
+
     create_boot_cache(&boot_kmem_cache, "kmem_cache",
                       sizeof(struct kmem_cache));
 
-    INIT_LIST_HEAD(&slab_caches);
-    list_add(&boot_kmem_cache.list, &slab_caches);
-    list_add(&boot_kmem_cache_node.list, &slab_caches);
-
     setup_kmalloc_cache_index_table();
+
     create_kmalloc_caches();
+
+    slabinfo();
+}
+
+void slabinfo(void)
+{
+    uart_printf("\n");
+    struct list_head* node;
+    list_for_each (node, &slab_caches) {
+        struct kmem_cache* s = list_entry(node, struct kmem_cache, list);
+        uart_printf("%s (%d)-> ", s->name, s->node->nr_partial);
+    }
+    uart_printf("\n");
+}
+
+void test_slab_alloc(void)
+{
+    struct kmem_cache* fuck = kmem_cache_create("fuck", 10, -1);
+
+    void* ptr = kmem_cache_alloc(fuck, 0);
+
+    kmem_cache_free(fuck, ptr);
+
+
+    kmem_cache_destroy(fuck);
+
+
+    void* ptr1 = kmalloc(10 * sizeof(int), 0);
+    kfree(ptr1);
+
+    void* ptr2 = kmalloc(4 * 1024, 0);
+    kfree(ptr2);
 }

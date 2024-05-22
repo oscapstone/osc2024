@@ -16,12 +16,5 @@ SECTIONS
         bss_end = .;
     }
 
-    .heap : {
-        . = ALIGN(0x8);
-        heap_begin = .;
-        . += 0x20000;
-        heap_end = .;
-    }
-
     PROVIDE(kernel_end = .);
 }

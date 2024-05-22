@@ -6,8 +6,17 @@
 #include "mini_uart.h"
 #include "page_flags.h"
 
-extern char kernel_start;
-extern char kernel_end;
+static struct zone zone;
+static struct free_area* free_areas;
+
+// frame array
+static struct page* mem_map;
+
+
+static uintptr_t base_ptr, max_ptr;
+
+extern char kernel_start[];
+extern char kernel_end[];
 
 static uintptr_t usable_mem_end;
 
@@ -16,191 +25,255 @@ static uintptr_t usable_mem_end;
 #define DTS_MEM_RESERVED_LENGTH 0x1000
 #define DTS_MEM_RESERVED_END    (DTS_MEM_RESERVED_START + DTS_MEM_RESERVED_LENGTH)
 
-/*
- * Page allocator - Buddy System
- * Page size = 4KB (defined in `mm.h`)
- */
 
-// HACK: For a non-power-of-2 size memory region, we simply treat it as a
-// nearest higher power-of-2 memory region, and check if the address is beyond
-// the real upper bound while do some operation
+size_t MAX_ORDER, MIN_ORDER;
+size_t MAX_ALLOC_SIZE, MIN_ALLOC_SIZE;
 
-size_t MAX_ALLOC, MAX_ALLOC_LOG2;
-size_t MIN_ALLOC, MIN_ALLOC_LOG2;
+#define BUCKET_COUNT (MAX_ORDER - MIN_ORDER + 1)
 
-#define BUCKET_COUNT \
-    (MAX_ALLOC_LOG2 - MIN_ALLOC_LOG2 + 1)  // How many order in total
+#define LOG2LL(__value) \
+    (((sizeof(long long) << 3) - 1) - __builtin_clzll((__value)))
 
-/*
- * free lists for each order
- * index is calculated by `MAX_ALLOC_LOG2 - order`
- */
-static struct zone zone;
-static struct free_area* free_areas;
+#define get_order_from_bucket(__bucket) ((__bucket) + MIN_ORDER)
+#define get_bucket_from_order(__order)  ((__order) - MIN_ORDER)
 
-#define get_order_from_bucket(bucket) (MAX_ALLOC_LOG2 - (bucket))
-#define get_bucket_from_order(order)  (MAX_ALLOC_LOG2 - (order))
-
-/*
- * This array is a bitmap which represents linearized binary tree nodes'
- * status (split or not) Every possible allocation order larger than
- * MIN_ALLOC_LOG2 has a node in this tree (because we only care about the
- * parent nodes)
- *
- * Each node in this tree can be in one of the following states:
- * - UNUSED (both children are UNUSED)
- * - SPLIT (one child is UNUSED and the other child isn't)
- * - USED (neither children are UNUSED)
- *
- * It turns out we have enough information to distinguish between UNUSED and
- * USED from context, so we only need to store SPLIT or not.
- *
- * SPLIT is basically the XOR of the two children nodes' UNUSED flags.
- * 0 - NOT SPLIT (Both children nodes are UNUSED or USED)
- * 1 - SPLIT (One of the children node is UNUSED)
- *
- */
-/*
- * Total nodes count (without minimum order)
- * = 2^0 + 2^1 + 2^2 + ... + 2^(MAX_ALLOC_LOG2 - MIN_ALLOC_LOG2 - 1)
- * = 2^(MAX_ALLOC_LOG2 - MIN_ALLOC_LOG2 - 1 + 1) - 1
- * = 2^(BUCKET_COUNT - 1) - 1
- */
-#define NODE_IS_SPLIT_SIZE ((1 << (BUCKET_COUNT - 1)) >> 3)
-static uint8_t* node_is_split;
-
-
-/* This array is a bitmap which represents the lowest level of the binary tree
- * nodes, whose order is MIN_ALLOC_LOG2, it is meant to be used in the reserve
- * memory functions
- */
-/*
- * Total Lowest level nodes count
- * = 2^(MAX_ALLOC_LOG2 - MIN_ALLOC_LOG2)
- * = 2^(BUCKET_COUNT - 1)
- */
-#define NODE_IS_RESERVED_SIZE ((1 << (BUCKET_COUNT - 1)) >> 3)
-static uint8_t* node_is_reserved;
-
-// if any page is reserved? this is used for `start_reserve_pages`.
-static bool reserve_flag;
-
-#define get_parent(index)      (((index) - 1) >> 1)
-#define get_left_child(index)  (((index) << 1) + 1)
-#define get_right_child(index) (((index) << 1) + 2)
-#define get_sibling(index)     ((((index) - 1) ^ 1) + 1)
-
-#define is_split(index) (node_is_split[(index) >> 3] & (1 << ((index) & 7)))
-#define flip_is_split(index) \
-    (node_is_split[(index) >> 3] ^= (1 << ((index) & 7)))
-#define parent_is_split(index)      (is_split(get_parent((index))))
-#define flip_parent_is_split(index) (flip_is_split(get_parent((index))))
-
-#define is_reserved(index)                                            \
-    (node_is_reserved[(((index) - (1 << MAX_ALLOC_LOG2) + 1) >> 3)] & \
-     (1 << (((index) - (1 << MAX_ALLOC_LOG2) + 1) & 7)))
-
-#define flip_is_reserved(index)                                        \
-    (node_is_reserved[(((index) - (1 << MAX_ALLOC_LOG2) + 1) >> 3)] ^= \
-     (1 << (((index) - (1 << MAX_ALLOC_LOG2) + 1) & 7)))
-
-static uint8_t* base_ptr;
-static uint8_t* max_ptr;
-
-// The bucket is required to avoid the need to derive it
-// from the index using a loop.
-#define get_ptr_from_index(index, bucket)        \
-    (base_ptr + (((index) - (1 << (bucket)) + 1) \
-                 << (get_order_from_bucket((bucket)) + PAGE_SHIFT)))
-
-// The bucket is required  since there may be many nodes
-// that all map to the same address.
-#define get_index_from_ptr(ptr, bucket)                 \
-    ((((uintptr_t)(ptr) - (uintptr_t)base_ptr) >>       \
-      (get_order_from_bucket((bucket)) + PAGE_SHIFT)) + \
-     (1 << (bucket)) - 1)
-
-/* align a value to the a higher power-of-two*/
-static inline size_t align_up_pow2(size_t n)
+inline void* PAGE_ALIGN_DOWN(void* x)
 {
-    n--;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n |= n >> 32;
-    n++;
-    return n;
+    return (void*)((((uintptr_t)x - base_ptr) & ~(PAGE_SIZE - 1)) + base_ptr);
 }
 
-#define PAGE_ALIGN_DOWN(size) ((size) & ~(PAGE_SIZE - 1))
-#define PAGE_ALIGN_UP(size)   mem_align(((void*)(size)), PAGE_SIZE)
-#define LOG2LL(value) \
-    (((sizeof(long long) << 3) - 1) - __builtin_clzll((value)))
-
-struct page* get_page_from_ptr(void* ptr)
+inline void* PAGE_ALIGN_UP(void* x)
 {
-    return (
-        struct page*)(PAGE_ALIGN_DOWN(((uintptr_t)ptr - (uintptr_t)base_ptr)) +
-                      base_ptr);
+    return (void*)((uintptr_t)mem_align((void*)((uintptr_t)x - base_ptr),
+                                        PAGE_SIZE) +
+                   base_ptr);
 }
 
-
-bool test_page_align(void* ptr)
+inline void* pfn_to_phys(size_t pfn)
 {
-    return !(((uintptr_t)ptr - (uintptr_t)base_ptr) & (PAGE_SIZE - 1));
+    return (void*)((pfn << PAGE_SHIFT) + base_ptr);
 }
 
-/*
- * Given the requested size, return the index of the
- * smallest bucket that can satisfy the request. (Assume
- * request <= MAX_ALLOC)
- */
-size_t order_for_request(size_t request)
+inline size_t phys_to_pfn(void* phys)
 {
-    size_t size = (size_t)PAGE_ALIGN_UP(request);  // page-alignment
-    size_t pages =
-        align_up_pow2(size >> PAGE_SHIFT);  // align number of page to 2^n
-    return LOG2LL(pages);                   // order
+    return ((uintptr_t)phys - base_ptr) >> PAGE_SHIFT;
 }
 
-/* remove the last node from the list */
-static struct list_head* list_pop(struct list_head* head)
+inline struct page* pfn_to_page(size_t pfn)
 {
-    if (list_empty(head))
+    return &mem_map[pfn];
+}
+
+inline size_t page_to_pfn(struct page* page)
+{
+    return page - mem_map;
+}
+
+inline void* page_to_phys(struct page* page)
+{
+    return pfn_to_phys(page_to_pfn(page));
+}
+
+inline struct page* phys_to_page(void* phys)
+{
+    return pfn_to_page(phys_to_pfn(phys));
+}
+
+#define get_buddy_pfn(__pfn, __order) ((__pfn) ^ (1 << (__order)))
+#define get_left_pfn(__pfn, __order)  ((__pfn) & ~(1 << (__order)))
+
+#define align_down_pow2(x) get_highest_set_bit((x))
+static inline size_t get_highest_set_bit(size_t x)
+{
+    x |= x >> 32;
+    x |= x >> 16;
+    x |= x >> 8;
+    x |= x >> 4;
+    x |= x >> 2;
+    x |= x >> 1;
+    return x ^ (x >> 1);
+}
+
+static inline size_t align_up_pow2(size_t x)
+{
+    x--;
+    x |= x >> 32;
+    x |= x >> 16;
+    x |= x >> 8;
+    x |= x >> 4;
+    x |= x >> 2;
+    x |= x >> 1;
+    x++;
+    return x;
+}
+
+size_t get_order(size_t size)
+{
+    size = ALIGN(size, PAGE_SIZE);
+    size_t nr_pages = size >> PAGE_SHIFT;
+    nr_pages = align_up_pow2(nr_pages);
+    if (nr_pages == 0)
+        return 0;
+    size_t order = LOG2LL(nr_pages);
+    return order;
+}
+
+static void add_page_to_freelist(struct page* page, size_t order)
+{
+    if (order < MIN_ORDER || order > MAX_ORDER)
+        return;
+
+    size_t bucket = get_bucket_from_order(order);
+
+    list_add_tail(&page->list, &free_areas[bucket].free_list);
+
+    free_areas[bucket].nr_free++;
+
+    SetPageBuddy(page);
+
+    page->private = order;
+}
+
+static void add_continuous_pages_to_freelist(struct page* base_page,
+                                             size_t nr_pages)
+{
+    if (nr_pages > zone.managed_pages ||
+        page_to_pfn(base_page) >= zone.managed_pages)
+        return;
+
+    size_t hsb = 0;
+    size_t order = 0;
+    while (nr_pages) {
+        hsb = get_highest_set_bit(nr_pages);
+        order = LOG2LL(hsb);
+        add_page_to_freelist(base_page, order);
+        base_page += hsb;
+        nr_pages ^= hsb;
+    }
+}
+
+static struct page* get_page_from_freelist(size_t order)
+{
+    if (order < MIN_ORDER || order > MAX_ORDER)
         return NULL;
 
-    struct list_head* last = head->prev;
+    size_t bucket = get_bucket_from_order(order);
+
+    if (list_empty(&free_areas[bucket].free_list))
+        return NULL;
+
+    struct list_head* last = free_areas[bucket].free_list.prev;
+
+    if (!last)
+        return NULL;
+
     list_del_init(last);
 
-    return last;
+    free_areas[bucket].nr_free--;
+
+    struct page* page = list_entry(last, struct page, list);
+
+    if (!page)
+        return NULL;
+
+    ClearPageBuddy(page);
+
+    return page;
 }
 
-/* Add a node to the last of the list */
-static void list_push(struct list_head* head, struct list_head* node)
+static void delete_page_from_freelist(struct page* page, size_t order)
 {
-    list_add_tail(node, head);
+    if (!page)
+        return;
+    list_del_init(&page->list);
+    ClearPageBuddy(page);
+    free_areas[get_bucket_from_order(order)].nr_free--;
 }
 
-/*
- * update max_ptr, this make sure we do not get out of bound (exceed
- * usable_mem_end)
- */
-static int update_max_ptr(uint8_t* new_val)
+void register_reserve_pages(uintptr_t start, uintptr_t end)
 {
-    if (new_val > max_ptr) {
-        if ((uintptr_t)new_val >= usable_mem_end)
-            return 0;
-        max_ptr = new_val;
+    if (end <= start || start >= usable_mem_end || end >= usable_mem_end)
+        return;
+
+    start = (uintptr_t)PAGE_ALIGN_DOWN((void*)start);
+    end = (uintptr_t)PAGE_ALIGN_UP((void*)end);
+    size_t start_pfn = phys_to_pfn((void*)start);
+    size_t end_pfn = phys_to_pfn((void*)end);
+
+    while (start_pfn != end_pfn) {
+        struct page* page = pfn_to_page(start_pfn);
+        SetPageReserved(page);
+        start_pfn++;
     }
-    return 1;
 }
 
-
-struct page* get_compound_head(struct page* page)
+void coalesce(struct page* page, size_t order)
 {
-    return (struct page*)(page->compound_head & -2);
+    uart_printf("coalesce...\n");
+    uart_printf("phys: 0x%x\n", page_to_phys(page));
+
+    size_t pfn = page_to_pfn(page);
+
+    if (pfn >= zone.managed_pages)
+        return;
+
+    while (order <= MAX_ORDER) {
+        uart_printf("order: %d\n", order);
+        size_t buddy_pfn = get_buddy_pfn(pfn, order);
+        if (buddy_pfn >= zone.managed_pages)
+            break;
+        struct page* buddy_page = pfn_to_page(buddy_pfn);
+        uart_printf("buddy phys: 0x%x\n", page_to_phys(buddy_page));
+        if (PageBuddy(buddy_page) && buddy_page->private == order) {
+            delete_page_from_freelist(buddy_page, order);
+            uart_printf("delete from order %d freelist\n", order);
+        } else {
+            uart_printf("Can't merge buddy\n");
+            break;
+        }
+        order++;
+        pfn = get_left_pfn(pfn, order);
+        page = pfn_to_page(pfn);
+    }
+    add_page_to_freelist(page, order);
+    uart_printf("add to order %d freelist\n", order);
+    uart_printf("coalesce end...\n");
+}
+
+void start_init_pages(void)
+{
+    size_t pfn = 0;
+    struct page *base_page, *page;
+    base_page = page = NULL;
+    size_t nr_pages = 0;
+    while (pfn != zone.managed_pages) {
+        page = pfn_to_page(pfn);
+        if (base_page) {
+            if (PageReserved(page))
+                goto add_pages;
+            else {
+                nr_pages++;
+                goto update_pfn;
+            }
+        } else if (!PageReserved(page)) {
+            base_page = page;
+            nr_pages++;
+            goto update_pfn;
+        } else {
+            goto update_pfn;
+        }
+
+    add_pages:
+        add_continuous_pages_to_freelist(base_page, nr_pages);
+        base_page = NULL;
+        nr_pages = 0;
+
+    update_pfn:
+        pfn++;
+    }
+
+    if (base_page)
+        add_continuous_pages_to_freelist(base_page, nr_pages);
 }
 
 static inline void set_compound_head(struct page* page, struct page* head)
@@ -208,15 +281,34 @@ static inline void set_compound_head(struct page* page, struct page* head)
     page->compound_head = (unsigned long)head + 1;
 }
 
+static inline void clear_compound_head(struct page* page)
+{
+    page->compound_head &= 0;
+}
+
+inline struct page* get_compound_head(struct page* page)
+{
+    return (struct page*)(page->compound_head & -2);
+}
+
 static inline void set_compound_order(struct page* page, unsigned int order)
 {
-    page->compound_order = order;
+    page[1].compound_order = order;
+}
+
+inline unsigned int get_compound_order(struct page* page)
+{
+    return page[1].compound_order;
 }
 
 static void prep_compound_tail(struct page* head, int tail_idx)
 {
-    struct page* p = (struct page*)((uintptr_t)head + (tail_idx << PAGE_SHIFT));
-    set_compound_head(p, head);
+    set_compound_head(head + tail_idx, head);
+}
+
+static void reset_compound_tail(struct page* head, int tail_idx)
+{
+    clear_compound_head(head + tail_idx);
 }
 
 static void prep_compound_head(struct page* page, unsigned int order)
@@ -224,499 +316,136 @@ static void prep_compound_head(struct page* page, unsigned int order)
     set_compound_order(page, order);
 }
 
+static void reset_compound_head(struct page* page)
+{
+    set_compound_order(page, 0);
+}
+
 void prep_compound_page(struct page* page, unsigned int order)
 {
-    int i;
-    int nr_pages = 1 << order;
+    size_t i;
+    size_t nr_pages = 1 << order;
     SetPageHead(page);
     for (i = 1; i < nr_pages; i++)
         prep_compound_tail(page, i);
     prep_compound_head(page, order);
 }
 
-
-/* allocate pages from our page allocator */
-struct page* alloc_pages(size_t order, gfp_t flags)
+void reset_compound_page(struct page* page)
 {
-#if defined(DEBUG)
-    uart_printf("\n===================================\n");
-    uart_printf("alloc pages: size 0x%x\n", 1 << (order + PAGE_SHIFT));
-    uart_printf("===================================\n");
-#endif
-
-    if (order > MAX_ALLOC_LOG2) {
-#if defined(DEBUG)
-        uart_printf("Request size too LARGE!! fail.\n");
-#endif
-        return NULL;
-    }
-
-    size_t bucket = get_bucket_from_order(order);
-    size_t original_bucket = bucket;
-
-#if defined(DEBUG)
-    uart_printf("Request order: %d\n", order);
-#endif
-
-    /*
-     * Search for a bucket with a non-empty free list
-     * that's as large or larger than what we need. If the
-     * bucket we get is larger, split it to get a match.
-     */
-    // since the type of bucket is of size_t (aka unsigned long long), we have
-    // to make sure it doesn't overflow.
-    while (bucket + 1 != 0) {
-        // Try to find a free block in the current bucket free list
-        uint8_t* ptr = (uint8_t*)list_pop(&free_areas[bucket].free_list);
-
-        // If the free list for this bucket is empty, check
-        // the free list for the next larger bucket instead
-        if (!ptr) {
-#if defined(DEBUG)
-            uart_printf(
-                "Free list for order %d is empty. "
-                "Moving to next order\n",
-                get_order_from_bucket(bucket));
-#endif
-            bucket--;
-            continue;
-        }
-
-        ptr = (uint8_t*)list_entry((struct list_head*)ptr, struct page, list);
-
-        free_areas[bucket].nr_free--;
-
-#if defined(DEBUG)
-        uart_printf("Found free block of order  %d !!\n",
-                    get_order_from_bucket(bucket));
-#endif
-
-        /*
-         * Try to expand the space first before going any
-         * further. If we have run out of space, put this
-         * block back on the free list and fail.
-         */
-        size_t size = (size_t)1 << get_order_from_bucket(bucket);
-        size_t bytes_needed =
-            bucket < original_bucket ? (size >> 1) + sizeof(struct page) : size;
-
-        if (!update_max_ptr(ptr + bytes_needed)) {
-#if defined(DEBUG)
-            uart_printf("Out of memory. Allocation fail\n");
-#endif
-            list_push(&free_areas[bucket].free_list,
-                      &((struct page*)ptr)->list);
-            ((struct page*)ptr)->private = get_order_from_bucket(bucket);
-            free_areas[bucket].nr_free++;
-            return NULL;
-        }
-
-        /*
-         * If we got a node from the free list, change the
-         * node from UNUSED to USED. We do this by flipping
-         * the split flag of the parent node. (because the
-         * split flag is the XOR of the UNUSED flags of both
-         * children), and our UNUSED flag has just changed.
-         */
-        size_t i = get_index_from_ptr(ptr, bucket);
-        if (i)
-            flip_parent_is_split(i);
-
-        /*
-         * If the node we get is larger than what we need,
-         * split it down until we get the correct size and
-         * put the new unused child nodes on the free list in
-         * the corresponding bucket. This is done by
-         * repeatedly moving to the left child node,
-         * splitting the parent, and then adding the right
-         * child to the free list.
-         */
-        while (bucket < original_bucket) {
-#if defined(DEBUG)
-            uart_printf(
-                "Splitting order %d page into half: 0x%x - "
-                "0x%x",
-                get_order_from_bucket(bucket),
-                (uintptr_t)get_ptr_from_index(i, bucket),
-                (uintptr_t)get_ptr_from_index(i + 1, bucket));
-#endif
-            i = get_left_child(i);
-            bucket++;
-
-            flip_parent_is_split(i);
-            struct page* right_half =
-                (struct page*)get_ptr_from_index(i + 1, bucket);
-            list_push(&free_areas[bucket].free_list, &right_half->list);
-            right_half->private = get_order_from_bucket(bucket);
-            free_areas[bucket].nr_free++;
-
-#if defined(DEBUG)
-            uart_printf(" => 0x%x - 0x%x and 0x%x - 0x%x\n",
-                        (uintptr_t)get_ptr_from_index(i, bucket),
-                        (uintptr_t)get_ptr_from_index(i + 1, bucket),
-                        (uintptr_t)get_ptr_from_index(i + 1, bucket),
-                        (uintptr_t)get_ptr_from_index(i + 2, bucket));
-#endif
-        }
-
-#if defined(DEBUG)
-        uart_printf("Allocated %d pages at 0x%x\n", 1 << order, ptr);
-#endif
-
-        ((struct page*)ptr)->private = get_order_from_bucket(bucket);
-        ((struct page*)ptr)->flags = 0;
-
-        if (flags & __GFP_COMP)
-            prep_compound_page((struct page*)ptr, order);
-
-        return (struct page*)ptr;
-    }
-
-    return NULL;
+    size_t i;
+    size_t order = get_compound_order(page);
+    size_t nr_pages = 1 << order;
+    ClearPageHead(page);
+    for (i = 1; i < nr_pages; i++)
+        reset_compound_tail(page, i);
+    reset_compound_head(page);
 }
 
-void free_pages(struct page* page_ptr, size_t order)
-{
-#if defined(DEBUG)
-    uart_printf("\n===================================\n");
-    uart_printf("free pages: address 0x%x\n", (uintptr_t)page_ptr);
-    uart_printf("===================================\n");
-#endif
-
-    /* if the ptr is NULL or it exceed usable_mem_end, stop*/
-    if (!page_ptr || (uintptr_t)page_ptr >= usable_mem_end ||
-        !test_page_align(page_ptr) || PageTail(page_ptr))
-        return;
-
-    uint8_t* ptr = (uint8_t*)page_ptr;
-
-#if defined(DEBUG)
-    uart_printf("free address 0x%x with %d pages\n", (uintptr_t)ptr,
-                1 << order);
-    uart_printf("Start traversing for coalesce\n");
-#endif
-    size_t bucket = get_bucket_from_order(order);
-    size_t i = get_index_from_ptr(ptr, bucket);
-
-    /*
-     * Traverse up to the root node, flipping USED blocks
-     * to UNUSED and mergin UNUSED buddies together into a
-     * single UNUSED parent.
-     */
-    while (i != 0) {
-#if defined(DEBUG)
-        uart_printf("Search in order %d free list\n",
-                    get_order_from_bucket(bucket));
-#endif
-        // flip the parent's split flag since the current
-        // node UNUSED flag has changed.
-        flip_parent_is_split(i);
-
-        // If the parent is SPLIT, that means our buddy is
-        // not UNUSED, we can't merge the buddy, so we're
-        // done.
-        if (parent_is_split(i)) {
-#if defined(DEBUG)
-            uart_printf("Buddy is in used. Stop traversing\n");
-#endif
-            break;
-        }
-
-        // Since the buddy is UNUSED. Remove the buddy from
-        // free list in corresponding bucket. and continue
-        // traversing up to the root node.
-
-#if defined(DEBUG)
-        uart_printf("Found buddy at 0x%x. Continue to traverse\n",
-                    get_ptr_from_index(get_sibling(i), bucket));
-#endif
-        uintptr_t buddy_addr =
-            (uintptr_t)get_ptr_from_index(get_sibling(i), bucket);
-
-        /* check if the buddy's address exceeds the usable_mem_end */
-        if (buddy_addr < usable_mem_end) {
-            list_del_init(&((struct page*)buddy_addr)->list);
-            free_areas[bucket].nr_free--;
-        }
-
-        i = get_parent(i);
-        bucket--;
-    }
-
-    // Add the merged block to the end of free list in the
-    // corresponding bucket.
-#if defined(DEBUG)
-    uart_printf("Merged block at 0x%x with order %d\n",
-                get_ptr_from_index(i, bucket), get_order_from_bucket(bucket));
-#endif
-
-    uintptr_t merged_addr = (uintptr_t)get_ptr_from_index(i, bucket);
-
-    /* check if the merged address exceeds the usable_mem_end */
-    if (merged_addr < usable_mem_end) {
-        list_push(&free_areas[bucket].free_list,
-                  &((struct page*)merged_addr)->list);
-        ((struct page*)merged_addr)->private = get_order_from_bucket(bucket);
-        free_areas[bucket].nr_free++;
-    }
-}
-
-/*
- * register the reserve region, reserve page_align(start) <= address <=
- * page_align(end), it needs to be called before `start_init_pages` function.
- */
-static void register_reserve_pages(uintptr_t start, uintptr_t end)
-{
-#if defined(DEBUG)
-    uart_printf("register reserve, start: 0x%x, end: 0x%x\n", start, end);
-#endif
-
-    if (end < start) {
-#if defined(DEBUG)
-        uart_printf(
-            "INVALID ADDRESS: start address is larger than end address!!\n");
-#endif
-        return;
-    }
-
-#if defined(DEBUG)
-    uart_printf("calculate page alignment address\n");
-#endif
-
-    start = (uintptr_t)PAGE_ALIGN_DOWN(start - (uintptr_t)base_ptr) +
-            (uintptr_t)base_ptr;
-    end = (uintptr_t)PAGE_ALIGN_UP(end - (uintptr_t)base_ptr) +
-          (uintptr_t)base_ptr;
-
-#if defined(DEBUG)
-    uart_printf("page-alignment address, start_addr: 0x%x, end_addr: 0x%x\n",
-                start, end);
-    uart_printf("calculate page index\n");
-#endif
-
-    size_t start_idx = get_index_from_ptr(start, MAX_ALLOC_LOG2);
-    size_t end_idx = get_index_from_ptr(end - PAGE_SIZE, MAX_ALLOC_LOG2);
-
-#if defined(DEBUG)
-    uart_printf("start reserve, start_idx: 0x%x, end_idx: 0x%x\n", start_idx,
-                end_idx);
-#endif
-
-    size_t i = start_idx;
-
-    while (i <= end_idx) {
-#if defined(DEBUG)
-        uart_printf("check reserved idx: 0x%x\n", i);
-#endif
-        if (!is_reserved(i)) {
-#if defined(DEBUG)
-            uart_printf("reserved\n");
-#endif
-            flip_is_reserved(i);
-#if defined(DEBUG)
-            uart_printf("start to split the ancestors\n");
-#endif
-            size_t temp = i;
-            while (temp) {
-                flip_parent_is_split(temp);
-                if (!parent_is_split(temp))
-                    break;
-                temp = get_parent(temp);
-            }
-        }
-        i++;
-    }
-#if defined(DEBUG)
-    uart_printf("register done\n");
-    uart_printf("\n");
-#endif
-    reserve_flag = true;
-}
-
-/*
- * start reserving pages and push all the free blocks onto the free list with
- * its corresponding bucket, if there is any call of `register_reserve_pages`
- * function, this function must be called after all of them.
- */
-static void start_init_pages(void)
-{
-#if defined(DEBUG)
-    uart_printf("start_reserve_pages\n");
-#endif
-
-    /*
-     * if there is no page need to be reserved, push the whole memory region
-     * onto the free list with maximum order
-     */
-    if (!reserve_flag) {
-        list_push(&free_areas[0].free_list, &((struct page*)base_ptr)->list);
-        ((struct page*)base_ptr)->private = get_order_from_bucket(0);
-        free_areas[0].nr_free++;
-        return;
-    }
-
-    // leftmost node in the lowest level of the binary tree
-    size_t i = (1 << MAX_ALLOC_LOG2) - 1;
-
-    // rightmost node in the lowest level of the binary tree
-    size_t last = (1 << (MAX_ALLOC_LOG2 + 1)) - 2;
-
-    while (i <= last) {
-#if defined(DEBUG)
-        uart_printf("check reserved idx: 0x%x\n", i);
-#endif
-        if (is_reserved(i)) {
-#if defined(DEBUG)
-            uart_printf("page already reserved!\n");
-#endif
-            i++;
-            continue;
-        }
-
-#if defined(DEBUG)
-        uart_printf("find first split\n");
-#endif
-
-        size_t first_split = i;
-        size_t curr_bucket = MAX_ALLOC_LOG2;
-        while (first_split && !parent_is_split(first_split)) {
-            first_split = get_parent(first_split);
-            curr_bucket--;
-        }
-
-        if (first_split) {
-#if defined(DEBUG)
-            uart_printf(
-                "found first split, index: 0x%x, order: %d, addr: 0x%x\n",
-                first_split, get_order_from_bucket(curr_bucket),
-                (uintptr_t)get_ptr_from_index(first_split, curr_bucket));
-            uart_printf("push onto free list\n");
-#endif
-            struct page* first_split_addr =
-                (struct page*)get_ptr_from_index(first_split, curr_bucket);
-            list_push(&free_areas[curr_bucket].free_list,
-                      &first_split_addr->list);
-            first_split_addr->private = get_order_from_bucket(curr_bucket);
-            free_areas[curr_bucket].nr_free++;
-#if defined(DEBUG)
-            uart_printf("update index\n");
-#endif
-            i += (1 << get_order_from_bucket(curr_bucket));
-        } else {
-            i++;
-        }
-#if defined(DEBUG)
-        uart_printf("\n");
-#endif
-    }
-#if defined(DEBUG)
-    uart_printf("\n");
-#endif
-}
-
-/* zero out a given array with given size*/
-static void init_array(uint8_t* array, size_t total_bytes)
-{
-    size_t stride = sizeof(unsigned long long);
-    size_t count = (total_bytes & ~(stride - 1)) >> LOG2LL(stride);
-    size_t remain = total_bytes & (stride - 1);
-
-    unsigned long long* ptr = (unsigned long long*)array;
-    while (count--)
-        *ptr++ = 0;
-
-    while (remain--)
-        *(uint8_t*)ptr = 0;
-}
-
-#define INIT_NODE_IS_SPLIT() init_array(node_is_split, NODE_IS_SPLIT_SIZE)
-#define INIT_NODE_IS_RESERVED() \
-    init_array(node_is_reserved, NODE_IS_RESERVED_SIZE)
-
-/*
- * Initialize the buddy system allocator. must be called
- * before any allocation happen.
- */
 void buddy_init(void)
 {
     uintptr_t dtb_start = get_dtb_start();
     uintptr_t dtb_end = get_dtb_end();
 
-#if defined(DEBUG)
-    uart_printf("dtb_start: 0x%x\n", dtb_start);
-    uart_printf("dtb_end: 0x%x\n", dtb_end);
-#endif
+    uart_printf("dtb_start: 0x%x, dtb_end: 0x%x\n", dtb_start, dtb_end);
 
     uintptr_t cpio_start = get_cpio_start();
     uintptr_t cpio_end = get_cpio_end();
 
-#if defined(DEBUG)
-    uart_printf("cpio_start: 0x%x\n", cpio_start);
-    uart_printf("cpio_end: 0x%x\n", cpio_end);
-#endif
+    uart_printf("cpio_start: 0x%x,  cpio_end: 0x%x\n", cpio_start, cpio_end);
+
+    uart_printf("kernel_start: 0x%x, kernel_end: 0x%x\n",
+                (uintptr_t)kernel_start, (uintptr_t)kernel_end);
 
     uintptr_t usable_mem_start = get_usable_mem_start();
     uintptr_t usable_mem_length = get_usable_mem_length();
+
     usable_mem_end = usable_mem_start + usable_mem_length;
 
-#if defined(DEBUG)
-    uart_printf("usable memory start: 0x%x\n", usable_mem_start);
-    uart_printf("usable memory end: 0x%x\n", usable_mem_end);
-#endif
+    base_ptr = max_ptr = usable_mem_start;
 
+    size_t nr_pages = (usable_mem_end - usable_mem_start) >> PAGE_SHIFT;
 
-    base_ptr = max_ptr = (uint8_t*)usable_mem_start;
+    MIN_ALLOC_SIZE = 1;
+    MIN_ORDER = LOG2LL(MIN_ALLOC_SIZE);
 
-    MIN_ALLOC = 1;
-    MIN_ALLOC_LOG2 = LOG2LL(MIN_ALLOC);
+    MAX_ALLOC_SIZE = align_down_pow2(nr_pages);
 
-    MAX_ALLOC = (size_t)align_up_pow2(
-                    (size_t)PAGE_ALIGN_UP(usable_mem_end - usable_mem_start)) >>
-                PAGE_SHIFT;
+    MAX_ORDER = LOG2LL(MAX_ALLOC_SIZE);
 
-    MAX_ALLOC_LOG2 = LOG2LL(MAX_ALLOC);
-
-#if defined(DEBUG)
-    uart_printf("base_ptr: 0x%x\n", base_ptr);
-
-    uart_printf("max_ptr: 0x%x\n", max_ptr);
-
-    uart_printf("MIN_ALLOC_LOG2: %d\n", MIN_ALLOC_LOG2);
-    uart_printf("MAX_ALLOC_LOG2: %d\n", MAX_ALLOC_LOG2);
-#endif
-
-    node_is_split = (uint8_t*)mem_alloc(sizeof(uint8_t) * NODE_IS_SPLIT_SIZE);
-
-    INIT_NODE_IS_SPLIT();
-
-
-    node_is_reserved =
-        (uint8_t*)mem_alloc(sizeof(uint8_t) * NODE_IS_RESERVED_SIZE);
-
-    INIT_NODE_IS_RESERVED();
-
-
-    zone.managed_pages = MAX_ALLOC;
+    zone.managed_pages = nr_pages;
     zone.free_areas = mem_alloc(sizeof(struct free_area) * BUCKET_COUNT);
+    if (!zone.free_areas)
+        return;
+
+    mem_map = (struct page*)mem_alloc_align(sizeof(struct page) * nr_pages,
+                                            page_alignment);
+
+    if (!mem_map)
+        return;
 
     free_areas = zone.free_areas;
-
 
     for (int i = 0; i < BUCKET_COUNT; i++) {
         INIT_LIST_HEAD(&free_areas[i].free_list);
         free_areas[i].nr_free = 0;
     }
 
+    mem_set(mem_map, 0, sizeof(struct page) * nr_pages);
+
     register_reserve_pages(DTS_MEM_RESERVED_START, DTS_MEM_RESERVED_END);
     register_reserve_pages(dtb_start, dtb_end);
     register_reserve_pages(cpio_start, cpio_end);
-    register_reserve_pages((uintptr_t)&kernel_start, (uintptr_t)&kernel_end);
-    register_reserve_pages(usable_mem_end,
-                           usable_mem_start + (MAX_ALLOC << PAGE_SHIFT));
+    register_reserve_pages((uintptr_t)kernel_start, (uintptr_t)kernel_end);
+    register_reserve_pages(HEAP_START, HEAP_END);
+    register_reserve_pages(STACK_START, STACK_END);
 
     start_init_pages();
 
     buddyinfo();
+}
+
+
+struct page* alloc_pages(size_t order, gfp_t flags)
+{
+    size_t original_order = order;
+
+    while (order <= MAX_ORDER) {
+        struct page* page = get_page_from_freelist(order);
+
+        if (!page) {
+            order++;
+            continue;
+        }
+
+        while (order > original_order) {
+            struct page* right_half = page + (1 << (order - 1));
+            add_page_to_freelist(right_half, order - 1);
+            order--;
+        }
+
+        if (flags & __GFP_COMP)
+            prep_compound_page(page, original_order);
+
+
+        if (flags & __GFP_ZERO)
+            mem_set((void*)page_to_phys(page), 0, PAGE_SIZE << original_order);
+
+        return page;
+    }
+
+    return NULL;
+}
+
+void free_pages(struct page* page, size_t order)
+{
+    if (!page || PageBuddy(page) || PageTail(page))
+        return;
+
+    if (PageCompound(page))
+        reset_compound_page(page);
+
+    coalesce(page, order);
 }
 
 void buddyinfo(void)
@@ -725,12 +454,14 @@ void buddyinfo(void)
     uart_printf("Free List layout\n");
     uart_printf("===================================\n");
 
-    for (int i = MIN_ALLOC_LOG2; i < MIN_ALLOC_LOG2 + BUCKET_COUNT; i++) {
-        uart_printf("ORDER %d: ", MAX_ALLOC_LOG2 - i);
-        uart_printf("HEAD(0x%x) -> ", &free_areas[i].free_list);
+    for (size_t i = MIN_ORDER; i <= MAX_ORDER; i++) {
+        size_t bucket = get_bucket_from_order(i);
+        uart_printf("ORDER %d: ", i);
+        uart_printf("HEAD(0x%x) (%d) -> ", &free_areas[bucket].free_list,
+                    free_areas[bucket].nr_free);
         struct page* page;
-        list_for_each_entry (page, &free_areas[i].free_list, list) {
-            uart_printf("0x%x -> ", (uintptr_t)page);
+        list_for_each_entry (page, &free_areas[bucket].free_list, list) {
+            uart_printf("0x%x -> ", page_to_phys(page));
         }
         uart_printf("\n");
     }
@@ -740,33 +471,24 @@ void test_page_alloc(void)
 {
     struct page* ptr1 = alloc_pages(1, __GFP_COMP);
 
-    buddyinfo();
 
     struct page* ptr2 = alloc_pages(5, __GFP_COMP);
 
-    buddyinfo();
 
     free_pages(ptr1, 1);
 
-    buddyinfo();
 
     struct page* ptr3 = alloc_pages(8, __GFP_COMP);
 
-    buddyinfo();
 
     free_pages(ptr3, 8);
 
-    buddyinfo();
 
     struct page* ptr4 = alloc_pages(0, 0);
 
-    buddyinfo();
 
     free_pages(ptr2, 5);
 
-    buddyinfo();
 
     free_pages(ptr4, 0);
-
-    buddyinfo();
 }

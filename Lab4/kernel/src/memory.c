@@ -6,10 +6,7 @@
 #include "list.h"
 #include "mini_uart.h"
 
-extern char heap_begin;
-extern char heap_end;
-
-static char* heap_ptr = &heap_begin;
+static char* heap_ptr = (char*)HEAP_START;
 
 int mem_init(uintptr_t dtb_ptr)
 {
@@ -41,7 +38,7 @@ void* mem_alloc(uint64_t size)
 
     size = (uint64_t)mem_align((char*)size, 8);
 
-    if (heap_ptr + size > &heap_end)
+    if (heap_ptr + size > (char*)HEAP_END)
         return NULL;
 
     char* ptr = heap_ptr;
@@ -50,12 +47,16 @@ void* mem_alloc(uint64_t size)
     return ptr;
 }
 
-void mem_free(void* ptr)
+void* mem_alloc_align(uint64_t size, uint32_t align)
 {
-    // TODO
-    return;
-}
+    if (!size)
+        return NULL;
+    if (!align)
+        align = 8;
 
+    heap_ptr = mem_align(heap_ptr, align);
+    return mem_alloc(size);
+}
 
 void mem_set(void* b, int c, size_t len)
 {

@@ -167,7 +167,8 @@ void parse_command(char* cmd)
 
     } else if (!str_cmp(cmd_name, "test_page_alloc")) {
         test_page_alloc();
-
+    } else if (!str_cmp(cmd_name, "test_slab_alloc")) {
+        test_slab_alloc();
     } else if (!str_cmp(cmd_name, "buddyinfo")) {
         buddyinfo();
     } else if (!str_cmp(cmd_name, "slabinfo")) {

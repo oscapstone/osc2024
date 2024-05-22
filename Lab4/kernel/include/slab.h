@@ -6,14 +6,19 @@
 #include "int.h"
 #include "list.h"
 
-extern size_t MAX_ALLOC_LOG2;
+extern size_t MAX_ORDER;
+
+#define MIN_PARTIAL 5
+#define MAX_PARTIAL 10
+
+#define MAX_OBJS_PER_PAGE 32767  // since page.objects is u15
 
 #define OO_SHIFT 16
 #define OO_MASK  ((1 << OO_SHIFT) - 1)
 
 #define KMALLOC_SHIFT_HIGH (PAGE_SHIFT + 1)
 #define KMALLOC_SHIFT_LOW  3
-#define KMALLOC_SHIFT_MAX  (MAX_ALLOC_LOG2 + PAGE_SHIFT - 1)
+#define KMALLOC_SHIFT_MAX  (MAX_ORDER + PAGE_SHIFT - 1)
 
 /* Maximum allocatable size */
 #define KMALLOC_MAX_SIZE (1UL << KMALLOC_SHIFT_MAX)
@@ -44,6 +49,9 @@ struct kmem_cache {
 
     struct kmem_cache_order_objects oo;
     struct kmem_cache_order_objects min;
+    struct kmem_cache_order_objects max;
+
+    gfp_t allocflags;
 
     uint64_t min_partial;
 
@@ -87,5 +95,7 @@ void* kzmalloc(size_t size, gfp_t flags);
 void kfree(const void* x);
 
 void slabinfo(void);
+
+void test_slab_alloc(void);
 
 #endif /* SLAB_H */
