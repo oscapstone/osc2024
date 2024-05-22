@@ -209,35 +209,25 @@ void register_reserve_pages(uintptr_t start, uintptr_t end)
 
 void coalesce(struct page* page, size_t order)
 {
-    uart_printf("coalesce...\n");
-    uart_printf("phys: 0x%x\n", page_to_phys(page));
-
     size_t pfn = page_to_pfn(page);
 
     if (pfn >= zone.managed_pages)
         return;
 
     while (order <= MAX_ORDER) {
-        uart_printf("order: %d\n", order);
         size_t buddy_pfn = get_buddy_pfn(pfn, order);
         if (buddy_pfn >= zone.managed_pages)
             break;
         struct page* buddy_page = pfn_to_page(buddy_pfn);
-        uart_printf("buddy phys: 0x%x\n", page_to_phys(buddy_page));
-        if (PageBuddy(buddy_page) && buddy_page->private == order) {
+        if (PageBuddy(buddy_page) && buddy_page->private == order)
             delete_page_from_freelist(buddy_page, order);
-            uart_printf("delete from order %d freelist\n", order);
-        } else {
-            uart_printf("Can't merge buddy\n");
+        else
             break;
-        }
         order++;
         pfn = get_left_pfn(pfn, order);
         page = pfn_to_page(pfn);
     }
     add_page_to_freelist(page, order);
-    uart_printf("add to order %d freelist\n", order);
-    uart_printf("coalesce end...\n");
 }
 
 void start_init_pages(void)

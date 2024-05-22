@@ -688,4 +688,7 @@ void test_slab_alloc(void)
 
     void* ptr2 = kmalloc(4 * 1024, 0);
     kfree(ptr2);
+
+    void* ptr3 = kmalloc(10 * 1024, 0);
+    kfree(ptr3);
 }
