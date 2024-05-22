@@ -1,3 +1,40 @@
+// .section .text.exception_vector_table
+.align 11
+.global exception_vector_table
+exception_vector_table:
+    b svc_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b svc_handler
+    .align 7
+    b irq_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b svc_handler
+    .align 7
+    b irq_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+    b exception_handler
+    .align 7
+
 // save general registers to stack
 .macro save_all
     sub sp, sp, 36 * 8
@@ -75,39 +112,3 @@ svc_handler:
     load_all
     eret
 
-// .section .text.exception_vector_table
-.align 11
-.global exception_vector_table
-exception_vector_table:
-    b svc_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b svc_handler
-    .align 7
-    b irq_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b svc_handler
-    .align 7
-    b irq_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7

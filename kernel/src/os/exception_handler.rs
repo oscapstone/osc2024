@@ -5,6 +5,8 @@ use core::{
     arch::{asm, global_asm},
     ptr::read_volatile,
 };
+
+use super::stdio::println_now;
 mod system_call;
 pub mod trap_frame;
 
@@ -54,6 +56,7 @@ unsafe extern "C" fn svc_handler_rust(trap_frame_ptr: *mut u64) {
             7 => system_call::kill(trap_frame_ptr),
             _ => panic!("Unknown system call number: {}", system_call_num),
         }
+        // println!("System call number: {}", system_call_num);
     } else {
         println!("Unknown exception: {:08x}", esr_el1);
         println!("ELR_EL1: {:08x}", elr_el1);
