@@ -5,6 +5,12 @@ ASMFLAGS = -Iinclude
 
 BUILD_DIR = build
 SRC_DIR = src
+
+GDB := gdb-multiarch
+QEMU := qemu-system-aarch64
+QOPS = -M raspi3b -kernel kernel8.img -dtb bcm2710-rpi-3-b-plus.dtb -initrd initramfs.cpio  -display none
+GDBOPS = --init-eval-command="file $(BUILD_DIR)/kernel8.elf" --init-eval-command="target remote :1234"
+SESSION_NAME := my-os
 #---------------------------------------------------------------------------------------
 
 C_FILES = $(wildcard $(SRC_DIR)/*.c)
@@ -35,5 +41,5 @@ run:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none  -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -S -s
-
+	tmux new-session -d -s $(SESSION_NAME) '$(QEMU) $(QOPS) -S -s  -serial null -serial stdio' \; split-window -h '$(GDB) $(GDBOPS)' \; attach -t $(SESSION_NAME)
+#qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -S -s

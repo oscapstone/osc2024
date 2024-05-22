@@ -9,7 +9,7 @@
 #include "memory.h"
 #include "timer.h"
 
-#define CLI_MAX_CMD 11
+#define CLI_MAX_CMD 12
 #define USTACK_SIZE 0x10000
 
 extern char* dtb_ptr;
@@ -27,6 +27,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
     {.command="exec", .help="execute a command, replacing current image with a new image"},
     {.command="setTimeout", .help="setTimeout [MESSAGE] [SECONDS]"},
     {.command="set2sAlert", .help="set core timer interrupt every 2 second"},
+    {.command="memTest", .help="memory testcase generator, allocate and free"},
     {.command="reboot", .help="reboot the device"}
 };
 
@@ -97,6 +98,8 @@ void cli_cmd_exec(char* buffer)
         do_cmd_dtb();
     } else if (strcmp(cmd, "exec") == 0){
         do_cmd_exec(argvs);
+    } else if (strcmp(cmd, "memTest") == 0) {
+        do_cmd_memory_tester();
     } else if (strcmp(cmd, "setTimeout") == 0) {
         char* sec = str_SepbySpace(argvs);
         do_cmd_setTimeout(argvs, sec);
@@ -119,7 +122,7 @@ void cli_print_banner()
     uart_puts("    //     //    ------    //          \r\n");
     uart_puts("   //     //          //  //           \r\n");
     uart_puts("    ------     ------      ------      \r\n");
-    uart_puts("   2024 Lab3 Exception and Interrupt   \r\n");
+    uart_puts("          2024 Lab4 Allocator          \r\n");
     uart_puts("=======================================\r\n");
 }
 
@@ -293,6 +296,19 @@ void do_cmd_setTimeout(char* msg, char* sec)
 void do_cmd_set2sAlert()
 {
     add_timer(timer_set2sAlert,2,"2sAlert");
+}
+
+void do_cmd_memory_tester()
+{
+
+    char *a = kmalloc(0x10000);
+    char *b = kmalloc(0x4000);
+    char *c = kmalloc(0x1001); //malloc size = 8KB
+
+    kfree(a);
+    kfree(b);
+    kfree(c);
+
 }
 
 void do_cmd_reboot()

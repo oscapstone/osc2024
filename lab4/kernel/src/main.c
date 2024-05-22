@@ -23,6 +23,7 @@ void main(char* arg){
     el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
 
     core_timer_enable();
+    init_allocator();
     cli_print_banner();
 
     while(1){
