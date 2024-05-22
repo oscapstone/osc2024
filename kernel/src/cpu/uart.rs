@@ -1,8 +1,11 @@
 use crate::cpu::registers::Register;
 use crate::cpu::registers::MMIO;
 use crate::os::critical_section;
+use crate::os::stdio::print_hex_now;
 use crate::os::stdio::println_now;
 use core::arch::asm;
+
+use super::reboot;
 
 const BUF_SIZE: usize = 2048;
 
@@ -106,6 +109,9 @@ pub unsafe fn irq_handler() {
     loop {
         match non_blocking_recv() {
             Some(c) => {
+                if c == 0x3 {
+                    reboot::reset(100);
+                }
                 RECV_BUFFER[RECV_END_IDX] = c;
                 RECV_END_IDX += 1;
                 RECV_END_IDX %= BUF_SIZE;
