@@ -2,8 +2,14 @@
 #![no_std]
 
 mod os;
-use core::{arch::{asm, global_asm}, ptr::addr_of_mut};
-use os::{stdio::{print, print_hex, println}, system_call::{fork, get_pid, uart_read, uart_write}};
+use core::{
+    arch::{asm, global_asm},
+    ptr::addr_of_mut,
+};
+use os::{
+    stdio::{print, print_hex, println},
+    system_call::{fork, get_pid, uart_read, uart_write},
+};
 
 use crate::os::system_call;
 
@@ -21,6 +27,7 @@ unsafe fn main() {
             println("Parent");
             loop {}
         }
+        println("NOPING");
         for _ in 0..1000000000 {
             asm!("nop");
         }
