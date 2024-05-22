@@ -47,8 +47,10 @@ static inline int free_child_thread(thread_t *parent_thread, thread_t *child_thr
 		kfree(child_thread->code);
 	}
 	threads[child_thread->pid] = NULL;
+	kfree(child_thread->child_list);
 	kfree(child_thread->user_stack_base);
 	kfree(child_thread->kernel_stack_base);
+	kfree(child_thread->name);
 	kfree(child_thread);
 	return 0;
 }
