@@ -1,6 +1,3 @@
-## TODO
-如果跑到板子上怪怪的話，可以改成 allocater 固定給 physical，在自已轉
-
-1. 設好用到 peripheral 的 pgd
-2. 設好 fork 的 pgd
-3. 研究怎麼把 mbox call 的地址轉對
+### 問題集
+1. allocate_page 在 syscall handler 會變成 physical address
+2. 不太理解為甚麼 mbox 需要複製(複製回去的時候也會操作到那個 memory，為甚麼不會有問題? 直接 mbox call不是一樣的概念嗎)

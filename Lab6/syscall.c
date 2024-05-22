@@ -74,14 +74,12 @@ void exec(trapframe * sp){
 
     unsigned long user_code = 0x0;
     unsigned long sp_el0 = 0xfffffffff000;
+    
     char* pgd = allocate_page(4096);
-    if(((unsigned long)(pgd)) < VT_OFFSET)
-        pgd += VT_OFFSET;
+    pgd = ensure_virtual(pgd);
+    memset(pgd, 4096);
 
     get_current() -> regs.pgd = (unsigned long *) pgd;
-    for(int i = 0; i< 4096; i++){
-        ((char*) (get_current() -> regs.pgd)) [i] = 0;
-    }
     
     //get_current() -> sp_el0 is the kernel address of sp_el0;
     sz_gb = sz;
@@ -142,8 +140,6 @@ void uartwrite(trapframe *sp) {
 }
 
 void fork(trapframe *sp){
-    uart_int(get_current() -> pid);
-    newline();
     int pid;
     char * temp = allocate_page(sizeof(thread));
     if(((unsigned long)(temp)) < VT_OFFSET)
@@ -232,6 +228,7 @@ void sys_mbox_call(trapframe * sp){
     for(int i=0; i<144;i++){
         ((char *)mbox)[i] = ((char *)temp)[i]; 
     }
+    //sp -> x[0] = mbox_call(mbox, temp);
 }
 
 void sys_call(trapframe * sp){
