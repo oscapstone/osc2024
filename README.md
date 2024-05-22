@@ -1,6 +1,6 @@
 # NYCU Operating System Capstone 2024
 
-## Dependancy
+## Dependency
 - `make`
 - `rust`
 - `qemu` (optional)
