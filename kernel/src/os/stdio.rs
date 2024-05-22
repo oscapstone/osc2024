@@ -72,6 +72,9 @@ pub fn print_hex_now(n: u32) {
 pub fn println_now(s: &str) {
     for c in s.bytes() {
         unsafe {
+            if c == b'\n' {
+                send(b'\r');
+            }
             send(c);
         }
     }
