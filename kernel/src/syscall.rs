@@ -60,7 +60,7 @@ pub fn fork() -> u64 {
 
 pub fn exit(status: u64) {
     println!("exit: {}", status);
-    crate::scheduler::get().exit(status);
+    scheduler::get().exit(status);
 }
 
 pub fn mbox_call(channel: u8, mbox: *mut u32) -> u64 {
@@ -80,4 +80,8 @@ pub fn mbox_call(channel: u8, mbox: *mut u32) -> u64 {
         }
     }
     ret as u64
+}
+
+pub fn kill(pid: u64) {
+    scheduler::get().kill(pid as usize);
 }

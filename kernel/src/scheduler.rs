@@ -164,6 +164,18 @@ impl Scheduler {
         let next = self.restore_next();
         self.current = Some(next);
     }
+
+    pub fn kill(&mut self, tid: usize) {
+        let current = self.save_current();
+        if tid == current {
+            println!("Killing current thread");
+            self.exit(0);
+        } else {
+            println!("Killing thread {}", tid);
+            self.threads[tid] = None;
+            self.ready_queue.retain(|&t| t != tid);
+        }
+    }
 }
 
 static mut SCHEDULER: Option<Scheduler> = None;

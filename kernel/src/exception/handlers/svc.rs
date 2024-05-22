@@ -135,6 +135,11 @@ unsafe fn syscall_handler(sp: u64) {
             let ret = crate::syscall::mbox_call(channel, mbox);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret as u64;
         }
+        7 => {
+            // println!("Syscall kill");
+            let pid = syscall.arg0;
+            crate::syscall::kill(pid);
+        }
         _ => {
             println!("Unknown syscall: 0x{:x}", syscall.idx);
             panic!("Unknown syscall");
