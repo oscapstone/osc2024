@@ -9,6 +9,9 @@ void uart_send ( char c );
 void uart_send_string(char* str);
 void uart_hex(unsigned int d);
 
+/* printf */
+void printf(char *fmt, ...);
+
 /* async part */
 uint8_t uart_async_recv(void);
 // void uart_async_send(uint8_t c);

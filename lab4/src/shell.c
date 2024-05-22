@@ -11,6 +11,8 @@
 
 #define BUFFER_SIZE 100
 
+extern char bss_end;
+
 void shell()
 {
     while (1) {
@@ -93,8 +95,10 @@ void parse_command(char *buffer)
         uart_send_string("The length of tmp is: ");
         uart_hex(my_strlen(tmp));
         uart_send_string("\r\n");
-    } 
-    else {
+    } else if (my_strcmp(buffer, "heap_limit") == 0){ 
+        printf("heap_start: %8x\n", &bss_end);
+        printf("heap_end:   %8x\n", show_heap_end());
+    } else {
         uart_send_string("command ");
         uart_send_string(buffer);
         uart_send_string(" not found\r\n");
@@ -114,6 +118,7 @@ void help()
     uart_send_string("async       async uart demo\r\n");
     uart_send_string("test        test the function my_atoi\r\n");
     uart_send_string("malloc      try to print the content of malloc\r\n");
+    uart_send_string("heap_limit  try to print out the limit of heap\r\n");
 }
 
 void hello()

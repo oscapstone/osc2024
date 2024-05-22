@@ -6,6 +6,6 @@
 
 char *mem_align(char *addr, unsigned int number);
 void *malloc(unsigned int size);
-
+void *show_heap_end(void);
 
 #endif

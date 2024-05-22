@@ -4,7 +4,7 @@
 
 extern char bss_end;
 // static char HEAP_USE[HEAP_SIZE] = {0};
-static unsigned int HEAP_OFFSET = 0;
+// static unsigned int HEAP_OFFSET = 0;
 // static unsigned int MEM_START = 0x10000000;
 // static unsigned int MEM_END = 0x20000000;
 
@@ -31,4 +31,9 @@ void *malloc(unsigned int size)
     char *now_addr = HEAP_ADDR;
     HEAP_ADDR += size;
     return now_addr;
+}
+
+void *show_heap_end(void)
+{
+    return (&bss_end + HEAP_SIZE);
 }
