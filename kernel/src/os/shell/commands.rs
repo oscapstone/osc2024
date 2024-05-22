@@ -8,6 +8,8 @@ use core::alloc::Layout;
 use core::arch::asm;
 use core::fmt::Display;
 
+use super::super::thread::THREAD_ALIGNMENT;
+
 use super::INITRAMFS;
 
 const CONTEXT_SWITCHING_DELAY: u64 = 1000 / 32;
@@ -95,10 +97,12 @@ pub fn exec(args: Vec<String>) {
         };
         let stack_size = 4096;
 
-        let program_ptr =
-            unsafe { alloc::alloc::alloc(Layout::from_size_align(filesize, 32).unwrap()) };
-        let program_stack_ptr =
-            unsafe { alloc::alloc::alloc(Layout::from_size_align(stack_size, 32).unwrap()) };
+        let program_ptr = unsafe {
+            alloc::alloc::alloc(Layout::from_size_align(filesize, THREAD_ALIGNMENT).unwrap())
+        };
+        let program_stack_ptr = unsafe {
+            alloc::alloc::alloc(Layout::from_size_align(stack_size, THREAD_ALIGNMENT).unwrap())
+        };
 
         for i in 0..filesize {
             unsafe {

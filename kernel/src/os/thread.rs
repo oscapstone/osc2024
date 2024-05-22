@@ -7,6 +7,8 @@ use core::{alloc::Layout, arch::asm};
 static mut THREADS: Option<Vec<Thread>> = None;
 pub static mut TRAP_FRAME_PTR: Option<*mut u64> = None;
 
+pub const THREAD_ALIGNMENT: usize = 32;
+
 #[derive(Clone)]
 struct ThreadContext {
     x0: usize,
@@ -154,21 +156,17 @@ pub fn run_thread(id: Option<usize>) {
         let threads = THREADS.as_mut().unwrap();
 
         let target_thread = match id {
-            Some(id) => {
-                threads
-                    .iter_mut()
-                    .find(|thread| thread.id == id)
-                    .expect("Thread not found")
-            }
-            None => {
-                threads
-                    .iter_mut()
-                    .find(|thread| match &thread.state {
-                        ThreadState::Waiting(_) => true,
-                        _ => false,
-                    })
-                    .expect("No running thread")
-            }
+            Some(id) => threads
+                .iter_mut()
+                .find(|thread| thread.id == id)
+                .expect("Thread not found"),
+            None => threads
+                .iter_mut()
+                .find(|thread| match &thread.state {
+                    ThreadState::Waiting(_) => true,
+                    _ => false,
+                })
+                .expect("No running thread"),
         };
 
         target_thread.state = match &target_thread.state {
@@ -186,6 +184,8 @@ pub fn run_thread(id: Option<usize>) {
                 "msr cntkctl_el1, {tmp}",
                 tmp = out(reg) _,
             );
+
+            assert_eq!(context.spsr, 0);
 
             asm!(
                 "mov x0, {spsr}",
@@ -425,7 +425,6 @@ pub fn restore_context(trap_frame_ptr: *mut u64) {
     }
 }
 
-#[no_mangle]
 pub fn context_switching() {
     // println!("Context switching");
     let threads = unsafe { THREADS.as_mut().unwrap() };
@@ -458,7 +457,6 @@ pub fn context_switching() {
         ThreadState::Waiting(_) => true,
         _ => false,
     });
-
 
     if next_thread.is_none() {
         next_thread = threads.iter_mut().find(|thread| match &thread.state {
@@ -501,18 +499,17 @@ pub fn context_switching() {
     restore_context(trap_frame_ptr);
 
     // println!("Context switched: {}", next_thread_id);
+    // println!("thread size: {}", threads.len());
     // println!(
     //     "{:X?}",
-    //     trap_frame::get(trap_frame_ptr, trap_frame::Register::PC)
+    //     unsafe {trap_frame::get(trap_frame_ptr, trap_frame::Register::PC)}
     // );
     // println!(
     //     "{:X?}",
-    //     trap_frame::get(trap_frame_ptr, trap_frame::Register::SP)
+    //     unsafe {trap_frame::get(trap_frame_ptr, trap_frame::Register::SP)}
     // );
 }
 
-#[no_mangle]
-#[inline(never)]
 pub fn fork() -> Option<usize> {
     let threads = unsafe { THREADS.as_mut().unwrap() };
     let current_thread = threads.iter().find(|thread| match &thread.state {
@@ -532,10 +529,16 @@ pub fn fork() -> Option<usize> {
 
         let new_pid = threads.len();
         let program_ptr = unsafe {
-            alloc::alloc::alloc(Layout::from_size_align(current_thread.program_size, 32).unwrap())
+            alloc::alloc::alloc(
+                Layout::from_size_align(current_thread.program_size, THREAD_ALIGNMENT)
+                    .expect("Layout error"),
+            )
         };
         let stack_ptr = unsafe {
-            alloc::alloc::alloc(Layout::from_size_align(current_thread.stack_size, 32).unwrap())
+            alloc::alloc::alloc(
+                Layout::from_size_align(current_thread.stack_size, THREAD_ALIGNMENT)
+                    .expect("Layout error"),
+            )
         };
         unsafe {
             core::ptr::copy_nonoverlapping(
@@ -553,7 +556,8 @@ pub fn fork() -> Option<usize> {
         let pc = current_thread_context.pc - current_thread.program as usize + program_ptr as usize;
         let sp = current_thread_context.sp - current_thread.stack as usize + stack_ptr as usize;
 
-        let new_thread = Thread {
+        println!("Old pc: {:X}", current_thread_context.pc);
+        threads.push(Thread {
             id: new_pid,
             program: program_ptr,
             program_size: current_thread.program_size,
@@ -565,13 +569,12 @@ pub fn fork() -> Option<usize> {
                 x0: 0,
                 ..*current_thread_context
             }),
-        };
-        // print_hex_now(program_ptr as u32);
-        // print_hex_now(pc as u32);
-        // print_hex_now(stack_ptr as u32);
-        // print_hex_now(sp as u32);
+        });
+        println!("New program start: {:X}", program_ptr as usize);
+        println!("new pc: {:X}", pc);
+        println!("New stack start: {:X}", stack_ptr as usize);
+        println!("new sp: {:X}", sp);
 
-        threads.push(new_thread);
         Some(new_pid)
     } else {
         println_now("No running thread to fork");
@@ -608,17 +611,21 @@ pub fn exec(program_name: String, program_args: Vec<String>) {
 
         alloc::alloc::dealloc(
             current_thread.program,
-            Layout::from_size_align(current_thread.program_size, 32).expect("Layout error"),
+            Layout::from_size_align(current_thread.program_size, THREAD_ALIGNMENT)
+                .expect("Layout error"),
         );
         alloc::alloc::dealloc(
             current_thread.stack,
-            Layout::from_size_align(current_thread.stack_size, 32).expect("Layout error"),
+            Layout::from_size_align(current_thread.stack_size, THREAD_ALIGNMENT)
+                .expect("Layout error"),
         );
 
-        current_thread.program =
-            alloc::alloc::alloc(Layout::from_size_align(filesize, 32).expect("Layout error"));
-        current_thread.stack =
-            alloc::alloc::alloc(Layout::from_size_align(4096, 32).expect("Layout error"));
+        current_thread.program = alloc::alloc::alloc(
+            Layout::from_size_align(filesize, THREAD_ALIGNMENT).expect("Layout error"),
+        );
+        current_thread.stack = alloc::alloc::alloc(
+            Layout::from_size_align(4096, THREAD_ALIGNMENT).expect("Layout error"),
+        );
 
         core::ptr::write_bytes(current_thread.program, 0, current_thread.program_size);
 
@@ -653,21 +660,17 @@ pub fn switch_to_thread(id: Option<usize>, trap_frame_ptr: *mut u64) {
     let threads = unsafe { THREADS.as_mut().unwrap() };
 
     let target_thread = match id {
-        Some(id) => {
-            threads
-                .iter_mut()
-                .find(|thread| thread.id == id)
-                .expect("Thread not found")
-        }
-        None => {
-            threads
-                .iter_mut()
-                .find(|thread| match &thread.state {
-                    ThreadState::Waiting(_) => true,
-                    _ => false,
-                })
-                .expect("No running thread")
-        }
+        Some(id) => threads
+            .iter_mut()
+            .find(|thread| thread.id == id)
+            .expect("Thread not found"),
+        None => threads
+            .iter_mut()
+            .find(|thread| match &thread.state {
+                ThreadState::Waiting(_) => true,
+                _ => false,
+            })
+            .expect("No running thread"),
     };
 
     target_thread.state = match &target_thread.state {
