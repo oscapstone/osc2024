@@ -30,21 +30,26 @@ static inline thread_t *child_node_to_thread(child_node_t *node)
 	return threads[(node)->pid];
 }
 
-static inline int free_thread(int64_t pid)
+static inline int free_child_thread(thread_t *parent_thread, thread_t *child_thread)
 {
-	if (pid >= MAX_PID)
+	list_head_t *curr;
+	list_head_t *n;
+	list_for_each_safe(curr, n, (list_head_t *)child_thread->child_list)
 	{
-		return -1;
+		thread_t *curr_child = child_node_to_thread((child_node_t *)curr);
+		curr_child->ppid = parent_thread->pid;
+		list_del_entry(curr);
+		list_add_tail(curr, (list_head_t *)parent_thread->child_list);
 	}
-	thread_t *thread = threads[pid];
-	if (thread_code_can_free(thread))
+
+	if (thread_code_can_free(child_thread))
 	{
-		kfree(thread->code);
+		kfree(child_thread->code);
 	}
-	kfree(thread->user_stack_base);
-	kfree(thread->kernel_stack_base);
-	kfree(thread);
-	threads[pid] = NULL;
+	threads[child_thread->pid] = NULL;
+	kfree(child_thread->user_stack_base);
+	kfree(child_thread->kernel_stack_base);
+	kfree(child_thread);
 	return 0;
 }
 
@@ -102,16 +107,6 @@ void idle()
 
 void init()
 {
-	// add_timer_by_sec(1, adapter_schedule_timer, NULL);
-	// DEBUG("Start schedule timer after 1 sec\r\n");
-	// curr_thread->context.lr = (uint64_t)__init;
-	// asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
-	// 	"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
-	// 	"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-	// 	"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
-	// 	"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-	// 	"eret\n\t" ::"r"(&curr_thread->context),
-	// 	"r"(curr_thread->context.lr), "r"(curr_thread->user_stack_base + USTACK_SIZE), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
 	while (1)
 	{
 		wait();
@@ -152,7 +147,7 @@ int64_t wait()
 			{
 				int64_t pid = child_thread->pid;
 				DEBUG("wait thread kfree\n");
-				free_thread(pid);
+				free_child_thread(curr_thread, child_thread);
 				list_del_entry(curr_child_node);
 				unlock_interrupt();
 				return pid;
@@ -170,21 +165,7 @@ void thread_exit()
 	lock_interrupt();
 	DEBUG("thread %d exit\n", curr_thread->pid);
 	curr_thread->status = THREAD_ZOMBIE;
-	thread_t *exit_thread = (list_head_t *)curr_thread;
-	do
-	{
-		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-	} while (list_is_head((list_head_t *)curr_thread, run_queue) || (curr_thread->status == THREAD_ZOMBIE)); // find a runnable thread
-	list_del_entry((list_head_t *)exit_thread);
-	list_head_t *curr;
-	list_head_t *n;
-	list_for_each_safe(curr, n, (list_head_t *)exit_thread->child_list)
-	{
-		thread_t *curr_child = child_node_to_thread((child_node_t *)curr);
-		curr_child->ppid = 1;
-		list_del_entry(curr);
-		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
-	}
+	list_del_entry((list_head_t *)curr_thread); // remove from run queue, still in parent's child list
 	unlock_interrupt();
 	schedule();
 }
@@ -265,7 +246,7 @@ void schedule()
 	do
 	{
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-	} while (list_is_head((list_head_t *)curr_thread, run_queue) || (curr_thread->status == THREAD_ZOMBIE)); // find a runnable thread
+	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 	// DEBUG("%d -> %d\n", prev_thread->pid, curr_thread->pid);
 	curr_thread->status = THREAD_RUNNING;
 	unlock_interrupt();
