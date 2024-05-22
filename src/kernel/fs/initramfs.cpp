@@ -9,7 +9,7 @@ CPIO initramfs;
 void initramfs_init() {
   auto find32 = [](auto path) {
     auto [found, view] = fdt.find(path);
-    if (!found)
+    if (not found)
       panic("initramfs: device %s not found", path);
     auto addr = pa2va((char*)(uint64_t)fdt_ld32(view.data()));
     return addr;
