@@ -149,7 +149,7 @@ nGnRnE: access gather(match),access order, signal write
 * TTBR Res0: 因為一個 page 是 4096 (2^12)，要 align
 * 找地址: 前 16 高低位， 48 開始每次 9，最後 12 是 offset (2^12)
 * Entry mask: 最後 12 bit (for) settings
-* init 的 n : 2MB x 512 = 1 GB, 2MB = 2 ^ 21 -> n = 22
+* init 的 n : 2MB x 512 = 1 GB, 2MB = 2 ^ 21 -> n = 20
 * 1GB -> 31:30 0 or 1 -> PMD (2 ^ 31)
 
 
