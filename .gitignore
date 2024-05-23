@@ -7,3 +7,4 @@
 *user_proc.img
 */kernel/*.cpio
 */bootloader/*.cpio
+*/kernel/.vscode
