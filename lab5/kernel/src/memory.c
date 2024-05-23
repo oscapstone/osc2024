@@ -183,8 +183,8 @@ int coalesce(frame_t **_frame_ptr)
     (*_frame_ptr)->used = FRAME_FREE;
     (*_frame_ptr)->cache_order = CACHE_NONE;
     
-    // memory_sendline("    coalesce detected, merging frame index %d (0x%x), %d (0x%x), -> val = %d\r\n", 
-    uart_sendline("    coalesce detected, merging frame index %d (0x%x), %d (0x%x), -> val = %d\r\n", 
+    memory_sendline("    coalesce detected, merging frame index %d (0x%x), %d (0x%x), -> val = %d\r\n", 
+    // uart_sendline("    coalesce detected, merging frame index %d (0x%x), %d (0x%x), -> val = %d\r\n", 
         frame_ptr->idx,     PAGE_INDEX_TO_PTR(frame_ptr->idx), 
         buddy->idx,         PAGE_INDEX_TO_PTR(buddy->idx),
         (*_frame_ptr)->val

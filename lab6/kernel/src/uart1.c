@@ -111,7 +111,11 @@ int  uart_sendline(char* fmt, ...) {
 char uart_async_getc() {
     *AUX_MU_IER_REG |=1; // enable read interrupt
     // do while if buffer empty
-    while (uart_rx_buffer_ridx == uart_rx_buffer_widx) *AUX_MU_IER_REG |=1; // enable read interrupt
+    while (uart_rx_buffer_ridx == uart_rx_buffer_widx) {
+        // uart_sendline("waiting for uart input\r\n");   
+        *AUX_MU_IER_REG |=1; // enable read interrupt
+    }
+    // uart_sendline("uart input received\r\n");
     lock();
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
     if (uart_rx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE) uart_rx_buffer_ridx = 0;

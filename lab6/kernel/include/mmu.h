@@ -52,19 +52,22 @@ typedef struct vm_area_struct
     unsigned long area_size;
     unsigned long rwx;   // 1, 2, 4
     int is_alloced;
-
+    char name[32];
 } vm_area_struct_t;
 
 void *set_2M_kernel_mmu(void *x0);
 void map_one_page(size_t *pgd_p, size_t va, size_t pa, size_t flag);
 
-void mmu_add_vma(struct thread *t, size_t va, size_t size, size_t pa, size_t rwx, int is_alloced);
+void mmu_add_vma(struct thread *t, size_t va, size_t size, size_t pa, size_t rwx, char *name, int is_alloced);
 void mmu_del_vma(struct thread *t);
 void mmu_map_pages(size_t *pgd_p, size_t va, size_t size, size_t pa, size_t flag);
 void mmu_free_page_tables(size_t *page_table, int level);
 
 void mmu_memfail_abort_handle(esr_el1_t* esr_el1);
 void copy_PTE(size_t *virt_pgd_parent, size_t *virt_pgd_child, int level);
+void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level);
+vm_area_struct_t *get_vma_by_va(thread_t *t, size_t va);
+void show_vma_list(int *highlight_array, int size);
 
 #endif //__ASSEMBLER__
 

@@ -9,6 +9,7 @@
 #include "memory.h"
 #include "timer.h"
 #include "sched.h"
+#include "colourful.h"
 
 #define CLI_MAX_CMD 9
 
@@ -22,6 +23,7 @@ struct CLI_CMDS cmd_list[] =
 {
     {.command="help",                   .func=do_cmd_help,          .help="print all available commands"},
     {.command="exec",                   .func=do_cmd_exec,          .help="execute a command, replacing current image with a new image"},
+    {.command="thread_tester",          .func=do_cmd_thread_tester, .help="thread tester with dummy function - foo()"},
     {.command="setTimeout",             .func=do_cmd_setTimeout,    .help="setTimeout [MESSAGE] [SECONDS]"},
     {.command="memory_tester",          .func=do_cmd_memory_tester, .help="memory testcase generator, allocate and free"},
     {.command="cat",                    .func=do_cmd_cat,           .help="concatenate files and print on the standard output"},
@@ -42,7 +44,7 @@ void cli_cmd()
     char input_buffer[CMD_MAX_LEN];
     while(1){
         cli_cmd_clear(input_buffer, CMD_MAX_LEN);
-        uart_puts("# ");
+        uart_puts(GRN "# " RESET);
         cli_cmd_read(input_buffer);
         cli_cmd_exec(input_buffer);
     }
@@ -61,6 +63,7 @@ void cli_cmd_read(char* buffer)
     int idx = 0;
     while(1)
     {
+        // uart_sendline("idx: %d\r\n", idx);
         if ( idx >= CMD_MAX_LEN ) break;
         c = uart_async_getc();
 
@@ -145,9 +148,9 @@ void cli_cmd_exec(char* buffer)
 void cli_print_banner()
 {
     uart_puts("\r\n");
-    uart_puts("=======================================\r\n");
-    uart_puts("  OSC 2024 Lab6 Shell  \r\n");
-    uart_puts("=======================================\r\n");
+    uart_puts(BLU "=======================================\r\n" RESET);
+    uart_puts(RED "  OSC 2024 Lab6 Shell  \r\n" RESET);
+    uart_puts(BLU "=======================================\r\n" RESET);
 }
 
 DO_CMD_FUNC(do_cmd_cat)
@@ -172,6 +175,23 @@ DO_CMD_FUNC(do_cmd_cat)
     return 0;
 }
 
+DO_CMD_FUNC(do_cmd_thread_tester)
+{
+    int num_thread = 5;
+    if (argv[0] != NULL){
+        num_thread = atoi(argv[0]);
+    }
+    uart_sendline("%d Threads Testing ...\r\n", num_thread);
+    
+    for (int i = 0; i < num_thread; ++i)
+    {
+        thread_create(foo, 0, NORMAL_PRIORITY);
+    }
+    schedule();
+    uart_puts("%d Thread tester done! \r\n", num_thread);
+    return 0;
+}
+
 DO_CMD_FUNC(do_cmd_dtb)
 {
     traverse_device_tree(dtb_ptr, dtb_callback_show_tree);
@@ -180,26 +200,27 @@ DO_CMD_FUNC(do_cmd_dtb)
 }
 DO_CMD_FUNC(do_cmd_memory_tester)
 {
-
-    char *p1 = kmalloc(0x820);
+    frame_t *frame_array = get_frame_array();
+    
     char *p2 = kmalloc(0x900);
     char *p3 = kmalloc(0x2000);
     char *p4 = kmalloc(0x3900);
+    // uart_sendline("p1: %x, p2: %x, p3: %x, p4: %x\r\n", p1, p2, p3, p4);
     kfree(p3);
     kfree(p4);
-    kfree(p1);
+    // kfree(p1);
     kfree(p2);
 
-    // char *p[10];
-    // for (int i = 0; i < 10; i++)
-    // {
-    //     p[i] = kmalloc(0x1000);
-    // }
+    char *p[10];
+    for (int i = 0; i < 10; i++)
+    {
+        p[i] = kmalloc(0x1000);
+    }
 
-    // for (int i = 0; i < 10;i++)
-    // {
-    //     kfree(p[i]);
-    // }
+    for (int i = 0; i < 10;i++)
+    {
+        kfree(p[i]);
+    }
 
     char *a = kmalloc(0x10);        // 16 byte
     char *b = kmalloc(0x100);
@@ -244,7 +265,21 @@ DO_CMD_FUNC(do_cmd_memory_tester)
     kfree(gg);
     kfree(h);
     kfree(hh);
-
+char *p1 = kmalloc(0x4000);
+uart_sendline("p1: %x\r\n", p1);
+    int frame_idx = PTR_TO_PAGE_INDEX(VIRT_TO_PHYS(p1));
+    uart_sendline("frame_idx: %d\r\n", frame_idx);
+    frame_t *frame = &frame_array[frame_idx];
+    uart_sendline("frame-val: %d\n", frame->val);
+    for (int i = 0; i <= frame->val; i++){
+        frame_t *cur = &frame_array[frame_idx + i];
+        uart_sendline("frame->counter: %d\n", cur->counter);
+    }
+    kfree(p1);
+    for (int i = 0; i <= frame->val; i++){
+        frame_t *cur = &frame_array[frame_idx + i];
+        uart_sendline("frame->counter: %d\n", cur->counter);
+    }
     return 0;
 }
 DO_CMD_FUNC(do_cmd_help)

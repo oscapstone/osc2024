@@ -1,10 +1,27 @@
-ARMGNU ?= aarch64-linux-gnu
+# ARMGNU ?= aarch64-linux-gnu
+
+CC := aarch64-linux-gnu-gcc
+LD := aarch64-linux-gnu-ld
+OBJCOPY := aarch64-linux-gnu-objcopy
+GDB := gdb-multiarch
+QEMU := qemu-system-aarch64
 
 CFLAGS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
 ASMFLAGS = -Iinclude
 
+# echo "DEBUG MODE"
+DEBUG = 1
+# Set the TARGET_PLATFORM and _DEBUG macro to be passed to the GCC definition later.
+ifdef DEBUG
+$(info DEBUG MODE)
+CFLAGS+=-D_DEBUG=$(DEBUG)
+endif
+
+NAME = kernel8
 BUILD_DIR = build
 SRC_DIR = src
+
+
 #---------------------------------------------------------------------------------------
 
 C_FILES = $(wildcard $(SRC_DIR)/*.c)
@@ -17,17 +34,17 @@ DEP_FILES = $(OBJ_FILES:%.o=%.d)
 
 $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
-	$(ARMGNU)-gcc $(CFLAGS) -MMD -c $< -o $@
+	$(CC) $(CFLAGS) -MMD -c $< -o $@
 
 $(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
-	$(ARMGNU)-gcc $(ASMFLAGS) -MMD -c $< -o $@
+	$(CC) $(ASMFLAGS) -MMD -c $< -o $@
 
-kernel8.img: $(SRC_DIR)/link.ld $(OBJ_FILES)
-	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
-	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
+$(NAME).img: $(SRC_DIR)/link.ld $(OBJ_FILES)
+	$(LD) -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
+	$(OBJCOPY) $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
 
 all: 
-	kernel8.img
+	$(NAME).img
 
 clean:
 	rm -rf $(BUILD_DIR) *.img

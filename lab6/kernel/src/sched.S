@@ -1,5 +1,20 @@
+#include "bcm2837/rpi_uart1.h"
+
+# print a character to the UART
+.macro debugA
+    // Load the address of AUX_MU_IO_REG into a register
+    LDR x9, =0xFFFF00003F215040
+    // Load the ASCII value of 'a' into a register
+    MOV x8, #'a'        
+    // Store the value of r1 into the memory address pointed to by r0
+    STR x8, [x9] 
+.endm
+
+
 .global switch_to
 switch_to:
+#    debugA
+
     stp x19, x20, [x0, 16 * 0]
     stp x21, x22, [x0, 16 * 1]
     stp x23, x24, [x0, 16 * 2]
@@ -8,8 +23,9 @@ switch_to:
     stp fp, lr, [x0, 16 * 5]
     mov x9, sp
     str x9, [x0, 16 * 6]
-    //mrs x9, ttbr0_el1
-    //str x9, [x0, 16 * 6 + 8]
+
+    mrs x9, ttbr0_el1
+    str x9, [x0, 16 * 6 + 8]
 
     ldp x19, x20, [x1, 16 * 0]
     ldp x21, x22, [x1, 16 * 1]
@@ -19,6 +35,7 @@ switch_to:
     ldp fp, lr, [x1, 16 * 5]
     ldp x9, x0, [x1, 16 * 6]
     mov sp,  x9
+
     msr tpidr_el1, x1
 
     dsb ish           // ensure write has completed, lock for context switch
@@ -26,8 +43,10 @@ switch_to:
     tlbi vmalle1is    // invalidate all TLB entries in stage 1, el1 and inner shareable
     dsb ish           // ensure completion of TLB invalidatation
     isb               // clear pipeline
-
     ret
+
+
+
 
 .global store_context
 store_context:

@@ -66,5 +66,5 @@ void signal_default_handler()
 {
     trapframe_t tpf;
     tpf.x0 = curr_thread->pid;
-    kill(&tpf);
+    sys_kill(&tpf);
 }

@@ -244,3 +244,13 @@ int atoi(char* str)
     // return result.
     return res;
 }
+void *memset(void *s, int c, int n)
+{
+  char *start = s;
+  for (int i = 0; i < n; i++)
+  {
+    start[i] = c;
+  }
+
+  return s;
+}
