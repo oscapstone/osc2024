@@ -189,14 +189,6 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 int sys_fork(trapframe_t *tpf)
 {
 	kernel_lock_interrupt();
-	uint64_t sp, lr;
-	asm volatile(
-		"mov %0, sp\n"
-		"mov %1, lr\n"
-		: "=r"(sp), "=r"(lr));
-	DEBUG("pid: %d, kernel stack: 0x%x -> 0x%x, kernel_stack_base: 0x%x, &(curr_thread->kernel_space_base): 0x%x\r\n", curr_thread->pid, sp, curr_thread->kernel_stack_base + KSTACK_SIZE, curr_thread->kernel_stack_base, &(curr_thread->kernel_stack_base));
-	DEBUG("sp: 0x%x, lr: 0x%x\r\n", sp, lr);
-	DEBUG("curr_thread->context.sp: 0x%x, curr_thread->context.fp: 0x%x\r\n", curr_thread->context.sp, curr_thread->context.fp);
 	thread_t *parent = curr_thread;
 	char *new_name = kmalloc(strlen(parent->name) + 1);
 	strcpy(new_name, parent->name);
@@ -339,14 +331,6 @@ void sys_unlock_interrupt(trapframe_t *tpf)
 int kernel_fork()
 {
 	kernel_lock_interrupt();
-	uint64_t sp, lr;
-	asm volatile(
-		"mov %0, sp\n"
-		"mov %1, lr\n"
-		: "=r"(sp), "=r"(lr));
-	DEBUG("pid: %d, kernel stack: 0x%x -> 0x%x, kernel_stack_base: 0x%x, &(curr_thread->kernel_space_base): 0x%x\r\n", curr_thread->pid, sp, curr_thread->kernel_stack_base + KSTACK_SIZE, curr_thread->kernel_stack_base, &(curr_thread->kernel_stack_base));
-	DEBUG("sp: 0x%x, lr: 0x%x\r\n", sp, lr);
-	DEBUG("curr_thread->context.sp: 0x%x, curr_thread->context.fp: 0x%x\r\n", curr_thread->context.sp, curr_thread->context.fp);
 	thread_t *parent = curr_thread;
 	char *new_name = kmalloc(strlen(parent->name) + 1);
 	thread_t *child = thread_create(parent->code, new_name);
@@ -362,6 +346,8 @@ int kernel_fork()
 
 	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
 	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
+	// Because make a function call, so lr is the next instruction address
+	// When context switch, child process will start from the next instruction
 	store_context(get_current_thread_context());
 	DEBUG("child: 0x%x, parent: 0x%x\r\n", child, parent);
 
