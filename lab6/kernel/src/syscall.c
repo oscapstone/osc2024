@@ -13,31 +13,7 @@
 
 extern int uart_recv_echo_flag; // to prevent the syscall.img from using uart_send() in uart_recv()
 
-// int syscall_num = 0;
-// SYSCALL_TABLE_T syscall_table [] = {
-//     { .func=getpid                  },
-//     { .func=uartread                },
-//     { .func=uartwrite               },
-//     { .func=exec                    },
-//     { .func=fork                    },
-//     { .func=exit                    },
-//     { .func=syscall_mbox_call       },
-//     { .func=kill                    },
-//     { .func=signal_register         },
-//     { .func=signal_kill             },
-//     { .func=mmap                    },
-//     { .func=signal_reture           }
-// };
-
-// void init_syscall()
-// {
-//     syscall_num = sizeof(syscall_table) / sizeof(SYSCALL_TABLE_T);
-//     // uart_sendline("syscall_table[syscall_no].func: 0x%x\r\n", syscall_table[0].func);
-
-// }
-
 char* syscall_table [SYSCALL_TABLE_SIZE];
-
 
 void init_syscall()
 {
@@ -103,10 +79,10 @@ SYSCALL_DEFINE1(exec, trapframe_t*, tpf)
     mmu_del_vma(curr_thread);
     INIT_LIST_HEAD(&curr_thread->vma_list);
 
-    curr_thread->datasize = get_file_size((char *)name);
-    char *new_data = get_file_start((char *)name);
-    curr_thread->data = kmalloc(curr_thread->datasize);
-    curr_thread->stack_alloced_ptr = kmalloc(USTACK_SIZE);
+    curr_thread->datasize =             get_file_size((char *)name);
+    char *new_data =                    get_file_start((char *)name);
+    curr_thread->data =                 kmalloc(curr_thread->datasize);
+    curr_thread->stack_alloced_ptr =    kmalloc(USTACK_SIZE);
 
     asm("dsb ish\n\t");      // ensure write has completed
     mmu_free_page_tables(curr_thread->context.pgd, 0);
@@ -115,11 +91,11 @@ SYSCALL_DEFINE1(exec, trapframe_t*, tpf)
         "dsb ish\n\t"        // ensure completion of TLB invalidatation
         "isb\n\t");          // clear pipeline
 
-    // add vma                        User Virtual Address,                              Size,                             Physical Address,            xwr,                            is_alloced
-    mmu_add_vma(curr_thread,              USER_KERNEL_BASE,             curr_thread->datasize,                (size_t)VIRT_TO_PHYS(curr_thread->data), 0b111, "Code & Data Segment\0",            1);
-    mmu_add_vma(curr_thread, USER_STACK_BASE - USTACK_SIZE,                       USTACK_SIZE,   (size_t)VIRT_TO_PHYS(curr_thread->stack_alloced_ptr), 0b111, "Stack Segment\0",                  1);
-    mmu_add_vma(curr_thread,              PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START,                                       PERIPHERAL_START, 0b011, "Peripheral\0",                     0);
-    mmu_add_vma(curr_thread,        USER_SIGNAL_WRAPPER_VA,                            0x2000,           (size_t)VIRT_TO_PHYS(signal_handler_wrapper), 0b101, "Signal Handler Wrapper\0",         0);
+    // add vma                        User Virtual Address,                              Size,                             Physical Address,            xwr,  name                                  is_alloced
+    mmu_add_vma(curr_thread,              USER_KERNEL_BASE,             curr_thread->datasize,                (size_t)VIRT_TO_PHYS(curr_thread->data), 0b111, "Code & Data Segment\0",              1);
+    mmu_add_vma(curr_thread, USER_STACK_BASE - USTACK_SIZE,                       USTACK_SIZE,   (size_t)VIRT_TO_PHYS(curr_thread->stack_alloced_ptr), 0b111, "Stack Segment\0",                    1);
+    mmu_add_vma(curr_thread,              PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START,                                       PERIPHERAL_START, 0b011, "Peripheral\0",                       0);
+    mmu_add_vma(curr_thread,        USER_SIGNAL_WRAPPER_VA,                            0x2000,           (size_t)VIRT_TO_PHYS(signal_handler_wrapper), 0b101, "Signal Handler Wrapper\0",           0);
 
     memcpy(curr_thread->data, new_data, curr_thread->datasize);
     for (int i = 0; i <= SIGNAL_MAX; i++)
@@ -163,7 +139,7 @@ SYSCALL_DEFINE1(fork, trapframe_t*, tpf)
 
     int parent_pid = curr_thread->pid;
 
-    //copy stack into new process
+    //copy kernel stack into new process. It's not a user stack
     for (int i = 0; i < KSTACK_SIZE; i++)
     {
         newt->kernel_stack_alloced_ptr[i] = curr_thread->kernel_stack_alloced_ptr[i];

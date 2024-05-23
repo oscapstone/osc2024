@@ -89,7 +89,13 @@ void* set_2M_kernel_mmu(void* x0)
 }
 
 
-
+/*
+    the function is used to map one page
+    @param virt_pgd_p: the pointer of the page table
+    @param va: the virtual address
+    @param pa: the physical address
+    @param flag: the flag of the page
+*/
 void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
 {
     // lock();
@@ -119,6 +125,16 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
 }
 
 
+/*
+    the function is used to add a vma to the list
+    @param t: the thread
+    @param va: the virtual address
+    @param size: the size of the vma
+    @param pa: the physical address
+    @param rwx: the permission of the vma
+    @param name: the name of the vma
+    @param is_alloced: the flag of the vma
+*/
 void mmu_add_vma(struct thread *t, size_t va, size_t size, size_t pa, size_t rwx, char *name, int is_alloced)
 {
     size = size % 0x1000 ? size + (0x1000 - size % 0x1000) : size;
@@ -171,6 +187,11 @@ void mmu_add_vma(struct thread *t, size_t va, size_t size, size_t pa, size_t rwx
     list_add_tail((list_head_t *)new_area, &t->vma_list);
 }
 
+
+/*
+    the function is used to delete the vma from the list
+    @param t: the thread
+*/
 void mmu_del_vma(struct thread *t)
 {
     list_head_t *pos = t->vma_list.next;
@@ -185,6 +206,14 @@ void mmu_del_vma(struct thread *t)
     }
 }
 
+/*
+    the function is used to map pages
+    @param virt_pgd_p: the pointer of the page table
+    @param va: the virtual address
+    @param size: the size of the pages
+    @param pa: the physical address
+    @param flag: the flag of the pages
+*/
 void mmu_map_pages(size_t *virt_pgd_p, size_t va, size_t size, size_t pa, size_t flag)
 {
     pa = pa - (pa % 0x1000); // align
@@ -194,6 +223,12 @@ void mmu_map_pages(size_t *virt_pgd_p, size_t va, size_t size, size_t pa, size_t
     }
 }
 
+/*
+    the function is used to free page tables
+    @param page_table: the pointer of the page table
+    @param level: the level of the page table
+
+*/
 void mmu_free_page_tables(size_t *page_table, int level)
 {
     size_t *table_virt = (size_t*)PHYS_TO_VIRT((char*)page_table);
@@ -213,45 +248,49 @@ void mmu_free_page_tables(size_t *page_table, int level)
 }
 
 // Impliment copy-and-write `
-// It has some error, so I will fix it later
+
+/*
+    To set the page tables to read only for parent and child tables
+    @param parent_table: the pointer of the parent table
+    @param child_table: the pointer of the child table
+    @param level: the level of the page table
+*/
 void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level)
 {
     if (level > 3)
-    {
         return;
-    }
 
     size_t *parent_table_virt = (size_t*)PHYS_TO_VIRT((char*)parent_table);
     size_t *child_table_virt = (size_t*)PHYS_TO_VIRT((char*)child_table);
-    int counter_ = 0;
+    // int counter_ = 0;
     lock();
     for (int i = 0; i < 512; i++)
     {
-        if (parent_table_virt[i] != 0)
+        if (parent_table_virt[i] == 0)
+            continue;
+
+        if (! (parent_table_virt[i] & PD_TABLE))
         {
-            if (! (parent_table_virt[i] & PD_TABLE))
-            {
-                uart_sendline("mmu_reset_page_tables_read_only error\r\n");
-                return; 
+            uart_sendline("mmu_reset_page_tables_read_only error\r\n");
+            return; 
+        }
+        if (level == 3){
+            child_table_virt[i] = parent_table_virt[i]; 
+            child_table_virt[i] |= PD_RDONLY;
+            // if (counter_ < 3)
+            parent_table_virt[i] |= PD_RDONLY;
+            // counter_++;
+        }
+        else {
+            if (!child_table_virt[i]){
+                size_t *new_table = kmalloc(0x1000);
+                memset(new_table, 0, 0x1000);
+                child_table_virt[i] = VIRT_TO_PHYS((size_t)new_table); 
+                child_table_virt[i] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2);
             }
-            if (level == 3){
-                child_table_virt[i] = parent_table_virt[i]; 
-                child_table_virt[i] |= PD_RDONLY;
-                if (counter_ < 3)
-                    parent_table_virt[i] |= PD_RDONLY;
-                counter_++;
-            }
-            else {
-                if (!child_table_virt[i]){
-                    size_t *new_table = kmalloc(0x1000);
-                    memset(new_table, 0, 0x1000);
-                    child_table_virt[i] = VIRT_TO_PHYS((size_t)new_table); 
-                    child_table_virt[i] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2);
-                }
-                size_t *parent_next_table = (size_t*)(parent_table_virt[i] & ENTRY_ADDR_MASK);
-                size_t *child_next_table = (size_t*)(child_table_virt[i] & ENTRY_ADDR_MASK);
-                mmu_reset_page_tables_read_only(parent_next_table, child_next_table, level + 1);
-            }
+            size_t *parent_next_table = (size_t*)(parent_table_virt[i] & ENTRY_ADDR_MASK);
+            size_t *child_next_table = (size_t*)(child_table_virt[i] & ENTRY_ADDR_MASK);
+            mmu_reset_page_tables_read_only(parent_next_table, child_next_table, level + 1);
         }
     }
     unlock();
@@ -259,7 +298,8 @@ void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, 
 
 /*
     Get the vma by virtual address
-
+    @t: the thread
+    @va: the virtual address
 */
 vm_area_struct_t *get_vma_by_va(thread_t *t, size_t va)
 {
@@ -282,6 +322,11 @@ vm_area_struct_t *get_vma_by_va(thread_t *t, size_t va)
     return target_vma;
 }
 
+/*
+    Get the vma by the counter
+    @t: the thread
+    @counter: the counter
+*/
 void show_vma_list(int *highlight_array, int size)
 {
     list_head_t *pos;
@@ -360,8 +405,9 @@ void handle_translation_fault(size_t error_addr, vm_area_struct_t *vma_area_ptr)
 }
 
 /*
-    Get the physical address by user virtual address
-
+    Translate the virtual address to physical address by the page table
+    @param virt_pgd_p: the pointer of the page table
+    @param va: the virtual address
 */
 size_t virt_to_phys_paging_table(size_t *virt_pgd_p, size_t va)
 {
@@ -399,11 +445,13 @@ void handle_permission_fault(size_t error_addr, vm_area_struct_t *vma_area_ptr)
 
     frame_t *error_frame = &frame_array[error_frame_idx];
 
-    // the frame counter is 1, so handle translation fault
+    // the frame counter is 1, so there is only one process use the page frame and handle translation fault
     if (error_frame->counter == 1){
         handle_translation_fault(error_addr, vma_area_ptr);
         return;
     }
+
+
     // handle copy-on-write
     uart_sendline(GRN "[Handle Copy-on-Write]\r\n" RESET);
 
@@ -411,7 +459,6 @@ void handle_permission_fault(size_t error_addr, vm_area_struct_t *vma_area_ptr)
     unsigned long long curr_offset = 0;
     int frame_idx;
     while(curr_offset <= vma_area_ptr->area_size){
-        
         frame_idx = PTR_TO_PAGE_INDEX(vma_area_ptr->phys_addr + curr_offset);
         frame_array[frame_idx].counter--;
         curr_offset += 0x1000;

@@ -10,7 +10,7 @@
 #include "colourful.h"
 
 extern int finish_init_thread_sched;
-extern int syscall_num;
+// extern int syscall_num;
 extern SYSCALL_TABLE_T *syscall_table;
 
 void sync_64_router(trapframe_t* tpf)
@@ -27,7 +27,8 @@ void sync_64_router(trapframe_t* tpf)
     }
     el1_interrupt_enable();
 
-    
+
+    // check whether it is a syscall 
     if (esr->ec == ESR_ELx_EC_SVC64){
         unsigned long long syscall_no = tpf->x8;
         if (syscall_no > SYSCALL_TABLE_SIZE || syscall_no < 0 )
