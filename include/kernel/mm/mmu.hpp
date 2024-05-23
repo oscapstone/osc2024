@@ -108,7 +108,8 @@ struct PT_Entry {
       bool PXN : 1 = false;
       bool UXN : 1 = false;
       bool level_is_PTE : 1 = false;
-      uint64_t software_reserved : 3 = 0;
+      bool require_free : 1 = false;
+      uint64_t software_reserved : 2 = 0;
       uint64_t upper_atributes : 5 = 0;
     };
     uint64_t value;
@@ -190,8 +191,9 @@ struct PT_Entry {
     asm volatile("" ::: "memory");
   }
   template <typename T>
-  void set_entry(T addr, int level) {
+  void set_entry(T addr, int level, bool req_free = false) {
     set_level(level);
+    require_free = req_free;
     set_addr((void*)addr, isPTE() ? PTE_ENTRY : PD_BLOCK);
   }
 

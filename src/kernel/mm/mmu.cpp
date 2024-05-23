@@ -20,7 +20,7 @@ void PT_Entry::print(int level) const {
 }
 
 void PT_Entry::alloc(int level, bool kernel) {
-  set_entry(kmalloc(PAGE_SIZE), level);
+  set_entry(kmalloc(PAGE_SIZE), level, true);
   if (kernel)
     UXN = true;
   else
@@ -80,7 +80,10 @@ PT::PT(PT* o, int level) {
 
 PT::~PT() {
   this->traverse(
-      [](auto, auto entry, auto, auto) { kfree(pa2va(entry.addr())); },
+      [](auto, auto entry, auto, auto) {
+        if (entry.require_free)
+          kfree(pa2va(entry.addr()));
+      },
       [](auto, auto entry, auto, auto) { delete entry.table(); });
 }
 
