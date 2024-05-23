@@ -1,7 +1,7 @@
 #include "board/pm.hpp"
 
 #include "board/mini-uart.hpp"
-#include "mmio.hpp"
+#include "board/mmio.hpp"
 #include "util.hpp"
 
 void reboot() {
