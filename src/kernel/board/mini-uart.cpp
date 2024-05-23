@@ -3,6 +3,7 @@
 #include "board/gpio.hpp"
 #include "board/mmio.hpp"
 #include "board/peripheral.hpp"
+#include "board/pm.hpp"
 #include "ds/ringbuffer.hpp"
 #include "int/interrupt.hpp"
 #include "int/irq.hpp"
@@ -72,6 +73,8 @@ void mini_uart_handler(void*) {
     // Receiver holds valid byte
     if (not rbuf.full()) {
       auto c = get32(pa2va(AUX_MU_IO_REG)) & MASK(8);
+      if (c == 3)  // ^C
+        reboot();
       rbuf.push(c);
     }
   }
