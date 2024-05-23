@@ -66,4 +66,5 @@ void  cache_free(void* ptr);
 void* kmalloc(unsigned int size);
 void  kfree(void *ptr);
 
+void  memory_reserve(unsigned long long start, unsigned long long end);
 #endif /* _HEAP_H_ */

@@ -5,6 +5,10 @@
 extern char _heap_top;
 static char* htop_ptr = &_heap_top;
 
+extern char  _start;
+extern char  _end;
+extern char  _stack_top;
+
 //lab2
 void* malloc(unsigned int size) {
     // -> htop_ptr
@@ -66,20 +70,9 @@ void init_allocator()
             list_add(&frame_array[i].listhead, &frame_freelist[FRAME_IDX_FINAL]);
         }
     }
-
-    /* Startup reserving the following region:
-    Spin tables for multicore boot (0x0000 - 0x1000)
-    Devicetree (Optional, if you have implement it)
-    Kernel image in the physical memory
-    Your simple allocator (startup allocator) (Stack + Heap in my case)
-    Initramfs
-    */
-    // uart_sendline("\r\n* Startup Allocation *\r\n");
-    // uart_sendline("buddy system: usable memory region: 0x%x ~ 0x%x\n", BUDDY_MEMORY_BASE, BUDDY_MEMORY_BASE + BUDDY_MEMORY_PAGE_COUNT * PAGESIZE);
-    // dtb_find_and_store_reserved_memory(); // find spin tables in dtb
-    // memory_reserve((unsigned long long)&_start, (unsigned long long)&_end); // kernel
-    // memory_reserve((unsigned long long)&_heap_top, (unsigned long long)&_stack_top);  // heap & stack -> simple allocator
-    // memory_reserve((unsigned long long)CPIO_DEFAULT_START, (unsigned long long)CPIO_DEFAULT_END);
+    memory_reserve((unsigned long long)&_start, (unsigned long long)&_end); // kernel
+    memory_reserve((unsigned long long)&_heap_top, (unsigned long long)&_stack_top);  // heap & stack -> simple allocator
+		
 }
 
 void* page_malloc(unsigned int size){
@@ -376,4 +369,47 @@ void kfree(void *ptr)
         return;
     }
     cache_free(ptr);
+}
+
+void memory_reserve( unsigned long long start, unsigned long long end) {
+    start -= start % PAGESIZE; // floor (align 0x1000)
+    end = end % PAGESIZE ? end + PAGESIZE - (end % PAGESIZE) : end; // ceiling (align 0x1000)
+
+    uart_sendline("Reserved Memory: ");
+    uart_sendline("start 0x%x ~ ", start);
+    uart_sendline("end 0x%x\r\n",end);
+
+    // delete page from free list
+    for (int order = FRAME_IDX_FINAL; order >= 0; order--)
+    {
+        list_head_t *pos;
+        list_for_each(pos, &frame_freelist[order])
+        {
+            unsigned long long pagestart = ((frame_t *)pos)->idx * PAGESIZE + BUDDY_MEMORY_BASE;
+            unsigned long long pageend = pagestart + (PAGESIZE << order);
+
+            if (start <= pagestart && end >= pageend) // if page all in reserved memory -> delete it from freelist
+            {
+                ((frame_t *)pos)->used = FRAME_ALLOCATED;
+                uart_sendline("    [!] Reserved page in 0x%x - 0x%x\n", pagestart, pageend);
+                uart_sendline("        Before\n");
+                dump_page_info();
+                list_del_entry(pos);
+                uart_sendline("        Remove usable block for reserved memory: order %d\r\n", order);
+                uart_sendline("        After\n");
+                dump_page_info();
+            }
+            else if (start >= pageend || end <= pagestart) // no intersection
+            {
+                continue;
+            }
+            else // partial intersection, separate the page into smaller size.
+            {
+                list_del_entry(pos);
+                list_head_t *temppos = pos -> prev;
+                list_add(&release_redundant((frame_t *)pos)->listhead, &frame_freelist[order - 1]);
+                pos = temppos;
+            }
+        }
+    }
 }
