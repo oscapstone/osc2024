@@ -18,6 +18,7 @@ inline void link(ListItem* prev, ListItem* next) {
 
 inline void unlink(ListItem* it) {
   link(it->prev, it->next);
+  it->prev = it->next = nullptr;
 }
 
 template <std::derived_from<ListItem> T>
