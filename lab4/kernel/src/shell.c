@@ -8,6 +8,7 @@
 #include "dtb.h"
 #include "timer.h"
 #include "uart1.h"
+#include "ANSI.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "cat", .help = "concatenate files and print on the standard output", .func = do_cmd_cat},
@@ -29,10 +30,16 @@ int start_shell()
 {
     char input_buffer[CMD_MAX_LEN] = {0};
     cli_print_banner();
+    print_log_level();
+
     while (1)
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
-        puts("[ (¦3[▓▓]  ...zzZ ] $ ");
+#ifdef QEMU
+        puts("[ " BLU "─=≡Σ((( つ•̀ω•́)つ " GRN "@ QEMU" CRESET " ] $ ");
+#elif RPI
+        puts("[ " HBLU "d[^_^]b " HGRN "@ RPI" CRESET " ] $ ");
+#endif
         cli_cmd_read(input_buffer);
         cli_cmd_exec(input_buffer);
     }
@@ -173,7 +180,8 @@ void cli_print_banner()
     puts(" =====`-.____`.___ \\_____/___.-`___.-'=====          \r\n");
     puts("                   `=---='                            \r\n");
     puts("\r\n\r\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   \r\n");
-    puts("        佛祖保佑             永無BUG                   \r\n\r\n");
+    puts("           May the code be bug-free.                 \r\n\r\n");
+    puts("\r\n");
 }
 
 int do_cmd_help(int argc, char **argv)
@@ -274,14 +282,10 @@ int do_cmd_ls(int argc, char **argv)
     }
     int error;
     CPIO_FOR_EACH(&c_filepath, &c_filesize, &c_filedata, error, {
-        // if this is not TRAILER!!! (last of file)
-        if (error != TRAILER)
-        {
-            puts(c_filepath);
-            puts("\r\n");
-        }
+        puts(c_filepath);
+        puts("\r\n");
     });
-    if (error == ERROR)
+    if (error == CPIO_ERROR)
     {
         puts("cpio parse error");
         return -1;
@@ -307,19 +311,19 @@ int do_cmd_cat(int argc, char **argv)
 
     int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
 
-    if (result == ERROR)
+    if (result == CPIO_ERROR)
     {
         puts("cpio parse error\r\n");
         return -1;
     }
-    else if (result == TRAILER)
+    else if (result == CPIO_TRAILER)
     {
         puts("cat: ");
         puts(filepath);
         puts(": No such file or directory\r\n");
         return -1;
     }
-    else if (result == SUCCESS)
+    else if (result == CPIO_SUCCESS)
     {
         puts(c_filedata);
     }
@@ -368,14 +372,14 @@ int do_cmd_exec(int argc, char **argv)
     unsigned int c_filesize;
 
     int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
-    if (result == TRAILER)
+    if (result == CPIO_TRAILER)
     {
         puts("exec: ");
         puts(filepath);
         puts(": No such file or directory\r\n");
         return -1;
     }
-    else if (result == ERROR)
+    else if (result == CPIO_ERROR)
     {
         puts("cpio parse error\r\n");
         return -1;

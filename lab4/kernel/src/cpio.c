@@ -35,11 +35,11 @@ static unsigned int parse_hex_str(char *s, unsigned int max_len)
 /* write pathname, data, next header into corresponding parameter */
 /* if no next header, next_header_pointer = 0, return 1 */
 /* return -1 if parse error*/
-int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **pathname, unsigned int *filesize, char **data, struct cpio_newc_header **next_header_pointer)
+CPIO_return_t cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **pathname, unsigned int *filesize, char **data, struct cpio_newc_header **next_header_pointer)
 {
     /* Ensure magic header exists. */
     if (strncmp(this_header_pointer->c_magic, CPIO_NEWC_HEADER_MAGIC, sizeof(this_header_pointer->c_magic)) != 0)
-        return ERROR;
+        return CPIO_ERROR;
 
     // transfer big endian 8 byte hex string to unsigned int and store into *filesize
     *filesize = parse_hex_str(this_header_pointer->c_filesize, 8);
@@ -69,10 +69,10 @@ int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **
     if (strncmp(*pathname, "TRAILER!!!", sizeof("TRAILER!!!")) == 0)
     {
         *next_header_pointer = 0;
-        return TRAILER;
+        return CPIO_TRAILER;
     }
 
-    return SUCCESS;
+    return CPIO_SUCCESS;
 }
 
 unsigned int padding_4byte(unsigned int size)
@@ -89,7 +89,7 @@ int cpio_get_file(char *filepath, unsigned int *c_filesize, char **c_filedata)
     CPIO_FOR_EACH(&c_filepath, c_filesize, c_filedata, error, {
         if (strcmp(c_filepath, filepath) == 0)
         {
-            return SUCCESS;
+            return CPIO_SUCCESS;
         }
     });
     return error;

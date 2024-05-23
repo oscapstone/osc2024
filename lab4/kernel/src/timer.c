@@ -48,8 +48,8 @@ void core_timer_handler()
 
 void timer_event_callback(timer_event_t *timer_event)
 {
-    list_del_entry((struct list_head *)timer_event); // delete the event in queue
-    kfree(timer_event->args);                        // free the event's space
+    list_del_entry((struct list_head *)timer_event);              // delete the event in queue
+    kfree(timer_event->args);                                     // free the event's space
     ((void (*)(char *))timer_event->callback)(timer_event->args); // call the event
     kfree(timer_event);
 
@@ -64,27 +64,30 @@ void timer_event_callback(timer_event_t *timer_event)
     }
 }
 
-void timer_set2sAlert(char *str)
+void timer_set2sAlert()
 {
     unsigned long long cntpct_el0;
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t" : "=r"(cntpct_el0)); // tick auchor
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0)); // tick frequency
     uart_puts("\r\n[Start Alert]\r\n");
-    // for(int i=0;i<10000000;i++) // pi
+
+#ifdef QEMU
     for (int i = 0; i < 1000000000; i++) // qemu
+#else
+    for (int i = 0; i < 10000000; i++) // pi
+#endif
     {
         // do nothing
     }
-    char buf[VSPRINT_MAX_BUF_SIZE];
-    sprintf(buf, "[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0 / cntfrq_el0);
-    uart_puts(buf);
+
+    uart_puts("[Interrupt][el1_irq] %d seconds after booting\n", cntpct_el0 / cntfrq_el0);
     add_timer(timer_set2sAlert, 2, "2sAlert");
 }
 
 void add_timer(void *callback, unsigned long long timeout, char *args)
 {
-    uart_puts("Add timer event: %s, %d\r\n", args, timeout);
+    printf("Add timer event: %s, %d\r\n", args, timeout);
     timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
     the_timer_event->args = kmalloc(strlen(args) + 1);

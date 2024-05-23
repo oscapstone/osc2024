@@ -30,7 +30,7 @@ void unlock()
     lock_counter--;
     if (lock_counter < 0)
     {
-        uart_puts("lock counter error\r\n");
+        ERROR("lock counter error");
         while (1)
             ;
     }
@@ -85,9 +85,7 @@ void el0_sync_router()
     __asm__ __volatile__("mrs %0, ELR_EL1\n\t" : "=r"(elr_el1)); // ELR_EL1 holds the address if return to EL1
     unsigned long long esr_el1;
     __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r"(esr_el1)); // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
-    char buf[VSPRINT_MAX_BUF_SIZE];
-    sprintf(buf, "[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\r\n", spsr_el1, elr_el1, esr_el1);
-    uart_puts(buf);
+    uart_puts("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\r\n", spsr_el1, elr_el1, esr_el1);
 }
 
 void el0_irq_64_router()
@@ -122,9 +120,7 @@ void el0_irq_64_router()
 
 void invalid_exception_router(unsigned long long x0)
 {
-    uart_puts("invalid exception router: ");
-    uart_send('0' + x0);
-    uart_puts("\r\n");
+    ERROR("invalid exception router: %d\r\n", x0);
     while (1)
         ;
 }
