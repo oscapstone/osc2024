@@ -170,6 +170,7 @@ void initrd_callback(unsigned int node_type, char *name, void *value, unsigned i
 }
 
 void initrd_exec_prog(char* target) {
+    el1_interrupt_disable();
     void* target_addr;
     char *filepath;
     char *filedata;
@@ -188,7 +189,7 @@ void initrd_exec_prog(char* target) {
         if (error)
         {
             // uart_printf("error\n");
-            uart_send_string("Error parsing cpio header123\n");
+            uart_send_string("Error parsing cpio header\n");
             break;
         }
         if (!strcmp(target, filepath))
@@ -213,6 +214,7 @@ void initrd_exec_prog(char* target) {
     uart_hex(target_addr);
     uart_send_string("\n");
     thread_t* t = create_thread(target_addr);
+    el1_interrupt_enable();
     unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
     unsigned long elr_el1 = t -> callee_reg.lr;
     unsigned long user_sp = t -> callee_reg.sp;

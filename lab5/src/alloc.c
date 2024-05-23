@@ -480,10 +480,13 @@ void page_free(void* addr) {
 }
 
 void* kmalloc(unsigned long long size) {
+	el1_interrupt_disable();
 	if(size == 0){
+		el1_interrupt_enable();
 		return 0;
 	}
-	// return page_alloc(size);
+	el1_interrupt_enable();
+	return page_alloc(size);
 	int idx = size2chunkidx(size);
 	if(idx >= 0) {
 		return chunk_alloc(idx);

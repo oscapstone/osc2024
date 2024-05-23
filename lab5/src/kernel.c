@@ -52,14 +52,14 @@ void main(char* base) {
 	uart_send_string("\n");
 	fdt_traverse(initrd_callback);
 	alloc_init();
-	uart_enable_interrupt();
 	// demo_mm();
 	uart_send_string("mm finished\n");
 	thread_init();
-	el1_interrupt_enable();
+	uart_enable_interrupt();
 	core_timer_enable();
+	el1_interrupt_enable();
 	// thread_test();
-	// fork_test();
+	fork_test();
 	debug=0;
 	shell();
 }

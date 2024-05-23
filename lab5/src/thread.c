@@ -14,15 +14,28 @@ thread_t* idle_thread = 0;
 int cur_tid = 0;
 
 void push(thread_t** head, thread_t* t) {
+    uart_send_string("push thread\n"); 
+    uart_hex(t->tid);
+    uart_send_string("\n");
+    uart_hex(running_q_head->tid);
+    uart_send_string("\n");
+    uart_hex((*head)->tid);
     if(!(*head)) {
+        uart_send_string("first thread\n");
         t -> prev = t;
         t -> next = t;
         (*head) = t;
     } else {
+        uart_send_string("not first thread\n");
         t->prev = (*head)->prev;
+        uart_send_string("1\n");
         t->next = (*head);
+        uart_send_string("2\n");
+        print_queue(running_q_head);
         (*head)->prev->next = t;
+        uart_send_string("3\n");
         (*head)->prev = t;
+        uart_send_string("4\n");
     }
 }
 
@@ -63,8 +76,22 @@ void print_queue(thread_t* head) {
 
 void schedule() {
     thread_t* cur_thread = get_current_thread();
-    thread_t* next_thread = (cur_thread->state != TASK_RUNNING) ? running_q_head : cur_thread->next;
-    uint64_t freq;
+    // uart_send_string("[schedule] ");
+    // uart_hex(cur_thread->tid);
+    // uart_send_string("\n");
+
+    thread_t* next_thread;
+    if(cur_thread -> state != TASK_RUNNING) {
+        if(!running_q_head) return;
+        uart_send_string("not running\n");
+        next_thread = running_q_head;
+    } else {
+        next_thread = cur_thread -> next;
+    }
+    // uart_send_string("\n");
+    // print_queue(running_q_head);
+    // uart_send_string("\n[schedule]\n");
+
     // asm volatile("mrs %0, cntfrq_el0" : "=r" (freq));
     // uart_send_string("Timer frequency: ");
     // uart_hex(freq);
@@ -79,20 +106,20 @@ void schedule() {
     // uart_send_string("Timer control: ");
     // uart_hex(freq);
     // uart_send_string("\n");
-    if (next_thread->tid != cur_thread->tid) {
-        // uart_send_string("[schedule] Switching from tid ");
-        // uart_hex(cur_thread->tid);
-        // uart_send_string(" to tid ");
-        // uart_hex(next_thread->tid);
-        // uart_send_string("\n");
+    if (next_thread && next_thread->tid != cur_thread->tid) {
+        uart_send_string("[schedule] Switching from tid ");
+        uart_hex(cur_thread->tid);
+        uart_send_string(" to tid ");
+        uart_hex(next_thread->tid);
+        uart_send_string("\n");
 
-        // uart_send_string("Current SP: ");
-        // uart_hex(cur_thread->callee_reg.sp);
-        // uart_send_string("\n");
+        uart_send_string("Current SP: ");
+        uart_hex(cur_thread->callee_reg.sp);
+        uart_send_string("\n");
 
-        // uart_send_string("Next SP: ");
-        // uart_hex(next_thread->callee_reg.sp);
-        // uart_send_string("\n");
+        uart_send_string("Next SP: ");
+        uart_hex(next_thread->callee_reg.sp);
+        uart_send_string("\n");
         switch_to(cur_thread, next_thread);
     }
     // switch to will switch to target thread by setting the lr 
@@ -132,7 +159,11 @@ thread_t* create_thread(void (*func)(void)) {
     t -> kernel_stack = kmalloc(T_STACK_SIZE);
     t -> callee_reg.sp = (unsigned long)(t->user_stack + T_STACK_SIZE);
     t -> callee_reg.fp = t -> callee_reg.sp; // set fp to sp as the pointer that fixed
-
+    t -> prev = 0;
+    t -> next = 0;
+    uart_send_string("creating thread\n");
+    if(running_q_head)
+        print_queue(running_q_head);
     push(&running_q_head, t);
     print_queue(running_q_head);
     return t;
@@ -180,7 +211,7 @@ void thread_exit() {
 void idle() {
     while(1) {
         kill_zombies();
-        // print_queue(running_q_head);
+        // (running_q_head);
         schedule();
         
     }

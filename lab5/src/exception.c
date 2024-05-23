@@ -7,6 +7,7 @@
 #include "tasklist.h"
 #include "syscall.h"
 #include "alloc.h"
+#include "thread.h"
 
 extern timer_t *timer_head;
 
@@ -104,7 +105,7 @@ void irq_exception_handler_c(){
         // uart_send_string("kernel UART interrupt\n");
         uart_irq_handler();
     }
-    if(interrupt_source & INTERRUPT_SOURCE_CNTPNSIRQ) {
+    else if(interrupt_source & INTERRUPT_SOURCE_CNTPNSIRQ) {
         // uart_send_string("\nkernel Timer interrupt");
         // free_list_info();
 		// print_chunk_info();
@@ -120,7 +121,6 @@ void irq_exception_handler_c(){
         // put32(CORE0_TIMER_IRQ_CTRL, 2);
         // irq_timer_exception();
     }
-    
     // execute_tasks();
 }
 
@@ -291,4 +291,3 @@ void core_timer_enable(){
     "str w0, [x1];" // unmask timer interrupt
   );
 }
-

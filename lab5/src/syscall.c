@@ -162,10 +162,12 @@ int sys_getpid() {
 }
 
 int sys_fork() {
+    // el1_interrupt_disable();
     int res;
     asm volatile("mov x8, 4");
     asm volatile("svc 0");
     asm volatile("mov %0, x0": "=r"(res));
+    // el1_interrupt_enable();
     return res;
 }
 

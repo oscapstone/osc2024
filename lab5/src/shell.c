@@ -6,12 +6,13 @@
 #include "initrd.h"
 #include "timer.h"
 #include "thread.h"
+#include "alloc.h"
 
 void shell(){
     uart_async_send_string("Welcome to OSC2024 shell!\n");
     while(1){
         uart_async_send_string("# ");
-        char str[100];
+        char* str = kmalloc(100);
         uart_recv_command(str);
         uart_async_send_string("\n");
         if(!strcmp(str, "hello")){
