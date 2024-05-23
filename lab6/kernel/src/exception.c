@@ -7,15 +7,17 @@
 #include "sched.h"
 #include "signal.h"
 #include "mmu.h"
+#include "colourful.h"
 
 extern int finish_init_thread_sched;
-extern int syscall_num;
+// extern int syscall_num;
 extern SYSCALL_TABLE_T *syscall_table;
 
 void sync_64_router(trapframe_t* tpf)
 {
     unsigned long long esr_el1;
     __asm__ __volatile__("mrs %0, esr_el1\n\t": "=r"(esr_el1));
+
     // esr_el1: Holds syndrome information for an exception taken to EL1.
     esr_el1_t *esr = (esr_el1_t *)&esr_el1;
     if (esr->ec == MEMFAIL_DATA_ABORT_LOWER || esr->ec == MEMFAIL_INST_ABORT_LOWER)
@@ -23,24 +25,32 @@ void sync_64_router(trapframe_t* tpf)
         mmu_memfail_abort_handle(esr);
         return;
     }
-
     el1_interrupt_enable();
-    unsigned long long syscall_no = tpf->x8;
-    if (syscall_no >= syscall_num || syscall_no < 0)
-    {
-        // invalid syscall number
-        uart_sendline("Invalid syscall number: %d\r\n", syscall_no);
-        tpf->x0 = -1;
-        return;
+
+
+    // check whether it is a syscall 
+    if (esr->ec == ESR_ELx_EC_SVC64){
+        unsigned long long syscall_no = tpf->x8;
+        if (syscall_no > SYSCALL_TABLE_SIZE || syscall_no < 0 )
+        {
+            // invalid syscall number
+            uart_sendline("Invalid syscall number: %d\r\n", syscall_no);
+            tpf->x0 = -1;
+            return;
+        }
+        if (((void **) syscall_table)[syscall_no] == 0)
+        {
+            uart_sendline("Unregisted syscall number: %d\r\n", syscall_no);
+            tpf->x0 = -1;
+            return;
+        }
+        ((int (*)(trapframe_t *))(((&syscall_table)[syscall_no])))(tpf);
     }
-    if (syscall_no == 50) syscall_no = 10;
-    ((int (*)(trapframe_t *))(((&syscall_table)[syscall_no])))(tpf);
-    
 }
 
 void irq_router(trapframe_t* tpf)
 {
-        lock();
+    lock();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16

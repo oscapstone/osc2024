@@ -36,8 +36,8 @@ void main(char* arg){
 #endif
 
     // cli_print_banner();
+    cli_cmd_init();
     init_syscall();
     init_thread_sched();
-    cli_cmd_init();
     (  (void (*)()) curr_thread->context.lr)();
 }

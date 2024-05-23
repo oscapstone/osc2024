@@ -70,5 +70,5 @@ void      thread_exit();
 thread_t *thread_create(void *start, unsigned int filesize, int priority);
 int       thread_exec(char *data, unsigned int filesize);
 void      run_user_code();
-
+void foo();
 #endif /* _SCHED_H_ */

@@ -16,39 +16,36 @@ extern thread_t *curr_thread;
 extern thread_t threads[PIDMAX + 1];
 extern int uart_recv_echo_flag; // to prevent the syscall.img from using uart_send() in uart_recv()
 
-int syscall_num = 0;
-SYSCALL_TABLE_T syscall_table [] = {
-    { .func=getpid                  },
-    { .func=uartread                },
-    { .func=uartwrite               },
-    { .func=exec                    },
-    { .func=fork                    },
-    { .func=exit                    },
-    { .func=syscall_mbox_call       },
-    { .func=kill                    },
-    { .func=signal_register         },
-    { .func=signal_kill             },
-    { .func=signal_reture           }
-};
+char* syscall_table [SYSCALL_TABLE_SIZE];
+
 
 void init_syscall()
 {
-    syscall_num = sizeof(syscall_table) / sizeof(SYSCALL_TABLE_T);
-    // uart_sendline("syscall_table[syscall_no].func: 0x%x\r\n", syscall_table[0].func);
-
+    memset(syscall_table, 0, sizeof(syscall_table));
+    
+    syscall_table[0] = (char *)sys_getpid;
+    syscall_table[1] = (char *)sys_uartread;
+    syscall_table[2] = (char *)sys_uartwrite;
+    syscall_table[3] = (char *)sys_exec;
+    syscall_table[4] = (char *)sys_fork;
+    syscall_table[5] = (char *)sys_exit;
+    syscall_table[6] = (char *)sys_mbox_call;
+    syscall_table[7] = (char *)sys_kill;
+    syscall_table[8] = (char *)sys_signal_register;
+    syscall_table[9] = (char *)sys_signal_kill;
+    syscall_table[50] = (char *)sys_signal_reture;
 }
 // trap is like a shared buffer for user space and kernel space
 // Because general-purpose registers are used for both arguments and return value,
 // We may receive the arguments we need, and overwrite them with return value.
 
-SYSCALL_DEFINE(getpid)
+SYSCALL_DEFINE1(getpid, trapframe_t *, tpf)
 {
-    // uart_sendline("getpid: %d\r\n", curr_thread->pid);
     tpf->x0 = curr_thread->pid;
     return curr_thread->pid;
 }
 
-SYSCALL_DEFINE(uartread)
+SYSCALL_DEFINE1(uartread, trapframe_t *, tpf)
 {
     char *buf = (char *)tpf->x0;
     size_t size = tpf->x1;
@@ -62,9 +59,8 @@ SYSCALL_DEFINE(uartread)
     return i;
 }
 
-SYSCALL_DEFINE(uartwrite)
+SYSCALL_DEFINE1(uartwrite, trapframe_t *, tpf)
 {
-    // uart_sendline("uartwrite: %s\r\n", (char *)tpf->x0);
     const char *buf = (const char *)tpf->x0;
     size_t size = tpf->x1;
 
@@ -78,10 +74,9 @@ SYSCALL_DEFINE(uartwrite)
 }
 
 //In this lab, you won’t have to deal with argument passing
-SYSCALL_DEFINE(exec)
+SYSCALL_DEFINE1(exec, trapframe_t *, tpf)
 {
     char *name = (char *)tpf->x0;
-    // char *argv[] = (char **)tpf->x1;
 
     curr_thread->datasize = get_file_size((char*)name);
     char *new_data = get_file_start((char *)name);
@@ -102,7 +97,7 @@ SYSCALL_DEFINE(exec)
     return 0;
 }
 
-SYSCALL_DEFINE(fork)
+SYSCALL_DEFINE1(fork, trapframe_t *, tpf)
 {
     lock();
     thread_t *newt = thread_create(curr_thread->data, NORMAL_PRIORITY);
@@ -137,8 +132,6 @@ SYSCALL_DEFINE(fork)
     {
         goto child;
     }
-    uart_sendline("I'am parent\r\n");
-    uart_sendline("fork: parent_pid: %d, child_pid: %d\r\n", parent_pid, newt->pid);
     newt->context = curr_thread->context;
     // the offset of current syscall should also be updated to new cpu context
     newt->context.fp += newt->kernel_stack_alloced_ptr - curr_thread->kernel_stack_alloced_ptr;
@@ -149,8 +142,6 @@ SYSCALL_DEFINE(fork)
     return newt->pid;   // pid = new
 
 child:
-    uart_sendline("I'am child\r\n");
-    uart_sendline("fork: child_pid: %d\r\n", newt->pid);
     // the offset of current syscall should also be updated to new return point
     tpf = (trapframe_t*)((char *)tpf + (unsigned long)newt->kernel_stack_alloced_ptr - (unsigned long)parent_thread->kernel_stack_alloced_ptr); // move tpf
     tpf->sp_el0 += newt->stack_alloced_ptr - parent_thread->stack_alloced_ptr;
@@ -158,7 +149,7 @@ child:
     return 0;           // pid = 0
 }
 
-SYSCALL_DEFINE(exit)
+SYSCALL_DEFINE1(exit, trapframe_t *, tpf)
 {
     // int status = tpf->x0;
     uart_recv_echo_flag = 1;
@@ -166,7 +157,7 @@ SYSCALL_DEFINE(exit)
     return 0;
 }
 
-SYSCALL_DEFINE(syscall_mbox_call)
+SYSCALL_DEFINE1(mbox_call, trapframe_t *, tpf)
 {
     unsigned char ch = (unsigned char)tpf->x0;
     unsigned int *mbox = (unsigned int *)tpf->x1;
@@ -189,7 +180,7 @@ SYSCALL_DEFINE(syscall_mbox_call)
     return 0;
 }
 
-SYSCALL_DEFINE(kill)
+SYSCALL_DEFINE1(kill, trapframe_t *, tpf)
 {
     int pid = tpf->x0;
     if ( pid < 0 || pid >= PIDMAX || !threads[pid].isused) return -1;
@@ -200,7 +191,7 @@ SYSCALL_DEFINE(kill)
     return 0;
 }
 
-SYSCALL_DEFINE(signal_register)
+SYSCALL_DEFINE1(signal_register, trapframe_t *, tpf)
 {
     int signal = tpf->x0;
     void (*handler)() = (void (*)())tpf->x1;
@@ -210,7 +201,7 @@ SYSCALL_DEFINE(signal_register)
     return 0;
 }
 
-SYSCALL_DEFINE(signal_kill)
+SYSCALL_DEFINE1(signal_kill, trapframe_t *, tpf)
 {
     int pid = tpf->x0;
     int signal = tpf->x1;
@@ -222,7 +213,7 @@ SYSCALL_DEFINE(signal_kill)
     return 0;
 }
 
-SYSCALL_DEFINE(signal_reture)
+SYSCALL_DEFINE1(signal_reture, trapframe_t *, tpf)
 {
     unsigned long signal_ustack = 
         tpf->sp_el0 % USTACK_SIZE == 0 ? 

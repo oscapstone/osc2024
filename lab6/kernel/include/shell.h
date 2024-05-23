@@ -23,6 +23,7 @@ void cli_print_banner();
 DO_CMD_FUNC(do_cmd_cat);
 DO_CMD_FUNC(do_cmd_dtb);
 DO_CMD_FUNC(do_cmd_exec);
+DO_CMD_FUNC(do_cmd_thread_tester);
 DO_CMD_FUNC(do_cmd_help);
 DO_CMD_FUNC(do_cmd_hello);
 DO_CMD_FUNC(do_cmd_info);

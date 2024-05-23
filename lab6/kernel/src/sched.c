@@ -7,6 +7,8 @@
 #include "mmu.h"
 #include "string.h"
 #include "shell.h"
+#include "colourful.h"
+#include "string.h"
 
 thread_t *curr_thread;
 list_head_t *run_queue;
@@ -30,8 +32,8 @@ void init_thread_sched()
         threads[i].iszombie = 0;
     }
 
-    curr_thread = thread_create(idle,0x1000, IDLE_PRIORITY);
-    thread_create(cli_cmd, 0x1000, SHELL_PRIORITY);
+     thread_create(idle,0x1000, IDLE_PRIORITY);
+    curr_thread =thread_create(cli_cmd, 0x1000, SHELL_PRIORITY);
 
     asm volatile("msr tpidr_el1, %0" ::"r"(curr_thread + sizeof(list_head_t)));
     finish_init_thread_sched = 1;
@@ -65,20 +67,22 @@ void add_task_to_runqueue(thread_t *t)
     }
     unlock();
 }
+
+unsigned long long counter = 0;
 void schedule(){
-    // lock();
-    // uart_sendline("schedule 11\r\n");
+    lock();
     list_del_entry(&curr_thread->listhead);
     add_task_to_runqueue(curr_thread);
     curr_thread = (thread_t *)run_queue->next;
-    // uart_sendline("curr_thread->pid: %d, is_zombie: %d\r\n", curr_thread->pid, curr_thread->iszombie);
     while(curr_thread->iszombie)
     {
+        // uart_sendline("Thread %d is zombie\r\n", curr_thread->pid);
         curr_thread = (thread_t *)curr_thread->listhead.next;
     }
-    // uart_sendline("curr_thread->pid: %d, is_zombie: %d\r\n", curr_thread->pid, curr_thread->iszombie);
+    unlock();
+    char tmp[10];
+    sprintf(tmp, "%d", curr_thread->pid);
     switch_to(get_current(), &curr_thread->context);
-    // unlock();
 }
 
 void kill_zombies(){
@@ -104,7 +108,7 @@ void kill_zombies(){
 
 int thread_exec(char *data, unsigned int filesize)
 {
-    thread_t *t_thread = thread_create(run_user_code, filesize, 100);
+    thread_t *t_thread = thread_create(run_user_code, filesize, NORMAL_PRIORITY);
     lock();
     // copy file into data
     for (int i = 0; i < filesize;i++)
@@ -121,20 +125,24 @@ int thread_exec(char *data, unsigned int filesize)
 
     return 0;
 }
+
+
 void run_user_code()
 {
-    lock();
-    // add vma                             Virtual Address,                              Size,                             Physical Address,            rwx, is_alloced
-    mmu_add_vma(curr_thread,              USER_KERNEL_BASE,             curr_thread->datasize,                (size_t)VIRT_TO_PHYS(curr_thread->data), 0b111, 1);
-    mmu_add_vma(curr_thread, USER_STACK_BASE - USTACK_SIZE,                       USTACK_SIZE,   (size_t)VIRT_TO_PHYS(curr_thread->stack_alloced_ptr), 0b111, 1);
-    mmu_add_vma(curr_thread,              PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START,                                       PERIPHERAL_START, 0b011, 0);
-    mmu_add_vma(curr_thread,        USER_SIGNAL_WRAPPER_VA,                            0x2000,           (size_t)VIRT_TO_PHYS(signal_handler_wrapper), 0b101, 0);
+    uart_sendline("run_user_code\r\n");
+    // lock();
+    // add vma                        User Virtual Address,                              Size,                             Physical Address,            xwr,                            is_alloced
+    mmu_add_vma(curr_thread,              USER_KERNEL_BASE,             curr_thread->datasize,                (size_t)VIRT_TO_PHYS(curr_thread->data), 0b111, "Code & Data Segment\0",            1);
+    mmu_add_vma(curr_thread, USER_STACK_BASE - USTACK_SIZE,                       USTACK_SIZE,   (size_t)VIRT_TO_PHYS(curr_thread->stack_alloced_ptr), 0b111, "Stack Segment\0",                  1);
+    mmu_add_vma(curr_thread,              PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START,                                       PERIPHERAL_START, 0b011, "Peripheral\0",                     0);
+    mmu_add_vma(curr_thread,        USER_SIGNAL_WRAPPER_VA,                            0x2000,           (size_t)VIRT_TO_PHYS(signal_handler_wrapper), 0b101, "Signal Handler Wrapper\0",         0);
+
     curr_thread->context.pgd = VIRT_TO_PHYS(curr_thread->context.pgd);
     curr_thread->context.sp = USER_STACK_BASE;
     curr_thread->context.fp = USER_STACK_BASE;
 
-    unlock();
-
+    // unlock();
+    add_timer(schedule_timer, 1, "", 0); // start scheduler
     asm("msr tpidr_el1, %0\n\t"
         "msr elr_el1, %1\n\t"
         "msr spsr_el1, xzr\n\t" // enable interrupt in EL0. You can do it by setting spsr_el1 to 0 before returning to EL0.
@@ -158,7 +166,6 @@ void run_user_code()
 //malloc a kstack and a userstack
 thread_t *thread_create(void *start, unsigned int filesize, int priority)
 {
-    // uart_sendline("thread_create\r\n");
     lock();
     thread_t *r;
     for (int i = 0; i <= PIDMAX; i++)
@@ -199,6 +206,7 @@ void thread_exit(){
     lock();
     uart_sendline("Thread %d exit\n", curr_thread->pid);
     curr_thread->iszombie = 1;
+    uart_flush_FIFO();
     unlock();
     schedule();
 }
@@ -207,4 +215,19 @@ void schedule_timer(char* notuse){
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); //tick frequency
     add_timer(schedule_timer, cntfrq_el0 >> 5, "", 1);
+}
+void foo(){
+    // Lab5 Basic 1 Test function
+    int color_idx = curr_thread->pid % 5;
+    char *colours[5] = {RED, GRN, YEL, BLU, MAG};
+    char *color = colours[color_idx];
+    
+    for (int i = 0; i < 10; ++i)
+    {
+        uart_puts( " %s Thread id: %d, Run %d time\n" RESET, color, curr_thread->pid, i);
+        int r = 1000000;
+        while (r--) { asm volatile("nop"); }
+        schedule();
+    }
+    thread_exit();
 }

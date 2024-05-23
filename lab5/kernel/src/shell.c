@@ -9,8 +9,8 @@
 #include "memory.h"
 #include "timer.h"
 #include "sched.h"
+#include "colourful.h"
 
-// #define CLI_MAX_CMD 13
 
 extern int   uart_recv_echo_flag;
 extern char* dtb_ptr;
@@ -19,7 +19,6 @@ extern char _start[];
 
 
 int cmd_list_size = 0;
-// struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
 struct CLI_CMDS cmd_list[] =
 {
     {.command="help",                   .func=do_cmd_help,          .help="print all available commands"},
@@ -44,15 +43,11 @@ void cli_cmd_init()
 }
 void cli_cmd()
 {
+    // unlock();
+    // uart_sendline("cli_cmd\r\n");
     cli_print_banner();
     char input_buffer[CMD_MAX_LEN];
     while(1){
-        // for (int i = 0; i < 1000000000; i++){
-        //     asm volatile("nop");
-
-        // }            
-        // int num = timer_list_get_size();
-            // uart_puts("timer_list_get_size: %d\n", num);
         cli_cmd_clear(input_buffer, CMD_MAX_LEN);
         uart_puts("# ");
         // uart_sendline("# ");
@@ -312,6 +307,7 @@ DO_CMD_FUNC(do_cmd_thread_tester)
     if (argv[0] != NULL){
         num_thread = atoi(argv[0]);
     }
+    uart_sendline("%d Threads Testing ...\r\n", num_thread);
     
     for (int i = 0; i < num_thread; ++i)
     {

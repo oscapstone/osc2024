@@ -6,6 +6,7 @@
 #include "timer.h"
 #include "signal.h"
 #include "shell.h"
+#include "colourful.h"
 
 list_head_t *run_queue;
 
@@ -34,7 +35,7 @@ void init_thread_sched()
 
     asm volatile("msr tpidr_el1, %0" ::"r"(curr_thread + sizeof(list_head_t)));
     finish_init_thread_sched = 1;
-    add_timer(schedule_timer, 1, "", 0); // start scheduler
+    // add_timer(schedule_timer, 1, "", 0); // start scheduler
 
     unlock();
 }
@@ -42,8 +43,9 @@ void init_thread_sched()
 void idle(){
     while(1)
     {
+        // uart_sendline("Idle thread\n");
         kill_zombies();   //reclaim threads marked as DEAD
-        el1_interrupt_enable();
+        // el1_interrupt_enable();
         schedule();
     }
 }
@@ -71,20 +73,22 @@ void schedule(){
     list_del_entry(&curr_thread->listhead);
     add_task_to_runqueue(curr_thread);
     curr_thread = (thread_t *)run_queue->next;
-    
+    // uart_sendline("Switch to thread %d\n", curr_thread->pid); 
     while(curr_thread->iszombie)
     {
         curr_thread = (thread_t *)curr_thread->listhead.next;
     }
-    switch_to(get_current(), &curr_thread->context);
     // unlock();
+    switch_to(get_current(), &curr_thread->context);
 }
 
 void kill_zombies(){
+    // uart_sendline("Kill zombies\n");
     lock();
     list_head_t *curr;
     list_for_each(curr, run_queue)
     {
+        // uart_sendline("Thread %d\n", ((thread_t *)curr)->pid);
         if (((thread_t *)curr)->iszombie)
         {
             list_del_entry(curr);
@@ -95,6 +99,7 @@ void kill_zombies(){
             ((thread_t *)curr)->isused = 0;
         }
     }
+    // uart_sendline("Kill zombies done\n");
 
     unlock();
 }
@@ -120,12 +125,20 @@ int exec_thread(char *data, unsigned int filesize)
 
 void run_user_code()
 {
+    add_timer(schedule_timer, 1, "", 0); // start scheduler
     asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
         "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
         "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
         "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process
         "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-        "eret\n\t" ::"r"(&curr_thread->context),"r"((unsigned long)curr_thread->data), "r"(curr_thread->context.sp), "r"(curr_thread->kernel_stack_alloced_ptr + KSTACK_SIZE));
+        "eret\n\t" 
+        :
+        :
+            "r"(&curr_thread->context),
+            "r"((unsigned long)curr_thread->data), 
+            "r"(curr_thread->context.sp), 
+            "r"(curr_thread->kernel_stack_alloced_ptr + KSTACK_SIZE)
+        );
 
 }
 thread_t *thread_create(void *start, int priority)
@@ -175,7 +188,7 @@ void thread_exit(){
     // thread cannot deallocate the stack while still using it, wait for someone to recycle it.
     // In this lab, idle thread handles this task, instead of parent thread.
     lock();
-    uart_sendline("Thread %d exit\n", curr_thread->pid);
+    // uart_puts("Thread %d exit\n", curr_thread->pid);
     curr_thread->iszombie = 1;
     unlock();
     schedule();
@@ -190,9 +203,13 @@ void schedule_timer(char* notuse){
 
 void foo(){
     // Lab5 Basic 1 Test function
+    int color_idx = curr_thread->pid % 5;
+    char *colours[5] = {RED, GRN, YEL, BLU, MAG};
+    char *color = colours[color_idx];
+    
     for (int i = 0; i < 10; ++i)
     {
-        uart_sendline("Thread id: %d, Run %d time\n", curr_thread->pid, i);
+        uart_puts( " %s Thread id: %d, Run %d time\n" RESET, color, curr_thread->pid, i);
         int r = 1000000;
         while (r--) { asm volatile("nop"); }
         schedule();

@@ -14,6 +14,11 @@ void  s_free(void* ptr);
 #define PAGESIZE    0x1000     // 4KB
 #define MAX_PAGES   0x10000    // 65536 (Entries), PAGESIZE * MAX_PAGES = 0x10000000 (SPEC)
 
+#define PTR_TO_PAGE_INDEX(ptr) (((unsigned long long)(ptr) - BUDDY_MEMORY_BASE) >> 12)
+#define PAGE_INDEX_TO_PTR(idx) ((void *) BUDDY_MEMORY_BASE + (PAGESIZE * (idx)))
+#define GET_BUDDY(frame) (&frame_array[frame->idx ^ (1 << frame->val)])
+
+
 typedef enum {
     FRAME_FREE = -2,
     FRAME_ALLOCATED,
@@ -46,8 +51,11 @@ typedef struct frame
     int used;
     int cache_order;
     unsigned int idx;
+    int counter;            // It's for lab 6 copy-on-write to count the number of references for the processes
 } frame_t;
 
+// extern frame_t*           frame_array;
+frame_t *get_frame_array();
 void     init_allocator();
 frame_t *release_redundant(frame_t *frame);
 frame_t *get_buddy(frame_t *frame);

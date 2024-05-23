@@ -14,5 +14,6 @@ char*              strcpy(char *dest, const char *src);
 
 int str_SepbySpace(char* head, char* words[]);
 int   atoi(char* str);
+void *memset(void *s, int c, int n);
 
 #endif /* _U_STRING_H_ */

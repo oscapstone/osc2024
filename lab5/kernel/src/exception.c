@@ -9,8 +9,7 @@
 #include "signal.h"
 
 extern int finish_init_thread_sched;
-extern int syscall_num;
-extern SYSCALL_TABLE_T *syscall_table;
+extern char *syscall_table;
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable(){
@@ -27,7 +26,7 @@ int get_current_el()
     __asm__ __volatile__("mrs %0, CurrentEL" : "=r"(el));
     return el >> 2;
 }
-static unsigned long long lock_counter = 0;
+static long long lock_counter = 0;
 
 void lock()
 {
@@ -38,11 +37,11 @@ void lock()
 
 void unlock()
 {
-    // uart_sendline("unlock %d\r\n", lock_counter);
     lock_counter--;
+    // uart_sendline("unlock %d\r\n", lock_counter);
     if (lock_counter < 0)
     {
-        uart_puts("lock counter error\r\n");
+        uart_sendline("lock counter error\r\n");
         while (1)
             ;
     }
@@ -93,11 +92,10 @@ void el1h_irq_router(trapframe_t *tpf){
     {
         uart_puts("Hello World el1 64 router other interrupt!\r\n");
     }
-    //only do signal handler when return to user mode
+    //only do signal handler when return to user mode (0b0000)
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
-        check_signal(tpf);
-        
+        check_signal(tpf);    
     }
 }
 
@@ -106,17 +104,19 @@ void el0_sync_router(trapframe_t *tpf){
     // Basic #3 - Based on System Call Format in Video Player’s Test Program
     el1_interrupt_enable(); // Allow UART input during exception
     unsigned long long syscall_no = tpf->x8;
-    if (syscall_no == 50) syscall_no = 10;
-    if (syscall_no > syscall_num|| syscall_no < 0)
+    if (syscall_no > SYSCALL_TABLE_SIZE || syscall_no < 0 )
     {
         // invalid syscall number
         uart_sendline("Invalid syscall number: %d\r\n", syscall_no);
         tpf->x0 = -1;
         return;
     }
-    
-    // char* func = (char*)(((&syscall_table)[syscall_no]));
-    // ((int (*)(trapframe_t *))func)(tpf);
+    if (((void **) syscall_table)[syscall_no] == 0)
+    {
+        uart_sendline("Unregisted syscall number: %d\r\n", syscall_no);
+        tpf->x0 = -1;
+        return;
+    }
     ((int (*)(trapframe_t *))(((&syscall_table)[syscall_no])))(tpf);
 }
 
@@ -155,7 +155,7 @@ void el0_irq_64_router(trapframe_t *tpf){
             schedule();    
     }
 
-    //only do signal handler when return to user mode
+    //only do signal handler when return to user mode (0b0000)
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
         check_signal(tpf);

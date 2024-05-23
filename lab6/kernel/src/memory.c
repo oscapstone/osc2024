@@ -46,6 +46,10 @@ static frame_t*           frame_array;                    // store memory's stat
 static list_head_t        frame_freelist[FRAME_MAX_IDX];  // store available block for page
 static list_head_t        cache_list[CACHE_MAX_IDX];      // store available block for cache
 
+frame_t *get_frame_array(){
+    return frame_array;
+}
+
 void init_allocator()
 {
     frame_array = s_allocator(BUDDY_MEMORY_PAGE_COUNT * sizeof(frame_t));
@@ -57,6 +61,7 @@ void init_allocator()
         {
             frame_array[i].val = FRAME_IDX_FINAL;
             frame_array[i].used = FRAME_FREE;
+            
         }
     }
 
@@ -78,6 +83,7 @@ void init_allocator()
         INIT_LIST_HEAD(&frame_array[i].listhead);
         frame_array[i].idx = i;
         frame_array[i].cache_order = CACHE_NONE;
+        frame_array[i].counter = 0;
 
         // add init frame (FRAME_IDX_FINAL) into freelist
         if (i % (1 << FRAME_IDX_FINAL) == 0)
@@ -139,44 +145,41 @@ void* page_malloc(unsigned int size)
         memory_sendline("[!] No available frame in freelist, page_malloc ERROR!!!!\r\n");
         return (void*)0;
     }
-    // uart_sendline("page_malloc 1\r\n");
-    // uart_sendline("target_val : %d\r\n", target_val);
     // get the available frame from freelist
     frame_t *target_frame_ptr = (frame_t*)frame_freelist[target_val].next;
-    // uart_sendline("page_malloc 2\r\n");
     list_del_entry((struct list_head *)target_frame_ptr);
-    // target_frame_ptr->prev
-    // target_frame_ptr->next
-    // uart_sendline("target_frame_ptr : 0x%x\r\n", target_frame_ptr);
-    // uart_sendline("target_frame_ptr->prev : 0x%x\r\n", target_frame_ptr->listhead);
-    // uart_sendline("target_frame_ptr->val: %d\r\n", target_frame_ptr->val);
-    // ((struct list_head *)target_frame_ptr)->next->prev = ((struct list_head *)target_frame_ptr)->prev;
-    // uart_sendline("page_malloc 2.5\r\n");
-	// ((struct list_head *)target_frame_ptr)->prev->next = ((struct list_head *)target_frame_ptr)->next;
-
-    // uart_sendline("page_malloc 3\r\n");
+    
     // Release redundant memory block to separate into pieces
     for (int j = target_val; j > val; j--) // ex: 10000 -> 01111
     {
         release_redundant(target_frame_ptr);
     }
 
+    // for (int i = 0; i < (1<<target_val); i++){
+    //     frame_array[target_frame_ptr->idx + i].counter = 1;
+    // }
+
     // Allocate it
     target_frame_ptr->used = FRAME_ALLOCATED;
-    memory_sendline("        physical address : 0x%x\n", BUDDY_MEMORY_BASE + (PAGESIZE*(target_frame_ptr->idx)));
+    memory_sendline("        physical address : 0x%x\n", PAGE_INDEX_TO_PTR(target_frame_ptr->idx));
     memory_sendline("        After\r\n");
     dump_page_info();
 
-    return (void *) BUDDY_MEMORY_BASE + (PAGESIZE * (target_frame_ptr->idx));
+    return PAGE_INDEX_TO_PTR(target_frame_ptr->idx);
 }
 
 void page_free(void* ptr)
 {
-    frame_t *target_frame_ptr = &frame_array[((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12]; // PAGESIZE * Available Region -> 0x1000 * 0x10000000 // SPEC #1, #2
+    frame_t *target_frame_ptr = &frame_array[PTR_TO_PAGE_INDEX(ptr)]; // PAGESIZE * Available Region -> 0x1000 * 0x10000000 // SPEC #1, #2
     memory_sendline("    [+] Free page: 0x%x, val = %d\r\n",ptr, target_frame_ptr->val);
     memory_sendline("        Before\r\n");
     dump_page_info();
     target_frame_ptr->used = FRAME_FREE;
+    for (int i = 0; i < (1<<target_frame_ptr->val); i++)
+    {
+        frame_array[target_frame_ptr->idx + i].counter = 0;
+    }
+
     frame_t* temp;
     while ((temp = coalesce(target_frame_ptr)) != (frame_t *)-1)target_frame_ptr = temp;
     list_add(&target_frame_ptr->listhead, &frame_freelist[target_frame_ptr->val]);
@@ -372,6 +375,7 @@ void memory_reserve(unsigned long long start, unsigned long long end)
                 memory_sendline("        Before\n");
                 dump_page_info();
                 list_del_entry(pos);
+            
                 memory_sendline("        Remove usable block for reserved memory: order %d\r\n", order);
                 memory_sendline("        After\n");
                 dump_page_info();
