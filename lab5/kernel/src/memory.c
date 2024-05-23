@@ -232,7 +232,7 @@ void kfree(void *ptr)
     {
         // DEBUG("kfree: cache_used_count == 0, free frame: 0x%x\n", frame);
         // DEBUG("remove the cache with the same frame from freelist\r\n");
-        for (size_t i = 1; i < PAGE_FRAME_SIZE / order_size; i++)
+        for (size_t i = 0; i < PAGE_FRAME_SIZE / order_size; i++)
         {
             list_del_entry((list_head_t *)((void *)frame_addr_to_phy_addr(frame) + i * order_size));
         }
