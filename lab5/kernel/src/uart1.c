@@ -96,17 +96,17 @@ char uart_async_recv()
 {
     *AUX_MU_IER_REG |= 1; // enable read interrupt
     // do while if buffer empty
-    lock_interrupt();
+    kernel_lock_interrupt();
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx)
     {
-        unlock_interrupt();
+        kernel_unlock_interrupt();
         *AUX_MU_IER_REG |= 1; // enable read interrupt
-        lock_interrupt();
+        kernel_lock_interrupt();
     }
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
     if (uart_rx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE)
         uart_rx_buffer_ridx = 0;
-    unlock_interrupt();
+    kernel_unlock_interrupt();
     return r;
 }
 
@@ -114,18 +114,18 @@ char uart_async_recv()
 // uart_w_irq_handler read from buffer then output
 void uart_async_send(char c)
 {
-    lock_interrupt();
+    kernel_lock_interrupt();
     // if buffer full, wait for uart_w_irq_handler
     while ((uart_tx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_ridx)
     {
-        unlock_interrupt();
+        kernel_unlock_interrupt();
         *AUX_MU_IER_REG |= 2; // enable write interrupt
-        lock_interrupt();
+        kernel_lock_interrupt();
     }
     uart_tx_buffer[uart_tx_buffer_widx++] = c;
     if (uart_tx_buffer_widx >= VSPRINT_MAX_BUF_SIZE)
         uart_tx_buffer_widx = 0; // cycle pointer
-    unlock_interrupt();
+    kernel_unlock_interrupt();
     *AUX_MU_IER_REG |= 2; // enable write interrupt
 }
 
@@ -155,39 +155,39 @@ void uart_interrupt_disable()
 
 void uart_r_irq_handler()
 {
-    lock_interrupt();
+    kernel_lock_interrupt();
     // uart_puts("uart_r_irq_handler\r\n");
     if ((uart_rx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_rx_buffer_ridx)
     {
         *AUX_MU_IER_REG &= ~(1); // disable read interrupt
-        unlock_interrupt();
+        kernel_unlock_interrupt();
         return;
     }
-    unlock_interrupt();
+    kernel_unlock_interrupt();
     uart_rx_buffer[uart_rx_buffer_widx] = uart_recv();
-    lock_interrupt();
+    kernel_lock_interrupt();
     uart_rx_buffer_widx++;
     if (uart_rx_buffer_widx >= VSPRINT_MAX_BUF_SIZE)
         uart_rx_buffer_widx = 0;
     *AUX_MU_IER_REG |= 1;
-    unlock_interrupt();
+    kernel_unlock_interrupt();
 }
 
 void uart_w_irq_handler()
 {
-    lock_interrupt();
+    kernel_lock_interrupt();
     if (uart_tx_buffer_ridx == uart_tx_buffer_widx)
     {
         *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-        unlock_interrupt();
+        kernel_unlock_interrupt();
         return; // buffer empty
     }
-    unlock_interrupt();
+    kernel_unlock_interrupt();
     uart_send(uart_tx_buffer[uart_tx_buffer_ridx]);
-    lock_interrupt();
+    kernel_lock_interrupt();
     uart_tx_buffer_ridx++;
     if (uart_tx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE)
         uart_tx_buffer_ridx = 0;
     *AUX_MU_IER_REG |= 2; // enable write interrupt
-    unlock_interrupt();
+    kernel_unlock_interrupt();
 }

@@ -6,10 +6,12 @@
 #include "string.h"
 #include "mbox.h"
 #include "bcm2837/rpi_mbox.h"
+#include "list.h"
+#include "syscall.h"
+#include "signal.h"
 
 // External references to the current thread and the thread array
 extern thread_t *curr_thread;
-extern thread_t *threads[];
 
 // Macro to copy n bytes of memory from src to dest
 #define MEMCPY(dest, src, n)                          \
@@ -100,7 +102,7 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	{
 		kfree(curr_thread->code);
 	}
-	lock_interrupt();
+	kernel_lock_interrupt();
 	char *filepath = kmalloc(strlen(name) + 1);
 	strcpy(filepath, name);
 	curr_thread->datasize = filesize;
@@ -110,24 +112,18 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
 	tpf->elr_el1 = (uint64_t)curr_thread->code;
 	tpf->sp_el0 = (uint64_t)curr_thread->user_stack_base + USTACK_SIZE;
-	unlock_interrupt();
+	kernel_unlock_interrupt();
 	return 0;
 }
 
 /**
  * @brief Wrapper function to run the user task pointed to by curr_thread->code.
  */
-void run_user_task()
+void run_user_task_wrapper(char *dest)
 {
-	DEBUG("run_user_task\r\n");
-	asm volatile(
-		"mov x8, #8\n\t"
-		"svc 0\n\t"
-		"mov x0, %0\n\t"
-		"blr x0\n\t"
-		:
-		: "r"(curr_thread->code)
-		: "x0", "x8");
+	DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
+	unlock_interrupt();
+	((void (*)(void))dest)();
 }
 
 /**
@@ -142,11 +138,10 @@ int exec(const char *name, char *const argv[])
 	asm volatile(
 		"mov x0, %0\n\t"
 		"mov x1, %1\n\t"
-		"mov x8, #4\n\t"
-		"svc 0\n\t"
 		:
 		: "r"(name), "r"(argv)
-		: "x0", "x1", "x8");
+		: "x0", "x1");
+	CALL_SYSCALL(SYSCALL_EXEC);
 }
 
 /**
@@ -157,7 +152,7 @@ int exec(const char *name, char *const argv[])
  */
 int sys_fork(trapframe_t *tpf)
 {
-	lock_interrupt();
+	kernel_lock_interrupt();
 	uint64_t sp, lr;
 	asm volatile(
 		"mov %0, sp\n"
@@ -174,6 +169,7 @@ int sys_fork(trapframe_t *tpf)
 	DEBUG("child pid: %d\r\n", pid);
 	child->datasize = parent->datasize;
 	child->status = THREAD_READY;
+	SIGNAL_COPY(child, parent);
 
 	child->code = kmalloc(parent->datasize);
 	MEMCPY(child->code, parent->code, parent->datasize);
@@ -192,7 +188,7 @@ int sys_fork(trapframe_t *tpf)
 		child->context = curr_thread->context;
 		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
 		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
-		unlock_interrupt();
+		kernel_unlock_interrupt();
 		return child->pid;
 	}
 	else // Child process
@@ -212,14 +208,12 @@ int sys_fork(trapframe_t *tpf)
 int fork()
 {
 	int64_t pid;
+	CALL_SYSCALL(SYSCALL_FORK);
 	asm volatile(
-		"mov x8, #4\n\t"
-		"svc 0\n\t"
 		"mov %0, x0\n\t"
 		: "=r"(pid)
 		:
-		: "x8", "x0");
-
+		: "x0");
 	return pid;
 }
 
@@ -245,10 +239,31 @@ int sys_exit(trapframe_t *tpf, int status)
  */
 int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 {
-	lock_interrupt();
+	kernel_lock_interrupt();
 	enum mbox_buffer_status_code status = mbox_call(ch, mbox);
-	unlock_interrupt();
+	kernel_unlock_interrupt();
 	return status;
+}
+
+int sys_kill(trapframe_t *tpf, int pid)
+{
+	thread_exit_by_pid(pid);
+	return 0;
+}
+
+int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*haldler)(void))
+{
+	signal_register_handler(SIGNAL, haldler);
+}
+
+int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL)
+{
+	signal_send(pid, SIGNAL);
+}
+
+int sys_signal_return(trapframe_t *tpf)
+{
+	signal_return();
 }
 
 /**
@@ -258,7 +273,7 @@ int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
  */
 int kernel_fork()
 {
-	lock_interrupt();
+	kernel_lock_interrupt();
 	uint64_t sp, lr;
 	asm volatile(
 		"mov %0, sp\n"
@@ -274,6 +289,8 @@ int kernel_fork()
 	DEBUG("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
 	child->datasize = parent->datasize;
 	child->status = THREAD_READY;
+	SIGNAL_COPY(child, parent);
+
 	child->code = parent->code;
 	DEBUG("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
 	DEBUG("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
@@ -289,7 +306,7 @@ int kernel_fork()
 		child->context = curr_thread->context;
 		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
 		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
-		unlock_interrupt();
+		kernel_unlock_interrupt();
 		return child->pid;
 	}
 	else // Child process
@@ -300,20 +317,20 @@ int kernel_fork()
 }
 
 /**
- * @brief Kernel function to execute a program.
+ * @brief Kernel function to execute a user-space program.
  *
- * @param name Name of the program to execute.
+ * @param program_name The name of the program to execute.
  * @param argv Arguments to pass to the program.
  * @return 0 on success, -1 on failure.
  */
-int kernel_exec(const char *name, char *const argv[])
+int kernel_exec_user_program(const char *program_name, char *const argv[])
 {
 	unsigned int filesize;
 	char *filedata;
-	int result = cpio_get_file(name, &filesize, &filedata);
+	int result = cpio_get_file(program_name, &filesize, &filedata);
 	if (result == CPIO_TRAILER)
 	{
-		WARNING("exec: %s: No such file or directory\r\n", name);
+		WARNING("exec: %s: No such file or directory\r\n", program_name);
 		return -1;
 	}
 	else if (result == CPIO_ERROR)
@@ -322,30 +339,32 @@ int kernel_exec(const char *name, char *const argv[])
 		return -1;
 	}
 
-	DEBUG("kernel exec: %s\r\n", name);
+	DEBUG("kernel exec: %s\r\n", program_name);
 	if (thread_code_can_free(curr_thread))
 	{
 		DEBUG("free code: 0x%x\r\n", curr_thread->code);
 		kfree(curr_thread->code);
 	}
-	lock_interrupt();
-	char *filepath = kmalloc(strlen(name) + 1);
-	strcpy(filepath, name);
+	kernel_lock_interrupt();
+	char *filepath = kmalloc(strlen(program_name) + 1);
+	strcpy(filepath, program_name);
 	curr_thread->datasize = filesize;
 	curr_thread->name = filepath;
 	curr_thread->code = kmalloc(filesize);
-	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d\r\n", name, curr_thread->code, filesize);
+	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d\r\n", program_name, curr_thread->code, filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
 
 	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
 
-	curr_thread->context.lr = (uint64_t)run_user_task;
-	asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
-		"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
-		"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-		"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
-		"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-		"eret\n\t" ::"r"(&curr_thread->context),
-		"r"(curr_thread->context.lr), "r"(curr_thread->user_stack_base + USTACK_SIZE), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
+	JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
+
+	// curr_thread->context.lr = (uint64_t)run_user_task_wrapper;
+	// asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+	// 	"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
+	// 	"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+	// 	"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
+	// 	"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
+	// 	"eret\n\t" ::"r"(&curr_thread->context),
+	// 	"r"(curr_thread->context.lr), "r"(curr_thread->user_stack_base + USTACK_SIZE), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
 	return 0;
 }

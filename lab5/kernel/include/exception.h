@@ -69,7 +69,14 @@ void el1_interrupt_enable();
 void el1_interrupt_disable();
 
 void lock_interrupt();
+void sys_lock_interrupt(trapframe_t *tpf);
+void kernel_lock_interrupt();
+void __lock_interrupt();
+
 void unlock_interrupt();
+void sys_unlock_interrupt(trapframe_t *tpf);
+void kernel_unlock_interrupt();
+void __unlock_interrupt();
 
 void el1h_irq_router(trapframe_t* tpf);
 void el0_sync_router(trapframe_t* tpf);

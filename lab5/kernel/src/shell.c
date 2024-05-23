@@ -396,7 +396,7 @@ int do_cmd_exec(int argc, char **argv)
 
     if (kernel_fork() == 0)
     { // child process
-        kernel_exec(filepath, NULL);
+        kernel_exec_user_program(filepath, NULL);
     }
     else
     {

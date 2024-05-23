@@ -14,7 +14,7 @@ extern thread_t *threads[];
 
 void main(char *arg)
 {
-    lock_interrupt();
+    kernel_lock_interrupt();
 
     dtb_init(arg);
 
@@ -52,6 +52,6 @@ void main(char *arg)
     threads[2]->datasize = 0x100000;
     schedule_timer();
     core_timer_enable();
-    unlock_interrupt();
+    kernel_unlock_interrupt();
     schedule();
 }
