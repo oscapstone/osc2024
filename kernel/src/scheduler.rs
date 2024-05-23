@@ -135,6 +135,9 @@ impl Scheduler {
             let program = alloc_prog(data);
             let new_thread = Box::new(Thread::new(0x2000, program));
             self.threads[current] = Some(new_thread);
+            self.ready_queue.push_back(current);
+            let next = self.restore_next();
+            self.current = Some(next);
         } else {
             println!("File not found: {}", name);
         }
