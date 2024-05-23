@@ -118,15 +118,19 @@ void PT::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
   auto nxt_level = level + 1;
   for (uint64_t idx = 0; idx < TABLE_SIZE_4K; idx++) {
     auto& entry = entries[idx];
-    if (entry.isTable()) {
-      if (cb_table) {
-        cb_table(context, entry, nxt_start, nxt_level);
-      } else {
-        entry.table()->traverse(nxt_start, nxt_level, cb_entry, cb_table,
-                                context);
-      }
-    } else if (entry.isEntry()) {
-      cb_entry(context, entry, nxt_start, level);
+    switch (entry.kind()) {
+      case EntryKind::TABLE:
+        if (cb_table)
+          cb_table(context, entry, nxt_start, nxt_level);
+        else
+          entry.table()->traverse(nxt_start, nxt_level, cb_entry, cb_table,
+                                  context);
+        break;
+      case EntryKind::ENTRY:
+        cb_entry(context, entry, nxt_start, level);
+        break;
+      case EntryKind::INVALID:
+        break;
     }
     nxt_start += ENTRY_SIZE[level];
   }
@@ -136,7 +140,7 @@ void PT::print(const char* name, uint64_t start, int level) {
   kprintf("===== %s ===== @ %p\n", name, va2pa(this));
   traverse(start, level, [](auto, auto entry, auto start, auto level) {
     kprintf("%016lx ~ %016lx -> ", start, start + ENTRY_SIZE[level]);
-    entry.print();
+    entry.print(level);
   });
   kprintf("----------------------\n");
 }
