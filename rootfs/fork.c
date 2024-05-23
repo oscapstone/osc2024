@@ -80,8 +80,8 @@ int fork() {
   return syscall(4);
 }
 
-void exit() {
-  syscall(5);
+void exit(int status) {
+  syscall(5, status);
 }
 
 int main() {
@@ -111,6 +111,7 @@ int main() {
   } else {
     printf("parent here, pid %d, child %d\n", get_pid(), ret);
   }
+  exit(0);
 
   return 0;
 }

@@ -27,14 +27,17 @@ void PT_Entry::alloc(int level, bool kernel) {
 
 PT_Entry PT_Entry::copy(int level) const {
   auto new_entry = *this;
+  // TODO: copy on write
   switch (kind()) {
     case EntryKind::TABLE:
       new_entry.set_table(level, pt_copy(table()));
       break;
-    case EntryKind::ENTRY:
-      // TODO: copy on write
-      panic("copy entry not implemented");
+    case EntryKind::ENTRY: {
+      auto new_page = kmalloc(PAGE_SIZE);
+      memcpy(new_page, pa2va(addr()), PAGE_SIZE);
+      new_entry.set_addr(va2pa(new_page), type);
       break;
+    }
     case EntryKind::INVALID:
       // just copy invalid entry
       break;
