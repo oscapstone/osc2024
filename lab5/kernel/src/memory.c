@@ -170,6 +170,34 @@ static int allocate_frame()
     return 0;
 }
 
+void memory_init()
+{
+    allocate_frame();
+    init_cache();
+
+    // INFO_BLOCK(test_memory(););
+    memory_reserve(0x0000, 0x1000); // Spin tables for multicore boot (0x0000 - 0x1000)
+    INFO("_start: 0x%x, _end: 0x%x\n", &_start, &_end);
+    memory_reserve((size_t)&_start, (size_t)&_end);
+    INFO("CPIO_START: 0x%x, CPIO_END: 0x%x\n", CPIO_START, CPIO_END);
+    memory_reserve((size_t)CPIO_START, (size_t)CPIO_END);
+    INFO("DTB_START: 0x%x, DTB_END: 0x%x\n", DTB_START, DTB_END);
+    memory_reserve((size_t)DTB_START, (size_t)DTB_END);
+    // DEBUG_BLOCK({
+    //      dump_frame();
+    //      dump_cache();
+    //  });
+}
+
+void init_cache()
+{
+    for (size_t i = MAX_ORDER; i >= 0; i--)
+    {
+        cache_freelist[i] = (list_head_t *)startup_malloc(sizeof(list_head_t));
+        INIT_LIST_HEAD(cache_freelist[i]);
+    }
+}
+
 void *kmalloc(size_t size)
 {
     kernel_lock_interrupt();
@@ -271,7 +299,7 @@ int memory_reserve(size_t start, size_t end)
             while (1)
                 ;
         }
-        if (curr_index < start_index)
+        if (curr_index < start_index) // split when curr_index is before start_index
         {
             INFO("curr_index is before start_index, curr_index: (0x%x, 0x%x), start_index: (0x%x, 0x%x)\n", curr_index, frame_addr_to_phy_addr(curr_frame), start_index, frame_addr_to_phy_addr(start_frame));
             size_t split_val = curr_frame->val - 1;
@@ -288,13 +316,13 @@ int memory_reserve(size_t start, size_t end)
                 curr_index = buddy_index;
             }
         }
-        else if (start_index <= curr_index && curr_index + val_to_num_of_frame(curr_frame->val) - 1 <= end_index)
+        else if (start_index <= curr_index && curr_index + val_to_num_of_frame(curr_frame->val) - 1 <= end_index) // all frame is in the range
         {
             INFO("reserve frame: (0x%x -> 0x%x), curr_frame->val: %d\n", frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), curr_frame->val);
             list_del_entry((list_head_t *)curr_frame);
             curr_index += val_to_num_of_frame(curr_frame->val);
         }
-        else if (start_index <= curr_index && end_index < curr_index + val_to_num_of_frame(curr_frame->val) - 1)
+        else if (start_index <= curr_index && end_index < curr_index + val_to_num_of_frame(curr_frame->val) - 1) // split when frame is over end_index
         {
             INFO("curr_index is over end_index, curr_index: %d, end_index: %d, curr->val: %d, curr: (0x%x -> 0x%x), end: (0x%x)\n", curr_index, end_index, curr_frame->val, frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), frame_addr_to_phy_addr(end_frame));
             size_t split_val = curr_frame->val - 1;
@@ -369,34 +397,6 @@ void test_memory()
     uart_puts("END TEST\r\n");
 }
 
-void memory_init()
-{
-    allocate_frame();
-    init_cache();
-
-    // INFO_BLOCK(test_memory(););
-    memory_reserve(0x0000, 0x1000); // Spin tables for multicore boot (0x0000 - 0x1000)
-    INFO("_start: 0x%x, _end: 0x%x\n", &_start, &_end);
-    memory_reserve((size_t)&_start, (size_t)&_end);
-    INFO("CPIO_START: 0x%x, CPIO_END: 0x%x\n", CPIO_START, CPIO_END);
-    memory_reserve((size_t)CPIO_START, (size_t)CPIO_END);
-    INFO("DTB_START: 0x%x, DTB_END: 0x%x\n", DTB_START, DTB_END);
-    memory_reserve((size_t)DTB_START, (size_t)DTB_END);
-    // DEBUG_BLOCK({
-    //      dump_frame();
-    //      dump_cache();
-    //  });
-}
-
-void init_cache()
-{
-    for (size_t i = MAX_ORDER; i >= 0; i--)
-    {
-        cache_freelist[i] = (list_head_t *)startup_malloc(sizeof(list_head_t));
-        INIT_LIST_HEAD(cache_freelist[i]);
-    }
-}
-
 /**
  * page_malloc - allocate a page frame by size
  * @size: the size of the declaration in bytes.
@@ -410,76 +410,92 @@ void *page_malloc(size_t size)
     {
         val++;
     }
-    struct list_head *curr;
+    frame_t *frame = get_free_frame(val);
+    if (frame == 1) // can't find the frame to allocate
+    {
+        kernel_unlock_interrupt();
+        ERROR("page_malloc: can't find the frame to allocate\r\n");
+        return 0;
+    }
+    frame->val = val;
+    frame->order = NOT_CACHE;
+    frame->cache_used_count = 0;
+    kernel_unlock_interrupt();
+    return frame_addr_to_phy_addr(frame);
+}
+
+frame_t *get_free_frame(int val)
+{
+    list_head_t *curr;
     size_t index = -1;
     if (!list_empty(frame_freelist[(size_t)val])) // find the exact size
     {
         curr = frame_freelist[(size_t)val]->next;
-        list_del_entry(curr);
-        curr->next = curr->prev = curr;
-        index = frame_to_index((frame_t *)curr);
     }
     else
     {
-        int8_t upper_val = val + 1;
-        while (upper_val <= MAX_VAL) // find upper size of frame
-        {
-            if (!list_empty(frame_freelist[(size_t)upper_val]))
-                break;
-            upper_val++;
+        curr = split_frame(val);
+        if(curr == 1){
+            return 1;
         }
-        //
-        // Split the frame
-        // we want val=2, upper_val=4
-        // j=4
-        // 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
-        // ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
-        // │  4  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
-        // └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
-        //             　
-        // j=3         　                                  ↓
-        // ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
-        // │  4  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
-        // └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
-        //                                                  ↑↑↑↑↑  change this frame to val=3
-        //
-        // j=2                                             ↓
-        // ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
-        // │  4  │ <F> │ <F> │ <F> │  2  │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
-        // └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
-        //                          ↑↑↑↑↑  change this frame to val=2
-        //
-        // finish split, get first frame and set val=2     ↓
-        // ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
-        // │  2  │ <F> │ <F> │ <F> │  2  │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
-        // └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
-        //  ↑↑↑↑↑  return this frame
-        //
-        //
+    }
+    index = frame_to_index((frame_t *)curr);
+    list_del_entry(curr);
+    curr->next = curr->prev = curr;
+    return curr;
+}
 
-        curr = frame_freelist[(size_t)upper_val]->next;
-        list_del_entry(curr);
-        curr->next = curr->prev = curr;
-        index = frame_to_index((frame_t *)curr);
-        for (size_t j = upper_val; j > val; j--) // second half frame
-        {
-            frame_t *buddy = get_buddy_frame(j - 1, (frame_t *)curr);
-            // uart_puts("val: %2d, split: (0x%x, 0x%x)\n", j, frame_addr_to_phy_addr((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)buddy));
-            buddy->val = j - 1;
-            // list_del_entry((list_head_t *)buddy);
-            page_insert(j - 1, buddy);
-        }
-    }
-    if (index == -1) // can't find the frame to allocate
+/**
+ * Split the frame
+ * we want val=2, upper_val=4
+ * j=4
+ * 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  4  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * 　
+ * j=3         　                                  ↓
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  4  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * ↑↑↑↑↑  change this frame to val=3
+ *
+ * j=2                                             ↓
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  4  │ <F> │ <F> │ <F> │  2  │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * ↑↑↑↑↑  change this frame to val=2
+ *
+ * finish split, get first frame and set val=2     ↓
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  2  │ <F> │ <F> │ <F> │  2  │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * ↑↑↑↑↑  return this frame
+ */
+frame_t *split_frame(int8_t val)
+{
+    struct list_head *curr;
+    size_t index = -1;
+    int8_t upper_val = val + 1;
+    while (upper_val <= MAX_VAL) // find upper size of frame
     {
-        kernel_unlock_interrupt();
-        return 0;
+        if (!list_empty(frame_freelist[(size_t)upper_val]))
+            break;
+        upper_val++;
     }
-    frame_array[index].val = val;
-    frame_array[index].order = NOT_CACHE;
-    frame_array[index].cache_used_count = 0;
-    kernel_unlock_interrupt();
-    return frame_addr_to_phy_addr(index_to_frame(index));
+    if(upper_val > MAX_VAL){
+        return 1;
+    }
+
+    curr = frame_freelist[(size_t)upper_val]->next;
+
+    for (size_t j = upper_val; j > val; j--) // second half frame
+    {
+        frame_t *buddy = get_buddy_frame(j - 1, (frame_t *)curr);
+        buddy->val = j - 1;
+        page_insert(j - 1, buddy);
+    }
+    return curr;
 }
 
 int page_free(void *ptr)
