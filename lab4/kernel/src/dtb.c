@@ -2,8 +2,11 @@
 #include "uart1.h"
 #include "utils.h"
 #include "cpio.h"
+#include "memory.h"
 
-extern void* CPIO_DEFAULT_PLACE;
+// extern void* CPIO_DEFAULT_PLACE;
+void* CPIO_DEFAULT_START;
+void* CPIO_DEFAULT_END;
 extern char* dtb_ptr;
 
 //stored as big endian
@@ -19,6 +22,18 @@ struct fdt_header {
     uint32_t size_dt_strings;
     uint32_t size_dt_struct;
 };
+
+// memory reservation block - https://zhuanlan.zhihu.com/p/144863497
+struct fdt_reserve_entry {
+    uint64_t address;
+    uint64_t size;
+};
+
+uint64_t uint64_endian_big2lttle(uint64_t data)
+{
+    char *r = (char *)&data;
+    return ((unsigned long long)r[7] << 0) | ((unsigned long long)r[6] << 8) | ((unsigned long long)r[5] << 16) | ((unsigned long long)r[4] << 24) | ((unsigned long long)r[3] << 32) | ((unsigned long long)r[2] << 40) | ((unsigned long long)r[1] << 48) | ((unsigned long long)r[0] << 56);
+}
 
 uint32_t uint32_endian_big2lttle(uint32_t data)
 {
@@ -102,8 +117,38 @@ void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size) {
     // https://github.com/stweil/raspberrypi-documentation/blob/master/configuration/device-tree.md
     // linux,initrd-start will be assigned by start.elf based on config.txt
-    if(node_type==FDT_PROP && strcmp(name,"linux,initrd-start")==0)
+    if (node_type==FDT_PROP && strcmp(name,"linux,initrd-start")==0)
     {
-        CPIO_DEFAULT_PLACE = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t*)value);
+        CPIO_DEFAULT_START = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t*)value);
     }
+    if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0)
+    {
+        CPIO_DEFAULT_END = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t *)value);
+    }
+}
+
+void dtb_find_and_store_reserved_memory()
+{
+    struct fdt_header *header = (struct fdt_header *) dtb_ptr;
+    if (uint32_endian_big2lttle(header->magic) != 0xD00DFEED)
+    {
+        uart_puts("traverse_device_tree : wrong magic in traverse_device_tree");
+        return;
+    }
+
+    // off_mem_rsvmap stores all of reserve memory map with address and size
+    char *dt_mem_rsvmap_ptr = (char *)((char *)header + uint32_endian_big2lttle(header->off_mem_rsvmap));
+    struct fdt_reserve_entry *reverse_entry = (struct fdt_reserve_entry *)dt_mem_rsvmap_ptr;
+
+    // reserve memory which is defined by dtb
+    while (reverse_entry->address != 0 || reverse_entry->size != 0)
+    {
+        unsigned long long start = uint64_endian_big2lttle(reverse_entry->address);
+        unsigned long long end = uint64_endian_big2lttle(reverse_entry->size) + start;
+        memory_reserve(start, end);
+        reverse_entry++;
+    }
+
+    // reserve device tree itself
+    memory_reserve((unsigned long long)dtb_ptr, (unsigned long long)dtb_ptr + uint32_endian_big2lttle(header->totalsize));
 }

@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "u_list.h"
 #include "uart1.h"
+#include "dtb.h"
 
 extern char _heap_top;
 static char* htop_ptr = &_heap_top;
@@ -8,6 +9,9 @@ static char* htop_ptr = &_heap_top;
 extern char  _start;
 extern char  _end;
 extern char  _stack_top;
+extern char* CPIO_DEFAULT_START;
+extern char* CPIO_DEFAULT_END;
+extern char* dtb_ptr;
 
 //lab2
 void* malloc(unsigned int size) {
@@ -70,9 +74,23 @@ void init_allocator()
             list_add(&frame_array[i].listhead, &frame_freelist[FRAME_IDX_FINAL]);
         }
     }
+
+    uart_sendline("\r\n* Initial Allocation *\r\n");
+    dump_page_info();
+    /* Startup reserving the following region:
+    Spin tables for multicore boot (0x0000 - 0x1000)
+    Devicetree (Optional, if you have implement it)
+    Kernel image in the physical memory
+    Your simple allocator (startup allocator) (Stack + Heap in my case)
+    Initramfs
+    */
+    uart_sendline("\r\n* Startup Allocation *\r\n");
+    uart_sendline("buddy system: usable memory region: 0x%x ~ 0x%x\n", BUDDY_MEMORY_BASE, BUDDY_MEMORY_BASE + BUDDY_MEMORY_PAGE_COUNT * PAGESIZE);
+    dtb_find_and_store_reserved_memory(); // find spin tables in dtb
+
     memory_reserve((unsigned long long)&_start, (unsigned long long)&_end); // kernel
     memory_reserve((unsigned long long)&_heap_top, (unsigned long long)&_stack_top);  // heap & stack -> simple allocator
-		
+	memory_reserve((unsigned long long)CPIO_DEFAULT_START, (unsigned long long)CPIO_DEFAULT_END);	
 }
 
 void* page_malloc(unsigned int size){
