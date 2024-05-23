@@ -56,6 +56,12 @@ void mini_uart_enqueue() {
     return;
   set_ier_reg(false, RECEIVE_INT);
   set_ier_reg(false, TRANSMIT_INT);
+  waiting = true;
+  irq_add_task(9, mini_uart_handler, nullptr, mini_uart_handler_fini);
+}
+
+void mini_uart_handler(void*) {
+  auto iir = get32(pa2va(AUX_MU_IIR_REG));
   if (iir & (1 << 1)) {
     // Transmit holding register empty
     if (not wbuf.empty()) {
@@ -69,11 +75,7 @@ void mini_uart_enqueue() {
       rbuf.push(c);
     }
   }
-  waiting = true;
-  irq_add_task(9, mini_uart_handler, nullptr, mini_uart_handler_fini);
-}
 
-void mini_uart_handler(void*) {
   // TODO: refactor uart task handlers
   if (mini_uart_delay > 0) {
     int delay = mini_uart_delay;
