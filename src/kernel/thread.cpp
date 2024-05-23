@@ -141,6 +141,45 @@ int Kthread::alloc_user_pages(uint64_t va, uint64_t size, ProtFlags prot) {
   return 0;
 }
 
+int Kthread::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
+                                ProtFlags prot) {
+  ensure_el0_tlb();
+
+  struct Ctx {
+    uint64_t va;
+    uint64_t pa;
+    ProtFlags prot;
+  } ctx{
+      .va = va,
+      .pa = pa,
+      .prot = prot,
+  };
+
+  klog("map_user_phy_pages:  0x%016lx ~ 0x%016lx -> %08lx\n", va, va + size,
+       pa);
+
+  // TODO: handle address overlap
+  el0_tlb->walk(
+      va, va + size,
+      [](auto context, PT_Entry& entry, auto start, auto level) {
+        auto ctx = (Ctx*)context;
+        entry.alloc(level);
+
+        entry.set_entry(ctx->pa + (start - ctx->va), level);
+
+        if (has(ctx->prot, ProtFlags::WRITE))
+          entry.AP = AP::USER_RW;
+        else
+          entry.AP = AP::USER_RO;
+        entry.UXN = not has(ctx->prot, ProtFlags::EXEC);
+      },
+      (void*)&ctx);
+
+  reload_tlb();
+
+  return 0;
+}
+
 void idle() {
   while (true) {
     kill_zombies();

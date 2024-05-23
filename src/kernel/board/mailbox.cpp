@@ -21,6 +21,8 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
     if (msg->tag_identifier == MBOX_ALLOCATE_BUFFER) {
       auto base_addr = msg->value_buf[0];
       auto size = msg->value_buf[1];
+      current_thread()->map_user_phy_pages(base_addr, base_addr, size,
+                                           ProtFlags::RW);
     }
   }
 
