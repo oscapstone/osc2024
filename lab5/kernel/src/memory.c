@@ -227,6 +227,7 @@ void kfree(void *ptr)
     frame->cache_used_count--;
     // DEBUG("kfree: cache address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
     size_t order_size = order_to_size(frame->order);
+    list_add((list_head_t *)ptr, cache_freelist[(size_t)frame->order]);
     if (frame->cache_used_count == 0)
     {
         // DEBUG("kfree: cache_used_count == 0, free frame: 0x%x\n", frame);
@@ -241,7 +242,6 @@ void kfree(void *ptr)
         return;
     }
     // DEBUG("kfree: cache_used_count != 0, add to cache_freelist: 0x%x\n", ptr);
-    list_add((list_head_t *)ptr, cache_freelist[(size_t)frame->order]);
     // DEBUG("add finish\r\n");
     kernel_unlock_interrupt();
     return;
