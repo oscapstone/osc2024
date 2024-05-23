@@ -1,6 +1,9 @@
-use core::arch::global_asm;
+use core::arch::{asm, global_asm};
 
-use aarch64_cpu::registers::{Writeable, ELR_EL1, SPSR_EL1, SP_EL0, TPIDR_EL0, TPIDR_EL1};
+use aarch64_cpu::{
+    asm::barrier,
+    registers::{Writeable, ELR_EL1, SPSR_EL1, SP_EL0, TPIDR_EL0, TPIDR_EL1, TTBR0_EL1},
+};
 use alloc::rc::Rc;
 use tock_registers::interfaces::Readable;
 
@@ -31,6 +34,13 @@ unsafe fn software_thread_switch(prev: *mut Task, next: *mut Task) {
     ELR_EL1.set(next.thread.elr_el1);
     SP_EL0.set(next.thread.sp_el0);
     SPSR_EL1.set(next.thread.spsr_el1);
+
+    let baddr = next.memory_mapping().page_table_phys_base_address();
+    barrier::dsb(barrier::ISH);
+    TTBR0_EL1.set_baddr(baddr);
+    asm!("tlbi vmalle1is");
+    barrier::dsb(barrier::ISH);
+    barrier::isb(barrier::SY);
 }
 
 pub unsafe fn switch_to(prev: *mut Task, next: *mut Task) -> *mut Task {
@@ -52,9 +62,6 @@ pub trait Scheduler {
 
     /// Start the scheduler main loop.
     fn start_scheduler(&self) -> !;
-
-    /// Execute a user space task.
-    fn execute_task(&self, task: Task);
 
     /// Use to check if the scheduler is initialized.
     fn initialized(&self) -> bool;
@@ -78,10 +85,6 @@ impl Scheduler for NullScheduler {
     }
 
     fn start_scheduler(&self) -> ! {
-        unimplemented!()
-    }
-
-    fn execute_task(&self, task: Task) {
         unimplemented!()
     }
 

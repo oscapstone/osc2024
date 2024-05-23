@@ -1,9 +1,8 @@
-use alloc::{boxed::Box, vec::Vec};
 use cpio::CPIOArchive;
 
 use crate::{
-    memory,
-    scheduler::{scheduler, task::Task},
+    memory::{self, phys_to_virt},
+    scheduler::current,
 };
 
 pub fn exec(name: *const char, argv: *const *const char) -> i32 {
@@ -12,26 +11,23 @@ pub fn exec(name: *const char, argv: *const *const char) -> i32 {
             .to_str()
             .unwrap()
     };
-    let mut devicetree =
-        unsafe { devicetree::FlattenedDevicetree::from_memory(memory::DEVICETREE_START_ADDR) };
+    let mut devicetree = unsafe {
+        devicetree::FlattenedDevicetree::from_memory(phys_to_virt(memory::DEVICETREE_START_ADDR))
+    };
     let result = devicetree.traverse(&move |device_name, property_name, property_value| {
         if property_name == "linux,initrd-start" {
             let mut cpio_archive = unsafe {
-                CPIOArchive::from_memory(
-                    u32::from_be_bytes(property_value.try_into().unwrap()) as usize
-                )
+                CPIOArchive::from_memory(phys_to_virt(u32::from_be_bytes(
+                    property_value.try_into().unwrap(),
+                ) as usize))
             };
 
             while let Some(file) = cpio_archive.read_next() {
                 if file.name != filename {
                     continue;
                 }
-                let mut code = Vec::from(file.content).into_boxed_slice();
-                let code_ptr = code.as_mut_ptr();
-                Box::into_raw(code);
-                let mut task =
-                    Task::from_job(unsafe { core::mem::transmute::<*mut u8, fn() -> !>(code_ptr) });
-                scheduler().execute_task(task);
+
+                unsafe { &mut *current() }.run_user_program(file.content);
                 return Ok(());
             }
             return Ok(());

@@ -6,7 +6,7 @@ use crate::scheduler::current;
 
 pub fn fork() -> i32 {
     unsafe { disable_kernel_space_interrupt() }
-    let mut sp = 0;
+    let mut sp;
     unsafe {
         asm!(
             "mov {}, sp",

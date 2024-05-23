@@ -1,4 +1,4 @@
-use crate::scheduler::{current, task};
+use crate::scheduler::current;
 
 pub enum Signal {
     SIGHUP = 1,

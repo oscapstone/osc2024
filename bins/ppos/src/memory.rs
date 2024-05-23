@@ -14,21 +14,56 @@
 *    }
 */
 
+use alloc::boxed::Box;
+use library::println;
+
 use self::{buddy_page_allocator::BuddyPageAllocator, slab_allocator::SlabAllocator};
 
 extern "C" {
-    pub static __phys_dram_start_addr: usize;
-    pub static __phys_binary_load_addr: usize;
-    pub static __bss_begin: usize;
-    pub static __bss_end: usize;
-    pub static __heap_begin: usize;
-    pub static __heap_end: usize;
+    static __bss_begin: usize;
+    static __bss_end: usize;
+    static __heap_begin: usize;
+    static __heap_end: usize;
+    static __virtual_kernel_space_addr: usize;
+    static __virtual_kernel_start_addr: usize;
 }
 
 pub static mut DEVICETREE_START_ADDR: usize = 0;
 pub static mut CPIO_START_ADDR: usize = 0;
 pub static mut CPIO_END_ADDR: usize = 0;
 pub const PAGE_SIZE: usize = 4096;
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct AllocatedMemory {
+    inner: Box<[u8]>,
+}
+
+impl AllocatedMemory {
+    #[inline(always)]
+    pub const fn new(memory: Box<[u8]>) -> Self {
+        Self { inner: memory }
+    }
+
+    #[inline(always)]
+    pub fn top(&self) -> *const u8 {
+        self.inner.as_ptr()
+    }
+
+    #[inline(always)]
+    pub fn bottom(&self) -> *const u8 {
+        (self.inner.as_ptr() as usize + self.inner.len()) as *const u8
+    }
+}
+
+impl core::ops::Deref for AllocatedMemory {
+    type Target = Box<[u8]>;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
 
 #[inline(always)]
 pub const fn round_up_with(v: usize, s: usize) -> usize {
@@ -51,33 +86,55 @@ pub const fn round_down(addr: usize) -> usize {
 }
 
 #[inline(always)]
-pub fn phys_dram_start_addr() -> usize {
-    unsafe { &__phys_dram_start_addr as *const usize as usize }
+pub const fn phys_to_virt(addr: usize) -> usize {
+    addr + virtual_kernel_space_addr()
 }
 
 #[inline(always)]
-pub fn phys_binary_load_addr() -> usize {
-    unsafe { &__phys_binary_load_addr as *const usize as usize }
+pub const fn virt_to_phys(addr: usize) -> usize {
+    addr - virtual_kernel_space_addr()
 }
 
 #[inline(always)]
-unsafe fn heap_start_addr() -> usize {
-    &__heap_begin as *const usize as usize
+pub const fn phys_dram_start_addr() -> usize {
+    0
 }
 
 #[inline(always)]
-unsafe fn heap_end_addr() -> usize {
-    &__heap_end as *const usize as usize
+pub const fn phys_binary_load_addr() -> usize {
+    0x80000
+}
+
+#[inline(always)]
+pub const fn virtual_kernel_space_addr() -> usize {
+    0xffff_0000_0000_0000
+}
+
+#[inline(always)]
+pub const fn virtual_kernel_start_addr() -> usize {
+    phys_to_virt(phys_binary_load_addr())
+}
+
+#[inline(always)]
+pub fn heap_start_addr() -> usize {
+    unsafe { &__heap_begin as *const usize as usize }
+}
+
+#[inline(always)]
+pub fn heap_end_addr() -> usize {
+    unsafe { &__heap_end as *const usize as usize }
 }
 
 pub unsafe fn init_allocator() {
     // initialize buddy memory allocator first
-    let mut devicetree = devicetree::FlattenedDevicetree::from_memory(DEVICETREE_START_ADDR);
+    let mut devicetree =
+        devicetree::FlattenedDevicetree::from_memory(phys_to_virt(DEVICETREE_START_ADDR));
     devicetree
         .traverse(&move |device_name, property_name, property_value| {
             if device_name == "memory@0" && property_name == "reg" {
                 let memory_end_addr = u64::from_be_bytes(property_value.try_into().unwrap());
-                BUDDY_PAGE_ALLOCATOR.init(0, memory_end_addr as usize)?;
+                BUDDY_PAGE_ALLOCATOR
+                    .init(phys_to_virt(0), phys_to_virt(memory_end_addr as usize))?;
             }
             Ok(())
         })
@@ -86,14 +143,17 @@ pub unsafe fn init_allocator() {
     devicetree
         .traverse_reserved_memory(&|start, size| {
             BUDDY_PAGE_ALLOCATOR
-                .reserve_memory(start as usize, (start + size) as usize)
+                .reserve_memory(
+                    phys_to_virt(start as usize),
+                    phys_to_virt((start + size) as usize),
+                )
                 .unwrap();
             Ok(())
         })
         .unwrap();
     // kernel / stack / heap...
     BUDDY_PAGE_ALLOCATOR
-        .reserve_memory(phys_dram_start_addr(), heap_end_addr())
+        .reserve_memory(virtual_kernel_space_addr(), heap_end_addr())
         .unwrap();
     // CPIO archive
     devicetree
@@ -101,13 +161,7 @@ pub unsafe fn init_allocator() {
             if property_name == "linux,initrd-start" {
                 CPIO_START_ADDR = u32::from_be_bytes(property_value.try_into().unwrap()) as usize;
                 return Ok(());
-            }
-            Ok(())
-        })
-        .unwrap();
-    devicetree
-        .traverse(&|device_name, property_name, property_value| {
-            if property_name == "linux,initrd-end" {
+            } else if property_name == "linux,initrd-end" {
                 CPIO_END_ADDR = u32::from_be_bytes(property_value.try_into().unwrap()) as usize;
                 return Ok(());
             }
@@ -115,13 +169,18 @@ pub unsafe fn init_allocator() {
         })
         .unwrap();
     BUDDY_PAGE_ALLOCATOR
-        .reserve_memory(CPIO_START_ADDR, round_up(CPIO_END_ADDR))
+        .reserve_memory(
+            phys_to_virt(CPIO_START_ADDR),
+            phys_to_virt(round_up(CPIO_END_ADDR)),
+        )
         .unwrap();
     // device tree
     BUDDY_PAGE_ALLOCATOR
         .reserve_memory(
-            round_down(DEVICETREE_START_ADDR),
-            round_up(DEVICETREE_START_ADDR + devicetree.header().total_size() as usize),
+            phys_to_virt(round_down(DEVICETREE_START_ADDR)),
+            phys_to_virt(round_up(
+                DEVICETREE_START_ADDR + devicetree.header().total_size() as usize,
+            )),
         )
         .unwrap();
     // simple allocator
@@ -133,7 +192,13 @@ pub unsafe fn init_allocator() {
 mod buddy_page_allocator;
 mod slab_allocator;
 
+pub mod paging;
+
 static BUDDY_PAGE_ALLOCATOR: BuddyPageAllocator = unsafe { BuddyPageAllocator::new() };
 
 #[global_allocator]
 static SLAB_ALLOCATOR: SlabAllocator = unsafe { SlabAllocator::new(&BUDDY_PAGE_ALLOCATOR) };
+
+pub fn print_memory_info() {
+    println!("{}", BUDDY_PAGE_ALLOCATOR);
+}

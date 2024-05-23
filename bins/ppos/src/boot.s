@@ -49,7 +49,7 @@ _start:
 	// Prepare the jump to Rust code.
 .L_prepare_rust:
 	// Set the stack pointer.
-	ADR_REL	x1, __phys_binary_load_addr
+	mov	x1, 0x80000
 	mov	sp, x1
 
 	// Jump to Rust code.

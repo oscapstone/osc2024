@@ -1,9 +1,9 @@
 PAGE_SIZE = 4K;
 
-__phys_dram_start_addr = 0;
-__phys_binary_load_addr = 0x80000;
+__virtual_kernel_space_addr = 0xffff000000000000;
+__virtual_kernel_start_addr = 0xffff000000080000;
 
-ENTRY(__phys_binary_load_addr)
+ENTRY(__virtual_kernel_start_addr)
 
 /**
  * Flags:
@@ -21,11 +21,11 @@ PHDRS
 
 SECTIONS
 {
-  . = __phys_dram_start_addr;
+  . = __virtual_kernel_space_addr;
   .stack (NOLOAD) : {
-    . += __phys_binary_load_addr;
+    . += 0x80000;
   } : segment_stack
-  . = __phys_binary_load_addr;
+  . = __virtual_kernel_start_addr;
   .text : {
     KEEP(*(.text._start))
     *(.text._start_arguments)

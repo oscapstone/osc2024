@@ -7,6 +7,7 @@ mod get_pid;
 mod kill;
 mod kill_with_signal;
 mod mbox_call;
+mod mmap;
 mod sig_return;
 mod signal;
 mod uart_read;
@@ -23,7 +24,10 @@ pub enum SystemCallNumber {
     Kill,
     Signal,
     KillWithSignal,
-    SignalReturn,
+    MMap,
+
+    // internal use
+    SignalReturn = 64,
 }
 
 impl From<u64> for SystemCallNumber {
@@ -39,7 +43,8 @@ impl From<u64> for SystemCallNumber {
             7 => SystemCallNumber::Kill,
             8 => SystemCallNumber::Signal,
             9 => SystemCallNumber::KillWithSignal,
-            10 => SystemCallNumber::SignalReturn,
+            10 => SystemCallNumber::MMap,
+            64 => SystemCallNumber::SignalReturn,
             _ => panic!("unsupport system call number"),
         }
     }
@@ -82,14 +87,18 @@ pub fn system_call(
             kill_with_signal::kill_with_signal(arg0 as i32, arg1 as i32);
             0
         }
+        SystemCallNumber::MMap => mmap::mmap(
+            arg0,
+            arg1,
+            arg2 as u32,
+            arg3 as u32,
+            arg4 as u32,
+            arg5 as u32,
+        ) as usize,
         SystemCallNumber::SignalReturn => {
             sig_return::sig_return();
             0
         }
-        _ => panic!(
-            "unsupport system call number: {}",
-            context.system_call_number()
-        ),
     };
     context.set_return_value(result as u64);
 }

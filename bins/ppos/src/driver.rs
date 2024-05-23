@@ -15,19 +15,21 @@ use device::timer::Timer;
 use device::watchdog::Watchdog;
 use library::console;
 
-static MINI_UART: MiniUart = unsafe { MiniUart::new(AUX_MMIO_BASE) };
-static GPIO: GPIO = unsafe { GPIO::new(GPIO_MMIO_BASE) };
-static WATCHDOG: Watchdog = unsafe { Watchdog::new(WATCHDOG_MMIO_BASE) };
-static MAILBOX: Mailbox = unsafe { Mailbox::new(MAILBOX_MMIO_BASE) };
+use crate::memory::phys_to_virt;
+
+static MINI_UART: MiniUart = unsafe { MiniUart::new(phys_to_virt(AUX_MMIO_BASE)) };
+static GPIO: GPIO = unsafe { GPIO::new(phys_to_virt(GPIO_MMIO_BASE)) };
+static WATCHDOG: Watchdog = unsafe { Watchdog::new(phys_to_virt(WATCHDOG_MMIO_BASE)) };
+static MAILBOX: Mailbox = unsafe { Mailbox::new(phys_to_virt(MAILBOX_MMIO_BASE)) };
 static PENDING_INTERRUPT_QUEUE: PendingInterruptQueue = PendingInterruptQueue::new();
 static INTERRUPT_CONTROLLER: InterruptController = unsafe {
     InterruptController::new(
-        INTERRUPT_CONTROLLER_MMIO_BASE,
-        CORE_INTERRUPT_SOURCE_MMIO_BASE,
+        phys_to_virt(INTERRUPT_CONTROLLER_MMIO_BASE),
+        phys_to_virt(CORE_INTERRUPT_SOURCE_MMIO_BASE),
         &PENDING_INTERRUPT_QUEUE,
     )
 };
-static TIMER: Timer = unsafe { Timer::new(CORE_TIMER_INTERRUPT_CONTROLL_MMIO_BASE) };
+static TIMER: Timer = unsafe { Timer::new(phys_to_virt(CORE_TIMER_INTERRUPT_CONTROLL_MMIO_BASE)) };
 
 pub unsafe fn init() -> Result<(), &'static str> {
     let driver_manager = driver_manager();
@@ -81,8 +83,4 @@ pub fn mailbox() -> &'static Mailbox {
 
 pub fn timer() -> &'static Timer {
     &TIMER
-}
-
-pub fn mini_uart() -> &'static MiniUart {
-    &MINI_UART
 }

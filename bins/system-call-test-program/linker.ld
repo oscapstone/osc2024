@@ -1,6 +1,6 @@
 SECTIONS
 {
-  . = 0x20008000;
+  . = 0;
   .text : {
     KEEP(*(.text._start))
     *(.text._start_arguments)

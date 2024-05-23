@@ -2,12 +2,12 @@ use core::alloc::GlobalAlloc;
 
 use cpu::cpu::{disable_kernel_space_interrupt, enable_kernel_space_interrupt};
 use library::{
-    console::{Console, ConsoleMode},
+    console::{console, ConsoleMode},
     println,
     sync::mutex::Mutex,
 };
 
-use crate::{driver::mini_uart, memory::PAGE_SIZE, shell::SLAB_ALLOCATOR_DEBUG_ENABLE};
+use crate::{memory::PAGE_SIZE, shell::SLAB_ALLOCATOR_DEBUG_ENABLE};
 
 use super::{buddy_page_allocator::BuddyPageAllocator, round_up_with};
 
@@ -26,7 +26,6 @@ impl SlabNode {
      * This method will update the next free node
      */
     unsafe fn alloc_one(&mut self, page_allocator: &BuddyPageAllocator, size: usize) -> *mut u8 {
-        mini_uart().change_mode(ConsoleMode::Sync);
         // if there is no free node, allocate a new page
         if self.0.is_null() {
             let frame =
@@ -45,7 +44,6 @@ impl SlabNode {
         }
         // set the allocated memory to 0 to avoid uninitialized memory issue
         core::slice::from_raw_parts_mut(res, size).fill(0);
-        mini_uart().change_mode(ConsoleMode::Async);
         res
     }
 
@@ -54,14 +52,12 @@ impl SlabNode {
      * This method just make the node as the next free node and attach the original next free node to the new free node
      */
     unsafe fn dealloc_one(&mut self, ptr: *mut u8) {
-        mini_uart().change_mode(ConsoleMode::Sync);
         let ptr = ptr as *mut SlabNode;
         (*ptr).0 = self.0;
         self.0 = ptr;
         if SLAB_ALLOCATOR_DEBUG_ENABLE {
             println!("Deallocate slab node at {:p}", ptr);
         }
-        mini_uart().change_mode(ConsoleMode::Async);
     }
 
     /**
@@ -114,27 +110,33 @@ impl<'a> SlabAllocator<'a> {
 unsafe impl<'a> GlobalAlloc for SlabAllocator<'a> {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
         disable_kernel_space_interrupt();
+        console().change_mode(ConsoleMode::Sync);
         if layout.size() > Self::MAX_SLAB_SIZE {
             let ptr = self.page_allocator.alloc(layout);
+            console().change_mode(ConsoleMode::Async);
             enable_kernel_space_interrupt();
             return ptr;
         }
         let (size, index) = Self::get_size_and_index(layout.size());
         let ptr = self.slab_nodes.lock().unwrap()[index].alloc_one(&self.page_allocator, size);
+        console().change_mode(ConsoleMode::Async);
         enable_kernel_space_interrupt();
         ptr
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
         disable_kernel_space_interrupt();
+        console().change_mode(ConsoleMode::Sync);
         if layout.size() > Self::MAX_SLAB_SIZE {
             self.page_allocator.dealloc(ptr, layout);
+            console().change_mode(ConsoleMode::Async);
             enable_kernel_space_interrupt();
             return;
         }
 
         let (_, index) = Self::get_size_and_index(layout.size());
         self.slab_nodes.lock().unwrap()[index].dealloc_one(ptr);
+        console().change_mode(ConsoleMode::Async);
         enable_kernel_space_interrupt();
     }
 }

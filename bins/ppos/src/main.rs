@@ -13,18 +13,20 @@ mod signal;
 mod system_call;
 
 use alloc::rc::Rc;
-use core::{arch::global_asm, panic::PanicInfo};
+use core::{
+    arch::{asm, global_asm},
+    panic::PanicInfo,
+};
 use cpu::cpu::{enable_kernel_space_interrupt, switch_to_el1};
 use library::{
-    console::{Console, ConsoleMode},
+    console::{console, ConsoleMode},
     println,
     sync::mutex::Mutex,
 };
+use memory::paging::mmu::mmu;
 use pid::pid_manager;
 use scheduler::{round_robin_scheduler::ROUND_ROBIN_SCHEDULER, task::Task};
 use shell::Shell;
-
-use crate::driver::mini_uart;
 
 global_asm!(include_str!("boot.s"));
 
@@ -32,10 +34,17 @@ global_asm!(include_str!("boot.s"));
 pub unsafe extern "C" fn _start_rust(devicetree_start_addr: usize) -> ! {
     memory::DEVICETREE_START_ADDR = devicetree_start_addr;
     // switch to EL1 and jump to kernel_init
-    switch_to_el1(
-        &memory::__phys_binary_load_addr as *const usize as u64,
-        kernel_init,
-    );
+    switch_to_el1(memory::phys_binary_load_addr() as u64, kernel_init_mmu);
+}
+
+unsafe fn kernel_init_mmu() -> ! {
+    mmu().enable_mmu();
+    let mut sp: usize;
+    asm!("mov {}, sp", out(reg) sp);
+    asm!("mov sp, {}", in(reg) memory::phys_to_virt(sp));
+    (core::mem::transmute::<*const fn() -> !, fn() -> !>(
+        (kernel_init as usize + memory::virtual_kernel_space_addr()) as *const fn() -> !,
+    ))();
 }
 
 unsafe fn kernel_init() -> ! {
@@ -44,7 +53,7 @@ unsafe fn kernel_init() -> ! {
     driver::init().unwrap();
     pid_manager().init();
     scheduler::register_scheduler(&ROUND_ROBIN_SCHEDULER);
-    mini_uart().change_mode(ConsoleMode::Async);
+    console().change_mode(ConsoleMode::Async);
     enable_kernel_space_interrupt();
     kernel_start();
 }
@@ -61,7 +70,7 @@ pub fn run_shell() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    mini_uart().change_mode(ConsoleMode::Sync);
+    console().change_mode(ConsoleMode::Sync);
     println!("{}", _info);
     loop {}
 }

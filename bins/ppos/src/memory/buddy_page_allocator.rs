@@ -1,8 +1,11 @@
-use core::{alloc::GlobalAlloc, array};
+use core::{alloc::GlobalAlloc, array, fmt};
 
 use library::{println, sync::mutex::Mutex};
 
-use crate::memory::buddy_page_allocator::order_free_list::OrderFreeListNode;
+use crate::{
+    memory::buddy_page_allocator::order_free_list::OrderFreeListNode,
+    shell::BUDDY_ALLOCATOR_DEBUG_ENABLE,
+};
 
 use self::order_free_list::OrderFreeList;
 
@@ -55,7 +58,9 @@ impl<'a> BuddyPageAllocator<'a> {
             return;
         }
         let buddy_index = Self::find_buddy_index(frame_index, frame_order);
-        println!("buddy index: {}", buddy_index);
+        if unsafe { BUDDY_ALLOCATOR_DEBUG_ENABLE } {
+            println!("buddy index: {}", buddy_index);
+        }
         // remove buddy from free list
         let mut frame_free_list = self.frame_free_list.lock().unwrap();
         let list_ins = &mut frame_free_list.as_mut().unwrap()[frame_order];
@@ -64,13 +69,15 @@ impl<'a> BuddyPageAllocator<'a> {
             unsafe {
                 if (*node).frame_index() == buddy_index {
                     list_ins.remove(node as *mut OrderFreeListNode);
-                    println!("Remove buddy from free list. buddy index: {}", buddy_index);
-                    println!(
-                        "Merge frame {} into frame {}. New val: {}",
-                        buddy_index,
-                        frame_index,
-                        frame_order + 1
-                    );
+                    if BUDDY_ALLOCATOR_DEBUG_ENABLE {
+                        println!("Remove buddy from free list. buddy index: {}", buddy_index);
+                        println!(
+                            "Merge frame {} into frame {}. New val: {}",
+                            buddy_index,
+                            frame_index,
+                            frame_order + 1
+                        );
+                    }
                     // if merge success, merge buddy again
                     self.merge_buddy(frame_index, frame_order + 1);
                     break;
@@ -139,7 +146,9 @@ impl<'a> BuddyPageAllocator<'a> {
             }
             request_node_order += 1;
         }
-        println!("Request node order: {}", request_node_order);
+        if BUDDY_ALLOCATOR_DEBUG_ENABLE {
+            println!("Request node order: {}", request_node_order);
+        }
         let free_frame_index = frame_free_list.as_mut().unwrap()[request_node_order]
             .pop_front()
             .unwrap();
@@ -151,10 +160,12 @@ impl<'a> BuddyPageAllocator<'a> {
             release_node_frame_amount >>= 1;
             let release_index = free_frame_index + release_node_frame_amount;
             frame_free_list.as_mut().unwrap()[release_node_order].push_front(release_index);
-            println!(
-                "Release frame {} and set order = {}",
-                release_index, release_node_order
-            );
+            if BUDDY_ALLOCATOR_DEBUG_ENABLE {
+                println!(
+                    "Release frame {} and set order = {}",
+                    release_index, release_node_order
+                );
+            }
         }
         let allocate_addr = self.boundary.lock().unwrap().0 + free_frame_index * PAGE_SIZE;
         println!(
@@ -184,8 +195,10 @@ impl<'a> BuddyPageAllocator<'a> {
         self.merge_buddy(frame_index, order);
         self.frame_free_list.lock().unwrap().as_mut().unwrap()[order].push_front(frame_index);
         println!(
-            "Frame {} has been freed(addr: {:#08x})",
-            frame_index, page_start_addr
+            "Frame {} has been freed (addr: {:#08x}..{:#08x})",
+            frame_index,
+            page_start_addr,
+            page_start_addr + (1 << order) * PAGE_SIZE
         );
         Ok(())
     }
@@ -259,6 +272,54 @@ impl<'a> BuddyPageAllocator<'a> {
                 }
                 cur = next;
             }
+        }
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for BuddyPageAllocator<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "BuddyPageAllocator: {:#x}..{:#x}",
+            self.boundary.lock().unwrap().0,
+            self.boundary.lock().unwrap().1
+        )?;
+        writeln!(f, "===============")?;
+        for (i, list) in self
+            .frame_free_list
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            writeln!(f, "Order {}:", i)?;
+            if let Some(head) = list.head() {
+                let mut current = unsafe { &*head };
+                let mut start = self.boundary.lock().unwrap().0 + current.frame_index() * PAGE_SIZE;
+                let size = (1 << i) * PAGE_SIZE;
+                writeln!(
+                    f,
+                    "  Frame index: {} ({:#x}..{:#x})",
+                    current.frame_index(),
+                    start,
+                    start + size
+                )?;
+                while let Some(cur) = current.next() {
+                    current = unsafe { &*cur };
+                    start = self.boundary.lock().unwrap().0 + current.frame_index() * PAGE_SIZE;
+                    writeln!(
+                        f,
+                        "  Frame index: {} ({:#x}..{:#x})",
+                        current.frame_index(),
+                        start,
+                        start + size
+                    )?;
+                }
+            }
+            writeln!(f, "===============")?;
         }
         Ok(())
     }
