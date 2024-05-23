@@ -29,7 +29,7 @@ PT_Entry PT_Entry::copy(int level) const {
   auto new_entry = *this;
   switch (kind()) {
     case EntryKind::TABLE:
-      new_entry.set_table(level, table()->copy());
+      new_entry.set_table(level, pt_copy(table()));
       break;
     case EntryKind::ENTRY:
       // TODO: copy on write
@@ -60,8 +60,10 @@ PT::PT(PT_Entry entry, int level) {
   }
 }
 
-PT* PT::copy() {
-  return new PT(this);
+PT* pt_copy(PT* o) {
+  if (o == nullptr)
+    return nullptr;
+  return new PT(o);
 }
 
 PT::PT(PT* o, int level) {

@@ -33,7 +33,7 @@ struct Kthread : ListItem {
   Mem kernel_stack;
   KthreadItem* item;
   Signal signal;
-  PT* el0_pgd;
+  PT* el0_tlb;
 
  private:
   Kthread();
@@ -47,6 +47,7 @@ struct Kthread : ListItem {
   void fix(const Kthread& o, Mem& mem);
   void fix(const Kthread& o, void* faddr, uint64_t fsize);
   void* fix(const Kthread& o, void* ptr);
+  void ensure_el0_tlb();
   int alloc_user_pages(uint64_t addr, uint64_t size, ProtFlags prot);
   void reset_kernel_stack() {
     regs.sp = kernel_stack.end(0x10);

@@ -48,7 +48,7 @@ Kthread::Kthread()
       exit_code(0),
       item(new KthreadItem(this)),
       signal{this},
-      el0_pgd{nullptr} {
+      el0_tlb{nullptr} {
   signal.setall([](int) {
     klog("kill init cause reboot!\n");
     reboot();
@@ -67,7 +67,7 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
       kernel_stack(KTHREAD_STACK_SIZE, true),
       item(new KthreadItem(this)),
       signal{this},
-      el0_pgd(new PT) {
+      el0_tlb(nullptr) {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
   add_list(this);
@@ -81,7 +81,7 @@ Kthread::Kthread(const Kthread& o)
       kernel_stack(o.kernel_stack),
       item(new KthreadItem(this)),
       signal{this, o.signal},
-      el0_pgd(o.el0_pgd->copy()) {
+      el0_tlb(pt_copy(o.el0_tlb)) {
   fix(o, &regs, sizeof(regs));
   fix(o, kernel_stack);
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
@@ -91,7 +91,8 @@ Kthread::Kthread(const Kthread& o)
 Kthread::~Kthread() {
   del_list(this);
   delete item;
-  delete el0_pgd;
+  if (el0_tlb)
+    delete el0_tlb;
 }
 
 void Kthread::fix(const Kthread& o, Mem& mem) {
@@ -107,9 +108,17 @@ void* Kthread::fix(const Kthread& o, void* ptr) {
   return ptr;
 }
 
+void Kthread::ensure_el0_tlb() {
+  if (el0_tlb == nullptr) {
+    el0_tlb = new PT;
+    load_tlb(el0_tlb);
+  }
+}
+
 int Kthread::alloc_user_pages(uint64_t addr, uint64_t size, ProtFlags prot) {
+  ensure_el0_tlb();
   // TODO: handle address overlap
-  el0_pgd->walk(
+  el0_tlb->walk(
       addr, addr + size,
       [](auto context, PT_Entry& entry, auto start, auto level) {
         auto prot = cast_enum<ProtFlags>(context);

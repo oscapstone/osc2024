@@ -236,6 +236,7 @@ struct PT {
 
 static_assert(sizeof(PT) == PAGE_SIZE);
 
+PT* pt_copy(PT*);
 void map_kernel_as_normal(char* ktext_beg, char* ktext_end);
 
 inline void debug_TTBR(bool upper = false) {
