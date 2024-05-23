@@ -20,13 +20,15 @@ void uart_init()
     // *AUX_MU_IIR      = 0xc6;       /* No FIFO */
 
     /* map UART1 to GPIO pins */
+    // GPFSEL1 register controls the function of GPIO pins
     reg = *GPFSEL1;
     reg &= ~((7<<12)|(7<<15));  /* address of gpio 14, 15 */
     reg |=   (2<<12)|(2<<15);   /* set to alt5 */
 
-    *GPFSEL1 = reg;
+    *GPFSEL1 = reg;            
 
-    *GPPUD = 0;                 /* enable gpio 14 and 15 */
+    // ensures that GPIO pins are not affected by internal resistors
+    *GPPUD = 0;                 /* Disable pull-up/down */
     reg=150;
     while ( reg-- )
     { 
@@ -34,15 +36,19 @@ void uart_init()
     }
     
     *GPPUDCLK0 = (1<<14)|(1<<15);
+
+    //Stabilizing the Signal to ensure Proper Configuration
     reg=150; 
     while ( reg-- )
     {
         asm volatile("nop");
     }
     
+    // ensures that GPIO pins are returned to a neutral state
     *GPPUDCLK0 = 0;             /* flush GPIO setup */
 
     *AUX_MU_CNTL = 3;           // Enable the transmitter and receiver.
+    *AUX_MU_IER  = 3;           // Enable the interrupt.
 }
 
 /**
@@ -50,7 +56,7 @@ void uart_init()
  */
 void uart_send(unsigned int c)
 {
-    /* Wait until we can send */
+    /* Wait until UART transmitter is ready to accept new data. */
     do {
 
         asm volatile("nop");
@@ -60,6 +66,7 @@ void uart_send(unsigned int c)
     /* write the character to the buffer */
     *AUX_MU_IO = c;
 
+    // ensure proper line termination
     if ( c == '\n' )
     {
         do {
@@ -87,10 +94,11 @@ char uart_getc() {
 
     } while ( ! ( *AUX_MU_LSR&0x01 ) );
 
-    /* read it and return */
+    /* read the data*/
     r = ( char )( *AUX_MU_IO );
 
     /* convert carrige return to newline */
+    //standardize newline characters across different systems.
     return r == '\r' ? '\n' : r;
 }
 
@@ -101,10 +109,6 @@ void uart_puts(char *s)
 {
     while( *s )
     {
-        /* convert newline to carrige return + newline */
-
-        //if(*s=='\n')
-        //    uart_send('\r');
 
         uart_send(*s++);
 

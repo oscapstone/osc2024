@@ -50,8 +50,8 @@ void command_controller (char c, char buffer[], int * counter )
             if (!strcmp(buffer, "help"))
             {
             	uart_puts("help        : print this help menu\n");
-    		uart_puts("hello       : print Hello World!\n");
-   		uart_puts("reboot      : reboot the device\n");
+    		    uart_puts("hello       : print Hello World!\n");
+   		        uart_puts("reboot      : reboot the device\n");
             } 
             else if (!strcmp(buffer,"hello"))
             {
@@ -60,12 +60,12 @@ void command_controller (char c, char buffer[], int * counter )
             else if (!strcmp(buffer,"reboot"))
             {
             	uart_puts("Start rebooting...\n");
-    		set(PM_RSTC, PM_PASSWORD | 0x20);
+    		    set(PM_RSTC, PM_PASSWORD | 0x20);
             }
             else
             {
             	uart_puts("Error: Command not found\n");
-    		uart_puts("Try command: help\n");
+    		    uart_puts("Try command: help\n");
             }                                        
         }
 
