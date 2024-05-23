@@ -16,10 +16,6 @@ static inline func_ptr get_signal_handler_frome_thread(thread_t *thread, int sig
 
 static inline signal_node_t *get_pending_signal_node_from_thread(thread_t *thread)
 {
-	// if (list_empty((list_head_t *)(thread->signal.pending_list)))
-	// {
-	// 	return NULL;
-	// }
 	return (signal_node_t *)(((list_head_t *)(thread->signal.pending_list))->next);
 }
 

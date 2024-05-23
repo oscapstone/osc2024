@@ -1,3 +1,9 @@
+/*
+ * Functions prefixed with sys_ are called by the exception handler.
+ * Functions prefixed with kernel_ can be called in kernel-space.
+ * Functions without any prefix are system call functions called in user-space.
+ */
+
 #include "stdint.h"
 #include "sched.h"
 #include "exception.h"
@@ -23,8 +29,66 @@ extern thread_t *curr_thread;
 		}                                             \
 	} while (0)
 
-// System call functions prefixed with sys_ are called by the exception handler
-// Wrapper functions without the sys_ prefix are called by the user program
+/**
+ * @brief Wrapper function to run the user task pointed to by curr_thread->code.
+ */
+void run_user_task_wrapper(char *dest)
+{
+	DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
+	unlock_interrupt();
+	((void (*)(void))dest)();
+}
+
+/**
+ * @brief Wrapper function for fork syscall in user space.
+ *
+ * @return The child's PID in the parent, 0 in the child.
+ */
+int fork()
+{
+	int64_t pid;
+	CALL_SYSCALL(SYSCALL_FORK);
+	asm volatile(
+		"mov %0, x0\n\t"
+		: "=r"(pid)
+		:
+		: "x0");
+	return pid;
+}
+
+/**
+ * @brief User-space syscall to execute a program.
+ *
+ * @param name Name of the program to execute.
+ * @param argv Arguments to pass to the program.
+ * @return 0 on success, -1 on failure.
+ */
+int exec(const char *name, char *const argv[])
+{
+	asm volatile(
+		"mov x0, %0\n\t"
+		"mov x1, %1\n\t"
+		:
+		: "r"(name), "r"(argv)
+		: "x0", "x1");
+	CALL_SYSCALL(SYSCALL_EXEC);
+}
+
+/**
+ * @brief User-space syscall to lock the interrupt.
+ */
+void lock_interrupt()
+{
+	CALL_SYSCALL(SYSCALL_LOCK_INTERRUPT);
+}
+
+/**
+ * @brief User-space syscall to unlock the interrupt.
+ */
+void unlock_interrupt()
+{
+	CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
+}
 
 /**
  * @brief Get the process ID of the current thread.
@@ -117,34 +181,6 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 }
 
 /**
- * @brief Wrapper function to run the user task pointed to by curr_thread->code.
- */
-void run_user_task_wrapper(char *dest)
-{
-	DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
-	unlock_interrupt();
-	((void (*)(void))dest)();
-}
-
-/**
- * @brief User-space syscall to execute a program.
- *
- * @param name Name of the program to execute.
- * @param argv Arguments to pass to the program.
- * @return 0 on success, -1 on failure.
- */
-int exec(const char *name, char *const argv[])
-{
-	asm volatile(
-		"mov x0, %0\n\t"
-		"mov x1, %1\n\t"
-		:
-		: "r"(name), "r"(argv)
-		: "x0", "x1");
-	CALL_SYSCALL(SYSCALL_EXEC);
-}
-
-/**
  * @brief Fork the current process.
  *
  * @param tpf Pointer to the trapframe structure.
@@ -200,23 +236,6 @@ int sys_fork(trapframe_t *tpf)
 }
 
 /**
- * @brief Wrapper function for fork syscall in user space.
- *
- * @return The child's PID in the parent, 0 in the child.
- */
-int fork()
-{
-	int64_t pid;
-	CALL_SYSCALL(SYSCALL_FORK);
-	asm volatile(
-		"mov %0, x0\n\t"
-		: "=r"(pid)
-		:
-		: "x0");
-	return pid;
-}
-
-/**
  * @brief Exit the current process.
  *
  * @param tpf Pointer to the trapframe structure.
@@ -238,31 +257,78 @@ int sys_exit(trapframe_t *tpf, int status)
  */
 int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 {
-	kernel_lock_interrupt();
+	// kernel_lock_interrupt();
 	enum mbox_buffer_status_code status = mbox_call(ch, mbox);
-	kernel_unlock_interrupt();
+	// kernel_unlock_interrupt();
 	return status;
 }
 
+/**
+ * @brief Terminate a thread by process ID.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param pid Process ID of the thread to be terminated.
+ * @return Always returns 0.
+ */
 int sys_kill(trapframe_t *tpf, int pid)
 {
 	thread_exit_by_pid(pid);
 	return 0;
 }
 
-int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*haldler)(void))
+/**
+ * @brief Register a signal handler.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param SIGNAL The signal number for which the handler is being registered.
+ * @param handler Pointer to the handler function to be registered.
+ */
+int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void))
 {
-	signal_register_handler(SIGNAL, haldler);
+	signal_register_handler(SIGNAL, handler);
 }
 
+/**
+ * @brief Send a signal to a process.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ * @param pid Process ID of the target process.
+ * @param SIGNAL The signal number to be sent.
+ */
 int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL)
 {
 	signal_send(pid, SIGNAL);
 }
 
+/**
+ * @brief Before returning to the execution of the signal handler.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ */
 int sys_signal_return(trapframe_t *tpf)
 {
 	signal_return();
+}
+
+/**
+ * @brief Lock the interrupt.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ */
+void sys_lock_interrupt(trapframe_t *tpf)
+{
+	__lock_interrupt();
+}
+
+/**
+ * @brief Unlock the interrupt.
+ *
+ * @param tpf Pointer to the trapframe structure.
+ */
+void sys_unlock_interrupt(trapframe_t *tpf)
+{
+	DEBUG("__unlock_interrupt\r\n");
+	__unlock_interrupt();
 }
 
 /**
@@ -352,18 +418,24 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	curr_thread->code = kmalloc(filesize);
 	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d\r\n", program_name, curr_thread->code, filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
-
 	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
 
 	JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
-
-	// curr_thread->context.lr = (uint64_t)run_user_task_wrapper;
-	// asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
-	// 	"msr elr_el1, %1\n\t"	// When el0 -> el1, store return address for el1 -> el0
-	// 	"msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-	// 	"msr sp_el0, %2\n\t"	// el0 stack pointer for el1 process
-	// 	"mov sp, %3\n\t"		// sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-	// 	"eret\n\t" ::"r"(&curr_thread->context),
-	// 	"r"(curr_thread->context.lr), "r"(curr_thread->user_stack_base + USTACK_SIZE), "r"(curr_thread->kernel_stack_base + KSTACK_SIZE));
 	return 0;
+}
+
+/**
+ * @brief Kernel function to lock the interrupt.
+ */
+void kernel_lock_interrupt()
+{
+	__lock_interrupt();
+}
+
+/**
+ * @brief Kernel function to unlock the interrupt.
+ */
+void kernel_unlock_interrupt()
+{
+	__unlock_interrupt();
 }

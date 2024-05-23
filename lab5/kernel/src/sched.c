@@ -44,14 +44,21 @@ static inline thread_t *child_node_to_thread(child_node_t *node)
 	return threads[(node)->pid];
 }
 
+void block(){
+
+}
+
 static inline int free_child_thread(thread_t *child_thread)
 {
 	list_head_t *curr;
 	list_head_t *n;
+	DEBUG("free child thread: %d\n", child_thread->pid);
+
 	list_for_each_safe(curr, n, (list_head_t *)child_thread->child_list)
 	{
 		thread_t *curr_child = child_node_to_thread((child_node_t *)curr);
 		curr_child->ppid = 1; // assign to init process
+		DEBUG("move child thread: %d to init process\n", curr_child->pid);
 		list_del_entry(curr);
 		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
 	}
@@ -65,7 +72,10 @@ static inline int free_child_thread(thread_t *child_thread)
 	kfree(child_thread->user_stack_base);
 	kfree(child_thread->kernel_stack_base);
 	kfree(child_thread->name);
+	block();
 	kfree(child_thread);
+	DEBUG("child_thread: 0x%x, curr_thread: 0x%x\n", child_thread, curr_thread);
+	// dump_run_queue();
 	return 0;
 }
 
@@ -126,7 +136,8 @@ void init()
 {
 	while (1)
 	{
-		wait();
+		int64_t pid = wait();
+		DEBUG("exit: %d\n", pid);
 	}
 }
 
@@ -162,9 +173,11 @@ int64_t wait()
 			thread_t *child_thread = child_node_to_thread((child_node_t *)curr_child_node);
 			if (child_thread->status == THREAD_ZOMBIE)
 			{
+				// dump_run_queue();
 				int64_t pid = child_thread->pid;
-				DEBUG("wait thread kfree\n");
+				DEBUG("wait thread kfree child: %d\n", pid);
 				free_child_thread(child_thread);
+
 				list_del_entry(curr_child_node);
 				kernel_unlock_interrupt();
 				return pid;
@@ -180,7 +193,7 @@ void thread_exit()
 	// thread cannot deallocate the stack while still using it, wait for someone to recycle it.
 	// In this lab, idle thread handles this task, instead of parent thread.
 	kernel_lock_interrupt();
-	DEBUG("thread %d exit\n", curr_thread->pid);
+	DEBUG("thread %d exit\n", curr_thread->pid); 
 	curr_thread->status = THREAD_ZOMBIE;
 	list_del_entry((list_head_t *)curr_thread); // remove from run queue, still in parent's child list
 	kernel_unlock_interrupt();
@@ -276,8 +289,8 @@ void schedule()
 	do
 	{
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
+		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
-	// DEBUG("%d -> %d\n", prev_thread->pid, curr_thread->pid);
 	curr_thread->status = THREAD_RUNNING;
 	kernel_unlock_interrupt();
 	switch_to(get_current_thread_context(), &(curr_thread->context));
@@ -304,23 +317,9 @@ void foo()
 
 void dump_run_queue()
 {
-	recursion_run_queue(threads[1], 0);
-}
-
-void recursion_run_queue(thread_t *root, int64_t level)
-{
-	for (int i = 0; i < level; i++)
-		printf("   ");
-	printf(" |---");
-	dump_thread_info(root);
-	list_head_t *curr;
-	list_for_each(curr, (list_head_t *)root->child_list)
-	{
-		// INFO("child: %d\n", child_node_to_thread((child_node_t *)curr)->pid);
-		recursion_run_queue(child_node_to_thread((child_node_t *)curr), level + 1);
-		// ERROR("OVER");
-	}
+	// DEBUG("curr_thread->pid: %d, run_queue: 0x%x, run_queue->next: 0x%x, &run_queue->next: 0x%x, run_queue->prev: 0x%x\n", curr_thread->pid, run_queue, run_queue->next, &(run_queue->next), run_queue->prev);
 	// uart_puts("---------------------- run queue list for each ----------------------\r\n");
+	// list_head_t *curr;
 	// list_for_each(curr, (list_head_t *)run_queue)
 	// {
 	// 	uart_puts("thread: 0x%x, thread->next: 0x%x, thread->prev: 0x%x, thread->name: %s, thread->pid: %d, thread->ppid: %d", curr, curr->next, curr->prev, ((thread_t *)curr)->name, ((thread_t *)curr)->pid, ((thread_t *)curr)->ppid);
@@ -341,6 +340,22 @@ void recursion_run_queue(thread_t *root, int64_t level)
 	// 	}
 	// }
 	// uart_puts("--------------------------------- end -------------------------------\r\n");
+	recursion_run_queue(threads[1], 0);
+}
+
+void recursion_run_queue(thread_t *root, int64_t level)
+{
+	for (int i = 0; i < level; i++)
+		printf("   ");
+	printf(" |---");
+	dump_thread_info(root);
+	list_head_t *curr;
+	list_for_each(curr, (list_head_t *)root->child_list)
+	{
+		// INFO("child: %d\n", child_node_to_thread((child_node_t *)curr)->pid);
+		recursion_run_queue(child_node_to_thread((child_node_t *)curr), level + 1);
+		// ERROR("OVER");
+	}
 }
 
 void dump_thread_info(thread_t *thread)

@@ -23,42 +23,11 @@ void el1_interrupt_disable()
 
 static uint64_t lock_counter = 0;
 
-void lock_interrupt()
-{
-    CALL_SYSCALL(SYSCALL_LOCK_INTERRUPT);
-}
-
-void sys_lock_interrupt(trapframe_t *tpf)
-{
-    __lock_interrupt();
-}
-
-void kernel_lock_interrupt()
-{
-    __lock_interrupt();
-}
-
 void __lock_interrupt()
 {
     el1_interrupt_disable();
     lock_counter++;
     // DEBUG("kernel_lock_interrupt counter: %d\r\n", lock_counter);
-}
-
-void unlock_interrupt()
-{
-    CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
-}
-
-void sys_unlock_interrupt(trapframe_t *tpf)
-{
-    DEBUG("__unlock_interrupt\r\n");
-    __unlock_interrupt();
-}
-
-void kernel_unlock_interrupt()
-{
-    __unlock_interrupt();
 }
 
 void __unlock_interrupt()
@@ -116,7 +85,7 @@ void el1h_irq_router(trapframe_t *tpf)
         need_to_schedule = 0;
         schedule();
     }
-        //only do signal handler when return to user mode
+    // only do signal handler when return to user mode
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
         run_pending_signal();
@@ -269,6 +238,7 @@ __exit_label:
 __mbox_call_label:
     DEBUG("sys_mbox_call\r\n");
     tpf->x0 = sys_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
+    DEBUG("mbox_call return: %d\r\n", tpf->x0);
     return;
 
 __kill_label:
@@ -345,7 +315,7 @@ void el0_irq_64_router(trapframe_t *tpf)
         need_to_schedule = 0;
         schedule();
     }
-        //only do signal handler when return to user mode
+    // only do signal handler when return to user mode
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
         run_pending_signal();

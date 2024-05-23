@@ -7,6 +7,16 @@
 #include "stddef.h"
 #include "exception.h"
 
+/**
+ * @brief Jump to user space with specific settings.
+ *
+ * This macro will store address of wrapper function to curr_thread->context.lr.
+ *
+ * @param wrapper Function pointer to the wrapper function to be called.
+ * @param dest Destination address to jump to in user space.
+ * @param user_sp Pointer to the user stack.
+ * @param kernel_sp Pointer to the kernel stack.
+ */
 #define JUMP_TO_USER_SPACE(wrapper, dest, user_sp, kernel_sp)                                                     \
 	do                                                                                                            \
 	{                                                                                                             \
@@ -20,10 +30,10 @@
 			"msr tpidr_el1, %0\n\t" /* Hold the \"kernel(el1)\" thread structure information */                   \
 			"msr elr_el1, %1\n\t"	/* When el0 -> el1, store return address for el1 -> el0 */                    \
 			"msr spsr_el1, xzr\n\t" /* Enable interrupt in EL0 -> Used for thread scheduler */                    \
-			"mov x0, %4\n\t"		/* Move destination address to x0 */                                          \
+			"mov x0, %2\n\t"		/* Move destination address to x0 */                                          \
 			"eret\n\t"                                                                                            \
 			:                                                                                                     \
-			: "r"(&curr_thread->context), "r"(curr_thread->context.lr), "r"(user_sp), "r"(kernel_sp), "r"(dest)); \
+			: "r"(&curr_thread->context), "r"(curr_thread->context.lr), "r"(dest)); \
 	} while (0)
 
 #define CALL_SYSCALL(syscall_num) \
@@ -56,9 +66,10 @@ enum syscall_num
 };
 
 void run_user_task_wrapper(char *dest);
-// void run_user_task_wrapper();
 int exec(const char *name, char *const argv[]);
 int fork();
+void lock_interrupt();
+void unlock_interrupt();
 
 int sys_getpid(trapframe_t *tpf);
 size_t sys_uart_read(trapframe_t *tpf, char buf[], size_t size);
@@ -68,11 +79,15 @@ int sys_fork(trapframe_t *tpf);
 int sys_exit(trapframe_t *tpf, int status);
 int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox);
 int sys_kill(trapframe_t *tpf, int pid);
-int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*haldler)(void));
+int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void));
 int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL);
 int sys_signal_return(trapframe_t *tpf);
+void sys_lock_interrupt(trapframe_t *tpf);
+void sys_unlock_interrupt(trapframe_t *tpf);
 
 int kernel_fork();
 int kernel_exec_user_program(const char *name, char *const argv[]);
+void kernel_lock_interrupt();
+void kernel_unlock_interrupt();
 
 #endif /* _SYSCALL_H_ */
