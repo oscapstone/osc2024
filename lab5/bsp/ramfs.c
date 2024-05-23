@@ -18,9 +18,9 @@ void init_ramfs_callback(void *addr) {
     ramfs_base = addr;
 }
 
-static FileList file_list;
+static file_list_t file_list;
 
-FileList *ramfs_get_file_list() {
+file_list_t *ramfs_get_file_list() {
     uint8_t *fptr = (uint8_t *)ramfs_base;  // for 8 byte alignment
     file_list.file_count = 0;               // 重置檔案數量
 
@@ -49,7 +49,7 @@ FileList *ramfs_get_file_list() {
 }
 
 static char file_buf[1024];
-char *ramfs_get_file_contents(char *file_name) {
+char *ramfs_get_file_contents(const char *file_name) {
     uint8_t *fptr = (uint8_t *)ramfs_base;  // for 8 byte alignment
     while (strcmp((void *)fptr + sizeof(cpio_t), "TRAILER!!!")) {
         cpio_t *header = (cpio_t *)fptr;
@@ -69,7 +69,7 @@ char *ramfs_get_file_contents(char *file_name) {
     return NULL;
 }
 
-uint32_t ramfs_get_file_size(char *file_name) {
+unsigned long ramfs_get_file_size(const char *file_name) {
     uint8_t *fptr = (uint8_t *)ramfs_base;  // for 8 byte alignment
     while (strcmp((void *)fptr + sizeof(cpio_t), "TRAILER!!!")) {
         cpio_t *header = (cpio_t *)fptr;

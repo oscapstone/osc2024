@@ -21,20 +21,21 @@ int atoi(const char *s) {
     return sign * (int)result;
 }
 
-void itoa(int n, char *s) {
+void itoa(int value, char *str) {
     int i = 0;
-    int sign = n;
-    if (n < 0) n = -n;
+    int sign = value;
+    if (value < 0) value = -value;
     do {
-        s[i++] = n % 10 + '0';
-    } while ((n /= 10) > 0);
-    if (sign < 0) s[i++] = '-';
-    s[i] = '\0';
+        str[i++] = value % 10 + '0';
+    } while ((value /= 10) > 0);
+    if (sign < 0) str[i++] = '-';
+    str[i] = '\0';
 
     // reverse
     for (int j = 0; j < i / 2; j++) {
-        char temp = s[j];
-        s[j] = s[i - j - 1];
-        s[i - j - 1] = temp;
+        char temp = str[j];
+        str[j] = str[i - j - 1];
+        str[i - j - 1] = temp;
     }
 }
+

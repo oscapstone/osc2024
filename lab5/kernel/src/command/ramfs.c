@@ -1,3 +1,4 @@
+#include <kernel/bsp_port/entry.h>
 #include <kernel/bsp_port/ramfs.h>
 #include <kernel/commands.h>
 #include <kernel/io.h>
@@ -6,7 +7,7 @@
 #include <lib/string.h>
 
 void _ls_command(int argc, char **argv) {
-    FileList *file_list = ramfs_get_file_list();
+    file_list_t *file_list = ramfs_get_file_list();
     for (int i = 0; i < file_list->file_count; i++) {
         print_string("\n");
         print_string(file_list->file_names[i]);
@@ -61,7 +62,7 @@ void _exec_command(int argc, char **argv) {
     print_string(file_name);
     print_string("\n");
 
-    char *user_program = USER_PROGRAM_BASE;
+    char *user_program = (void *)USER_PROGRAM_BASE;
     memcpy(user_program, file_contents, file_size);
     from_el1_to_el0(USER_PROGRAM_BASE, USER_STACK_POINTER_BASE);
 }

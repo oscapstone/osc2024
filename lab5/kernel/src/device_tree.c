@@ -8,6 +8,7 @@
 extern void *dtb_base;
 
 static uint64_t initrd_start, initrd_end;
+static uint32_t be2le(const void *s);
 
 void fdt_traverse(void (*callback)(void *)) {
     struct fdt_header *header = (struct fdt_header *)(dtb_base);
@@ -77,6 +78,12 @@ void fdt_traverse(void (*callback)(void *)) {
 uint64_t fdt_get_initrd_start() { return initrd_start; }
 uint64_t fdt_get_initrd_end() { return initrd_end; }
 
+/**
+ * @brief Convert a 4-byte big-endian sequence to little-endian.
+ *
+ * @param s: big-endian sequence
+ * @return little-endian sequence
+ */
 static uint32_t be2le(const void *s) {
     const uint8_t *bytes = (const uint8_t *)s;
     return (uint32_t)bytes[0] << 24 | (uint32_t)bytes[1] << 16 |

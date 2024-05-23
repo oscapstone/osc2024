@@ -1,7 +1,7 @@
 #ifndef _DEVTREE_H
 #define _DEVTREE_H
 
-#include <lib/stdlib.h>
+#include <lib/stddef.h>
 #include <lib/utils.h>
 
 struct fdt_header {
@@ -27,12 +27,5 @@ void fdt_traverse(void (*callback)(void *));
 uint64_t fdt_get_initrd_start();
 uint64_t fdt_get_initrd_end();
 
-/**
- * @brief Convert a 4-byte big-endian sequence to little-endian.
- *
- * @param s: big-endian sequence
- * @return little-endian sequence
- */
-static uint32_t be2le(const void *s);
 
 #endif

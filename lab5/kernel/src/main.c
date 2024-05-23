@@ -5,13 +5,30 @@
 #include <kernel/device_tree.h>
 #include <kernel/io.h>
 #include <kernel/memory.h>
-#include <kernel/task_queue.h>
+#include <kernel/sched.h>
 #include <kernel/timer.h>
 
 void print_boot_timeout(int delay) {
     print_string("\nBoot Timeout: ");
     print_d((const int)delay);
     print_string("s\n");
+}
+
+void aa() {
+    while(1) {
+        for(int i = 0; i < 100000000; i++);
+        print_string("--------------aa\n");
+    }
+    exit_process();
+}
+
+void bb() {
+    int count = 0;
+    while(++count < 10) {
+        for(int i = 0; i < 100000000; i++);
+        // print_string("--------------bb\n");
+    }
+    exit_process();
 }
 
 int main() {
@@ -23,21 +40,33 @@ int main() {
     fdt_traverse(init_ramfs_callback);
 
     // lab3
-    el1_enable_interrupt();
+    enable_irq();
     // set_timeout((void *)print_boot_timeout, (void *)4, 4);
     core_timer_enable();
-    init_task_queue();
 
     // lab4
     init_kmalloc();
+
+    // lab5
+    sched_init();
 
     struct Console *console = console_create();
     register_all_commands(console);
 
     uart_puts("\nWelcome to YJack0000's shell\n");
-    while (1) {
-        run_console(console);
-    }
+
+    copy_process(PF_KTHREAD, (unsigned long)(void *)&bb, 0, 0);
+
+    copy_process(PF_KTHREAD, (unsigned long)(void *)&run_console,
+                 (unsigned long)console, 0);
+    // print_string("start aa\n");
+    // copy_process(PF_KTHREAD, (unsigned long)(void *)&aa, 0, 0);
+    // print_string("start bb\n");
+    // copy_process(PF_KTHREAD, (unsigned long)(void *)&bb, 0, 0);
+
+    // run_console(console);
+
+    // root_task();
 
     return 0;
 }

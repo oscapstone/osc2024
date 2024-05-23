@@ -18,5 +18,6 @@ extern struct Command exec_command;
 extern struct Command set_timeout_command;
 extern struct Command test_kmalloc_command;
 extern struct Command test_kfree_command;
+extern struct Command test_multi_thread_command;
 
 #endif

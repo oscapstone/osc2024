@@ -19,7 +19,7 @@
 #define TAG_REQUEST_CODE 0x00000000
 #define END_TAG 0x00000000
 
-void mailbox_call(unsigned int *mailbox);
+int mailbox_call(unsigned char ch, unsigned int *mailbox);
 unsigned int get_board_revision();
 void get_memory_info(unsigned int *base, unsigned int *size);
 

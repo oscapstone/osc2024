@@ -28,12 +28,12 @@ typedef struct cpio_newc_header {
 typedef struct {
     char file_names[MAX_FILES][MAX_FILENAME_LENGTH];
     int file_count;
-} FileList;
+} file_list_t;
 
 void init_ramfs_callback(void *base_addr);
-FileList *ramfs_get_file_list();
-char *ramfs_get_file_contents(char *file_name);
-uint32_t ramfs_get_file_size(char *file_name);
-void ramfs_execute_file(char *file_name);
+file_list_t *ramfs_get_file_list();
+char *ramfs_get_file_contents(const char *file_name);
+unsigned long ramfs_get_file_size(const char *file_name);
+void ramfs_execute_file(const char *file_name);
 
 #endif

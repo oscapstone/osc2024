@@ -1,6 +1,7 @@
 #include <kernel/commands.h>
 #include <kernel/io.h>
 #include <kernel/memory.h>
+#include <lib/stdlib.h>
 
 void _test_malloc_command(int argc, char **argv) {
     print_string("\nMalloc size: ");
@@ -33,7 +34,7 @@ void _test_kmalloc_comand(int argc, char **argv) {
         return;
     }
 
-    unsigned int size = atoi(argv[1]);
+    int size = atoi(argv[1]);
     print_string("\nMalloc size: ");
     print_string(argv[1]);
     void *ptr = kmalloc(size);
@@ -47,7 +48,7 @@ void _test_kmalloc_comand(int argc, char **argv) {
     print_string("\n");
 
     // print_kmalloc_caches();
-    print_free_areas();
+    // print_free_areas();
 }
 
 struct Command test_kmalloc_command = {.name = "test_kmalloc",

@@ -1,11 +1,11 @@
 #ifndef __IRQ_H__
 #define __IRQ_H__
 
-#include <lib/stdlib.h>
+#include <lib/stddef.h>
 
 // el1 IRQ can be disable to protect the critical sections
-void el1_enable_interrupt();
-void el1_disable_interrupt();
+void enable_irq();
+void disable_irq();
 
 // GPU IRQ handle is used to handle the GPU IRQ such as UART IRQ
 void gpu_irq_handler();

@@ -17,7 +17,9 @@ void _set_timeout(int argc, char **argv) {
     print_string("\nSetting timeout: ");
     print_d(atoi(argv[1]));
     print_string("s\n");
-    set_timeout((void *)print_timeout, (void *)atoi(argv[1]), atoi(argv[1]));
+
+    unsigned long timeout = atoi(argv[1]);
+    set_timeout((void *)print_timeout, (void *)timeout, atoi(argv[1]));
 }
 
 struct Command set_timeout_command = {.name = "set_timeout",

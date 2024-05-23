@@ -16,7 +16,7 @@ void *simple_malloc(unsigned int size) {
     if (size == 0) {
         return NULL;
     }
-    if (heap_top + size >= (char *)HEAP_MAX) {
+    if (heap_top + size >= HEAP_MAX) {
         print_string("Out of memory\n");
         return NULL;
     }

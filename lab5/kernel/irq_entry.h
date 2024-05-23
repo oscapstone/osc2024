@@ -14,7 +14,4 @@ void default_exception_entry(int type, unsigned long spsr, unsigned long elr,
 void el0_irq_entry(int type, unsigned long spsr, unsigned long elr,
                    unsigned long esr);
 
-void svc_exception_entry(int type, unsigned long spsr, unsigned long elr,
-                         unsigned long esr);
-
 #endif

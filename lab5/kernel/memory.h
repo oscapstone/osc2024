@@ -4,7 +4,7 @@
 #define USER_PROGRAM_BASE 0x100000
 #define USER_STACK_POINTER_BASE 0x200000
 
-#include <lib/stdlib.h>
+#include <lib/stddef.h>
 
 void init_memory();
 void *simple_malloc(unsigned int size);

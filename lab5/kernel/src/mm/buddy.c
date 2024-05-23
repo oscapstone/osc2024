@@ -47,6 +47,7 @@ static inline void __remove_page(page_t **head, page_t *page) {
 void buddy_init(phys_addr_t start, phys_addr_t end) {
     uintptr_t buddy_size = (uintptr_t)end - (uintptr_t)start;
 
+#ifdef MEM_DEBUG
     print_string("Buddy size: ");
     print_d(buddy_size);
     print_string("\nFrom ");
@@ -54,6 +55,7 @@ void buddy_init(phys_addr_t start, phys_addr_t end) {
     print_string(" to ");
     print_h((uint64_t)end);
     print_string("\n");
+#endif
 
     // split the memory into max order pages and add them to free areas
     for (int i = 0; i <= MAX_ORDER; i++) {
@@ -62,13 +64,15 @@ void buddy_init(phys_addr_t start, phys_addr_t end) {
 
     int num_of_pages = buddy_size / PAGE_SIZE;
 
+#ifdef MEM_DEBUG
     print_string("Number of pages: ");
     print_d(num_of_pages);
     print_string("\n");
+#endif
 
     mem_map = simple_malloc(num_of_pages * sizeof(page_t));
-    
-    if(mem_map == NULL) {
+
+    if (mem_map == NULL) {
         print_string("Failed to allocate memory for mem_map\n");
         return;
     }
@@ -183,33 +187,39 @@ void memory_reserve(phys_addr_t start, phys_addr_t end) {
     print_string(" - ");
     print_h((uint64_t)end);
     print_string("\n");
-    
-    for(int cur_order = MAX_ORDER; cur_order >= 0; cur_order--) {
+
+    for (int cur_order = MAX_ORDER; cur_order >= 0; cur_order--) {
         page_t *page = free_areas[cur_order];
-        while(page != NULL) {
+        while (page != NULL) {
             page_t *next_page = page->next;
 
             phys_addr_t page_addr = get_addr_by_page(page);
-            phys_addr_t page_end = page_addr + (1 << (cur_order + PAGE_SHIFT)) - 1;
+            phys_addr_t page_end =
+                page_addr + (1 << (cur_order + PAGE_SHIFT)) - 1;
 
-            if(cur_order == 0) {
-                if(!(page_end < start || page_addr > end)) {
+            if (cur_order == 0) {
+                if (!(page_end < start || page_addr > end)) {
+#ifdef MEM_DEBUG
                     print_string("\nPage partially reserved\n");
+#endif
                     page->status = PAGE_RESERVED;
                     __remove_page(&free_areas[cur_order], page);
                 }
-            } else if(page_addr >= start && page_end <= end) {
+            } else if (page_addr >= start && page_end <= end) {
+#ifdef MEM_DEBUG
                 print_string("\nPage fully reserved\n");
                 print_h((uint64_t)page_addr);
                 print_string(" - ");
                 print_h((uint64_t)page_end);
                 print_string("\n");
+#endif
 
                 page->status = PAGE_RESERVED;
                 __remove_page(&free_areas[cur_order], page);
-            } else if(start > page_end || end < page_addr) { // page out of range
+            } else if (start > page_end ||
+                       end < page_addr) {  // page out of range
                 // print_string("\nPage out of range\n");
-            } else { // split the overlapping page using buddy
+            } else {  // split the overlapping page using buddy
                 // print_string("\nFind buddy\n");
                 // print_string("\nPage: ");
                 // print_h((uint64_t)page_addr);
@@ -221,6 +231,7 @@ void memory_reserve(phys_addr_t start, phys_addr_t end) {
                 uint32_t buddy_pfn = (page - mem_map) ^ (1 << (cur_order - 1));
                 page_t *buddy = &mem_map[buddy_pfn];
 
+#ifdef MEM_DEBUG
                 print_string("Split page: ");
                 print_h((uint64_t)page_addr);
                 print_string(", ");
@@ -228,13 +239,16 @@ void memory_reserve(phys_addr_t start, phys_addr_t end) {
                 print_string(", ");
                 print_h((uint64_t)buddy_pfn);
                 print_string("\n");
+#endif
 
-                // remove the original page from the free area
+// remove the original page from the free area
+#ifdef MEM_DEBUG
                 print_string("\nRemove page ");
                 print_h((uint64_t)get_addr_by_page(page));
                 print_string(" from order ");
                 print_d(cur_order);
                 print_string("\n");
+#endif
                 __remove_page(&free_areas[cur_order], page);
                 buddy->order = cur_order - 1;
                 page->order = cur_order - 1;

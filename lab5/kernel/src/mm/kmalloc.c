@@ -13,16 +13,13 @@ typedef struct kmem_cache {
 } kmem_cache_t;
 
 static kmem_cache_t
-    *kmalloc_caches[KMEM_CACHE_MAX_ORDER - KMEM_CACHE_MIN_ORDER];
+    *kmalloc_caches[KMEM_CACHE_MAX_ORDER - KMEM_CACHE_MIN_ORDER + 1];
 
 uint32_t get_page_order_by_size(uint32_t size) {
     uint32_t order = 0;
     while (size > (1 << (PAGE_SHIFT + order))) {
         order++;
     }
-    print_string("\nGet order: ");
-    print_d(order);
-    print_string("\n");
     return order;
 }
 
@@ -47,12 +44,12 @@ void init_kmalloc() {
         (phys_addr_t)&__heap_start,
         (phys_addr_t)((void *)&__heap_start + 0x100000));  // Startup allocator
 
-    print_free_areas();
-
     memory_reserve((phys_addr_t)fdt_get_initrd_start(),
                    (phys_addr_t)fdt_get_initrd_end());  // Initramfs
 
+#ifdef MEM_DEBUG
     print_free_areas();
+#endif
 }
 
 void print_kmalloc_caches() {
@@ -89,6 +86,7 @@ void *kmem_cache_alloc(uint32_t order) {
             cache->next = kmalloc_caches[order];
             kmalloc_caches[order] = cache;
         }
+        print_d((uint64_t)page);
     }
     kmem_cache_t *cache = kmalloc_caches[order];
     kmalloc_caches[order] = cache->next;
@@ -107,7 +105,7 @@ void kmem_cache_free(void *ptr, uint32_t order) {
     cache->next = kmalloc_caches[order];
     kmalloc_caches[order] = cache;
 
-    print_kmalloc_caches();
+    // print_kmalloc_caches();
 }
 
 void *kmalloc(uint32_t size) {

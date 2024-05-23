@@ -1,5 +1,6 @@
 #include <kernel/bsp_port/uart.h>
 #include <kernel/io.h>
+#include <lib/stdlib.h>
 
 char read_c() { return uart_getc(); }
 void read_s(char *s) {
@@ -31,6 +32,6 @@ void print_h(const unsigned long long x) { uart_hex(x); }
 void print_d(const int x) {
     char buffer[10];
 
-    itoa(x, buffer, 10);
+    itoa(x, buffer);
     print_string(buffer);
 }
