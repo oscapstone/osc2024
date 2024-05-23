@@ -3,7 +3,7 @@
 pub mod macros;
 use driver::uart;
 
-fn send(c: u8) {
+pub fn send(c: u8) {
     // uart::send(c);
     uart::send_async(c);
 }
@@ -16,7 +16,7 @@ fn _recv() -> u8 {
     }
 }
 
-fn recv() -> u8 {
+pub fn recv() -> u8 {
     // let c = uart::recv();
     let c = _recv();
     match c {

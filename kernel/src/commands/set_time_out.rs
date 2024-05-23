@@ -6,7 +6,6 @@ use core::time::Duration;
 use stdio::debug;
 use stdio::println;
 
-#[inline(never)]
 pub fn exec(command: &[u8]) {
     let args = match core::str::from_utf8(&command[10..]) {
         Ok(s) => s.split_whitespace().collect::<Vec<&str>>(),
@@ -39,9 +38,8 @@ pub fn exec(command: &[u8]) {
     add_timer(Duration::from_millis(delay), message);
 }
 
-#[inline(never)]
 fn add_timer(duration: Duration, message: String) {
-    let tm = timer::manager::get_timer_manager();
+    let tm = timer::manager::get();
     tm.add_timer(
         duration,
         Box::new(move || {

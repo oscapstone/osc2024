@@ -308,10 +308,12 @@ unsafe impl GlobalAlloc for BuddyAllocator {
         if let Some(idx) = ret {
             let addr = BUDDY_SYSTEM.faddr(idx);
             assert!(addr % align as u32 == 0);
-            debug!(
-                "BuddyAllocator: alloc frame {} at 0x{:x} size {} align {}",
-                idx, addr, size, align
-            );
+            if BUDDY_SYSTEM.verbose {
+                debug!(
+                    "BuddyAllocator: alloc frame {} at 0x{:x} size {} align {}",
+                    idx, addr, size, align
+                );
+            }
             if BUDDY_SYSTEM.verbose {
                 println!("Free list: {:?}", BUDDY_SYSTEM.free_list);
             }

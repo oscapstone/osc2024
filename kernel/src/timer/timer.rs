@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+
 pub trait Callback {
     fn call(&self);
 }

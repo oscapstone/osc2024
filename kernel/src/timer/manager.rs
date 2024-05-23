@@ -9,17 +9,27 @@ pub struct TimerManager {
 
 pub static mut TIMER_MANAGER: Option<TimerManager> = None;
 
-pub fn init_timer_manager() {
+pub fn init() {
     unsafe {
         TIMER_MANAGER = Some(TimerManager::new());
     }
+    // unsafe {
+    //     crate::exception::enable_interrupt();
+    // }
+    let tm = get();
+    tm.add_timer(
+        Duration::from_days(1000),
+        Box::new(|| {
+            println!("First boot timer expired!");
+        }),
+    );
 }
 
-pub fn get_timer_manager() -> &'static mut TimerManager {
+pub fn get() -> &'static mut TimerManager {
     unsafe { TIMER_MANAGER.as_mut().unwrap() }
 }
 
-unsafe fn enable_timmer_irq() {
+unsafe fn enable_timer_irq() {
     // debug!("Enable timer interrupt");
     asm!(
         "mov {0}, 1",
@@ -32,7 +42,7 @@ unsafe fn enable_timmer_irq() {
     );
 }
 
-unsafe fn disable_timmer_irq() {
+unsafe fn disable_timer_irq() {
     // debug!("Disable timer interrupt");
     asm!(
         "mov {0}, 0",
@@ -52,7 +62,6 @@ impl TimerManager {
         return ret;
     }
 
-    #[inline(never)]
     pub fn add_timer(&mut self, duration: Duration, callback: Box<dyn Fn() + Send + Sync>) {
         let expiry = self.compute_delay(duration);
         let timer = Timer::new(expiry, callback);
@@ -60,12 +69,12 @@ impl TimerManager {
         self.set_timer();
         if self.pq.len() == 1 {
             unsafe {
-                enable_timmer_irq();
+                enable_timer_irq();
             }
         }
     }
 
-    pub fn handle_inturrupt(&mut self) {
+    pub fn handle_interrupt(&mut self) {
         if let Some(timer) = self.pq.pop() {
             assert!(
                 timer.expiry <= self.get_current(),
@@ -76,12 +85,12 @@ impl TimerManager {
                 self.set_timer();
             } else {
                 unsafe {
-                    disable_timmer_irq();
+                    disable_timer_irq();
                 }
             }
         } else {
             unsafe {
-                disable_timmer_irq();
+                disable_timer_irq();
             }
         }
     }
@@ -99,7 +108,7 @@ impl TimerManager {
         }
     }
 
-    fn get_current(&self) -> u64 {
+    pub fn get_current(&self) -> u64 {
         let mut now: u64;
         unsafe {
             asm!(
@@ -110,7 +119,7 @@ impl TimerManager {
         now
     }
 
-    fn get_frequency(&self) -> u64 {
+    pub fn get_frequency(&self) -> u64 {
         let mut freq: u64;
         unsafe {
             asm!(
@@ -122,9 +131,26 @@ impl TimerManager {
     }
 
     fn compute_delay(&self, duration: Duration) -> u64 {
+        let now = self.get_current() as f64;
+        let freq = self.get_frequency() as f64;
+        let delay = duration.as_secs_f64();
+        (now + (delay * freq)) as u64
+    }
+
+    #[allow(dead_code)]
+    pub fn current_time(&self) -> Duration {
         let now = self.get_current();
         let freq = self.get_frequency();
-        let delay = duration.as_secs() as u64;
-        now + (delay * freq)
+        Duration::from_millis(now / (freq / 1000))
+    }
+
+    #[allow(dead_code)]
+    pub fn print(&self) {
+        for timer in self.pq.iter() {
+            debug!(
+                "Timer: {}",
+                timer.expiry as f64 / self.get_frequency() as f64
+            );
+        }
     }
 }

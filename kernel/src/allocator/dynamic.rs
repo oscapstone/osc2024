@@ -45,16 +45,20 @@ unsafe fn slice_page(size: usize, align: usize) -> vec::Vec<*mut u8, BumpAllocat
     );
     let mut ret = vec::Vec::new_in(BumpAllocator);
     let mut ptr = BUDDY_SYSTEM.alloc(Layout::from_size_align(FRAME_SIZE, align).unwrap());
-    debug!(
-        "Slicing page at 0x{:x} into {} bytes, align {}",
-        ptr as usize, size, align
-    );
+    if DYNAMIC_ALLOCATOR.verbose {
+        debug!(
+            "Slicing page at 0x{:x} into {} bytes, align {}",
+            ptr as usize, size, align
+        );
+    }
     for _ in 0..FRAME_SIZE / size {
         ret.push(ptr);
         ptr = (ptr as usize + size) as *mut u8;
         ptr = align_up(ptr as usize, align) as *mut u8;
     }
-    debug!("Sliced vector size: {}", ret.len());
+    if DYNAMIC_ALLOCATOR.verbose {
+        debug!("Sliced vector size: {}", ret.len());
+    }
     ret
 }
 
@@ -64,7 +68,9 @@ unsafe impl GlobalAlloc for DynamicAllocator {
             return BumpAllocator.alloc(layout);
         }
         if layout.size() > FRAME_SIZE {
-            debug!("Allocating {} bytes with size > 0x1000", layout.size());
+            if DYNAMIC_ALLOCATOR.verbose {
+                debug!("Allocating {} bytes with size > 0x1000", layout.size());
+            }
             return BUDDY_SYSTEM.alloc(layout);
         }
         if DYNAMIC_ALLOCATOR.verbose {
@@ -75,18 +81,9 @@ unsafe impl GlobalAlloc for DynamicAllocator {
         let key = (size, align);
         let ptr = match DYNAMIC_ALLOCATOR.data.get_mut(&key) {
             Some(v) => {
-                if DYNAMIC_ALLOCATOR.verbose {
-                    println!("DynamicAllocator::alloc: vector size {}", v.len());
-                }
                 if let Some(ptr) = v.pop() {
-                    if DYNAMIC_ALLOCATOR.verbose {
-                        println!("DynamicAllocator::alloc: vector pop 0x{:x}", ptr as usize);
-                    }
                     ptr
                 } else {
-                    if DYNAMIC_ALLOCATOR.verbose {
-                        println!("DynamicAllocator::alloc: vector empty");
-                    }
                     DYNAMIC_ALLOCATOR.data.insert(key, slice_page(size, align));
                     DYNAMIC_ALLOCATOR.alloc(layout)
                 }
@@ -122,7 +119,13 @@ unsafe impl GlobalAlloc for DynamicAllocator {
             );
             return BUDDY_SYSTEM.dealloc(ptr, layout);
         }
-
+        if DYNAMIC_ALLOCATOR.verbose {
+            println!(
+                "Deallocating 0x{:x} with {} bytes",
+                ptr as usize,
+                layout.size()
+            );
+        }
         let size = layout.size();
         let align = layout.align();
         let key = (size, align);

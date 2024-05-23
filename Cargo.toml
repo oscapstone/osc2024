@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["bootloader", "driver", "filesystem", "kernel", "stdio"]
+members = ["bootloader", "driver", "filesystem", "kernel", "program", "stdio"]
 
 resolver = "2"
 
