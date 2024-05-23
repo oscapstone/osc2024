@@ -43,8 +43,6 @@ int exec(ExecCtx* ctx) {
 
   delete ctx;
 
-  // pa2va((PT*)read_sysreg(TTBR0_EL1))->print("TTBR0_EL1");
-
   memcpy((void*)USER_TEXT_START, file.data(), file.size());
   memzero((void*)USER_STACK_START, (void*)USER_STACK_END);
   thread->reset_kernel_stack();

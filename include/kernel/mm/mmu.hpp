@@ -221,3 +221,10 @@ struct PT {
 static_assert(sizeof(PT) == PAGE_SIZE);
 
 void map_kernel_as_normal(char* ktext_beg, char* ktext_end);
+
+inline void debug_TTBR(bool upper = false) {
+  if (upper)
+    pa2va((PT*)read_sysreg(TTBR1_EL1))->print("TTBR1_EL1", KERNEL_SPACE);
+  else
+    pa2va((PT*)read_sysreg(TTBR0_EL1))->print("TTBR0_EL1");
+}

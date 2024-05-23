@@ -5,14 +5,15 @@
 #include "sched.hpp"
 
 void PT_Entry::print() const {
+  kprintf("0x%08lx Attr%d %s %s %s", (uint64_t)addr(), AttrIdx, levelstr(),
+          kindstr(), apstr());
   if (UXN)
-    kprintf("UXN ");
+    kprintf(" UXN");
   if (PXN)
-    kprintf("PXN ");
+    kprintf(" PXN");
   if (AF)
-    kprintf("AF ");
-  kprintf("%s %02lb addr 0x%08lx Attr %d type %s %s\n", apstr(), Underlying(AP),
-          (uint64_t)addr(), AttrIdx, kindstr(), levelstr());
+    kprintf(" AF");
+  kprintf("\n");
 }
 
 void PT_Entry::alloc() {
@@ -120,9 +121,9 @@ void PT::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
 }
 
 void PT::print(const char* name, uint64_t start, int level) {
-  kprintf("===== %s ===== \n", name);
+  kprintf("===== %s ===== @ %p\n", name, va2pa(this));
   traverse(start, level, [](auto, auto entry, auto start, auto level) {
-    kprintf("%016lx ~ %016lx: ", start, start + ENTRY_SIZE[level]);
+    kprintf("%016lx ~ %016lx -> ", start, start + ENTRY_SIZE[level]);
     entry.print();
   });
   kprintf("----------------------\n");
