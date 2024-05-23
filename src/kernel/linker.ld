@@ -21,6 +21,14 @@ SECTIONS {
 
     . = ALIGN(0x1000);
 
+    .vsyscall : {
+        __vsyscall_beg = .;
+        *(.vsyscall)
+        __vsyscall_end = .;
+    }
+
+    . = ALIGN(0x1000);
+
     __kernel_data_beg = .;
 
     .data : {

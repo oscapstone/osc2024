@@ -3,6 +3,7 @@
 #include "board/pm.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
+#include "mm/vsyscall.hpp"
 #include "sched.hpp"
 #include "syscall.hpp"
 
@@ -111,6 +112,8 @@ void Kthread::ensure_el0_tlb() {
   if (el0_tlb == nullptr) {
     el0_tlb = new PT;
     load_tlb(el0_tlb);
+    map_user_phy_pages(VSYSCALL_START, __vsyscall_beg, PAGE_SIZE,
+                       ProtFlags::RX);
   }
 }
 
@@ -141,8 +144,8 @@ int Kthread::alloc_user_pages(uint64_t va, uint64_t size, ProtFlags prot) {
   return 0;
 }
 
-int Kthread::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
-                                ProtFlags prot) {
+int Kthread::map_user_phy_pages_impl(uint64_t va, uint64_t pa, uint64_t size,
+                                     ProtFlags prot) {
   ensure_el0_tlb();
 
   struct Ctx {

@@ -49,8 +49,12 @@ struct Kthread : ListItem {
   void* fix(const Kthread& o, void* ptr);
   void ensure_el0_tlb();
   int alloc_user_pages(uint64_t va, uint64_t size, ProtFlags prot);
-  int map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
-                         ProtFlags prot);
+  template <typename T, typename U>
+  int map_user_phy_pages(T va, U pa, uint64_t size, ProtFlags prot) {
+    return map_user_phy_pages_impl((uint64_t)va, (uint64_t)pa, size, prot);
+  }
+  int map_user_phy_pages_impl(uint64_t va, uint64_t pa, uint64_t size,
+                              ProtFlags prot);
   void reset_kernel_stack() {
     regs.sp = kernel_stack.end(0x10);
   }

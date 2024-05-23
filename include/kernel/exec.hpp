@@ -7,8 +7,10 @@
 
 constexpr uint64_t USER_TEXT_START = 0;
 constexpr uint64_t USER_STACK_SIZE = PAGE_SIZE * 4;
+constexpr uint64_t USER_SIGNAL_STACK = 0xffffffffa000;
 constexpr uint64_t USER_STACK_START = 0xffffffffb000;
 constexpr uint64_t USER_STACK_END = 0xfffffffff000;
+static_assert(USER_STACK_START + USER_STACK_SIZE == USER_STACK_END);
 
 extern "C" {
 // exec.S

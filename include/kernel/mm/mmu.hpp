@@ -74,6 +74,7 @@ enum class ProtFlags {
   READ = 1 << 0,
   WRITE = 1 << 1,
   EXEC = 1 << 2,
+  RX = READ | EXEC,
   RW = READ | WRITE,
   RWX = READ | WRITE | EXEC,
   MARK_AS_BITMASK_ENUM(EXEC),
