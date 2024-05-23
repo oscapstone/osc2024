@@ -153,6 +153,9 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
               entry.PXN = false;
             });
 
+  PMD->traverse(KERNEL_SPACE, PMD_LEVEL,
+                [](auto, auto entry, auto, auto) { entry.UXN = true; });
+
   auto PUD = (PT*)__upper_PUD;
   PUD->set_level(PUD_LEVEL);
   auto PGD = (PT*)__upper_PGD;
