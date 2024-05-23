@@ -162,7 +162,8 @@ void kthread_start() {
 
 // TODO: wq
 void kthread_wait(int pid) {
-  while (find_thread_by_tid(pid))
+  Kthread* th;
+  while ((th = find_thread_by_tid(pid)) and th->status != KthreadStatus::kDead)
     schedule();
 }
 

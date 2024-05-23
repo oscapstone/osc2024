@@ -16,7 +16,9 @@ struct KthreadItem : ListItem {
 };
 
 enum class KthreadStatus {
+  kNone = 0,
   kReady,
+  kRunning,
   kWaiting,
   kDead,
 };
