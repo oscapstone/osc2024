@@ -208,7 +208,7 @@ void fork(trapframe *sp){
     t -> regs.pgd = ensure_virtual(allocate_page(4096));
     memset(t -> regs.pgd, 4096);
 
-    map_pages(t -> regs.pgd, 0x3C000000L, 0x3000000L, 0x3C000000L);
+    map_pages(t -> regs.pgd, 0x3C000000L, 0x1000000L, 0x3C000000L);
     map_pages(t -> regs.pgd, 0xffffffffb000, 0x4000, t -> sp_el0 - VT_OFFSET);
     map_pages(t -> regs.pgd, 0x0, sz_gb, prog_gb);
 

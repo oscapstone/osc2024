@@ -32,7 +32,7 @@ void walk(unsigned long * pgd, unsigned long va, unsigned long pa){
     for(int i=0; i<4; i++){
         unsigned int offset = (va >> (39 - i * 9)) & 0x1ff;
         
-        if(i == 3){ //set the physical address
+        if(i == 3){
             pgd[offset] = pa;
             pgd[offset] |=  PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_KERNEL_USER_ACCESS;
             return;
@@ -46,7 +46,8 @@ void walk(unsigned long * pgd, unsigned long va, unsigned long pa){
                 ((char *) (new_page_table))[j] = 0;
             }
             pgd[offset] = new_page_table - VT_OFFSET; // to physical
-            pgd[offset] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_KERNEL_USER_ACCESS;
+            pgd[offset] |= PD_TABLE;
+            //pgd[offset] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_KERNEL_USER_ACCESS;
         }
 
         pgd = (unsigned long * ) (((unsigned long) (pgd[offset] & ENTRY_ADDR_MASK)) + VT_OFFSET);
