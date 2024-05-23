@@ -1,5 +1,8 @@
-use core::{ptr::{read_volatile, write_volatile}, usize};
-use crate::os::stdio::*;
+use crate::{cpu::mailbox, os::stdio::*, println};
+use core::{
+    ptr::{read_volatile, write_volatile},
+    usize,
+};
 
 const MAILBOX_BASE: u32 = 0x3F00_B880;
 const MAILBOX_READ: u32 = MAILBOX_BASE + 0x00;
@@ -23,14 +26,14 @@ pub enum MailboxTag {
 }
 
 #[inline(never)]
-fn mailbox_call(mailbox: &mut [u32]) {
-    let mut mailbox_addr = mailbox.as_ptr() as u32;
-    mailbox_addr = mailbox_addr & !0xF | 8;
+pub fn mailbox_call(channel: u8, mailbox: *mut u32) {
+    let mut mailbox_addr = mailbox as u32;
+    mailbox_addr = mailbox_addr & !0xF | (channel as u32 & 0xF);
 
     unsafe {
         while (read_volatile(MAILBOX_STATUS as *const u32) & MAILBOX_FULL) != 0 {}
         write_volatile(MAILBOX_WRITE as *mut u32, mailbox_addr);
-        
+
         loop {
             while (read_volatile(MAILBOX_STATUS as *const u32) & MAILBOX_EMPTY) != 0 {}
             let data = read_volatile(MAILBOX_READ as *const u32);
@@ -39,7 +42,8 @@ fn mailbox_call(mailbox: &mut [u32]) {
             }
         }
     }
-    
+
+    assert!(unsafe { read_volatile(mailbox.add(1)) } == REQUEST_SUCCEED);
 }
 
 pub fn get(tag: MailboxTag) -> (u32, u32) {
@@ -48,31 +52,36 @@ pub fn get(tag: MailboxTag) -> (u32, u32) {
 
     start_idx = (0x10 - (start_idx & 0xF)) / 4 % 4;
 
-    match tag {
-        MailboxTag::GetBoardRevision => {
-            mailbox[start_idx + 0] = 7 * 4; // buffer size in bytes
-            mailbox[start_idx + 3] = 4; // maximum of request and response value buffer's length.
+    assert_eq!(
+        unsafe { mailbox.as_ptr().add(start_idx) } as usize % 16,
+        0,
+        "Mailbox buffer is not aligned to 16 bytes"
+    );
+
+    unsafe {
+        let mailbox_ptr = mailbox.as_mut_ptr().add(start_idx);
+
+        match tag {
+            MailboxTag::GetBoardRevision => {
+                write_volatile(mailbox_ptr.add(0), 7 * 4); // buffer size in bytes
+                write_volatile(mailbox_ptr.add(3), 4); // maximum of request and response value buffer's length.
+            }
+            MailboxTag::GetArmMemory => {
+                write_volatile(mailbox_ptr.add(0), 8 * 4);
+                write_volatile(mailbox_ptr.add(3), 8);
+            }
         }
-        MailboxTag::GetArmMemory => {
-            mailbox[start_idx + 0] = 8 * 4; // buffer size in bytes
-            mailbox[start_idx + 3] = 8; // maximum of request and response value buffer's length.
-        }
+        write_volatile(mailbox_ptr.add(1), REQUEST_CODE);
+        write_volatile(mailbox_ptr.add(2), tag as u32); // tag identifier
+        write_volatile(mailbox_ptr.add(4), TAG_REQUEST_CODE);
+        write_volatile(mailbox_ptr.add(5), 0); // value buffer
+        write_volatile(mailbox_ptr.add(6), END_TAG);
+
+        mailbox_call(8, mailbox.as_mut_ptr().add(start_idx) as *mut u32);
     }
-    mailbox[start_idx + 1] = REQUEST_CODE;
-    mailbox[start_idx + 2] = tag as u32; // tag identifier
-    mailbox[start_idx + 4] = TAG_REQUEST_CODE;
-    mailbox[start_idx + 5] = 0; // value buffer
-    mailbox[start_idx + 6] = END_TAG;
-
-    mailbox_call(&mut mailbox[start_idx..start_idx + 7]);
 
     match tag {
-        MailboxTag::GetBoardRevision => {
-            (mailbox[start_idx + 5], 0)
-        }
-        MailboxTag::GetArmMemory => {
-            (mailbox[start_idx + 5], mailbox[start_idx + 6])
-        }
-        
+        MailboxTag::GetBoardRevision => (mailbox[start_idx + 5], 0),
+        MailboxTag::GetArmMemory => (mailbox[start_idx + 5], mailbox[start_idx + 6]),
     }
 }

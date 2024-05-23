@@ -1,11 +1,12 @@
-use core::arch::asm;
-
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
 use crate::println;
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use crate::os::stdio::*;
 
+#[allow(dead_code)]
 enum FdtHeader {
     Magic = 0,
     TotalSize = 1,
@@ -123,7 +124,7 @@ impl DeviceTree {
     }
 
     pub fn get_address() -> *mut u8 {
-        unsafe {*(DeviceTree::DEVICE_TREE_ADDRESS) as *mut u8}
+        unsafe { *(DeviceTree::DEVICE_TREE_ADDRESS) as *mut u8 }
     }
 
     pub fn init() -> DeviceTree {

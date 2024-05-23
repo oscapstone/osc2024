@@ -1,7 +1,5 @@
-use self::buddy_system::BuddyAllocator;
-
 use super::stdio::*;
-use crate::println;
+use buddy_system::BuddyAllocator;
 use core::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
 use core::ptr::{null_mut, NonNull};
 
@@ -9,8 +7,6 @@ mod buddy_system;
 
 #[global_allocator]
 pub static mut ALLOCATOR: BuddyAllocator = BuddyAllocator {};
-
-pub static mut SIMPLE_ALLOCATOR: SimpleAllocator = SimpleAllocator {};
 
 static mut SA_ADDRESS: *mut u8 = 0 as *mut u8;
 
@@ -33,7 +29,6 @@ impl SimpleAllocator {}
 
 unsafe impl GlobalAlloc for SimpleAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        
         //print_hex_now(count);
         if layout.size() == 0 {
             println("Warning: Allocating zero size");
@@ -42,7 +37,6 @@ unsafe impl GlobalAlloc for SimpleAllocator {
 
         let aligned_start = SA_ADDRESS.align_offset(layout.align());
         let allocated_start = SA_ADDRESS.add(aligned_start);
-
 
         SA_ADDRESS = allocated_start.add(layout.size());
 

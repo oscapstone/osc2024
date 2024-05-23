@@ -1,16 +1,13 @@
 use super::file_system::cpio;
-use super::stdio::{get_line, print};
-use crate::os::stdio::{println, println_now};
+use super::stdio::{get_line, print, print_hex_now, println_now};
+use crate::cpu::uart::recv_async;
 use crate::os::timer;
 use crate::println;
-use core::alloc::Layout;
-use core::arch::asm;
-use core::time;
-use alloc::alloc::alloc;
-use alloc::string::{String, ToString};
 use alloc::boxed::Box;
-mod commands;
-use super::allocator;
+use alloc::string::{String, ToString};
+use core::arch::asm;
+pub mod commands;
+use alloc::vec::Vec;
 
 fn print_time(time: u64) {
     let sec = time / 1000;
@@ -19,100 +16,162 @@ fn print_time(time: u64) {
     // set_next_timer(2000);
 }
 
-fn set_next_timer() {
-    // println!("Timer expired");
-    timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
-    // for c in b"Timer expired -- Function\n" {
-    //     unsafe {
-    //         crate::cpu::uart::send(*c);
-    //     }
-    // }
-    // loop {}
+pub static mut INITRAMFS: Option<cpio::CpioArchive> = None;
+
+fn push_all_commands(commands: &mut Vec<commands::command>) {
+    commands.push(commands::command::new(
+        "help",
+        "Print help message",
+        commands::help,
+    ));
+    commands.push(commands::command::new(
+        "hello",
+        "print Hello World",
+        commands::hello,
+    ));
+    commands.push(commands::command::new(
+        "reboot",
+        "Reboot the device",
+        commands::reboot,
+    ));
+    commands.push(commands::command::new(
+        "ls",
+        "List files in the initramfs",
+        commands::ls,
+    ));
+    commands.push(commands::command::new(
+        "cat",
+        "Print the content of a file in the initramfs",
+        commands::cat,
+    ));
+    commands.push(commands::command::new(
+        "exec",
+        "Execute a program in the initramfs",
+        commands::exec,
+    ));
+    commands.push(commands::command::new(
+        "setTimeout",
+        "Set a timer to print a message after a certain time",
+        commands::set_timeout,
+    ));
+    commands.push(commands::command::new(
+        "test_memory",
+        "Test buddy allocator",
+        commands::test_memory,
+    ));
+    commands.push(commands::command::new(
+        "current_el",
+        "Print current exception level",
+        commands::current_el,
+    ));
+}
+
+fn get_input(commands: &Vec<commands::command>) -> String {
+    let mut input_buffer = String::new();
+
+    loop {
+        if let Some(c) = unsafe { recv_async() } {
+            if c == b'\r' {
+                println!("");
+                break input_buffer;
+            } else if c == b'\t' {
+                let mut matched_commands = Vec::new();
+                for command in commands.iter() {
+                    let name = command.get_name();
+                    if name.starts_with(input_buffer.as_str()) {
+                        matched_commands.push(command);
+                    }
+                }
+
+                if matched_commands.len() == 1 {
+                    let match_name = matched_commands[0].get_name();
+                    let match_name_remaining = &match_name[input_buffer.len()..];
+                    input_buffer.push_str(match_name_remaining);
+                    input_buffer.push(' ');
+                    print!("{} ", match_name_remaining);
+                } else {
+                    if matched_commands.len() > 1 {
+                        // find the common prefix
+                        'prefix: for idx in input_buffer.len().. {
+                            match matched_commands[0].get_name().as_bytes().get(idx) {
+                                Some(c) => {
+                                    for cmd in &matched_commands {
+                                        if cmd.get_name().as_bytes().get(idx).unwrap_or(&0).clone()
+                                            != *c
+                                        {
+                                            break 'prefix;
+                                        }
+                                    }
+                                    input_buffer.push(*c as char);
+                                }
+                                None => break,
+                            }
+                        }
+                    }
+
+                    let padding = commands.iter().map(|cmd| cmd.get_name().len()).max().unwrap_or(0);
+
+                    // print all matches
+                    println!("");
+                    for cmd in matched_commands.iter() {
+                        println!("{: <width$}: {}", cmd.get_name(), cmd.get_description(), width = padding);
+                    }
+                    print!("> ");
+                    print!("{}", input_buffer);
+                }
+            } else if c == 127 {
+                if !input_buffer.is_empty() {
+                    input_buffer.pop();
+                    print!("\x08 \x08");
+                }
+            } else {
+                input_buffer.push(c as char);
+                print!("{}", c as char);
+            }
+        }
+    }
 }
 
 pub fn start(initrd_start: u32) {
-    let mut inp_buf = [0u8; 256];
+    unsafe {
+        INITRAMFS = Some(cpio::CpioArchive::load(initrd_start as *const u8));
+    }
 
-    loop {
-        print("> ".into());
-        let len = get_line(&mut inp_buf, 256);
-        let initramfs = cpio::CpioArchive::load(initrd_start as *const u8);
+    let mut commands = Vec::new();
+    push_all_commands(&mut commands);
+    commands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 
-        if !inp_buf[0].is_ascii_alphabetic() {
-            continue;
+    'shell: loop {
+        print!("> ");
+
+        let input = get_input(&commands);
+        let mut input = input.trim().split_whitespace();
+
+        let input_command = input.next().unwrap_or("");
+        let input_args: Vec<&str> = input.collect();
+        let input_args = {
+            let mut args = Vec::from([input_command.to_string()]);
+            for arg in input_args.iter() {
+                args.push(String::from(*arg));
+            }
+            args
+        };
+
+        if input_command == "help" {
+            let padding = commands.iter().map(|cmd| cmd.get_name().len()).max().unwrap_or(0);
+            for cmd in commands.iter() {
+                println!("{: <width$}: {}", cmd.get_name(), cmd.get_description(), width = padding);
+            }
+            continue 'shell;
         }
 
-        if inp_buf.starts_with(b"help") {
-            commands::help();
-        } else if inp_buf.starts_with(b"hello") {
-            println!("Hello, World!");
-        } else if inp_buf.starts_with(b"reboot") {
-            println!("Rebooting...");
-            crate::cpu::reboot::reset(100);
-            break;
-        } else if inp_buf.starts_with(b"ls") {
-            for i in initramfs.get_file_list() {
-                println!(i);
+        for command in commands.iter() {
+            if input_command == command.get_name() {
+                command.execute(input_args);
+                continue 'shell;
             }
-        } else if inp_buf.starts_with(b"cat") {
-            print!("Filename: ");
-            let len = get_line(&mut inp_buf, 256);
-            let filename = core::str::from_utf8(&inp_buf[..len - 1]).unwrap();
-            initramfs.print_file_content(filename);
-        } else if inp_buf.starts_with(b"exec") {
-            print!("Filename: ");
-            let len = get_line(&mut inp_buf, 256);
-            let filename = core::str::from_utf8(&inp_buf[..len - 1]).unwrap();
-            match initramfs.load_file_to_memory(filename, 0x2001_0000 as *mut u8) {
-                true => println!("File loaded to memory"),
-                false => {
-                    println!("File not found");
-                    continue;
-                }
-            }
-
-            timer::add_timer_ms(2000, Box::new(|| set_next_timer()));
-
-            unsafe {
-                asm!(
-                    "mov {tmp}, 0x200",
-                    "msr spsr_el1, {tmp}",
-                    "ldr {tmp}, =0x20010000", // Program counter
-                    "msr elr_el1, {tmp}",
-                    "ldr {tmp}, =0x2000F000", // Stack pointer
-                    "msr sp_el0, {tmp}",
-                    "eret",
-                    tmp = out(reg) _,
-                );
-
-                println!("Should not reach here");
-            }
-        } else if inp_buf.starts_with(b"M3") {
-            println!("香的發糕");
-
-        } else if inp_buf.starts_with(b"setTimeout") {
-            let inp_buf = &inp_buf[..len - 1];
-            let mut iter = inp_buf.split(|c| c.clone() == b' ');
-            assert_eq!(iter.next().unwrap(), b"setTimeout");
-            let message = core::str::from_utf8(iter.next().unwrap()).unwrap().to_string();
-            let time = core::str::from_utf8(iter.next().unwrap()).unwrap();
-            match time.parse::<u64>() {
-                Ok(time) => {
-                    timer::add_timer_ms(time, move || println!("{}", message));
-                }
-                Err(_) => {
-                    println!("Invalid time: {}", time.len());
-                }
-            }
-            
-            // timer::add_timer_ms(time, move || println!("{}", message));
-        
-        } else if inp_buf.starts_with(b"test_memory") {
-            commands::test_memory();
-        } else {
-            println!(
-                "Unknown command"
-            );
         }
+
+        println!("Command not found");
     }
 }

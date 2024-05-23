@@ -1,5 +1,6 @@
 use crate::cpu::uart::{recv_non_blocking};
 use crate::stdio::{print, print_dec, print_hex, println};
+use core::ptr::write_volatile;
 
 const KERNEL_LOAD_ADDRESS: u32 = 0x80000;
 
@@ -17,7 +18,7 @@ pub fn load_kernel() {
                     if count % 1024 == 0 {
                         print(".");
                     }
-                    *ptr = byte;
+                    write_volatile(ptr, byte);
                     ptr = ptr.offset(1);
                 }
                 None => {

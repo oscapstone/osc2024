@@ -1,6 +1,6 @@
-use core::ptr::read_volatile;
-use core::ptr::write_volatile;
+use core::ptr::{read_volatile, write_volatile};
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum Register {
     AUX_IRQ = 0x3F21_5000,
@@ -37,9 +37,7 @@ pub struct MMIO {}
 
 impl MMIO {
     pub fn read(reg: Register) -> u32 {
-        unsafe {
-            read_volatile(reg.addr() as *const u32)
-        }
+        unsafe { read_volatile(reg.addr() as *const u32) }
     }
 
     pub fn write(reg: Register, data: u32) {

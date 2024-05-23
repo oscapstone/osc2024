@@ -53,8 +53,8 @@ pub unsafe fn init(memory_size: usize) {
     }
 
     println_now("Buddy system initialized");
-    print_hex_now(current_ptr as u32);
-    print_hex_now(MAX_FRAME_SIZE as u32);
+    // print_hex_now(current_ptr as u32);
+    // print_hex_now(MAX_FRAME_SIZE as u32);
 
     // let mut i = MAX_FRAME_SIZE;
 

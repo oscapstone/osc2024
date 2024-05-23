@@ -8,8 +8,9 @@ global_asm!(include_str!("boot.s"));
 #[no_mangle]
 pub unsafe fn _start_rust() {
     crate::cpu::uart::initialize();
+    println("");
     println("+------------------------------------+");
-    println("+   Bootloader v1.2 by @zolark173    +");
+    println("+   Bootloader v1.3 by @zolark173    +");
     println("+------------------------------------+");
     println("Please send a kernel image...");
 

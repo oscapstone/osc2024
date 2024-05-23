@@ -1,19 +1,147 @@
-use crate::os::allocator;
-use crate::os::stdio::{get_line, print, println_now};
+use crate::os::stdio::{get_line, println_now};
+use crate::os::{allocator, thread, timer};
 use crate::println;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
 use core::alloc::Layout;
+use core::arch::asm;
+use core::fmt::Display;
 
-pub fn help() {
-    println!("help\t:print this help menu");
-    println!("hello\t:print Hello, World!");
-    println!("reboot\t:reboot the device");
-    println!("ls\t:list files in the initramfs");
-    println!("cat\t:print the content of a file in the initramfs");
-    println!("exec\t:load a file to memory and execute it");
-    println!("test_memory\t:test buddy memory allocation");
+use super::super::thread::THREAD_ALIGNMENT;
+
+use super::INITRAMFS;
+
+const CONTEXT_SWITCHING_DELAY: u64 = 1000 / 32;
+
+pub struct command {
+    name: &'static str,
+    description: &'static str,
+    function: fn(Vec<String>),
 }
 
-pub fn test_memory() {
+impl Display for command {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+fn set_next_timer() {
+    // println!("Timer context switching");
+    thread::context_switching();
+    timer::add_timer_ms(CONTEXT_SWITCHING_DELAY, Box::new(|| set_next_timer()));
+}
+
+impl command {
+    pub fn new(name: &'static str, description: &'static str, function: fn(Vec<String>)) -> Self {
+        command {
+            name,
+            description,
+            function,
+        }
+    }
+
+    pub fn get_name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn get_description(&self) -> &'static str {
+        self.description
+    }
+
+    pub fn execute(&self, args: Vec<String>) {
+        (self.function)(args);
+    }
+}
+
+pub fn hello(args: Vec<String>) {
+    println!("Hello, World!");
+}
+
+pub fn reboot(args: Vec<String>) {
+    println!("Rebooting...");
+    crate::cpu::reboot::reset(100);
+    loop {}
+}
+
+// TODO - Implement the help function
+pub fn help(args: Vec<String>) {
+    todo!("Implement the help function");
+}
+
+pub fn ls(args: Vec<String>) {
+    let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
+    for file in initramfs.get_file_list() {
+        println!(file);
+    }
+}
+
+pub fn cat(args: Vec<String>) {
+    let args = args.iter().skip(1);
+    let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
+    for arg in args {
+        initramfs.print_file_content(arg);
+    }
+}
+
+pub fn exec(args: Vec<String>) {
+    let initramfs = unsafe { INITRAMFS.as_ref().unwrap() };
+
+    for filename in args.iter().skip(1) {
+        let filesize = match initramfs.get_filesize_by_name(filename.as_str()) {
+            Some(size) => size as usize,
+            None => {
+                println!("File not found");
+                return;
+            }
+        };
+        let stack_size = 4096;
+
+        let program_ptr = unsafe {
+            alloc::alloc::alloc(Layout::from_size_align(filesize, THREAD_ALIGNMENT).unwrap())
+        };
+        let program_stack_ptr = unsafe {
+            alloc::alloc::alloc(Layout::from_size_align(stack_size, THREAD_ALIGNMENT).unwrap())
+        };
+
+        for i in 0..filesize {
+            unsafe {
+                core::ptr::write(program_ptr.add(i), 0);
+            }
+        }
+
+        match initramfs.load_file_to_memory(filename.as_str(), program_ptr) {
+            true => println!("File loaded to memory"),
+            false => {
+                println!("File not found");
+                return;
+            }
+        }
+
+        let pid = thread::create_thread(program_ptr, filesize, program_stack_ptr, stack_size);
+        println!("PID: {}", pid);
+        println!("PC: {:X?}", program_ptr);
+    }
+    timer::add_timer_ms(CONTEXT_SWITCHING_DELAY, Box::new(|| set_next_timer()));
+    thread::run_thread(None);
+
+    panic!("Should not reach here");
+}
+
+pub fn set_timeout(args: Vec<String>) {
+    let message = args.get(1).unwrap().clone();
+    let time = args.get(2).unwrap();
+    match time.parse::<u64>() {
+        Ok(time) => {
+            timer::add_timer_ms(time, move || println!("{}", message));
+        }
+        Err(_) => {
+            println!("Invalid time: {}", time.len());
+        }
+    }
+}
+
+pub fn test_memory(args: Vec<String>) {
     let mut inp_buf = [0u8; 256];
     println!("Usage:");
     println!("malloc <size> -> <address> - Allocate memory");
@@ -76,4 +204,12 @@ pub fn test_memory() {
             println!("Unknown command");
         }
     }
+}
+
+pub fn current_el(args: Vec<String>) {
+    let current_el: u64;
+    unsafe {
+        asm!("mrs {0}, CurrentEL", out(reg) current_el);
+    }
+    println!("CurrentEL: {}", (current_el >> 2) & 0b11);
 }

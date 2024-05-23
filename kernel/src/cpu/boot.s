@@ -24,17 +24,18 @@ _start:
     ldr x0, =_stack_start
     mov sp, x0
 
+    # CS counter
     ldr x0, =0x75000
     str xzr, [x0]
     
     # Initialize bss
-    ldr x0, =_bss_start
-    ldr x1, =_bss_end
+    ADR_REL x0, _bss_start
+    ADR_REL x1, _bss_end
 .L_clear_bss:
-   cmp x0, x1
-   bge .L_done_clearing
-   str xzr, [x0], #8
-   b .L_clear_bss
+    cmp x0, x1
+    bge .L_done_clearing
+    str xzr, [x0], #8
+    b .L_clear_bss
 .L_done_clearing:
 
     bl .from_el2_to_el1
@@ -53,7 +54,7 @@ _start:
 .from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
-    mov x0, 0x3c5 // EL1h (SPSel = 1) witH interrupt disabled
+    mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
     msr spsr_el2, x0
     msr elr_el2, lr
     mov x0, sp
@@ -66,42 +67,3 @@ _start:
 
 .size	_start, . - _start
 .type	_start, function
-
-
-// .section .text.exception_vector_table
-.align 11
-.global exception_vector_table
-exception_vector_table:
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-    b exception_handler
-    .align 7
-

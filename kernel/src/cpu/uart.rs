@@ -1,10 +1,11 @@
 use crate::cpu::registers::Register;
 use crate::cpu::registers::MMIO;
-use crate::os::stdio::println;
-use crate::os::stdio::println_now;
-use crate::{println, print};
-use core::arch::asm;
 use crate::os::critical_section;
+use crate::os::stdio::print_hex_now;
+use crate::os::stdio::println_now;
+use core::arch::asm;
+
+use super::reboot;
 
 const BUF_SIZE: usize = 2048;
 
@@ -82,34 +83,35 @@ pub unsafe fn send_async(c: u8) {
 pub unsafe fn recv_async() -> Option<u8> {
     // println!("RECV_START_IDX: {}", RECV_START_IDX);
     // println!("RECV_END_IDX: {}", RECV_END_IDX);
+    critical_section::disable_irq();
     if RECV_START_IDX == RECV_END_IDX {
-        // println!("No data");
+        critical_section::enable_irq();
         None
     } else {
         let c = RECV_BUFFER[RECV_START_IDX];
 
         RECV_START_IDX += 1;
         RECV_START_IDX %= BUF_SIZE;
+        critical_section::enable_irq();
         // println!("RECV_START_IDX: {}", RECV_START_IDX);
         // println!("RECV_END_IDX: {}", RECV_END_IDX);
         Some(c)
     }
-    
 }
 
 pub unsafe fn irq_handler() {
-    // if SEND_IDX > 0 {
-    //     println!("Send size: {}", SEND_IDX);
-    // }
-
     for i in 0..SEND_IDX {
         send(SEND_BUFFER[i]);
     }
     SEND_IDX = 0;
-    
+
+    critical_section::disable_irq();
     loop {
         match non_blocking_recv() {
             Some(c) => {
+                if c == 0x3 {
+                    reboot::reset(100);
+                }
                 RECV_BUFFER[RECV_END_IDX] = c;
                 RECV_END_IDX += 1;
                 RECV_END_IDX %= BUF_SIZE;
@@ -117,6 +119,6 @@ pub unsafe fn irq_handler() {
             None => break,
         }
     }
+    critical_section::enable_irq();
     MMIO::write(Register::AUX_MU_IER_REG, 0b01);
-    // println!("RECV: {}", RECV_END_IDX);
 }

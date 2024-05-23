@@ -8,3 +8,4 @@ pub mod allocator;
 pub mod exception_handler;
 pub mod critical_section;
 pub mod timer;
+pub mod thread;
