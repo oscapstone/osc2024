@@ -61,7 +61,14 @@ void help(void)
         "  logo        - print raspberry pi logo\n"
         "  exec        - execute a program\n"
         "  async       - test uart async\n"
-        "  set_timeout - set core timer timeout\n");
+        "  set_timeout - set core timer timeout\n"
+        "  page_alloc  - allocate pages from buddy system\n"
+        "  kmalloc     - allocate object using slab allocator\n"
+        "  buddyinfo   - print buddy system information\n"
+        "  pageinfo    - print memory pages information\n"
+        "  slabinfo    - print slab allocator information\n"
+        "  test_page_alloc - buddy system test\n"
+        "  test_slab_alloc - slab allocator test\n");
 }
 
 void hello(void)
@@ -154,8 +161,10 @@ void parse_command(char* cmd)
         uart_send_string("No more core timer interrupt!!\n");
     } else if (!str_cmp(cmd_name, "alloc_page")) {
         char* size = str_tok(NULL, " ");
-        if (!size)
+        if (!size) {
             uart_send_string("Usage: alloc_page <order>\n");
+            return;
+        }
         int order = decstr2int(size);
         if (order < 0) {
             uart_send_string("Invalid size\n");
@@ -165,6 +174,17 @@ void parse_command(char* cmd)
         uart_printf("%d pages allocated at 0x%x\n", 1 << order,
                     (uintptr_t)page_ptr);
 
+    } else if (!str_cmp(cmd_name, "kmalloc")) {
+        char* size = str_tok(NULL, " ");
+        if (!size) {
+            uart_send_string("Usage: kmalloc <size>\n");
+            return;
+        }
+        int sized = decstr2int(size);
+        if (sized < 0)
+            uart_send_string("Invalid size\n");
+        void* object = kmalloc(sized, 0);
+        uart_printf("object allocated at 0x%x\n", object);
     } else if (!str_cmp(cmd_name, "test_page_alloc")) {
         test_page_alloc();
     } else if (!str_cmp(cmd_name, "test_slab_alloc")) {
@@ -173,6 +193,8 @@ void parse_command(char* cmd)
         buddyinfo();
     } else if (!str_cmp(cmd_name, "slabinfo")) {
         slabinfo();
+    } else if (!str_cmp(cmd_name, "pageinfo")) {
+        pageinfo();
     } else {
         uart_send_string("Command '");
         uart_send_string(cmd);

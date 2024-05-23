@@ -31,14 +31,11 @@ void kernel_main(uintptr_t dtb_ptr)
 
     kmem_cache_init();
 
-    if (irq_init())
+    if (!irq_init())
         goto inf_loop;
 
-    if (timer_init())
+    if (!timer_init())
         goto inf_loop;
-
-    buddyinfo();
-    slabinfo();
 
     shell();
 

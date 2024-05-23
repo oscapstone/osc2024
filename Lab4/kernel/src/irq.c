@@ -29,8 +29,8 @@ int irq_init(void)
 {
     irq = kmem_cache_create("irq", sizeof(irq_task_t), -1);
     if (!irq)
-        return -1;
-    return 0;
+        return 0;
+    return 1;
 }
 
 static irq_task_t* create_irq_task(irq_callback handler, unsigned long priority)

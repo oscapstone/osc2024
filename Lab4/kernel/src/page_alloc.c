@@ -209,6 +209,9 @@ void register_reserve_pages(uintptr_t start, uintptr_t end)
 
 void coalesce(struct page* page, size_t order)
 {
+#ifdef DEBUG
+    uart_printf("  Try to find the buddy to merge...\n");
+#endif
     size_t pfn = page_to_pfn(page);
 
     if (pfn >= zone.managed_pages)
@@ -219,14 +222,31 @@ void coalesce(struct page* page, size_t order)
         if (buddy_pfn >= zone.managed_pages)
             break;
         struct page* buddy_page = pfn_to_page(buddy_pfn);
-        if (PageBuddy(buddy_page) && buddy_page->private == order)
+#ifdef DEBUG
+        uart_printf("  Found buddy at 0x%x\n", page_to_phys(buddy_page));
+#endif
+        if (PageBuddy(buddy_page) && buddy_page->private == order) {
+#ifdef DEBUG
+            uart_printf("  Mergable!!\n, merged order: %d\n", order + 1);
+#endif
             delete_page_from_freelist(buddy_page, order);
-        else
+        } else {
+#ifdef DEBUG
+
+            uart_printf("  NOT mergable, stop\n");
+#endif
             break;
+        }
         order++;
         pfn = get_left_pfn(pfn, order);
         page = pfn_to_page(pfn);
     }
+
+#ifdef DEBUG
+    uart_printf(
+        "  Final Merged address: 0x%x, put it into freelist with order %d\n",
+        page_to_phys(page), order);
+#endif
     add_page_to_freelist(page, order);
 }
 
@@ -288,6 +308,8 @@ static inline void set_compound_order(struct page* page, unsigned int order)
 
 inline unsigned int get_compound_order(struct page* page)
 {
+    if (!PageHead(page))
+        return 0;
     return page[1].compound_order;
 }
 
@@ -391,25 +413,50 @@ void buddy_init(void)
     register_reserve_pages(STACK_START, STACK_END);
 
     start_init_pages();
-
-    buddyinfo();
 }
 
 
 struct page* alloc_pages(size_t order, gfp_t flags)
 {
+#ifdef DEBUG
+    uart_printf("Allocate pages with %d order\n", order);
+#endif
+
     size_t original_order = order;
 
     while (order <= MAX_ORDER) {
+#ifdef DEBUG
+        uart_printf("  Search in freelist with %d order\n", order);
+#endif
         struct page* page = get_page_from_freelist(order);
 
         if (!page) {
+#ifdef DEBUG
+            uart_printf(
+                "  Cannot find usable pages in freelist with %d order, try "
+                "%d "
+                "order\n",
+                order, order + 1);
+#endif
             order++;
             continue;
         }
 
+#ifdef DEBUG
+        uart_printf("  Found usable pages in freelist with %d order\n", order);
+#endif
         while (order > original_order) {
             struct page* right_half = page + (1 << (order - 1));
+#ifdef DEBUG
+            uart_printf(
+                "  Usable pages order is larget than requested order, "
+                "split it "
+                "down to request order\n");
+            uart_printf(
+                "  Put right half of the pages (0x%x) to freelist with %d "
+                "order\n",
+                page_to_phys(right_half), order);
+#endif
             add_page_to_freelist(right_half, order - 1);
             order--;
         }
@@ -421,6 +468,10 @@ struct page* alloc_pages(size_t order, gfp_t flags)
         if (flags & __GFP_ZERO)
             mem_set((void*)page_to_phys(page), 0, PAGE_SIZE << original_order);
 
+#ifdef DEBUG
+        uart_printf("Allocated pages at 0x%x\n", page_to_phys(page));
+#endif
+
         return page;
     }
 
@@ -429,6 +480,9 @@ struct page* alloc_pages(size_t order, gfp_t flags)
 
 void free_pages(struct page* page, size_t order)
 {
+#ifdef DEBUG
+    uart_printf("free pages with %d order\n", order);
+#endif
     if (!page || PageBuddy(page) || PageTail(page))
         return;
 
@@ -441,14 +495,12 @@ void free_pages(struct page* page, size_t order)
 void buddyinfo(void)
 {
     uart_printf("\n===================================\n");
-    uart_printf("Free List layout\n");
+    uart_printf("Buddy Info\n");
     uart_printf("===================================\n");
 
     for (size_t i = MIN_ORDER; i <= MAX_ORDER; i++) {
         size_t bucket = get_bucket_from_order(i);
-        uart_printf("ORDER %d: ", i);
-        uart_printf("HEAD(0x%x) (%d) -> ", &free_areas[bucket].free_list,
-                    free_areas[bucket].nr_free);
+        uart_printf("ORDER %d (#free %d): ", i, free_areas[bucket].nr_free);
         struct page* page;
         list_for_each_entry (page, &free_areas[bucket].free_list, list) {
             uart_printf("0x%x -> ", page_to_phys(page));
@@ -457,28 +509,105 @@ void buddyinfo(void)
     }
 }
 
+void pageinfo(void)
+{
+    size_t nr_pages = zone.managed_pages;
+    size_t pfn = 0;
+    struct page *page, *base_page;
+    page = base_page = NULL;
+
+    uart_printf("\n===================================\n");
+    uart_printf("Page Info\n");
+    uart_printf("===================================\n");
+
+    uart_printf("Total # of page: %d\n", nr_pages);
+
+    nr_pages = 0;
+
+    uart_printf("| address | size | status |\n");
+
+    while (pfn != zone.managed_pages) {
+        page = pfn_to_page(pfn);
+
+        if (PageReserved(page)) {
+            if (!base_page)
+                base_page = page;
+            else {
+                nr_pages++;
+                pfn++;
+            }
+        } else {
+            if (base_page) {
+                uart_printf("| 0x%x | %dKB | Reserved |\n",
+                            page_to_phys(base_page),
+                            (nr_pages << PAGE_SHIFT) >> 10);
+                nr_pages = 0;
+                base_page = NULL;
+            }
+            if (PageBuddy(page)) {
+                uart_printf("| 0x%x | %dKB | Buddy |\n", page_to_phys(page),
+                            (PAGE_SIZE << page->private) >> 10);
+                pfn += 1 << page->private;
+            } else if (PageSlab(page)) {
+                size_t order = 0;
+                if (PageHead(page))
+                    order = get_compound_order(page);
+                uart_printf("| 0x%x | %dKB | Slab |\n", page_to_phys(page),
+                            (PAGE_SIZE << order) >> 10);
+                pfn += 1 << order;
+            }
+        }
+    }
+
+    uart_printf("\n");
+}
+
 void test_page_alloc(void)
 {
+    uart_printf("\n==========================\n");
+    uart_printf("Allocate order 1 pages\n");
     struct page* ptr1 = alloc_pages(1, __GFP_COMP);
 
+    uart_printf("\n==========================\n");
 
+
+    uart_printf("\n==========================\n");
+    uart_printf("Allocate order 5 pages\n");
     struct page* ptr2 = alloc_pages(5, __GFP_COMP);
+    uart_printf("\n==========================\n");
 
 
+    uart_printf("\n==========================\n");
+    uart_printf("Free order 1 pages\n");
     free_pages(ptr1, 1);
+    uart_printf("\n==========================\n");
 
 
+
+    uart_printf("\n==========================\n");
+    uart_printf("Allocate order 8 pages\n");
     struct page* ptr3 = alloc_pages(8, __GFP_COMP);
+    uart_printf("\n==========================\n");
 
-
+    uart_printf("\n==========================\n");
+    uart_printf("Free order 8 pages\n");
     free_pages(ptr3, 8);
+    uart_printf("\n==========================\n");
 
 
+    uart_printf("\n==========================\n");
+    uart_printf("Allocate order 0 pages\n");
     struct page* ptr4 = alloc_pages(0, 0);
+    uart_printf("\n==========================\n");
 
 
+    uart_printf("\n==========================\n");
+    uart_printf("Free order 5 pages\n");
     free_pages(ptr2, 5);
+    uart_printf("\n==========================\n");
 
-
+    uart_printf("\n==========================\n");
+    uart_printf("Free order 0 pages\n");
     free_pages(ptr4, 0);
+    uart_printf("\n==========================\n");
 }

@@ -27,8 +27,8 @@ int timer_init(void)
 {
     timer = kmem_cache_create("timer", sizeof(timeout_event_t), -1);
     if (!timer)
-        return -1;
-    return 0;
+        return 0;
+    return 1;
 }
 
 static timeout_event_t* create_timeout_event(timer_callback cb,

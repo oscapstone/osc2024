@@ -277,9 +277,7 @@ static void free_slab(struct kmem_cache* slab_cache, struct page* slab)
     if (slab->slab_cache != slab_cache)
         return;
 
-    size_t order = 0;
-    if (PageCompound(slab))
-        order = get_compound_order(slab);
+    size_t order = get_compound_order(slab);
 
     list_del_init(&slab->slab_list);
     ClearPageSlab(slab);
@@ -640,6 +638,7 @@ void kfree(const void* x)
         return;
     }
 
+    // otherwise, it's slab cache allocated.
     kmem_cache_free(page->slab_cache, object);
 }
 
@@ -656,39 +655,86 @@ void kmem_cache_init(void)
     setup_kmalloc_cache_index_table();
 
     create_kmalloc_caches();
-
-    slabinfo();
 }
 
 void slabinfo(void)
 {
-    uart_printf("\n");
-    struct list_head* node;
-    list_for_each (node, &slab_caches) {
-        struct kmem_cache* s = list_entry(node, struct kmem_cache, list);
-        uart_printf("%s (%d)-> ", s->name, s->node->nr_partial);
+    uart_printf("\n===================================\n");
+    uart_printf("Slab Info\n");
+    uart_printf("===================================\n");
+
+    uart_printf("\n| Name | #Slab | #inuse / #objects |\n");
+    struct kmem_cache* cache;
+    struct page* slab;
+    list_for_each_entry (cache, &slab_caches, list) {
+        size_t objects = 0;
+        size_t inuse = 0;
+        list_for_each_entry (slab, &cache->node->partial, slab_list) {
+            objects += slab->objects;
+            inuse += slab->inuse;
+        }
+        uart_printf("| %s | %d | %d / %d |\n", cache->name,
+                    cache->node->nr_partial, inuse, objects);
     }
     uart_printf("\n");
 }
 
 void test_slab_alloc(void)
 {
+    uart_printf("\n==========================\n");
+    uart_printf("Create new slab cache\n");
     struct kmem_cache* fuck = kmem_cache_create("fuck", 10, -1);
+    uart_printf("\n==========================\n");
 
+    uart_printf("\n==========================\n");
+    uart_printf("Allocate object from new slab cache\n");
     void* ptr = kmem_cache_alloc(fuck, 0);
+    uart_printf("allocated object at 0x%x\n", ptr);
+    uart_printf("\n==========================\n");
 
+
+    uart_printf("\n==========================\n");
+    uart_printf("Free object from new slab cache\n");
     kmem_cache_free(fuck, ptr);
+    uart_printf("\n==========================\n");
 
 
+    uart_printf("\n==========================\n");
+    uart_printf("Delete the new slab cache\n");
     kmem_cache_destroy(fuck);
+    uart_printf("\n==========================\n");
 
 
+    uart_printf("\n==========================\n");
+    uart_printf("kmalloc 40B\n");
     void* ptr1 = kmalloc(10 * sizeof(int), 0);
+    uart_printf("allocated object at 0x%x\n", ptr1);
+    uart_printf("\n==========================\n");
+
+    uart_printf("\n==========================\n");
+    uart_printf("kfree 40B\n");
     kfree(ptr1);
+    uart_printf("\n==========================\n");
 
+    uart_printf("\n==========================\n");
+    uart_printf("kmalloc 4KB\n");
     void* ptr2 = kmalloc(4 * 1024, 0);
-    kfree(ptr2);
+    uart_printf("allocated object at 0x%x\n", ptr2);
+    uart_printf("\n==========================\n");
 
+    uart_printf("\n==========================\n");
+    uart_printf("kfree 4KB\n");
+    kfree(ptr2);
+    uart_printf("\n==========================\n");
+
+    uart_printf("\n==========================\n");
+    uart_printf("kmalloc 10KB\n");
     void* ptr3 = kmalloc(10 * 1024, 0);
+    uart_printf("allocated object at 0x%x\n", ptr3);
+    uart_printf("\n==========================\n");
+
+    uart_printf("\n==========================\n");
+    uart_printf("kfree 10KB\n");
     kfree(ptr3);
+    uart_printf("\n==========================\n");
 }

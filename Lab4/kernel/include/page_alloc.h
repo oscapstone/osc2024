@@ -65,7 +65,9 @@ struct page {
 void buddy_init(void);
 struct page* alloc_pages(size_t order, gfp_t types);
 void free_pages(struct page* page_ptr, size_t order);
+
 void buddyinfo(void);
+void pageinfo(void);
 
 void test_page_alloc(void);
 
