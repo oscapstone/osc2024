@@ -34,7 +34,7 @@ bootloader.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 	$(OBJCOPY) $(BUILD_DIR)/bootloader.elf -O binary bootloader.img
 	
 run: bootloader.img
-	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial stdio -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel bootloader.img -display none -serial null -serial pty -d in_asm
 	
 onboard: bootloader.img
 	screen /dev/ttyUSB0 115200

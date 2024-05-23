@@ -30,7 +30,7 @@ char* mem_alin(char* ptr,int alin){
 void cpio_ls()
 {
     char* pointer=cpio_addr;
-    puts("apio_addr:0x");
+    puts("cpio_addr:0x");
     put_hex((unsigned long long)cpio_addr);
     puts("\r\n");
     //struct cpio_newc_header* head=(struct cpio_newc_header*)pointer;
@@ -62,7 +62,12 @@ void cpio_ls()
         unsigned int filesize=hex_to_int(head->c_filesize,8);
         puts_len(pointer+sizeof(struct cpio_newc_header),namesize);
         puts("\r\n");
+        put_int(namesize);
+        puts("\r\n");
+        put_int(filesize);
+        puts("\r\n");
         pointer+=sizeof(struct cpio_newc_header);
+        //pointer=mem_alin(pointer,4);
         pointer=mem_alin(pointer+namesize,4);
         pointer=mem_alin(pointer+filesize,4);
     }
@@ -82,6 +87,7 @@ void cpio_cat(char* filename){
         unsigned int namesize=hex_to_int(head->c_namesize,8);
         unsigned int filesize=hex_to_int(head->c_filesize,8);
         ptr+=sizeof(struct cpio_newc_header);
+        //ptr=mem_alin(ptr,4);
         ptr=mem_alin(ptr+namesize,4);
         ptr=mem_alin(ptr+filesize,4);
     }

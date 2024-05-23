@@ -34,7 +34,7 @@ kernel8.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 	$(OBJCOPY) $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
 	
 run: kernel8.img
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -d in_asm
 	
 onboard: kernel8.img
 	screen /dev/ttyUSB0 115200

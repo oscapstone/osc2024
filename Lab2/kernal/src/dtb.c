@@ -17,14 +17,16 @@ uint32_t uint32_endian_big2little(uint32_t data)
 	return (r[3] << 0) | (r[2] << 8) | (r[1] << 16) | (r[0] << 24);
 }
 
-void initramfs_callback(char *struct_addr, char *string_addr, unsigned int prop_len){
+void initramfs_callback(char *value_addr, char *string_addr, unsigned int prop_len){
 
 
     if(!strcmp(string_addr, "linux,initrd-start")){
 
-        char *temp = struct_addr;
-        temp += 4;
+        char *temp = value_addr;
         if(prop_len > 0){
+            puts("prop_len:");
+            put_int(prop_len);
+            puts("\r\n");
             puts("CPIO address:");
             // Since address are 64bits, if we declare int32, there will be warning
             uint64_t addr = (uint64_t)uint32_endian_big2little(*(uint32_t*)(temp));
@@ -73,7 +75,7 @@ void fdt_traverse(void (*callback)(char *, char *, unsigned int)){
                 // 32bits
                 struct_ptr += 4;
                 // property name offset (starting at string block)
-                callback(struct_ptr, string_ptr + uint32_endian_big2little(*(uint32_t*)(struct_ptr)), prop_len);
+                callback(struct_ptr+4, string_ptr + uint32_endian_big2little(*(uint32_t*)(struct_ptr)), prop_len);
                 // 32bits
                 struct_ptr += 4;
                 // property value
