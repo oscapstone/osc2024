@@ -47,9 +47,9 @@ void init_kmalloc() {
     memory_reserve((phys_addr_t)fdt_get_initrd_start(),
                    (phys_addr_t)fdt_get_initrd_end());  // Initramfs
 
-#ifdef MEM_DEBUG
+// #ifdef MEM_DEBUG
     print_free_areas();
-#endif
+// #endif
 }
 
 void print_kmalloc_caches() {

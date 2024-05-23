@@ -14,6 +14,9 @@ int copy_process(unsigned long clone_flags, unsigned long func,
     // struct task_struct *new_task =
         // (task_struct_t *)kmalloc(sizeof(task_struct_t));
 
+    print_string("[copy_process] new_task: ");
+    print_h((uint64_t)new_task);
+
     if (!new_task) {
         print_string("allocate new task failed\n");
         return -1;
@@ -32,7 +35,7 @@ int copy_process(unsigned long clone_flags, unsigned long func,
         memcpy((void *)regs, (void *)current_regs, sizeof(struct pt_regs));
         regs->regs[0] = 0;  // return value of child process
         unsigned long sp_offset = get_current()->stack + STACK_SIZE - current_regs->sp;
-        regs->sp = (unsigned long)new_task + STACK_SIZE - sp_offset;
+        regs->sp = stack + STACK_SIZE - sp_offset;
         memcpy((void *)regs->sp, (void *)current_regs->sp, sp_offset);
         new_task->stack = stack;
     }

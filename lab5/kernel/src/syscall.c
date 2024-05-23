@@ -50,6 +50,9 @@ int sys_exec(const char* name, char* argv[]) {
 int sys_fork() {
     unsigned long stack = (unsigned long)kmalloc(STACK_SIZE);
     if ((void*)stack == NULL) return -1;
+    print_string("Forking new process with stack at ");
+    print_h(stack);
+    print_string("\n");
     memset((void*)stack, 0, STACK_SIZE);
     return copy_process(0, 0, 0, stack);
 }

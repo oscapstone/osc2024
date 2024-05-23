@@ -89,7 +89,9 @@ void buddy_init(phys_addr_t start, phys_addr_t end) {
         }
     }
 
+#ifdef MEM_DEBUG
     print_free_areas();
+#endif
 }
 
 page_t *alloc_pages(unsigned long order) {

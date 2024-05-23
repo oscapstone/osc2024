@@ -68,8 +68,8 @@ void enqueue_run_queue(task_struct_t *task) {
         task->next = run_queue;
         run_queue->prev = task;
     }
-    // print_string("[enqueue_run_queue] done\n");
-    // print_task_list();
+    print_string("[enqueue_run_queue] done\n");
+    print_task_list();
 }
 
 void delete_run_queue(task_struct_t *task) {
@@ -147,11 +147,13 @@ void print_task_list() {
         print_string(", ");
         print_d(task->priority);
         print_string(", ");
-        print_h((unsigned long)get_current()->context.x19);
+        print_h((unsigned long)task->context.x19);
         print_string(", ");
-        print_h((unsigned long)get_current()->context.x20);
+        print_h((unsigned long)task->context.x20);
         print_string(", ");
-        print_h((unsigned long)get_current()->context.pc);
+        print_h((unsigned long)task->context.pc);
+        print_string(", ");
+        print_h((unsigned long)task->context.sp);
         print_string(") -> ");
         task = task->next;
     } while (task != get_current());

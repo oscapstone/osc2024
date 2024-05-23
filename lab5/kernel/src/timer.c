@@ -16,7 +16,7 @@ typedef struct timer_t {
 static timer_t *head = (timer_t *)0;
 
 void set_timeout(void (*callback)(void *), void *arg, int delay) {
-    timer_t *timer = (timer_t *)simple_malloc(sizeof(timer_t));
+    timer_t *timer = (timer_t *)kmalloc(sizeof(timer_t));
 #ifdef TIMER_DEBUG
     print_string("\n[set_timeout] timer_t allocated at ");
     print_h((unsigned long)timer);
@@ -49,20 +49,22 @@ void set_timeout(void (*callback)(void *), void *arg, int delay) {
 static void empty() {}
 
 void timer_irq_handler() {
-    // #ifdef SCHED_DEBUG
+#ifdef SCHED_DEBUG
     static int count = 0;
     if (count++ % 1 == 0) {
         print_string("\n[timer_irq_handler] \n");
         print_task_list();
     }
-    // #endif
+#endif
 
     set_timeout(&empty, 0, 1);  // 1s for task switch
 
     // Check the timer queue
     while (head != 0 && timer_get_uptime() >= head->time) {
         head->func(head->arg);
-        head = head->next;  // TODO: free the node
+        timer_t *temp = head;
+        head = head->next;
+        kfree(temp);
     }
 
     if (head != 0) core_timer_enable();
