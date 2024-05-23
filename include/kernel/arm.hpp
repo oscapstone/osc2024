@@ -15,7 +15,7 @@
 #define SPSR_EL1h     0b0101
 #define SPSR_VALUE    (SPSR_MASK_ALL | SPSR_EL1h)
 
-// ESR
+// D19.2.37 ESR_EL1, Exception Syndrome Register (EL1)
 
 #define ESR_ELx_EC_SHIFT (26)
 #define ESR_ELx_EC_WIDTH (6)

@@ -74,8 +74,9 @@ PT::PT(PT* o, int level) {
 }
 
 PT::~PT() {
-  this->traverse([](auto, auto entry, auto, auto) { kfree(entry.addr()); },
-                 [](auto, auto entry, auto, auto) { delete entry.table(); });
+  this->traverse(
+      [](auto, auto entry, auto, auto) { kfree(pa2va(entry.addr())); },
+      [](auto, auto entry, auto, auto) { delete entry.table(); });
 }
 
 PT_Entry& PT::walk(uint64_t start, int level, uint64_t va_start, int va_level) {
