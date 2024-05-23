@@ -5,20 +5,22 @@
 #include "sched.hpp"
 
 void PT_Entry::print(int level) const {
-  kprintf("0x%08lx Attr%d %s %s %s", (uint64_t)addr(), AttrIdx,
-          PT_levelstr(level), kindstr(), apstr());
-  if (UXN)
-    kprintf(" UXN");
-  if (PXN)
-    kprintf(" PXN");
-  if (AF)
-    kprintf(" AF");
+  kprintf("0x%08lx Attr%d %s %s", (uint64_t)addr(), AttrIdx, PT_levelstr(level),
+          kindstr());
+  if (isEntry()) {
+    kprintf(" %s", apstr());
+    if (UXN)
+      kprintf(" UXN");
+    if (PXN)
+      kprintf(" PXN");
+    if (AF)
+      kprintf(" AF");
+  }
   kprintf("\n");
 }
 
 void PT_Entry::alloc(int level, bool kernel) {
-  set_level(level);
-  set_addr(kmalloc(PAGE_SIZE), isPTE() ? PTE_ENTRY : PD_BLOCK);
+  set_entry(kmalloc(PAGE_SIZE), level);
   if (kernel)
     UXN = true;
   else

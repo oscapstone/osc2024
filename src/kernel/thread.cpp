@@ -91,8 +91,7 @@ Kthread::Kthread(const Kthread& o)
 Kthread::~Kthread() {
   del_list(this);
   delete item;
-  if (el0_tlb)
-    delete el0_tlb;
+  reset_el0_tlb();
 }
 
 void Kthread::fix(const Kthread& o, Mem& mem) {
@@ -115,16 +114,21 @@ void Kthread::ensure_el0_tlb() {
   }
 }
 
-int Kthread::alloc_user_pages(uint64_t addr, uint64_t size, ProtFlags prot) {
+int Kthread::alloc_user_pages(uint64_t va, uint64_t size, ProtFlags prot) {
   ensure_el0_tlb();
+
   // TODO: handle address overlap
   el0_tlb->walk(
-      addr, addr + size,
+      va, va + size,
       [](auto context, PT_Entry& entry, auto start, auto level) {
         auto prot = cast_enum<ProtFlags>(context);
         entry.alloc(level);
-        if (not has(prot, ProtFlags::WRITE))
+
+        if (has(prot, ProtFlags::WRITE))
+          entry.AP = AP::USER_RW;
+        else
           entry.AP = AP::USER_RO;
+        entry.UXN = not has(prot, ProtFlags::EXEC);
 
         klog("alloc_user_pages:  0x%016lx ~ 0x%016lx -> ", start,
              start + ENTRY_SIZE[level]);

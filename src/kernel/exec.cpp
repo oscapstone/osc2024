@@ -28,6 +28,9 @@ int exec(ExecCtx* ctx) {
 
   auto file = hdr->file();
   auto thread = current_thread();
+
+  thread->reset_el0_tlb();
+
   // TODO: RO TEXT
   if (thread->alloc_user_pages(USER_TEXT_START, file.size(), ProtFlags::RWX)) {
     klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,

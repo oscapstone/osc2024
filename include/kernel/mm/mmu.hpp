@@ -189,6 +189,11 @@ struct PT_Entry {
     value = e.value;
     asm volatile("" ::: "memory");
   }
+  template <typename T>
+  void set_entry(T addr, int level) {
+    set_level(level);
+    set_addr((void*)addr, isPTE() ? PTE_ENTRY : PD_BLOCK);
+  }
 
   PT* table() const {
     return (PT*)pa2va(addr());
