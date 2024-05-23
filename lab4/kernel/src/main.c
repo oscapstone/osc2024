@@ -20,6 +20,7 @@ void main(char* arg){
     irqtask_list_init();
     timer_list_init();
     uart_interrupt_enable();
+    uart_flush_FIFO();
     el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
 
     core_timer_enable();
