@@ -179,13 +179,12 @@ int sys_fork(trapframe_t *tpf)
 	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
-	store_context(get_current_thread_context());
+	store_context(&(child->context));
 	DEBUG("child: 0x%x, parent: 0x%x\r\n", child, parent);
 
 	if (child->pid != curr_thread->pid) // Parent process
 	{
 		DEBUG("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		child->context = curr_thread->context;
 		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
 		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
 		kernel_unlock_interrupt();
