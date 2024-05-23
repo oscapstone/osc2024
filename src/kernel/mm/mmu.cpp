@@ -4,9 +4,9 @@
 #include "mm/page.hpp"
 #include "sched.hpp"
 
-void PT_Entry::print() const {
-  kprintf("0x%08lx Attr%d %s %s %s", (uint64_t)addr(), AttrIdx, levelstr(),
-          kindstr(), apstr());
+void PT_Entry::print(int level) const {
+  kprintf("0x%08lx Attr%d %s %s %s", (uint64_t)addr(), AttrIdx,
+          PT_levelstr(level), kindstr(), apstr());
   if (UXN)
     kprintf(" UXN");
   if (PXN)
@@ -16,17 +16,28 @@ void PT_Entry::print() const {
   kprintf("\n");
 }
 
-void PT_Entry::alloc() {
-  set_addr(kmalloc(PAGE_SIZE), PD_TABLE);
+void PT_Entry::alloc(int level, bool kernel) {
+  set_level(level);
+  set_addr(kmalloc(PAGE_SIZE), isPTE() ? PTE_ENTRY : PD_BLOCK);
+  if (kernel)
+    UXN = true;
+  else
+    PXN = true;
 }
 
-PT_Entry PT_Entry::copy() const {
+PT_Entry PT_Entry::copy(int level) const {
   auto new_entry = *this;
-  if (isTable()) {
-    new_entry.set_table(table()->copy());
-  } else if (isEntry()) {
-    // TODO: copy on write
-    panic("copy entry not implemented");
+  switch (kind()) {
+    case EntryKind::TABLE:
+      new_entry.set_table(level, table()->copy());
+      break;
+    case EntryKind::ENTRY:
+      // TODO: copy on write
+      panic("copy entry not implemented");
+      break;
+    case EntryKind::INVALID:
+      // just copy invalid entry
+      break;
   }
   return new_entry;
 }
@@ -41,9 +52,7 @@ PT::PT() {
 }
 
 PT::PT(PT_Entry entry, int level) {
-  entry.level = level;
-  if (level == PTE_LEVEL)
-    entry.type = PD_TABLE;
+  entry.set_level(level);
   uint64_t offset = ENTRY_SIZE[level] / PAGE_SIZE;
   for (uint64_t i = 0; i < TABLE_SIZE_4K; i++) {
     entries[i] = entry;
@@ -55,10 +64,10 @@ PT* PT::copy() {
   return new PT(this);
 }
 
-PT::PT(PT* o) {
+PT::PT(PT* o, int level) {
   // TODO: copy on write
   for (uint64_t i = 0; i < TABLE_SIZE_4K; i++) {
-    entries[i] = o->entries[i].copy();
+    entries[i] = o->entries[i].copy(level);
   }
 }
 
@@ -82,7 +91,7 @@ PT_Entry& PT::walk(uint64_t start, int level, uint64_t va_start, int va_level) {
     nxt_table = entry.table();
   } else {
     nxt_table = new PT(entry, nxt_level);
-    entry.set_table(nxt_table);
+    entry.set_table(level, nxt_table);
   }
   return nxt_table->walk(nxt_start, nxt_level, va_start, va_level);
 }
@@ -138,7 +147,7 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
       .output_address = MEM_START / PAGE_SIZE,
       .PXN = true,
       .UXN = true,
-      .level = PMD_LEVEL,
+      .level_is_PTE = false,
   };
   auto PMD = new PT(PMD_entry, PMD_LEVEL);
 
@@ -161,7 +170,7 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   auto PGD = (PT*)__upper_PGD;
   PGD->set_level(PGD_LEVEL);
 
-  PUD->entries[0].set_table(PMD);
+  PUD->entries[0].set_table(PUD_LEVEL, PMD);
   PUD->entries[1].PXN = true;
   PUD->entries[1].UXN = true;
 

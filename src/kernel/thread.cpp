@@ -113,13 +113,13 @@ int Kthread::alloc_user_pages(uint64_t addr, uint64_t size, ProtFlags prot) {
       addr, addr + size,
       [](auto context, PT_Entry& entry, auto start, auto level) {
         auto prot = cast_enum<ProtFlags>(context);
-        entry.alloc();
+        entry.alloc(level);
         if (not has(prot, ProtFlags::WRITE))
           entry.AP = AP::USER_RO;
 
-        klog("alloc_user_pages:  0x%016lx ~ 0x%016lx", start,
+        klog("alloc_user_pages:  0x%016lx ~ 0x%016lx -> ", start,
              start + ENTRY_SIZE[level]);
-        entry.print();
+        entry.print(level);
       },
       (void*)prot);
 

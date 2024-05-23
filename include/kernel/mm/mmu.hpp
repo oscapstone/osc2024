@@ -55,6 +55,20 @@ constexpr uint64_t ENTRY_SIZE[] = {PGD_ENTRY_SIZE, PUD_ENTRY_SIZE,
                                    PMD_ENTRY_SIZE, PTE_ENTRY_SIZE};
 constexpr int PGD_LEVEL = 0, PUD_LEVEL = 1, PMD_LEVEL = 2, PTE_LEVEL = 3;
 
+inline const char* PT_levelstr(int level) {
+  switch (level) {
+    case PGD_LEVEL:
+      return "PGD";
+    case PUD_LEVEL:
+      return "PUD";
+    case PMD_LEVEL:
+      return "PMD";
+    case PTE_LEVEL:
+      return "PTE";
+  }
+  return "unknown";
+}
+
 enum class ProtFlags {
   NONE = 0,
   READ = 1 << 0,
@@ -74,8 +88,8 @@ enum class AP : uint64_t {
 
 enum class EntryKind : uint64_t {
   INVALID = 0,
-  TABLE = 1,
-  ENTRY = 2,
+  TABLE = 1,  // PD_TABLE
+  ENTRY = 2,  // PD_BLOCK or PTE_ENTRY
 };
 
 struct PT_Entry {
@@ -93,8 +107,8 @@ struct PT_Entry {
       bool Contiguous : 1 = false;
       bool PXN : 1 = false;
       bool UXN : 1 = false;
-      uint64_t level : 2 = 0;
-      uint64_t software_reserved : 2 = 0;
+      bool level_is_PTE : 1 = false;
+      uint64_t software_reserved : 3 = 0;
       uint64_t upper_atributes : 5 = 0;
     };
     uint64_t value;
@@ -125,34 +139,35 @@ struct PT_Entry {
     }
   }
 
-  const char* levelstr() const {
-    switch (level) {
-      case PGD_LEVEL:
-        return "PGD";
-      case PUD_LEVEL:
-        return "PUD";
-      case PMD_LEVEL:
-        return "PMD";
-      case PTE_LEVEL:
-        return "PTE";
-    }
-    return "unknown";
-  }
-  void print() const;
+  void print(int level = -1) const;
 
   bool isInvalid() const {
     return (type & 1) == 0;
   }
-  bool isPTE() const {
-    return level == PTE_LEVEL;
+
+  void set_level(int level) {
+    level_is_PTE = level == PTE_LEVEL;
+    if (level_is_PTE and not isInvalid())
+      type = PTE_ENTRY;
   }
+  bool isPTE() const {
+    return level_is_PTE;
+  }
+
   EntryKind kind() const {
-    if (isInvalid())
+    // if (isInvalid())
+    //   return EntryKind::INVALID;
+    if (isPTE()) {
+      if (type == PTE_ENTRY)
+        return EntryKind::ENTRY;
       return EntryKind::INVALID;
-    if (isPTE())
-      return type == PD_TABLE ? EntryKind::ENTRY : EntryKind::INVALID;
-    else
-      return type == PD_TABLE ? EntryKind::TABLE : EntryKind::ENTRY;
+    } else {
+      if (type == PD_TABLE)
+        return EntryKind::TABLE;
+      if (type == PD_BLOCK)
+        return EntryKind::ENTRY;
+      return EntryKind::INVALID;
+    }
   }
   bool isEntry() const {
     return kind() == EntryKind::ENTRY;
@@ -164,12 +179,12 @@ struct PT_Entry {
   void* addr() const {
     return (void*)(output_address * PAGE_SIZE);
   }
-  void set_addr(void* addr, uint64_t t) {
+  void set_addr(void* addr, uint64_t new_type) {
     asm volatile("" ::: "memory");
     auto e = *this;
     e.AF = true;
     e.output_address = (uint64_t)va2pa(addr) / PAGE_SIZE;
-    e.type = t;
+    e.type = new_type;
     value = e.value;
     asm volatile("" ::: "memory");
   }
@@ -177,24 +192,25 @@ struct PT_Entry {
   PT* table() const {
     return (PT*)pa2va(addr());
   }
-  void set_table(PT* table) {
+  void set_table(int level, PT* table) {
+    set_level(level);
     set_addr((void*)table, PD_TABLE);
   }
 
-  void alloc();
-  PT_Entry copy() const;
+  void alloc(int level, bool kernel = false);
+  PT_Entry copy(int level) const;
 };
 static_assert(sizeof(PT_Entry) == sizeof(uint64_t));
 
 struct PT {
   PT_Entry entries[TABLE_SIZE_4K];
   PT();
-  PT(PT_Entry entry, int level);
+  PT(PT_Entry entry, int level = PGD_LEVEL);
   PT* copy();
-  PT(PT* table);
+  PT(PT* table, int level = PGD_LEVEL);
   ~PT();
   PT_Entry& walk(uint64_t start, int level, uint64_t va_start, int va_level);
-  using CB = void(void*, PT_Entry& entry, uint64_t start, int level);
+  using CB = void(void* context, PT_Entry& entry, uint64_t start, int level);
   void walk(uint64_t start, int level, uint64_t va_start, uint64_t va_end,
             int va_level, CB cb_entry, void* context = nullptr);
   template <typename T, typename U>
@@ -209,9 +225,9 @@ struct PT {
     return traverse(USER_SPACE, PGD_LEVEL, cb_entry, cb_table, context);
   }
 
-  void set_level(uint64_t level) {
+  void set_level(int level) {
     for (uint64_t i = 0; i < TABLE_SIZE_4K; i++)
-      entries[i].level = level;
+      entries[i].set_level(level);
   }
 
   void print(const char* name = "PageTable", uint64_t start = USER_SPACE,
