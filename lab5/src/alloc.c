@@ -129,7 +129,7 @@ void init_page_arr() {
 		uart_send_string("\n");
 	}
 	page_arr = (page*)simple_malloc(total_page * sizeof(page));
-	unsigned char* addr = PAGE_BASE;
+	char* addr = PAGE_BASE;
 	for (uint64_t i = 0; i < total_page; i++) {
 		page_arr[i].addr = addr;
 		page_arr[i].idx = i;
@@ -310,15 +310,22 @@ void* chunk_alloc(int idx) {
 		chunk_info_arr[idx].page_head = new_page;
 
 		// split page to chunk
-		for(unsigned char* addr = new_page + PAGE_SIZE - chunk_size; addr > new_page + sizeof(page_info_t); addr -= chunk_size) {
+		for(
+			unsigned char* addr = new_page + PAGE_SIZE - chunk_size; 
+			addr > new_page + sizeof(page_info_t); 
+			addr -= chunk_size
+		) {
 			chunk* new_chunk = (chunk*)addr;
 			new_chunk -> addr = addr;
 			new_chunk -> next = chunk_info_arr[idx].chunk_head;
 			chunk_info_arr[idx].chunk_head = new_chunk;
 			chunk_info_arr[idx].cnt ++;
 			if(debug) {
+				// uart_hex(chunk_size);
 				uart_send_string("new chunk: 0x");
 				uart_hex((unsigned long long)addr);
+				uart_send_string("\n");
+				uart_hex((unsigned char*)new_page + sizeof(page_info_t));
 				uart_send_string("\n");
 			}
 		}
@@ -347,7 +354,7 @@ void* chunk_free(void* addr) {
 	}
 	// convert chunk addr to page addr
 	void* page_addr = (void*)((uint64_t)addr & (~(PAGE_SIZE - 1)));
-	page_info_t* chunk_page = page_addr;
+	page_info_t* chunk_page = (page_info_t*)page_addr;
 	int idx = chunk_page -> idx;
 	chunk* new_chunk = (chunk*)addr;
 	new_chunk -> addr = addr;
@@ -388,10 +395,10 @@ void alloc_init()
 	memory_reserve((void*)old_heap_top, (void*)heap_top);
 	debug = 0;
 	init_page_allocator();
-	debug = 1;
+	// debug = 1;
 	check_free_list();
 	// print the number of free pages for each order
-	if(1 || debug) {
+	if(debug) {
 		free_list_info();
 	}
 	// init chunk info
@@ -406,11 +413,17 @@ void memory_reserve(void* start, void* end) {
 		uart_hex((unsigned long)end);
 		uart_send_string("\n");
 	}
-	uint64_t s_idx = (start - PAGE_BASE) / PAGE_SIZE;
-	uint64_t e_idx = (end - PAGE_BASE) / PAGE_SIZE;
-	for(uint64_t i=s_idx; i<e_idx; i++) {
-		page_arr[i].val = RESERVED;
-	}
+	 // Align start to the nearest page boundary (round down)
+    uint64_t aligned_start = (uint64_t)start & ~(PAGE_SIZE - 1);
+    // Align end to the nearest page boundary (round up)
+    uint64_t aligned_end = ((uint64_t)end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+    uint64_t s_idx = (aligned_start - (uint64_t)PAGE_BASE) / PAGE_SIZE;
+    uint64_t e_idx = (aligned_end - (uint64_t)PAGE_BASE) / PAGE_SIZE;
+
+    for (uint64_t i = s_idx; i < e_idx; i++) {
+        page_arr[i].val = RESERVED;
+    }
 }
 
 void* page_alloc(unsigned long long size) {
@@ -467,6 +480,10 @@ void page_free(void* addr) {
 }
 
 void* kmalloc(unsigned long long size) {
+	if(size == 0){
+		return 0;
+	}
+	// return page_alloc(size);
 	int idx = size2chunkidx(size);
 	if(idx >= 0) {
 		return chunk_alloc(idx);
@@ -476,10 +493,13 @@ void* kmalloc(unsigned long long size) {
 }
 
 void kfree(void* addr) {
+	if(!addr) return;
 	if(is_page(addr)) {
+		// uart_send_string("page addr release\n");
 		page_free(addr);
 	}
 	else {
+		// uart_send_string("chunk addr release\n");
 		chunk_free(addr);
 	}
 }

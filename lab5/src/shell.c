@@ -5,6 +5,7 @@
 #include "string.h"
 #include "initrd.h"
 #include "timer.h"
+#include "thread.h"
 
 void shell(){
     uart_async_send_string("Welcome to OSC2024 shell!\n");

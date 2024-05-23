@@ -9,7 +9,7 @@ int cur_priority = 100;
 
 void create_task(task_callback_t callback, unsigned long long priority) {
     el1_interrupt_disable();
-    task_t* task = kmalloc(sizeof(task_t));
+    task_t* task = (task_t*)kmalloc(sizeof(task_t));
     if(!task) return;
 
     task->callback = callback;
@@ -21,6 +21,7 @@ void create_task(task_callback_t callback, unsigned long long priority) {
 
 void enqueue_task(task_t *task) {
     el1_interrupt_disable();
+    // uart_send_string("enqueue task\n");
     if(!task_head || (task->priority < task_head->priority)) {
         task -> next = task_head;
         task -> prev = 0;
@@ -40,15 +41,16 @@ void enqueue_task(task_t *task) {
         current -> next = task;
     }
     el1_interrupt_enable();
-    return;
 }
 
 void execute_tasks() {
     // el1_interrupt_disable();
     while(task_head) {
         el1_interrupt_disable();
-        task_head -> callback();
-        task_head = task_head->next;
+        task_t* cur = task_head;
+        cur -> callback();
+        task_head = cur->next;
+        kfree(cur);
         if(task_head) {
             task_head -> prev = 0;
         }
@@ -58,7 +60,7 @@ void execute_tasks() {
 }
 
 void execute_tasks_preemptive() {
-    el1_interrupt_enable();
+    // el1_interrupt_enable();
     while(task_head) {
         el1_interrupt_disable();
         task_t* new_task = task_head;
@@ -81,8 +83,8 @@ void execute_tasks_preemptive() {
         new_task -> callback();
 
         el1_interrupt_disable();
-
         cur_priority = prev_priority;
+        kfree(new_task);
 
         el1_interrupt_enable();
 

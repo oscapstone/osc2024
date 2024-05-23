@@ -5,6 +5,8 @@
 #include "initrd.h"
 #include "c_utils.h"
 #include "exception.h"
+#include "thread.h"
+#include <stdint.h>
 
 #define TEST_SIZE 30
 
@@ -12,6 +14,20 @@ extern char *dtb_base;
 
 void demo_mm() {
 	char* page_addr[TEST_SIZE];
+	for(int i=0;i<TEST_SIZE;i+=3) {
+		page_addr[i] = kmalloc(20);
+		page_addr[i+1] = kmalloc(200);
+		page_addr[i+2] = kmalloc(PAGE_SIZE);
+		// free_list_info();
+		print_chunk_info();
+	}
+	for(int i=0;i<TEST_SIZE;i+=3) {
+		kfree(page_addr[i]);
+		kfree(page_addr[i+1]);
+		kfree(page_addr[i+2]);
+		// free_list_info();
+		print_chunk_info();
+	}
 	for(int i=0;i<TEST_SIZE;i+=3) {
 		page_addr[i] = kmalloc(20);
 		page_addr[i+1] = kmalloc(200);
@@ -37,7 +53,13 @@ void main(char* base) {
 	fdt_traverse(initrd_callback);
 	alloc_init();
 	uart_enable_interrupt();
-	demo_mm();
-	debug = 0;
+	// demo_mm();
+	uart_send_string("mm finished\n");
+	thread_init();
+	el1_interrupt_enable();
+	core_timer_enable();
+	// thread_test();
+	// fork_test();
+	debug=0;
 	shell();
 }

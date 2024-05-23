@@ -6,7 +6,7 @@ void uart_recv_command(char *str){
     char c;
     int i = 0;
     while(1){
-        c = uart_async_recv();
+        c = uart_recv();
         if(c == '\r'){
             str[i] = '\0';
             break;

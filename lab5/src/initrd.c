@@ -5,6 +5,9 @@
 #include "mini_uart.h"
 #include "string.h"
 #include "c_utils.h"
+#include "thread.h"
+#include "exception.h"
+#include "timer.h"
 
 char *ramfs_base;
 char *ramfs_end;
@@ -167,9 +170,7 @@ void initrd_callback(unsigned int node_type, char *name, void *value, unsigned i
 }
 
 void initrd_exec_prog(char* target) {
-
-    char* target_addr = (char*) 0x20000;
-
+    void* target_addr;
     char *filepath;
     char *filedata;
     unsigned int filesize;
@@ -187,14 +188,16 @@ void initrd_exec_prog(char* target) {
         if (error)
         {
             // uart_printf("error\n");
-            uart_send_string("Error parsing cpio header\n");
+            uart_send_string("Error parsing cpio header123\n");
             break;
         }
         if (!strcmp(target, filepath))
         {
-            for (unsigned int i = 0; i < filesize; i++){
-                *target_addr++ = filedata[i];
-            }
+            uart_send_string("filesize: ");
+            uart_hex(filesize);
+            uart_send_string("\n");
+            target_addr = kmalloc(filesize);
+            memcpy(target_addr, filedata, filesize);
             break;
         }
         // uart_send_string("header_pointer: ");
@@ -206,15 +209,20 @@ void initrd_exec_prog(char* target) {
             return;
         }
     }
-    
-    unsigned long spsr_el1 = 0x3c0;
-    unsigned long elr_el1 = 0x20000;
-    unsigned long sp = (unsigned long)kmalloc(4096) + 4096;
-
-    // "r": Any general-purpose register, except sp.
+    uart_send_string("prog addr: ");
+    uart_hex(target_addr);
+    uart_send_string("\n");
+    thread_t* t = create_thread(target_addr);
+    unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
+    unsigned long elr_el1 = t -> callee_reg.lr;
+    unsigned long user_sp = t -> callee_reg.sp;
+    unsigned long kernel_sp = (unsigned long)t -> kernel_stack + T_STACK_SIZE;
+    // "r": Any general-purpose register, except sp
+    asm volatile("msr tpidr_el1, %0" : : "r" (t));
     asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
     asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
-    asm volatile("msr sp_el0, %0" : : "r" (sp));
-    asm volatile("eret");
-
+    asm volatile("msr sp_el0, %0" : : "r" (user_sp));
+    asm volatile("mov sp, %0" :: "r" (kernel_sp));
+    asm volatile("eret"); // jump to user program
+    return;
 }

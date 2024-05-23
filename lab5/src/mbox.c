@@ -2,9 +2,8 @@
 #include "mini_uart.h"
 
 
-void mailbox_call(unsigned int* mailbox){
-
-    unsigned int r = (((unsigned long) mailbox) & ~0xF) | 8;
+int mailbox_call(unsigned char ch, unsigned int* mailbox){
+    unsigned int r = (((unsigned long) mailbox) & ~0xF) | (ch & 0xf);
     // ~0xF is used to clear the last 4 bits of the address
     // 8 is used to set the last 4 bits to 8 (channel 8 is the mailbox channel)
 
@@ -20,7 +19,7 @@ void mailbox_call(unsigned int* mailbox){
         } // wait until the mailbox is not empty
 
         if(r == *MAILBOX_READ){
-            return;
+            return mailbox[1] == REQUEST_SUCCEED;
         }
     }
 }
@@ -37,7 +36,7 @@ void get_board_revision(){
     // tags end
     mailbox[6] = END_TAG;
 
-    mailbox_call(mailbox); // message passing procedure call, you should implement it following the 6 steps provided above.
+    mailbox_call((unsigned char)0x8, mailbox); // message passing procedure call, you should implement it following the 6 steps provided above.
 
     uart_send_string("Board revision: ");
     uart_hex(mailbox[5]);
@@ -56,7 +55,7 @@ void get_memory_info() {
     mailbox[6] = 0;                 // size in bytes
     mailbox[7] = END_TAG;           // end tag
     // tags end
-    mailbox_call(mailbox);
+    mailbox_call((unsigned char)0x8, mailbox);
     uart_send_string("ARM memory base address : ");
     uart_hex(mailbox[5]);
     uart_send_string("\n");
