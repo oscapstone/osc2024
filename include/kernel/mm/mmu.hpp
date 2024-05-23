@@ -72,6 +72,12 @@ enum class AP : uint64_t {
   USER_RO = 0b11,
 };
 
+enum class EntryKind : uint64_t {
+  INVALID = 0,
+  TABLE = 1,
+  ENTRY = 2,
+};
+
 struct PT_Entry {
   union {
     struct {
@@ -108,14 +114,12 @@ struct PT_Entry {
     return "unknown_AP";
   }
 
-  const char* typestr() const {
-    if (level == PTE_LEVEL)
-      return type == PD_TABLE ? "ENTRY" : "INVALID";
-    switch (type) {
-      case PD_TABLE:
+  const char* kindstr() const {
+    switch (kind()) {
+      case EntryKind::TABLE:
         return "TABLE";
-      case PD_BLOCK:
-        return "BLOCK";
+      case EntryKind::ENTRY:
+        return "ENTRY";
       default:
         return "INVALID";
     }
@@ -142,11 +146,19 @@ struct PT_Entry {
   bool isPTE() const {
     return level == PTE_LEVEL;
   }
+  EntryKind kind() const {
+    if (isInvalid())
+      return EntryKind::INVALID;
+    if (isPTE())
+      return type == PD_TABLE ? EntryKind::ENTRY : EntryKind::INVALID;
+    else
+      return type == PD_TABLE ? EntryKind::TABLE : EntryKind::ENTRY;
+  }
   bool isEntry() const {
-    return type == PD_BLOCK or (type == PD_TABLE and isPTE());
+    return kind() == EntryKind::ENTRY;
   }
   bool isTable() const {
-    return type == PD_TABLE and not isPTE();
+    return kind() == EntryKind::TABLE;
   }
 
   void* addr() const {

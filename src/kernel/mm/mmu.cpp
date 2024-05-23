@@ -12,7 +12,7 @@ void PT_Entry::print() const {
   if (AF)
     kprintf("AF ");
   kprintf("%s %02lb addr 0x%08lx Attr %d type %s %s\n", apstr(), Underlying(AP),
-          (uint64_t)addr(), AttrIdx, typestr(), levelstr());
+          (uint64_t)addr(), AttrIdx, kindstr(), levelstr());
 }
 
 void PT_Entry::alloc() {
