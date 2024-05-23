@@ -3,8 +3,8 @@
 
 #include "u_list.h"
 
-#define UART_IRQ_PRIORITY  1
-#define TIMER_IRQ_PRIORITY 0
+#define UART_IRQ_PRIORITY  0
+#define TIMER_IRQ_PRIORITY 1
 
 typedef struct irqtask
 {

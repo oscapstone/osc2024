@@ -48,14 +48,16 @@ void el1h_irq_router()
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IER_REG & 2)
+        //if (*AUX_MU_IER_REG & 2)
+        //else if (*AUX_MU_IER_REG & 1)
+        if (*AUX_MU_IIR_REG & (1 << 1))
         {
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
-        else if (*AUX_MU_IER_REG & 1)
+        else if (*AUX_MU_IIR_REG & (2 << 1))
         {
             *AUX_MU_IER_REG &= ~(1); // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
