@@ -148,6 +148,25 @@ void PT::print(const char* name, uint64_t start, int level) {
   kprintf("----------------------\n");
 }
 
+void* PT::translate_va(uint64_t va, uint64_t start, int level) {
+  uint64_t idx = (va - start) / ENTRY_SIZE[level];
+  auto nxt_start = start + idx * ENTRY_SIZE[level];
+  auto nxt_level = level + 1;
+
+  auto& entry = entries[idx];
+
+  if (false) {
+    kprintf("translate_va %s 0x%lx: 0x%lx -> ", PT_levelstr(level), start, va);
+    entry.print(level);
+    kprintf("\n");
+  }
+
+  if (entry.isEntry())
+    return entry.addr(va % ENTRY_SIZE[level]);
+
+  return entry.table()->translate_va(va, nxt_start, nxt_level);
+}
+
 void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   PT_Entry PMD_entry{
       .type = PD_BLOCK,

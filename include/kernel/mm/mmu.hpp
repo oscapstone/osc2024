@@ -176,8 +176,9 @@ struct PT_Entry {
     return kind() == EntryKind::TABLE;
   }
 
-  void* addr() const {
-    return (void*)(output_address * PAGE_SIZE);
+  template <typename T = uint64_t>
+  void* addr(T offset = 0) const {
+    return (void*)(output_address * PAGE_SIZE + (uint64_t)offset);
   }
   void set_addr(void* addr, uint64_t new_type) {
     asm volatile("" ::: "memory");
@@ -232,6 +233,14 @@ struct PT {
 
   void print(const char* name = "PageTable", uint64_t start = USER_SPACE,
              int level = PGD_LEVEL);
+
+  template <typename T, typename R = std::conditional_t<
+                            sizeof(T) == sizeof(void*), T, void*>>
+  R translate(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
+    return (R)translate_va((uint64_t)va, start, level);
+  }
+  void* translate_va(uint64_t va, uint64_t start = USER_SPACE,
+                     int level = PGD_LEVEL);
 };
 
 static_assert(sizeof(PT) == PAGE_SIZE);

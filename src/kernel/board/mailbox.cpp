@@ -6,7 +6,9 @@
 #include "thread.hpp"
 
 SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
-  mailbox_call(ch, mbox);
+  auto phy_mbox = current_thread()->el0_tlb->translate(mbox);
+  // kprintf("%p -> %p\n", mbox, phy_mbox);
+  mailbox_call(ch, phy_mbox);
 
   for (uint64_t offset = 0, size; offset < mbox->buf_size; offset += size) {
     auto idx = offset / sizeof(uint32_t);
@@ -25,8 +27,8 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
   return 1;  // TODO ???
 }
 
-void mailbox_call(uint8_t ch, MboxBuf* mailbox) {
-  uint32_t data = (((uint32_t)(unsigned long)mailbox) & ~0xf) | ch;
+void mailbox_call(uint8_t ch, MboxBuf* phy_mbox) {
+  uint32_t data = (((uint32_t)(unsigned long)phy_mbox) & ~0xf) | ch;
   while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_FULL) != 0)
     NOP;
   set32(pa2va(MAILBOX_WRITE), data);

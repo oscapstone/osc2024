@@ -30,7 +30,7 @@ struct __attribute__((aligned(0x10))) __attribute__((packed)) MboxBuf {
   volatile uint32_t buf[];
 };
 
-void mailbox_call(uint8_t ch, MboxBuf* mailbox);
+void mailbox_call(uint8_t ch, MboxBuf* phy_mbox);
 uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx);
 uint32_t get_board_revision();
 uint32_t get_arm_memory(int idx);
