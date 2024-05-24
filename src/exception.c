@@ -54,19 +54,17 @@ void exc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
         }
     }
     /* dump registers */
-    // printf(":\n ESR_EL1  %x ELR_EL1 %x\n", esr, elr);
-    // printf(" SPSR_EL1 %x FAR_EL1 %x\n", spsr, far);
     uart_puts(":\n  ESR_EL1 ");
-    // uart_hex(esr>>32);
+    uart_hex(esr>>32);
     uart_hex(esr);
     uart_puts(" ELR_EL1 ");
-    // uart_hex(elr>>32);
+    uart_hex(elr>>32);
     uart_hex(elr);
     uart_puts("\n SPSR_EL1 ");
-    // uart_hex(spsr>>32);
+    uart_hex(spsr>>32);
     uart_hex(spsr);
     uart_puts(" FAR_EL1 ");
-    // uart_hex(far>>32);
+    uart_hex(far>>32);
     uart_hex(far);
     uart_puts("\n");
 

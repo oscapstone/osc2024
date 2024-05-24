@@ -26,13 +26,15 @@ from_el2_to_el1:
 /* From el1 to el0 */
 .global move_to_user_mode
 move_to_user_mode:
-    mov x0, 0x70000
-    msr sp_el0, x0 // el1's sp will be 0x40000
+    mov x0, #0x70000
+    msr sp_el0, x0
 
     mov x1, #0x0 // same effect as `ldr x1, =0`
     msr spsr_el1, x1
 
-    msr elr_el1, lr
+    mov x1, lr
+    and x1, x1, #0xffffffffffff // clear the high 16 bits for virtual address
+    msr elr_el1, x1
 
     eret // return to EL0
 

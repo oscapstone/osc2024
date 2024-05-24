@@ -57,12 +57,15 @@ _start:
     /* Set up MAIR_EL1 */
     ldr     x0, =MAIR_CONFIG
     msr     mair_el1, x0
-    mov     sp, 0x70000 // Before jumping to C code, set the stack pointer to 0x3c000000
+
+    /* At this time, the sp is virtual address, set an proper physical address to setup page table. */
+    mov     sp, 0x80000
     bl      setup_page_table
 
     /* Enable MMU */
     mrs     x2, sctlr_el1
     orr     x2, x2, 1
+    bic     x2, x2, #(1 << 19) // clear WXN bit
     msr     sctlr_el1, x2 // enable MMU, cache remains disabled
 
     /* Then we have to set a proper stack pointer */

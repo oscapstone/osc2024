@@ -37,7 +37,7 @@ void task_init()
     update_current(&task_pool[0]);
     num_running_task = 1;
     // TODO: the task 0's stack are not in kstack_pool[0] and ustack_pool[0]. It is in the stack that start.S set up.
-    task_pool[0].tss.lr = (uint64_t) do_shell;
+    task_pool[0].tss.lr = (uint64_t) do_shell_user;
     task_pool[0].tss.sp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
     task_pool[0].tss.fp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
 }

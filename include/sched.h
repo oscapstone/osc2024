@@ -6,8 +6,6 @@
 #include "signal.h"
 
 #define NR_TASKS 16
-#define FIRST_TASK task_pool[0]
-#define LAST_TASK task_pool[NR_TASKS - 1]
 #define KSTACK_SIZE 4096
 #define KSTACK_TOP (KSTACK_SIZE)
 #define USTACK_SIZE 4096

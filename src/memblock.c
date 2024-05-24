@@ -278,7 +278,7 @@ void memblock_init(void)
     memblock_add_range(&memblock.memory, base, size);
 
     /* Reserve the kernel memory */
-    memblock_reserve(0, (unsigned long) &_end - 0);
+    memblock_reserve(0x0, (unsigned long) (&_end - 0) & 0xffffffff); // translate the kernel address to physical address
 
     /* Reserve the initrd memory (cpio). */
     initrd_reserve_memory();

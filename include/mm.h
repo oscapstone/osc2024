@@ -8,6 +8,7 @@
 
 /* For virtual memory usage */
 #define KERNEL_VADDR_BASE               (0xffff000000000000)
+
 /* Paging is configured by TCR. The following basic configuration is used in lab5 */
 #define TCR_T0SZ_48bit                  ((64 - 48) << 0)
 #define TCR_T1SZ_48bit                  ((64 - 48) << 16)
@@ -42,13 +43,21 @@
 #define PD_PAGE                         0b11
 #define PD_INVALID                      0b00
 
+/* Execute Never bits only for blocks */
+#define UXN                             (1UL << 54)
+#define PXN                             (1UL << 53)
+
 #define PD_ACCESS                       (1 << 10)
 
-#define BOOT_PGD_ATTR                   (PD_TABLE)
+/* Access Permission*/
+#define PD_AP_EL0                       (1UL << 6)
+#define PD_AP_READOLY                   (1UL << 7)
+
 #define DEVICE_BLOCK_ATTR               (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)
 #define NORMAL_BLOCK_ATTR               (PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_BLOCK)
 #define DEVICE_PAGE_ATTR                (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_PAGE)
 #define NORMAL_PAGE_ATTR                (PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_PAGE)
+#define TABLE_ENTRY                     (PD_TABLE)
 
 #ifndef MMIO_BASE
 #define MMIO_BASE               (0x3F000000)
