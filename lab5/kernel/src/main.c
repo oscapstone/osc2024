@@ -28,6 +28,8 @@ void putc(void *p, char c) {
 
 void func_task_a() {
 	shell();
+
+	task_exit();
 }
 
 void func_task_b() {
