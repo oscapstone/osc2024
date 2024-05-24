@@ -3,3 +3,4 @@
 *.elf
 */.vscode/
 lab5/kernel/screenlog.txt
+*/.vs
