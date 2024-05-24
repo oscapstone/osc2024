@@ -107,12 +107,14 @@ void cli_clear_cmd(char* buf, int length) {
 
 void cli_print_welcome_msg() {
     uart_puts("\r\n");
-    uart_puts("===========================================\r\n");
-    uart_puts("| * * * * * * * * * * * * * * * * * * * * |\r\n");
-    uart_puts("| * * (◍•ᴗ•◍)  OSC 2024 SHELL (◍•ᴗ•◍) * * |\r\n");
-    uart_puts("| * * * * * * * * * * * * * * * * * * * * |\r\n");
-    uart_puts("===========================================\r\n");                    
+    uart_puts("          __,.__                                 \r\n");
+    uart_puts("         /  ||  \\            _____     _        \r\n");
+    uart_puts("  ::::::| .-'`-. |::::::    |   __|_ _|_|___ ___ \r\n");
+    uart_puts("  :::::/.'  ||  `,\\:::::    |   __| | | | .'|   |\r\n");
+    uart_puts("  ::::/ |`--'`--'| \\::::    |_____|\\_/|_|__,|_|_|\r\n");                    
+    uart_puts("  :::/   \\`/++\' /   \\:::    https://github.com/chuangchen1019\r\n");
     uart_puts("\r\n");
+    uart_puts("  ---------------- May the Force be with you. ---------------\r\n\r\n");
 }
 
 void cmd_help() {
@@ -126,7 +128,7 @@ void cmd_help() {
     uart_puts("   ls                            - list all files in directory.\r\n");
     uart_puts("   dtb                           - show device tree.\r\n");
     uart_puts("   settimer                      - enable timer.\r\n");
-    uart_puts("   sleep         [sec]           - sleep with secs.\r\n");
+    uart_puts("   sleep         [msg][sec]      - sleep with message and secs.\r\n");
     uart_puts("   setalert2s    [msg]           - set 2s alert with message.\r\n");
     uart_puts("   malloc                        - test malloc function.\r\n");
     uart_puts("   reboot                        - reboot the device.\r\n");

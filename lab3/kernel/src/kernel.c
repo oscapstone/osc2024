@@ -24,11 +24,10 @@ void kernel_main(char* arg) {
 	el1_interrupt_enable();
 	
 	cli_print_welcome_msg();
-	uart_puts("[DTB loaded from: 0x%x]\r\n\r\n", arg);
 
 	while (1) {
 		cli_clear_cmd(input_buf, MAX_CMD_LEN);
-		uart_puts("LAB3(つ´ω`)つ@sh> ");
+		uart_puts("▬▬ι═══════- $ ");
 		cli_read_cmd(input_buf);
 		cli_exec_cmd(input_buf);
 	}
