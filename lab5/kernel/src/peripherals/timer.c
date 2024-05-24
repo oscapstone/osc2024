@@ -32,7 +32,10 @@ void core0_timer_enable() {
     utils_write_sysreg(cntp_tval_el0, freq * 30LL);
     
     
-    
+    // enable access in EL0 for lab5 (armv8 pg. 2177)
+    U64 timer_ctl_value = utils_read_sysreg(cntkctl_el1);
+    timer_ctl_value |= 1;
+    utils_write_sysreg(cntkctl_el1, timer_ctl_value);
     
     REGS_ARM_CORE->timer_control[0] = 2; // enable irq
 

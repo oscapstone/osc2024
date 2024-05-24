@@ -748,3 +748,14 @@ void mem_dereference(UPTR p_addr) {
         mem_manager.frames[frame_index + i].ref_count--;
     }
 }
+
+
+void memcpy(const void* src, void* dst, size_t size) {
+    char *_dst = dst;
+    const char *_src = src;
+
+    while (size--)
+    {
+        *_dst++ = *_src++;
+    }
+}

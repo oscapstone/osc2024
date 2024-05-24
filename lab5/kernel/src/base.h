@@ -1,6 +1,10 @@
 #ifndef BASE_H
 #define BASE_H
 
+#include <stddef.h>
+
+// static in C mean only for specific c file only can not access from other file using header (expect function pointer)
+
 typedef unsigned char               U8;
 typedef unsigned short              U16;
 typedef unsigned int                U32;
@@ -8,7 +12,6 @@ typedef unsigned long long          U64;
 
 typedef unsigned long long          pd_t;
 
-typedef unsigned long long          size_t;
 
 typedef volatile U32                REG32;
 
@@ -20,7 +23,6 @@ typedef char                        BOOL;
 #define TRUE    1
 #define FALSE   0
 
-#define NULL    0
 
 // because the c in aling in 32 bit, if you don't want your struct having padding
 // define this at the end of your struct

@@ -117,7 +117,13 @@ void task_run(TASK* task);
 TASK* task_create(const char* name, U32 flags);             // create kernel process
 TASK* task_create_user(const char* name, U32 flags);        // create user process
 void task_exit();
-void task_kill(TASK* task);
+/**
+ * @param exitcode
+ *      0  exit normally
+ *      -1 exit with error
+ *      -2 exit by killing
+*/
+int task_kill(pid_t pid, int exitcode);
 void task_kill_dead();
 
 /***

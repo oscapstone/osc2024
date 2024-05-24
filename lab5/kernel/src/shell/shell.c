@@ -10,6 +10,7 @@
 #include "mm/mm.h"
 #include "arm/elutils.h"
 #include "lib/fork.h"
+#include "fs/fs.h"
 
 extern char* _dtb_ptr;
 
@@ -131,28 +132,44 @@ void shell() {
 		} else if (utils_strncmp(cmd_space, "exe ", 4) == 0) {
 			char fileName[32];
 			U32 len = 0;
-			char s;
 			U32 iter = 4;
-			while ((s = cmd_space[iter]) == ' ') {
+			while (cmd_space[iter] == ' ') {
 				iter++;
 			}
-			while ((s = cmd_space[iter]) != '\0') {
+			while (cmd_space[iter] != '\0') {
 				fileName[len++] = cmd_space[iter++];
 			}
-			fileName[len] = '\0';
-			len--;
-			UPTR filePtr;	// file start pointer in cpio
-			unsigned long contentSize;
-			if (cpio_get(fileName, len, &filePtr, &contentSize)) {
-				printf("Program %s not found.\n", fileName);
+			fileName[--len] = '\0';
+
+			FS_FILE* file;
+			int ret = vfs_open(fileName, NULL, &file);
+			if (ret != 0) {
+				printf("Program %s not found. result = %d\n", fileName, ret);
 				continue;
 			}
-
+			unsigned long contentSize = file->vnode->content_size;
+			char* buf = kmalloc(file->vnode->content_size);
+			vfs_read(file, buf, contentSize);
+			vfs_close(file);
+			
 			printf("Executing %s\n", fileName);
 
 			TASK* user_task = task_create_user(fileName, NULL);
-			task_copy_program(user_task, filePtr, contentSize);
+			task_copy_program(user_task, buf, contentSize);
+			kfree(buf);
 			task_run_to_el0(user_task);
+
+
+			// if (cpio_get(fileName, len, &filePtr, &contentSize)) {
+			// 	printf("Program %s not found.\n", fileName);
+			// 	continue;
+			// }
+
+			// printf("Executing %s\n", fileName);
+
+			// TASK* user_task = task_create_user(fileName, NULL);
+			// task_copy_program(user_task, filePtr, contentSize);
+			// task_run_to_el0(user_task);
 
 			// TODO: wait task
 

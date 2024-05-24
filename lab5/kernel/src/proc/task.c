@@ -169,36 +169,14 @@ void task_to_user_func() {
 }
 
 void task_exit() {
-    lock_interrupt();
-    TASK* task = task_get_current_el1();
-    task->flags &= ~TASK_FLAGS_RUNNING;
-    task->flags |= TASK_FLAGS_DEAD;
-    U32 i = 0;
-    for(;i < task_manager->running;i++) {
-        if (task_manager->running_queue[i] == task)
-            break;
-    }
-    for (;i < task_manager->running; i++) {
-        if (task_manager->running_queue[i + 1] == NULL) {
-            task_manager->running_queue[i] = NULL;
-            break;
-        }
-        task_manager->running_queue[i] = task_manager->running_queue[i + 1];
-    }
-    task_manager->running--;
-    task_manager->dead_list[task_manager->dead_count++] = task;
-
-    // TODO: Signal the parent task to know by waiting
-
-    unlock_interrupt();
-    NS_DPRINT("[TASK][TRACE] task exited. pid = %d\n", task->pid);
-    task_schedule();
+    task_kill(task_get_current_el1()->pid, 0);
 }
 
-void task_kill(TASK* task) {
+int task_kill(pid_t pid, int exitcode) {
+    TASK* task = &task_manager->tasks[pid];
     if (!(task->flags & TASK_FLAGS_RUNNING)) {
         printf("[TASK][WARN] task does not run.\n");
-        return;
+        return -1;
     }
     lock_interrupt();
     task->flags &= ~TASK_FLAGS_RUNNING;
@@ -217,10 +195,15 @@ void task_kill(TASK* task) {
     }
     task_manager->running--;
     task_manager->dead_list[task_manager->dead_count++] = task;
+    
+    // TODO: Signal the parent task to know by waiting
+    // exitcode
+
     unlock_interrupt();
     NS_DPRINT("[TASK][TRACE] task killed. pid = %d\n", task->pid);
     if (task_get_current_el1() == task)
         task_schedule();
+    return 0;
 }
 
 void task_delete(TASK* task) {

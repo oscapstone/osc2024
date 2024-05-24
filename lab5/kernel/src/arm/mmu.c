@@ -156,7 +156,7 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
  *      the allocated page physical address
 */
 USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
-    NS_DPRINT("[MMU][DEBUG] mmu map page start, task[%d] v_addr: %lx, page: %x.\n", task->pid, v_addr, page);
+    NS_DPRINT("[MMU][DEBUG] mmu map page start, task[%d] v_addr: %x, page: %x.\n", task->pid, v_addr, page);
     U64 pte = mmu_get_pte(task, v_addr);
     mmu_map_table_entry((pd_t*)(pte + 0), v_addr, page, flags);
     U8 user_flags = 0;

@@ -6,14 +6,27 @@
 typedef void (*SYS_CALL) (TRAP_FRAME*);
 
 enum {
-    SYS_GETPID,
-    SYS_UART_READ,
-    SYS_UART_WRITE,
-    SYS_EXEC,
-    SYS_FORK,
-    SYS_EXIT,
+    SYS_GETPID,         // done
+    SYS_UART_READ,      // done
+    SYS_UART_WRITE,     // done
+    SYS_EXEC,           
+    SYS_FORK,           // done
+    SYS_EXIT,           // done
     SYS_MBOX_CALL,
-    SYS_KILL,
+    SYS_KILL,           // done
+    SYS_SIGNAL,         // 8
+    SYS_SIGKILL,        // 9
+    SYS_MMAP,           // 10
+    SYS_OPEN,
+    SYS_CLOSE,
+    SYS_WRITE,
+    SYS_READ,
+    SYS_MKDIR,
+    SYS_MOUNT,
+    SYS_CHDIR,
+    SYS_LSEEK64,
+    SYS_IOCTL,
+    SYS_SYNC,
     NR_SYSCALLS
 };
 

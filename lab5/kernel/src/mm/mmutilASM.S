@@ -8,16 +8,6 @@ memzero:
     b.gt    memzero
     ret
 
-// memcpy(void* src, void* dst, size_t size);
-.global memcpy
-memcpy:
-    ldr     x3, [x0], #8
-    str     x3, [x1], #8
-    sub     x2, x2, #8
-    cmp     x2, xzr
-    bgt     memcpy
-    ret
-
 // memset(void* src, U8 c, size_t size);
 .global memset
 memset:

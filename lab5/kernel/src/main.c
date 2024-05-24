@@ -12,9 +12,12 @@
 #include "proc/task.h"
 #include "lib/fork.h"
 #include "lib/getpid.h"
+#include "fs/fs.h"
 
 // in exception.S
 void set_exception_vector_table();
+// in shell.c
+void get_cpio_addr(int token, const char* name, const void *data, unsigned int size);
 
 void putc(void *p, char c) {
 	if (c == '\n') {
@@ -71,6 +74,12 @@ void main() {
 	timer_init();
 
 	task_init();
+
+	// getting CPIO addr
+	fdt_traverse(get_cpio_addr);
+
+	// initializing file system
+	fs_init();
 
 	// enabling the interrupt
 	enable_interrupt();
