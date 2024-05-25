@@ -88,14 +88,10 @@ from_el2_to_el1:
     mrs x0, elr_el1
     mrs x1, sp_el0
     stp x0, x1, [sp, 16*16]
-    mrs x0, esr_el1
-    stp x0, x0, [sp, 16*17]
 .endm
 
 // load general registers from stack
 .macro load_all
-    ldp x0, x1, [sp, 16*17]
-    msr esr_el1, x0
     ldp x0, x1, [sp, 16*16]
     msr elr_el1, x0
     msr sp_el0, x1

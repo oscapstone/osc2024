@@ -6,7 +6,6 @@
 typedef void (*timer_callback_t)(void *data);
 
 typedef struct timer {
-    struct timer *prev;
     struct timer *next;
     timer_callback_t callback;
     void *data;
@@ -20,6 +19,12 @@ void create_timer(
     void *data, 
     unsigned long long timeout
 );
-void add_timer(timer_t *timer);
+void create_timer_freq_shift(
+    timer_callback_t callback, 
+    void *data, 
+    unsigned long long shift
+);
+void add_timer(timer_t **timer);
+void schedule_task(void* data);
 
 #endif

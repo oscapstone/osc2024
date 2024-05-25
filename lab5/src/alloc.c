@@ -123,7 +123,7 @@ int size2chunkidx(unsigned long long size) {
 
 void init_page_arr() {
 	total_page = ((uint64_t)PAGE_END - (uint64_t)PAGE_BASE) / (uint64_t)PAGE_SIZE;
-	if(debug) {
+	if(0 && debug) {
 		uart_send_string("total_page: ");
 		uart_hex(total_page);
 		uart_send_string("\n");
@@ -171,7 +171,7 @@ void init_page_allocator() {
 void release(page* r_page) {
 	// if the page is already free
 	if(r_page -> val > 0) return;
-	if(debug) {
+	if(0 && debug) {
 		uart_send_string("release ");
 		page_info(r_page);
 		uart_send_string("\n");
@@ -199,7 +199,7 @@ void merge(page* m_page) {
 		}
 		page* a_page = &page_arr[a_idx];
 		page* b_page = &page_arr[b_idx];
-		if(debug) {
+		if(0 && debug) {
 			uart_send_string("merge ");
 			page_info(a_page);
 			uart_send_string(" and ");
@@ -221,7 +221,7 @@ void merge(page* m_page) {
 }
 
 page* truncate(page* t_page, int order) {
-	if(debug) {
+	if(0 && debug) {
 		uart_send_string("truncate ");
 		page_info(t_page);
 		uart_send_string(" to order ");
@@ -428,7 +428,7 @@ void memory_reserve(void* start, void* end) {
 
 void* page_alloc(unsigned long long size) {
 	int order = log2(align_page(size) / PAGE_SIZE);
-	if(debug) {
+	if(0 && debug) {
 		uart_send_string("Requesting ");
 		uart_hex(size);
 		uart_send_string(" bytes, order: ");
@@ -437,7 +437,7 @@ void* page_alloc(unsigned long long size) {
 	}
 	page* res_page = 0;
 	for(int i=order; i<=MAX_ORDER; i++) {
-		if(debug) {
+		if(0 && debug) {
 			uart_send_string("Checking free_list[");
 			uart_hex(i);
 			uart_send_string("] = ");
@@ -450,14 +450,14 @@ void* page_alloc(unsigned long long size) {
 		}
 	}
 	if(!res_page){
-		if(debug) {
+		if(0 && debug) {
 			uart_send_string("No enough memory\n");
 		}
 		return 0;
 	}
 	res_page = truncate(res_page, order);
 	res_page -> val = ALLOCATED;
-	if(debug) {
+	if(0 && debug) {
 		uart_send_string("Allocated ");
 		page_info(res_page);
 		uart_send_string("\n");
@@ -467,7 +467,7 @@ void* page_alloc(unsigned long long size) {
 
 void page_free(void* addr) {
 	int idx = ((unsigned long long)addr - (unsigned long long)PAGE_BASE) / PAGE_SIZE;
-	if(debug) {
+	if(0 && debug) {
 		uart_send_string("0x");
 		uart_hex((unsigned long long)addr);
 		uart_send_string(" -> ");
@@ -497,6 +497,7 @@ void* kmalloc(unsigned long long size) {
 
 void kfree(void* addr) {
 	if(!addr) return;
+	el1_interrupt_disable();
 	if(is_page(addr)) {
 		// uart_send_string("page addr release\n");
 		page_free(addr);
@@ -505,6 +506,7 @@ void kfree(void* addr) {
 		// uart_send_string("chunk addr release\n");
 		chunk_free(addr);
 	}
+	el1_interrupt_enable();
 }
 
 void *simple_malloc(unsigned long long size)

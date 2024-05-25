@@ -19,6 +19,7 @@ typedef struct trapframe_t {
 void el1_interrupt_enable();
 void el1_interrupt_disable();
 
+void core_timer_init();
 void core_timer_enable();
 void core_timer_disable();
 

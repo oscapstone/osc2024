@@ -83,7 +83,7 @@ int exec(const char* name, char *const argv[]) {
 int fork(trapframe_t* tf) {
     
     thread_t* parent_thread = get_current_thread();
-    thread_t* child_thread = create_thread(0);
+    thread_t* child_thread = create_fork_thread(0);
     
 
     uart_send_string("parent: ");
@@ -129,13 +129,19 @@ int fork(trapframe_t* tf) {
     unsigned long lr;
     asm volatile("mov %0, lr" : "=r" (lr));
 
-    uart_send_string("[INFO] child lr: ");
-    uart_hex(lr);
-    uart_send_string("\n");
+    // uart_send_string("[INFO] child lr: ");
+    // uart_hex(lr);
+    // uart_send_string("\n");
 
-    child_thread -> callee_reg.lr =lr;
+    child_thread -> callee_reg.lr = lr;
+
+
+
     if(get_current_thread() -> tid == child_thread -> tid) return 0;
-
+    // uart_send_string("[INFO] child tid: ");
+    // uart_hex(child_thread -> tid);
+    // uart_send_string("\n");
+    push_running(child_thread);
     tf -> x[0] = child_thread -> tid;
     return child_thread -> tid;
 }

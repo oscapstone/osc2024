@@ -3,6 +3,8 @@
 #include "mini_uart.h"
 #include "c_utils.h"
 #include "syscall.h"
+#include "timer.h"
+#include "shell.h"
 #include <stdint.h>
 
 // define three queues
@@ -12,6 +14,7 @@ thread_t* zombie_q_head  = 0;
 thread_t* idle_thread = 0;
 
 int cur_tid = 0;
+int cnt_ = 0;
 
 void push(thread_t** head, thread_t* t) {
     uart_send_string("push thread\n"); 
@@ -19,29 +22,31 @@ void push(thread_t** head, thread_t* t) {
     uart_send_string("\n");
     uart_hex(running_q_head->tid);
     uart_send_string("\n");
-    uart_hex((*head)->tid);
+    // uart_hex((*head)->tid);
+    el1_interrupt_disable();
     if(!(*head)) {
-        uart_send_string("first thread\n");
         t -> prev = t;
         t -> next = t;
         (*head) = t;
     } else {
-        uart_send_string("not first thread\n");
         t->prev = (*head)->prev;
-        uart_send_string("1\n");
         t->next = (*head);
-        uart_send_string("2\n");
-        print_queue(running_q_head);
         (*head)->prev->next = t;
-        uart_send_string("3\n");
         (*head)->prev = t;
-        uart_send_string("4\n");
     }
+    print_queue(running_q_head);
+
+    el1_interrupt_enable();
+}
+
+void push_running(thread_t* t) {
+    push(&running_q_head, t);
 }
 
 thread_t* pop(thread_t** head) {
     if(!(*head)) return 0;
     thread_t* res = (*head);
+    el1_interrupt_disable();
     if(res -> next == res){
         (*head) = 0;
     } else {
@@ -49,11 +54,12 @@ thread_t* pop(thread_t** head) {
         res -> next -> prev = res -> prev;
         (*head) = res -> next;
     }
-
+    el1_interrupt_enable();
     return res;
 }
 
 void pop_t(thread_t** head, thread_t* t) {
+    el1_interrupt_disable();
     if(!(*head)) return;
     if(t -> next == t){
         (*head) = 0;
@@ -61,6 +67,7 @@ void pop_t(thread_t** head, thread_t* t) {
         t -> prev -> next = t -> next;
         t -> next -> prev = t -> prev;
     }
+    el1_interrupt_enable();
 }
 
 void print_queue(thread_t* head) {
@@ -74,69 +81,67 @@ void print_queue(thread_t* head) {
     uart_send_string("]\n");
 }
 
+int is_more_than_two_thread() {
+    thread_t* cur = running_q_head;
+    int cnt = 0;
+    do {
+        cnt++;
+        cur = cur -> next;
+    } while(cur != running_q_head);
+    return cnt > 2;
+}
+
 void schedule() {
+    el1_interrupt_disable();
     thread_t* cur_thread = get_current_thread();
     // uart_send_string("[schedule] ");
     // uart_hex(cur_thread->tid);
+    // uart_send_string("-->");
+    // uart_hex(cur_thread->next->tid);
     // uart_send_string("\n");
-
     thread_t* next_thread;
     if(cur_thread -> state != TASK_RUNNING) {
         if(!running_q_head) return;
-        uart_send_string("not running\n");
+        // uart_send_string("not running\n");
         next_thread = running_q_head;
     } else {
         next_thread = cur_thread -> next;
     }
-    // uart_send_string("\n");
-    // print_queue(running_q_head);
-    // uart_send_string("\n[schedule]\n");
-
-    // asm volatile("mrs %0, cntfrq_el0" : "=r" (freq));
-    // uart_send_string("Timer frequency: ");
-    // uart_hex(freq);
-    // uart_send_string("\n");
-
-    // asm volatile("mrs %0, cntp_tval_el0" : "=r" (freq));
-    // uart_send_string("Timer value: ");
-    // uart_hex(freq);
-    // uart_send_string("\n");
-
-    // asm volatile("mrs %0, cntp_ctl_el0" : "=r" (freq));
-    // uart_send_string("Timer control: ");
-    // uart_hex(freq);
-    // uart_send_string("\n");
     if (next_thread && next_thread->tid != cur_thread->tid) {
-        uart_send_string("[schedule] Switching from tid ");
-        uart_hex(cur_thread->tid);
-        uart_send_string(" to tid ");
-        uart_hex(next_thread->tid);
-        uart_send_string("\n");
+        // uart_send_string("[schedule] Switching from tid ");
+        // uart_hex(cur_thread->tid);
+        // uart_send_string(" to tid ");
+        // uart_hex(next_thread->tid);
+        // uart_send_string("\n");
 
-        uart_send_string("Current SP: ");
-        uart_hex(cur_thread->callee_reg.sp);
-        uart_send_string("\n");
+        // uart_send_string("Current SP: ");
+        // uart_hex(cur_thread->callee_reg.sp);
+        // uart_send_string("\n");
 
-        uart_send_string("Next SP: ");
-        uart_hex(next_thread->callee_reg.sp);
-        uart_send_string("\n");
+        // uart_send_string("Next SP: ");
+        // uart_hex(next_thread->callee_reg.sp);
+        // uart_send_string("\n");
+
+        // // print current lr
+        // uart_send_string("current thread lr: ");
+        // uart_hex(cur_thread->callee_reg.lr);
+        // uart_send_string("\n");
+
+        // // print lr
+        // uart_send_string("next thread lr: ");
+        // uart_hex(next_thread->callee_reg.lr);
+        // uart_send_string("\n");
+        // uart_hex(cnt_++);
+        // uart_send_string("\n");
+
+        // uart_hex(next_thread);
         switch_to(cur_thread, next_thread);
     }
-    // switch to will switch to target thread by setting the lr 
-    // if(cur_thread -> state != TASK_RUNNING) {
-    //     uart_send_string("old sp: ");
-    //     uart_hex(cur_thread -> callee_reg.sp);
-    //     uart_send_string("\n");
-    //     uart_send_string("new sp: ");
-    //     uart_hex(running_q_head -> callee_reg.sp);
-    //     uart_send_string("\n");
-    //     switch_to(cur_thread, running_q_head);
-    // } else {
-    //     switch_to(cur_thread, cur_thread -> next);
-    // }
+    el1_interrupt_enable();
 }
 
 void kill_zombies() {
+    el1_interrupt_disable();
     while(zombie_q_head) {
         uart_send_string("<ZOMBIE>: ");
         print_queue(zombie_q_head);
@@ -148,6 +153,7 @@ void kill_zombies() {
         kfree(zombie->kernel_stack);
         kfree(zombie);
     }
+    el1_interrupt_enable();
 }
 
 thread_t* create_thread(void (*func)(void)) {
@@ -166,6 +172,20 @@ thread_t* create_thread(void (*func)(void)) {
         print_queue(running_q_head);
     push(&running_q_head, t);
     print_queue(running_q_head);
+    return t;
+}
+
+thread_t* create_fork_thread(void (*func)(void)) {
+    thread_t* t = (thread_t*)kmalloc(sizeof(thread_t));
+    t -> tid = cur_tid ++;
+    t -> state = TASK_RUNNING;
+    t -> callee_reg.lr = (unsigned long)func;
+    t -> user_stack = kmalloc(T_STACK_SIZE);
+    t -> kernel_stack = kmalloc(T_STACK_SIZE);
+    t -> callee_reg.sp = (unsigned long)(t->user_stack + T_STACK_SIZE);
+    t -> callee_reg.fp = t -> callee_reg.sp; // set fp to sp as the pointer that fixed
+    t -> prev = 0;
+    t -> next = 0;
     return t;
 }
 
@@ -211,9 +231,7 @@ void thread_exit() {
 void idle() {
     while(1) {
         kill_zombies();
-        // (running_q_head);
         schedule();
-        
     }
 }
 
@@ -246,7 +264,6 @@ void run_fork_test() {
     uart_hex(t->tid);
     uart_send_string("\n");
     uart_hex(t->callee_reg.sp);
-    // delay(1000000);
     for(int i=0;i<1000000;i++);
     asm volatile("msr spsr_el1, %0" ::"r"(0x3c0));         // disable E A I F
     asm volatile("msr elr_el1, %0" ::"r"(main_fork_test));       // get back to caller function

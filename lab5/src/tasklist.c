@@ -60,7 +60,7 @@ void execute_tasks() {
 }
 
 void execute_tasks_preemptive() {
-    // el1_interrupt_enable();
+    el1_interrupt_enable();
     while(task_head) {
         el1_interrupt_disable();
         task_t* new_task = task_head;

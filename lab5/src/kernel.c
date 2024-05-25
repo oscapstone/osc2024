@@ -6,6 +6,7 @@
 #include "c_utils.h"
 #include "exception.h"
 #include "thread.h"
+#include "timer.h"
 #include <stdint.h>
 
 #define TEST_SIZE 30
@@ -54,12 +55,21 @@ void main(char* base) {
 	alloc_init();
 	// demo_mm();
 	uart_send_string("mm finished\n");
-	thread_init();
 	uart_enable_interrupt();
+	core_timer_init();
 	core_timer_enable();
 	el1_interrupt_enable();
+	// create_timer(schedule_task, 0, 1);
+	thread_init();
 	// thread_test();
-	fork_test();
-	debug=0;
+	debug = 0;
+	// fork_test();
+	create_timer_freq_shift(schedule_task, 0, 5);
+	// create_thread(shell);
+
 	shell();
+
+
+
+	idle();
 }

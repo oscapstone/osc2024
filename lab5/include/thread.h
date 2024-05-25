@@ -48,12 +48,14 @@ extern thread_t* get_current_thread();
 
 // queue-related
 void push(thread_t** head, thread_t* t);
+void push_running(thread_t* t);
 thread_t* pop(thread_t** head); // pop front
 void pop_t(thread_t** head, thread_t* t); // pop given thread
 void print_queue(thread_t* head);
 
 void schedule();
 thread_t* create_thread(void (*func)(void));
+thread_t* create_fork_thread(void (*func)(void));
 thread_t* get_thread_from_tid(int tid);
 
 void kill_thread(int tid);
