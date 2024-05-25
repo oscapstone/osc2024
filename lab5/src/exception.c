@@ -8,6 +8,7 @@
 #include "syscall.h"
 #include "alloc.h"
 #include "thread.h"
+#include "reboot.h"
 
 extern timer_t *timer_head;
 
@@ -52,7 +53,7 @@ void exception_handler_c() {
 }
 
 void user_irq_exception_handler_c() {
-    // uart_send_string("User IRQ Exception Occurs!\n");
+    uart_send_string("User IRQ Exception Occurs!\n");
     el1_interrupt_disable();
     unsigned int irq = *IRQ_PENDING_1;
     unsigned int interrupt_source = *CORE0_INTERRUPT_SOURCE;
@@ -70,7 +71,7 @@ void user_irq_exception_handler_c() {
 }
 
 void irq_exception_handler_c(){
-    // uart_send_string("IRQ Exception Occurs!\n");
+    uart_send_string("IRQ Exception Occurs!\n");
     unsigned int irq = *IRQ_PENDING_1;
     unsigned int interrupt_source = *CORE0_INTERRUPT_SOURCE;
 
@@ -105,10 +106,12 @@ void user_exception_handler_c(trapframe_t* tf) {
             tf -> x[0] = exec((const char*)tf -> x[0], tf->x[1]);
             break;
         case 4:
-            // uart_send_string("[INFO] system call: fork\n");
-            // el1_interrupt_disable();
-            tf -> x[0] = fork(tf);
-            // el1_interrupt_enable();
+            uart_send_string("[INFO] system call: fork\n");
+            core_timer_disable();
+            el1_interrupt_disable();
+            fork(tf);
+            el1_interrupt_enable();
+            core_timer_enable();
             break;
         case 5:
             exit(0);
@@ -127,17 +130,11 @@ void user_exception_handler_c(trapframe_t* tf) {
 
 void irq_timer_exception(){
     // uart_send_string("enter timer\n");
-    el1_interrupt_disable();
     core_timer_disable();
     while(timer_head){
         unsigned long long current_time;
         asm volatile("mrs %0, cntpct_el0":"=r"(current_time));
         if(timer_head -> timeout <= current_time) {
-            // uart_send_string("timeout\n");
-            // uart_hex(timer_head -> timeout);
-            // uart_send_string("\n");
-            // uart_hex(current_time);
-            // uart_send_string("\n");
             timer_t *timer = timer_head;
             timer -> callback(timer -> data);
             timer_head = timer_head -> next;
@@ -156,8 +153,6 @@ void irq_timer_exception(){
         asm volatile("msr cntp_ctl_el0, %0" :: "r"(0));
     }
     core_timer_enable();
-    el1_interrupt_enable();
-
 }
 
 void user_irq_timer_exception(){

@@ -7,12 +7,12 @@
 #include "timer.h"
 #include "thread.h"
 #include "alloc.h"
+#include "exception.h"
 #include "thread.h"
 
 void shell(){
     uart_async_send_string("Welcome to OSC2024 shell!\n");
     while(1){
-        while(is_more_than_two_thread()){uart_send_string("wait\n");};
         uart_send_string("# ");
         char* str = kmalloc(100);
         uart_recv_command(str);
@@ -37,8 +37,9 @@ void shell(){
             uart_recv_command(file_name);
             uart_async_send_string("\n");
             initrd_exec_prog(file_name);
-            while(is_more_than_two_thread()){uart_send_string("wait\n");};
-        } else if (!strncmp(str, "setTimeout", 10)){
+        } else if (!strcmp(str, "run")){
+            initrd_run_syscall();
+        }  else if (!strncmp(str, "setTimeout", 10)){
             // str = setTimeout MESSAGE SECONDS
             // split the message and seconds into two char*
             // without using lib

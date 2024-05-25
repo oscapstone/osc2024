@@ -228,3 +228,81 @@ void initrd_exec_prog(char* target) {
     asm volatile("eret"); // jump to user program
     return;
 }
+
+void initrd_exec_syscall() {
+    void* target_addr;
+    char *filepath;
+    char *filedata;
+    unsigned int filesize;
+    char* target = "syscall.img";
+    // current pointer
+    cpio_t *header_pointer = (cpio_t *)(ramfs_base);
+    print_running();
+    // print every cpio pathname
+    while (header_pointer)
+    {
+        // uart_send_string("header_pointer: ");
+        // uart_hex((unsigned long)header_pointer);
+        // uart_send_string("\n");
+        int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
+        // if parse header error
+        if (error)
+        {
+            // uart_printf("error\n");
+            uart_send_string("Error parsing cpio header\n");
+            break;
+        }
+        if (!strcmp(target, filepath))
+        {
+            uart_send_string("filesize: ");
+            uart_hex(filesize);
+            uart_send_string("\n");
+            target_addr = kmalloc(filesize);
+            uart_send_string("copying\n");
+            memcpy(target_addr, filedata, filesize);
+            uart_send_string("copied\n");
+            break;
+        }
+        // uart_send_string("header_pointer: ");
+        // uart_hex((unsigned long)header_pointer);
+        // uart_send_string("\n");
+        // if this is not TRAILER!!! (last of file)
+        if (header_pointer == 0){
+            uart_send_string("Program not found\n");
+            return;
+        }
+    }
+    uart_send_string("prog addr: ");
+    uart_hex(target_addr);
+    uart_send_string("\n");
+    thread_t* t = get_current_thread();
+    uart_send_string("thread tid: ");
+    uart_hex(t -> tid);
+    uart_send_string("\n");
+
+    unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
+    unsigned long elr_el1 = target_addr;
+    unsigned long user_sp = t -> user_stack + T_STACK_SIZE;
+    unsigned long kernel_sp = (unsigned long)t -> kernel_stack + T_STACK_SIZE;
+    // unsigned long kernel_sp = (unsigned long)kmalloc(T_STACK_SIZE) + T_STACK_SIZE;
+    
+
+    // reset t call reg
+    t -> callee_reg.lr = target_addr;
+    // core_timer_enable();
+    // el1_interrupt_enable();
+    
+    asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
+    asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
+    asm volatile("msr sp_el0, %0" : : "r" (user_sp));
+    asm volatile("mov sp, %0" :: "r" (kernel_sp));
+    print_running();
+    asm volatile("eret"); // jump to user program
+    print_running();
+}
+
+void initrd_run_syscall() {
+    core_timer_disable();
+    int tid = create_thread(initrd_exec_syscall) -> tid;
+    thread_wait(tid);
+}

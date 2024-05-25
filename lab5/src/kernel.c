@@ -63,13 +63,8 @@ void main(char* base) {
 	thread_init();
 	// thread_test();
 	debug = 0;
-	// fork_test();
 	create_timer_freq_shift(schedule_task, 0, 5);
-	// create_thread(shell);
-
-	shell();
-
-
-
+	// fork_test();
+	create_thread(shell);
 	idle();
 }

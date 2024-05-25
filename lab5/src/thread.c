@@ -22,6 +22,8 @@ void push(thread_t** head, thread_t* t) {
     uart_send_string("\n");
     uart_hex(running_q_head->tid);
     uart_send_string("\n");
+    if(running_q_head)
+        print_queue(running_q_head);
     // uart_hex((*head)->tid);
     el1_interrupt_disable();
     if(!(*head)) {
@@ -35,8 +37,15 @@ void push(thread_t** head, thread_t* t) {
         (*head)->prev = t;
     }
     print_queue(running_q_head);
+}
 
-    el1_interrupt_enable();
+void print_running() {
+    if(running_q_head){
+        uart_send_string("running q head addr: ");
+        uart_hex(running_q_head);
+        uart_send_string("\n");
+        print_queue(running_q_head);
+    }
 }
 
 void push_running(thread_t* t) {
@@ -93,50 +102,25 @@ int is_more_than_two_thread() {
 
 void schedule() {
     el1_interrupt_disable();
-    thread_t* cur_thread = get_current_thread();
-    // uart_send_string("[schedule] ");
-    // uart_hex(cur_thread->tid);
-    // uart_send_string("-->");
-    // uart_hex(cur_thread->next->tid);
-    // uart_send_string("\n");
+    core_timer_disable();
+    thread_t* cur_thread = get_current_thread();  
     thread_t* next_thread;
     if(cur_thread -> state != TASK_RUNNING) {
         if(!running_q_head) return;
-        // uart_send_string("not running\n");
         next_thread = running_q_head;
     } else {
         next_thread = cur_thread -> next;
     }
     if (next_thread && next_thread->tid != cur_thread->tid) {
-        // uart_send_string("[schedule] Switching from tid ");
-        // uart_hex(cur_thread->tid);
-        // uart_send_string(" to tid ");
-        // uart_hex(next_thread->tid);
-        // uart_send_string("\n");
-
-        // uart_send_string("Current SP: ");
-        // uart_hex(cur_thread->callee_reg.sp);
-        // uart_send_string("\n");
-
-        // uart_send_string("Next SP: ");
-        // uart_hex(next_thread->callee_reg.sp);
-        // uart_send_string("\n");
-
-        // // print current lr
-        // uart_send_string("current thread lr: ");
-        // uart_hex(cur_thread->callee_reg.lr);
-        // uart_send_string("\n");
-
-        // // print lr
-        // uart_send_string("next thread lr: ");
-        // uart_hex(next_thread->callee_reg.lr);
-        // uart_send_string("\n");
-        // uart_hex(cnt_++);
-        // uart_send_string("\n");
-
-        // uart_hex(next_thread);
+        // 
+        uart_send_string("[SCHEDULE] Switching from ");
+        uart_hex(cur_thread->tid);
+        uart_send_string(" to ");
+        uart_hex(next_thread->tid);
+        uart_send_string("\n");
         switch_to(cur_thread, next_thread);
     }
+    core_timer_enable();
     el1_interrupt_enable();
 }
 
@@ -167,6 +151,7 @@ thread_t* create_thread(void (*func)(void)) {
     t -> callee_reg.fp = t -> callee_reg.sp; // set fp to sp as the pointer that fixed
     t -> prev = 0;
     t -> next = 0;
+    // TODO: pass data into function
     uart_send_string("creating thread\n");
     if(running_q_head)
         print_queue(running_q_head);
@@ -175,11 +160,11 @@ thread_t* create_thread(void (*func)(void)) {
     return t;
 }
 
-thread_t* create_fork_thread(void (*func)(void)) {
+thread_t* create_fork_thread() {
     thread_t* t = (thread_t*)kmalloc(sizeof(thread_t));
     t -> tid = cur_tid ++;
     t -> state = TASK_RUNNING;
-    t -> callee_reg.lr = (unsigned long)func;
+    t -> callee_reg.lr = 0;
     t -> user_stack = kmalloc(T_STACK_SIZE);
     t -> kernel_stack = kmalloc(T_STACK_SIZE);
     t -> callee_reg.sp = (unsigned long)(t->user_stack + T_STACK_SIZE);
@@ -221,11 +206,38 @@ void thread_init() {
 
 void thread_exit() {
     thread_t* cur = get_current_thread();
+    uart_send_string("[EXIT] tid=");
+    uart_hex(cur->tid);
+    uart_send_string("\n");
     cur -> state = TASK_ZOMBIE;
     running_q_head = cur -> next;
     pop_t(&running_q_head, cur);
     push(&zombie_q_head, cur);
     schedule();
+}
+
+void thread_wait(int tid) {
+    thread_t* cur = running_q_head;
+    
+    while(1) {
+        el1_interrupt_disable();
+        int running = 0;
+        thread_t* cur = running_q_head;
+        do {
+            if(cur -> tid == tid){
+                running = 1;
+                break;
+            }
+            cur = cur -> next;
+        } while(cur != running_q_head);
+        if(running) {
+            schedule();
+        } else {
+            break;
+        }
+        el1_interrupt_enable();
+    }
+    el1_interrupt_enable();
 }
 
 void idle() {

@@ -2,7 +2,9 @@
 #define _THREAD_H
 
 
-#define T_STACK_SIZE (0x1000) // 2^12 = 4096 = 4KB = 1 page
+#define T_STACK_SIZE (2 * 0x1000) // 2^12 = 4096 = 4KB = 1 page
+
+#include <stdint.h>
 
 typedef enum thread_state {
     TASK_RUNNING,
@@ -12,19 +14,19 @@ typedef enum thread_state {
 
 // for callee-saved registers
 typedef struct callee_reg_t {
-    unsigned long x19;
-    unsigned long x20;
-    unsigned long x21;
-    unsigned long x22;
-    unsigned long x23;
-    unsigned long x24;
-    unsigned long x25;
-    unsigned long x26;
-    unsigned long x27;
-    unsigned long x28;
-    unsigned long fp;
-    unsigned long lr;
-    unsigned long sp;
+    uint64_t x19;
+    uint64_t x20;
+    uint64_t x21;
+    uint64_t x22;
+    uint64_t x23;
+    uint64_t x24;
+    uint64_t x25;
+    uint64_t x26;
+    uint64_t x27;
+    uint64_t x28;
+    uint64_t fp;
+    uint64_t lr;
+    uint64_t sp;
 } callee_reg_t;
 
 typedef struct thread_t {
@@ -34,6 +36,8 @@ typedef struct thread_t {
     thread_state state;
     void* user_stack;
     void* kernel_stack;
+    void* data;
+    void* data_size;
 
     // use in queue
     struct thread_t *prev;
@@ -52,10 +56,11 @@ void push_running(thread_t* t);
 thread_t* pop(thread_t** head); // pop front
 void pop_t(thread_t** head, thread_t* t); // pop given thread
 void print_queue(thread_t* head);
+void print_running();
 
 void schedule();
 thread_t* create_thread(void (*func)(void));
-thread_t* create_fork_thread(void (*func)(void));
+thread_t* create_fork_thread();
 thread_t* get_thread_from_tid(int tid);
 
 void kill_thread(int tid);
@@ -63,7 +68,7 @@ void kill_zombies();
 
 void thread_init();
 void thread_exit();
-
+void thread_wait(int tid);
 
 void idle(); // function for idle thread
 void foo();

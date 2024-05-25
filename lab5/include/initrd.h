@@ -33,5 +33,7 @@ void initrd_list();
 void initrd_cat(const char *target);
 void initrd_callback(unsigned int node_type, char *name, void *value, unsigned int name_size);
 void initrd_exec_prog(char* target);
-
+void initrd_exec_syscall();
+void initrd_run_syscall();
+void exec_user_prog ();
 #endif // INITRD_H
