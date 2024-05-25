@@ -53,7 +53,7 @@ void exception_handler_c() {
 }
 
 void user_irq_exception_handler_c() {
-    uart_send_string("User IRQ Exception Occurs!\n");
+    // uart_send_string("User IRQ Exception Occurs!\n");
     el1_interrupt_disable();
     unsigned int irq = *IRQ_PENDING_1;
     unsigned int interrupt_source = *CORE0_INTERRUPT_SOURCE;
@@ -71,7 +71,7 @@ void user_irq_exception_handler_c() {
 }
 
 void irq_exception_handler_c(){
-    uart_send_string("IRQ Exception Occurs!\n");
+    // uart_send_string("IRQ Exception Occurs!\n");
     unsigned int irq = *IRQ_PENDING_1;
     unsigned int interrupt_source = *CORE0_INTERRUPT_SOURCE;
 

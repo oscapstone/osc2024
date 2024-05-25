@@ -50,10 +50,10 @@ void execute_tasks() {
         task_t* cur = task_head;
         cur -> callback();
         task_head = cur->next;
-        kfree(cur);
         if(task_head) {
             task_head -> prev = 0;
         }
+        kfree(cur);
         el1_interrupt_enable();
     }
     // el1_interrupt_enable();

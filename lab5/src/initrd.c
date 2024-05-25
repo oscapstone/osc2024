@@ -237,7 +237,7 @@ void initrd_exec_syscall() {
     char* target = "syscall.img";
     // current pointer
     cpio_t *header_pointer = (cpio_t *)(ramfs_base);
-    print_running();
+    // print_running();
     // print every cpio pathname
     while (header_pointer)
     {
@@ -258,9 +258,9 @@ void initrd_exec_syscall() {
             uart_hex(filesize);
             uart_send_string("\n");
             target_addr = kmalloc(filesize);
-            uart_send_string("copying\n");
+            uart_send_string("Copying user program\n");
             memcpy(target_addr, filedata, filesize);
-            uart_send_string("copied\n");
+            uart_send_string("Finished\n");
             break;
         }
         // uart_send_string("header_pointer: ");
@@ -296,9 +296,9 @@ void initrd_exec_syscall() {
     asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
     asm volatile("msr sp_el0, %0" : : "r" (user_sp));
     asm volatile("mov sp, %0" :: "r" (kernel_sp));
-    print_running();
+    // print_running();
     asm volatile("eret"); // jump to user program
-    print_running();
+    // print_running();
 }
 
 void initrd_run_syscall() {

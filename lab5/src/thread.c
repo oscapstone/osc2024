@@ -5,6 +5,7 @@
 #include "syscall.h"
 #include "timer.h"
 #include "shell.h"
+#include "alloc.h"
 #include <stdint.h>
 
 // define three queues
@@ -17,13 +18,13 @@ int cur_tid = 0;
 int cnt_ = 0;
 
 void push(thread_t** head, thread_t* t) {
-    uart_send_string("push thread\n"); 
-    uart_hex(t->tid);
-    uart_send_string("\n");
-    uart_hex(running_q_head->tid);
-    uart_send_string("\n");
-    if(running_q_head)
-        print_queue(running_q_head);
+    // uart_send_string("push thread\n"); 
+    // uart_hex(t->tid);
+    // uart_send_string("\n");
+    // uart_hex(running_q_head->tid);
+    // uart_send_string("\n");
+    // if(running_q_head)
+    //     print_queue(running_q_head);
     // uart_hex((*head)->tid);
     el1_interrupt_disable();
     if(!(*head)) {
@@ -36,7 +37,7 @@ void push(thread_t** head, thread_t* t) {
         (*head)->prev->next = t;
         (*head)->prev = t;
     }
-    print_queue(running_q_head);
+    // print_queue(running_q_head);
 }
 
 void print_running() {
@@ -45,6 +46,7 @@ void print_running() {
         uart_hex(running_q_head);
         uart_send_string("\n");
         print_queue(running_q_head);
+        page_info_addr(running_q_head);
     }
 }
 
@@ -113,11 +115,11 @@ void schedule() {
     }
     if (next_thread && next_thread->tid != cur_thread->tid) {
         // 
-        uart_send_string("[SCHEDULE] Switching from ");
-        uart_hex(cur_thread->tid);
-        uart_send_string(" to ");
-        uart_hex(next_thread->tid);
-        uart_send_string("\n");
+        // uart_send_string("[SCHEDULE] Switching from ");
+        // uart_hex(cur_thread->tid);
+        // uart_send_string(" to ");
+        // uart_hex(next_thread->tid);
+        // uart_send_string("\n");
         switch_to(cur_thread, next_thread);
     }
     core_timer_enable();
@@ -153,8 +155,8 @@ thread_t* create_thread(void (*func)(void)) {
     t -> next = 0;
     // TODO: pass data into function
     uart_send_string("creating thread\n");
-    if(running_q_head)
-        print_queue(running_q_head);
+    // if(running_q_head)
+        // print_queue(running_q_head);
     push(&running_q_head, t);
     print_queue(running_q_head);
     return t;
