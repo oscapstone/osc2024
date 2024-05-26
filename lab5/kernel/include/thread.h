@@ -7,6 +7,7 @@ typedef struct thread {
 	void* lr;
 	void* sp;
 	void* stack_start;
+	void* kstack_start;
 	int state, id;
 	struct thread* next;
 	struct thread* prev;

@@ -6,6 +6,7 @@ typedef struct trapframe_t{
 	// x[31] is empty
 	unsigned long long spsr_el1;
 	unsigned long long elr_el1;
+	unsigned long long sp_el0;
 } trapframe_t;
 // basically all the shits stored by save_all
 

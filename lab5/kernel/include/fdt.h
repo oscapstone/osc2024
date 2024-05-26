@@ -105,7 +105,7 @@ static inline uint32_t fdt32_ld(const fdt32_t *p)
 typedef uint32_t (*fdt_callback)(int type, char *name, char *data, uint32_t size);
 uint32_t print_dtb(int type, char *name, char *data, uint32_t size) ;
 uint32_t get_initramfs_addr(int type, char *name, char *data, uint32_t size);
-uint32_t fdt_traverse(fdt_callback cb, char* dtb_ptr);
+uint32_t fdt_traverse(fdt_callback cb);
 
 int get_fdt_end();
 

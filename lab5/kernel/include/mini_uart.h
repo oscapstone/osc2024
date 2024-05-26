@@ -14,8 +14,8 @@ void uart_send_num(int64_t, int, int);
 
 void uart_irq_on();
 void uart_irq_off();
-void uart_irq_send(char*);
-void uart_irq_read(char*);
+void uart_irq_send(char*, int);
+char uart_irq_read();
 
 void change_read_irq(int);
 void change_write_irq(int);

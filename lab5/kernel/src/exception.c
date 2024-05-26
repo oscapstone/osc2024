@@ -77,7 +77,7 @@ void core_timer_entry() {
 }
 
 void simple_core_timer_entry() {
-	irq(0);
+	// irq closed before getting in
     unsigned long long cur_cnt, cnt_freq;
 
     asm volatile(
@@ -85,14 +85,12 @@ void simple_core_timer_entry() {
         "mrs %[var2], cntfrq_el0;"
         :[var1] "=r" (cur_cnt), [var2] "=r" (cnt_freq)
     );
-	uart_printf ("Now is %d\r\n", cur_cnt / cnt_freq);
-
+	// uart_printf ("now is %d\r\n", cur_cnt / cnt_freq);
 	asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq));
-	unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
-	*address = 2;
+	// unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
+	// *address = 2;
 
-	irq(1);
-	schedule(1);
+	schedule();
 	// uart_printf ("I'm back\r\n");
 }
 
@@ -107,21 +105,26 @@ void c_general_irq_handler(){
 
         unsigned int irq_status = mmio_read((long)AUX_MU_IIR_REG);
         if(irq_status & 0x4){
-			change_read_irq(0);
-			create_task(recv_handler, 5);
+			// uart_printf ("[DEBUG] irq read\r\n");
+			// change_read_irq(0);
+			// create_task(recv_handler, 5);
+			recv_handler();
         }
         else if(irq_status & 0x2){
-			change_write_irq(0);
-			create_task(write_handler, 5);
+			// uart_printf ("[DEBUG] irq write\r\n");
+			// change_write_irq(0);
+			// create_task(write_handler, 5);
+			write_handler();
 		}
     }
 	else if (cpu_irq_src & (0x1 << 1)) {
-		unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
-		*address = 0;
-		create_task(simple_core_timer_entry, 5);
+		// unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
+		// *address = 0;
+		// create_task(simple_core_timer_entry, 5);
+		simple_core_timer_entry();
 	}
 	irq(1);
-	execute_tasks();
+	// execute_tasks();
 }
 
 void c_undefined_exception() {
@@ -130,14 +133,18 @@ void c_undefined_exception() {
 }
 
 void c_system_call_handler(trapframe_t* tf) {
+	irq(0);
 	int id = tf -> x[8];
+	// uart_printf ("having exception of id %d\r\n", id);
 	if (id == 0) {
 		tf -> x[0] = do_getpid();
 	}
 	else if (id == 1) {
+		irq(1);
 		tf -> x[0] = do_uart_read(tf -> x[0], tf -> x[1]);
 	}
 	else if (id == 2) {
+		irq(1);
 		tf -> x[0] = do_uart_write(tf -> x[0], tf -> x[1]);
 	}
 	else if (id == 3) {
@@ -150,9 +157,16 @@ void c_system_call_handler(trapframe_t* tf) {
 		do_exit();
 	}
 	else if (id == 6) {
+		uart_printf ("mailboxing\r\n");
 		tf -> x[0] = do_mbox_call(tf -> x[0], tf -> x[1]);
 	}
 	else if (id == 7) {
 		do_kill(tf -> x[0]);	
 	}
+	else {
+		uart_printf ("This is unexpected systemcall, proc hang\r\n");
+		while (1);
+	}
+	// uart_printf ("Exception ended with return value = %d\r\n", tf -> x[0]);
+	irq(1);
 }

@@ -195,9 +195,11 @@ void uart_init ( void )
 void irq(int d) {
 	if (d) {
 		asm volatile ("msr DAIFclr, 0xf");
+		// uart_printf ("IRQ is on\r\n");
 	}
 	else {
 		asm volatile ("msr DAIFset, 0xf");
+		// uart_printf ("IRQ is off\r\n");
 	}
 }
 
@@ -229,28 +231,36 @@ void uart_irq_off(){
 	*Disable_IRQs_1     |=   (1<<29);
 }
 
-void uart_irq_send(char* str) {
-	for (int i = 0; str[i] != '\0'; i ++) {
-		write_buffer[write_tail ++] = str[i];
+void uart_irq_send(char* c, int siz) {
+	for (int i = 0; i < siz; i ++) {
+		if (c[i] == 0) continue;
+		write_buffer[write_tail ++] = c[i];
 	}
-	change_write_irq(1);
-}
-
-void uart_irq_read(char* str) {
-	int ind = 0;
-	while (recv_ind < recv_tail) {
-		str[ind ++] = recv_buffer[recv_ind ++];
+	if (write_tail > write_ind) {
+		change_write_irq(1);
 	}
 }
 
+char uart_irq_read() {
+	// uart_printf ("%d, %d\r\n", recv_ind, recv_tail);
+	if (recv_ind >= recv_tail) {
+		return 0;
+	}
+	else {
+		return recv_buffer[recv_ind ++];
+	}
+}
 void write_handler(){
+	change_write_irq(0);
 	irq(0);	
 
     while(write_ind != write_tail){
 		char c = write_buffer[write_ind++];
+		while (!(*AUX_MU_LSR_REG & (1 << 5))) {
+			asm volatile ( "nop;" );
+		}
 		*AUX_MU_IO_REG = (unsigned int)c;
 	}
-
 	irq(1);	
 }
 
@@ -258,11 +268,13 @@ void recv_handler(){
 
 	irq(0);	
 
-	char c = (char)(*AUX_MU_IO_REG);
-	if (c != 0) {
-	    recv_buffer[recv_tail ++] = c;
+	while ((*AUX_MU_LSR_REG & 1)) {
+		char c = (char)(*AUX_MU_IO_REG);
+		if (c != 0) {
+			recv_buffer[recv_tail ++] = c;
+		}
 	}
-	change_read_irq(1);
+	// change_read_irq(1);
 
 	irq(1);	
 }

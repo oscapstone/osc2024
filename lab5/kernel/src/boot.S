@@ -44,24 +44,14 @@ master:
 from_el2_to_el1:
   mov x0, (1 << 31)
   msr hcr_el2, x0
-  mov x0, 0x3c5
+  mov x0, 5 
   msr spsr_el2, x0
   msr elr_el2, lr
   eret
 
-/*
-from_el1_to_el0:
-  mov x0, 0x340 
-  msr spsr_el1, x0
-  ldr x0, =0x100000
-  msr sp_el0, x0
-  msr elr_el1, lr
-  eret
- */
-
 // save general registers to stack
 .macro save_all
-    sub sp, sp, 32 * 9
+    sub sp, sp, 32 * 10 
     stp x0, x1, [sp ,16 * 0]
     stp x2, x3, [sp ,16 * 1]
     stp x4, x5, [sp ,16 * 2]
@@ -83,6 +73,8 @@ from_el1_to_el0:
 	mrs x0, SPSR_EL1
 	mrs x1, ELR_EL1
 	stp x0, x1, [sp, 16 * 16]
+	mrs x0, sp_el0
+	str x0, [sp, 16 * 17]
 	// nested shit
 
 .endm
@@ -92,6 +84,8 @@ from_el1_to_el0:
 	ldp x0, x1,  [sp, 16 * 16]
 	msr SPSR_EL1, x0
 	msr ELR_EL1,  x1
+	ldr x0, [sp, 16 * 17]
+	msr sp_el0, x0
     
 	ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
@@ -110,17 +104,8 @@ from_el1_to_el0:
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
 
-    add sp, sp, 32 * 9 
+    add sp, sp, 32 * 10
 .endm
-
-.macro irq_on
-	msr DAIFclr, 0xf
-.endm
-
-.macro irq_off
-	msr DAIFset, 0xf
-.endm
-
 
 exception_handler:
   save_all
@@ -242,8 +227,6 @@ switch_to:
     ldr x9, [x1, 16 * 6]
     mov sp,  x9
     msr tpidr_el1, x1
-	
-	irq_on
 
     ret
 
@@ -254,8 +237,6 @@ get_current:
 
 .global ret_from_fork_child
 ret_from_fork_child:
-	add sp, sp, 16 * 3 
-	// I believe thread_func_handler sub the sp for 16 * 3 
 	load_all
-	// bl get_elr_el1
+	msr DAIFclr, 0xf
 	eret

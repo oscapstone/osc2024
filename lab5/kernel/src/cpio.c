@@ -4,6 +4,7 @@
 #include "mini_uart.h"
 #include "helper.h"
 #include "alloc.h"
+#include "thread.h"
 
 extern char* _cpio_file;
 char buff[1024];
@@ -103,6 +104,7 @@ void cpio_parse_cat(char* name) {
         }
 
 		if (same(buff, name)) {
+			uart_printf ("Cat %d\r\n", filesize);
 			substr(buff, filedata, 0, filesize - 1);
 			uart_printf("%s\r\n", buff);
 		}
@@ -115,14 +117,42 @@ void cpio_parse_cat(char* name) {
     }
 }
 
+extern thread* get_current();
+
 void cpio_load(char* str) {
+	irq(0);
+	/*
+	void* t = my_malloc (4096);
+	stack += 4096 - 16;
+	*/
 	void* pos = cpio_find(str); 
-	void* stack = my_malloc(4096);
-	stack += 4096 - 1;
-	void* code = my_malloc(4096);
-	strcpy(pos, code, 4096);
+	void* code = my_malloc(4096 * 64);
+	strcpy(pos, code, 4096 * 64);
+
+	thread_init();
+
+	void* stack = get_current() -> stack_start + 4096 - 16;
+	void* el1_sp = get_current() -> sp;
+		
+	uart_printf("Running code from %x...\n", code);
+
+	// uart_irq_on();
+
+	/*
+	uart_irq_send ("fuck me\r\n", 9);
 	
-	uart_printf("Running code from %x...\n", pos);
+	char buf[1];
+			
+	while (1) {
+		buf[0] = uart_irq_read();
+		if (buf[0]) {
+			uart_irq_send(buf, 1);
+		}
+		delay(1e7);
+		uart_irq_send ("fuck me\r\n", 9);
+	}
+	*/
+
 	asm volatile(
 		"mov x1, 0;"
 		"msr spsr_el1, x1;"
@@ -130,10 +160,12 @@ void cpio_load(char* str) {
 		"mov x2, %[sp];"
 		"msr elr_el1, x1;"
 		"msr sp_el0, x2;"
+		"msr DAIFclr, 0xf;"
+		"mov sp, %[sp_el1];"
 		"eret;"
 		:
-		: [code] "r" (code), [sp] "r" (stack)
-		: "x1", "x2"
+		: [code] "r" (code), [sp] "r" (stack), [sp_el1] "r" (el1_sp)
+		: "x1", "x2", "sp"
 	);
 }
 

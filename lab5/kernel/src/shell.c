@@ -45,16 +45,17 @@ void handle_timeout() {
 void async_test() {
 	uart_irq_on();
 
-	uart_irq_send("Test\r\n\0");
+	uart_irq_send("Test\n", 5);
 
 	int t = 100000000;
 	while (t --); 
 
-	char* str = simple_malloc(100, sizeof(char));
-	uart_irq_read(str);
-
-	t = 10000000;
-	while (t --);
+	char* str = my_malloc(512);
+	int len;
+	for (len = 0; ; len ++) {
+		str[len] = uart_irq_read();
+		if (str[len] == 0) break;
+	}
 	
 	uart_irq_off();
 	uart_printf("%s, End\n", str);
@@ -136,47 +137,47 @@ void shell_begin(char* fdt)
 			help();
 		}
 		else if (same(buf, "async")) {
-			async_test();
-		}
-		else if(same(buf, "initramd")) {
-			fdt_traverse(get_initramfs_addr, fdt);
-		}
-		else if (same(buf, "ls")) {
-			cpio_parse_ls();
-		}
-		else if (same(buf, "cat")) {
-			uart_printf("Filename: ");
-			uart_recv_string(buf);
-			uart_printf("\n");
-			cpio_parse_cat(buf);
-		}
-		else if (same(buf, "dtb")) {
-			fdt_traverse(print_dtb, fdt);
-		}
-		else if(same(buf, "revision")) {
-			unsigned int rev = get_board_revision();
-			if (rev) {
-				uart_printf("%x", rev);
+				async_test();
 			}
-			else {
-				uart_printf("Failed to get board revision\n");
+			else if(same(buf, "initramd")) {
+				fdt_traverse(get_initramfs_addr);
 			}
-		}
-		else if(same(buf, "memory")) {
-			unsigned int arr[2];
-			arr[0] = arr[1] = 0;
-			if(!get_arm_memory(arr)) {
-				uart_printf("Your ARM memory address base is: %x", arr[0]);
-				uart_printf("Your ARM memory size is: %x", arr[1]);
+			else if (same(buf, "ls")) {
+				cpio_parse_ls();
 			}
-			else {
-				uart_printf("Failed getting ARM memory info\n");
+			else if (same(buf, "cat")) {
+				uart_printf("Filename: ");
+				uart_recv_string(buf);
+				uart_printf("\n");
+				cpio_parse_cat(buf);
 			}
-		}
-		else if (same(buf, "reboot")) {
-			uart_printf("Rebooting\n");
-			reset(100);
-		}
+			else if (same(buf, "dtb")) {
+				fdt_traverse(print_dtb);
+			}
+			else if(same(buf, "revision")) {
+				unsigned int rev = get_board_revision();
+				if (rev) {
+					uart_printf("%x", rev);
+				}
+				else {
+					uart_printf("Failed to get board revision\n");
+				}
+			}
+			else if(same(buf, "memory")) {
+				unsigned int arr[2];
+				arr[0] = arr[1] = 0;
+				if(!get_arm_memory(arr)) {
+					uart_printf("Your ARM memory address base is: %x", arr[0]);
+					uart_printf("Your ARM memory size is: %x", arr[1]);
+				}
+				else {
+					uart_printf("Failed getting ARM memory info\n");
+				}
+			}
+			else if (same(buf, "reboot")) {
+				uart_printf("Rebooting\n");
+				reset(100);
+			}
 		else if (same(buf, "exit")) {
 			break;
 		}
@@ -196,7 +197,7 @@ void shell_begin(char* fdt)
 			thread_test();
 		}
 		else if (same(buf, "fork")) {
-			from_el1_to_fork_test();
+			thread_create(from_el1_to_fork_test);
 		}
 		else if (same(buf, "timer")) {
 			core_timer_enable();

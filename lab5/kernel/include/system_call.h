@@ -17,5 +17,6 @@ void from_el1_to_fork_test();
 
 // for debug purpose
 void get_sp();
+void output_sp(void*);
 
 #endif

@@ -5,6 +5,7 @@
 
 char* _cpio_file;
 char* _fdt_end;
+char* fdt_addr;
 
 void _print_tab(int level)
 {
@@ -103,16 +104,16 @@ uint32_t parse_dt_struct(fdt_callback cb, char *dt_struct, char *dt_strings) {
 	return 0;
 }
 
-uint32_t fdt_traverse(fdt_callback cb, char *dtb)
+uint32_t fdt_traverse(fdt_callback cb)
 {
-    struct fdt_header *hdr = (struct fdt_header *)dtb;
+    struct fdt_header *hdr = (struct fdt_header *)fdt_addr;
 
     if (fdt_magic(hdr) != FDT_MAGIC) {
         uart_printf("[x] Not valid fdt_header\r\n");
     }
 
-    char *dt_struct = dtb + fdt_off_dt_struct(hdr);
-    char *dt_strings = dtb + fdt_off_dt_strings(hdr);
+    char *dt_struct = fdt_addr + fdt_off_dt_struct(hdr);
+    char *dt_strings = fdt_addr + fdt_off_dt_strings(hdr);
 
     uint32_t r = parse_dt_struct(cb, dt_struct, dt_strings);
 

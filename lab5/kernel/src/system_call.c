@@ -8,91 +8,66 @@
 #include "exception.h"
 
 extern thread* get_current();
-extern thread* threads[];
-extern void* thread_fn[];
+extern thread** threads;
+extern void** thread_fn;
 
-const int stack_size = 4096; 
+#define stack_size 4096
 
 int do_getpid() {
 	return get_current() -> id;
 }
 
 size_t do_uart_read(char buf[], size_t size) {
-	for (int i = 0; i < size; i ++) {
-		buf[i] = uart_recv(); 
-	}
-	return size;
+	buf[0] = uart_recv();
+	return 1;
 }
 
 size_t do_uart_write(char buf[], size_t size) {
-	for (int i = 0; i < size; i ++) {
-		uart_send(buf[i]);
-	}
-	return size;
+	uart_send (buf[0]);
+	return 1;
 }
 
 int do_exec(char* name, char *argv[]) {
 	void* pos = cpio_find(name);
-	void* code = my_malloc(4096);
-	strcpy(pos, code, 4096);
+	void* code = my_malloc(4096 * 64);
+	strcpy(pos, code, 4096 * 64);
 
 	void* stack = my_malloc(4096);
 	stack += 4096 - 16;
 
-	void (*func)() = pos;
-	func();
-
+	asm volatile (
+		"mov x1, 0;"
+		"msr spsr_el1, x1;"
+		"mov x1, %[code];"
+		"mov x2, %[sp];"
+		"msr elr_el1, x1;"
+		"msr sp_el0, x2;"
+		"msr DAIFclr, 0xf;"
+		"eret;"
+		:
+		: [code] "r" (code), [sp] "r" (stack)
+	);
 }
 
-
-void fork_test_idle();
 extern void ret_from_fork_child();
-
-inline void get_sp() {
-	trapframe_t* sp;
-	asm volatile (
-		"mov %0, sp\n"
-		: "=r" (sp)
-	);
-	uart_printf ("sp is %x, elr is %x\r\n", sp, sp -> elr_el1);
-	return;
-}
-
-void get_elr_el1() {
-	unsigned long elr_el1;
-	asm volatile (
-		"mrs %0, elr_el1\n"
-		: "=r" (elr_el1)
-	);
-	uart_printf ("elr_el1 is %x\r\n", elr_el1);
-	return;
-}
-
-void c_ret_from_fork_child() {
-	unsigned long el;
-	asm volatile (
-		"mrs %0, CurrentEL\n"
-		"lsr %0, %0, #2\n"
-		: "=r" (el)
-	);
-	uart_printf ("Going to load_all and eret, el %d\r\n", el);
-	
-	trapframe_t* sp;
-	asm volatile (
-		"mov %0, sp\n"
-		: "=r" (sp)
-	);
-	uart_printf ("sp is %x, elr is %x\r\n", sp, sp -> elr_el1);
-
-	asm volatile ( "bl ret_from_fork_child" );
-}
 
 typedef unsigned long long ull;
 
+uint64_t get_sp_el0() {
+    uint64_t value;
+    asm volatile("mrs %0, sp_el0" : "=r" (value));
+    return value;
+}
+uint64_t get_sp_el1() {
+    uint64_t value;
+    asm volatile("mov %0, sp" : "=r" (value));
+    return value;
+}
+
+
+
 // tf is the sp
 int do_fork(trapframe_t* tf) {
-
-	irq (0);
 	uart_printf ("Started do fork\r\n");
 	int id = thread_create(NULL); // later set by thread_fn
 
@@ -103,22 +78,31 @@ int do_fork(trapframe_t* tf) {
 		child -> reg[i] = cur -> reg[i];
 	}
 	strcpy(cur -> stack_start, child -> stack_start, stack_size);
+	strcpy(cur -> kstack_start, child -> kstack_start, stack_size);
 	
-	child -> sp = ((ull)tf - (ull)cur -> stack_start + (ull)child -> stack_start); 
+	child -> sp = (void*)((char*)tf - (char*)cur -> kstack_start + (char*)child -> kstack_start); 
 	child -> fp = child -> sp; 
+	// on el1 stack
 	thread_fn[id] = ret_from_fork_child; 
 
 	if (get_current() -> id == id) {
 		uart_printf ("Child should not be here%d, %d\r\n", get_current() -> id, id);
 	}
 
+	void* sp_el0 = get_sp_el0();
+	void* sp_el1 = get_sp_el1();
+	uart_printf ("CUR SPEL0: %x, CUR SPEL1: %x\r\n", sp_el0, sp_el1);
+
 	trapframe_t* child_tf = (trapframe_t*)child -> sp;
 	child_tf -> x[0] = 0;
-	uart_printf ("Forked a child with pid = %d\r\n", id);
+	child_tf -> sp_el0 += child -> stack_start - cur -> stack_start;
 	
-	irq(1);
+	uart_printf ("Child tf should be at %x should jump to %x\r\n", child -> sp, thread_fn[id], child_tf -> elr_el1);
+	uart_printf ("And then to %x, ori is %x :(:(:(:(:\r\n", child_tf -> elr_el1, tf -> elr_el1);
+
+	uart_printf ("diff1 %x, diff2 %x\r\n", (void*)tf - (cur -> kstack_start), (void*)child_tf - (child -> kstack_start));
 	
-	return id;
+	return id;	
 }
 
 void do_exit() {
@@ -137,6 +121,8 @@ extern int fork();
 extern int getpid();
 extern void exit();
 extern void core_timer_enable();
+extern int mbox_call(unsigned char, unsigned int*);
+extern void test_syscall();
 
 void given_fork_test(){
     uart_printf("\nFork Test, pid %d\n", getpid());
@@ -165,62 +151,85 @@ void given_fork_test(){
     else {
         uart_printf("parent here, pid %d, child %d\n", getpid(), ret);
     }
-}
-
-void fork_test_func() {
-	int ret = fork();
-	if (ret) {
-		uart_printf ("This is father with child of pid %d\r\n", ret);
-	}
-	else {
-		uart_printf ("This is child forked, my pid is %d\r\n", getpid());
-	}
 	while (1) {
-		uart_printf ("This is fork test func, pid %d\r\n", getpid(), ret);
+		uart_printf ("This is main create fork shit\r\n");
 		delay(1e7);
 	}
 }
+
+void fork_test_func() {
+	for (int i = 0; i < 3; i ++) {
+		int ret = fork();
+		if (ret) {
+			uart_printf ("This is father %d with child of pid %d\r\n", getpid(), ret);
+		}
+		else {
+			uart_printf ("This is child forked, my pid is %d\r\n", getpid());
+		}
+	}
+	exit();
+	/*
+	while (1) {
+		delay(1e7);
+	}
+	*/
+}
+void simple_fork_test() {
+	for (int i = 0; i < 1; i ++) {
+		// uart_printf ("%d: %d\r\n", getpid(), i);
+		int t = fork();
+		if (t) {
+			uart_printf ("This is parent with child %d\r\n", t);
+		}
+		else {
+			uart_printf ("This is child with pid %d\r\n", getpid());
+		}
+	}
+	exit();
+	while (1);
+}
 void fork_test_idle() {
 	while(1) {
-		unsigned int el;
+		unsigned int __attribute__((aligned(16))) mailbox[7];
+        mailbox[0] = 7 * 4; // buffer size in bytes
+        mailbox[1] = REQUEST_CODE;
+        // tags begin
+        mailbox[2] = GET_BOARD_REVISION; // tag identifier
+        mailbox[3] = 4; // maximum of request and response value buffer's length.
+        mailbox[4] = TAG_REQUEST_CODE;
+        mailbox[5] = 0; // value buffer
+        // tags end
+        mailbox[6] = END_TAG;
+
+        if (mbox_call(8, mailbox)) {
+			uart_printf ("%x\r\n", mailbox[5]);
+        }
+		else {
+			uart_printf ("Fail getting mailbox\r\n");
+		}
+
 		uart_printf ("This is idle, pid %d, %d\r\n", getpid(), threads[1] -> next -> id);
 		delay(1e7);
 	}
 }
 
-void fork_test() {
-	uart_printf ("started fork test\r\n");
-	thread_create(fork_test_idle);
-	thread_create(given_fork_test);
-	uart_printf ("Finish creating functions\r\n");
-	unsigned int el;
-	/*
-	asm volatile (
-		"mrs %0, CurrentEL\n"
-		"lsr %0, %0, #2\n"
-		: "=r" (el)
-	);
-	*/
-	while (1) {
-		uart_printf ("Original fork test place, %d\r\n", threads[1] -> next -> id);
-		delay(1e7);
-	}
-}
-	
 void from_el1_to_fork_test() {
-	uart_printf ("From el1 to fork test\r\n");	
-	void* stack = my_malloc(4096);
-	stack += 4096 - 16;
+	irq(0);
+	uart_printf ("From el1 to el0 fork test\r\n");	
+	get_current() -> stack_start = my_malloc(4096);
+	void* stack = get_current() -> stack_start + 4096 - 16;
+
 	asm volatile(
 		"mov x1, 0;"
 		"msr spsr_el1, x1;"
 		"mov x1, %[code];"
-		"mov x2, %[sp];"
+		"mov x2, %[stack];"
 		"msr elr_el1, x1;"
 		"msr sp_el0, x2;"
+		"msr DAIFclr, 0xf;" // irq(1);
 		"eret;"
 		:
-		: [code] "r" (fork_test), [sp] "r" (stack)
+		: [code] "r" (simple_fork_test), [stack] "r" (stack)
 		: "x1", "x30"
 	);
 }

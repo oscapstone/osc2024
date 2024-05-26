@@ -17,6 +17,6 @@ void my_free(char*);
 void print_node_list();
 void print_pool();
 
-void manage_init (char*);
+void manage_init ();
 
 #endif

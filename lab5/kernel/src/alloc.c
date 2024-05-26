@@ -16,6 +16,7 @@ size for managing: starting from 0x100001
 
 
 extern char* _cpio_file;
+extern char* fdt_addr;
 
 struct node {
 	int sz, par;
@@ -100,7 +101,7 @@ int pop_node_list(int ind) {
 }
 
 
-void manage_init(char* fdt) {
+void manage_init() {
 	frame_pool = simple_malloc(arr_size, sizeof(char));
 	for (int i = 0; i < arr_size; i ++) {
 		frame_pool[i] = 0;
@@ -120,7 +121,7 @@ void manage_init(char* fdt) {
 	reserve (manage_start, now + sizeof(struct nodeList) * 10000);
 	limit = now + sizeof(struct nodeList) * 10000;
 	// TODO This is SHIT, might potentially cause problem
-	reserve (fdt, get_fdt_end());
+	reserve (fdt_addr, get_fdt_end());
 	reserve (_cpio_file, get_cpio_end());
 
 	for (int i = 1; (1 << i) <= arr_size ; i ++) {
