@@ -3,7 +3,7 @@
 .global _start
 
 .equ TCR_CONFIG_REGION_48bit, (((64 - 48) << 0) | ((64 - 48) << 16));
-.equ TCR_CONFIG_4KB, ((0x0 << 14) |  (0x2 << 30));
+.equ TCR_CONFIG_4KB, ((0b00 << 14) |  (0b00 << 30));
 .equ TCR_CONFIG_DEFAULT, (TCR_CONFIG_REGION_48bit | TCR_CONFIG_4KB);
 
 .equ MAIR_DEVICE_nGnRnE, 0b00000000

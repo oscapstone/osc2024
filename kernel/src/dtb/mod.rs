@@ -7,6 +7,8 @@ mod utils;
 use alloc::vec::Vec;
 use stdio::println;
 
+const DTB_ADDRERSS: u64 = 0x6_f000;
+
 pub fn load_dtb() -> dt::Dt {
     let (dtb_addr, header) = get_dtb_addr();
     let strings_addr = dtb_addr + header.off_dt_strings;
@@ -17,7 +19,7 @@ pub fn load_dtb() -> dt::Dt {
 }
 
 pub fn get_dtb_addr() -> (u32, fdt::FdtHeader) {
-    let dtb_addr = 0x6f000 as *const u8;
+    let dtb_addr = DTB_ADDRERSS as *const u8;
     println!("DTB address: {:p}", dtb_addr);
     let dtb_addr = unsafe { core::ptr::read_volatile(dtb_addr as *const u32) };
     println!("DTB address: {:#x}", dtb_addr);
