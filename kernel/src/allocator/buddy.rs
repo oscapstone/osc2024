@@ -79,7 +79,6 @@ impl BuddyAllocator {
             }
         }
         println!("Free list: {:?}", BUDDY_SYSTEM.free_list);
-        BUDDY_SYSTEM.initialized = true;
     }
 
     pub unsafe fn print_info(&self) {

@@ -1,9 +1,9 @@
 use crate::exception::trap_frame;
-use core::arch::asm;
+use core::{arch::asm, fmt::Debug};
 use stdio::{debug, println};
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 struct Syscall {
     arg0: u64,
     arg1: u64,
@@ -39,6 +39,16 @@ impl Syscall {
             arg7,
             idx,
         }
+    }
+}
+
+impl Debug for Syscall {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Syscall {{ idx: 0x{:x}, arg0: 0x{:x}, arg1: 0x{:x}, arg2: 0x{:x}, arg3: 0x{:x}, arg4: 0x{:x}, arg5: 0x{:x}, arg6: 0x{:x}, arg7: 0x{:x} }}",
+            self.idx, self.arg0, self.arg1, self.arg2, self.arg3, self.arg4, self.arg5, self.arg6, self.arg7
+        )
     }
 }
 
