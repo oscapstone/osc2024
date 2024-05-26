@@ -14,30 +14,35 @@ use alloc::string::ToString;
 use alloc::vec::Vec;
 
 pub fn execute(command: &[u8]) {
+    let command = match command.iter().position(|&c| c == 0) {
+        Some(i) => &command[..i],
+        None => command,
+    };
     let args: Vec<String> = core::str::from_utf8(command)
         .unwrap()
         .split_whitespace()
         .map(|s| s.to_string())
         .collect();
-    if command.starts_with(b"\x00") {
+    println!("Executing command: {:?}", args);
+    if args.is_empty() {
         return;
-    } else if command.starts_with(b"hello") {
+    } else if args[0] == "hello" {
         hello::exec();
-    } else if command.starts_with(b"help") {
+    } else if args[0] == "help" {
         help::exec();
-    } else if command.starts_with(b"reboot") {
+    } else if args[0] == "reboot" {
         reboot::exec();
-    } else if command.starts_with(b"ls") {
+    } else if args[0] == "ls" {
         ls::exec();
-    } else if command.starts_with(b"cat") {
+    } else if args[0] == "cat" {
         cat::exec(&command);
-    } else if command.starts_with(b"exec") {
+    } else if args[0] == "exec" {
         exec::exec(args);
-    } else if command.starts_with(b"echo") {
+    } else if args[0] == "echo" {
         echo::exec(&command);
-    } else if command.starts_with(b"setTimeOut") {
+    } else if args[0] == "setTimeOut" {
         set_time_out::exec(&command);
-    } else if command.starts_with(b"buddy") {
+    } else if args[0] == "buddy" {
         buddy::exec();
     } else {
         println!(

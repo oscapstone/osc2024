@@ -29,7 +29,6 @@ _start:
     bl from_el2_to_el1
     bl set_mmu
 
-
     // set stack before our code
     ldr     x1, =_start
     mov     sp, x1
@@ -45,7 +44,8 @@ _start_kernel:
     adr x0, exception_vector_table
     msr vbar_el1, x0
 
-    b _start_rust
+    ldr x0, =_start_rust
+    br x0
 
 from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64

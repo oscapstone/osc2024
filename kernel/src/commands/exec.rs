@@ -20,6 +20,11 @@ pub fn exec(args: Vec<String>) {
             );
         }
     }
-    assert!(!scheduler::get().ready_queue.is_empty());
-    scheduler::get().run_threads();
+
+    if scheduler::get().ready_queue.is_empty() {
+        println!("No threads to run!");
+        return;
+    } else {
+        scheduler::get().run_threads();
+    }
 }
