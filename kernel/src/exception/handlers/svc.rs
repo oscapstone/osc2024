@@ -87,10 +87,11 @@ unsafe fn el1_interrupt(sp: u64) {
 
 unsafe fn syscall_handler(sp: u64) {
     let syscall = Syscall::new(sp);
+    println!("Syscall {:?}", syscall);
     assert!(trap_frame::TRAP_FRAME.is_some());
     match syscall.idx {
         0 => {
-            println!("Syscall get_pid");
+            // println!("Syscall get_pid");
             let pid = crate::syscall::get_pid();
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
         }
