@@ -67,7 +67,8 @@ void initrd_cat(const char *target)
         char pathname[namesize];
         strncpy(pathname, fptr + sizeof(cpio_t), namesize);
         if (!strcmp(target, pathname)) {
-            char data[filesize];
+            char data[filesize + 1];
+            memset(data, 0, filesize + 1);
             strncpy(data, fptr + headsize, filesize);
             uart_puts(data);
             uart_putc('\n');

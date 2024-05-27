@@ -20,7 +20,7 @@ struct thread_struct {
     unsigned long fp;
     unsigned long lr;
     unsigned long sp;
-};
+}; // TODO: Rename to cpu_context
 
 enum task_state {
     TASK_RUNNING,
@@ -41,11 +41,6 @@ struct task_struct {
     struct task_struct *prev;
     struct task_struct *next;
 };
-
-typedef struct task_queue_t {
-    struct task_struct *front;
-    struct task_struct *rear;
-} task_queue_t;
 
 extern struct task_struct *get_current();
 struct task_struct *get_task(int pid);

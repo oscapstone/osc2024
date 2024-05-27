@@ -36,6 +36,6 @@ typedef struct trap_frame {
     unsigned long spsr_el1;
     unsigned long elr_el1;
     unsigned long sp_el0;
-} trap_frame;
+} trap_frame; // TODO: Rename to pt_regs
 
 #endif // TRAPS_H
