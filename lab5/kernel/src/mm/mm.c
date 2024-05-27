@@ -291,13 +291,6 @@ void buddy_init() {
         */
     }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////
-    /// not work on real pi
-#ifdef NS_DEBUG
-    uart_get_char();
-#endif
-
-
     U32 frame_offset = 0;
     while (frame_offset < mem_manager.number_of_frames) {
         NS_DPRINT("[MEMORY][TRACE] current frame offset: %d\n", frame_offset);
@@ -359,8 +352,6 @@ void buddy_init() {
         
         
     }
-    /////////////////////////////////////////////////////////////////////////////////////////////
-    /// End not work on real pi
 
 }
 

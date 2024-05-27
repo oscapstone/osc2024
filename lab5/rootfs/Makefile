@@ -16,18 +16,18 @@ CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding \
 
 LIB		= lib/fork.o lib/uartwrite.o lib/printf.o lib/getpid.o start.o
 
-all : testProgram test_fork test_tfault
+all : testProgram test_fork test_cow
 
 clean :
-	rm -rf testProgram test_fork test_tfault
+	rm -rf testProgram test_fork test_cow
 
 test_fork : test_fork.o lib/fork.o lib/uartwrite.o start.o
 	$(LD) $^ -T linker.ld -o test_fork.elf
 	$(OBJCOPY) -O binary test_fork.elf $@
 
-test_tfault : test_tfault.o $(LIB)
-	$(LD) $^ -T linker.ld -o test_tfault.elf
-	$(OBJCOPY) -O binary test_tfault.elf $@
+test_cow : test_cow.o $(LIB)
+	$(LD) $^ -T linker.ld -o test_cow.elf
+	$(OBJCOPY) -O binary test_cow.elf $@
 
 testProgram : testProgram.o lib/fork.o
 	$(LD) testProgram.o -T linker.ld -o testProgram.elf
