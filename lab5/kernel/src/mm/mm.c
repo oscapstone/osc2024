@@ -10,6 +10,7 @@
 #include "peripherals/irq.h"
 #include "proc/task.h"
 #include "arm/sysregs.h"
+#include "io/uart.h"
 
 extern void* _dtb_ptr;
 extern char __static_mem_start__, __static_mem_end__;
@@ -103,7 +104,6 @@ void mm_init() {
 
     mem_memory_reserve(initramfs_start, initramfs_end);
     NS_DPRINT("[MEMORY][TRACE] initramfs reserve. offset: %x, size: %x\n", initramfs_start, initramfs_end);
-
 
     buddy_init();
 
@@ -266,6 +266,7 @@ void buddy_init() {
 
         for(U32 i = 0;i < current_info->space; i++) {
             current_info->info[i] = MEM_FREE_INFO_UNUSED;
+            current_info->size = 0;
         }
         // initialize the buddy
         /*
@@ -290,8 +291,16 @@ void buddy_init() {
         */
     }
 
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    /// not work on real pi
+#ifdef NS_DEBUG
+    uart_get_char();
+#endif
+
+
     U32 frame_offset = 0;
     while (frame_offset < mem_manager.number_of_frames) {
+        NS_DPRINT("[MEMORY][TRACE] current frame offset: %d\n", frame_offset);
 
         // first add until hit the usable block region
         U32 usable_offset = 0;
@@ -301,31 +310,41 @@ void buddy_init() {
             usable_offset++;
         }
 
-
         U32 region_size = usable_offset;
+        NS_DPRINT("[MEMORY][TRACE] region size: %d\n", region_size);
         while (region_size > 0) {
             U32 highest_order = utils_highestOneBit(region_size) - 1;
+            NS_DPRINT("[MEMORY][TRACE] highest order: %d\n", highest_order);
             // let the order fit the address order
             U32 order = highest_order;
             while (((1 << order) - 1) & frame_offset) {
                 order--;
             }
+            NS_DPRINT("[MEMORY][TRACE] choose order: %d, frame offset: %d\n", order, frame_offset);
+
 
             U64 number_of_frames_in_block = (1 << order); 
 
             FREE_INFO* free_info = &mem_manager.free_list[order];
+
+            NS_DPRINT("test\n");
             free_info->info[free_info->size] = frame_offset;
             free_info->size++;
+            NS_DPRINT("test\n");
 
             // first frame
             mem_manager.frames[frame_offset].flag &= ~(MEM_FRAME_FLAG_USED);
+            
+            NS_DPRINT("test\n");
             mem_manager.frames[frame_offset].order = order;
+            NS_DPRINT("test\n");
             // rest frame  
             for (U64 i = 1; i < number_of_frames_in_block; i++) {
                 mem_manager.frames[frame_offset + i].flag &= ~(MEM_FRAME_FLAG_USED);
                 mem_manager.frames[frame_offset + i].flag |= MEM_FRAME_FLAG_CONTINUE;
                 mem_manager.frames[frame_offset + i].order = order;
             }
+            NS_DPRINT("test\n");
             frame_offset += number_of_frames_in_block;
             region_size -= number_of_frames_in_block;
             NS_DPRINT("[MEMORY][TRACE] free info insered. count: %d, frame offset: %d\n", free_info->size - 1, frame_offset);
@@ -337,7 +356,11 @@ void buddy_init() {
                 break;
             frame_offset++;
         }
+        
+        
     }
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    /// End not work on real pi
 
 }
 
