@@ -60,9 +60,11 @@
  * 4kb in memory is 0x1000
 */
 
-#define MMU_PXN              (1L << 53)
+#define MMU_UNX              (1L << 54)         // non-executable page frame for EL0 if set
+#define MMU_PXN              (1L << 53)         // non-executable page frame for EL1 if set
 
-#define PD_PAGE_MASK    	0xfffffffffffff000
+// filter for page
+#define PD_PAGE_MASK    	0x00000000fffff000
 // [0, 2]
 #define PD_TABLE            0x3
 #define PD_BLOCK            0x1
@@ -74,8 +76,8 @@
 #define PD_KERNEL_PUD_ATTR  (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)
 
 #define MMU_AP_EL0_NONE         (0)
-#define MMU_AP_EL0_READ_ONLY    (0x3 << 6)
-#define MMU_AP_EL0_READ_WRITE   (0x1 << 6) 
+#define MMU_AP_EL0_READ_ONLY    (1L << 7)       // 0 for read-write, 1 for read-only.
+#define MMU_AP_EL0_UK_ACCESS   (1L << 6)        // 0 for only kernel access, 1 for user/kernel access.
 
 #define PD_PGD_SHIFT        39
 #define PD_PUD_SHIFT        30
@@ -129,3 +131,6 @@ void mmu_map_io(TASK* task);
 */
 void mmu_delete_mm(TASK* task);
 void mmu_fork_mm(TASK* src_task, TASK* new_task);
+
+// the handler for memory failed
+void mmu_memfail_handler(U64 esr);

@@ -29,7 +29,7 @@ void putc(void *p, char c) {
 void func_task_a() {
 	shell();
 
-	task_exit();
+	task_exit(0);
 }
 
 void func_task_b() {
@@ -54,7 +54,7 @@ void func_task_c() {
 		printf("C . %d\n", i);
 		task_schedule();
 	}
-	task_exit();
+	task_exit(0);
 }
 
 void main() {

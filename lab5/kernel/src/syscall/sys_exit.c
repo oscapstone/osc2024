@@ -5,5 +5,5 @@
 
 void sys_exit(TRAP_FRAME* regs) {
     NS_DPRINT("[SYSCALL][EXIT] task exited with status: %d\n", regs->regs[0]);
-    task_exit();
+    task_exit(regs->regs[0]);
 }

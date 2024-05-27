@@ -102,6 +102,8 @@ void kfree(void* ptr);
 */
 void* kzalloc(U64 size);
 
+void mem_reference(UPTR p_addr);
+void mem_dereference(UPTR p_addr);
 
 // mmutiilASM
 void memzero(void* src, U32 n);

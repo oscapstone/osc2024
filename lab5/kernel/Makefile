@@ -36,7 +36,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
-QEMU_DEVICE = /dev/pts/3
+QEMU_DEVICE = /dev/pts/4
 
 all : kernel.img
 

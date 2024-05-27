@@ -1,6 +1,6 @@
 SECTIONS
 {
-    . = 0x90000;
+    . = 0x0;
     /* code section */
     .text :
     {

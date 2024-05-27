@@ -41,6 +41,11 @@ struct arm_core_regs {
 // ISS,bits[24:0]
 #define ESR_ELx_ISS(esr) (esr & 0x03FFFFFF)
 
+#define ISS_TF_LEVEL0 0b000100 // iss IFSC, bits [5:0]
+#define ISS_TF_LEVEL1 0b000101
+#define ISS_TF_LEVEL2 0b000110
+#define ISS_TF_LEVEL3 0b000111
+
 
 // armv8 pg. 1900
 #define ESR_ELx_EC_SVC64                0x15

@@ -54,7 +54,7 @@ void sys_fork(TRAP_FRAME* regs) {
     // copy the register status, the parent process will continue here because of disabling interrupt when in trap at default
     U64 tmp_pgd = new_task->cpu_regs.pgd;
     memcpy(&task->cpu_regs, &new_task->cpu_regs, sizeof(CPU_REGS));
-    new_task->cpu_regs.pgd = MMU_VIRT_TO_PHYS(tmp_pgd);
+    new_task->cpu_regs.pgd = tmp_pgd;
     //NS_DPRINT("new task GPD addr: 0x%x\n", new_task->cpu_regs.pgd);
     new_task->cpu_regs.fp += (U64)new_task->kernel_stack - (U64)task->kernel_stack;
     new_task->cpu_regs.sp += (U64)new_task->kernel_stack - (U64)task->kernel_stack;

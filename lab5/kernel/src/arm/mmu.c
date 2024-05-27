@@ -101,11 +101,17 @@ void mmu_map_table_entry(pd_t* pte, U64 v_addr, U64 p_addr, U64 flags) {
 
 /**
  * get the table page to this table
+ * @param table
+ *      in physical address
 */
 pd_t mmu_map_table(pd_t* table, U64 shift, U64 v_addr, BOOL* gen_new_table) {
     U64 index = v_addr >> shift;
     index = index & (PD_PTRS_PER_TABLE - 1);
     pd_t* table_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)table);
+    //////////////
+    /// WIRED bug it didn't translate to virtual address!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    printf("table phy addr: 0x%x, virt addr: 0x%x%x\n", table, (U64)table_virt >> 32, table_virt);
     if (!table_virt[index]) {        // no entry
         *gen_new_table = TRUE;
         U64 next_level_table = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
@@ -121,11 +127,13 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
     U64 pgd;
     if (!task->cpu_regs.pgd) {
         task->cpu_regs.pgd = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
+        NS_DPRINT("[MMU][TRACE] new PGD table for task. pid = %d, addr: 0x%x\n", task->pid, task->cpu_regs.pgd);
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = task->cpu_regs.pgd;
     }
     pgd = task->cpu_regs.pgd;
+    NS_DPRINT("[MMU][TRACE] PGD table. pid = %d, addr: 0x%x%x\n", task->pid, task->cpu_regs.pgd >> 32, task->cpu_regs.pgd);
     BOOL gen_new_table = FALSE;
-    U64 pud = mmu_map_table((pd_t*)(pgd + 0), PD_PGD_SHIFT, v_addr, &gen_new_table);
+    U64 pud = mmu_map_table(pgd, PD_PGD_SHIFT, v_addr, &gen_new_table);
     if (gen_new_table) {
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = pud;
     }
@@ -149,7 +157,7 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
  * @param v_addr
  *      the virtual address this page will assign to
  * @param page
- *      the page to be insert
+ *      the page to be insert in physical address
  * @param flags
  *      page descriptor flags
  * @return user page
@@ -158,17 +166,31 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
 USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
     NS_DPRINT("[MMU][DEBUG] mmu map page start, task[%d] v_addr: %x, page: %x.\n", task->pid, v_addr, page);
     U64 pte = mmu_get_pte(task, v_addr);
-    mmu_map_table_entry((pd_t*)(pte + 0), v_addr, page, flags);
+    mmu_map_table_entry((pd_t*)(pte), v_addr, page, flags);
     U8 user_flags = 0;
-    if (flags & MMU_AP_EL0_READ_ONLY) {
+    
+    if (flags & MMU_AP_EL0_UK_ACCESS) {
         user_flags |= TASK_USER_PAGE_INFO_FLAGS_READ;
-    } else if (flags & MMU_AP_EL0_READ_WRITE) {
-        user_flags |= TASK_USER_PAGE_INFO_FLAGS_WRITE | TASK_USER_PAGE_INFO_FLAGS_READ;
+        if (!(flags & MMU_AP_EL0_READ_ONLY)) {
+            user_flags |= TASK_USER_PAGE_INFO_FLAGS_WRITE;   
+        }
     }
-    if (flags & (1 << 53)) {
+    if (!(flags & MMU_UNX)) {
         user_flags |= TASK_USER_PAGE_INFO_FLAGS_EXEC;
     }
-    USER_PAGE_INFO* user_page = &task->mm.user_pages[task->mm.user_pages_count++];
+    USER_PAGE_INFO* user_page = NULL;
+    for (U64 i = 0; i < task->mm.user_pages_count; i++) {
+        USER_PAGE_INFO* cur_page = &task->mm.user_pages[i];
+        if (cur_page->v_addr == v_addr) {
+            user_page = cur_page;
+            break;
+        }
+    }
+    if (user_page == NULL) {
+        NS_DPRINT("[MMU][DEBUG] New user page. v_addr: 0x%x, p_addr: 0x%x\n", v_addr, page);
+        user_page = &task->mm.user_pages[task->mm.user_pages_count++];
+    }
+
     user_page->p_addr = page;
     user_page->v_addr = v_addr;
     user_page->flags = user_flags;
@@ -187,7 +209,7 @@ void mmu_task_init(TASK* task) {
     U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
     for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
         U64 pte = mmu_get_pte(task, stack_v_addr);
-        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_READ_WRITE | MMU_PXN/* 還沒看懂到底要不要家 */);
+        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
         stack_v_addr += PD_PAGE_SIZE;
     }
     return;
@@ -232,7 +254,7 @@ void mmu_delete_mm(TASK* task) {
     
     // delete block descriptors
     for (U64 i = 0; i < task->mm.user_pages_count; i++) {
-        kfree(task->mm.user_pages[i].p_addr);
+        mem_dereference(task->mm.user_pages[i].p_addr);
     }
     task->mm.user_pages_count = 0;
     task->cpu_regs.pgd = NULL;
@@ -252,12 +274,75 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
         USER_PAGE_INFO* user_page = &src_task->mm.user_pages[i];
         U64 mmu_flags = 0;
 
-        // TODO: execution premission?
+        mmu_flags |= MMU_PXN;                       // cannot be execute in kernel mode
+        if (user_page->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
+            mmu_flags |= MMU_AP_EL0_UK_ACCESS;      // can be access in user mode
+        }
+        mmu_flags |= MMU_AP_EL0_READ_ONLY;          // only readable for child process
+        if (!(user_page->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
+            mmu_flags |= MMU_UNX;                   // cannot be execute in user mode
+        }
 
-        mmu_flags |= MMU_AP_EL0_READ_ONLY;
         USER_PAGE_INFO* new_task_user_page = mmu_map_page(new_task, user_page->v_addr, user_page->p_addr, mmu_flags);
+        mem_reference(user_page->p_addr);
         // if this page it writable then later the page fault handler will know this and do the copy on write instead of segementation fault.
         new_task_user_page->flags = user_page->flags;
     }
 }
 
+void mmu_memfail_handler(U64 esr) {
+    TASK* task = task_get_current_el1();        // get the current task
+
+    U64 far_el1 = utils_read_sysreg(FAR_EL1);
+    USER_PAGE_INFO* current_page_info = NULL;
+    for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {
+        USER_PAGE_INFO* page_info = &task->mm.user_pages[i];
+        if (page_info->v_addr <= far_el1 && page_info->v_addr + PD_PAGE_SIZE >= far_el1) {
+            current_page_info = page_info;
+            break;
+        }
+    }
+
+    if (!current_page_info) {
+        printf("[MMU][ERROR] [Segmentation fault: Kill process]\n");
+        printf("addr: %x\n", far_el1);
+        task_exit(-1);
+        // will not go anywhere
+    }
+
+    U64 iss = ESR_ELx_ISS(esr);
+
+    if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE) {
+        printf("[MMU][WARN] Doing copy on write\n");
+        U64 page_flags = 0;       // flag for page descriptor entry
+        page_flags |= MMU_PXN;      // cannot be executed in kernel mode
+        page_flags |= MMU_AP_EL0_UK_ACCESS;
+        if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) page_flags |= MMU_UNX;
+        printf("[MMU][TRACE] origin page addr: 0x%x\n", current_page_info->p_addr);
+        U64 new_page = kmalloc(PD_PAGE_SIZE);
+        memcpy((void*)MMU_PHYS_TO_VIRT(current_page_info->p_addr), (void*)new_page, PD_PAGE_SIZE);
+        mem_dereference(current_page_info->p_addr);
+
+        // replace the page to modify the new page
+        printf("[MMU][TRACE] new page addr: 0x%x%x\n", new_page >> 32, new_page);
+        mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
+        return;
+    }
+
+    if ((iss & 0x3f) == ISS_TF_LEVEL0 ||
+        (iss & 0x3f) == ISS_TF_LEVEL1 ||
+        (iss & 0x3f) == ISS_TF_LEVEL2 ||
+        (iss & 0x3f) == ISS_TF_LEVEL3)
+    {
+        printf("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
+
+    } else {
+        printf("[MMU][ERROR] [Segmentation fault]: other fault.\n");
+        printf("iss: 0x%x\n", iss);
+        printf("addr: %x\n", far_el1);
+        task_exit(-1);
+    }
+
+
+
+}

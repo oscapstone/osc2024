@@ -301,10 +301,16 @@ void buddy_init() {
             usable_offset++;
         }
 
-        // TODO: put into free list
+
         U32 region_size = usable_offset;
         while (region_size > 0) {
-            U32 order = utils_highestOneBit(region_size) - 1;
+            U32 highest_order = utils_highestOneBit(region_size) - 1;
+            // let the order fit the address order
+            U32 order = highest_order;
+            while (((1 << order) - 1) & frame_offset) {
+                order--;
+            }
+
             U64 number_of_frames_in_block = (1 << order); 
 
             FREE_INFO* free_info = &mem_manager.free_list[order];
@@ -359,8 +365,7 @@ U32 mem_get_free(U8 order) {
     }
 
     // remove from the free list
-    current_free_info->info[current_free_info->size - 1] = MEM_FREE_INFO_UNUSED;
-    current_free_info->size--;
+    current_free_info->info[--current_free_info->size] = MEM_FREE_INFO_UNUSED;
 #ifdef NS_DEBUG
     printf("[MEMORY][DEBUG] Found buddy, order: %d Start frame: %d\n", order, start_frame);
 #endif
@@ -462,6 +467,18 @@ U32 mem_buddy_alloc(U8 order) {
     // found the frame index for the current order
     if (frame_index != MEM_FREE_INFO_UNUSED) {
         NS_DPRINT("[MEMORY][TRACE] No need to find larger block. index: %d, order: %d\n", frame_index, order);
+        
+        // change the order of the current start frame
+        mem_manager.frames[frame_index].flag |= MEM_FRAME_FLAG_USED;
+        mem_manager.frames[frame_index].flag &= ~MEM_FRAME_FLAG_CONTINUE;
+        mem_manager.frames[frame_index].order = order;
+        mem_manager.frames[frame_index].ref_count = 1;
+        U64 number_of_frames_in_block = (1 << order);
+        for (U64 i = 1; i < number_of_frames_in_block; i++) {
+            mem_manager.frames[frame_index + i].flag |= MEM_FRAME_FLAG_USED | MEM_FRAME_FLAG_CONTINUE;
+            mem_manager.frames[frame_index + i].order = order;
+            mem_manager.frames[frame_index + i].ref_count = 1;                // 老實說至應該用不到
+        }
         return frame_index;
     }
 
@@ -498,12 +515,12 @@ U32 mem_buddy_alloc(U8 order) {
     mem_manager.frames[frame_index].flag |= MEM_FRAME_FLAG_USED;
     mem_manager.frames[frame_index].flag &= ~MEM_FRAME_FLAG_CONTINUE;
     mem_manager.frames[frame_index].order = order;
-    mem_manager.frames[frame_index].ref_count++;
+    mem_manager.frames[frame_index].ref_count = 1;
     U64 number_of_frames_in_block = (1 << order);
     for (U64 i = 1; i < number_of_frames_in_block; i++) {
         mem_manager.frames[frame_index + i].flag |= MEM_FRAME_FLAG_USED | MEM_FRAME_FLAG_CONTINUE;
         mem_manager.frames[frame_index + i].order = order;
-        mem_manager.frames[frame_index + i].ref_count++;                // 老實說至應該用不到
+        mem_manager.frames[frame_index + i].ref_count = 1;                // 老實說至應該用不到
     }
 
     return frame_index;
@@ -518,6 +535,7 @@ BOOL mem_is_first_buddy(U32 frame_index, U8 order) {
 }
 
 void mem_buddy_free(U32 frame_index) {
+    NS_DPRINT("[MEMORY][TRACE] Try to free memory. index: %d, order: %d\n", frame_index, mem_manager.frames[frame_index].order);
 
     // check if it is free space
     if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_USED)) {
@@ -561,7 +579,7 @@ void mem_buddy_free(U32 frame_index) {
 
         // buddy is not free, can't merge
         if (MEM_FRAME_IS_INUSE(mem_manager.frames[other_buddy])) {
-            NS_DPRINT("[MEMORY][TRACE] buddy partner is not free. buddy: %d\n", other_buddy);
+            NS_DPRINT("[MEMORY][TRACE] buddy partner is not free. buddy: %d, order: %d\n", other_buddy, mem_manager.frames[other_buddy].order);
             break;
         }
         
@@ -574,10 +592,12 @@ void mem_buddy_free(U32 frame_index) {
         NS_DPRINT("[MEMORY][TRACE] buddy partner index: %d, order: %d\n", other_buddy, check_order - 1);
 
         // remove the buddy partner from free list
+        
         FREE_INFO* buddy_order_free_list = &mem_manager.free_list[order];
         U32 i = 0;
         for (; i < buddy_order_free_list->space; i++) {
             if (buddy_order_free_list->info[i] == other_buddy) {
+                NS_DPRINT("[MEMORY][TRACE] removing buddy partner from free list. buddy: %d, order: %d\n", other_buddy, mem_manager.frames[other_buddy].order);;
                 for (U32 j = i + 1; j < buddy_order_free_list->space; j++) {
                     if (buddy_order_free_list->info[j] == MEM_FREE_INFO_UNUSED) {
                         buddy_order_free_list->info[j - 1] = MEM_FREE_INFO_UNUSED;
@@ -701,14 +721,14 @@ void* kzalloc(U64 size) {
  * Reference a memory in buddy system (I tired to do the seperate reference in buddy system)
  * Also, if reference happen, the buddy_free will failed if this block has multiple reference
 */
-void mem_refernce(UPTR p_addr) {
+void mem_reference(UPTR p_addr) {
     U64 frame_index = mem_addr2idx(p_addr);
 
     if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_USED)) {
         printf("[MEMORY][ERROR] this block is not been allocated. cannot reference. index: %d\n", frame_index);
         return;
     }
-    if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CONTINUE)) {
+    if (mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CONTINUE) {
         printf("[MEMORY][ERROR] this frame is not the first frame in block. cannot reference. index: %d\n", frame_index);
         return;
     }
@@ -719,6 +739,7 @@ void mem_refernce(UPTR p_addr) {
     for (U64 i = 1; i < number_of_frames_in_block; i++) {
         mem_manager.frames[frame_index + i].ref_count++;
     }
+    printf("[MEMORY][TRACE] referencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
 }
 /**
  * Dereference a memory in buddy system
@@ -731,10 +752,11 @@ void mem_dereference(UPTR p_addr) {
         printf("[MEMORY][ERROR] this block is not been allocated. cannot dereference. index: %d\n", frame_index);
         return;
     }
-    if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CONTINUE)) {
+    if (mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_CONTINUE) {
         printf("[MEMORY][ERROR] this frame is not the first frame in block. cannot dereference. index: %d\n", frame_index);
         return;
     }
+    printf("[MEMORY][TRACE] dereferencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
     U8 ref_count = mem_manager.frames[frame_index].ref_count;
     if (ref_count == 1) {           // there only one reference, free the block
         mem_buddy_free(frame_index);

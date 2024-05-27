@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "trapFrame.h"
 #include "utils/printf.h"
+#include "arm/mmu.h"
 
 #include "syscall/syscall.h"
 #include "peripherals/irq.h"
@@ -25,9 +26,7 @@ void exception_sync_el0_handler(TRAP_FRAME* trap_frame) {
         break;
     case ESR_ELx_EC_DABT_LOW:
     case ESR_ELx_EC_IABT_LOW:
-        NS_DPRINT("[SYSCALL] memory failed \n");
-
-        // TODO MMU page fault handler
+        mmu_memfail_handler(esr);
         break;
     default:
         break;

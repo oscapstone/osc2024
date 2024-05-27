@@ -168,8 +168,8 @@ void task_to_user_func() {
         );
 }
 
-void task_exit() {
-    task_kill(task_get_current_el1()->pid, 0);
+void task_exit(int exitcode) {
+    task_kill(task_get_current_el1()->pid, exitcode);
 }
 
 int task_kill(pid_t pid, int exitcode) {
@@ -298,7 +298,7 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size) {
         size_t size = offset + PD_PAGE_SIZE > program_size ? program_size - offset : PD_PAGE_SIZE;
         printf("current size: %d\n", size);
         U64 page = kzalloc(PD_PAGE_SIZE);
-        mmu_map_page(task, offset, MMU_VIRT_TO_PHYS(page), MMU_AP_EL0_READ_WRITE);
+        mmu_map_page(task, offset, MMU_VIRT_TO_PHYS(page), MMU_AP_EL0_UK_ACCESS | MMU_PXN);
         NS_DPRINT("program offset: %x\n", program_start + offset);
         memcpy((char*)program_start + offset, (void*)page, size);
         offset += size;
