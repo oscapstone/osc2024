@@ -5,6 +5,7 @@
 #include "schedule.h"
 #include "mailbox.h"
 #include "allocator.h"
+#include "mm.h"
 #include "exception.h"
 
 #define AUX_MU_IO ((volatile unsigned int *)(MMIO_BASE + 0x00215040))
@@ -64,6 +65,8 @@ void exception_entry()
 void sync_handler_entry()
 {
     uart_puts("Into sync handler\n");
+    while (1)
+        ;
 }
 
 void el0_svc_handler_entry(struct ucontext *trapframe)
@@ -240,13 +243,12 @@ void sys_exec(struct ucontext *trapframe)
 void sys_fork(struct ucontext *trapframe)
 {
     task_struct *parent = get_current_task();
-    task_struct *child = task_create(0, 0);
-    disable_interrupt();
-
+    task_struct *child = task_create(return_from_fork, 0);
     child->priority++;
 
     int kstack_offset = parent->kstack - (void *)trapframe;
-    int ustack_offset = (unsigned long long)parent->ustack - trapframe->sp_el0;
+    // map ustack and sp_el0 to physical address
+    int ustack_offset = (unsigned long long)parent->ustack - VA_START - translate_v_to_p(parent->mm_struct->pgd, trapframe->sp_el0);
 
     for (int i = 0; i < kstack_offset; i++) // copy kstack content
         *((char *)child->kstack - i) = *((char *)parent->kstack - i);
@@ -260,14 +262,28 @@ void sys_fork(struct ucontext *trapframe)
         child->signal_handler[i] = parent->signal_handler[i];
     }
 
-    child->cpu_context = parent->cpu_context;
     child->cpu_context.sp = (unsigned long long)child->kstack - kstack_offset; // revise the right kernel stack pointer
     child->cpu_context.fp = (unsigned long long)child->kstack;
-    child->cpu_context.lr = (unsigned long long)return_from_fork;
+
+    unsigned long long code_start, code_end;
+    for (struct vm_area_struct *cur = parent->mm_struct->mmap; cur != NULL; cur = cur->vm_next)
+    {
+        if (cur->vm_type == CODE) // find the code section in VMA of the parent process
+        {
+            code_start = cur->vm_start;
+            code_end = cur->vm_end;
+            break;
+        }
+    }
+    init_mm_struct(child->mm_struct);
+    // map to code
+    mappages(child->mm_struct, CODE, 0, code_start, code_end - code_start);
+    // map to ustack
+    mappages(child->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(child->ustack) - 4096 * 4 - VA_START, 4096 * 4);
+    // map to MMIO_BASE
+    mappages(child->mm_struct, IO, 0x3c000000, 0x3c000000, 0x40000000 - 0x3c000000);
 
     struct ucontext *child_trapframe = (struct ucontext *)child->cpu_context.sp;
-    child_trapframe->sp_el0 = (unsigned long long)child->ustack - ustack_offset; // revise the right user stack pointer
-
     trapframe->x[0] = child->id; // return child's id
     child_trapframe->x[0] = 0;
 }
@@ -281,12 +297,15 @@ void sys_mbox_call(struct ucontext *trapframe)
 {
     unsigned char ch = (unsigned char)trapframe->x[0];
     unsigned int *mbox = (unsigned int *)trapframe->x[1];
-    for (int i = 0; i < 36; i++)
+
+    int size = mbox[0] / 4;
+
+    for (int i = 0; i < size; i++)
         mailbox[i] = mbox[i];
 
     trapframe->x[0] = mailbox_call(ch);
 
-    for (int i = 0; i < 36; i++)
+    for (int i = 0; i < size; i++)
         mbox[i] = mailbox[i];
 }
 
@@ -325,6 +344,10 @@ void sys_sigreturn(struct ucontext *trapframe)
     for (int i = 0; i < 34; i++)
         *((unsigned long long *)trapframe + i) = *((unsigned long long *)cur->signal_stack - i);
 
-    kfree((char *)cur->signal_stack - 4096 * 2);
+    kfree((char *)cur->signal_stack - 4096 * 4);
     cur->signal_stack = NULL;
+
+    // map to ustack
+    mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4);
+    switch_mm_irqs_off(cur->mm_struct->pgd); // flush tlb and pipeline because page table is change
 }

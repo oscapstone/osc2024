@@ -24,12 +24,12 @@ void startup_allocate()
     void *startup_start = (void *)heap_head;
     page_array_init(PAGE_BASE, PAGE_END);
     object_array_init();
-
-    memory_reserve((void *)(VA_START | 0), (void *)(VA_START | 0x1000));            // spin tables for multicore boot (0x0000 - 0x1000)
-    memory_reserve((void *)(VA_START | 0x80000), (void *)(VA_START | 0x100000));    // kernel image in the physical memory
-    memory_reserve((void *)(VA_START | 0x60000), (void *)(VA_START | 0x80000));     // stack space
-    memory_reserve((void *)cpio_start, (void *)cpio_end); // initramfs
-    memory_reserve(startup_start, (void *)heap_head);     // startup allocator
+    
+    memory_reserve((void *)(VA_START | 0), (void *)(VA_START | 0x1000));                                // spin tables for multicore boot (0x0000 - 0x1000)
+    memory_reserve((void *)(VA_START | 0x80000), (void *)(VA_START | (0x100000 + (1028 * (1 << 12))))); // kernel image in the physical memory
+    memory_reserve((void *)(VA_START | 0x60000), (void *)(VA_START | 0x80000));                         // kernel stack space
+    memory_reserve((void *)cpio_start, (void *)cpio_end);                                               // initramfs
+    memory_reserve(startup_start, (void *)heap_head);                                                   // startup allocator
 
     page_allocator_init();
     object_allocator_init();

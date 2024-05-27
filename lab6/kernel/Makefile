@@ -32,7 +32,7 @@ run: all
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd ../bootloader/initramfs.cpio -dtb ../bootloader/bcm2710-rpi-3-b-plus.dtb -display none -serial null -serial stdio
 
 debug: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd ../bootloader/initramfs.cpio -dtb ../bootloader/bcm2710-rpi-3-b-plus.dtb -display none -S -s
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd ../bootloader/initramfs.cpio -dtb ../bootloader/bcm2710-rpi-3-b-plus.dtb -display none -S -s -serial null -serial stdio
 
 clean:
 	rm -f $(SRC_DIR)/*.o kernel8.*

@@ -1,3 +1,14 @@
+.global switch_mm_irqs_off
+switch_mm_irqs_off:
+    msr DAIFSet, 0xf
+    dsb ish // ensure write has completed
+    msr ttbr0_el1, x0 // switch translation based address.
+    tlbi vmalle1is // invalidate all TLB entries
+    dsb ish // ensure completion of TLB invalidatation
+    isb // clear pipeline
+    msr DAIFClr, 0xf
+    ret
+
 .global switch_to
 switch_to:
     stp x19, x20, [x0, 16 * 0]

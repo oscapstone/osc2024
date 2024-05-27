@@ -1,6 +1,7 @@
 #ifndef __THREAD_H
 #define __THREAD_H
 
+#include "mm.h"
 #include "signal.h"
 #include "syscall.h"
 
@@ -33,6 +34,7 @@ enum task_state
 typedef struct task_struct
 {
     struct cpu_context cpu_context;         // task context
+    struct mm_struct *mm_struct;            // mm strcut
     int id;                                 // task id
     int priority;                           // task priority
     void *kstack;                           // stack for kernel
@@ -54,6 +56,7 @@ typedef struct task_list
 extern task_list run_queue;
 
 extern task_struct *get_current_task();
+extern void switch_mm_irqs_off(unsigned long long* pgd);
 extern void switch_to(task_struct *prev, task_struct *next);
 extern void user_switch_to(task_struct *next);
 
@@ -72,6 +75,5 @@ void context_switch(struct task_struct *next);
 void check_need_schedule();
 void check_signal(struct ucontext *sigframe);
 void do_exec(const char *name, char *const argv[]);
-void exec_fun(void (*func)(void));
 
 #endif

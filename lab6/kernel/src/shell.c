@@ -13,7 +13,7 @@
 
 void exec_syscall_img()
 {
-    do_exec("syscall.img", NULL);
+    do_exec("vm.img", NULL);
 }
 
 void shell_cmd(char *cmd)
@@ -84,12 +84,13 @@ void shell_cmd(char *cmd)
         unsigned long long cntfrq_el0 = 0;
         asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0)); // get timer's frequency
 
+        task_create(exec_syscall_img, 0);
+
         timer temp;
         temp.callback = re_shedule;
         temp.expire = cntpct_el0 + (cntfrq_el0 >> 5);
         add_timer(temp);
 
-        task_create(exec_syscall_img, 0);
         zombie_reaper();
     }
     else

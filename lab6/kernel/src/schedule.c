@@ -4,6 +4,7 @@
 #include "cpio.h"
 #include "exception.h"
 #include "utils.h"
+#include "mm.h"
 #include "schedule.h"
 
 task_list run_queue;
@@ -57,12 +58,18 @@ task_struct *task_create(void (*start_routine)(void), int priority)
     task_struct *new_task = kmalloc(sizeof(task_struct));
     new_task->id = task_id++;
     new_task->priority = priority;
-    new_task->kstack = (void *)((char *)kmalloc(4096 * 2) + 4096 * 2); // malloc space for kernel stack
-    new_task->ustack = (void *)((char *)kmalloc(4096 * 2) + 4096 * 2); // malloc space for user stack
+
+    new_task->mm_struct = (struct mm_struct *)kmalloc(sizeof(struct mm_struct));
+    new_task->mm_struct->mmap = NULL;
+    new_task->mm_struct->pgd = NULL;
+    new_task->kstack = (void *)((char *)kmalloc(4096 * 5) + 4096 * 4); // malloc space for kernel stack
+    new_task->ustack = (void *)((char *)kmalloc(4096 * 5) + 4096 * 4); // malloc space for user stack
     new_task->signal_stack = NULL;
+
     new_task->cpu_context.sp = (unsigned long long)(new_task->kstack); // set stack pointer
     new_task->cpu_context.fp = (unsigned long long)(new_task->kstack); // set frame pointer
     new_task->cpu_context.lr = (unsigned long long)start_routine;      // set linker register
+
     new_task->state = RUNNING;
     new_task->need_sched = 0;
     new_task->received_signal = NOSIG;
@@ -79,8 +86,6 @@ task_struct *task_create(void (*start_routine)(void), int priority)
 
     run_queue_push(new_task, priority);
 
-    enable_interrupt();
-
     return new_task;
 }
 
@@ -96,6 +101,7 @@ void zombie_reaper()
 {
     while (1)
     {
+        //uart_puts("idle\n");
         kill_zombies();
         schedule();
     }
@@ -117,8 +123,9 @@ void kill_zombies()
 
                 run_queue_remove(del, i); // remove zombie task
 
-                kfree((char *)del->kstack - 4096 * 2); // free the space
-                kfree((char *)del->ustack - 4096 * 2);
+                kfree(del->mm_struct);
+                kfree((char *)del->kstack - 4096 * 4); // free the space
+                kfree((char *)del->ustack - 4096 * 4);
                 kfree(del);
 
                 enable_interrupt();
@@ -146,9 +153,8 @@ void context_switch(struct task_struct *next)
     struct task_struct *prev = get_current_task();
     if (prev != next)
     {
-        disable_interrupt();
+        switch_mm_irqs_off(next->mm_struct->pgd);
         switch_to(prev, next);
-        enable_interrupt();
     }
 }
 
@@ -190,18 +196,23 @@ void do_exec(const char *name, char *const argv[])
         {
             char *content = file_arr[i].file_content;
             int size = given_size_hex_atoi(file_arr[i].file_header->c_filesize, 8);
-
-            disable_interrupt();
-            char *target = kmalloc(size);
-            enable_interrupt();
-
-            char *copy = target;
-            while (size--) // move the file content to memory
-                *copy++ = *content++;
-
             task_struct *cur = get_current_task();
             cur->priority = 1;
 
+            disable_interrupt();
+            char *target = kmalloc(size);
+            char *copy = target;
+
+            init_mm_struct(cur->mm_struct);
+            // map code
+            mappages(cur->mm_struct, CODE, 0, (unsigned long long)target - VA_START, size);
+            // map ustack
+            mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4);
+
+            while (size--) // move the file content to memory
+                *copy++ = *content++;
+
+            switch_mm_irqs_off(cur->mm_struct->pgd);
             // set sp_el0 to user stack, sp_el1 to kernels stack, elr_el1 to the file content
             asm volatile(
                 "msr sp_el0, %0\n"
@@ -211,22 +222,7 @@ void do_exec(const char *name, char *const argv[])
                 "mov sp, %2\n"
                 "eret\n"
                 :
-                : "r"(cur->ustack), "r"(target), "r"(cur->kstack));
+                : "r"(0xfffffffff000), "r"(0x0), "r"(cur->kstack));
         }
     }
-}
-
-void exec_fun(void (*func)(void))
-{
-    task_struct *cur = get_current_task();
-    cur->priority = 1;
-    asm volatile(
-        "msr sp_el0, %0\n"
-        "msr elr_el1, %1\n"
-        "mov x10, 0\n"
-        "msr spsr_el1, x10\n"
-        "mov sp, %2\n"
-        "eret\n"
-        :
-        : "r"(cur->ustack), "r"(func), "r"(cur->kstack));
 }
