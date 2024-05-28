@@ -83,7 +83,7 @@ typedef struct thread_struct
 int8_t thread_code_can_free(thread_t *thread);
 void schedule_timer();
 void init_thread_sched();
-void _init_create_thread(char *name, int64_t pid, int64_t ppid, void *start);
+thread_t *_init_create_thread(char *name, int64_t pid, int64_t ppid, void *start);
 int64_t wait();
 void idle();
 void __init();

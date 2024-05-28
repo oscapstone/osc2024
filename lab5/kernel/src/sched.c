@@ -8,6 +8,7 @@
 #include "exception.h"
 #include "callback_adapter.h"
 #include "uart1.h"
+#include "shell.h"
 
 struct list_head *run_queue;
 
@@ -44,8 +45,8 @@ static inline thread_t *child_node_to_thread(child_node_t *node)
 	return threads[(node)->pid];
 }
 
-void block(){
-
+void block()
+{
 }
 
 static inline int free_child_thread(thread_t *child_thread)
@@ -84,29 +85,44 @@ inline int8_t thread_code_can_free(thread_t *thread)
 	return !in_kernel_img_space((uint64_t)thread->code);
 }
 
+/**
+ * @brief Initialize the run queue and create idle and init process
+ *
+ * Set the current thread context to idle process
+ */
 void init_thread_sched()
 {
 	kernel_lock_interrupt();
+
 	run_queue = kmalloc(sizeof(thread_t));
 	INIT_LIST_HEAD(run_queue);
 
+	// idle process
 	char *thread_name = kmalloc(5);
 	strcpy(thread_name, "idle");
-	_init_create_thread(thread_name, 0, 0, idle);
+	curr_thread = _init_create_thread(thread_name, 0, 0, idle);
 	set_current_thread_context(&(threads[0]->context));
+	
+	// init process
 	thread_name = kmalloc(5);
 	strcpy(thread_name, "init");
-	curr_thread = thread_create(init, thread_name);
-	curr_thread->code = init;
-	curr_thread->datasize = 4000;
+	thread_t *init_thread = thread_create(init, thread_name);
+	init_thread->datasize = 0x4000;
+
+	// kshell process
+	thread_name = kmalloc(7);
+	sprintf(thread_name, "kshell");
+	thread_t *kshell = thread_create(start_shell, thread_name);
+	kshell->datasize = 0x100000;
+
+    schedule_timer();
 	kernel_unlock_interrupt();
 }
 
-void _init_create_thread(char *name, int64_t pid, int64_t ppid, void *start)
+thread_t *_init_create_thread(char *name, int64_t pid, int64_t ppid, void *start)
 {
 	thread_t *thread = (thread_t *)kmalloc(sizeof(thread_t));
 	init_thread_signal(thread);
-	curr_thread = thread;
 	threads[0] = thread;
 	thread->name = name;
 	thread->pid = pid;
@@ -120,14 +136,15 @@ void _init_create_thread(char *name, int64_t pid, int64_t ppid, void *start)
 	thread->context.sp = (uint64_t)thread->kernel_stack_base + KSTACK_SIZE;
 	thread->context.fp = thread->context.sp; // frame pointer for local variable, which is also in stack.
 	list_add((list_head_t *)thread, run_queue);
+	return thread;
 }
 
 void idle()
 {
+	kernel_unlock_interrupt();
 	DEBUG("idle process\r\n");
 	while (1)
 	{
-		// wait();
 		schedule();
 	}
 }
@@ -193,7 +210,7 @@ void thread_exit()
 	// thread cannot deallocate the stack while still using it, wait for someone to recycle it.
 	// In this lab, idle thread handles this task, instead of parent thread.
 	kernel_lock_interrupt();
-	DEBUG("thread %d exit\n", curr_thread->pid); 
+	DEBUG("thread %d exit\n", curr_thread->pid);
 	curr_thread->status = THREAD_ZOMBIE;
 	list_del_entry((list_head_t *)curr_thread); // remove from run queue, still in parent's child list
 	kernel_unlock_interrupt();
