@@ -1,5 +1,9 @@
 .section ".text.exception"
 
+#define SVC_64 0b010101
+#define DATA_ABORT_FROM_LOWER_LV 0b100100
+#define INSTRUCTION_ABORT_FROM_LOWER_LV 0b100000
+
 // save general registers to stack
 .macro save_all
     sub sp, sp, #272
@@ -62,7 +66,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b sync_handler
+  b el1_sync_handler
   .align 7
   b irq_handler
   .align 7
@@ -71,7 +75,7 @@ exception_vector_table:
   b exception_handler
   .align 7
 
-  b el0_svc_handler
+  b el0_sync_handler
   .align 7
   b irq_handler
   .align 7
@@ -95,9 +99,9 @@ exception_handler:
   load_all
   eret
 
-sync_handler:
+el1_sync_handler:
   save_all
-  bl sync_handler_entry
+  bl el1_sync_handler_entry
   load_all
   eret
 
@@ -110,12 +114,36 @@ irq_handler:
   load_all
   eret
 
-el0_svc_handler:
+el0_sync_handler:
   save_all
+  mrs x25, esr_el1 // read the syndrome register
+  lsr	x24, x25, 26 // exception class
+  cmp x24, SVC_64 // SVC in 64-bit state
+  beq el0_svc
+  cmp	x24, DATA_ABORT_FROM_LOWER_LV	// data abort in EL0
+	beq	el0_da
+  cmp	x24, INSTRUCTION_ABORT_FROM_LOWER_LV	// instruction abort in EL0
+	beq	el0_ia
+  bl el1_sync_handler_entry
+  load_all
+  eret
+
+
+el0_svc:
   mov x0, sp // pass trap frame
   bl el0_svc_handler_entry
   mov x0, sp // pass signal frame
   bl check_signal
+  load_all
+  eret
+
+el0_da:
+  bl el0_da_handler_entry
+  load_all
+  eret
+
+el0_ia:
+  bl el0_ia_handler_entry
   load_all
   eret
 

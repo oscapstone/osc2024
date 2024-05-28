@@ -7,8 +7,10 @@ extern void return_from_fork();
 void enable_interrupt();
 void disable_interrupt();
 void exception_entry();
-void sync_handler_entry();
+void el1_sync_handler_entry();
 void el0_svc_handler_entry(struct ucontext* trapframe);
+void el0_da_handler_entry();
+void el0_ia_handler_entry();
 void irq_handler_entry();
 
 void rx_task();
@@ -25,6 +27,7 @@ void sys_mbox_call(struct ucontext *trapframe);
 void sys_kill(struct ucontext *trapframe);
 void sys_signal(struct ucontext *trapframe);
 void sys_signal_kill(struct ucontext *trapframe);
+void sys_mmap(struct ucontext *trapframe);
 void sys_sigreturn(struct ucontext *trapframe);
 
 

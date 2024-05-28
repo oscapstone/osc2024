@@ -10,7 +10,9 @@
 #define SYS_KILL 7
 #define SYS_SIGNAL 8
 #define SYS_SIGNAL_KILL 9
-#define SYS_SIGRETURN 10
+#define SYS_MMAP 10
+
+#define SYS_SIGRETURN 50
 
 .global getpid
 getpid:
@@ -69,6 +71,12 @@ signal:
 .global signal_kill
 signal_kill:
     mov x8, SYS_SIGNAL_KILL
+    svc #0
+    ret
+
+.global mmap
+mmap:
+    mov x8, SYS_MMAP
     svc #0
     ret
 

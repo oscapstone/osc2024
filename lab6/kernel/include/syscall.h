@@ -11,7 +11,9 @@
 #define SYS_KILL 7
 #define SYS_SIGNAL 8
 #define SYS_SIGNAL_KILL 9
-#define SYS_SIGRETURN 10
+#define SYS_MMAP 10
+
+#define SYS_SIGRETURN 50
 
 struct ucontext
 {
@@ -31,6 +33,7 @@ int mbox_call(unsigned char ch, unsigned int *mbox);
 void kill(int pid);
 void signal(int SIGNAL, void (*handler)());
 void signal_kill(int pid, int SIGNAL);
+void *mmap(void *addr, unsigned long long len, int prot, int flags, int fd, int file_offset);
 void sigreturn();
 
 #endif

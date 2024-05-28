@@ -101,7 +101,6 @@ void zombie_reaper()
 {
     while (1)
     {
-        //uart_puts("idle\n");
         kill_zombies();
         schedule();
     }
@@ -123,8 +122,16 @@ void kill_zombies()
 
                 run_queue_remove(del, i); // remove zombie task
 
+                page_reclaim(del->mm_struct->pgd);                                    // reclaim all page entry
+                for (struct vm_area_struct *vma = del->mm_struct->mmap; vma != NULL;) // clean all VMA
+                {
+                    struct vm_area_struct *temp = vma;
+                    vma = vma->vm_next;
+                    kfree(temp);
+                }
+
                 kfree(del->mm_struct);
-                kfree((char *)del->kstack - 4096 * 4); // free the space
+                kfree((char *)del->kstack - 4096 * 4); // free the stack space
                 kfree((char *)del->ustack - 4096 * 4);
                 kfree(del);
 
@@ -139,7 +146,7 @@ void kill_zombies()
 void schedule()
 {
     task_struct *cur = get_current_task()->next;
-    while (cur != NULL && cur->state == IDLE)
+    while (cur != NULL && (cur->state == IDLE || cur->state == EXIT)) // fine a process that it's state is running
         cur = cur->next;
 
     if (cur == NULL)
@@ -153,7 +160,7 @@ void context_switch(struct task_struct *next)
     struct task_struct *prev = get_current_task();
     if (prev != next)
     {
-        switch_mm_irqs_off(next->mm_struct->pgd);
+        switch_mm_irqs_off(next->mm_struct->pgd); // change the page table
         switch_to(prev, next);
     }
 }
@@ -205,9 +212,9 @@ void do_exec(const char *name, char *const argv[])
 
             init_mm_struct(cur->mm_struct);
             // map code
-            mappages(cur->mm_struct, CODE, 0, (unsigned long long)target - VA_START, size);
+            mappages(cur->mm_struct, CODE, 0, (unsigned long long)target - VA_START, size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
             // map ustack
-            mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4);
+            mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
 
             while (size--) // move the file content to memory
                 *copy++ = *content++;
