@@ -79,8 +79,7 @@ void shell() {
 			printf("async  : mini uart async test\n");
         } else if (utils_strncmp(cmd_space, "hello", 4) == 0) {
 			printf("Hello World!\n");
-        }
-		else if (utils_strncmp(cmd_space,"info", 4) == 0) {
+        } else if (utils_strncmp(cmd_space,"info", 4) == 0) {
 			get_board_revision();
 			if (mailbox_call()) {
 				printf("Revision:            0x%X\n", mailbox[5]);
@@ -142,19 +141,22 @@ void shell() {
 			fileName[--len] = '\0';
 
 			FS_FILE* file;
-			int ret = vfs_open(fileName, NULL, &file);
+			int ret = vfs_open(fileName, FS_FILE_FLAGS_READ, &file);
 			if (ret != 0) {
 				printf("Program %s not found. result = %d\n", fileName, ret);
 				continue;
 			}
 			unsigned long contentSize = file->vnode->content_size;
+			char programName[20];
+			utils_char_fill(programName, file->vnode->name, utils_strlen(file->vnode->name));
 			char* buf = kmalloc(file->vnode->content_size);
 			vfs_read(file, buf, contentSize);
 			vfs_close(file);
 			
 			printf("Executing %s\n", fileName);
 
-			TASK* user_task = task_create_user(fileName, NULL);
+			TASK* user_task = task_create_user(programName, NULL);
+			user_task->pwd = file->vnode->parent;				// Just Hard coded now, can change to shell working directory
 			task_copy_program(user_task, buf, contentSize);
 			kfree(buf);
 			task_run_to_el0(user_task);
@@ -172,13 +174,13 @@ void shell() {
 			// task_run_to_el0(user_task);
 
 			// TODO: wait task
+			task_wait(user_task->pid);
 
-		}
-		 else if (utils_strncmp(cmd_space, "async", 5) == 0) {
+		} else if (utils_strncmp(cmd_space, "async", 5) == 0) {
 			printf("This will transmit A character for async uart\n");
 			uart_async_write_char('A');
 			uart_set_transmit_int();
-		 } else if (utils_strncmp(cmd_space, "mem ", 4) == 0) {
+		} else if (utils_strncmp(cmd_space, "mem ", 4) == 0) {
 			printf("Memory base address: 0x%x\n", mem_manager.base_ptr);
 			printf("Memory size        : 0x%x\n", mem_manager.size);
 			printf("Total Levels       : %d\n", mem_manager.levels);
@@ -195,7 +197,7 @@ void shell() {
 				}
 			}
 			printf("Free space         : %u bytes\n", free_size);
-		 } else if (utils_strncmp(cmd_space, "memtest", 7) == 0) {
+		} else if (utils_strncmp(cmd_space, "memtest", 7) == 0) {
 			printf("Memory management test\n");
 			char* ptr1 = kmalloc(16);
 			char* ptr2 = kmalloc(15);
@@ -209,7 +211,7 @@ void shell() {
 			kfree(ptr3);
 			kfree(ptr2);
 			kfree(ptr1);
-		 } else if (utils_strncmp(cmd_space, "svctest", 7) == 0) {
+		} else if (utils_strncmp(cmd_space, "svctest", 7) == 0) {
 			int pid = fork();
 			if (pid == 0) {
 				printf("child task\n");
@@ -217,12 +219,27 @@ void shell() {
 				printf("parent task. pid = %d\n", pid);
 			}
 			printf("SVC end\n");
-		 } else if (utils_strncmp(cmd_space, "ps ", 3) == 0) {
+		} else if (utils_strncmp(cmd_space, "ps ", 3) == 0) {
 			printf("Current running task: %d\n", task_manager->running);
 			for (U32 i = 0; i < task_manager->running; i++) {
 				printf("%4d: %s\n", task_manager->running_queue[i]->pid, task_manager->running_queue[i]->name);
 			}
-		 }
+		} else if (utils_strncmp(cmd_space, "kill ", 5) == 0) {
+			char* number_ptr = &cmd_space[5];
+			int char_size = 0;
+			for(int i = 5; i < 256; i++) {
+				char c = cmd_space[i];
+				if (c == '\0' || c == ' ')
+					break;
+				char_size++;
+			}
+			char_size--;
+			printf("char size: %d\n", char_size);
+			pid_t pid = utils_atou_dec(number_ptr, char_size);
+			task_kill(pid, -2);
+		} else if (utils_strncmp(cmd_space, "setTimeout ", 11) == 0) {
+			// TODO
+		}
 		 else {
 			uart_send_string("Unknown command\n");
 			uart_send_string(cmd_space);

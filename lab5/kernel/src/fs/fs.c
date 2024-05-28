@@ -144,6 +144,10 @@ void fs_init() {
     NS_DPRINT("[FS][TRACE] fs_init() success.\n");
 }
 
+FS_VNODE* fs_get_root_node() {
+    return fs_manager->rootfs->root;
+}
+
 int fs_register(FS_FILE_SYSTEM* fs) {
     if (!fs_get(fs->name)) {
         link_list_push_back(&fs_manager->filesystems, &fs->list);
@@ -202,6 +206,8 @@ int vfs_write(FS_FILE* file, const void* buf, size_t len) {
 }
 
 int vfs_read(FS_FILE* file, void* buf, size_t len) {
+    if (!(file->flags & FS_FILE_FLAGS_READ))
+        return -1;
     return file->vnode->f_ops->read(file, buf, len);
 }
 

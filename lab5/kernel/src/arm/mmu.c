@@ -217,6 +217,7 @@ void mmu_task_init(TASK* task) {
 
 /**
  * @param return
+ *      get physical address of the page
  *      0 = no page found
 */
 U64 mmu_get_page(TASK* task, UPTR v_addr) {
@@ -311,20 +312,22 @@ void mmu_memfail_handler(U64 esr) {
     }
 
     U64 iss = ESR_ELx_ISS(esr);
+    NS_DPRINT("iss: 0x%x\n", iss);
 
-    if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE) {
-        printf("[MMU][WARN] Doing copy on write\n");
+    // is copy on write
+    if (ISS_IS_WRITE(iss) && (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
+        NS_DPRINT("[MMU][TRACE] Writing operation permission fault and can be write, doing copy on write.\n");
         U64 page_flags = 0;       // flag for page descriptor entry
         page_flags |= MMU_PXN;      // cannot be executed in kernel mode
         page_flags |= MMU_AP_EL0_UK_ACCESS;
         if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) page_flags |= MMU_UNX;
-        printf("[MMU][TRACE] origin page addr: 0x%x\n", current_page_info->p_addr);
+        NS_DPRINT("[MMU][TRACE] origin page addr: 0x%x\n", current_page_info->p_addr);
         U64 new_page = kmalloc(PD_PAGE_SIZE);
         memcpy((void*)MMU_PHYS_TO_VIRT(current_page_info->p_addr), (void*)new_page, PD_PAGE_SIZE);
-        mem_dereference(current_page_info->p_addr);
+        mem_dereference(current_page_info->p_addr);     // detach the old page (parent page)
 
         // replace the page to modify the new page
-        printf("[MMU][TRACE] new page addr: 0x%x%x\n", new_page >> 32, new_page);
+        NS_DPRINT("[MMU][TRACE] new page addr: 0x%x%x\n", new_page >> 32, new_page);
         mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
         return;
     }
@@ -345,4 +348,18 @@ void mmu_memfail_handler(U64 esr) {
 
 
 
+}
+
+void* mmu_va2pa(UPTR v_addr) {
+
+    UPTR page_p_addr = mmu_get_page(task_get_current_el1(), v_addr);
+
+    if (!page_p_addr) {
+        NS_DPRINT("[MMU][ERROR] Failed to get the page from virtual address: %x\n", v_addr);
+        return 0;
+    }
+
+    U64 offset = v_addr & 0xfff;
+    
+    return (offset | page_p_addr);
 }

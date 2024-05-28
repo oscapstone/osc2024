@@ -160,7 +160,7 @@ void* mem_chunk_alloc(U32 size) {
                 char* return_addr = mem_idx2addr(chunk_info->frame_index);
                 return_addr = return_addr + (j * order_pool->obj_size);
 
-                NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", chunk_info->frame_index, j);
+                //NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", chunk_info->frame_index, j);
                 return (void*)return_addr;
             }
         }
@@ -240,7 +240,7 @@ void mem_chunk_free(void* ptr) {
         pool->chunk_count--;
     }
 
-    NS_DPRINT("[MEMORY][TRACE] free chunk memory successfully, ptr:%x\n", ptr);
+    //NS_DPRINT("[MEMORY][TRACE] free chunk memory successfully, ptr:%x\n", ptr);
 }
 
 
@@ -261,12 +261,12 @@ void buddy_init() {
         U32 max_free_size = (mem_manager.size / level_size) + 1;
         FREE_INFO* current_info = &mem_manager.free_list[current_level];
         current_info->space = max_free_size;
+        current_info->size = 0;
         current_info->info = smalloc(max_free_size * sizeof(int));
         NS_DPRINT("[MEMORY][TRACE] free list init. level: %d, space: %d\n", current_level, current_info->space);
 
         for(U32 i = 0;i < current_info->space; i++) {
             current_info->info[i] = MEM_FREE_INFO_UNUSED;
-            current_info->size = 0;
         }
         // initialize the buddy
         /*

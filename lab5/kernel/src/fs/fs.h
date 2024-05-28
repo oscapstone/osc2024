@@ -27,10 +27,13 @@ typedef struct _FS_FILE {
     U32 flags;
 }FS_FILE;
 
+#define FS_FILE_FLAGS_NONE      0x0
 #define FS_FILE_FLAGS_CREATE    0x1
+#define FS_FILE_FLAGS_READ      0x2
 
 
 #define O_CREAT                 FS_FILE_FLAGS_CREATE
+#define O_READ                  FS_FILE_FLAGS_READ
 
 typedef struct _FS_MOUNT {
     FS_VNODE* root;
@@ -69,6 +72,8 @@ typedef struct _FS_MANAGER {
 // called by main (kernel)
 void fs_init();
 
+FS_VNODE* fs_get_root_node();
+
 /**
  * @param node_name
  *      target node name to return
@@ -80,6 +85,12 @@ int fs_find_node(const char* pathname, FS_VNODE** parent, FS_VNODE** target, cha
 FS_VNODE *vnode_create(const char *name, U32 flags);
 
 #define FS_OPEN_NO_PARENT_DIR                       -11
+/**
+ * @param flags
+ *      FS_FILE_FLAGS
+ * @return
+ *      0 = success
+*/
 int vfs_open(const char* pathname, U32 flags, FS_FILE** target);
 int vfs_close(FS_FILE* file);
 int vfs_write(FS_FILE* file, const void* buf, size_t len);

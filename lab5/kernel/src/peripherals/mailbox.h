@@ -26,6 +26,12 @@ extern volatile unsigned int mailbox[36];
 #define MBOX_TAG_LAST           0x00000000
 
 int mailbox_call();
+/**
+ * calling mailbox using custom structure
+ * @param mailbox_ptr
+ *      the physical address (not kernel address) of the structure in memory
+*/
+int mailbox_call_user(U8 ch, void* mailbox_ptr);
 void get_board_revision();
 void get_serial_number();
 void get_arm_mem();

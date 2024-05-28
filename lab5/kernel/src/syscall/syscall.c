@@ -39,7 +39,7 @@ void syscall_handler(TRAP_FRAME* trap_frame) {
 
     U64 syscall_index = trap_frame->regs[8];
 
-    NS_DPRINT("[SYSCALL][TRACE] index: %d\n", syscall_index);
+    //NS_DPRINT("[SYSCALL][TRACE] index: %d\n", syscall_index);
     if (syscall_index >= NR_SYSCALLS) {
         printf("[SYSCALL][ERROR] Invalid system call.\n");
         return;

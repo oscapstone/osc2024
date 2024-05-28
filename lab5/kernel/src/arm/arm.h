@@ -39,7 +39,9 @@ struct arm_core_regs {
 // EC,bits[31:26]
 #define ESR_ELx_EC(esr) ((esr & 0xFC000000) >> 26)
 // ISS,bits[24:0]
-#define ESR_ELx_ISS(esr) (esr & 0x03FFFFFF)
+#define ESR_ELx_ISS(esr) (esr & 0x01FFFFFF)
+
+#define ISS_IS_WRITE(iss) (iss & 0x40)
 
 #define ISS_TF_LEVEL0 0b000100 // iss IFSC, bits [5:0]
 #define ISS_TF_LEVEL1 0b000101

@@ -6,13 +6,18 @@
 #include "utils/utils.h"
 #include "arm/arm.h"
 #include "proc/task.h"
+#include "mm/mm.h"
 
 const U32 interval_1 = CLOCKHZ / 300;
 U32 current_value_1 = 0;
 
+TIMER_MANAGER timer_manager;
+
 void core0_timer_enable();
 
 void timer_init() {
+
+    timer_manager.tasks = 0;
 
     // system timer
     current_value_1 = REGS_TIMER->counter_low;
@@ -61,14 +66,28 @@ void timer_sys_timer_3_handler() {
 }
 
 void timer_core_timer_0_handler() {
+
+    if (timer_manager.tasks) {
+        TIMER_TASK* current_task = timer_manager.tasks;
+        void (*callback)() = current_task->callback;
+        kfree(current_task);
+        timer_manager.tasks = current_task->next;
+        U32 freq = utils_read_sysreg(cntfrq_el0);
+        utils_write_sysreg(cntp_tval_el0, freq * timer_manager.tasks->timeout / 1000);
+        callback();
+    }
+
     // just use the core 0 timer to do multitasking
-    U64 freq = utils_read_sysreg(cntfrq_el0) / 1000;
-    utils_write_sysreg(cntp_tval_el0, freq * 30LL);
+    // U64 freq = utils_read_sysreg(cntfrq_el0) / 1000;
+    // utils_write_sysreg(cntp_tval_el0, freq * 30LL);
+    // U64 freq = utils_read_sysreg(cntfrq_el0);
+    // utils_write_sysreg(cntp_tval_el0, freq);
+    // printf("[CORE TIMER TEST]\n");
     
     // when handling interrupts default state is disable interrupt so we need to enable it
-    enable_interrupt();
-    task_schedule();
-    disable_interrupt();        // 老實說根本不會走到這裡八?
+    // enable_interrupt();
+    // task_schedule();
+    //disable_interrupt();        // 老實說根本不會走到這裡八?
 }
 
 U64 timer_get_ticks() {
@@ -92,4 +111,36 @@ void timer_sleep(U32 ms) {
     while (timer_get_ticks() < start + (ms * 1000)) {
         asm volatile("nop");
     }
+}
+
+void timer_add(void (*callback)(), U32 millisecond) {
+    TIMER_TASK* timer_task = kmalloc(sizeof(TIMER_TASK));
+    timer_task->callback = callback;
+    timer_task->next = NULL;
+    timer_task->timeout = millisecond;
+
+    if (!timer_manager.tasks) {
+        timer_manager.tasks = timer_task;
+        return;
+    }
+    TIMER_TASK* current_task = timer_manager.tasks;
+    TIMER_TASK* prev_task = current_task;
+    while (current_task) {
+        if (current_task->timeout > timer_task->timeout) {
+            current_task->timeout -= timer_task->timeout;
+            timer_task->next = current_task;
+            if (timer_manager.tasks == current_task) {
+                timer_manager.tasks = timer_task;
+            } else {
+                prev_task->next = timer_task;
+            }
+            return;
+        } else {
+            timer_task->timeout -= current_task->timeout;
+        }
+
+        prev_task = current_task;
+        current_task = current_task->next;
+    }
+    prev_task->next = timer_task;
 }

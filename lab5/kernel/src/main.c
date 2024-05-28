@@ -75,19 +75,18 @@ void main() {
 
 	timer_init();
 
-	task_init();
-
 	// getting CPIO addr
 	fdt_traverse(get_cpio_addr);
 
 	// initializing file system
 	fs_init();
 
+	task_init();
+
 	// enabling the interrupt
 	enable_interrupt();
-	TASK* task_a = task_create("task_a", TASK_FLAGS_KERNEL);
-	task_a->cpu_regs.lr = func_task_a;
-	NS_DPRINT("task a pid = %d\n", task_a->pid);
+	TASK* task_a = task_create_kernel("kernel_tty", TASK_FLAGS_KERNEL);
+	task_a->cpu_regs.lr = (U64)func_task_a;
 	task_run(task_a);
 	// TASK* task_b = task_create_user("task_b", NULL);
 	// NS_DPRINT("task b pid = %d\n", task_b->pid);
@@ -99,6 +98,7 @@ void main() {
 
 	// init idle
 	while (1) {
+		//printf("a\n");
 		task_kill_dead();
 		task_schedule();
 	}

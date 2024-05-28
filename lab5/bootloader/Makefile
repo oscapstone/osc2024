@@ -22,11 +22,11 @@ bootloader.img : $(OBJ_FILES) linker.ld $(BIN_DIR)
 
 run : bootloader.img
 	# qemu-system-aarch64 -M raspi3b -serial null -serial pty -display none -device loader,file=$<,addr=0x80000,cpu-num=0
-	qemu-system-aarch64 -M raspi3b -serial null -serial pty -display none -kernel $< -initrd ../initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -serial null -serial pty -kernel $< -initrd ../initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 	
 debugRun : bootloader.img
 	# qemu-system-aarch64 -M raspi3b -serial null -serial pty -display none -device loader,file=$<,addr=0x80000,cpu-num=0 -S -s
-	qemu-system-aarch64 -M raspi3b -serial null -serial pty -display none -kernel $< -initrd ../initramfs.cpio -S -s -dtb bcm2710-rpi-3-b-plus.dtb
+	qemu-system-aarch64 -M raspi3b -serial null -serial pty -kernel $< -initrd ../initramfs.cpio -S -s -dtb bcm2710-rpi-3-b-plus.dtb
 
 gdb-run :
 	gdb-multiarch -ex 'set architecture aarch64' -ex 'file bin/bootloader.elf' -ex 'target remote localhost:1234'

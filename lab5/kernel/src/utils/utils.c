@@ -17,6 +17,18 @@ unsigned long utils_atoi(const char *s, int char_size) {
     return num;
 }
 
+U64 utils_atou_dec(const char *s, int char_size) {
+    U64 val = 0;
+    for (int i = 0; i < char_size; i++) {
+        val = val * 10;
+        if (*s >= '0' && *s <= '9') {
+            val += (*s - '0');
+        }
+        s++;
+    }
+    return val;
+}
+
 void utils_align(void *size, unsigned int s) {
 	unsigned long* x = (unsigned long*) size;
 	unsigned long mask = s-1;

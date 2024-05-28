@@ -132,5 +132,10 @@ void mmu_map_io(TASK* task);
 void mmu_delete_mm(TASK* task);
 void mmu_fork_mm(TASK* src_task, TASK* new_task);
 
+/**
+ * Transfer virtual addres to physical address according to current process page table
+*/
+void* mmu_va2pa(UPTR v_addr);
+
 // the handler for memory failed
 void mmu_memfail_handler(U64 esr);

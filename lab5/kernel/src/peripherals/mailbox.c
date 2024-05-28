@@ -1,3 +1,5 @@
+
+#include "base.h"
 #include "mailbox.h"
 
 volatile unsigned int  __attribute__((aligned(16))) mailbox[36];
@@ -18,6 +20,23 @@ int mailbox_call()
             /* is it a valid successful response? */
             return mailbox[1]==MBOX_RESPONSE;
     }
+    return 0;
+}
+
+int mailbox_call_user(U8 ch, void* mailbox_ptr) {
+    U32 r = ((U32)((U32) mailbox_ptr) & ~0xf) | (ch & 0xf);
+
+    do { asm volatile("nop"); } while (*MBOX_STATUS & MBOX_FULL);
+    *MBOX_WRITE = r;
+
+    while (1) {
+        do {asm volatile("nop"); } while (*MBOX_STATUS & MBOX_EMPTY);
+
+        if (r == *MBOX_READ) {
+            return ((U32*)mailbox_ptr) [1] == MBOX_RESPONSE;
+        }
+    }
+
     return 0;
 }
 

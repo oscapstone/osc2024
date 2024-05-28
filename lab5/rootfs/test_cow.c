@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     if (pid == 0) {
         i = 20;
         pid = getpid();
-        sprintf(test_data, "child process gogo\n");
+        sprintf(test_data, "child process gogo\n");             // writing data that is not in stack trigger page fault handler to do copy on write
         printf(test_data);
         printf("child process: pid = %d, i = %d\n", pid, i);
     } else {

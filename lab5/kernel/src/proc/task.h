@@ -2,30 +2,32 @@
 
 #include "base.h"
 
+#include "fs/fs.h"
+
 typedef U64 pid_t;
 
-typedef struct _VMA_PAGE_INFO {
-    U64                         v_addr;
-    U64                         p_addr;                     // this page physical address
-    struct _VMA_PAGE_INFO*      next;
-}VMA_PAGE_INFO;
+// typedef struct _VMA_PAGE_INFO {
+//     U64                         v_addr;
+//     U64                         p_addr;                     // this page physical address
+//     struct _VMA_PAGE_INFO*      next;
+// }VMA_PAGE_INFO;
 
-/**
- * A contiguous region of virtual memory information
-*/
-typedef struct _VMA_STRUCT {
-    UPTR                    v_start;             // where the virtual addr this page
-    UPTR                    v_end;
-    U32                     flags;
-    U32                     page_count;         // number of page in this region
-    struct _VMA_PAGE_INFO*  pages;           // the page info (block descriptor)
-    struct _VMA_STRUCT*     next;               // next region
-}VMA_STRUCT;
+// /**
+//  * A contiguous region of virtual memory information
+// */
+// typedef struct _VMA_STRUCT {
+//     UPTR                    v_start;             // where the virtual addr this page
+//     UPTR                    v_end;
+//     U32                     flags;
+//     U32                     page_count;         // number of page in this region
+//     struct _VMA_PAGE_INFO*  pages;           // the page info (block descriptor)
+//     struct _VMA_STRUCT*     next;               // next region
+// }VMA_STRUCT;
 
-#define VMA_FLAGS_READ             0x1
-#define VMA_FLAGS_WRITE            0x2
-#define VMA_FLAGS_EXEC             0x4
-#define VMA_FLAGS_GROW_DOWN        0x8
+// #define VMA_FLAGS_READ             0x1
+// #define VMA_FLAGS_WRITE            0x2
+// #define VMA_FLAGS_EXEC             0x4
+// #define VMA_FLAGS_GROW_DOWN        0x8
 
 
 #define TASK_MAX_KERNEL_PAGES       20
@@ -69,11 +71,20 @@ typedef struct _CPU_REGS
     U64 sp, pgd;
 }CPU_REGS;
 
+typedef struct _FILE_DESCRIPTOR
+{
+    // fd is the index in task file descriptor table
+    FS_FILE* file;
+}FILE_DESCRIPTOR;
+
+#define MAX_FILE_DESCRIPTOR 10
+
 // in other word, process
 typedef struct _TASK
 {
     CPU_REGS cpu_regs;
     pid_t pid;
+    U32 status;
     U32 flags;
     int priority;               // the nice value how many time this task can be preempt
     /**
@@ -84,7 +95,12 @@ typedef struct _TASK
     void* user_stack;
     char name[20];              // the task name
     pid_t parent_pid;           // the parent pid
+    int exitcode;
     MM_STRUCT mm;
+
+    // FS
+    FS_VNODE* pwd;              // current working directory
+    FILE_DESCRIPTOR file_table[MAX_FILE_DESCRIPTOR];
 }TASK;
 
 #define TASK_CPU_REGS_OFFSET    offsetof(cpu_regs, TASK)
@@ -93,17 +109,22 @@ typedef struct _TASK
 #define TASK_STACK_PAGE_COUNT   4
 #define TASK_STACK_SIZE         (TASK_STACK_PAGE_COUNT * PD_PAGE_SIZE)
 
+#define TASK_STATUS_RUNNING     1
+#define TASK_STATUS_WAITING     2
+#define TASK_STATUS_DEAD        3
+
 #define TASK_FLAGS_ALLOC        0x01            // it is allocated or not
-#define TASK_FLAGS_RUNNING      0x02            // it is running or not
 #define TASK_FLAGS_KERNEL       0x04            // it is a kernel task or not
-#define TASK_FLAGS_DEAD         0x08
 
 #define TASK_MAX_TASKS          500
+
+#define TASK_SCHE_FREQ          30LL            // in millisecond
 
 typedef struct _TASK_MANAGER {
     U32 count;                                  // current allocated number of task
     U32 running;                                // how many task in running queue
     TASK* running_queue[TASK_MAX_TASKS];        // running queue
+    TASK* waiting_list[TASK_MAX_TASKS];         // waiting
     TASK tasks[TASK_MAX_TASKS];
     U32 dead_count;
     TASK* dead_list[TASK_MAX_TASKS];
@@ -114,7 +135,7 @@ void task_schedule();
 
 void task_run_to_el0(TASK* task);
 void task_run(TASK* task);
-TASK* task_create(const char* name, U32 flags);             // create kernel process
+TASK* task_create_kernel(const char* name, U32 flags);             // create kernel process
 TASK* task_create_user(const char* name, U32 flags);        // create user process
 void task_exit(int exitcode);
 /**
@@ -130,6 +151,13 @@ void task_kill_dead();
  * 
 */
 void task_copy_program(TASK* task, void* program_start, size_t program_size);
+
+/**
+ * Poorly waiting task for pid
+ * @param pid
+ *      the task to wait
+*/
+void task_wait(pid_t pid);
 
 // asm
 void task_asm_switch_to(TASK* current, TASK* next);

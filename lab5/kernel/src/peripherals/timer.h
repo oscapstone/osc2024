@@ -3,6 +3,24 @@
 #include "base.h"
 #include "bcm2837base.h"
 
+//
+//
+typedef struct _TIMER_TASK {
+    U32 timeout;        // the timeout compare to the previous TASK in millisecond
+    void (*callback)();
+    struct _TIMER_TASK* next;
+}TIMER_TASK;
+
+typedef struct _TIMER_MANAGER
+{
+    TIMER_TASK* tasks;
+}TIMER_MANAGER;
+
+void timer_add(void (*callback)(), U32 millisecond);
+
+//
+// user timer
+
 // one second for system timer
 #define CLOCKHZ 1000000
 
