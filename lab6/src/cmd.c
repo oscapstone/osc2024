@@ -138,6 +138,15 @@ void demo()
         void *p31 = kmalloc(8192);
         void *p32 = kmalloc(8192);
         void *p33 = kmalloc(8192);
+        uart_puts("ptr1 = ");
+        uart_hex((uintptr_t)p31);
+        uart_puts("\n");
+        uart_puts("ptr2 = ");
+        uart_hex((uintptr_t)p32);
+        uart_puts("\n");
+        uart_puts("ptr3 = ");
+        uart_hex((uintptr_t)p33);
+        uart_puts("\n");
         kfree(p31);
         kfree(p32);
         kfree(p33);

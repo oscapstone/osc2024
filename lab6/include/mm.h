@@ -27,5 +27,6 @@ void kfree(void *ptr);
 
 void mem_init();
 void memory_reserve(uint64_t start, uint64_t end);
+void free_list_display();
 
 #endif // MM_H
