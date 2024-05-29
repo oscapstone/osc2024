@@ -34,6 +34,7 @@ struct Kthread : ListItem {
   KthreadItem* item;
   Signal signal;
   PT* el0_tlb;
+  ListHead<PageItem> user_ro_pages{};
 
  private:
   Kthread();

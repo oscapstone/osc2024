@@ -101,7 +101,14 @@ void segv_handler(int el, unsigned iss, SEGV_TYPE type) {
 }
 
 void return_to_user(TrapFrame* frame) {
+  auto th = current_thread();
   enable_interrupt();
-  current_thread()->signal.handle(frame);
+  th->signal.handle(frame);
   disable_interrupt();
+  for (auto page : th->user_ro_pages) {
+    auto entry = th->el0_tlb->get_entry(page->addr);
+    if (entry)
+      entry->AP = AP::USER_RO;
+  }
+  th->user_ro_pages.clear();
 }

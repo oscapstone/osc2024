@@ -3,6 +3,7 @@
 #include "io.hpp"
 #include "mm/page.hpp"
 #include "sched.hpp"
+#include "thread.hpp"
 
 void PT_Entry::print(int level) const {
   kprintf("0x%08lx Attr%d %s %s", (uint64_t)addr(), AttrIdx, PT_levelstr(level),
@@ -269,7 +270,12 @@ int fault_handler(int el) {
     return -1;
 
   switch (iss.DFSC) {
-      // TODO
+    case ESR_ELx_IIS_DFSC_PERM_FAULT_L3:
+      if (el == 1) {
+        entry->AP = AP::KERNEL_RW;
+        current_thread()->user_ro_pages.push_back(new PageItem{fpage});
+      }
+      break;
   }
 
   return 0;

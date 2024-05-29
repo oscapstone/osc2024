@@ -31,8 +31,7 @@ int exec(ExecCtx* ctx) {
 
   thread->reset_el0_tlb();
 
-  // TODO: RO TEXT
-  if (thread->alloc_user_pages(USER_TEXT_START, file.size(), ProtFlags::RWX)) {
+  if (thread->alloc_user_pages(USER_TEXT_START, file.size(), ProtFlags::RX)) {
     klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
          thread->tid, file.size());
     return -1;

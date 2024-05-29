@@ -4,8 +4,15 @@
 
 #include "arm.hpp"
 #include "ds/bitmask_enum.hpp"
+#include "ds/list.hpp"
 #include "mm/mm.hpp"
 #include "util.hpp"
+
+struct PageItem : ListItem {
+  uint64_t addr;
+  template <typename T>
+  PageItem(T addr) : ListItem{}, addr((uint64_t)addr) {}
+};
 
 extern char __upper_PGD[];
 extern char __upper_PUD[];

@@ -35,6 +35,8 @@
 #define ESR_ELx_EC_DABT_CUR (0b100101)
 #define ESR_ELx_EC_SP_ALIGN (0b100110)
 
+#define ESR_ELx_IIS_DFSC_PERM_FAULT_L3 (0b001111)
+
 // D8.2.82 TCR_EL1, Translation Control Register(EL1)
 
 #define TCR_CONFIG_REGION_48bit (((64 - 48) << 0) | ((64 - 48) << 16))
