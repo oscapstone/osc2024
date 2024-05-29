@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "arm.hpp"
+#include "mm/flags.hpp"
 #include "mm/mm.hpp"
 #include "util.hpp"
 
@@ -198,8 +199,15 @@ struct PT_Entry {
     asm volatile("" ::: "memory");
   }
   template <typename T>
-  void set_entry(T addr, int level, bool req_free = false) {
+  void set_user_entry(T addr, int level, ProtFlags prot,
+                      bool req_free = false) {
     set_level(level);
+    if (has(prot, ProtFlags::WRITE))
+      AP = AP::USER_RW;
+    else
+      AP = AP::USER_RO;
+    UXN = not has(prot, ProtFlags::EXEC);
+    PXN = true;
     require_free = req_free;
     set_addr((void*)addr, isPTE() ? PTE_ENTRY : PD_BLOCK);
   }
@@ -212,7 +220,8 @@ struct PT_Entry {
     set_addr((void*)table, PD_TABLE);
   }
 
-  void alloc(int level, bool kernel = false);
+  void alloc_table(int level);
+  void alloc_user_page(ProtFlags prot);
   PT_Entry copy(int level) const;
 };
 static_assert(sizeof(PT_Entry) == sizeof(uint64_t));

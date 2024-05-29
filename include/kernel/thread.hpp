@@ -97,3 +97,8 @@ template <typename T, typename U>
   return current_thread()->vmm.map_user_phy_pages((uint64_t)va, (uint64_t)pa,
                                                   size, prot, name);
 }
+
+template <typename T>
+[[nodiscard]] VMA* find_vma(T va) {
+  return current_thread()->vmm.vma_find((uint64_t)va);
+}

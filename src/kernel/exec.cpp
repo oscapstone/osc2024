@@ -55,6 +55,7 @@ int exec(ExecCtx* ctx) {
   memzero((void*)stack_addr, (void*)stack_end);
   thread->reset_kernel_stack();
 
+  thread->vmm.return_to_user();
   exec_user_prog((void*)text_addr, (void*)stack_end, thread->regs.sp);
 
   return 0;

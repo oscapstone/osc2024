@@ -20,17 +20,15 @@ void PT_Entry::print(int level) const {
   kprintf("\n");
 }
 
-void PT_Entry::alloc(int level, bool kernel) {
+void PT_Entry::alloc_table(int level) {
   set_level(level);
-  if (not level_is_PTE) {
-    int nxt_level = level + 1;
-    auto nxt_table = new PT(*this, nxt_level);
-    set_table(level, nxt_table);
-  } else {
-    set_entry(kmalloc(PAGE_SIZE), level, true);
-    UXN = kernel;
-    PXN = !kernel;
-  }
+  int nxt_level = level + 1;
+  auto nxt_table = new PT(*this, nxt_level);
+  set_table(level, nxt_table);
+}
+
+void PT_Entry::alloc_user_page(ProtFlags prot) {
+  set_user_entry(kmalloc(PAGE_SIZE), PTE_LEVEL, prot, true);
 }
 
 PT_Entry PT_Entry::copy(int level) const {
@@ -104,7 +102,7 @@ PT_Entry& PT::walk(uint64_t start, int level, uint64_t va_start, int va_level) {
   auto nxt_start = start + idx * ENTRY_SIZE[level];
   auto nxt_level = level + 1;
   if (not entry.isTable())
-    entry.alloc(level);
+    entry.alloc_table(level);
   PT* nxt_table = entry.table();
   return nxt_table->walk(nxt_start, nxt_level, va_start, va_level);
 }
@@ -125,19 +123,19 @@ void PT::walk(uint64_t start, int level, uint64_t va_start, uint64_t va_end,
 PT_Entry* PT::get_entry(uint64_t start, int level, uint64_t addr, bool alloc) {
   uint64_t idx = (addr - start) / ENTRY_SIZE[level];
   auto entry = &entries[idx];
-  if (entry->isInvalid() and alloc)
-    entry->alloc(level);
-  switch (entry->kind()) {
-    case EntryKind::TABLE: {
-      auto nxt_start = start + idx * ENTRY_SIZE[level];
-      auto nxt_level = level + 1;
-      return entry->table()->get_entry(nxt_start, nxt_level, addr);
-    }
-    case EntryKind::ENTRY:
-      return entry;
-    default:
-      return nullptr;
+
+  if (level == PTE_LEVEL)
+    return entry;
+
+  if (alloc and entry->isInvalid())
+    entry->alloc_table(level);
+
+  if (entry->kind() == EntryKind::TABLE) {
+    auto nxt_start = start + idx * ENTRY_SIZE[level];
+    auto nxt_level = level + 1;
+    return entry->table()->get_entry(nxt_start, nxt_level, addr, alloc);
   }
+  return nullptr;
 }
 
 void PT::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
@@ -258,25 +256,40 @@ int fault_handler(int el) {
   }
 
   auto faddr = (void*)read_sysreg(FAR_EL1);
+
   if (isKernelSpace(faddr)) {
     klog("fault error: in kernel space\n");
     return -1;
   }
 
   auto fpage = getPage(faddr);
-  auto entry = current_thread()->vmm.el0_tlb->get_entry(fpage);
-  // TODO: demand paging, check addr is in valid adddress space
-  if (not entry)
-    return -1;
+  auto entry = current_thread()->vmm.el0_pgd->get_entry(fpage);
+  auto vma = find_vma(faddr);
 
   switch (iss.DFSC) {
+    case ESR_ELx_IIS_DFSC_TRAN_FAULT_L0:
+    case ESR_ELx_IIS_DFSC_TRAN_FAULT_L1:
+    case ESR_ELx_IIS_DFSC_TRAN_FAULT_L2:
+    case ESR_ELx_IIS_DFSC_TRAN_FAULT_L3:
+      klog("[Translation fault]: %016lx\n", (uint64_t)faddr);
+      if (!vma)
+        return -1;
+      entry = current_thread()->vmm.el0_pgd->get_entry(fpage, true);
+      entry->alloc_user_page(vma->prot);
+      reload_pgd();
+      return 0;
+
     case ESR_ELx_IIS_DFSC_PERM_FAULT_L3:
       if (el == 1) {
         entry->AP = AP::KERNEL_RW;
         current_thread()->vmm.user_ro_pages.push_back(new PageItem{fpage});
+        return 0;
+      } else {
+        return -1;
       }
-      break;
-  }
 
-  return 0;
+    default:
+      kprintf("unknown DFSC %06b\n", iss.DFSC);
+      return -1;
+  }
 }
