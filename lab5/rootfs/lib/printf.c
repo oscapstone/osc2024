@@ -19,10 +19,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 typedef void (*putcf) (void*,char);
 void putc(void* p, char c) {
-
-    if (c == '\n') {
-        uartwrite('\r', 1);
-    }
     uartwrite(&c, 1);
 }
 static putcf stdout_putf = putc;
