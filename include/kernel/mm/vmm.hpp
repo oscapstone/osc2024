@@ -1,9 +1,28 @@
 #pragma once
 
+#include "ds/bitmask_enum.hpp"
 #include "ds/list.hpp"
 #include "mm/mmu.hpp"
 #include "string.hpp"
 #include "util.hpp"
+
+enum class ProtFlags : uint64_t {
+  NONE = 0,
+  READ = 1 << 0,
+  WRITE = 1 << 1,
+  EXEC = 1 << 2,
+  RX = READ | EXEC,
+  RW = READ | WRITE,
+  RWX = READ | WRITE | EXEC,
+  MARK_AS_BITMASK_ENUM(EXEC),
+};
+
+enum class MmapFlags : uint64_t {
+  NONE = 0,
+  MAP_ANONYMOUS = 0x0800,
+  MAP_POPULATE = 0x10000,
+  MARK_AS_BITMASK_ENUM(MAP_POPULATE),
+};
 
 struct VMA : ListItem {
  private:
@@ -32,6 +51,15 @@ struct VMA : ListItem {
   uint64_t size() const {
     return size_;
   }
+
+  template <typename T>
+  bool contain(T addr) const {
+    return start() <= (uint64_t)addr and (uint64_t) addr <= end();
+  }
+
+  bool overlap(uint64_t addr, uint64_t size) const {
+    return addr <= end() and start() <= addr + size;
+  }
 };
 
 struct PageItem : ListItem {
@@ -44,17 +72,24 @@ struct PageItem : ListItem {
 class VMM {
  public:
   PT* el0_tlb = nullptr;
-  ListHead<VMA> items{};
+  ListHead<VMA> vmas{};
   ListHead<PageItem> user_ro_pages{};
 
   VMM() = default;
   VMM(const VMM& o);
   ~VMM();
 
+  bool vma_overlap(uint64_t va, uint64_t size);
+  uint64_t vma_addr(uint64_t va, uint64_t size);
+  void vma_add(string name, uint64_t addr, uint64_t size, ProtFlags prot);
+  VMA* vma_find(uint64_t va);
+
   void ensure_el0_tlb();
-  int alloc_user_pages(uint64_t va, uint64_t size, ProtFlags prot);
-  int map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
-                         ProtFlags prot);
+  [[nodiscard]] uint64_t mmap(uint64_t va, uint64_t size, ProtFlags prot,
+                              MmapFlags flags, const char* name);
+  [[nodiscard]] uint64_t map_user_phy_pages(uint64_t va, uint64_t pa,
+                                            uint64_t size, ProtFlags prot,
+                                            const char* name);
 
   void reset();
   void return_to_user();

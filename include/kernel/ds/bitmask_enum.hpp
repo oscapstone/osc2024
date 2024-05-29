@@ -128,7 +128,7 @@ bool has(E LHS, E RHS) {
   return (LHS & RHS) == RHS;
 }
 
-template <typename E>
-E cast_enum(void* Val) {
+template <typename E, typename T>
+E cast_enum(T Val) {
   return static_cast<E>((uint64_t)(Val)&Mask<E>());
 }

@@ -110,7 +110,7 @@ string operator+(const string& a, const string& b) {
 }
 
 string to_hex_string(uint64_t value) {
-  uint32_t size = npf_snprintf(nullptr, 0, "0x%lx", value);
+  uint32_t size = npf_snprintf(nullptr, 0, "0x%lx", value) + 1;
   string s(size);
   s += npf_snprintf(s.data(), s.cap(), "0x%lx", value);
   return s;

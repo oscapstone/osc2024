@@ -1,6 +1,7 @@
 #include "signal.hpp"
 
 #include "exec.hpp"
+#include "mm/vmm.hpp"
 #include "mm/vsyscall.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
@@ -69,10 +70,10 @@ void Signal::handle(TrapFrame* frame) {
       if (frame) {
         if (not stack.alloc(PAGE_SIZE, true))
           panic("[signal::handle] can't alloc new stack");
-        map_user_phy_pages(USER_SIGNAL_STACK, va2pa(stack.addr), PAGE_SIZE,
-                           ProtFlags::RWX);
-        auto backup_frame =
-            (char*)USER_SIGNAL_STACK + PAGE_SIZE - sizeof(TrapFrame);
+        auto stack_addr =
+            map_user_phy_pages(USER_SIGNAL_STACK, va2pa(stack.addr), PAGE_SIZE,
+                               ProtFlags::RWX, "[signal_stack]");
+        auto backup_frame = (char*)stack_addr + PAGE_SIZE - sizeof(TrapFrame);
         memcpy(backup_frame, frame, sizeof(TrapFrame));
         frame->sp_el0 = (uint64_t)backup_frame;
         frame->elr_el1 = (uint64_t)act.handler;

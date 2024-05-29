@@ -2,6 +2,7 @@
 
 #include "io.hpp"
 #include "mm/mmu.hpp"
+#include "mm/vmm.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -22,11 +23,15 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
       auto base_addr = msg->value_buf[0] & 0x3FFFFFFF;
       auto length = msg->value_buf[1];
       klog("mbox: buf 0x%x ~ 0x%x\n", base_addr, base_addr + length);
-      map_user_phy_pages(base_addr, base_addr, length, ProtFlags::RW);
+      auto va = map_user_phy_pages(base_addr, base_addr, length, ProtFlags::RW,
+                                   "[frame_buffer]");
+      if (va != (uint32_t)va)
+        return false;
+      msg->value_buf[0] = (uint32_t)va;
     }
   }
 
-  return 1;  // TODO ???
+  return true;
 }
 
 void mailbox_call(uint8_t ch, MboxBuf* phy_mbox) {

@@ -3,8 +3,6 @@
 #include <type_traits>
 
 #include "arm.hpp"
-#include "ds/bitmask_enum.hpp"
-#include "ds/list.hpp"
 #include "mm/mm.hpp"
 #include "util.hpp"
 
@@ -21,9 +19,19 @@ extern char __upper_PUD[];
 extern char __upper_end[];
 
 constexpr uint64_t ADDRESS_SPACE_TAG = 0xFFFF000000000000;
+constexpr uint64_t ADDRESS_SPACE_SIZE = 0x0000FFFFFFFFFFFF;
+static_assert((ADDRESS_SPACE_TAG & ADDRESS_SPACE_SIZE) == 0);
+
 constexpr uint64_t KERNEL_SPACE = 0xFFFF000000000000;
 constexpr uint64_t USER_SPACE = 0;
 constexpr uint64_t MEM_START = 0;
+static_assert((KERNEL_SPACE & ADDRESS_SPACE_TAG) == KERNEL_SPACE);
+
+constexpr uint64_t USER_SPACE_START = USER_SPACE;
+constexpr uint64_t USER_SPACE_END = USER_SPACE + ADDRESS_SPACE_SIZE;
+constexpr uint64_t KERNEL_SPACE_START = USER_SPACE;
+constexpr uint64_t KERNEL_SPACE_END = KERNEL_SPACE + ADDRESS_SPACE_SIZE;
+constexpr uint64_t INVALID_ADDRESS = (USER_SPACE_END + KERNEL_SPACE_START) / 2;
 
 template <typename T>
 inline uint64_t lower_addr(T x) {
@@ -77,17 +85,6 @@ inline const char* PT_levelstr(int level) {
   }
   return "unknown";
 }
-
-enum class ProtFlags {
-  NONE = 0,
-  READ = 1 << 0,
-  WRITE = 1 << 1,
-  EXEC = 1 << 2,
-  RX = READ | EXEC,
-  RW = READ | WRITE,
-  RWX = READ | WRITE | EXEC,
-  MARK_AS_BITMASK_ENUM(EXEC),
-};
 
 enum class AP : uint64_t {
   KERNEL_RW = 0b00,

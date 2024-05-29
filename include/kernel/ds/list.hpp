@@ -143,6 +143,9 @@ class ListHead {
     return size_ == 0;
   }
 
+  iterator head() const {
+    return (T*)&head_;
+  }
   iterator begin() const {
     return (T*)head_.next;
   }

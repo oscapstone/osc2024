@@ -2,6 +2,7 @@
 
 #include "fs/initramfs.hpp"
 #include "io.hpp"
+#include "mm/vmm.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -31,27 +32,30 @@ int exec(ExecCtx* ctx) {
 
   thread->vmm.reset();
 
-  if (thread->vmm.alloc_user_pages(USER_TEXT_START, file.size(),
-                                   ProtFlags::RX)) {
+  auto text_addr =
+      mmap(USER_TEXT_START, file.size(), ProtFlags::RX, MmapFlags::NONE, name);
+  if (text_addr == INVALID_ADDRESS) {
     klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
          thread->tid, file.size());
     return -1;
   }
-  if (thread->vmm.alloc_user_pages(USER_STACK_START, USER_STACK_SIZE,
-                                   ProtFlags::RW)) {
+
+  auto stack_addr = mmap(USER_STACK_START, USER_STACK_SIZE, ProtFlags::RW,
+                         MmapFlags::NONE, "[stack]");
+  if (stack_addr == INVALID_ADDRESS) {
     klog("%s: can't alloc user_stack for thread %d / size = %lx\n", __func__,
          thread->tid, USER_STACK_SIZE);
     return -1;
   }
+  auto stack_end = stack_addr + USER_STACK_SIZE;
 
   delete ctx;
 
-  memcpy((void*)USER_TEXT_START, file.data(), file.size());
-  memzero((void*)USER_STACK_START, (void*)USER_STACK_END);
+  memcpy((void*)text_addr, file.data(), file.size());
+  memzero((void*)stack_addr, (void*)stack_end);
   thread->reset_kernel_stack();
 
-  exec_user_prog((void*)USER_TEXT_START, (void*)USER_STACK_END,
-                 thread->regs.sp);
+  exec_user_prog((void*)text_addr, (void*)stack_end, thread->regs.sp);
 
   return 0;
 }
