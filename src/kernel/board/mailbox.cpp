@@ -20,9 +20,9 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
       break;
     if (msg->tag_identifier == MBOX_ALLOCATE_BUFFER) {
       auto base_addr = msg->value_buf[0] & 0x3FFFFFFF;
-      auto size = msg->value_buf[1];
-      klog("mbox: buf 0x%x ~ 0x%x\n", base_addr, base_addr + size);
-      current_thread()->map_user_phy_pages(base_addr, base_addr, size,
+      auto length = msg->value_buf[1];
+      klog("mbox: buf 0x%x ~ 0x%x\n", base_addr, base_addr + length);
+      current_thread()->map_user_phy_pages(base_addr, base_addr, length,
                                            ProtFlags::RW);
     }
   }

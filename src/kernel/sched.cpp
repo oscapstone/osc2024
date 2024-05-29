@@ -95,6 +95,8 @@ void schedule() {
       case KthreadStatus::kDead:
         push_dead(cur);
         break;
+      default:
+        break;
     }
     auto nxt = pop_rq();
     nxt->status = KthreadStatus::kRunning;
