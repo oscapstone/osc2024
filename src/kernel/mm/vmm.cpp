@@ -30,8 +30,8 @@ void VMM::ensure_el0_pgd() {
     el0_pgd = new PT;
     load_pgd(el0_pgd);
     auto vsyscall_addr =
-        map_user_phy_pages(VSYSCALL_START, (uint64_t)__vsyscall_beg, PAGE_SIZE,
-                           ProtFlags::RX, "[vsyscall]]");
+        map_user_phy_pages(VSYSCALL_START, (uint64_t)va2pa(__vsyscall_beg),
+                           PAGE_SIZE, ProtFlags::RX, "[vsyscall]");
     if (vsyscall_addr != VSYSCALL_START)
       panic("vsyscall addr shouldn't change!");
   }
@@ -131,7 +131,7 @@ uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
       .prot = prot,
   };
 
-  klog("map_user_phy_pages:  0x%016lx ~ 0x%016lx -> %08lx\n", va, va + size,
+  klog("map_user_phy_pages: 0x%016lx ~ 0x%016lx -> 0x%08lx\n", va, va + size,
        pa);
 
   el0_pgd->walk(
