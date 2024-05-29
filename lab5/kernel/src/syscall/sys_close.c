@@ -3,8 +3,9 @@
 #include "proc/task.h"
 #include "peripherals/irq.h"
 #include "fs/fs.h"
+#include "utils/printf.h"
 
-void sys_open(TRAP_FRAME* regs) {
+void sys_close(TRAP_FRAME* regs) {
     
     TASK* current_task = task_get_current_el1();
 

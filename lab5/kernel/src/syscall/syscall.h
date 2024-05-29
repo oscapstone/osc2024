@@ -42,3 +42,5 @@ void sys_fork(TRAP_FRAME* regs);
 void sys_exit(TRAP_FRAME* regs);
 void sys_mbox_call(TRAP_FRAME* regs);
 void sys_kill(TRAP_FRAME* regs);
+void sys_open(TRAP_FRAME* regs);
+void sys_close(TRAP_FRAME* regs);
