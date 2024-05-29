@@ -8,8 +8,9 @@
 #include "dtb.h"
 #include "memory.h"
 #include "timer.h"
+#include "sched.h"
 
-#define CLI_MAX_CMD 12
+#define CLI_MAX_CMD 13
 #define USTACK_SIZE 0x10000
 
 extern char* dtb_ptr;
@@ -28,6 +29,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
     {.command="setTimeout", .help="setTimeout [MESSAGE] [SECONDS]"},
     {.command="set2sAlert", .help="set core timer interrupt every 2 second"},
     {.command="memTest", .help="memory testcase generator, allocate and free"},
+    {.command="thread", .help="thread tester with dummy function - foo()"},
     {.command="reboot", .help="reboot the device"}
 };
 
@@ -105,6 +107,8 @@ void cli_cmd_exec(char* buffer)
         do_cmd_setTimeout(argvs, sec);
     } else if (strcmp(cmd, "set2sAlert") == 0) {
         do_cmd_set2sAlert();
+    } else if (strcmp(cmd, "thread") == 0) {
+        do_cmd_thread_tester();
     } else if (strcmp(cmd, "reboot") == 0) {
         do_cmd_reboot();
     } else if (cmd){
@@ -122,9 +126,28 @@ void cli_print_banner()
     uart_puts("    //     //    ------    //          \r\n");
     uart_puts("   //     //          //  //           \r\n");
     uart_puts("    ------     ------      ------      \r\n");
-    uart_puts("          2024 Lab4 Allocator          \r\n");
+    uart_puts("   2024 Lab5: Thread and User Process  \r\n");
     uart_puts("=======================================\r\n");
 }
+
+void start_shell()
+{
+    uart_sendline("In start_shell\n");
+    char input_buffer[CMD_MAX_LEN];
+    cli_print_banner();
+    while (1)
+    {
+        cli_cmd_clear(input_buffer, CMD_MAX_LEN);
+        //uart_sendline("lock_counter : %d\n",lock_counter);
+        uart_puts("Key in command: ");
+        cli_cmd_read(input_buffer);
+        cli_cmd_exec(input_buffer);
+        // idle();
+        // uart_sendline("idle finish\n");
+    }
+    // return 0;
+}
+
 
 void do_cmd_help()
 {
@@ -320,6 +343,21 @@ void do_cmd_memory_tester()
     kfree(c);
     kfree(d);
 
+}
+
+void do_cmd_thread_tester()
+{
+    for (int i = 0; i < 5; ++i)
+    { // N should > 2
+        // uart_sendline("Debug do_cmd_thread_tester i %d\n", i); 
+        thread_create(foo);
+    }
+    schedule();
+
+    for (int i = 0; i < 3; ++i)
+    {
+        schedule();
+    }
 }
 
 void do_cmd_reboot()

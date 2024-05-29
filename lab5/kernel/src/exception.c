@@ -14,6 +14,19 @@ void el1_interrupt_disable(){
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
+static unsigned long long lock_count = 0;
+void lock()
+{
+    el1_interrupt_disable();
+    lock_count++;
+}
+
+void unlock()
+{
+    lock_count--;
+    if (lock_count == 0)
+        el1_interrupt_enable();
+}
 
 void el1h_irq_router(){
     // decouple the handler into irqtask queue

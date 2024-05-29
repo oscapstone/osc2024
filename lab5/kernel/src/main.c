@@ -5,11 +5,14 @@
 #include "dtb.h"
 #include "exception.h"
 #include "timer.h"
+#include "sched.h"
 
 char* dtb_ptr;
+extern void load_context(void *curr_context);
+extern thread_t *curr_thread;
 
 void main(char* arg){
-    char input_buffer[CMD_MAX_LEN];
+    // char input_buffer[CMD_MAX_LEN];
 
     dtb_ptr = arg;
     traverse_device_tree(dtb_ptr, dtb_callback_initramfs);
@@ -25,12 +28,15 @@ void main(char* arg){
 
     core_timer_enable();
     init_allocator();
-    cli_print_banner();
 
-    while(1){
-        cli_cmd_clear(input_buffer, CMD_MAX_LEN);
-        uart_puts("Key in command: ");
-        cli_cmd_read(input_buffer);
-        cli_cmd_exec(input_buffer);
-    }
+    init_thread_sched();
+    load_context(&curr_thread->context);
+    // cli_print_banner();
+
+    // while(1){
+    //     cli_cmd_clear(input_buffer, CMD_MAX_LEN);
+    //     uart_puts("Key in command: ");
+    //     cli_cmd_read(input_buffer);
+    //     cli_cmd_exec(input_buffer);
+    // }
 }

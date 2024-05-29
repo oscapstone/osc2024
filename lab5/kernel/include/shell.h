@@ -15,6 +15,7 @@ void cli_cmd_clear(char*, int);
 void cli_cmd_read(char*);
 void cli_cmd_exec(char*);
 void cli_print_banner();
+void start_shell();
 
 void do_cmd_cat(char*);
 void do_cmd_help();
@@ -27,6 +28,7 @@ void do_cmd_exec(char*);
 void do_cmd_setTimeout(char* msg, char* sec);
 void do_cmd_set2sAlert();
 void do_cmd_memory_tester();
+void do_cmd_thread_tester();
 void do_cmd_reboot();
 
 #endif /* _SHELL_H_ */
