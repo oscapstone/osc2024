@@ -60,14 +60,16 @@ void uart_putc(char c)
     *AUX_MU_IO = c; // Write to AUX_MU_IO_REG
 }
 
-void uart_hex(unsigned int h)
+void uart_hex(unsigned long h)
 {
     uart_puts("0x");
-    unsigned int n;
-    for (int c = 28; c >= 0; c -= 4) {
+    unsigned long n;
+    for (int c = 60; c >= 0; c -= 4) {
         n = (h >> c) & 0xF;
         n += n > 9 ? 0x37 : '0';
         uart_putc(n);
+        // if (c % 16 == 0 && c != 0)
+        //     uart_putc('_');
     }
 }
 

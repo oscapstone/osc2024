@@ -1,7 +1,7 @@
 ARMGNU ?= aarch64-linux-gnu
 
 CFLAGS = -Iinclude -nostdlib -nostartfiles -ffreestanding -mgeneral-regs-only -Wall -g
-ASMFLAGS = -Iinclude
+ASMFLAGS = -Iinclude -g
 QEMUFLAGS = -M raspi3b -display none -serial null -serial stdio
 
 SRC_DIR = src
