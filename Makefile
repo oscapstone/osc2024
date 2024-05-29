@@ -18,6 +18,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -D_LIBCPP_DISABLE_AVAILABILITY \
 			  -D_LIBCPP_CSTDLIB \
 			  -fno-exceptions \
+			  -fno-c++-static-destructors \
 			  -std=c++20 \
 			  -nostdlib -Os -fPIE
 

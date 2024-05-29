@@ -60,6 +60,7 @@ int schedule_nesting = 0;
 
 void schedule_init() {
   rq.init();
+  deadq.init();
   schedule_nesting = 0;
   schedule_timer();
 }

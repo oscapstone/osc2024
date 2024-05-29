@@ -73,6 +73,9 @@ class ListHead {
   }
 
   ListHead(const ListHead&) = delete;
+  ~ListHead() {
+    clear();
+  }
 
   void init() {
     size_ = 0;
@@ -100,6 +103,13 @@ class ListHead {
     save_DAIF_disable_interrupt();
     size_--;
     unlink(*it);
+    restore_DAIF();
+  }
+
+  void clear() {
+    save_DAIF_disable_interrupt();
+    while (size() > 0)
+      erase(begin());
     restore_DAIF();
   }
 
