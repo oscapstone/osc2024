@@ -7,6 +7,7 @@
 struct ListItem {
   ListItem *prev, *next;
   ListItem() : prev(nullptr), next(nullptr) {}
+  ListItem(const ListItem&) = delete;
 };
 
 inline void link(ListItem* prev, ListItem* next) {
@@ -46,8 +47,8 @@ class ListHead {
       ++*this;
       return copy;
     }
-    T* operator*() const {
-      return it_;
+    T& operator*() const {
+      return *it_;
     }
     T* operator->() const {
       return it_;
@@ -57,6 +58,9 @@ class ListHead {
     }
     bool operator!=(const iterator& other) const {
       return !(*this == other);
+    }
+    operator T*() {
+      return it_;
     }
 
    private:
@@ -73,8 +77,8 @@ class ListHead {
   }
 
   ListHead(const ListHead& o) : ListHead{} {
-    for (auto it : o) {
-      push_back(new T(*it));
+    for (auto& it : o) {
+      push_back(new T(it));
     }
   }
 
@@ -92,7 +96,7 @@ class ListHead {
     save_DAIF_disable_interrupt();
     size_++;
     link(node, it->next);
-    link(*it, node);
+    link(it, node);
     restore_DAIF();
   }
   void insert_before(iterator it, T* node) {
@@ -107,7 +111,7 @@ class ListHead {
   void erase(iterator it) {
     save_DAIF_disable_interrupt();
     size_--;
-    unlink(*it);
+    unlink(it);
     restore_DAIF();
   }
 
@@ -123,13 +127,13 @@ class ListHead {
       return nullptr;
     auto it = begin();
     erase(it);
-    return *it;
+    return it;
   }
 
   T* front() {
     if (empty())
       return nullptr;
-    return *begin();
+    return begin();
   }
 
   int size() const {

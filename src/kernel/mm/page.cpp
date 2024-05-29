@@ -37,8 +37,8 @@ void PageSystem::info() {
     if (not free_list_[o].empty()) {
       kprintf("  free_list %d: ", o);
       save_DAIF_disable_interrupt();
-      for (auto p : free_list_[o])
-        kprintf("%p -> ", p);
+      for (auto& p : free_list_[o])
+        kprintf("%p -> ", &p);
       restore_DAIF();
       kprintf("\n");
     }

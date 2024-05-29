@@ -41,7 +41,8 @@ struct Kthread : ListItem {
 
  public:
   Kthread(Kthread::fp start, void* ctx);
-  Kthread(const Kthread& o);
+  Kthread(const Kthread* o);
+  Kthread(const Kthread& o) = delete;
   ~Kthread();
 
   void fix(const Kthread& o, Mem& mem);

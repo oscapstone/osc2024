@@ -35,9 +35,9 @@ void del_list(Kthread* thread) {
 
 // TODO: don't use linear search
 Kthread* find_thread_by_tid(int tid) {
-  for (auto thread : kthreads)
-    if (thread->tid == tid)
-      return thread;
+  for (auto& thread : kthreads)
+    if (thread.tid == tid)
+      return &thread;
   return nullptr;
 }
 
@@ -71,18 +71,18 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
   add_list(this);
 }
 
-Kthread::Kthread(const Kthread& o)
-    : regs(o.regs),
+Kthread::Kthread(const Kthread* o)
+    : regs(o->regs),
       tid(new_tid()),
-      status(o.status),
+      status(o->status),
       exit_code(0),
-      kernel_stack(o.kernel_stack),
+      kernel_stack(o->kernel_stack),
       item(new KthreadItem(this)),
-      signal{this, o.signal},
-      vmm(o.vmm) {
-  fix(o, &regs, sizeof(regs));
-  fix(o, kernel_stack);
-  klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
+      signal{this, o->signal},
+      vmm(o->vmm) {
+  fix(*o, &regs, sizeof(regs));
+  fix(*o, kernel_stack);
+  klog("fork thread %d @ %p from %d @ %p\n", tid, this, o->tid, &o);
   add_list(this);
 }
 
@@ -186,7 +186,7 @@ Kthread* kthread_create(Kthread::fp start, void* ctx) {
 
 long kthread_fork() {
   auto othread = current_thread();
-  auto nthread = new Kthread(*othread);
+  auto nthread = new Kthread(othread);
 
   save_regs(&nthread->regs);
 

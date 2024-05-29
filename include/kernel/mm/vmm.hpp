@@ -38,6 +38,7 @@ struct PageItem : ListItem {
   uint64_t addr;
   template <typename T>
   PageItem(T addr) : ListItem{}, addr((uint64_t)addr) {}
+  PageItem(const PageItem& o) : ListItem{}, addr(o.addr) {}
 };
 
 class VMM {

@@ -34,7 +34,7 @@ void irq_add_task(int prio, Task::fp callback, void* context,
 void irq_run() {
   while (not irq_tasks.empty()) {
     auto it = irq_tasks.begin();
-    auto task = *it;
+    auto task = &*it;
     if (task->running)
       break;
     task->running = true;

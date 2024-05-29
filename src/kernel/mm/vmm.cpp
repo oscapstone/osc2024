@@ -98,8 +98,8 @@ void VMM::reset() {
 }
 
 void VMM::return_to_user() {
-  for (auto page : user_ro_pages) {
-    auto entry = el0_tlb->get_entry(page->addr);
+  for (auto& page : user_ro_pages) {
+    auto entry = el0_tlb->get_entry(page.addr);
     if (entry)
       entry->AP = AP::USER_RO;
   }
