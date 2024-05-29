@@ -255,9 +255,19 @@ void mmu_delete_mm(TASK* task) {
     
     // delete block descriptors
     for (U64 i = 0; i < task->mm.user_pages_count; i++) {
-        mem_dereference(task->mm.user_pages[i].p_addr);
+        if (task->mm.user_pages[i].p_addr)      // because it probably not loaded yet.
+            mem_dereference(task->mm.user_pages[i].p_addr);
     }
     task->mm.user_pages_count = 0;
+
+    // delete mmap
+    // VMA_STRUCT* mmap = task->mm.mmap;
+    // while (mmap) {
+    //     VMA_STRUCT* next = mmap->next;
+    //     kfree(mmap);
+    //     mmap = next;
+    // }
+
     task->cpu_regs.pgd = NULL;
     NS_DPRINT("[MMU][DEBUG] task[%d] mm deleted.\n", task->pid);
 }
@@ -305,8 +315,8 @@ void mmu_memfail_handler(U64 esr) {
     }
 
     if (!current_page_info) {
-        printf("[MMU][ERROR] [Segmentation fault: Kill process]\n");
-        printf("addr: %x\n", far_el1);
+        NS_DPRINT("[MMU][ERROR] [Segmentation fault: Kill process]\n");
+        NS_DPRINT("addr: %x\n", far_el1);
         task_exit(-1);
         // will not go anywhere
     }
@@ -314,12 +324,32 @@ void mmu_memfail_handler(U64 esr) {
     U64 iss = ESR_ELx_ISS(esr);
     NS_DPRINT("iss: 0x%x\n", iss);
 
+    // not assign page for it damand paging
+    if (current_page_info->p_addr == 0) {
+        NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
+        NS_DPRINT("[MMU][TRACE] page not present yet.\n");
+        U64 page_flags = 0;
+        page_flags |= MMU_PXN;
+        if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
+            page_flags |= MMU_AP_EL0_UK_ACCESS;
+        }
+        if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
+            page_flags |= MMU_AP_EL0_READ_ONLY;
+        }
+        if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
+            page_flags |= MMU_UNX;
+        }
+        U64 new_page = kzalloc(PD_PAGE_SIZE);
+        mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
+        return;
+    }
+
     // is copy on write
     if (ISS_IS_WRITE(iss) && (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
         NS_DPRINT("[MMU][TRACE] Writing operation permission fault and can be write, doing copy on write.\n");
         U64 page_flags = 0;       // flag for page descriptor entry
         page_flags |= MMU_PXN;      // cannot be executed in kernel mode
-        page_flags |= MMU_AP_EL0_UK_ACCESS;
+        page_flags |= MMU_AP_EL0_UK_ACCESS; // can write not can read is wired
         if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) page_flags |= MMU_UNX;
         NS_DPRINT("[MMU][TRACE] origin page addr: 0x%x\n", current_page_info->p_addr);
         U64 new_page = kmalloc(PD_PAGE_SIZE);
@@ -337,8 +367,7 @@ void mmu_memfail_handler(U64 esr) {
         (iss & 0x3f) == ISS_TF_LEVEL2 ||
         (iss & 0x3f) == ISS_TF_LEVEL3)
     {
-        printf("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
-
+        // Will not go here probably?
     } else {
         printf("[MMU][ERROR] [Segmentation fault]: other fault.\n");
         printf("iss: 0x%x\n", iss);
@@ -363,3 +392,61 @@ void* mmu_va2pa(UPTR v_addr) {
     
     return (offset | page_p_addr);
 }
+
+// int mmu_vma_alloc(TASK *task, UPTR v_start, U32 page_count, U32 flags) {
+//     if (v_start & 0xfff) {
+//         v_start = v_start & ~(0xfff);
+//     }
+
+//     VMA_STRUCT* mmap = kzalloc(sizeof(VMA_STRUCT));
+//     mmap->v_start = v_start;
+//     mmap->v_end = v_start + page_count * PD_PAGE_SIZE;
+//     mmap->flags = flags;
+//     mmap->next = NULL;
+//     NS_DPRINT("[MMU][TRACE] start mapping vma. v_start: 0x%x", v_start);
+
+//     if (!task->mm.mmap) {
+//         task->mm.mmap = mmap;
+//         return 0;       // success
+//     }
+
+//     if (task->mm.mmap->v_start > mmap->v_end) {
+//         mmap->next = task->mm.mmap;
+//         task->mm.mmap = mmap;
+//         return 0;       // success
+//     }
+
+//     VMA_STRUCT* previous_Mmap = task->mm.mmap;
+//     VMA_STRUCT* current_Mmap = task->mm.mmap->next;
+
+//     // check if intersect at the first mmap
+//     if (previous_Mmap->v_start < mmap->v_start && previous_Mmap->v_end > mmap->v_start ||
+//         previous_Mmap->v_start < mmap->v_end && previous_Mmap->v_end > mmap->v_end
+//         ) {
+//         kfree(mmap);
+//         return -1;
+//     }
+
+//     while (current_Mmap) {
+
+//         if (previous_Mmap->v_end < mmap->v_start && current_Mmap->v_start > mmap->v_end) {
+//             previous_Mmap->next = mmap;
+//             mmap->next = current_Mmap;
+//             return 0;
+//         }
+
+//         // intersect
+//         if (previous_Mmap->v_start < mmap->v_start && previous_Mmap->v_end > mmap->v_start ||
+//             previous_Mmap->v_start < mmap->v_end && previous_Mmap->v_end > mmap->v_end
+//             ) {
+//             kfree(mmap);
+//             return -1;
+//         }
+
+//         previous_Mmap = current_Mmap;
+//         current_Mmap = current_Mmap->next;
+//     }
+
+//     previous_Mmap->next = mmap;
+//     return 0;
+// }

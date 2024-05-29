@@ -137,5 +137,18 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task);
 */
 void* mmu_va2pa(UPTR v_addr);
 
+/**
+ * Allocate a virtual area for this process
+ * @param task
+ *      this process task structure
+ * @param v_start
+ *      the virtual address starting point
+ * @param page_count
+ *      how many contiguous page this area have in virtual space
+ * @param flags
+ *      VMA_FLAGS
+*/
+//int mmu_vma_alloc(TASK *task, UPTR v_start, U32 page_count, U32 flags);
+
 // the handler for memory failed
 void mmu_memfail_handler(U64 esr);

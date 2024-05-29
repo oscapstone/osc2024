@@ -6,21 +6,14 @@
 
 typedef U64 pid_t;
 
-// typedef struct _VMA_PAGE_INFO {
-//     U64                         v_addr;
-//     U64                         p_addr;                     // this page physical address
-//     struct _VMA_PAGE_INFO*      next;
-// }VMA_PAGE_INFO;
-
 // /**
 //  * A contiguous region of virtual memory information
+//  * Just information of the virtual memory in user space not contain page
 // */
 // typedef struct _VMA_STRUCT {
 //     UPTR                    v_start;             // where the virtual addr this page
 //     UPTR                    v_end;
 //     U32                     flags;
-//     U32                     page_count;         // number of page in this region
-//     struct _VMA_PAGE_INFO*  pages;           // the page info (block descriptor)
 //     struct _VMA_STRUCT*     next;               // next region
 // }VMA_STRUCT;
 
@@ -28,6 +21,7 @@ typedef U64 pid_t;
 // #define VMA_FLAGS_WRITE            0x2
 // #define VMA_FLAGS_EXEC             0x4
 // #define VMA_FLAGS_GROW_DOWN        0x8
+// #define VMA_FLAGS_
 
 
 #define TASK_MAX_KERNEL_PAGES       20
@@ -52,6 +46,8 @@ typedef struct _MM_STRUCT {
     */
     U64             user_pages_count;
     USER_PAGE_INFO  user_pages[TASK_MAX_USER_PAGES];
+
+    //VMA_STRUCT* mmap;               // the information of the virtual addressing
 
 }MM_STRUCT;
 
