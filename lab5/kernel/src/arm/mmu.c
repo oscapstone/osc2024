@@ -123,7 +123,7 @@ pd_t mmu_map_table(pd_t* table, U64 shift, U64 v_addr, BOOL* gen_new_table) {
     return table_virt[index] & PD_PAGE_MASK;
 }
 
-U64 mmu_get_pte(TASK* task, U64 v_addr) {
+U64 mmu_get_pud(TASK* task, U64 v_addr) {
     U64 pgd;
     if (!task->cpu_regs.pgd) {
         task->cpu_regs.pgd = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
@@ -137,10 +137,25 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
     if (gen_new_table) {
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = pud;
     }
+    return pud;
+}
+
+U64 mmu_get_pmd(TASK* task, U64 v_addr) {
+    BOOL gen_new_table = FALSE;
+    U64 pud = mmu_get_pud(task, v_addr);
+    if (gen_new_table) {
+        task->mm.kernel_pages[task->mm.kernel_pages_count++] = pud;
+    }
     U64 pmd = mmu_map_table((pd_t*)(pud + 0), PD_PUD_SHIFT, v_addr, &gen_new_table);
     if (gen_new_table) {
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = pmd;
     }
+    return pmd;
+}
+
+U64 mmu_get_pte(TASK* task, U64 v_addr) {
+    U64 pmd = mmu_get_pmd(task, v_addr);
+    BOOL gen_new_table = FALSE;
     U64 pte = mmu_map_table((pd_t*)(pmd + 0), PD_PMD_SHIFT, v_addr, &gen_new_table);
     if (gen_new_table) {
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = pte;
@@ -212,6 +227,19 @@ void mmu_task_init(TASK* task) {
         mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
         stack_v_addr += PD_PAGE_SIZE;
     }
+
+    // 這個玩具OS可以讓應用程式隨意存取peripheral的I/O喔 這麼蝦
+    U64 peripheral_ptr = 0x3c000000;
+    for (int i = 0; i < 24; i++) {
+        U64 current_peripheral_addr = peripheral_ptr + (i << 21) /* 2M for here */;
+        U64 index = current_peripheral_addr >> PD_PMD_SHIFT;
+        index = index & (PD_PTRS_PER_TABLE - 1);
+        //NS_DPRINT("!!!!!!!!!!!!!!! index: %d\n", index);
+        U64 pmd = mmu_get_pmd(task, current_peripheral_addr);
+        pd_t* pmd_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)pmd);
+        pmd_virt[index] = current_peripheral_addr | MMU_AP_EL0_UK_ACCESS | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK;
+    }
+
     return;
 }
 
@@ -314,6 +342,9 @@ void mmu_memfail_handler(U64 esr) {
         }
     }
 
+    U64 iss = ESR_ELx_ISS(esr);
+    NS_DPRINT("iss: 0x%x\n", iss);
+
     if (!current_page_info) {
         NS_DPRINT("[MMU][ERROR] [Segmentation fault: Kill process]\n");
         NS_DPRINT("addr: %x\n", far_el1);
@@ -321,10 +352,7 @@ void mmu_memfail_handler(U64 esr) {
         // will not go anywhere
     }
 
-    U64 iss = ESR_ELx_ISS(esr);
-    NS_DPRINT("iss: 0x%x\n", iss);
-
-    // not assign page for it damand paging
+    // not assign page for it, it is damand paging (anonymous page allocation)
     if (current_page_info->p_addr == 0) {
         NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
         NS_DPRINT("[MMU][TRACE] page not present yet.\n");

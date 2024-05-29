@@ -320,24 +320,19 @@ void buddy_init() {
 
             FREE_INFO* free_info = &mem_manager.free_list[order];
 
-            NS_DPRINT("test\n");
             free_info->info[free_info->size] = frame_offset;
             free_info->size++;
-            NS_DPRINT("test\n");
 
             // first frame
             mem_manager.frames[frame_offset].flag &= ~(MEM_FRAME_FLAG_USED);
             
-            NS_DPRINT("test\n");
             mem_manager.frames[frame_offset].order = order;
-            NS_DPRINT("test\n");
             // rest frame  
             for (U64 i = 1; i < number_of_frames_in_block; i++) {
                 mem_manager.frames[frame_offset + i].flag &= ~(MEM_FRAME_FLAG_USED);
                 mem_manager.frames[frame_offset + i].flag |= MEM_FRAME_FLAG_CONTINUE;
                 mem_manager.frames[frame_offset + i].order = order;
             }
-            NS_DPRINT("test\n");
             frame_offset += number_of_frames_in_block;
             region_size -= number_of_frames_in_block;
             NS_DPRINT("[MEMORY][TRACE] free info insered. count: %d, frame offset: %d\n", free_info->size - 1, frame_offset);
