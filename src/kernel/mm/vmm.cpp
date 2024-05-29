@@ -17,7 +17,7 @@ SYSCALL_DEFINE6(mmap, void*, addr, size_t, len, int, prot, int, flags, int, fd,
 }
 
 VMM::VMM(const VMM& o)
-    : el0_tlb(pt_copy(o.el0_tlb)),
+    : el0_pgd(pt_copy(o.el0_pgd)),
       vmas{o.vmas},
       user_ro_pages{o.user_ro_pages} {}
 
@@ -25,10 +25,10 @@ VMM::~VMM() {
   reset();
 }
 
-void VMM::ensure_el0_tlb() {
-  if (el0_tlb == nullptr) {
-    el0_tlb = new PT;
-    load_tlb(el0_tlb);
+void VMM::ensure_el0_pgd() {
+  if (el0_pgd == nullptr) {
+    el0_pgd = new PT;
+    load_pgd(el0_pgd);
     auto vsyscall_addr =
         map_user_phy_pages(VSYSCALL_START, (uint64_t)__vsyscall_beg, PAGE_SIZE,
                            ProtFlags::RX, "[vsyscall]]");
@@ -94,7 +94,7 @@ void VMM::vma_print() {
 
 uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
                    const char* name) {
-  ensure_el0_tlb();
+  ensure_el0_pgd();
 
   size = align<PAGE_SIZE>(size);
   va = align<PAGE_SIZE, false>(va);
@@ -105,7 +105,7 @@ uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
 
   vma_add(name ? name : "[anon_" + to_hex_string(va) + "]", va, size, prot);
 
-  el0_tlb->walk(
+  el0_pgd->walk(
       va, va + size,
       [](auto context, PT_Entry& entry, auto start, auto level) {
         auto prot = cast_enum<ProtFlags>(context);
@@ -124,14 +124,14 @@ uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
       },
       (void*)prot);
 
-  reload_tlb();
+  reload_pgd();
 
   return va;
 }
 
 uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
                                  ProtFlags prot, const char* name) {
-  ensure_el0_tlb();
+  ensure_el0_pgd();
 
   size = align<PAGE_SIZE>(size);
   va = align<PAGE_SIZE, false>(va);
@@ -156,7 +156,7 @@ uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
        pa);
 
   // TODO: handle address overlap
-  el0_tlb->walk(
+  el0_pgd->walk(
       va, va + size,
       [](auto context, PT_Entry& entry, auto start, auto level) {
         auto ctx = (Ctx*)context;
@@ -172,15 +172,15 @@ uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
       },
       (void*)&ctx);
 
-  reload_tlb();
+  reload_pgd();
 
   return va;
 }
 
 void VMM::reset() {
-  if (el0_tlb) {
-    delete el0_tlb;
-    el0_tlb = nullptr;
+  if (el0_pgd) {
+    delete el0_pgd;
+    el0_pgd = nullptr;
   }
   vmas.clear();
   user_ro_pages.clear();
@@ -188,10 +188,10 @@ void VMM::reset() {
 
 void VMM::return_to_user() {
   for (auto& page : user_ro_pages) {
-    auto entry = el0_tlb->get_entry(page.addr);
+    auto entry = el0_pgd->get_entry(page.addr);
     if (entry)
       entry->AP = AP::USER_RO;
   }
   user_ro_pages.clear();
-  reload_tlb();
+  reload_pgd();
 }

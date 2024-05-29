@@ -21,7 +21,7 @@
     msr     TPIDR_EL1, \r1
 .endm
 
-.macro LOAD_TLB r1
+.macro LOAD_PGD r1
     dsb     ISH             // ensure write has completed
     msr     TTBR0_EL1, \r1  // switch translation based address.
     tlbi    VMALLE1IS       // invalidate all TLB entries
@@ -33,7 +33,7 @@
 switch_to_regs:
     SAVE_REG    x0
     LOAD_REG    x1 x2
-    LOAD_TLB    x3
+    LOAD_PGD    x3
     ret
 
 .global save_regs
@@ -44,5 +44,5 @@ save_regs:
 .global load_regs
 load_regs:
     LOAD_REG    x0 x1
-    LOAD_TLB    x2
+    LOAD_PGD    x2
     ret

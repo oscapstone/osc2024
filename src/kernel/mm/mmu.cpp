@@ -228,7 +228,7 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   PUD->entries[1].PXN = true;
   PUD->entries[1].UXN = true;
 
-  reload_tlb();
+  reload_pgd();
 }
 
 struct IIS_DABT {

@@ -10,8 +10,8 @@ struct PT;
 
 extern "C" {
 // mm/mmu.S
-void load_tlb(PT* pgd);
-void reload_tlb();
+void load_pgd(PT* pgd);
+void reload_pgd();
 }
 
 extern char __upper_PGD[];
