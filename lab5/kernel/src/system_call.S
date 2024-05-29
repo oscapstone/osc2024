@@ -45,8 +45,3 @@ kill:
 	svc #0
 	ret
 
-.global test_syscall
-test_syscall:
-	mov x8, 8
-	svc #0
-	ret

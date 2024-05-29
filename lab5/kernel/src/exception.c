@@ -86,7 +86,7 @@ void simple_core_timer_entry() {
         :[var1] "=r" (cur_cnt), [var2] "=r" (cnt_freq)
     );
 	// uart_printf ("now is %d\r\n", cur_cnt / cnt_freq);
-	asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq));
+	asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq >> 5));
 	// unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
 	// *address = 2;
 
@@ -125,6 +125,7 @@ void c_general_irq_handler(){
 	}
 	irq(1);
 	// execute_tasks();
+
 }
 
 void c_undefined_exception() {
@@ -157,11 +158,18 @@ void c_system_call_handler(trapframe_t* tf) {
 		do_exit();
 	}
 	else if (id == 6) {
-		uart_printf ("mailboxing\r\n");
 		tf -> x[0] = do_mbox_call(tf -> x[0], tf -> x[1]);
 	}
 	else if (id == 7) {
 		do_kill(tf -> x[0]);	
+	}
+	else if (id == 8) {
+		uart_printf ("Do a register\r\n");
+		do_signal(tf -> x[0], tf -> x[1]);
+	}
+	else if (id == 9) {
+		uart_printf ("Do a kill\r\n");
+		do_sigkill(tf -> x[0], tf -> x[1]);
 	}
 	else {
 		uart_printf ("This is unexpected systemcall, proc hang\r\n");

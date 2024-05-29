@@ -11,6 +11,7 @@
 #include "exception.h"
 #include "thread.h"
 #include "system_call.h"
+#include "signal.h"
 
 char buf[1024];
 

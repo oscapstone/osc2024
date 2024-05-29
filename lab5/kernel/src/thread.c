@@ -3,6 +3,7 @@
 #include "mini_uart.h"
 #include "helper.h"
 #include "exception.h"
+#include "signal.h"
 
 #define stack_size 4096
 #define max_thread_num 500 
@@ -34,6 +35,11 @@ void thread_init() {
 	x -> kstack_start = my_malloc(stack_size);
 	x -> sp = x -> kstack_start + stack_size - 16;
 	x -> fp = x -> sp;
+	
+	for (int i = 0; i < 10; i ++) {
+		x -> signal[i] = 0;
+		x -> signal_handler[i] = NULL;
+	}
 
 	x -> stack_start = my_malloc(stack_size);
 	asm volatile ("msr tpidr_el1, %0" : "=r" (x));
@@ -42,6 +48,8 @@ void thread_init() {
 	thread_tail = thread_start;
 	thread_start -> next = NULL;
 	thread_start -> prev = NULL;
+
+
 	irq(1);
 }
 
@@ -85,10 +93,9 @@ void schedule() {
 		thread_tail = thread_tail -> next;
 	}
 	thread_start -> prev = NULL;
-	uart_printf ("[DEBUG] Scheduled From %d to %d\r\n", get_current() -> id, thread_start -> id);
-	// uart_printf ("[DEBUG] LR is at %x\r\n", thread_start -> lr);
+	// uart_printf ("[DEBUG] Scheduled From %d to %d\r\n", get_current() -> id, thread_start -> id);
 	switch_to(get_current(), thread_start);
-	// switch_to does the irq(1)
+	// after successfully switched, ending of irq handler do irq(1)
 	return;
 }
 
@@ -159,6 +166,11 @@ int thread_create(void* func) {
 	x -> fp = x -> sp;
 	x -> lr = thread_func_handler;
 	x -> state = 1;
+	
+	for (int i = 0; i < 10; i ++) {
+		x -> signal_handler[i] = NULL;
+		x -> signal[i] = 0;
+	}
 
 	for (int i = 1; i < max_thread_num; i ++) {
 		if (threads[i] == NULL) {

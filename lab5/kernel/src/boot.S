@@ -139,13 +139,22 @@ core_timer_handler:
 general_irq_handler:
   save_all
   bl c_general_irq_handler
+  mov x0, sp
+  bl handle_signal
   load_all
   eret
 
 system_call_handler:
+	cmp x8, #10
+	beq system_call_handler_end
 	save_all
 	mov x0, sp
 	bl c_system_call_handler
+system_call_handler_end:
+	load_all
+	eret
+
+sig_return_handler:
 	load_all
 	eret
 

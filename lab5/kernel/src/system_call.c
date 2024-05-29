@@ -28,25 +28,7 @@ size_t do_uart_write(char buf[], size_t size) {
 }
 
 int do_exec(char* name, char *argv[]) {
-	void* pos = cpio_find(name);
-	void* code = my_malloc(4096 * 64);
-	strcpy(pos, code, 4096 * 64);
-
-	void* stack = my_malloc(4096);
-	stack += 4096 - 16;
-
-	asm volatile (
-		"mov x1, 0;"
-		"msr spsr_el1, x1;"
-		"mov x1, %[code];"
-		"mov x2, %[sp];"
-		"msr elr_el1, x1;"
-		"msr sp_el0, x2;"
-		"msr DAIFclr, 0xf;"
-		"eret;"
-		:
-		: [code] "r" (code), [sp] "r" (stack)
-	);
+	cpio_load(name);
 }
 
 extern void ret_from_fork_child();
@@ -84,6 +66,10 @@ int do_fork(trapframe_t* tf) {
 	child -> fp = child -> sp; 
 	// on el1 stack
 	thread_fn[id] = ret_from_fork_child; 
+	
+	for (int i = 0; i < 10; i ++) {
+		child -> signal_handler[i] = cur -> signal_handler[i];
+	}
 
 	if (get_current() -> id == id) {
 		uart_printf ("Child should not be here%d, %d\r\n", get_current() -> id, id);
@@ -115,6 +101,24 @@ int do_mbox_call(unsigned char ch, unsigned int *mbox) {
 
 void do_kill(int pid) {
 	kill_thread(pid);
+}
+
+void do_signal(int sig, handler func) {
+	uart_printf ("Registered %d\r\n", sig);
+	if (sig >= 10) {
+		uart_printf ("this sig num is greater then I can handle\r\n");
+		return;
+	}
+	get_current() -> signal_handler[sig] = (void*)func;
+}
+
+void do_sigkill(int pid, int sig) {
+	uart_printf ("DO sigkill %d, %d\r\n", pid, sig);
+	if (sig >= 10) {
+		uart_printf ("this sig num is greater then I can handle\r\n");
+		return;
+	}
+	threads[pid] -> signal[sig] = 1;
 }
 
 extern int fork();

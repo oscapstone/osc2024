@@ -8,9 +8,12 @@ typedef struct thread {
 	void* sp;
 	void* stack_start;
 	void* kstack_start;
+	void* sstack_start;
 	int state, id;
 	struct thread* next;
 	struct thread* prev;
+	void* signal_handler[10]; // sigid at most 9
+	int signal[10];
 } thread;
 
 void thread_init();
