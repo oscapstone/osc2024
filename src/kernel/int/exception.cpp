@@ -65,7 +65,7 @@ void sync_handler(TrapFrame* frame, int type) {
       segv_handler(el, iss, kIABT);
       break;
 
-    case ESR_ELx_EC_PC_ALIGN:;
+    case ESR_ELx_EC_PC_ALIGN:
       segv_handler(el, iss, kPC);
       break;
 
@@ -74,7 +74,7 @@ void sync_handler(TrapFrame* frame, int type) {
       segv_handler(el, iss, kDABT);
       break;
 
-    case ESR_ELx_EC_SP_ALIGN:;
+    case ESR_ELx_EC_SP_ALIGN:
       segv_handler(el, iss, kSP);
       break;
 
