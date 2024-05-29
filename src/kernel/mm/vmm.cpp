@@ -54,7 +54,7 @@ uint64_t VMM::vma_addr(uint64_t va, uint64_t size) {
 
   auto close_to_start = va - USER_SPACE_START < USER_SPACE_END - va;
   auto next = close_to_start ? +[](decltype(it) it) { return ++it; }
-                             : +[](decltype(it) it) { return it; };
+                             : +[](decltype(it) it) { return --it; };
   auto end = close_to_start ? vmas.end() : vmas.head();
 
   while (it != end) {
@@ -71,10 +71,10 @@ uint64_t VMM::vma_addr(uint64_t va, uint64_t size) {
 void VMM::vma_add(string name, uint64_t addr, uint64_t size, ProtFlags prot) {
   auto it = vmas.begin();
   auto end = vmas.end();
-  while (it != end and it->end() < addr)
+  while (it != end and it->end() <= addr)
     it++;
-  vmas.insert(it, new VMA{name, addr, size, prot});
-  klog("vma_add: 0x%08lx ~ 0x%08lx %s\n", addr, addr + size, name.data());
+  vmas.insert_before(it, new VMA{name, addr, size, prot});
+  klog("vma_add: 0x%016lx ~ 0x%016lx %s\n", addr, addr + size, name.data());
 }
 
 VMA* VMM::vma_find(uint64_t va) {
@@ -82,6 +82,14 @@ VMA* VMM::vma_find(uint64_t va) {
     if (vma.contain(va))
       return &vma;
   return nullptr;
+}
+
+void VMM::vma_print() {
+  klog("==== maps ====\n");
+  klog("vma size = %d\n", vmas.size());
+  for (auto& vma : vmas)
+    klog("0x%016lx ~ 0x%016lx %s\n", vma.start(), vma.end(), vma.name.data());
+  klog("--------------\n");
 }
 
 uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,

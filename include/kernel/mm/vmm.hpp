@@ -83,6 +83,7 @@ class VMM {
   uint64_t vma_addr(uint64_t va, uint64_t size);
   void vma_add(string name, uint64_t addr, uint64_t size, ProtFlags prot);
   VMA* vma_find(uint64_t va);
+  void vma_print();
 
   void ensure_el0_tlb();
   [[nodiscard]] uint64_t mmap(uint64_t va, uint64_t size, ProtFlags prot,
