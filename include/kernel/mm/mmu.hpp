@@ -228,6 +228,13 @@ struct PT {
          cb_entry, context);
   }
 
+  PT_Entry* get_entry(uint64_t start, int level, uint64_t addr,
+                      bool alloc = false);
+  template <typename T>
+  PT_Entry* get_entry(T addr, bool alloc = false) {
+    return get_entry(USER_SPACE, PGD_LEVEL, (uint64_t)addr, alloc);
+  }
+
   void traverse(uint64_t start, int level, CB cb_entry, CB cb_table = nullptr,
                 void* context = nullptr);
   void traverse(CB cb_entry, CB cb_table = nullptr, void* context = nullptr) {
@@ -255,6 +262,7 @@ static_assert(sizeof(PT) == PAGE_SIZE);
 
 PT* pt_copy(PT*);
 void map_kernel_as_normal(char* ktext_beg, char* ktext_end);
+int fault_handler(int el);
 
 inline void debug_TTBR(bool upper = false) {
   if (upper)

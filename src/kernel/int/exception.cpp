@@ -3,6 +3,7 @@
 #include "arm.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
+#include "mm/mmu.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -71,7 +72,8 @@ void sync_handler(TrapFrame* frame, int type) {
 
     case ESR_ELx_EC_DABT_LOW:
     case ESR_ELx_EC_DABT_CUR:
-      segv_handler(el, iss, kDABT);
+      if (fault_handler(el))
+        segv_handler(el, iss, kDABT);
       break;
 
     case ESR_ELx_EC_SP_ALIGN:

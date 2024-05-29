@@ -121,6 +121,24 @@ void PT::walk(uint64_t start, int level, uint64_t va_start, uint64_t va_end,
   }
 }
 
+PT_Entry* PT::get_entry(uint64_t start, int level, uint64_t addr, bool alloc) {
+  uint64_t idx = (addr - start) / ENTRY_SIZE[level];
+  auto entry = &entries[idx];
+  if (entry->isInvalid() and alloc)
+    entry->alloc(level);
+  switch (entry->kind()) {
+    case EntryKind::TABLE: {
+      auto nxt_start = start + idx * ENTRY_SIZE[level];
+      auto nxt_level = level + 1;
+      return entry->table()->get_entry(nxt_start, nxt_level, addr);
+    }
+    case EntryKind::ENTRY:
+      return entry;
+    default:
+      return nullptr;
+  }
+}
+
 void PT::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
                   void* context) {
   auto nxt_start = start;
@@ -210,4 +228,49 @@ void map_kernel_as_normal(char* ktext_beg, char* ktext_end) {
   PUD->entries[1].UXN = true;
 
   reload_tlb();
+}
+
+struct IIS_DABT {
+  uint32_t DFSC : 4;
+  uint32_t WnR : 1;
+  uint32_t S1PTW : 1;
+  uint32_t CM : 1;
+  uint32_t EA : 1;
+  uint32_t FnV : 1;
+  uint32_t LST : 2;
+  uint32_t VNCR : 1;
+  uint32_t AR : 1;
+  uint32_t SF : 1;
+  uint32_t SRT : 5;
+  uint32_t SSE : 1;
+  uint32_t SAS : 2;
+  uint32_t ISV : 1;
+};
+
+int fault_handler(int el) {
+  unsigned long esr = read_sysreg(ESR_EL1);
+  auto iss = (IIS_DABT)ESR_ELx_ISS(esr);
+
+  if (iss.FnV) {
+    klog("fault error: FAR is not valid\n");
+    return -1;
+  }
+
+  auto faddr = (void*)read_sysreg(FAR_EL1);
+  if (isKernelSpace(faddr)) {
+    klog("fault error: in kernel space\n");
+    return -1;
+  }
+
+  auto fpage = getPage(faddr);
+  auto entry = current_thread()->el0_tlb->get_entry(fpage);
+  // TODO: demand paging, check addr is in valid adddress space
+  if (not entry)
+    return -1;
+
+  switch (iss.DFSC) {
+      // TODO
+  }
+
+  return 0;
 }
