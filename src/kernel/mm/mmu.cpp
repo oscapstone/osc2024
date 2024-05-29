@@ -28,7 +28,7 @@ void PT_Entry::alloc_table(int level) {
 }
 
 void PT_Entry::alloc_user_page(ProtFlags prot) {
-  set_user_entry(kmalloc(PAGE_SIZE), PTE_LEVEL, prot, true);
+  set_user_entry(kcalloc(PAGE_SIZE), PTE_LEVEL, prot, true);
 }
 
 PT_Entry PT_Entry::copy(int level) const {

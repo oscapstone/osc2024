@@ -52,7 +52,6 @@ int exec(ExecCtx* ctx) {
   delete ctx;
 
   memcpy((void*)text_addr, file.data(), file.size());
-  memzero((void*)stack_addr, (void*)stack_end);
   thread->reset_kernel_stack();
 
   thread->vmm.return_to_user();
