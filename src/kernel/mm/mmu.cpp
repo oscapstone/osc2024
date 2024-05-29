@@ -270,16 +270,17 @@ struct IIS_DABT {
 int fault_handler(int el) {
   unsigned long esr = read_sysreg(ESR_EL1);
   auto iss = (IIS_DABT)ESR_ELx_ISS(esr);
+  auto tid = current_thread()->tid;
 
   if (iss.FnV) {
-    klog("fault error: FAR is not valid\n");
+    klog("t%d fault error: FAR is not valid\n", tid);
     return -1;
   }
 
   auto faddr = (void*)read_sysreg(FAR_EL1);
 
   if (isKernelSpace(faddr)) {
-    klog("fault error: in kernel space\n");
+    klog("t%d fault error: in kernel space\n", tid);
     return -1;
   }
 
@@ -292,7 +293,7 @@ int fault_handler(int el) {
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L1:
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L2:
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L3:
-      klog("[Translation fault]: %016lx\n", (uint64_t)faddr);
+      klog("t%d [Translation fault]: %016lx\n", tid, (uint64_t)faddr);
       if (!vma)
         return -1;
       entry = current_thread()->vmm.el0_pgd->get_entry(fpage, true);
@@ -305,7 +306,7 @@ int fault_handler(int el) {
         current_thread()->vmm.user_ro_pages.push_back(new PageItem{fpage});
       } else if (vma and has(vma->prot, ProtFlags::WRITE)) {
         // copy on write fault
-        klog("[CoW fault]: %016lx\n", (uint64_t)faddr);
+        klog("t%d [CoW fault]: %016lx\n", tid, (uint64_t)faddr);
         entry->copy_on_write();
       } else {
         return -1;
@@ -313,7 +314,7 @@ int fault_handler(int el) {
       break;
 
     default:
-      kprintf("unknown DFSC %06b\n", iss.DFSC);
+      klog("t%d unknown DFSC %06b\n", tid, iss.DFSC);
       return -1;
   }
 

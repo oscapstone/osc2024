@@ -73,7 +73,7 @@ void sync_handler(TrapFrame* frame, int type) {
     case ESR_ELx_EC_DABT_LOW:
     case ESR_ELx_EC_DABT_CUR:
       if (fault_handler(el)) {
-        klog("[Segmentation fault]: Kill Process %d\n", current_thread()->tid);
+        klog("t%d [Segmentation fault]: Kill Process\n", current_thread()->tid);
         // kthread_exit(-1);
         segv_handler(el, iss, kDABT);
       }
