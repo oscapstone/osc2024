@@ -4,6 +4,7 @@
 
 volatile unsigned int  __attribute__((aligned(16))) mailbox[36];
 
+// only use in kernel process!!!
 int mailbox_call() 
 {
     unsigned int r = (((unsigned int)((unsigned long)&mailbox)&~0xF) | (MBOX_CH_PROP&0xF));
@@ -18,7 +19,7 @@ int mailbox_call()
         /* is it a response to our message? */
         if(r == *MBOX_READ)
             /* is it a valid successful response? */
-            return mailbox[1]==MBOX_RESPONSE;
+            return mailbox[1] == MBOX_RESPONSE;
     }
     return 0;
 }
@@ -33,7 +34,7 @@ int mailbox_call_user(U8 ch, void* mailbox_ptr) {
         do {asm volatile("nop"); } while (*MBOX_STATUS & MBOX_EMPTY);
 
         if (r == *MBOX_READ) {
-            return ((U32*)mailbox_ptr) [1] == MBOX_RESPONSE;
+            return ((U32*)MMU_PHYS_TO_VIRT((UPTR)mailbox_ptr)) [1] == MBOX_RESPONSE;
         }
     }
 

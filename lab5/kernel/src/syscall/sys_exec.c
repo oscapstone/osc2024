@@ -37,6 +37,7 @@ void jump_user_prog() {
 void sys_exec(TRAP_FRAME* regs) {
     char* name = (char*) regs->regs[0];
     const char** argv = (const char**) regs->regs[1];
+    NS_DPRINT("[SYSCALL][EXEC] Start executing %s\n", name);
 
     FS_FILE* file;
     if (vfs_open(name, O_READ, &file)) {

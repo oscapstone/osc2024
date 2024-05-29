@@ -222,13 +222,13 @@ void mmu_task_init(TASK* task) {
 */
 U64 mmu_get_page(TASK* task, UPTR v_addr) {
     U64 pte = mmu_get_pte(task, v_addr);
-    U64* pte_addr = (U64*)pte;
+    pd_t* pte_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)pte);
     U64 index = v_addr >> PD_PAGE_SHIFT;
     index = index & (PD_PTRS_PER_TABLE - 1);
-    if (!pte_addr[index]) {
+    if (!pte_virt[index]) {
         return 0;
     }
-    return pte_addr[index] & PD_PAGE_MASK;
+    return pte_virt[index] & PD_PAGE_MASK;
 }
 
 int mmu_set_entry(TASK* task, U64 v_addr, U64 mmu_flags) {
