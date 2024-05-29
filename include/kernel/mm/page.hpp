@@ -31,9 +31,10 @@ class PageSystem {
     union {
       struct __attribute__((__packed__)) {
         FRAME_TYPE type : 2;
-        int order : 6;
+        uint8_t order : 6;
+        uint8_t ref;
       };
-      int8_t value;
+      uint16_t value;
     };
     bool allocated() const {
       return type == FRAME_TYPE::ALLOCATED;
@@ -60,7 +61,7 @@ class PageSystem {
   void release(AllocatedPage apage);
   AllocatedPage alloc(FreePage* fpage, bool head);
   AllocatedPage split(AllocatedPage apage);
-  void truncate(AllocatedPage apage, int8_t order);
+  void truncate(AllocatedPage apage, uint8_t order);
   void merge(FreePage* fpage);
 
   void* pfn2addr(uint64_t pfn) {
@@ -106,6 +107,16 @@ class PageSystem {
   }
   uint64_t end() const {
     return end_;
+  }
+
+  template <typename T>
+  bool managed(T addr) {
+    return start() <= (uint64_t)addr and (uint64_t) addr <= end();
+  }
+
+  template <typename T>
+  uint8_t& refcnt(T addr) {
+    return array_[addr2pfn((void*)addr)].ref;
   }
 };
 

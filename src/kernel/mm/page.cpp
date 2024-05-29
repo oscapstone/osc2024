@@ -33,7 +33,7 @@ void PageSystem::info() {
 #pragma GCC diagnostic pop
     }
   }
-  for (int8_t o = 0; o < total_order_; o++)
+  for (uint8_t o = 0; o < total_order_; o++)
     if (not free_list_[o].empty()) {
       kprintf("  free_list %d: ", o);
       save_DAIF_disable_interrupt();
@@ -59,7 +59,7 @@ void PageSystem::preinit(uint64_t p_start, uint64_t p_end) {
            total_order_);
   array_ = new Frame[length_];
   for (uint64_t i = 0; i < length_; i++)
-    array_[i] = {.type = FRAME_TYPE::ALLOCATED, .order = 0};
+    array_[i] = {.type = FRAME_TYPE::ALLOCATED, .order = 0, .ref = 0};
   free_list_ = new ListHead<FreePage>[total_order_];
 }
 
@@ -105,6 +105,7 @@ PageSystem::AllocatedPage PageSystem::alloc(PageSystem::FreePage* fpage,
     if (log)
       MM_VERBOSE("alloc(+): page %p order %d\n", fpage, order);
     array_[pfn].type = FRAME_TYPE::ALLOCATED;
+    array_[pfn].ref = 1;
     auto apage = AllocatedPage(fpage);
     return apage;
   } else {
@@ -123,7 +124,7 @@ PageSystem::AllocatedPage PageSystem::split(AllocatedPage apage) {
   return bpage;
 }
 
-void PageSystem::truncate(AllocatedPage apage, int8_t order) {
+void PageSystem::truncate(AllocatedPage apage, uint8_t order) {
   auto pfn = addr2pfn(apage);
   while (array_[pfn].order > order) {
     auto bpage = split(apage);
@@ -154,12 +155,12 @@ void PageSystem::merge(FreePage* apage) {
 }
 
 void* PageSystem::alloc(uint64_t size) {
-  int8_t order = log2c(align<PAGE_SIZE>(size) / PAGE_SIZE);
+  uint8_t order = log2c(align<PAGE_SIZE>(size) / PAGE_SIZE);
   MM_DEBUG("alloc: size 0x%lx -> order %d\n", size, order);
 
   save_DAIF_disable_interrupt();
   AllocatedPage apage = nullptr;
-  for (int8_t ord = order; ord < total_order_; ord++) {
+  for (uint8_t ord = order; ord < total_order_; ord++) {
     auto fpage = free_list_[ord].front();
     if (fpage == nullptr)
       continue;

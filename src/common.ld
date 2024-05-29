@@ -1,6 +1,6 @@
 # ref: BCM2837-ARM-Peripherals 1.2 Address map
 __phy_heap_start = 0x0001000;
-__phy_heap_end   = 0x0050000;
+__phy_heap_end   = 0x0080000;
 __bootloader     = 0x0060000;
 __phy_kernel     = 0x0080000;
 __phy_stack_beg  = 0x00A0000;

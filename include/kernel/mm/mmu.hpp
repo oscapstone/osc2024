@@ -189,6 +189,9 @@ struct PT_Entry {
   void* addr(T offset = 0) const {
     return (void*)(output_address * PAGE_SIZE + (uint64_t)offset);
   }
+  void* addr_va() const {
+    return pa2va(addr());
+  }
   void set_addr(void* addr, uint64_t new_type) {
     asm volatile("" ::: "memory");
     auto e = *this;
@@ -213,7 +216,7 @@ struct PT_Entry {
   }
 
   PT* table() const {
-    return (PT*)pa2va(addr());
+    return (PT*)addr_va();
   }
   void set_table(int level, PT* table) {
     set_level(level);
@@ -222,7 +225,8 @@ struct PT_Entry {
 
   void alloc_table(int level);
   void alloc_user_page(ProtFlags prot);
-  PT_Entry copy(int level) const;
+  PT_Entry copy(int level);
+  void copy_on_write();
 };
 static_assert(sizeof(PT_Entry) == sizeof(uint64_t));
 

@@ -31,17 +31,18 @@ void PT_Entry::alloc_user_page(ProtFlags prot) {
   set_user_entry(kcalloc(PAGE_SIZE), PTE_LEVEL, prot, true);
 }
 
-PT_Entry PT_Entry::copy(int level) const {
+PT_Entry PT_Entry::copy(int level) {
   auto new_entry = *this;
-  // TODO: copy on write
   switch (kind()) {
     case EntryKind::TABLE:
       new_entry.set_table(level, pt_copy(table()));
       break;
     case EntryKind::ENTRY: {
-      auto new_page = kmalloc(PAGE_SIZE);
-      memcpy(new_page, pa2va(addr()), PAGE_SIZE);
-      new_entry.set_addr(va2pa(new_page), type);
+      // copy on write
+      AP = AP::USER_RO;
+      new_entry.AP = AP::USER_RO;
+      auto& ref = mm_page.refcnt(addr_va());
+      ref++;
       break;
     }
     case EntryKind::INVALID:
@@ -49,6 +50,21 @@ PT_Entry PT_Entry::copy(int level) const {
       break;
   }
   return new_entry;
+}
+
+void PT_Entry::copy_on_write() {
+  if (not mm_page.managed(addr_va())) {
+    // assume peripheral memory
+  } else {
+    auto& ref = mm_page.refcnt(addr_va());
+    if (ref > 1) {
+      ref--;
+      auto new_page = kmalloc(PAGE_SIZE);
+      memcpy(new_page, addr_va(), PAGE_SIZE);
+      set_addr(va2pa(new_page), type);
+    }
+  }
+  AP = AP::USER_RW;
 }
 
 PT::PT() {
@@ -72,11 +88,12 @@ PT::PT(PT_Entry entry, int level) {
 PT* pt_copy(PT* o) {
   if (o == nullptr)
     return nullptr;
-  return new PT(o);
+  auto npt = new PT(o);
+  reload_pgd();
+  return npt;
 }
 
 PT::PT(PT* o, int level) {
-  // TODO: copy on write
   for (uint64_t i = 0; i < TABLE_SIZE_4K; i++) {
     entries[i] = o->entries[i].copy(level);
   }
@@ -85,8 +102,12 @@ PT::PT(PT* o, int level) {
 PT::~PT() {
   this->traverse(
       [](auto, auto entry, auto, auto) {
-        if (entry.require_free)
-          kfree(pa2va(entry.addr()));
+        if (entry.require_free) {
+          auto va = entry.addr_va();
+          auto& ref = mm_page.refcnt(va);
+          if (--ref == 0)
+            kfree(va);
+        }
       },
       [](auto, auto entry, auto, auto) { delete entry.table(); });
 }
@@ -276,20 +297,26 @@ int fault_handler(int el) {
         return -1;
       entry = current_thread()->vmm.el0_pgd->get_entry(fpage, true);
       entry->alloc_user_page(vma->prot);
-      reload_pgd();
-      return 0;
+      break;
 
     case ESR_ELx_IIS_DFSC_PERM_FAULT_L3:
       if (el == 1) {
         entry->AP = AP::KERNEL_RW;
         current_thread()->vmm.user_ro_pages.push_back(new PageItem{fpage});
-        return 0;
+      } else if (vma and has(vma->prot, ProtFlags::WRITE)) {
+        // copy on write fault
+        klog("[CoW fault]: %016lx\n", (uint64_t)faddr);
+        entry->copy_on_write();
       } else {
         return -1;
       }
+      break;
 
     default:
       kprintf("unknown DFSC %06b\n", iss.DFSC);
       return -1;
   }
+
+  reload_pgd();
+  return 0;
 }
