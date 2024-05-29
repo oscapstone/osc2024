@@ -24,7 +24,7 @@ void Regs::show() const {
 }
 
 void switch_to(Kthread* prev, Kthread* next) {
-  switch_to_regs(&prev->regs, &next->regs, next, va2pa(next->el0_tlb));
+  switch_to_regs(&prev->regs, &next->regs, next, va2pa(next->vmm.el0_tlb));
 }
 
 ListHead<KthreadItem> rq;

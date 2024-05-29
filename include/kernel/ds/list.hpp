@@ -72,7 +72,12 @@ class ListHead {
     init();
   }
 
-  ListHead(const ListHead&) = delete;
+  ListHead(const ListHead& o) : ListHead{} {
+    for (auto it : o) {
+      push_back(new T(*it));
+    }
+  }
+
   ~ListHead() {
     clear();
   }
@@ -134,10 +139,10 @@ class ListHead {
     return size_ == 0;
   }
 
-  iterator begin() {
+  iterator begin() const {
     return (T*)head_.next;
   }
-  iterator end() {
+  iterator end() const {
     return (T*)&tail_;
   }
 };

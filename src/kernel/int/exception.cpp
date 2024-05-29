@@ -105,10 +105,5 @@ void return_to_user(TrapFrame* frame) {
   enable_interrupt();
   th->signal.handle(frame);
   disable_interrupt();
-  for (auto page : th->user_ro_pages) {
-    auto entry = th->el0_tlb->get_entry(page->addr);
-    if (entry)
-      entry->AP = AP::USER_RO;
-  }
-  th->user_ro_pages.clear();
+  th->vmm.return_to_user();
 }

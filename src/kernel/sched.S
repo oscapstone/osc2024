@@ -21,11 +21,9 @@
     msr     TPIDR_EL1, \r1
 .endm
 
-.macro LOAD_TLB load=0, r1=x
+.macro LOAD_TLB r1
     dsb     ISH             // ensure write has completed
-    .if \load != 0
     msr     TTBR0_EL1, \r1  // switch translation based address.
-    .endif
     tlbi    VMALLE1IS       // invalidate all TLB entries
     dsb     ISH             // ensure completion of TLB invalidatation
     isb                     // clear pipeline
@@ -35,7 +33,7 @@
 switch_to_regs:
     SAVE_REG    x0
     LOAD_REG    x1 x2
-    LOAD_TLB    1 x3
+    LOAD_TLB    x3
     ret
 
 .global save_regs
@@ -46,15 +44,5 @@ save_regs:
 .global load_regs
 load_regs:
     LOAD_REG    x0 x1
-    LOAD_TLB    1 x2
-    ret
-
-.global load_tlb
-load_tlb:
-    LOAD_TLB    1 x0
-    ret
-
-.global reload_tlb
-reload_tlb:
-    LOAD_TLB
+    LOAD_TLB    x2
     ret

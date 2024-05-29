@@ -2,8 +2,6 @@
 
 #include <type_traits>
 
-#include "mm/mmu.hpp"
-
 #define SECTION_VSYSCALL __attribute__((section(".vsyscall")))
 
 extern char __vsyscall_beg[];

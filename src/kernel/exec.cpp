@@ -29,15 +29,16 @@ int exec(ExecCtx* ctx) {
   auto file = hdr->file();
   auto thread = current_thread();
 
-  thread->reset_el0_tlb();
+  thread->vmm.reset();
 
-  if (thread->alloc_user_pages(USER_TEXT_START, file.size(), ProtFlags::RX)) {
+  if (thread->vmm.alloc_user_pages(USER_TEXT_START, file.size(),
+                                   ProtFlags::RX)) {
     klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
          thread->tid, file.size());
     return -1;
   }
-  if (thread->alloc_user_pages(USER_STACK_START, USER_STACK_SIZE,
-                               ProtFlags::RW)) {
+  if (thread->vmm.alloc_user_pages(USER_STACK_START, USER_STACK_SIZE,
+                                   ProtFlags::RW)) {
     klog("%s: can't alloc user_stack for thread %d / size = %lx\n", __func__,
          thread->tid, USER_STACK_SIZE);
     return -1;

@@ -16,8 +16,6 @@ extern "C" {
 void switch_to_regs(Regs* prev, Regs* next, Kthread* nthread, PT* pgd);
 void save_regs(Regs* r);
 void load_regs(Regs* r, Kthread* nthread, PT* pgd);
-void load_tlb(PT* pgd);
-void reload_tlb();
 }
 
 void switch_to(Kthread* prev, Kthread* next);

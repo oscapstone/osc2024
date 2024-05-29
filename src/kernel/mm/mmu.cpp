@@ -264,7 +264,7 @@ int fault_handler(int el) {
   }
 
   auto fpage = getPage(faddr);
-  auto entry = current_thread()->el0_tlb->get_entry(fpage);
+  auto entry = current_thread()->vmm.el0_tlb->get_entry(fpage);
   // TODO: demand paging, check addr is in valid adddress space
   if (not entry)
     return -1;
@@ -273,7 +273,7 @@ int fault_handler(int el) {
     case ESR_ELx_IIS_DFSC_PERM_FAULT_L3:
       if (el == 1) {
         entry->AP = AP::KERNEL_RW;
-        current_thread()->user_ro_pages.push_back(new PageItem{fpage});
+        current_thread()->vmm.user_ro_pages.push_back(new PageItem{fpage});
       }
       break;
   }

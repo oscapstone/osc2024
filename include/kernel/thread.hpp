@@ -3,7 +3,7 @@
 #include "ds/list.hpp"
 #include "ds/mem.hpp"
 #include "mm/mm.hpp"
-#include "mm/mmu.hpp"
+#include "mm/vmm.hpp"
 #include "sched.hpp"
 #include "signal.hpp"
 #include "util.hpp"
@@ -33,8 +33,7 @@ struct Kthread : ListItem {
   Mem kernel_stack;
   KthreadItem* item;
   Signal signal;
-  PT* el0_tlb;
-  ListHead<PageItem> user_ro_pages{};
+  VMM vmm;
 
  private:
   Kthread();
@@ -48,22 +47,8 @@ struct Kthread : ListItem {
   void fix(const Kthread& o, Mem& mem);
   void fix(const Kthread& o, void* faddr, uint64_t fsize);
   void* fix(const Kthread& o, void* ptr);
-  void ensure_el0_tlb();
-  int alloc_user_pages(uint64_t va, uint64_t size, ProtFlags prot);
-  template <typename T, typename U>
-  int map_user_phy_pages(T va, U pa, uint64_t size, ProtFlags prot) {
-    return map_user_phy_pages_impl((uint64_t)va, (uint64_t)pa, size, prot);
-  }
-  int map_user_phy_pages_impl(uint64_t va, uint64_t pa, uint64_t size,
-                              ProtFlags prot);
   void reset_kernel_stack() {
     regs.sp = kernel_stack.end(0x10);
-  }
-  void reset_el0_tlb() {
-    if (el0_tlb) {
-      delete el0_tlb;
-      el0_tlb = nullptr;
-    }
   }
 };
 
@@ -91,3 +76,16 @@ void kthread_exit(int status);
 void kthread_fini();
 Kthread* kthread_create(Kthread::fp start, void* ctx = nullptr);
 long kthread_fork();
+
+template <typename T,
+          typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
+R translate_va_to_pa(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
+  return (R)current_thread()->vmm.el0_tlb->translate_va((uint64_t)va, start,
+                                                        level);
+}
+
+template <typename T, typename U>
+int map_user_phy_pages(T va, U pa, uint64_t size, ProtFlags prot) {
+  return current_thread()->vmm.map_user_phy_pages((uint64_t)va, (uint64_t)pa,
+                                                  size, prot);
+}

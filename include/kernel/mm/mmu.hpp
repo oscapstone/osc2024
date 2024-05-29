@@ -8,11 +8,13 @@
 #include "mm/mm.hpp"
 #include "util.hpp"
 
-struct PageItem : ListItem {
-  uint64_t addr;
-  template <typename T>
-  PageItem(T addr) : ListItem{}, addr((uint64_t)addr) {}
-};
+struct PT;
+
+extern "C" {
+// mm/mmu.S
+void load_tlb(PT* pgd);
+void reload_tlb();
+}
 
 extern char __upper_PGD[];
 extern char __upper_PUD[];
@@ -256,11 +258,6 @@ struct PT {
   void print(const char* name = "PageTable", uint64_t start = USER_SPACE,
              int level = PGD_LEVEL);
 
-  template <typename T, typename R = std::conditional_t<
-                            sizeof(T) == sizeof(void*), T, void*>>
-  R translate(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
-    return (R)translate_va((uint64_t)va, start, level);
-  }
   void* translate_va(uint64_t va, uint64_t start = USER_SPACE,
                      int level = PGD_LEVEL);
 };

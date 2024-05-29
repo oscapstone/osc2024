@@ -3,7 +3,6 @@
 #include "board/pm.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
-#include "mm/vsyscall.hpp"
 #include "sched.hpp"
 #include "syscall.hpp"
 
@@ -48,8 +47,7 @@ Kthread::Kthread()
       status(KthreadStatus::kReady),
       exit_code(0),
       item(new KthreadItem(this)),
-      signal{this},
-      el0_tlb{nullptr} {
+      signal{this} {
   signal.setall([](int) {
     klog("kill init cause reboot!\n");
     reboot();
@@ -67,8 +65,7 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
       exit_code(0),
       kernel_stack(KTHREAD_STACK_SIZE, true),
       item(new KthreadItem(this)),
-      signal{this},
-      el0_tlb(nullptr) {
+      signal{this} {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
   add_list(this);
@@ -82,7 +79,7 @@ Kthread::Kthread(const Kthread& o)
       kernel_stack(o.kernel_stack),
       item(new KthreadItem(this)),
       signal{this, o.signal},
-      el0_tlb(pt_copy(o.el0_tlb)) {
+      vmm(o.vmm) {
   fix(o, &regs, sizeof(regs));
   fix(o, kernel_stack);
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
@@ -92,7 +89,6 @@ Kthread::Kthread(const Kthread& o)
 Kthread::~Kthread() {
   del_list(this);
   delete item;
-  reset_el0_tlb();
 }
 
 void Kthread::fix(const Kthread& o, Mem& mem) {
@@ -106,81 +102,6 @@ void Kthread::fix(const Kthread& o, void* faddr, uint64_t fsize) {
 void* Kthread::fix(const Kthread& o, void* ptr) {
   ptr = kernel_stack.fix(o.kernel_stack, ptr);
   return ptr;
-}
-
-void Kthread::ensure_el0_tlb() {
-  if (el0_tlb == nullptr) {
-    el0_tlb = new PT;
-    load_tlb(el0_tlb);
-    map_user_phy_pages(VSYSCALL_START, __vsyscall_beg, PAGE_SIZE,
-                       ProtFlags::RX);
-  }
-}
-
-int Kthread::alloc_user_pages(uint64_t va, uint64_t size, ProtFlags prot) {
-  ensure_el0_tlb();
-
-  // TODO: handle address overlap
-  el0_tlb->walk(
-      va, va + size,
-      [](auto context, PT_Entry& entry, auto start, auto level) {
-        auto prot = cast_enum<ProtFlags>(context);
-        entry.alloc(level);
-
-        if (has(prot, ProtFlags::WRITE))
-          entry.AP = AP::USER_RW;
-        else
-          entry.AP = AP::USER_RO;
-        entry.UXN = not has(prot, ProtFlags::EXEC);
-
-        klog("alloc_user_pages:  0x%016lx ~ 0x%016lx -> ", start,
-             start + ENTRY_SIZE[level]);
-        entry.print(level);
-      },
-      (void*)prot);
-
-  reload_tlb();
-
-  return 0;
-}
-
-int Kthread::map_user_phy_pages_impl(uint64_t va, uint64_t pa, uint64_t size,
-                                     ProtFlags prot) {
-  ensure_el0_tlb();
-
-  struct Ctx {
-    uint64_t va;
-    uint64_t pa;
-    ProtFlags prot;
-  } ctx{
-      .va = va,
-      .pa = pa,
-      .prot = prot,
-  };
-
-  klog("map_user_phy_pages:  0x%016lx ~ 0x%016lx -> %08lx\n", va, va + size,
-       pa);
-
-  // TODO: handle address overlap
-  el0_tlb->walk(
-      va, va + size,
-      [](auto context, PT_Entry& entry, auto start, auto level) {
-        auto ctx = (Ctx*)context;
-        entry.alloc(level);
-
-        entry.set_entry(ctx->pa + (start - ctx->va), level);
-
-        if (has(ctx->prot, ProtFlags::WRITE))
-          entry.AP = AP::USER_RW;
-        else
-          entry.AP = AP::USER_RO;
-        entry.UXN = not has(ctx->prot, ProtFlags::EXEC);
-      },
-      (void*)&ctx);
-
-  reload_tlb();
-
-  return 0;
 }
 
 void idle() {

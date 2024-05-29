@@ -6,7 +6,7 @@
 #include "thread.hpp"
 
 SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
-  auto phy_mbox = current_thread()->el0_tlb->translate(mbox);
+  auto phy_mbox = translate_va_to_pa(mbox);
   // kprintf("%p -> %p\n", mbox, phy_mbox);
   mailbox_call(ch, phy_mbox);
 
@@ -22,8 +22,7 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
       auto base_addr = msg->value_buf[0] & 0x3FFFFFFF;
       auto length = msg->value_buf[1];
       klog("mbox: buf 0x%x ~ 0x%x\n", base_addr, base_addr + length);
-      current_thread()->map_user_phy_pages(base_addr, base_addr, length,
-                                           ProtFlags::RW);
+      map_user_phy_pages(base_addr, base_addr, length, ProtFlags::RW);
     }
   }
 

@@ -69,8 +69,8 @@ void Signal::handle(TrapFrame* frame) {
       if (frame) {
         if (not stack.alloc(PAGE_SIZE, true))
           panic("[signal::handle] can't alloc new stack");
-        cur->map_user_phy_pages(USER_SIGNAL_STACK, va2pa(stack.addr), PAGE_SIZE,
-                                ProtFlags::RWX);
+        map_user_phy_pages(USER_SIGNAL_STACK, va2pa(stack.addr), PAGE_SIZE,
+                           ProtFlags::RWX);
         auto backup_frame =
             (char*)USER_SIGNAL_STACK + PAGE_SIZE - sizeof(TrapFrame);
         memcpy(backup_frame, frame, sizeof(TrapFrame));
