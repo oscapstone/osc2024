@@ -7,6 +7,6 @@ void _reboot_command(int argc, char **argv) {
     reset(200);
 }
 
-struct Command reboot_command = {.name = "reboot",
+command_t reboot_command = {.name = "reboot",
                                  .description = "reboot the device",
                                  .function = &_reboot_command};

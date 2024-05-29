@@ -47,7 +47,7 @@ void uart_init() {
     *GPPUDCLK0 = 0;    // flush GPIO setup
     *AUX_MU_CNTL = 3;  // enable Tx, Rx // bit1:transmitter bit0:receiver
 
-    *ENABLE_IRQS_1 |= (1 << 29);
+    // *ENABLE_IRQS_1 |= (1 << 29);
 }
 
 void uart_send(unsigned int c) {

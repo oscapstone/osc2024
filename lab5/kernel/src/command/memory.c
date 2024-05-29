@@ -24,7 +24,7 @@ void _test_malloc_command(int argc, char **argv) {
     print_string("\n");
 }
 
-struct Command test_malloc_command = {.name = "test_malloc",
+command_t test_malloc_command = {.name = "test_malloc",
                                       .description = "test malloc",
                                       .function = &_test_malloc_command};
 
@@ -51,7 +51,7 @@ void _test_kmalloc_comand(int argc, char **argv) {
     // print_free_areas();
 }
 
-struct Command test_kmalloc_command = {.name = "test_kmalloc",
+command_t test_kmalloc_command = {.name = "test_kmalloc",
                                        .description = "test kmalloc",
                                        .function = &_test_kmalloc_comand};
 
@@ -68,6 +68,6 @@ void _test_kfree_command(int argc, char **argv) {
     print_free_areas();
 }
 
-struct Command test_kfree_command = {.name = "test_kfree",
+command_t test_kfree_command = {.name = "test_kfree",
                                      .description = "test kfree",
                                      .function = &_test_kfree_command};

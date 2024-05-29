@@ -34,7 +34,7 @@ void _async_io_demo(int argc, char **argv) {
     uart_async_read(command);
 }
 
-struct Command async_io_demo_command = {
+command_t async_io_demo_command = {
     .name = "async_io",
     .description = "demo async IO functions",
     .function = &_async_io_demo};

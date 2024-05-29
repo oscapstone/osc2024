@@ -5,7 +5,7 @@
 #include <lib/string.h>
 
 struct Console {
-    struct Command commands[64];
+    command_t commands[64];
     int num_commands;
 };
 
@@ -61,7 +61,7 @@ void run_console(struct Console *console) {
     }
 }
 
-void register_command(struct Console *console, struct Command *command) {
+void register_command(struct Console *console, command_t *command) {
     console->commands[console->num_commands] = *command;
     console->num_commands++;
 }

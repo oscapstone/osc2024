@@ -218,7 +218,7 @@ ret_from_fork:
 	blr	x19                             // return to the new process
 ret_to_user:
 	bl disable_irq				
-    bl sys_debug_msg
+    // bl sys_debug_msg
 	kernel_exit 0 
 
 err_hang:

@@ -8,6 +8,7 @@ extern void ret_from_fork();
 
 int copy_process(unsigned long clone_flags, unsigned long func,
                  unsigned long arg, unsigned long stack) {
+    // print_string("[copy_process] begin\n");
     preempt_disable();  // copy process is not preemptable
 
     task_struct_t *new_task = (task_struct_t *)kmalloc(STACK_SIZE);
@@ -54,14 +55,15 @@ int copy_process(unsigned long clone_flags, unsigned long func,
     unsigned long pid = get_new_pid();
     new_task->pid = pid;
 
-    print_string("[copy_process - enqueue_run_queue] pid: ");
-    print_d(pid);
+    // print_string("[copy_process - enqueue_run_queue] pid: ");
+    // print_d(pid);
     // print_string(", ");
     // print_h((uint64_t)new_task);
-    print_string("\n");
+    // print_string("\n");
     enqueue_run_queue(new_task);
 
     preempt_enable();
+
     return pid;
 }
 

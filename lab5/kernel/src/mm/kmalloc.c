@@ -86,12 +86,12 @@ void *kmem_cache_alloc(uint32_t order) {
             cache->next = kmalloc_caches[order];
             kmalloc_caches[order] = cache;
         }
-        print_d((uint64_t)page);
+        // print_d((uint64_t)page);
     }
     kmem_cache_t *cache = kmalloc_caches[order];
     kmalloc_caches[order] = cache->next;
 
-    print_kmalloc_caches();
+    // print_kmalloc_caches();
 
     return cache;
 }

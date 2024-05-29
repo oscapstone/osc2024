@@ -8,7 +8,6 @@
 #define CPIO_BASE_RPI (0x20000000)
 static void *ramfs_base = (void *)CPIO_BASE_RPI;  // DEFAULT for RPI
 
-
 static int hextoi(char *s, int n);
 
 void init_ramfs_callback(void *addr) {
@@ -35,8 +34,9 @@ file_list_t *ramfs_get_file_list() {
             namesize < MAX_FILENAME_LENGTH ? namesize : MAX_FILENAME_LENGTH - 1;
 
         memcpy(file_list.file_names[file_list.file_count], file_name,
-                copy_length);
+               copy_length);
         file_list.file_names[file_list.file_count][copy_length] = '\0';
+        file_list.file_sizes[file_list.file_count] = filesize;
         file_list.file_count++;
 
         uint32_t headsize = align4(sizeof(cpio_t) + namesize);
@@ -48,8 +48,7 @@ file_list_t *ramfs_get_file_list() {
     return &file_list;
 }
 
-static char file_buf[1024];
-char *ramfs_get_file_contents(const char *file_name) {
+void ramfs_get_file_contents(const char *file_name, char *file_buf) {
     uint8_t *fptr = (uint8_t *)ramfs_base;  // for 8 byte alignment
     while (strcmp((void *)fptr + sizeof(cpio_t), "TRAILER!!!")) {
         cpio_t *header = (cpio_t *)fptr;
@@ -61,12 +60,10 @@ char *ramfs_get_file_contents(const char *file_name) {
 
         if (strcmp((void *)fptr + sizeof(cpio_t), file_name) == 0) {
             memcpy(file_buf, (void *)fptr + headsize, filesize);
-            return file_buf;
-        } 
+        }
 
         fptr += headsize + datasize;
     }
-    return NULL;
 }
 
 unsigned long ramfs_get_file_size(const char *file_name) {
@@ -79,7 +76,7 @@ unsigned long ramfs_get_file_size(const char *file_name) {
         uint32_t datasize = align4(filesize);
         if (strcmp((void *)fptr + sizeof(cpio_t), file_name) == 0) {
             return filesize;
-        } 
+        }
         fptr += headsize + datasize;
     }
     return 0;
@@ -96,4 +93,3 @@ static int hextoi(char *s, int n) {
     }
     return r;
 }
-

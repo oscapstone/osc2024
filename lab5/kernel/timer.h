@@ -6,5 +6,6 @@
 
 void set_timeout(void (*callback)(void *), void *arg, int after);
 void timer_irq_handler();
+void enable_user_to_physical_timer();
 
 #endif 

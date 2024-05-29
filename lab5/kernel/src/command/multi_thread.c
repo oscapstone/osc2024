@@ -17,6 +17,7 @@ void user_foo() {
     print_string("\r\nFork Test, pid: ");
     print_d(getpid());
     print_string("\n");
+    uartwrite("UART Write Test\n", 16);
     uint32_t cnt = 1, ret = 0;
 
     if ((ret = fork()) == 0) {  // pid == 0 => child
@@ -70,7 +71,7 @@ static void entry() {
     // }
 }
 
-struct Command test_multi_thread_command = {
+command_t test_multi_thread_command = {
     .name = "multi_thread",
     .description = "demo multi-thread user program",
     .function = &entry,

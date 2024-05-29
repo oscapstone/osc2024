@@ -27,6 +27,7 @@ struct cpu_context {
 enum task_state {
     TASK_RUNNING,
     TASK_ZOMBIE,
+    TASK_STOPPED,
 };
 
 typedef struct task_struct {

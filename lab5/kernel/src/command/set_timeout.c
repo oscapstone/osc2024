@@ -22,6 +22,6 @@ void _set_timeout(int argc, char **argv) {
     set_timeout((void *)print_timeout, (void *)timeout, atoi(argv[1]));
 }
 
-struct Command set_timeout_command = {.name = "set_timeout",
+command_t set_timeout_command = {.name = "set_timeout",
                                       .description = "set a timeout",
                                       .function = &_set_timeout};

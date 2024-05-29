@@ -68,8 +68,8 @@ void enqueue_run_queue(task_struct_t *task) {
         task->next = run_queue;
         run_queue->prev = task;
     }
-    print_string("[enqueue_run_queue] done\n");
-    print_task_list();
+    // print_string("[enqueue_run_queue] done\n");
+    // print_task_list();
 }
 
 void delete_run_queue(task_struct_t *task) {
@@ -87,6 +87,10 @@ void delete_run_queue(task_struct_t *task) {
 }
 
 static void switch_to(task_struct_t *next) {
+    if(get_current() == next) {
+        // return;
+        print_string("[switch_to] same task\n");
+    }
 #ifdef SCHED_DEBUG
     print_string("[switch_to] ");
     print_string("(");
@@ -103,10 +107,12 @@ static void switch_to(task_struct_t *next) {
     print_h((unsigned long)get_current()->context.x20);
     print_string(", ");
     print_h((unsigned long)get_current()->context.sp);
+    // print_string(", ");
+    // print_h((unsigned long)get_current()->context.pc);
     print_string(") -> (");
     // print_string(" -> ");
-    print_h((unsigned long)next);
-    print_string(", ");
+    // print_h((unsigned long)next);
+    // print_string(", ");
     print_d(next->pid);
     print_string(", ");
     print_d(next->counter);
@@ -120,11 +126,14 @@ static void switch_to(task_struct_t *next) {
     print_h((unsigned long)next->context.x20);
     print_string(", ");
     print_h((unsigned long)next->context.sp);
+    // print_string(", ");
+    // print_h((unsigned long)next->context.pc);
     print_string(")");
     print_string("\n");
 
     print_string("[switch_to] print_task_list\n");
     print_task_list();
+// }
 #endif
 
     if (get_current() == next) {
@@ -256,7 +265,7 @@ void timer_tick() {
 }
 
 void schedule_tail() {
-    print_string("[schedule_tail]\n");
+    // print_string("[schedule_tail]\n");
     preempt_enable();
 }
 

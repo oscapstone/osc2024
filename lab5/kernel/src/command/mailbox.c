@@ -18,6 +18,6 @@ void _mailbox_command(int argc, char **argv) {
     print_string("\r\n");
 }
 
-struct Command mailbox_command = {.name = "mailbox",
+command_t mailbox_command = {.name = "mailbox",
                                   .description = "print hardware info",
                                   .function = &_mailbox_command};
