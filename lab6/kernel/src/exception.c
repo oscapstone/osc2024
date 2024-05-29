@@ -65,6 +65,18 @@ void exception_entry()
 void el1_sync_handler_entry()
 {
     uart_puts("Into sync handler\n");
+    unsigned long long esr;
+    unsigned long long addr;
+    asm volatile(
+        "mrs %0, esr_el1\n"
+        "mrs %1, far_el1\n"
+        : "=r"(esr), "=r"(addr));
+
+    int DFSC = esr & 0b111111;
+    uart_puts("DFSC: ");
+    uart_hex_lower_case(DFSC);
+    uart_puts(", OS can't handle it.\n");
+
     while (1)
         ;
 }
@@ -312,23 +324,14 @@ void sys_fork(struct ucontext *trapframe)
     child->priority++;
 
     int kstack_offset = parent->kstack - (void *)trapframe;
-    // map ustack and sp_el0 to physical address
-    int ustack_offset = (unsigned long long)parent->ustack - VA_START - translate_v_to_p(parent->mm_struct->pgd, trapframe->sp_el0);
-
     for (int i = 0; i < kstack_offset; i++) // copy kstack content
         *((char *)child->kstack - i) = *((char *)parent->kstack - i);
-
-    for (int i = 0; i < ustack_offset; i++) // copy ustack content
-        *((char *)child->ustack - i) = *((char *)parent->ustack - i);
 
     for (int i = 0; i < SIG_NUM; i++) // copy signal handler
     {
         child->is_default_signal_handler[i] = parent->is_default_signal_handler[i];
         child->signal_handler[i] = parent->signal_handler[i];
     }
-
-    child->cpu_context.sp = (unsigned long long)child->kstack - kstack_offset; // revise the right kernel stack pointer
-    child->cpu_context.fp = (unsigned long long)child->kstack;
 
     unsigned long long code_start, code_size;
     for (struct vm_area_struct *cur = parent->mm_struct->mmap; cur != NULL; cur = cur->vm_next)
@@ -340,15 +343,23 @@ void sys_fork(struct ucontext *trapframe)
             break;
         }
     }
+
+    child->cpu_context.sp = (unsigned long long)child->kstack - kstack_offset; // revise the right kernel stack pointer
+    child->cpu_context.fp = (unsigned long long)child->kstack;
+
     init_mm_struct(child->mm_struct);
     // map to code
     mappages(child->mm_struct, CODE, 0, code_start, code_size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
     // map to ustack
-    mappages(child->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(child->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    mappages(child->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(parent->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
     // map to MMIO_BASE
     mappages(child->mm_struct, IO, 0x3c000000, 0x3c000000, 0x40000000 - 0x3c000000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
 
+    change_all_pgd_prot(parent->mm_struct->pgd, PROT_READ);        // change parent prcess pte to read only
+    copy_pgd_table(parent->mm_struct->pgd, child->mm_struct->pgd); // child copy parent's page entry
+
     struct ucontext *child_trapframe = (struct ucontext *)child->cpu_context.sp;
+
     trapframe->x[0] = child->id; // return child's id
     child_trapframe->x[0] = 0;
 }

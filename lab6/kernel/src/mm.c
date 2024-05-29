@@ -97,6 +97,9 @@ void page_reclaim(unsigned long long *pgd) // reclaim all the pages
             page_reclaim_pud((unsigned long long *)((pgd[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START));
     }
     kfree(pgd);
+
+    switch_mm_irqs_off(get_current_task()->mm_struct->pgd); // flush tlb and pipeline because page table is change
+    disable_interrupt();
 }
 
 void page_reclaim_pud(unsigned long long *pud)
@@ -117,6 +120,113 @@ void page_reclaim_pmd(unsigned long long *pmd)
             kfree((unsigned long long *)((pmd[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START));
     }
     kfree(pmd);
+}
+
+void change_all_pgd_prot(unsigned long long *pgd, int prot)
+{
+    pgd = (unsigned long long *)((unsigned long long)(pgd) | VA_START);
+    for (int i = 0; i < 512; i++)
+    {
+        if (pgd[i] != PD_INVALID)
+        {
+            unsigned long long *pud = (unsigned long long *)((pgd[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START);
+            change_all_pud_prot(pud, prot);
+        }
+    }
+
+    switch_mm_irqs_off(get_current_task()->mm_struct->pgd); // flush tlb and pipeline because page table is change
+    disable_interrupt();
+}
+
+void change_all_pud_prot(unsigned long long *pud, int prot)
+{
+    for (int i = 0; i < 512; i++)
+    {
+        if (pud[i] != PD_INVALID)
+        {
+            unsigned long long *pmd = (unsigned long long *)((pud[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START);
+            change_all_pmd_prot(pmd, prot);
+        }
+    }
+}
+
+void change_all_pmd_prot(unsigned long long *pmd, int prot)
+{
+    for (int i = 0; i < 512; i++)
+    {
+        if (pmd[i] != PD_INVALID)
+        {
+            unsigned long long *pte = (unsigned long long *)((pmd[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START);
+            change_all_pte_prot(pte, prot);
+        }
+    }
+}
+
+void change_all_pte_prot(unsigned long long *pte, int prot)
+{
+    for (int i = 0; i < 512; i++)
+    {
+        if (pte[i] != PD_INVALID)
+        {
+            pte[i] &= ~(0b1 << 7); // clean the bit[7]
+            if ((prot & 0b11) == (PROT_READ | PROT_WRITE))
+                pte[i] |= PD_READ_WRITE;
+            else if ((prot & 0b11) == PROT_READ)
+                pte[i] |= PD_READ_ONLY;
+        }
+    }
+}
+
+void copy_pgd_table(unsigned long long *pgd, unsigned long long *copy_pgd)
+{
+    pgd = (unsigned long long *)((unsigned long long)(pgd) | VA_START);
+    copy_pgd = (unsigned long long *)((unsigned long long)(copy_pgd) | VA_START);
+    for (int i = 0; i < 512; i++)
+    {
+        if (pgd[i] != PD_INVALID)
+        {
+            unsigned long long *pud = (unsigned long long *)((pgd[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START);
+            unsigned long long *copy_pud = create_page_table();
+            copy_pgd[i] = ((unsigned long long)copy_pud & ~VA_START) | PD_TABLE; // map to physical address
+            copy_pud_table(pud, copy_pud);
+        }
+        else
+            copy_pgd[i] = PD_INVALID;
+    }
+}
+
+void copy_pud_table(unsigned long long *pud, unsigned long long *copy_pud)
+{
+    for (int i = 0; i < 512; i++)
+    {
+        if (pud[i] != PD_INVALID)
+        {
+            unsigned long long *pmd = (unsigned long long *)((pud[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START);
+            unsigned long long *copy_pmd = create_page_table();
+            copy_pud[i] = ((unsigned long long)copy_pmd & ~VA_START) | PD_TABLE; // map to physical address
+            copy_pmd_table(pmd, copy_pmd);
+        }
+        else
+            copy_pud[i] = PD_INVALID;
+    }
+}
+
+void copy_pmd_table(unsigned long long *pmd, unsigned long long *copy_pmd)
+{
+    for (int i = 0; i < 512; i++)
+    {
+        if (pmd[i] != PD_INVALID)
+        {
+            unsigned long long *pte = (unsigned long long *)((pmd[i] & ((unsigned long long)(0xfffffffff) << 12)) | VA_START);
+            unsigned long long *copy_pte = create_page_table();
+            copy_pmd[i] = ((unsigned long long)copy_pte & ~VA_START) | PD_TABLE; // map to physical address
+
+            for (int j = 0; j < 512; j++)
+                copy_pte[j] = pte[j];
+        }
+        else
+            copy_pmd[i] = PD_INVALID;
+    }
 }
 
 unsigned long long translate_v_to_p(unsigned long long *pgd, unsigned long long v_add) // translate the virtual addrss to physical address through pgd
@@ -160,7 +270,52 @@ void do_translation_fault(unsigned long long address)
 
 void do_permission_fault(unsigned long long address)
 {
-    do_bad_area(address);
+    uart_puts("[Permission fault]: 0x");
+    uart_hex_lower_case(address);
+    uart_puts("\n");
+
+    struct task_struct *cur_task = get_current_task();
+
+    for (struct vm_area_struct *cur_vma = cur_task->mm_struct->mmap; cur_vma != NULL; cur_vma = cur_vma->vm_next)
+    {
+        if (address >= cur_vma->vm_start && address <= cur_vma->vm_end) // try to search address in VMA list
+        {
+            if ((cur_vma->vm_page_prot & 0b11) == (PROT_READ | PROT_WRITE))
+            {
+                unsigned long long v_add = address;
+                unsigned long long p_add = VA_START | translate_v_to_p(cur_task->mm_struct->pgd, address);
+
+                char *frame = (char *)((p_add >> 12) << 12);
+                char *copy_frame = NULL;
+
+                copy_frame = kmalloc(4096 * 2); // allocate one page frame and copy from orignal page frame 
+                for (int i = 0; i < 4096; i++)
+                    copy_frame[i] = frame[i];
+
+                unsigned long long *cur_table = (unsigned long long *)(VA_START | (unsigned long long)cur_task->mm_struct->pgd); // map pdg to kenel sacpe
+                for (int level = 0; level < 4; level++)
+                {
+                    unsigned long long idx = (v_add >> (12 + 9 * (3 - level))) & 0x1ff;
+                    unsigned long long *pte = &cur_table[idx];
+
+                    if (level == 3)
+                        // change the pte's bit[7] from read only to read/write
+                        *pte = ((unsigned long long)copy_frame - VA_START) | PD_READ_WRITE | PD_KERNEL_USER_ACCESS | PTE_ATTR;
+                    else
+                    {
+                        unsigned long long next_level_table_address = *pte & ((unsigned long long)(0xfffffffff) << 12); // descriptor address [47:12]
+                        cur_table = (unsigned long long *)(VA_START | next_level_table_address);
+                    }
+                }
+                break;
+            }
+            else
+                do_bad_area(address); // the address is not find, try to kill the process.
+        }
+    }
+
+    switch_mm_irqs_off(cur_task->mm_struct->pgd); // flush tlb and pipeline because page table is change
+    disable_interrupt();
 }
 
 void do_page_fault(unsigned long long p_add, unsigned long long v_add, int prot)
@@ -212,6 +367,9 @@ void do_page_fault(unsigned long long p_add, unsigned long long v_add, int prot)
             }
         }
     }
+
+    switch_mm_irqs_off(get_current_task()->mm_struct->pgd); // flush tlb and pipeline because page table is change
+    disable_interrupt();
 }
 
 void do_bad_area(unsigned long long address)

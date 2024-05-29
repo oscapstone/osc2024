@@ -56,6 +56,16 @@ void page_reclaim(unsigned long long *pgd);
 void page_reclaim_pud(unsigned long long *pud);
 void page_reclaim_pmd(unsigned long long *pmd);
 
+void change_all_pgd_prot(unsigned long long *pgd, int prot);
+void change_all_pud_prot(unsigned long long *pud, int prot);
+void change_all_pmd_prot(unsigned long long *pmd, int prot);
+void change_all_pte_prot(unsigned long long *pte, int prot);
+
+void copy_pgd_table(unsigned long long *pgd, unsigned long long *copy_pgd);
+void copy_pud_table(unsigned long long *pud, unsigned long long *copy_pud);
+void copy_pmd_table(unsigned long long *pmd, unsigned long long *copy_pmd);
+void copy_pte_table(unsigned long long *pte, unsigned long long *copy_pte);
+
 unsigned long long translate_v_to_p(unsigned long long *pgd, unsigned long long v_add);
 
 void do_translation_fault(unsigned long long address);

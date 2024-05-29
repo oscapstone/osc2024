@@ -14,6 +14,15 @@ void do_signal(struct ucontext *sigframe, void (*signal_handler)(void))
 {
     task_struct *cur = get_current_task();
 
+    uart_hex_lower_case(translate_v_to_p(cur->mm_struct->pgd, 0xffffffffb000));
+    uart_puts("\n");
+    uart_hex_lower_case(translate_v_to_p(cur->mm_struct->pgd, 0xffffffffc000));
+    uart_puts("\n");
+    uart_hex_lower_case(translate_v_to_p(cur->mm_struct->pgd, 0xffffffffd000));
+    uart_puts("\n");
+    uart_hex_lower_case(translate_v_to_p(cur->mm_struct->pgd, 0xffffffffe000));
+    uart_puts("\n");
+
     disable_interrupt();
     cur->signal_stack = (void *)((char *)kmalloc(4096 * 5) + 4096 * 4); // malloc a stack's space to deal with signal
 
