@@ -20,7 +20,7 @@ bool print_fdt(uint32_t tag, int level, const char* node_name,
     }
     case FDT_PROP: {
       kprintf("%s: ", prop_name);
-      kprint({prop_value, (int)len});
+      kprint_str_or_hex({prop_value, (int)len});
       break;
     }
     default: {

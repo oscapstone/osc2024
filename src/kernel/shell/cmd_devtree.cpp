@@ -20,7 +20,7 @@ int cmd_devtree(int argc, char* argv[]) {
     kprintf("%s: %s: No such device\n", argv[0], path);
   } else if (view.data()) {
     kprintf("%s: ", path);
-    kprint(view);
+    kprint_str_or_hex(view);
     kprintf("\n");
   }
   return r;
