@@ -20,11 +20,16 @@ void PT_Entry::print(int level) const {
 }
 
 void PT_Entry::alloc(int level, bool kernel) {
-  set_entry(kmalloc(PAGE_SIZE), level, true);
-  if (kernel)
-    UXN = true;
-  else
-    PXN = true;
+  set_level(level);
+  if (not level_is_PTE) {
+    int nxt_level = level + 1;
+    auto nxt_table = new PT(*this, nxt_level);
+    set_table(level, nxt_table);
+  } else {
+    set_entry(kmalloc(PAGE_SIZE), level, true);
+    UXN = kernel;
+    PXN = !kernel;
+  }
 }
 
 PT_Entry PT_Entry::copy(int level) const {
@@ -97,13 +102,9 @@ PT_Entry& PT::walk(uint64_t start, int level, uint64_t va_start, int va_level) {
   }
   auto nxt_start = start + idx * ENTRY_SIZE[level];
   auto nxt_level = level + 1;
-  PT* nxt_table;
-  if (entry.isTable()) {
-    nxt_table = entry.table();
-  } else {
-    nxt_table = new PT(entry, nxt_level);
-    entry.set_table(level, nxt_table);
-  }
+  if (not entry.isTable())
+    entry.alloc(level);
+  PT* nxt_table = entry.table();
   return nxt_table->walk(nxt_start, nxt_level, va_start, va_level);
 }
 
