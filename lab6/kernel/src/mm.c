@@ -75,6 +75,14 @@ void mmap_pop(struct vm_area_struct **mmap_ptr, enum vm_type vm_type) // remove 
 void mappages(struct mm_struct *mm_struct, enum vm_type vm_type, unsigned long long v_add, unsigned long long p_add, unsigned long long size, int prot, int flags)
 {
     mmap_push(&(mm_struct->mmap), vm_type, p_add, v_add, v_add + size, prot, flags); // just push it to VMA list for demand paging
+
+    /*unsigned long long start = p_add >> 12;
+    unsigned long long end = start + (size >> 12) + (size & 0xfff) == 0 ? 0 : 1;
+    while (start <= end)
+    {
+        page_arr[start].refer_count++;
+        start++;
+    }*/
 }
 
 unsigned long long *create_page_table()
@@ -288,7 +296,7 @@ void do_permission_fault(unsigned long long address)
                 char *frame = (char *)((p_add >> 12) << 12);
                 char *copy_frame = NULL;
 
-                copy_frame = kmalloc(4096 * 2); // allocate one page frame and copy from orignal page frame 
+                copy_frame = kmalloc(4096); // allocate one page frame and copy from orignal page frame
                 for (int i = 0; i < 4096; i++)
                     copy_frame[i] = frame[i];
 

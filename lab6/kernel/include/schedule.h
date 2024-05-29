@@ -39,7 +39,6 @@ typedef struct task_struct
     int priority;                           // task priority
     void *kstack;                           // stack for kernel
     void *ustack;                           // stack for user
-    void *signal_stack;                     // stack for signal handler;
     enum task_state state;                  // task state
     int need_sched;                         // Do this task need to yield cpu ?
     int received_signal;                    // the signal that the process received

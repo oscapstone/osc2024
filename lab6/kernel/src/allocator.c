@@ -3,7 +3,7 @@
 #include "utils.h"
 #include "allocator.h"
 
-//#define DEBUG 0
+// #define DEBUG 0
 
 volatile unsigned char *heap_head = ((volatile unsigned char *)(VA_START | 0x10000000));
 
@@ -24,7 +24,7 @@ void startup_allocate()
     void *startup_start = (void *)heap_head;
     page_array_init(PAGE_BASE, PAGE_END);
     object_array_init();
-    
+
     memory_reserve((void *)(VA_START | 0), (void *)(VA_START | 0x1000));                                // spin tables for multicore boot (0x0000 - 0x1000)
     memory_reserve((void *)(VA_START | 0x80000), (void *)(VA_START | (0x100000 + (1028 * (1 << 12))))); // kernel image in the physical memory
     memory_reserve((void *)(VA_START | 0x60000), (void *)(VA_START | 0x80000));                         // kernel stack space
@@ -50,6 +50,7 @@ void page_array_init(void *start, void *end)
         page_arr[i].page_idx = i;
         page_arr[i].order_before_allocate = 0;
         page_arr[i].object_order = -1;
+        page_arr[i].refer_count = 0;
         page_arr[i].pre_block = NULL;
         page_arr[i].next_block = NULL;
         page_arr[i].object_address = NULL;

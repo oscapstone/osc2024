@@ -322,6 +322,8 @@ void sys_fork(struct ucontext *trapframe)
     task_struct *parent = get_current_task();
     task_struct *child = task_create(return_from_fork, 0);
     child->priority++;
+    kfree(child->ustack);
+    child->ustack = NULL;
 
     int kstack_offset = parent->kstack - (void *)trapframe;
     for (int i = 0; i < kstack_offset; i++) // copy kstack content
@@ -422,7 +424,7 @@ void sys_mmap(struct ucontext *trapframe)
     int prot = (int)trapframe->x[2];
     int flags = (int)trapframe->x[3];
 
-    len = ((len >> 16) << 16) + ((len & 0x1000) == 0 ? 0 : 4096); // align len
+    len = ((len >> 12) << 12) + ((len & 0xfff) == 0 ? 0 : 4096); // align len
     unsigned long long p_addr = (unsigned long long)kmalloc(len);
     for (int i = 0; i < len; i++)
         *((char *)(p_addr) + i) = 0;
@@ -430,7 +432,7 @@ void sys_mmap(struct ucontext *trapframe)
     if (addr) // if addr is not NULL, then try to allocate it
     {
         int addr_is_free = 1;
-        addr = ((addr >> 16) << 16) + ((addr & 0x1000) == 0 ? 0 : 4096); // align len
+        addr = ((addr >> 12) << 12) + ((addr & 0xfff) == 0 ? 0 : 4096); // align len
         for (struct vm_area_struct *vma = cur_task->mm_struct->mmap; vma != NULL; vma = vma->vm_next)
         {
             if ((vma->vm_end > addr && vma->vm_start <= addr) || (vma->vm_end > addr + len && vma->vm_start <= addr + len))
@@ -454,7 +456,7 @@ void sys_mmap(struct ucontext *trapframe)
             }
         }
     }
-    else // add is NULL, try to find the free region by brute-force
+    else // addr is NULL, try to find the free region by brute-force
     {
         addr = 0x0;
         while (1)
@@ -477,21 +479,8 @@ void sys_mmap(struct ucontext *trapframe)
 
 void sys_sigreturn(struct ucontext *trapframe)
 {
-    task_struct *cur = get_current_task();
+    unsigned long long *sp_ptr = (unsigned long long *)trapframe->sp_el0;
 
     for (int i = 0; i < 34; i++)
-        *((unsigned long long *)trapframe + i) = *((unsigned long long *)cur->signal_stack - i);
-
-    kfree((char *)cur->signal_stack - 4096 * 4);
-    cur->signal_stack = NULL;
-
-    page_reclaim(cur->mm_struct->pgd);                                                                 // reclaim all page entry
-    cur->mm_struct->pgd = (unsigned long long *)((unsigned long long)create_page_table() & ~VA_START); // allocate a new pgd page table
-
-    mmap_pop(&(cur->mm_struct->mmap), STACK);   // pop the signal stack form vma
-    mmap_pop(&(cur->mm_struct->mmap), SYSCALL); // pop the sigreturn form vma
-    // map to ustack
-    mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
-
-    switch_mm_irqs_off(cur->mm_struct->pgd); // flush tlb and pipeline because page table is change
+        *((unsigned long long *)trapframe + i) = *(sp_ptr + (34 - i));
 }

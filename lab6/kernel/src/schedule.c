@@ -64,7 +64,6 @@ task_struct *task_create(void (*start_routine)(void), int priority)
     new_task->mm_struct->pgd = NULL;
     new_task->kstack = (void *)((char *)kmalloc(4096 * 5) + 4096 * 4); // malloc space for kernel stack
     new_task->ustack = (void *)((char *)kmalloc(4096 * 5) + 4096 * 4); // malloc space for user stack
-    new_task->signal_stack = NULL;
 
     new_task->cpu_context.sp = (unsigned long long)(new_task->kstack); // set stack pointer
     new_task->cpu_context.fp = (unsigned long long)(new_task->kstack); // set frame pointer
@@ -122,17 +121,32 @@ void kill_zombies()
 
                 run_queue_remove(del, i); // remove zombie task
 
-                page_reclaim(del->mm_struct->pgd);                                    // reclaim all page entry
                 for (struct vm_area_struct *vma = del->mm_struct->mmap; vma != NULL;) // clean all VMA
                 {
+                    /*unsigned long long start = vma->vm_start;
+                    unsigned long long end = vma->vm_end;
+
+                    while (start < end)
+                    {
+                        unsigned long long page_idx = translate_v_to_p(del->mm_struct->pgd, start) >> 12;
+                        if (page_idx != 0)
+                        {
+                            page_arr[page_idx].refer_count--;
+                            kfree((void *)(page_idx << 12));
+                        }
+                        start += 4096;
+                    }*/
+
                     struct vm_area_struct *temp = vma;
                     vma = vma->vm_next;
                     kfree(temp);
                 }
+                page_reclaim(del->mm_struct->pgd); // reclaim all page entry
 
                 kfree(del->mm_struct);
                 kfree((char *)del->kstack - 4096 * 4); // free the stack space
-                kfree((char *)del->ustack - 4096 * 4);
+                if (del->ustack != NULL)
+                    kfree((char *)del->ustack - 4096 * 4);
                 kfree(del);
 
                 enable_interrupt();
