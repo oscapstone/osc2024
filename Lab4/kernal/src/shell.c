@@ -160,7 +160,7 @@ int cmd_loadimg(){
 int cmd_malloc(){
     char* ptr=simple_malloc(5);
     char* ptr2=simple_malloc(sizeof("Thanks you,Cheems."));
-    if(ptr==NULL | ptr2==NULL){
+    if(ptr==NULL || ptr2==NULL){
         puts("error:memory allocate fault\r\n");
         return 0;
     }
@@ -176,6 +176,8 @@ int cmd_malloc(){
 
 int cmd_output_reverse(){
     fdt_output_reverse();
+
+    return 0;
 }
 
 int cmd_get_el(){
@@ -301,11 +303,21 @@ int cmd_test(){
 }
 
 int cmd_dy_malloc(){
-    int* arr=dy_malloc(sizeof(int)*20);
-    puts("arraddress:");
-    put_hex(arr);
-    puts("\r\n");
-    dy_free(arr);
+    int* arr[100];
+    for(int i=0;i<100;i++){
+        arr[i]=dy_malloc(sizeof(int));
+    }
+    for(int i=0;i<100;i++){
+        puts("address:");
+        put_hex(arr[i]);
+        puts("\r\n");
+    }
+
+    for(int i=0;i<100;i++){
+        dy_free(arr[i]);
+    }
+
+    return 0;
 }
 
 int cmd_timer_output_switch(){

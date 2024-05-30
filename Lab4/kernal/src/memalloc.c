@@ -267,65 +267,67 @@ void* fr_malloc(unsigned int size){
 }
 
 struct frame_entry* get_block(int power){ //get new 4kb*2^power blocks
-    check_sentinel();
-    if(power<0){
-        puts("error: power<0.\r\n");
-        return NULL;
-    }
-    if(block_lists[power] == NULL){
-        if(power == 31){
-            //puts("out of memory.\r\n");
+    while(1){
+        check_sentinel();
+        if(power<0){
+            puts("error: power<0.\r\n");
             return NULL;
         }
-        struct frame_entry* sub_block1=get_block(power+1);
-        if(sub_block1 == NULL){
-            return NULL;
-        }
-        
-        
-        struct frame_entry* sub_block2=new_frame_entry();
-        if(sub_block2 == NULL){
-            puts("error:heap overflow?\r\n");
-            return NULL;
-        }
-        sub_block2->address=sub_block1->address | (1 << (power+12));
-        if(sub_block2->address == sub_block1->address){
-            puts("error: uncutable\r\n");
-        }
-        sub_block2->power=power;
-        sub_block1->power=power;
-        Frame[sub_block1->address/frame_element_size]=power;
-        Frame[sub_block2->address/frame_element_size]=power;
-        puts("@@@cut: ");
-        put_hex(sub_block1->address);
-        puts("~");
-        put_hex(sub_block1->address+(1 << (sub_block1->power+12+1)));
-        puts("\r\nto: ");
-        put_hex(sub_block1->address);
-        puts("~");
-        put_hex(sub_block1->address+(1 << (sub_block1->power+12)));
-        puts(" and ");
-        put_hex(sub_block2->address);
-        puts("~");
-        put_hex(sub_block2->address+(1 << (sub_block2->power+12)));
-        puts("\r\n");
+        if(block_lists[power] == NULL){
+            if(power == 31){
+                //puts("out of memory.\r\n");
+                return NULL;
+            }
+            struct frame_entry* sub_block1=get_block(power+1);
+            if(sub_block1 == NULL){
+                return NULL;
+            }
+            
+            
+            struct frame_entry* sub_block2=new_frame_entry();
+            if(sub_block2 == NULL){
+                puts("error:heap overflow?\r\n");
+                return NULL;
+            }
+            sub_block2->address=sub_block1->address | (1 << (power+12));
+            if(sub_block2->address == sub_block1->address){
+                puts("error: uncutable\r\n");
+            }
+            sub_block2->power=power;
+            sub_block1->power=power;
+            Frame[sub_block1->address/frame_element_size]=power;
+            Frame[sub_block2->address/frame_element_size]=power;
+            puts("@@@cut: ");
+            put_hex(sub_block1->address);
+            puts("~");
+            put_hex(sub_block1->address+(1 << (sub_block1->power+12+1)));
+            puts("\r\nto: ");
+            put_hex(sub_block1->address);
+            puts("~");
+            put_hex(sub_block1->address+(1 << (sub_block1->power+12)));
+            puts(" and ");
+            put_hex(sub_block2->address);
+            puts("~");
+            put_hex(sub_block2->address+(1 << (sub_block2->power+12)));
+            puts("\r\n");
 
 
-        insert_entry(sub_block1);
-        insert_entry(sub_block2);
+            insert_entry(sub_block1);
+            insert_entry(sub_block2);
+        }
+        struct frame_entry* temp_block=pop_entry(power);
+        if(temp_block->power != Frame[temp_block->address/frame_element_size]){
+            // puts("invalid block,address:0x");
+            // put_hex(temp_block->address);
+            // puts("\r\n");
+            temp_block->address=NULL;
+            temp_block->power=-1;
+            temp_block->next=freed_entry;
+            freed_entry=temp_block;
+            continue;
+        }
+        else return temp_block;
     }
-    struct frame_entry* temp_block=pop_entry(power);
-    if(temp_block->power != Frame[temp_block->address/frame_element_size]){
-        // puts("invalid block,address:0x");
-        // put_hex(temp_block->address);
-        // puts("\r\n");
-        temp_block->address=NULL;
-        temp_block->power=-1;
-        temp_block->next=freed_entry;
-        freed_entry=temp_block;
-        return get_block(power);
-    }
-    else return temp_block;
 }
 
 void fr_free(unsigned long address){

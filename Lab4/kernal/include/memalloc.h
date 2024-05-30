@@ -17,6 +17,7 @@ struct frame_entry* merge_entry(struct frame_entry* block);
 struct frame_entry* invalid_entry_collector_recv(struct frame_entry* entry);
 struct frame_entry* invalid_entry_collector_iter(struct frame_entry* head);
 void* dy_malloc(unsigned int size);
+int dy_free(unsigned long address);
 unsigned long dy_frame_allo(unsigned int size,unsigned long frame_address);
 
 struct frame_entry{
