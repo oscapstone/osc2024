@@ -484,8 +484,9 @@ void memory_reserve(void* start, void* end) {
     uint64_t s_idx = (aligned_start - (uint64_t)PAGE_BASE) / PAGE_SIZE;
     uint64_t e_idx = (aligned_end - (uint64_t)PAGE_BASE) / PAGE_SIZE;
 
-    for (uint64_t i = s_idx; i < e_idx; i++) {
+    for (uint64_t i = s_idx; i <= e_idx; i++) {
         page_arr[i].val = RESERVED;
+		page_arr[i].order = 0;
     }
 }
 

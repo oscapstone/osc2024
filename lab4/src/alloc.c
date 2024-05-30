@@ -439,7 +439,7 @@ void alloc_init()
 	// reserve memory
 	memory_reserve((void*)0x0000, (void*)0x1000); // spin tables
 	memory_reserve((void*)ramfs_base, (void*)ramfs_end); // ramfs
-	// memory_reserve((void*)dtb_base, (void*)dtb_end); // dtb
+	memory_reserve((void*)dtb_base, (void*)dtb_end); // dtb
 
 	// kernel, bss, stack
 	// 0x80000 = _start
@@ -469,7 +469,7 @@ void alloc_init()
 }
 
 void memory_reserve(void* start, void* end) {
-	if(debug) {
+	if(1 || debug) {
 		uart_send_string("memory_reserve: ");
 		uart_hex((unsigned long)start);
 		uart_send_string(" ~ ");
@@ -484,7 +484,7 @@ void memory_reserve(void* start, void* end) {
     uint64_t s_idx = (aligned_start - (uint64_t)PAGE_BASE) / PAGE_SIZE;
     uint64_t e_idx = (aligned_end - (uint64_t)PAGE_BASE) / PAGE_SIZE;
 
-    for (uint64_t i = s_idx; i < e_idx; i++) {
+    for (uint64_t i = s_idx; i <= e_idx; i++) {
         page_arr[i].val = RESERVED;
     }
 }
