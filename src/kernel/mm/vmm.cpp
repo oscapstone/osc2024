@@ -17,23 +17,21 @@ SYSCALL_DEFINE6(mmap, void*, addr, size_t, len, int, prot, int, flags, int, fd,
 }
 
 VMM::VMM(const VMM& o)
-    : el0_pgd(pt_copy(o.el0_pgd)),
-      vmas{o.vmas},
-      user_ro_pages{o.user_ro_pages} {}
+    : ttbr0(pt_copy(o.ttbr0)), vmas{o.vmas}, user_ro_pages{o.user_ro_pages} {}
 
 VMM::~VMM() {
   reset();
 }
 
-void VMM::ensure_el0_pgd() {
-  if (el0_pgd == nullptr) {
-    el0_pgd = new PT;
-    load_pgd(el0_pgd);
+void VMM::ensure_ttbr0() {
+  if (is_invlid_addr(ttbr0)) {
+    ttbr0 = new PT;
     auto vsyscall_addr =
         map_user_phy_pages(VSYSCALL_START, (uint64_t)va2pa(__vsyscall_beg),
                            PAGE_SIZE, ProtFlags::RX, "[vsyscall]");
     if (vsyscall_addr != VSYSCALL_START)
       panic("vsyscall addr shouldn't change!");
+    load_pgd(ttbr0);
   }
 }
 
@@ -94,7 +92,7 @@ void VMM::vma_print() {
 
 uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
                    const char* name) {
-  ensure_el0_pgd();
+  ensure_ttbr0();
 
   size = align<PAGE_SIZE>(size);
   va = align<PAGE_SIZE, false>(va);
@@ -110,7 +108,7 @@ uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
 
 uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
                                  ProtFlags prot, const char* name) {
-  ensure_el0_pgd();
+  ensure_ttbr0();
 
   size = align<PAGE_SIZE>(size);
   va = align<PAGE_SIZE, false>(va);
@@ -134,7 +132,7 @@ uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
   klog("map_user_phy_pages: 0x%016lx ~ 0x%016lx -> 0x%08lx\n", va, va + size,
        pa);
 
-  el0_pgd->walk(
+  ttbr0->walk(
       va, va + size,
       [](auto context, PT_Entry& entry, auto start, auto level) {
         auto ctx = (Ctx*)context;
@@ -148,9 +146,9 @@ uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
 }
 
 void VMM::reset() {
-  if (el0_pgd) {
-    delete el0_pgd;
-    el0_pgd = nullptr;
+  if (not is_invlid_addr(ttbr0)) {
+    delete ttbr0;
+    set_invlid_addr(ttbr0);
   }
   vmas.clear();
   user_ro_pages.clear();
@@ -158,7 +156,7 @@ void VMM::reset() {
 
 void VMM::return_to_user() {
   for (auto& page : user_ro_pages) {
-    auto entry = el0_pgd->get_entry(page.addr);
+    auto entry = ttbr0->get_entry(page.addr);
     if (entry)
       entry->AP = AP::USER_RO;
   }

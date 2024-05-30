@@ -53,7 +53,7 @@ struct PageItem : ListItem {
 
 class VMM {
  public:
-  PT* el0_pgd = nullptr;
+  PT* ttbr0 = (PT*)INVALID_ADDRESS;
   ListHead<VMA> vmas{};
   ListHead<PageItem> user_ro_pages{};
 
@@ -67,7 +67,7 @@ class VMM {
   VMA* vma_find(uint64_t va);
   void vma_print();
 
-  void ensure_el0_pgd();
+  void ensure_ttbr0();
   [[nodiscard]] uint64_t mmap(uint64_t va, uint64_t size, ProtFlags prot,
                               MmapFlags flags, const char* name);
   [[nodiscard]] uint64_t map_user_phy_pages(uint64_t va, uint64_t pa,

@@ -81,8 +81,8 @@ long kthread_fork();
 template <typename T,
           typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
 R translate_va_to_pa(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
-  return (R)current_thread()->vmm.el0_pgd->translate_va((uint64_t)va, start,
-                                                        level);
+  return (R)current_thread()->vmm.ttbr0->translate_va((uint64_t)va, start,
+                                                      level);
 }
 
 template <typename T>

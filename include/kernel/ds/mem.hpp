@@ -76,7 +76,8 @@ struct Mem {
   void dealloc() {
     if (addr and (not ref or --(*ref) == 0)) {
       kfree(addr);
-      kfree(ref);
+      if (ref)
+        kfree(ref);
     }
     new (this) Mem;
   }

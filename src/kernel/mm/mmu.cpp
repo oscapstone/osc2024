@@ -35,6 +35,7 @@ PT_Entry PT_Entry::copy(int level) {
   auto new_entry = *this;
   switch (kind()) {
     case EntryKind::TABLE:
+      // TODO: copy on write
       new_entry.set_table(level, pt_copy(table()));
       break;
     case EntryKind::ENTRY: {
@@ -285,7 +286,7 @@ int fault_handler(int el) {
   }
 
   auto fpage = getPage(faddr);
-  auto entry = current_thread()->vmm.el0_pgd->get_entry(fpage);
+  auto entry = current_thread()->vmm.ttbr0->get_entry(fpage);
   auto vma = find_vma(faddr);
 
   switch (iss.DFSC) {
@@ -296,7 +297,7 @@ int fault_handler(int el) {
       klog("t%d [Translation fault]: %016lx\n", tid, (uint64_t)faddr);
       if (!vma)
         return -1;
-      entry = current_thread()->vmm.el0_pgd->get_entry(fpage, true);
+      entry = current_thread()->vmm.ttbr0->get_entry(fpage, true);
       entry->alloc_user_page(vma->prot);
       break;
 

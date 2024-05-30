@@ -35,6 +35,15 @@ constexpr uint64_t KERNEL_SPACE_END = KERNEL_SPACE + ADDRESS_SPACE_SIZE;
 constexpr uint64_t INVALID_ADDRESS = (USER_SPACE_END + KERNEL_SPACE_START) / 2;
 
 template <typename T>
+inline bool is_invlid_addr(T x) {
+  return (uint64_t)x == INVALID_ADDRESS;
+}
+template <typename T>
+inline void set_invlid_addr(T& x) {
+  (uint64_t&)x = INVALID_ADDRESS;
+}
+
+template <typename T>
 inline uint64_t lower_addr(T x) {
   return (uint64_t)x & (~ADDRESS_SPACE_TAG);
 }
@@ -266,7 +275,7 @@ struct PT {
   }
 
   void print(const char* name = "PageTable", uint64_t start = USER_SPACE,
-             int level = PGD_LEVEL);
+             int level = PGD_LEVEL, uint64_t pad = 0);
 
   void* translate_va(uint64_t va, uint64_t start = USER_SPACE,
                      int level = PGD_LEVEL);
