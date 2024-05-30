@@ -1,5 +1,8 @@
 #include "signal.hpp"
 
+#include "exec.hpp"
+#include "mm/vmm.hpp"
+#include "mm/vsyscall.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -67,12 +70,15 @@ void Signal::handle(TrapFrame* frame) {
       if (frame) {
         if (not stack.alloc(PAGE_SIZE, true))
           panic("[signal::handle] can't alloc new stack");
-        auto backup_frame = stack.end(sizeof(TrapFrame));
+        auto stack_addr =
+            map_user_phy_pages(USER_SIGNAL_STACK, va2pa(stack.addr), PAGE_SIZE,
+                               ProtFlags::RWX, "[signal_stack]");
+        auto backup_frame = (char*)stack_addr + PAGE_SIZE - sizeof(TrapFrame);
         memcpy(backup_frame, frame, sizeof(TrapFrame));
         frame->sp_el0 = (uint64_t)backup_frame;
         frame->elr_el1 = (uint64_t)act.handler;
         frame->X[0] = sig;
-        frame->lr = (uint64_t)el0_sig_return;
+        frame->lr = (uint64_t)va2vsys(el0_sig_return);
       } else {
         list.push_front(new SignalItem{sig});
       }
@@ -102,6 +108,6 @@ void signal_return(TrapFrame* frame) {
 }
 
 // run on EL0
-void el0_sig_return() {
+void SECTION_VSYSCALL el0_sig_return() {
   asm volatile("svc 1\n");
 }

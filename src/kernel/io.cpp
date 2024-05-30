@@ -68,13 +68,21 @@ int kprintf_sync(const char* format, ...) {
   return size;
 }
 
-int klog(const char* format, ...) {
+void klog(const char* format, ...) {
   va_list args;
   va_start(args, format);
   kprintf("[" PRTval "] ", FTval(get_current_time()));
-  int size = kvprintf(format, args);
+  kvprintf(format, args);
   va_end(args);
-  return size;
+}
+
+void klog(string_view view) {
+  kprintf("[" PRTval "] ", FTval(get_current_time()));
+  kprint(view);
+}
+
+void kflush() {
+  mini_uart_async_flush();
 }
 
 void kputs(const char* s) {
@@ -96,11 +104,15 @@ void kprint_str(string_view view) {
     kputc(c);
 }
 
-void kprint(string_view view) {
+void kprint_str_or_hex(string_view view) {
   if (view.printable())
     kprint_str(view);
   else
     kprint_hex(view);
+}
+
+void kprint(string_view view) {
+  kwrite(view.data(), view.size());
 }
 
 int kgetline_echo(char* buffer, int size) {

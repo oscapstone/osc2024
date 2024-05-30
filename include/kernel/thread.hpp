@@ -1,10 +1,9 @@
 #pragma once
 
-#include <cstdint>
-
 #include "ds/list.hpp"
 #include "ds/mem.hpp"
 #include "mm/mm.hpp"
+#include "mm/vmm.hpp"
 #include "sched.hpp"
 #include "signal.hpp"
 #include "util.hpp"
@@ -17,7 +16,9 @@ struct KthreadItem : ListItem {
 };
 
 enum class KthreadStatus {
+  kNone = 0,
   kReady,
+  kRunning,
   kWaiting,
   kDead,
 };
@@ -29,9 +30,10 @@ struct Kthread : ListItem {
   int tid;
   KthreadStatus status = KthreadStatus::kReady;
   int exit_code = 0;
-  Mem kernel_stack, user_text, user_stack;
+  Mem kernel_stack;
   KthreadItem* item;
   Signal signal;
+  VMM vmm;
 
  private:
   Kthread();
@@ -39,13 +41,13 @@ struct Kthread : ListItem {
 
  public:
   Kthread(Kthread::fp start, void* ctx);
-  Kthread(const Kthread& o);
+  Kthread(const Kthread* o);
+  Kthread(const Kthread& o) = delete;
   ~Kthread();
 
   void fix(const Kthread& o, Mem& mem);
   void fix(const Kthread& o, void* faddr, uint64_t fsize);
   void* fix(const Kthread& o, void* ptr);
-  int alloc_user_text_stack(uint64_t text_size, uint64_t stack_size);
   void reset_kernel_stack() {
     regs.sp = kernel_stack.end(0x10);
   }

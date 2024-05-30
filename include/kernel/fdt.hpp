@@ -1,9 +1,8 @@
 #pragma once
 
-#include <cstdint>
-
 #include "pair.hpp"
 #include "string.hpp"
+#include "util.hpp"
 
 constexpr uint32_t FDT_MAGIC = 0xd00dfeed;
 constexpr uint32_t LAST_COMP_VERSION = 17;

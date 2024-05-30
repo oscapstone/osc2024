@@ -2,15 +2,16 @@
 
 #include "fdt.hpp"
 #include "io.hpp"
+#include "mm/mmu.hpp"
 
 CPIO initramfs;
 
 void initramfs_init() {
   auto find32 = [](auto path) {
     auto [found, view] = fdt.find(path);
-    if (!found)
+    if (not found)
       panic("initramfs: device %s not found", path);
-    auto addr = (char*)(uint64_t)fdt_ld32(view.data());
+    auto addr = pa2va((char*)(uint64_t)fdt_ld32(view.data()));
     return addr;
   };
   auto start = find32("/chosen/linux,initrd-start");

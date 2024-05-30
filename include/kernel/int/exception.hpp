@@ -15,6 +15,32 @@ struct TrapFrame {
   void show() const;
 };
 
+enum SEGV_TYPE {
+  kNone = 0,
+  kIABT,
+  kPC,
+  kDABT,
+  kSP,
+  kUnknown,
+};
+
+inline const char* reason(SEGV_TYPE type) {
+  switch (type) {
+    case kNone:
+      return "none";
+    case kIABT:
+      return "undefined instruction";
+    case kPC:
+      return "PC alignment fault";
+    case kDABT:
+      return "data abort";
+    case kSP:
+      return "SP alignment fault";
+    default:
+      return "unknown";
+  }
+}
+
 inline int get_el() {
   return read_sysreg(CurrentEL) >> 2;
 }
@@ -29,4 +55,4 @@ void irq_handler(TrapFrame* frame, int type);
 void set_exception_vector_table();
 }
 
-void segv_handler(int el, const char* reason);
+void segv_handler(int el, unsigned iss, SEGV_TYPE type);

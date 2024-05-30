@@ -24,7 +24,7 @@ void Regs::show() const {
 }
 
 void switch_to(Kthread* prev, Kthread* next) {
-  switch_to_regs(&prev->regs, &next->regs, next);
+  switch_to_regs(&prev->regs, &next->regs, next, va2pa(next->vmm.ttbr0));
 }
 
 ListHead<KthreadItem> rq;
@@ -60,6 +60,7 @@ int schedule_nesting = 0;
 
 void schedule_init() {
   rq.init();
+  deadq.init();
   schedule_nesting = 0;
   schedule_timer();
 }
@@ -83,6 +84,8 @@ void schedule() {
   if (schedule_nesting == 0) {
     auto cur = current_thread();
     switch (cur->status) {
+      case KthreadStatus::kRunning:
+        cur->status = KthreadStatus::kReady;
       case KthreadStatus::kReady:
         push_rq(cur);
         break;
@@ -92,8 +95,11 @@ void schedule() {
       case KthreadStatus::kDead:
         push_dead(cur);
         break;
+      default:
+        break;
     }
     auto nxt = pop_rq();
+    nxt->status = KthreadStatus::kRunning;
     if (cur != nxt)
       switch_to(cur, nxt);
   }

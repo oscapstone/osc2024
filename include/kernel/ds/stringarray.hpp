@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "util.hpp"
 
 struct StringArray {
   uint32_t buf_size, size;

@@ -1,6 +1,7 @@
 #include "io.hpp"
 #include "shell/cmd.hpp"
 #include "signal.hpp"
+#include "string.hpp"
 
 int cmd_kill(int argc, char* argv[]) {
   if (argc != 2) {

@@ -1,9 +1,9 @@
 #include "int/exception.hpp"
 
 #include "arm.hpp"
-#include "board/pm.hpp"
 #include "int/interrupt.hpp"
 #include "io.hpp"
+#include "mm/mmu.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -63,41 +63,50 @@ void sync_handler(TrapFrame* frame, int type) {
 
     case ESR_ELx_EC_IABT_LOW:
     case ESR_ELx_EC_IABT_CUR:
-      segv_handler(el, "undefined instruction");
+      segv_handler(el, iss, kIABT);
       break;
 
-    case ESR_ELx_EC_PC_ALIGN:;
-      segv_handler(el, "PC alignment fault");
+    case ESR_ELx_EC_PC_ALIGN:
+      segv_handler(el, iss, kPC);
       break;
 
     case ESR_ELx_EC_DABT_LOW:
     case ESR_ELx_EC_DABT_CUR:
-      segv_handler(el, "data abort");
+      if (fault_handler(el)) {
+        klog("t%d [Segmentation fault]: Kill Process\n", current_thread()->tid);
+        // kthread_exit(-1);
+        segv_handler(el, iss, kDABT);
+      }
       break;
 
-    case ESR_ELx_EC_SP_ALIGN:;
-      segv_handler(el, "SP alignment fault");
+    case ESR_ELx_EC_SP_ALIGN:
+      segv_handler(el, iss, kSP);
       break;
 
     default:
-      kprintf_sync("unknown ESR_ELx_EC %06b / %d %d\n", ec, type, el);
-      segv_handler(el, "unknown");
+      kprintf_sync("unknown ESR_ELx_EC %06b\n type %d el %d @ 0x%lx\n", ec,
+                   type, el, read_sysreg(ELR_EL1));
+      segv_handler(el, iss, kUnknown);
       prog_hang();
   }
 }
 
-void segv_handler(int el, const char* reason) {
+void segv_handler(int el, unsigned iss, SEGV_TYPE type) {
+  klog("LR address   : 0x%lx\n", read_sysreg(ELR_EL1));
+  klog("fault address: 0x%lx\n", read_sysreg(FAR_EL1));
+  klog("segv_handler : iss %025b\n", iss);
   if (el != 0) {
-    panic("%s", reason);
+    panic("%s", reason(type));
   } else {
-    klog("thread %d: %s @ 0x%lx\n", current_thread()->tid, reason,
-         read_sysreg(ELR_EL1));
+    klog("thread %d: %s\n", current_thread()->tid, reason(type));
     kthread_exit(-1);
   }
 }
 
 void return_to_user(TrapFrame* frame) {
+  auto th = current_thread();
   enable_interrupt();
-  current_thread()->signal.handle(frame);
+  th->signal.handle(frame);
   disable_interrupt();
+  th->vmm.return_to_user();
 }

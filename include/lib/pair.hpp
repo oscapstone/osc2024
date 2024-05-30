@@ -1,6 +1,6 @@
 #pragma once
 
-#if _LIBCPP_VERSION
+#if __has_include(<__utility/pair.h>)
 #include <__utility/pair.h>
 #else
 #include <bits/stl_pair.h>

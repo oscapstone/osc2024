@@ -116,7 +116,7 @@ class CPIO {
   bool init(char* cpio_start, char* cpio_end) {
     cpio_start_ = cpio_start;
     cpio_end_ = cpio_end;
-    if (!begin()->valid())
+    if (not begin()->valid())
       return false;
     return true;
   }

@@ -2,7 +2,6 @@
 
 #include "board/pm.hpp"
 #include "int/interrupt.hpp"
-#include "int/timer.hpp"
 #include "io.hpp"
 #include "sched.hpp"
 #include "syscall.hpp"
@@ -36,9 +35,9 @@ void del_list(Kthread* thread) {
 
 // TODO: don't use linear search
 Kthread* find_thread_by_tid(int tid) {
-  for (auto thread : kthreads)
-    if (thread->tid == tid)
-      return thread;
+  for (auto& thread : kthreads)
+    if (thread.tid == tid)
+      return &thread;
   return nullptr;
 }
 
@@ -72,20 +71,18 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
   add_list(this);
 }
 
-Kthread::Kthread(const Kthread& o)
-    : regs(o.regs),
+Kthread::Kthread(const Kthread* o)
+    : regs(o->regs),
       tid(new_tid()),
-      status(o.status),
+      status(o->status),
       exit_code(0),
-      kernel_stack(o.kernel_stack),
-      user_text(o.user_text),
-      user_stack(o.user_stack),
+      kernel_stack(o->kernel_stack),
       item(new KthreadItem(this)),
-      signal{this, o.signal} {
-  fix(o, &regs, sizeof(regs));
-  fix(o, kernel_stack);
-  fix(o, user_stack);
-  klog("fork thread %d @ %p from %d @ %p\n", tid, this, o.tid, &o);
+      signal{this, o->signal},
+      vmm(o->vmm) {
+  fix(*o, &regs, sizeof(regs));
+  fix(*o, kernel_stack);
+  klog("fork thread %d @ %p from %d @ %p\n", tid, this, o->tid, &o);
   add_list(this);
 }
 
@@ -100,33 +97,11 @@ void Kthread::fix(const Kthread& o, Mem& mem) {
 
 void Kthread::fix(const Kthread& o, void* faddr, uint64_t fsize) {
   kernel_stack.fix(o.kernel_stack, faddr, fsize);
-  user_text.fix(o.user_text, faddr, fsize);
-  user_stack.fix(o.user_stack, faddr, fsize);
 }
 
 void* Kthread::fix(const Kthread& o, void* ptr) {
   ptr = kernel_stack.fix(o.kernel_stack, ptr);
-  ptr = user_text.fix(o.user_text, ptr);
-  ptr = user_stack.fix(o.user_stack, ptr);
   return ptr;
-}
-
-int Kthread::alloc_user_text_stack(uint64_t text_size, uint64_t stack_size) {
-  user_text.dealloc();
-  user_stack.dealloc();
-
-  if (not user_text.alloc(text_size, false)) {
-    klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
-         tid, text_size);
-    return -1;
-  }
-
-  if (not user_stack.alloc(stack_size, true)) {
-    klog("%s: can't alloc user_stack / size = %lx\n", __func__, stack_size);
-    return -1;
-  }
-
-  return 0;
 }
 
 void idle() {
@@ -163,7 +138,8 @@ void kthread_start() {
 
 // TODO: wq
 void kthread_wait(int pid) {
-  while (find_thread_by_tid(pid))
+  Kthread* th;
+  while ((th = find_thread_by_tid(pid)) and th->status != KthreadStatus::kDead)
     schedule();
 }
 
@@ -210,7 +186,7 @@ Kthread* kthread_create(Kthread::fp start, void* ctx) {
 
 long kthread_fork() {
   auto othread = current_thread();
-  auto nthread = new Kthread(*othread);
+  auto nthread = new Kthread(othread);
 
   save_regs(&nthread->regs);
 

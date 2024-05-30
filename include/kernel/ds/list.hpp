@@ -7,6 +7,7 @@
 struct ListItem {
   ListItem *prev, *next;
   ListItem() : prev(nullptr), next(nullptr) {}
+  ListItem(const ListItem&) = delete;
 };
 
 inline void link(ListItem* prev, ListItem* next) {
@@ -18,6 +19,7 @@ inline void link(ListItem* prev, ListItem* next) {
 
 inline void unlink(ListItem* it) {
   link(it->prev, it->next);
+  it->prev = it->next = nullptr;
 }
 
 template <std::derived_from<ListItem> T>
@@ -45,8 +47,8 @@ class ListHead {
       ++*this;
       return copy;
     }
-    T* operator*() const {
-      return it_;
+    T& operator*() const {
+      return *it_;
     }
     T* operator->() const {
       return it_;
@@ -56,6 +58,9 @@ class ListHead {
     }
     bool operator!=(const iterator& other) const {
       return !(*this == other);
+    }
+    operator T*() {
+      return it_;
     }
 
    private:
@@ -71,7 +76,15 @@ class ListHead {
     init();
   }
 
-  ListHead(const ListHead&) = delete;
+  ListHead(const ListHead& o) : ListHead{} {
+    for (auto& it : o) {
+      push_back(new T(it));
+    }
+  }
+
+  ~ListHead() {
+    clear();
+  }
 
   void init() {
     size_ = 0;
@@ -83,7 +96,7 @@ class ListHead {
     save_DAIF_disable_interrupt();
     size_++;
     link(node, it->next);
-    link(*it, node);
+    link(it, node);
     restore_DAIF();
   }
   void insert_before(iterator it, T* node) {
@@ -98,7 +111,14 @@ class ListHead {
   void erase(iterator it) {
     save_DAIF_disable_interrupt();
     size_--;
-    unlink(*it);
+    unlink(it);
+    restore_DAIF();
+  }
+
+  void clear() {
+    save_DAIF_disable_interrupt();
+    while (size() > 0)
+      erase(begin());
     restore_DAIF();
   }
 
@@ -107,13 +127,13 @@ class ListHead {
       return nullptr;
     auto it = begin();
     erase(it);
-    return *it;
+    return it;
   }
 
   T* front() {
     if (empty())
       return nullptr;
-    return *begin();
+    return begin();
   }
 
   int size() const {
@@ -123,10 +143,13 @@ class ListHead {
     return size_ == 0;
   }
 
-  iterator begin() {
+  iterator head() const {
+    return (T*)&head_;
+  }
+  iterator begin() const {
     return (T*)head_.next;
   }
-  iterator end() {
+  iterator end() const {
     return (T*)&tail_;
   }
 };

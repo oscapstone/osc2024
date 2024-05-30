@@ -1,6 +1,7 @@
 #pragma once
 
-#include <cstdint>
+#include "pair.hpp"
+#include "util.hpp"
 
 constexpr uint64_t PAGE_SIZE = 0x1000;
 
@@ -17,6 +18,7 @@ void mm_reserve(T start, U end) {
   mm_reserve_p((void*)(uint64_t)start, (void*)(uint64_t)end);
 }
 
+pair<uint64_t, uint64_t> mm_range();
 void mm_preinit();
 void mm_init();
 

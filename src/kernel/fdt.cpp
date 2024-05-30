@@ -20,7 +20,7 @@ bool print_fdt(uint32_t tag, int level, const char* node_name,
     }
     case FDT_PROP: {
       kprintf("%s: ", prop_name);
-      kprint({prop_value, (int)len});
+      kprint_str_or_hex({prop_value, (int)len});
       break;
     }
     default: {
@@ -139,7 +139,7 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
   if (found) {
     if (level < cur_level)
       return true;
-    if (!list_fp)
+    if (not list_fp)
       return true;
     if (depth and level > cur_level + depth)
       return false;
@@ -157,7 +157,7 @@ static bool find_path(uint32_t tag, int level, const char* node_name,
       if (debug)
         kprintf("+ %s\n", node_name);
 
-      if (!match(node_name))
+      if (not match(node_name))
         return false;
 
       if (last) {

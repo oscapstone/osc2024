@@ -3,15 +3,15 @@
 #include "fdt.hpp"
 #include "int/interrupt.hpp"
 #include "mm/heap.hpp"
+#include "mm/mmu.hpp"
 #include "mm/new.hpp"
 #include "mm/page.hpp"
 #include "mm/startup.hpp"
-#include "pair.hpp"
 
-pair<uint32_t, uint32_t> mm_range() {
+pair<uint64_t, uint64_t> mm_range() {
   auto path = "/memory/reg";
   auto [found, view] = fdt.find(path);
-  if (!found)
+  if (not found)
     panic("mm: device %s not found", path);
   auto value = fdt_ld64(view.data());
   uint32_t start = value >> 32;
@@ -23,7 +23,7 @@ void mm_preinit() {
   startup_alloc_init();
 
   auto [start, end] = mm_range();
-  mm_page.preinit(start, end);
+  mm_page.preinit(pa2va(start), pa2va(end));
 }
 
 void mm_reserve_p(void* start, void* end) {

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <cstdint>
-
 #include "string.hpp"
+#include "util.hpp"
 
 struct timeval {
   uint32_t sec, usec;

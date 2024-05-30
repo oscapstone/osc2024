@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "util.hpp"
 
 extern char __heap_start[];
 extern char __heap_end[];

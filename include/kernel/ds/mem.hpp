@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstdint>
+#include <new.hpp>
 
 #include "mm/mm.hpp"
-#include "new.hpp"
+#include "util.hpp"
 
 struct Mem {
   char* addr;
@@ -76,7 +76,8 @@ struct Mem {
   void dealloc() {
     if (addr and (not ref or --(*ref) == 0)) {
       kfree(addr);
-      kfree(ref);
+      if (ref)
+        kfree(ref);
     }
     new (this) Mem;
   }

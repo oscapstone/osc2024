@@ -2,7 +2,7 @@
 
 #include "fs/initramfs.hpp"
 #include "io.hpp"
-#include "string.hpp"
+#include "mm/vmm.hpp"
 #include "syscall.hpp"
 #include "thread.hpp"
 
@@ -29,20 +29,33 @@ int exec(ExecCtx* ctx) {
 
   auto file = hdr->file();
   auto thread = current_thread();
-  if (thread->alloc_user_text_stack(file.size(), USER_STACK_SIZE)) {
+
+  thread->vmm.reset();
+
+  auto text_addr =
+      mmap(USER_TEXT_START, file.size(), ProtFlags::RX, MmapFlags::NONE, name);
+  if (text_addr == INVALID_ADDRESS) {
+    klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
+         thread->tid, file.size());
     return -1;
   }
 
+  auto stack_addr = mmap(USER_STACK_START, USER_STACK_SIZE, ProtFlags::RW,
+                         MmapFlags::NONE, "[stack]");
+  if (stack_addr == INVALID_ADDRESS) {
+    klog("%s: can't alloc user_stack for thread %d / size = %lx\n", __func__,
+         thread->tid, USER_STACK_SIZE);
+    return -1;
+  }
+  auto stack_end = stack_addr + USER_STACK_SIZE;
+
   delete ctx;
 
-  memcpy(thread->user_text.addr, file.data(), file.size());
+  memcpy((void*)text_addr, file.data(), file.size());
   thread->reset_kernel_stack();
-  thread->user_stack.clean();
 
-  klog("exec_user_prog: text %p stack %p\n", thread->user_text.addr,
-       thread->user_stack.end(0x10));
-  exec_user_prog(thread->user_text.addr, thread->user_stack.end(0x10),
-                 thread->regs.sp);
+  thread->vmm.return_to_user();
+  exec_user_prog((void*)text_addr, (void*)stack_end, thread->regs.sp);
 
   return 0;
 }

@@ -4,8 +4,8 @@
 #include "board/mini-uart.hpp"
 #include "board/pm.hpp"
 
-extern char __kernel[];
-char* kernel_addr = __kernel;
+extern char __phy_kernel[];
+char* kernel_addr = __phy_kernel;
 
 const char usage[] =
     "\n"

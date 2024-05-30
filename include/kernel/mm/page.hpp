@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <new.hpp>
 
 #include "ds/list.hpp"
@@ -32,9 +31,10 @@ class PageSystem {
     union {
       struct __attribute__((__packed__)) {
         FRAME_TYPE type : 2;
-        int order : 6;
+        uint8_t order : 6;
+        uint8_t ref;
       };
-      int8_t value;
+      uint16_t value;
     };
     bool allocated() const {
       return type == FRAME_TYPE::ALLOCATED;
@@ -61,35 +61,35 @@ class PageSystem {
   void release(AllocatedPage apage);
   AllocatedPage alloc(FreePage* fpage, bool head);
   AllocatedPage split(AllocatedPage apage);
-  void truncate(AllocatedPage apage, int8_t order);
+  void truncate(AllocatedPage apage, uint8_t order);
   void merge(FreePage* fpage);
 
-  void* vpn2addr(uint64_t vpn) {
-    return (void*)(start_ + vpn * PAGE_SIZE);
+  void* pfn2addr(uint64_t pfn) {
+    return (void*)(start_ + pfn * PAGE_SIZE);
   }
-  void* vpn2end(uint64_t vpn) {
-    return (void*)(start_ + (vpn + (1 << array_[vpn].order)) * PAGE_SIZE);
+  void* pfn2end(uint64_t pfn) {
+    return (void*)(start_ + (pfn + (1 << array_[pfn].order)) * PAGE_SIZE);
   }
-  uint64_t addr2vpn(void* addr) {
+  uint64_t addr2pfn(void* addr) {
     return ((uint64_t)addr - start_) / PAGE_SIZE;
   }
-  uint64_t addr2vpn_safe(void* addr) {
+  uint64_t addr2pfn_safe(void* addr) {
     if ((uint64_t)addr < start_)
       return 0;
     if (end_ < (uint64_t)addr)
       return (end_ - start_) / PAGE_SIZE;
     return ((uint64_t)addr - start_) / PAGE_SIZE;
   }
-  uint64_t buddy(uint64_t vpn) {
-    return vpn ^ (1 << array_[vpn].order);
+  uint64_t buddy(uint64_t pfn) {
+    return pfn ^ (1 << array_[pfn].order);
   }
   template <bool assume = false>
-  FreePage* vpn2freepage(uint64_t vpn) {
-    auto addr = vpn2addr(vpn);
-    if (assume or array_[vpn].free()) {
+  FreePage* pfn2freepage(uint64_t pfn) {
+    auto addr = pfn2addr(pfn);
+    if (assume or array_[pfn].free()) {
       return (FreePage*)addr;
     } else {
-      array_[vpn].type = FRAME_TYPE::FREE;
+      array_[pfn].type = FRAME_TYPE::FREE;
       return new (addr) FreePage;
     }
   }
@@ -107,6 +107,16 @@ class PageSystem {
   }
   uint64_t end() const {
     return end_;
+  }
+
+  template <typename T>
+  bool managed(T addr) {
+    return start() <= (uint64_t)addr and (uint64_t) addr <= end();
+  }
+
+  template <typename T>
+  uint8_t& refcnt(T addr) {
+    return array_[addr2pfn((void*)addr)].ref;
   }
 };
 

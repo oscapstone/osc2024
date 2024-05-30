@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "util.hpp"
 
 using malloc_fp = void* (*)(uint64_t, uint64_t);
 using free_fp = void (*)(void*);
