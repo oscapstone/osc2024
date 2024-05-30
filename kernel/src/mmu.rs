@@ -38,12 +38,10 @@ pub unsafe extern "C" fn set_mmu() {
     // 0b0000_0000_AAAA_AAAA_ABBB_BBBB_BBCC_CCCC_CCCD_DDDD_DDDD_XXXX_XXXX_XXXX
     //                        000_0000_00
     *(L1_ADDR as *mut u64) = L2_ADDR | PD_TABLE as u64;
-    // *(L1_ADDR as *mut u64) =
-    //     0x0000_0000 as u64 | PD_ACCESS as u64 | (MAIR_NORMAL_NC_IDX as u64) << 2 | PD_BLOCK as u64;
-    // *(L1_ADDR.wrapping_add(8) as *mut u64) = PD_ACCESS as u64
-    //     | PD_ACCESS as u64
-    //     | (MAIR_DEVICE_NG_NR_NE_IDX as u64) << 2
-    //     | PD_BLOCK as u64;
+    *(L1_ADDR.wrapping_add(8) as *mut u64) = 0x4000_0000 as u64
+        | PD_ACCESS as u64
+        | (MAIR_DEVICE_NG_NR_NE_IDX as u64) << 2
+        | PD_BLOCK as u64;
 
     // Set up PMD
     // 0b0000_0000_AAAA_AAAA_ABBB_BBBB_BBCC_CCCC_CCCD_DDDD_DDDD_XXXX_XXXX_XXXX
