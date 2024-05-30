@@ -77,28 +77,3 @@ void kthread_exit(int status);
 void kthread_fini();
 Kthread* kthread_create(Kthread::fp start, void* ctx = nullptr);
 long kthread_fork();
-
-template <typename T,
-          typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
-R translate_va_to_pa(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
-  return (R)current_thread()->vmm.ttbr0->translate_va((uint64_t)va, start,
-                                                      level);
-}
-
-template <typename T>
-[[nodiscard]] uint64_t mmap(T va, uint64_t size, ProtFlags prot,
-                            MmapFlags flags, const char* name) {
-  return current_thread()->vmm.mmap((uint64_t)va, size, prot, flags, name);
-}
-
-template <typename T, typename U>
-[[nodiscard]] uint64_t map_user_phy_pages(T va, U pa, uint64_t size,
-                                          ProtFlags prot, const char* name) {
-  return current_thread()->vmm.map_user_phy_pages((uint64_t)va, (uint64_t)pa,
-                                                  size, prot, name);
-}
-
-template <typename T>
-[[nodiscard]] VMA* find_vma(T va) {
-  return current_thread()->vmm.vma_find((uint64_t)va);
-}

@@ -77,3 +77,28 @@ class VMM {
   void reset();
   void return_to_user();
 };
+
+VMM* current_vmm();
+template <typename T,
+          typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
+R translate_va_to_pa(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
+  return (R)current_vmm()->ttbr0->translate_va((uint64_t)va, start, level);
+}
+
+template <typename T>
+[[nodiscard]] uint64_t mmap(T va, uint64_t size, ProtFlags prot,
+                            MmapFlags flags, const char* name) {
+  return current_vmm()->mmap((uint64_t)va, size, prot, flags, name);
+}
+
+template <typename T, typename U>
+[[nodiscard]] uint64_t map_user_phy_pages(T va, U pa, uint64_t size,
+                                          ProtFlags prot, const char* name) {
+  return current_vmm()->map_user_phy_pages((uint64_t)va, (uint64_t)pa, size,
+                                           prot, name);
+}
+
+template <typename T>
+[[nodiscard]] VMA* find_vma(T va) {
+  return current_vmm()->vma_find((uint64_t)va);
+}

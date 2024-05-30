@@ -4,7 +4,6 @@
 #include "mm/mmu.hpp"
 #include "mm/vmm.hpp"
 #include "syscall.hpp"
-#include "thread.hpp"
 
 SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
   auto phy_mbox = translate_va_to_pa(mbox);

@@ -163,3 +163,7 @@ void VMM::return_to_user() {
   user_ro_pages.clear();
   reload_pgd();
 }
+
+VMM* current_vmm() {
+  return &current_thread()->vmm;
+}
