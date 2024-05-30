@@ -184,13 +184,29 @@ void PT::traverse(uint64_t start, int level, CB cb_entry, CB cb_table,
   }
 }
 
-void PT::print(const char* name, uint64_t start, int level) {
-  kprintf("===== %s ===== @ %p\n", name, va2pa(this));
-  traverse(start, level, [](auto, auto entry, auto start, auto level) {
-    kprintf("%016lx ~ %016lx -> ", start, start + ENTRY_SIZE[level]);
-    entry.print(level);
-  });
-  kprintf("----------------------\n");
+void PT::print(const char* name, uint64_t start, int level, uint64_t pad) {
+  if (pad == 0)
+    kprintf("===== %s ===== @ %p\n", name, va2pa(this));
+  traverse(
+      start, level,
+      [](auto ctx, auto entry, auto start, auto level) {
+        auto pad = (uint64_t)ctx;
+        for (uint64_t i = 0; i < pad; i++)
+          kputc(' ');
+        kprintf("%016lx ~ %016lx -> ", start, start + ENTRY_SIZE[level]);
+        entry.print(level);
+      },
+      [](auto ctx, auto entry, auto start, auto level) {
+        auto pad = (uint64_t)ctx;
+        for (uint64_t i = 0; i < pad; i++)
+          kputc(' ');
+        kprintf("%016lx ~ %016lx -> ", start, start + ENTRY_SIZE[level]);
+        entry.print(level);
+        entry.table()->print(nullptr, start, level, pad + 1);
+      },
+      (void*)pad);
+  if (pad == 0)
+    kprintf("----------------------\n");
 }
 
 void* PT::translate_va(uint64_t va, uint64_t start, int level) {
