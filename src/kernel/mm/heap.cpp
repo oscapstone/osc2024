@@ -85,8 +85,8 @@ struct Info {
     kprintf("\n");
 #if MM_LOG_LEVEL >= 3
     kprintf("  free chk (%d): ", list.size());
-    for (auto chk : list)
-      kprintf("%p -> ", chk);
+    for (auto& chk : list)
+      kprintf("%p -> ", &chk);
     kprintf("\n");
 #else
     kprintf("  free chk: %d\n", list.size());
