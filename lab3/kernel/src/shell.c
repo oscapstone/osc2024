@@ -291,7 +291,7 @@ void cmd_set_alert_2s(char**argvs, int argc) {
         puts("Invalid arg number.\r\n");
         return;
     }
-    set_alert_2S(message);
+    add_timer(set_alert_2S, 2, message);
 }
 
 void cmd_sleep(char** argvs, int argc) {

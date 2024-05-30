@@ -132,11 +132,24 @@ void irqtask_run_preemptive() {
         lock();
         irqtask_t *irq_task = (irqtask_t *)irqtask_list->next;
 
+        // uart_puts("Current task prio: ");
+        // put_int(curr_task_priority);
+        // uart_puts("\r\n");
+
         if (curr_task_priority <= irq_task->priority) {
+            // uart_puts("unlock\r\n");
             unlock();
             break;
         }
         
+        // struct list_head* curr;
+        // uart_puts("DEBUG: ");
+        // list_for_each(curr, irqtask_list) {
+        //     put_int(((irqtask_t *)curr)->priority);
+        //     uart_puts(" ");
+        // }
+        // uart_puts("\r\n");
+
         list_del_entry((struct list_head *)irq_task);
         int prev_task_priority = curr_task_priority;
         curr_task_priority = irq_task->priority;
@@ -146,7 +159,6 @@ void irqtask_run_preemptive() {
         lock();
 
         curr_task_priority = prev_task_priority;
-        // free(irq_task);
         unlock();
     }
 }
