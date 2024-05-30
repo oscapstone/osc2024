@@ -8,7 +8,7 @@ CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -nostdlib -Os -fPIE \
 			  -I../include/lib -g
 
-BINS = hello.img svc.img syscall.img fork.img vm.img
+BINS = hello.img svc.img syscall.img fork.img vm.img vfs1.img
 
 .PHONY: all clean
 
@@ -34,3 +34,6 @@ syscall.img:
 
 vm.img:
 	wget https://nycu-caslab.github.io/OSC2024/_downloads/4a3ff2431ab7fa74536c184270dbe5c0/vm.img
+
+vfs1.img:
+	wget https://nycu-caslab.github.io/OSC2024/_downloads/3cb3bdb8f851d1cf29ac6f4f5d585981/vfs1.img
