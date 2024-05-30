@@ -1,0 +1,44 @@
+ARMGNU ?= aarch64-linux-gnu
+
+COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only -ggdb
+ASMOPS = -Iinclude -ggdb
+
+BUILD_DIR = build
+SRC_DIR = src
+
+all : kernel8.img
+
+clean :
+	rm -rf $(BUILD_DIR) *.img 
+
+run: 
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+
+debug:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -s -S
+
+send:
+	sudo python bootloader/sender.py -f kernel8.img
+
+cpio:
+	rm -f initramfs.cpio
+	cd rootfs ; find . | cpio -o -H newc > ../initramfs.cpio
+
+$(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
+	mkdir -p $(@D)
+	$(ARMGNU)-gcc $(COPS) -MMD -c $< -o $@
+
+$(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
+	$(ARMGNU)-gcc $(COPS) -MMD -c $< -o $@
+
+C_FILES = $(wildcard $(SRC_DIR)/*.c)
+ASM_FILES = $(wildcard $(SRC_DIR)/*.S)
+OBJ_FILES = $(C_FILES:$(SRC_DIR)/%.c=$(BUILD_DIR)/%_c.o)
+OBJ_FILES += $(ASM_FILES:$(SRC_DIR)/%.S=$(BUILD_DIR)/%_s.o)
+
+DEP_FILES = $(OBJ_FILES:%.o=%.d)
+-include $(DEP_FILES)
+
+kernel8.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
+	$(ARMGNU)-ld -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
+	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
