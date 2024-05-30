@@ -15,11 +15,15 @@ PageSystem mm_page;
 void PageSystem::info() {
   kprintf("== PageAlloc ==\n");
   bool reserved = false;
+  uint64_t used = 0, total = 0;
   for (uint64_t i = 0, r; i < length_; i++) {
     if (array_[i].type == FRAME_TYPE::RESERVED) {
       if (not reserved)
         r = i, reserved = true;
     } else if (array_[i].head()) {
+      total += 1 << array_[i].order;
+      if (array_[i].type == FRAME_TYPE::ALLOCATED)
+        used += 1 << array_[i].order;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat"
       // flag '0' results in undefined behavior with 'p' conversion specifier
@@ -42,6 +46,7 @@ void PageSystem::info() {
       restore_DAIF();
       kprintf("\n");
     }
+  kprintf("usage: 0x%lx / 0x%lx\n", used, total);
   kprintf("---------------\n");
 }
 
