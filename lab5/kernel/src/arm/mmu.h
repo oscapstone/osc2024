@@ -7,6 +7,7 @@
 #define MMU_PERIPHERAL_END          0x3f000000L
 #define MMU_USER_KERNEL_BASE        0x00000000L
 #define MMU_USER_STACK_BASE         0xfffffffff000L
+#define MMU_SINGAL_ENTRY_BASE       (MMU_USER_STACK_BASE - TASK_STACK_SIZE - 2 * PD_PAGE_SIZE)    // only one page
 
 #define MMU_PHYS_TO_VIRT(x)   (x + 0xffff000000000000L)
 #define MMU_VIRT_TO_PHYS(x)   (x - 0xffff000000000000L)
@@ -103,7 +104,8 @@
 void setup_kernel_space_mapping();
 
 // for task process
-
+void mmu_map_table_entry(pd_t* pte, U64 v_addr, U64 p_addr, U64 flags);
+U64 mmu_get_pte(TASK* task, U64 v_addr);
 /**
  * Assign a page to this task virtual address
  * This function create each level table for the target page (save in task kernel pages)

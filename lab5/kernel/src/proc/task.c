@@ -32,6 +32,7 @@ void task_init() {
     init->flags = TASK_FLAGS_ALLOC | TASK_FLAGS_KERNEL;
     init->kernel_stack = NULL;
     init->cpu_regs.pgd = PD_KERNEL_ENTRY;
+    init->current_signal = -1;      // no signal starting run
     utils_char_fill(init->name, "init", 4);
     
     // set the tpidr_el1 register to init
@@ -91,6 +92,14 @@ void task_schedule() {
     task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
 }
 
+TASK* task_get(int pid) {
+    TASK* task = &task_manager->tasks[pid];
+    if (!(task->flags & TASK_FLAGS_ALLOC)) {
+        return NULL;
+    }
+    return task;
+}
+
 void task_switch_to(TASK* current, TASK* next) {
     task_asm_switch_to(current, next);
 }
@@ -131,6 +140,7 @@ void task_run(TASK* task) {
     lock_interrupt();
     task->status = TASK_STATUS_RUNNING;
     task->preempt = task->priority;
+    task->current_signal = -1;      // no signal starting run
 
     for (U32 i = 0; i < task_manager->running; i++) {
         TASK* run_task = task_manager->running_queue[i];

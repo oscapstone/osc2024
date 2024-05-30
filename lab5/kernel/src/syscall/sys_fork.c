@@ -64,6 +64,10 @@ void sys_fork(TRAP_FRAME* regs) {
     TRAP_FRAME* child_trapFrame = (TRAP_FRAME*)((UPTR)regs + (U64)new_task->kernel_stack - (U64)task->kernel_stack);
     child_trapFrame->regs[0] = 0;   // set the child x0 = 0 for return value
 
+    // copy handler
+    for(int i = 0; i < SIGNAL_NUM; i++) {
+        new_task->signals[i].handler = task->signals[i].handler;
+    }
 
     unlock_interrupt();
 

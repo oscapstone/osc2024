@@ -3,6 +3,7 @@
 #include "base.h"
 
 #include "fs/fs.h"
+#include "proc/signal.h"
 
 typedef U64 pid_t;
 
@@ -94,6 +95,10 @@ typedef struct _TASK
     int exitcode;
     MM_STRUCT mm;
 
+    // SIGNAL
+    TASK_SIGNAL signals[SIGNAL_NUM];
+    int current_signal;
+
     // FS
     FS_VNODE* pwd;              // current working directory
     FILE_DESCRIPTOR file_table[MAX_FILE_DESCRIPTOR];
@@ -128,6 +133,7 @@ typedef struct _TASK_MANAGER {
 
 void task_init();
 void task_schedule();
+TASK* task_get(int pid);
 
 void task_run_to_el0(TASK* task);
 void task_run(TASK* task);
@@ -157,5 +163,6 @@ void task_wait(pid_t pid);
 
 // asm
 void task_asm_switch_to(TASK* current, TASK* next);
-void task_asm_store_context(TASK* current);
+void task_asm_store_context(CPU_REGS* current);
+void task_asm_load_context(CPU_REGS* current);
 TASK* task_get_current_el1();

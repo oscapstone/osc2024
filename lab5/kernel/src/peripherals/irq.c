@@ -7,6 +7,7 @@
 #include "peripherals/timer.h"
 #include "utils/utils.h"
 #include "arm/arm.h"
+#include "proc/signal.h"
 
 const char entry_error_messages[16][32] = {
 	"SYNC_INVALID_EL1t",
@@ -41,7 +42,9 @@ void enable_interrupt_controller() {
     REGS_IRQ->irq_enable_1 = AUX_IRQ | SYS_TIMER_1;
 }
 
-void handle_irq() {
+void handle_irq(TRAP_FRAME* trap_frame) {
+
+
     U32 irq = REGS_IRQ->irq_pending_1;
     BOOL core_0_irq = REGS_ARM_CORE->irq_source[0];
 
@@ -70,6 +73,9 @@ void handle_irq() {
     // core 0 timer interrupt
     if (core_0_irq & 0x2) {
         timer_core_timer_0_handler();
+    }
+    if ((trap_frame->pstate & 0xc) == 0) {
+        signal_check(trap_frame);
     }
 }
 

@@ -17,8 +17,8 @@ SYS_CALL syscall_table[NR_SYSCALLS] = {
     [SYS_EXIT] = &sys_exit,
     [SYS_MBOX_CALL] = &sys_mbox_call,
     [SYS_KILL] = &sys_kill,
-    [SYS_SIGNAL] = &sys_none,
-    [SYS_SIGKILL] = &sys_none,
+    [SYS_SIGNAL_REGISTER] = &sys_signal_register,
+    [SYS_SIGNAL] = &sys_signal,
     [SYS_MMAP] = &sys_none,
     [SYS_OPEN] = &sys_open,
     [SYS_CLOSE] = &sys_close,
@@ -29,7 +29,8 @@ SYS_CALL syscall_table[NR_SYSCALLS] = {
     [SYS_CHDIR] = &sys_none,
     [SYS_LSEEK64] = &sys_none,
     [SYS_IOCTL] = &sys_none,
-    [SYS_SYNC] = &sys_none
+    [SYS_SYNC] = &sys_none,
+    [SYS_SIGRETURN] = &sys_sigreturn
 };
 
 void syscall_handler(TRAP_FRAME* trap_frame) {

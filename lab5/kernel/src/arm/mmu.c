@@ -6,6 +6,8 @@
 #include "arm/sysregs.h"
 #include "utils/printf.h"
 
+void signal_entry();
+
 void setup_identity_mapping()
 {
     // set the default translation config register
@@ -239,6 +241,13 @@ void mmu_task_init(TASK* task) {
         pd_t* pmd_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)pmd);
         pmd_virt[index] = current_peripheral_addr | MMU_AP_EL0_UK_ACCESS | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK | MMU_UNX | MMU_PXN/* can not execute */;
     }
+
+    // SIGNAL entry user code
+    UPTR signal_entry_v_addr = MMU_SINGAL_ENTRY_BASE;
+    UPTR signal_entry_first_page_p_addr = MMU_VIRT_TO_PHYS((UPTR)signal_entry) & ~(0xfff);
+    U64 pte = mmu_get_pte(task, signal_entry_v_addr);
+    mmu_map_table_entry((pd_t*)pte, signal_entry_v_addr, signal_entry_first_page_p_addr, MMU_AP_EL0_UK_ACCESS | MMU_AP_EL0_READ_ONLY | MMU_PXN);
+    mmu_map_table_entry((pd_t*)pte, signal_entry_v_addr + PD_PAGE_SIZE, signal_entry_first_page_p_addr + PD_PAGE_SIZE, MMU_AP_EL0_UK_ACCESS | MMU_AP_EL0_READ_ONLY | MMU_PXN);
 
     return;
 }

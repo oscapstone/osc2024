@@ -14,8 +14,8 @@ enum {
     SYS_EXIT,           // done
     SYS_MBOX_CALL,      // doen
     SYS_KILL,           // done
-    SYS_SIGNAL,         // 8
-    SYS_SIGKILL,        // 9
+    SYS_SIGNAL_REGISTER,// 8
+    SYS_SIGNAL,         // 9
     SYS_MMAP,           // 10
     SYS_OPEN,
     SYS_CLOSE,
@@ -27,6 +27,7 @@ enum {
     SYS_LSEEK64,
     SYS_IOCTL,
     SYS_SYNC,
+    SYS_SIGRETURN,
     NR_SYSCALLS
 };
 
@@ -44,3 +45,6 @@ void sys_mbox_call(TRAP_FRAME* regs);
 void sys_kill(TRAP_FRAME* regs);
 void sys_open(TRAP_FRAME* regs);
 void sys_close(TRAP_FRAME* regs);
+void sys_signal_register(TRAP_FRAME* regs);
+void sys_signal(TRAP_FRAME* trap_frame);
+void sys_sigreturn(TRAP_FRAME* trap_frame);
