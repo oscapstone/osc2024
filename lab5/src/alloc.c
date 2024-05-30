@@ -44,6 +44,11 @@ void print_chunk_info() {
 		uart_send_string("].cnt: ");
 		uart_hex(chunk_info_arr[i].cnt);
 		uart_send_string("\n");
+		uart_send_string("chunk_info_arr[");
+		uart_hex(i);
+		uart_send_string("].size: ");
+		uart_hex(chunk_info_arr[i].size);
+		uart_send_string("\n");
 	}
 }
 
@@ -152,13 +157,14 @@ void init_page_arr() {
 }
 
 void init_chunk_info() {
-	for(int i=0;i<MAX_CHUNK;i++) {
+	for(int i=0;i<=MAX_CHUNK;i++) {
 		chunk_info_arr[i].idx = i;
 		chunk_info_arr[i].size = 1 << (i + 4);
 		chunk_info_arr[i].page_head = 0;
 		chunk_info_arr[i].chunk_head = 0;
 		chunk_info_arr[i].cnt = 0;
 	}
+	print_chunk_info();
 }
 
 void init_page_allocator() {
@@ -450,7 +456,7 @@ void alloc_init()
 	}
 	// heap
 	memory_reserve((void*)old_heap_top, (void*)heap_top);
-	debug = 0;
+	debug = 0;	
 	init_page_allocator();
 	// debug = 1;
 	check_free_list();
@@ -542,16 +548,22 @@ void* kmalloc(unsigned long long size) {
 		el1_interrupt_enable();
 		return 0;
 	}
-	void* addr = page_alloc(size);
-	el1_interrupt_enable();
+	// void* addr = page_alloc(size);
 	// free_list_info();
-	return addr;
+	// return addr;
 	int idx = size2chunkidx(size);
-	if(idx >= 0) {
-		return chunk_alloc(idx);
+
+	void* addr;
+	int use_page_only = 0;
+	if(use_page_only) {
+		addr = page_alloc(size);
+	} else if(idx >= 0) {
+		addr = chunk_alloc(idx);
 	} else {
-		return page_alloc(size);
+		addr = page_alloc(size);
 	}
+	el1_interrupt_enable();
+	return addr;
 }
 
 void kfree(void* addr) {
