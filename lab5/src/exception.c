@@ -9,6 +9,7 @@
 #include "alloc.h"
 #include "thread.h"
 #include "reboot.h"
+#include "signal.h"
 
 extern timer_t *timer_head;
 
@@ -33,7 +34,7 @@ void exception_handler_c() {
 	//read elr_el1
 	unsigned long long elr_el1 = 0;
 	asm volatile("mrs %0, elr_el1":"=r"(elr_el1));
-	uart_send_string("elr_e l1: ");
+	uart_send_string("elr_el1: ");
 	uart_hex(elr_el1);
 	uart_send_string("\n");
 	
@@ -67,6 +68,7 @@ void user_irq_exception_handler_c() {
         create_task(user_irq_timer_exception, 10);
         execute_tasks_preemptive();        
     }
+    check_and_run_signal();
     schedule();
 }
 
@@ -86,6 +88,7 @@ void irq_exception_handler_c(){
         execute_tasks_preemptive();
 
     }
+    check_and_run_signal();
     schedule();
 }
 
@@ -123,6 +126,15 @@ void user_exception_handler_c(trapframe_t* tf) {
             break;
         case 7:
             kill((int)tf -> x[0]);
+            break;
+        case 8:
+            signal((int)tf -> x[0], (void*)tf -> x[1]);
+            break;
+        case 9:
+            posix_kill((int)tf -> x[0], (int)tf -> x[1]);
+            break;
+        case 20:
+            sigreturn();
             break;
     }
     return;

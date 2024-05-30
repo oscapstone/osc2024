@@ -4,6 +4,7 @@
 #include "string.h"
 #include "exception.h"
 #include "mbox.h"
+#include "signal.h"
 #include <stdint.h>
 
 int getpid() {
@@ -83,6 +84,10 @@ int exec(const char* name, char *const argv[]) {
     thread_t* cur_thread = get_current_thread();
     
     // TODO: signal handling, should clear all signal handler here
+    for(int i=0;i<=SIGNAL_NUM;i++) {
+        cur_thread -> signal_handler[i] = 0;
+        cur_thread -> waiting_signal[i] = 0;
+    }
 
     cur_thread -> callee_reg.lr = (unsigned long)target_addr;
 
@@ -121,7 +126,11 @@ void fork(trapframe_t* tf) {
     save_regs(parent_thread);
     copy_regs(&child_thread->callee_reg);
 
-
+    // copy signal_handler
+    for(int i=0;i<=SIGNAL_NUM;i++) {
+        child_thread -> signal_handler[i] = parent_thread -> signal_handler[i];
+        child_thread -> waiting_signal[i] = parent_thread -> waiting_signal[i];
+    }
 
     uint64_t parent_sp = get_current_thread() -> callee_reg.sp;
     uint64_t parent_fp = get_current_thread() -> callee_reg.fp;
@@ -167,6 +176,37 @@ void kill(int pid) {
     kill_thread(pid);
 }
 
+void signal(int signal, void (*handler)()) {
+    thread_t* t = get_current_thread();
+    uart_send_string("register signal\n");
+    uart_hex(t->tid);
+    uart_send_string("\n");
+    uart_send_string("singal num: ");
+    uart_hex(signal);
+    uart_send_string("\n");
+    t -> signal_handler[signal] = handler;
+}
+
+void posix_kill(int pid, int signal) {
+    thread_t* t = get_thread_from_tid(pid);
+    if(!t) return;
+    uart_send_string("[set signal] tid: ");
+    uart_hex(t->tid);
+    uart_send_string("\n");
+    t -> waiting_signal[signal] = 1;
+}
+
+void sigreturn() {
+    thread_t* t = get_current_thread();
+    // uart_send_string("sigreturn\n tid: ");
+    // uart_hex(t->tid);
+    // uart_send_string("\n");
+    kfree(t -> callee_reg.fp - T_STACK_SIZE);
+    load_regs(t->signal_regs);
+    t -> is_processing_signal = 0;
+    return;
+}
+
 
 int sys_getpid() {
     int res;
@@ -177,16 +217,24 @@ int sys_getpid() {
 }
 
 int sys_fork() {
-    // el1_interrupt_disable();
     int res;
     asm volatile("mov x8, 4");
     asm volatile("svc 0");
     asm volatile("mov %0, x0": "=r"(res));
-    // el1_interrupt_enable();
     return res;
 }
 
 void sys_exit(int status){
     asm volatile("mov x8, 5");
+    asm volatile("svc 0");
+}
+
+void sys_posix_kill(){
+    asm volatile("mov x8, 9");
+    asm volatile("svc 0");
+}
+
+void sys_sigreturn() {
+    asm volatile("mov x8, 20");
     asm volatile("svc 0");
 }

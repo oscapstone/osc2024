@@ -280,6 +280,11 @@ void initrd_exec_syscall() {
     uart_hex(t -> tid);
     uart_send_string("\n");
 
+    for(int i=0;i<=SIGNAL_NUM;i++) {
+        t -> signal_handler[i] = 0;
+        t -> waiting_signal[i] = 0;
+    }
+
     unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
     unsigned long elr_el1 = target_addr;
     unsigned long user_sp = t -> user_stack + T_STACK_SIZE;
@@ -297,12 +302,15 @@ void initrd_exec_syscall() {
     asm volatile("msr sp_el0, %0" : : "r" (user_sp));
     asm volatile("mov sp, %0" :: "r" (kernel_sp));
     // print_running();
+    core_timer_enable();
+    // el1_interrupt_enable();
     asm volatile("eret"); // jump to user program
     // print_running();
 }
 
 void initrd_run_syscall() {
-    core_timer_disable();
+    // core_timer_disable();
+    // el1_interrupt_disable();
     int tid = create_thread(initrd_exec_syscall) -> tid;
     thread_wait(tid);
 }

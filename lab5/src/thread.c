@@ -138,6 +138,7 @@ void kill_zombies() {
         kfree(zombie->user_stack);
         kfree(zombie->kernel_stack);
         kfree(zombie);
+        uart_send_string("[KILL] killed\n");
     }
     el1_interrupt_enable();
 }
@@ -151,6 +152,14 @@ thread_t* create_thread(void (*func)(void)) {
     t -> kernel_stack = kmalloc(T_STACK_SIZE);
     t -> callee_reg.sp = (unsigned long)(t->user_stack + T_STACK_SIZE);
     t -> callee_reg.fp = t -> callee_reg.sp; // set fp to sp as the pointer that fixed
+    
+    // init signal
+    for(int i=0;i<=SIGNAL_NUM;i++) {
+        t -> signal_handler[i] = 0;
+        t -> waiting_signal[i] = 0;
+    }
+    t -> is_processing_signal = 0;
+
     t -> prev = 0;
     t -> next = 0;
     // TODO: pass data into function
@@ -171,6 +180,13 @@ thread_t* create_fork_thread() {
     t -> kernel_stack = kmalloc(T_STACK_SIZE);
     t -> callee_reg.sp = (unsigned long)(t->user_stack + T_STACK_SIZE);
     t -> callee_reg.fp = t -> callee_reg.sp; // set fp to sp as the pointer that fixed
+
+    for(int i=0;i<=SIGNAL_NUM;i++) {
+        t -> signal_handler[i] = 0;
+        t -> waiting_signal[i] = 0;
+    }
+    t -> is_processing_signal = 0;
+
     t -> prev = 0;
     t -> next = 0;
     return t;

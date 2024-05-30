@@ -14,9 +14,14 @@ void fork(trapframe_t* tf);
 void exit(int status);
 int mbox_call(unsigned char ch, unsigned int *mbox);
 void kill(int pid);
+void signal(int signal, void (*handler)());
+void posix_kill(int pid, int signal);
+void sigreturn();
+
 
 int sys_getpid();
 int sys_fork();
 void sys_exit(int status);
+void sys_sigreturn();
 
 #endif
