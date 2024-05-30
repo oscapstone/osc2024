@@ -61,3 +61,13 @@ Goals of this lab:
 * Implement a page frame allocator.
 * Implement a dynamic memory allocator.
 * Implement a startup allocator.
+
+### Lab 5: Thread and User Process
+Multitasking is the most important feature of an operating system. In this lab, you’ll learn how to create threads and how to switch between different threads to achieve multitasking. Moreover, you’ll learn how a user program becomes a user process and accesses services provided by the kernel through system calls.
+
+Goals of this lab:
+
+* Understand how to create threads and user processes.
+* Understand how to implement scheduler and context switch.
+* Understand what’s preemption.
+* Understand how to implement POSIX signals.
