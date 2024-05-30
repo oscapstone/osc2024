@@ -8,6 +8,7 @@
 #include "uart.h"
 #include "utils.h"
 
+// TODO: Convert to virtual memory address
 static void *RAMFS_BASE = (void *)0x8000000;
 
 // Convert hexadecimal string to int

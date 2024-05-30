@@ -29,7 +29,7 @@ void timer_enable_interrupt()
 {
     // Unmask the timer interrupt
     asm volatile("mov x0, 2;"
-                 "ldr x1, =0x40000040;"
+                 "ldr x1, =0xFFFF000040000040;"
                  "str w0, [x1];");
 }
 
@@ -37,7 +37,7 @@ void timer_disable_interrupt()
 {
     // Mask the timer interrupt
     asm volatile("mov x0, 0;"
-                 "ldr x1, =0x40000040;"
+                 "ldr x1, =0xFFFF000040000040;"
                  "str w0, [x1];");
 }
 

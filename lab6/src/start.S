@@ -9,35 +9,66 @@ _start:
     /* switch from EL2 to EL1 */
     bl from_el2_to_el1
 
+    /* set up kernel page tables */
     ldr x0, =TCR_CONFIG_DEFAULT
     msr tcr_el1, x0
 
     ldr x0, =MAIR_CONFIG_DEFAULT
     msr mair_el1, x0
 
-    mov x0, 0x1000
-    mov x1, 0x2000
+    mov x0, 0x1000 // PGD base addr
+    mov x1, 0x2000 // PUD base addr
+    mov x2, 0x3000 // PMD base addr
 
-    ldr x2, =BOOT_PGD_ATTR
-    orr x2, x1, x2
-    str x2, [x0]
+    ldr x6, =PD_TABLE
+    orr x6, x1, x6
+    str x6, [x0]
 
-    ldr x2, =BOOT_PUD_ATTR
-    mov x3, 0x00000000
-    orr x3, x3, x2
-    str x3, [x1]
+    ldr x6, =PD_TABLE
+    orr x6, x2, x6
+    str x6, [x1]
+
+    ldr x6, =PD_DEVICE_ATTR
     mov x3, 0x40000000
-    orr x3, x3, x2
-    str x3, [x1, 8]
+    orr x6, x3, x6
+    str x6, [x1, 8]
 
+    /* set PMD entries */
+    mov x3, 0x00000000
+    mov x4, 0x3F000000
+    mov x5, 0x40000000
+
+set_pmd:
+    cmp x3, x5
+    beq enable_mmu
+    cmp x3, x4
+    bge set_attr_device
+
+set_attr_normal:
+    ldr x6, =PD_NORMAL_ATTR
+    b set_entry
+
+set_attr_device:
+    ldr x6, =PD_DEVICE_ATTR
+    b set_entry
+
+set_entry:
+    orr x6, x3, x6
+    str x6, [x2], #8
+    add x3, x3, 0x200000
+    b set_pmd
+
+enable_mmu:
+    /* enable memory management unit */
     msr ttbr0_el1, x0
     msr ttbr1_el1, x0
-    mrs x2, sctlr_el1
-    orr x2, x2, 1
-    msr sctlr_el1, x2
 
-    ldr x2, =boot_rest
-    br x2
+    mrs x0, sctlr_el1
+    orr x0, x0, 1
+    msr sctlr_el1, x0
+
+    ldr x0, =boot_rest
+    br x0
 
 boot_rest:
     /* get dtb address from x0 */
@@ -51,7 +82,7 @@ boot_rest:
     cbnz x1, halt // halt if cpu id != 0
 
     /* set exception vector table */
-    adr x0, exception_vector_table // defined in excasm.S
+    adr x0, exception_vector_table // defined in entry.S
     msr vbar_el1, x0
 
     /* set stack pointer */

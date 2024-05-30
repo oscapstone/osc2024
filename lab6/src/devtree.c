@@ -3,6 +3,7 @@
 #include "uart.h"
 #include "utils.h"
 
+// TODO: Convert to virtual memory address
 // Assign a non-zero value to be stored in the .data section
 void *DTB_BASE = (void *)0xF;
 
