@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use filesystem::cpio::CpioArchive;
 use stdio::println;
 
-pub fn exec(args: Vec<String>) {
+pub fn exec(args: Vec<String>) -> ! {
     println!("Executing exec command with args: {:?}", args);
     let rootfs = CpioArchive::load(unsafe { INITRAMFS_ADDR } as *const u8);
     for filename in args.iter().skip(1) {
@@ -22,8 +22,7 @@ pub fn exec(args: Vec<String>) {
     }
 
     if scheduler::get().ready_queue.is_empty() {
-        println!("No threads to run!");
-        return;
+        panic!("No threads to run!");
     } else {
         scheduler::get().run_threads();
     }

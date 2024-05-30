@@ -11,6 +11,7 @@ mod commands;
 mod dtb;
 mod exception;
 mod kernel;
+mod mmu;
 mod panic;
 mod scheduler;
 mod syscall;
@@ -25,7 +26,7 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
-    // commands::execute(b"exec syscall.img");
+    commands::execute(b"exec rprog.img");
     kernel_shell();
 }
 

@@ -61,7 +61,27 @@ unsafe fn svc_handler(eidx: u64, sp: u64) {
     // debug!("Syscall {:?}", syscall);
     match eidx {
         4 => el1_interrupt(sp),
-        8 => syscall_handler(sp),
+        8 => {
+            let esr_el1: u64;
+            let elr_el1: u64;
+            let current_el: u64;
+            let far_el1: u64;
+            asm!(
+                "mrs {0}, esr_el1",
+                "mrs {1}, elr_el1",
+                "mrs {2}, CurrentEL",
+                "mrs {3}, far_el1",
+                out(reg) esr_el1,
+                out(reg) elr_el1,
+                out(reg) current_el,
+                out(reg) far_el1,
+            );
+            debug!("ESR_EL1: 0x{:x}", esr_el1);
+            debug!("ELR_EL1: 0x{:x}", elr_el1);
+            debug!("CurrentEL: 0x{:x}", current_el);
+            debug!("FAR_EL1: 0x{:x}", far_el1);
+            syscall_handler(sp)
+        }
         _ => {
             println!("Exception {}", eidx);
             println!("Unknown exception");

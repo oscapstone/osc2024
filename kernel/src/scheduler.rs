@@ -93,7 +93,7 @@ impl Scheduler {
         );
     }
 
-    pub fn run_threads(&mut self) {
+    pub fn run_threads(&mut self) -> ! {
         self.sched_timer();
         assert!(self.current.is_none());
         assert!(!self.ready_queue.is_empty());
@@ -123,6 +123,7 @@ impl Scheduler {
                 "eret",
                 in(reg) entry,
                 in(reg) sp,
+                options(noreturn),
             );
         }
     }
