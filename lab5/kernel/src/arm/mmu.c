@@ -237,7 +237,7 @@ void mmu_task_init(TASK* task) {
         //NS_DPRINT("!!!!!!!!!!!!!!! index: %d\n", index);
         U64 pmd = mmu_get_pmd(task, current_peripheral_addr);
         pd_t* pmd_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)pmd);
-        pmd_virt[index] = current_peripheral_addr | MMU_AP_EL0_UK_ACCESS | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK;
+        pmd_virt[index] = current_peripheral_addr | MMU_AP_EL0_UK_ACCESS | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK | MMU_UNX | MMU_PXN/* can not execute */;
     }
 
     return;
