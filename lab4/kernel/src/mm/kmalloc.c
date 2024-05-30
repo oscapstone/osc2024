@@ -31,6 +31,9 @@ uint32_t get_cache_order_by_size(uint32_t size) {
     while (size > (1 << (order + KMEM_CACHE_MIN_ORDER))) {
         order++;
     }
+    print_string("\nGet cache order: ");
+    print_d(order);
+    print_string("\n");
     return order;
 }
 
@@ -84,10 +87,19 @@ void *kmem_cache_alloc(uint32_t order) {
         page->status = PAGE_CACHE;  // mark as cache page
         uint32_t cache_size = 1 << (order + KMEM_CACHE_MIN_ORDER);
         for (int i = 0; i < PAGE_SIZE; i += cache_size) {
+            print_string("\n");
+            print_d(i);
             kmem_cache_t *cache = ((void *)get_addr_by_page(page) + i);
+            print_string("\ncache_addr: ");
+            print_h((uint64_t)cache);
+            print_string("\n");
+            print_string(" .a ");
             cache->order = order;
+            print_string(" .b ");
             cache->next = kmalloc_caches[order];
+            print_string(" .c ");
             kmalloc_caches[order] = cache;
+            print_string(" .d ");
         }
     }
     kmem_cache_t *cache = kmalloc_caches[order];
@@ -117,7 +129,7 @@ void *kmalloc(uint32_t size) {
     }
 
     if (order == 0) {
-        if (size >= (1 << KMEM_CACHE_MAX_ORDER)) {
+        if (size > (1 << KMEM_CACHE_MAX_ORDER)) {
             return (void *)get_addr_by_page(alloc_pages(order));
         }
 
