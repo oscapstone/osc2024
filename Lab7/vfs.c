@@ -1,10 +1,13 @@
 #include "vfs.h"
 #include "uart.h"
+#include "utils.h"
+#include "shell.h"
+#include "tmpfs.h"
 
-char current_dir[MAX_PATH];
 struct mount* rootfs;
 struct filesystem fs_register[MAX_FS];
 struct directory directories[MAX_DIR];
+struct vnode * current_dir;
 
 int register_filesystem(struct filesystem *fs){
     for(int i=0; i< MAX_FS; i++){
@@ -49,15 +52,57 @@ int register_filesystem(struct filesystem *fs){
 
 // int vfs_mkdir(const char* pathname);
 // int vfs_mount(const char* target, const char* filesystem);
-// int vfs_lookup(const char* pathname, struct vnode** target);
+
+int vfs_lookup(const char* pathname, struct vnode** target){
+    int idx = 0;
+    char vnode_name[256];
+    struct vnode * cur_node = rootfs -> root;
+    for(int i=1;i<strlen(pathname);i++){
+        if(pathname[i] == '/'){
+            //not sure use full path or only name
+            vnode_name[idx] = '\0';
+
+            if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0)
+                return -1; //get next vnode
+            
+            while(cur_node -> mount){// check if the vnode is in different file system
+                cur_node = cur_node -> mount -> root;
+            }
+            idx = 0;
+        }
+        else{
+            vnode_name[idx] = pathname[i];
+            idx++;
+        }
+    }
+
+    vnode_name[idx+1] = 0;
+    if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0)
+        return -1; //get next vnode
+    
+    while(cur_node -> mount){
+        cur_node = cur_node -> mount -> root;
+    }
+    *target = cur_node;
+    
+    return 0;
+}
+
+void init_rootfs(){
+    int idx = reg_tmpfs();
+    fs_register[idx].setup_mount(&fs_register[idx], rootfs);
+    current_dir = rootfs -> root;
+}
 
 void pwd(){ 
-    uart_puts(current_dir);
+    uart_puts((char *) (current_dir -> internal));
     newline();
 }
 
 void shell_with_dir(){
+    //will not show full path name, need to try other way, but current_dir can keep for ls
+    //can still use char[MAX_PATH], also good for cd implementation
     uart_send('\r');
-    uart_puts(current_dir);
+    uart_puts((char *) (current_dir -> internal));
     uart_puts(" # ");
 }

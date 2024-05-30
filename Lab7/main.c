@@ -65,7 +65,7 @@ void main(void* dtb)
     fdt_tranverse(dtb, "linux,initrd-end", initramfs_end_callback);
     // say hello
     frames_init();
-    init_tmpfs();
+    init_rootfs();
     // show el
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
     el = el >> 2;

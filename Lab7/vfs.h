@@ -2,6 +2,7 @@
 #define MAX_FS 64
 #define MAX_PATH 255
 #define MAX_DIR 255
+#define MAX_ENTRY 16
 
 //use vfs instruction for all, then it will call specific instruction by api (set by file systems)
 
@@ -31,7 +32,7 @@ struct vnode {
   struct mount* mount;
   struct vnode_operations* v_ops;
   struct file_operations* f_ops;
-  void* internal;
+  void* internal; //structure of node should start with name for printing current dir
 };
 
 // file handle
