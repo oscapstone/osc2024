@@ -48,7 +48,6 @@ struct vm_area_struct
 
 void init_mm_struct(struct mm_struct *mm_struct);
 void mmap_push(struct vm_area_struct **mmap_ptr, enum vm_type vm_type, unsigned long long pm_base, unsigned long long vm_start, unsigned long long vm_end, int prot, int flags);
-void mmap_pop(struct vm_area_struct **mmap_ptr, enum vm_type vm_type);
 void mappages(struct mm_struct *mm_struct, enum vm_type vm_type, unsigned long long v_add, unsigned long long p_add, unsigned long long size, int prot, int flags);
 
 unsigned long long *create_page_table();
@@ -64,7 +63,6 @@ void change_all_pte_prot(unsigned long long *pte, int prot);
 void copy_pgd_table(unsigned long long *pgd, unsigned long long *copy_pgd);
 void copy_pud_table(unsigned long long *pud, unsigned long long *copy_pud);
 void copy_pmd_table(unsigned long long *pmd, unsigned long long *copy_pmd);
-void copy_pte_table(unsigned long long *pte, unsigned long long *copy_pte);
 
 unsigned long long translate_v_to_p(unsigned long long *pgd, unsigned long long v_add);
 

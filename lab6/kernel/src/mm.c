@@ -36,53 +36,20 @@ void mmap_push(struct vm_area_struct **mmap_ptr, enum vm_type vm_type, unsigned 
     }
 }
 
-void mmap_pop(struct vm_area_struct **mmap_ptr, enum vm_type vm_type) // remove all the vm_type VMA in mmap
-{
-    disable_interrupt();
-    struct vm_area_struct *vma = *mmap_ptr;
-    while (vma != NULL)
-    {
-        if (vma->vm_type == vm_type) // find the VMA which want to remove
-        {
-            if (*mmap_ptr == vma) // if the VMA that want to remove is mmap's head, the move the head to next VMA
-            {
-                *mmap_ptr = vma->vm_next;
-                if (vma->vm_next)
-                    vma->vm_next->vm_prev = NULL;
-
-                struct vm_area_struct *del = vma;
-                vma = vma->vm_next;
-                kfree(del);
-            }
-            else
-            {
-                if (vma->vm_prev)
-                    vma->vm_prev->vm_next = vma->vm_next;
-
-                if (vma->vm_next)
-                    vma->vm_next->vm_prev = vma->vm_prev;
-
-                struct vm_area_struct *del = vma;
-                vma = vma->vm_next;
-                kfree(del);
-            }
-        }
-        else
-            vma = vma->vm_next;
-    }
-}
-
 void mappages(struct mm_struct *mm_struct, enum vm_type vm_type, unsigned long long v_add, unsigned long long p_add, unsigned long long size, int prot, int flags)
 {
     mmap_push(&(mm_struct->mmap), vm_type, p_add, v_add, v_add + size, prot, flags); // just push it to VMA list for demand paging
 
-    /*unsigned long long start = p_add >> 12;
-    unsigned long long end = start + (size >> 12) + (size & 0xfff) == 0 ? 0 : 1;
-    while (start <= end)
+    if (p_add >= 0x0 && p_add < 0x3c000000)
     {
-        page_arr[start].refer_count++;
-        start++;
-    }*/
+        unsigned long long start = p_add >> 12;
+        unsigned long long end = start + (size >> 12) + ((size & 0xfff) == 0 ? 0 : 1);
+        while (start <= end)
+        {
+            page_arr[start].refer_count++;
+            start++;
+        }
+    }
 }
 
 unsigned long long *create_page_table()
@@ -296,9 +263,24 @@ void do_permission_fault(unsigned long long address)
                 char *frame = (char *)((p_add >> 12) << 12);
                 char *copy_frame = NULL;
 
-                copy_frame = kmalloc(4096); // allocate one page frame and copy from orignal page frame
-                for (int i = 0; i < 4096; i++)
-                    copy_frame[i] = frame[i];
+                unsigned long long page_idx = translate_v_to_p(cur_task->mm_struct->pgd, address) >> 12;
+
+                if (page_arr[page_idx].refer_count > 1)
+                {
+                    copy_frame = kmalloc(4096); // allocate one page frame and copy from orignal page frame
+                    for (int i = 0; i < 4096; i++)
+                        copy_frame[i] = frame[i];
+
+                    page_arr[page_idx].refer_count--;
+                    page_arr[((unsigned long long)copy_frame - VA_START) >> 12].refer_count = 1;
+
+                    cur_vma->pm_base = (unsigned long long)copy_frame - VA_START;
+                }
+                else
+                {
+                    copy_frame = frame;
+                    cur_vma->pm_base = (unsigned long long)copy_frame - VA_START;
+                }
 
                 unsigned long long *cur_table = (unsigned long long *)(VA_START | (unsigned long long)cur_task->mm_struct->pgd); // map pdg to kenel sacpe
                 for (int level = 0; level < 4; level++)
