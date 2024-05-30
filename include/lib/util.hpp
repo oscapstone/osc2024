@@ -18,6 +18,7 @@
 #define STRONG_ALIAS(name, aliasname) \
   extern __typeof(name) aliasname __attribute__((alias(#name)));
 
+#include <cstddef>
 #include <cstdint>
 using addr_t = volatile char*;
 

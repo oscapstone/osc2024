@@ -7,29 +7,29 @@ void memzero(void* start, void* end) {
     *i = 0;
 }
 
-void* memcpy(void* dst, const void* src, int n) {
+void* memcpy(void* dst, const void* src, size_t n) {
   auto d = (char*)dst;
   auto s = (const char*)src;
-  for (int i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++)
     *d++ = *s++;
   return dst;
 }
 
-void memset(void* b, int c, int len) {
+void memset(void* b, int c, size_t len) {
   for (char* i = (char*)b; len; len--, i++)
     *i = c;
 }
 
-int memcmp(const void* s1, const void* s2, int n) {
+int memcmp(const void* s1, const void* s2, size_t n) {
   auto s1_ = (const unsigned char*)s1, s2_ = (const unsigned char*)s2;
   int d;
-  for (int i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++)
     if ((d = *s1_++ - *s2_++) != 0)
       return d;
   return 0;
 }
 
-int strlen(const char* s) {
+size_t strlen(const char* s) {
   const char* e = s;
   while (*e)
     e++;
@@ -50,9 +50,10 @@ int strcmp(const char* s1, const char* s2) {
   return d;
 }
 
-int strncmp(const char* s1, const char* s2, int n) {
+int strncmp(const char* s1, const char* s2, size_t n) {
   char c1, c2;
-  int i = 0, d;
+  size_t i = 0;
+  int d;
   for (; i < n && (d = (c1 = *s1) - (c2 = *s2)) == 0 && c1 && c2; i++)
     s1++, s2++;
   return i == n ? 0 : d;
@@ -64,10 +65,10 @@ const char* strchr(const char* s, char c) {
   return s;
 }
 
-long strtol(const char* s, const char** endptr, int base, int n) {
-  int r = 0, x = 1;
+long strtol(const char* s, const char** endptr, size_t base, size_t n) {
+  size_t r = 0, x = 1;
   char c;
-  unsigned int d;
+  long d;
   if (*s == '-')
     x = -1, s++;
   else if (*s == '+')
@@ -80,7 +81,7 @@ long strtol(const char* s, const char** endptr, int base, int n) {
     else
       base = 16, s += 2;
   }
-  for (int i = 0; (n == 0 or i < n) and (c = *s++); i++) {
+  for (size_t i = 0; (n == 0 or i < n) and (c = *s++); i++) {
     if ('0' <= c and c <= '9')
       d = c - '0';
     else if ('a' <= c and c <= 'z')
