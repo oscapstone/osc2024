@@ -41,5 +41,5 @@ struct fdt_reserve_entry {
 void initramfs_callback(char *struct_addr, char *string_addr, unsigned int prop_len);
 void fdt_traverse(void (*callback)(char *, char*, unsigned int));
 void fdt_output_reverse();
-
+unsigned long long dtb_end();
 #endif

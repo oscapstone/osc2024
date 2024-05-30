@@ -10,5 +10,5 @@ void enable_irq( void );
 void disable_irq( void );
 void irq_except_handler_timer_c();
 
-
+extern int timer_flag;
 #endif  /*_IRQ_H */

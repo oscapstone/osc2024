@@ -30,7 +30,7 @@ master:
     	mov sp, x1
     	
     	
-    //bl core_timer_enable
+    bl core_timer_enable
     	
 	mov     x0, x10
 	mov     x1, x11

@@ -8,13 +8,14 @@
 #include"cpio.h"
 #include"memalloc.h"
 #include "peripherals/mini_uart.h"
+#include "irq.h"
 
 int cmd_help(){
 	puts("help:");for(int i=4;i<32;i++)puts(" ");puts("print this help menu.\r\n");
 	puts("hello:");for(int i=5;i<32;i++)puts(" ");puts("print Hello World!\r\n");
 	puts("info:");for(int i=4;i<32;i++)puts(" ");puts("print device info.\r\n");
 	puts("reboot:");for(int i=6;i<32;i++)puts(" ");puts("reboot the device.\r\n");
-    puts("getsp:");for(int i=5;i<32;i++)puts(" ");puts("test stack position.\r\n");
+    //puts("getsp:");for(int i=5;i<32;i++)puts(" ");puts("test stack position.\r\n");
     puts("getdtb:");for(int i=6;i<32;i++)puts(" ");puts("output drb address.\r\n");
     puts("fdt_cpio:");for(int i=8;i<32;i++)puts(" ");puts("call fdt.\r\n");
     puts("ls:");for(int i=2;i<32;i++)puts(" ");puts("call cpio_ls.\r\n");
@@ -24,7 +25,9 @@ int cmd_help(){
     puts("getreg:");for(int i=6;i<32;i++)puts(" ");puts("output register value.\r\n");
     puts("loadimg:");for(int i=7;i<32;i++)puts(" ");puts("load img file to load_base and exec it.\r\n");
     puts("async:");for(int i=5;i<32;i++)puts(" ");puts("test asynchronous I/O.\r\n");
-    puts("reverse:");for(int i=7;i<32;i++)puts(" ");puts("output memory reverse block\r\n");
+    //puts("reverse:");for(int i=7;i<32;i++)puts(" ");puts("output memory reverse block\r\n");
+    puts("test:");for(int i=4;i<32;i++)puts(" ");puts("run test funtion.\r\n");
+    puts("buddy:");for(int i=5;i<32;i++)puts(" ");puts("init buddy system.\r\n");
     
 	
 	return 0;
@@ -77,7 +80,7 @@ int cmd_info()
 }
 
 int cmd_reboot(){
-    reset(0x160);
+    reset(0x400);
     puts("if you want to cancel reset,insert y:");
     char c;
     c=getchar();
@@ -156,8 +159,13 @@ int cmd_loadimg(){
 
 int cmd_malloc(){
     char* ptr=simple_malloc(5);
-    ptr="doge";
     char* ptr2=simple_malloc(sizeof("Thanks you,Cheems."));
+    if(ptr==NULL | ptr2==NULL){
+        puts("error:memory allocate fault\r\n");
+        return 0;
+    }
+    ptr="doge";
+    
     ptr2="Thanks you,Cheems.";
     puts(ptr);
     puts("\r\n");
@@ -262,12 +270,56 @@ int cmd_async_IO_test(){
     return 0;
 }
 
+int cmd_init_buddy(){
+    buddy_init();
+    return 0;
+}
+
+
+int cmd_test(){
+    int counter=0;
+    int* arr[10];
+    for(int i=0;i<10;i++){
+        arr[i]=NULL;
+    }
+    for(int i=0;i<10;i++){
+        int* doge=fr_malloc(0x1000);
+        if(doge == NULL)break;
+        counter++;
+        arr[i]=doge;
+    }
+
+    for(int i=0;i<10;i++){
+        if(arr[i] == NULL)break;
+        fr_free(arr[i]);
+    }
+    puts("counter:0x");
+    put_hex(counter);
+    puts("\r\n");
+
+    return 0;
+}
+
+int cmd_dy_malloc(){
+    int* arr=dy_malloc(sizeof(int)*20);
+    puts("arraddress:");
+    put_hex(arr);
+    puts("\r\n");
+    dy_free(arr);
+}
+
+int cmd_timer_output_switch(){
+    if(timer_flag)timer_flag=0;
+    else timer_flag=1;
+    return 0;
+}
+
 int cmd_handler(char* cmd){
 	if(!strcmp(cmd,"help"))cmd_help();
 	else if(!strcmp(cmd,"hello"))cmd_hello();
 	else if(!strcmp(cmd,"info"))cmd_info();
     else if(!strcmp(cmd,"reboot"))cmd_reboot();
-    else if(!strcmp(cmd,"getsp"))cmd_get_sp();
+    //else if(!strcmp(cmd,"getsp"))cmd_get_sp();
     else if(!strcmp(cmd,"getdtb"))cmd_get_dtb_addr();
     else if(!strcmp(cmd,"fdt_cpio"))cmd_fdt_traverse();
     else if(!strcmp(cmd,"ls"))cmd_ls();
@@ -277,7 +329,11 @@ int cmd_handler(char* cmd){
     else if(!strcmp(cmd,"getreg"))cmd_get_reg();
     else if(!strcmp(cmd,"loadimg"))cmd_loadimg();
     else if(!strcmp(cmd,"async"))cmd_async_IO_test();
-    else if(!strcmp(cmd,"reverse"))cmd_output_reverse();
+    //else if(!strcmp(cmd,"reverse"))cmd_output_reverse();
+    else if(!strcmp(cmd,"test"))cmd_test();
+    else if(!strcmp(cmd,"switch"))cmd_timer_output_switch();
+    else if(!strcmp(cmd,"buddy"))cmd_init_buddy();
+    else if(!strcmp(cmd,"dy"))cmd_dy_malloc();
 	else {
 		puts("can't find command:");
 		puts(cmd);

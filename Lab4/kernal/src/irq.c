@@ -7,6 +7,8 @@
 #include "peripherals/irq.h"
 #include "peripherals/mini_uart.h"
 
+int timer_flag=0;
+
 void irq_handler_timer_c();
 
 const char *entry_error_messages[] = {
@@ -86,8 +88,9 @@ void show_invalid_entry_message(int type, unsigned long esr, unsigned long addre
 	// puts("\r\n");
 
 
-	if(type == 5 || type == 9){
-		irq_handler_timer_c();
+	if(type == 4){
+		reset(0x400);
+		delay(0x400);
 	}
 	return ;
 }
@@ -142,8 +145,6 @@ void c_write_handler(){
 }
 
 void irq_handler_timer_c() {
-	
-	puts("In timer interruption\r\n");
 
 	unsigned long long cntpct_el0 = 0;//The register count secs with frequency
 	asm volatile("mrs %0,cntpct_el0":"=r"(cntpct_el0));
@@ -152,9 +153,11 @@ void irq_handler_timer_c() {
 	asm volatile("mrs %0,cntfrq_el0":"=r"(cntfrq_el0));
 
 	unsigned long long sec = cntpct_el0 / cntfrq_el0;
-	puts("sec:");
-	put_int(sec);
-	puts("\r\n");
+	if(timer_flag){
+		puts("sec:");
+		put_int(sec);
+		puts("\r\n");
+	}
 	
 	unsigned long long wait = cntfrq_el0 * 2;// wait 2 seconds
 	asm volatile ("msr cntp_tval_el0, %0"::"r"(wait));//set new timer
@@ -164,7 +167,6 @@ void irq_handler_timer_c() {
 
 void irq_general_handler_c(){
 	if(get32(CORE0_INTERRUPT_SOURCE) & (1<<1)){
-		puts("timer interrupt:\r\n");
 		irq_handler_timer_c();
 		return;
 	}

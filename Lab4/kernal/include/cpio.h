@@ -2,7 +2,7 @@
 #define CPIO_H
 
 
-extern char* cpio_addr;
+extern void* cpio_addr;
 
 // New ASCII format:
 // The  pathname  is  followed  by NUL bytes so that the total size	of the

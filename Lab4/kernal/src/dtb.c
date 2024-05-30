@@ -189,3 +189,15 @@ void fdt_output_reverse(){
     // }
     // puts("\r\n");
 }
+
+unsigned long long dtb_end(){
+    struct fdt_header* head = (struct fdt_header*)_dtb_addr;
+    unsigned long long dtb_end=_dtb_addr+uint32_endian_big2little(head->totalsize);
+    puts("dtb_start:0x");
+    put_hex(_dtb_addr);
+    puts("\r\n");
+    puts("dtb_end:0x");
+    put_hex(dtb_end);
+    puts("\r\n");
+    return dtb_end;
+}
