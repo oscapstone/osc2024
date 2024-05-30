@@ -16,14 +16,14 @@ void demo_mm() {
 		page_addr[i] = kmalloc(20);
 		page_addr[i+1] = kmalloc(200);
 		page_addr[i+2] = kmalloc(PAGE_SIZE);
-		// free_list_info();
+		free_list_info();
 		print_chunk_info();
 	}
 	for(int i=0;i<TEST_SIZE;i+=3) {
 		kfree(page_addr[i]);
 		kfree(page_addr[i+1]);
 		kfree(page_addr[i+2]);
-		// free_list_info();
+		free_list_info();
 		print_chunk_info();
 	}
 }
@@ -35,9 +35,12 @@ void main(char* base) {
 	uart_hex(dtb_base);
 	uart_send_string("\n");
 	fdt_traverse(initrd_callback);
+	debug = 0;
 	alloc_init();
+	debug = 1;
 	uart_enable_interrupt();
 	demo_mm();
 	debug = 0;
+	while(1);
 	shell();
 }

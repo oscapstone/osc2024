@@ -20,6 +20,11 @@ int buddy(int idx) {
 	return idx ^ (1 << page_arr[idx].order);
 }
 
+void page_info_addr(void* addr) {
+	unsigned int idx = ((unsigned long long)addr - (unsigned long long)PAGE_BASE) / PAGE_SIZE;
+	page_info(&page_arr[idx]);
+}
+
 void page_info(page* p) {
 	uart_send_string("(addr: 0x");
 	uart_hex((unsigned long long)p->addr);
@@ -38,6 +43,11 @@ void print_chunk_info() {
 		uart_hex(i);
 		uart_send_string("].cnt: ");
 		uart_hex(chunk_info_arr[i].cnt);
+		uart_send_string("\n");
+		uart_send_string("chunk_info_arr[");
+		uart_hex(i);
+		uart_send_string("].size: ");
+		uart_hex(chunk_info_arr[i].size);
 		uart_send_string("\n");
 	}
 }
@@ -129,7 +139,7 @@ void init_page_arr() {
 		uart_send_string("\n");
 	}
 	page_arr = (page*)simple_malloc(total_page * sizeof(page));
-	unsigned char* addr = PAGE_BASE;
+	char* addr = PAGE_BASE;
 	for (uint64_t i = 0; i < total_page; i++) {
 		page_arr[i].addr = addr;
 		page_arr[i].idx = i;
@@ -147,13 +157,14 @@ void init_page_arr() {
 }
 
 void init_chunk_info() {
-	for(int i=0;i<MAX_CHUNK;i++) {
+	for(int i=0;i<=MAX_CHUNK;i++) {
 		chunk_info_arr[i].idx = i;
 		chunk_info_arr[i].size = 1 << (i + 4);
 		chunk_info_arr[i].page_head = 0;
 		chunk_info_arr[i].chunk_head = 0;
 		chunk_info_arr[i].cnt = 0;
 	}
+	print_chunk_info();
 }
 
 void init_page_allocator() {
@@ -161,7 +172,7 @@ void init_page_allocator() {
 		free_list[i].head = 0; // NULL
 		free_list[i].cnt = 0;
 	}
-	for(unsigned long long i=0;i<total_page;i++) {
+	for(uint64_t i=0;i<total_page;i++) {
 		if(page_arr[i].val == ALLOCATED) {
 			release(&page_arr[i]);
 		}
@@ -170,7 +181,13 @@ void init_page_allocator() {
 
 void release(page* r_page) {
 	// if the page is already free
-	if(r_page -> val > 0) return;
+	if(r_page -> val > 0){
+		uart_send_string("Error: ");
+		page_info(r_page);
+		uart_send_string(" is already free\n");
+		while(1);
+	}
+		
 	if(debug) {
 		uart_send_string("release ");
 		page_info(r_page);
@@ -184,6 +201,12 @@ void release(page* r_page) {
 
 void merge(page* m_page) {
 	int a_idx = m_page->idx;
+	if(page_arr[a_idx].val < 0) {
+		uart_send_string("Error: ");
+		page_info(&page_arr[a_idx]);
+		uart_send_string(" is not free\n");
+		while(1);
+	}
 	while(page_arr[a_idx].order + 1 < MAX_ORDER) {
 		int b_idx = buddy(a_idx);
 		if(buddy(b_idx) != a_idx 
@@ -206,17 +229,27 @@ void merge(page* m_page) {
 			page_info(b_page);
 			uart_send_string("\n");
 		}
+		if(b_page->order != a_page->order) {
+			uart_send_string("Error: ");
+			page_info(a_page);
+			uart_send_string(" and ");
+			page_info(b_page);
+			uart_send_string(" have different order\n");
+			while(1);
+		}
 		// b_page becomes a_page's buddy
-		b_page->val = BUDDY;
-		b_page->order = a_page->order;
+		// b_page->order = a_page->order;
+		
 		// remove a_page and b_page from free_list
 		erase_page(a_page, a_page->order);
 		erase_page(b_page, b_page->order);
+		b_page->val = BUDDY;
+
 		// a_page's order increases
 		a_page -> order++;
 		a_page -> val++;
 		// insert a_page to free_list
-		insert_page(a_page, a_page->val);
+		insert_page(a_page, a_page->order);
 	}
 }
 
@@ -232,9 +265,10 @@ page* truncate(page* t_page, int order) {
 	while(t_page->order > order) {
 		t_page->order--;
 		int buddy_idx = buddy(idx);
-		page* buddy_page = &page_arr[buddy_idx];
-		buddy_page->val = t_page->order;
+		page* buddy_page = &(page_arr[buddy_idx]);
+		buddy_page->val = ALLOCATED;
 		buddy_page->order = t_page->order;
+
 		if(debug) {
 			// split page into two buddies
 			uart_send_string("split ");
@@ -243,36 +277,65 @@ page* truncate(page* t_page, int order) {
 			page_info(buddy_page);
 			uart_send_string("\n");
 		}
-		insert_page(buddy_page, buddy_page->order);
+		release(buddy_page);
 	}
-	t_page->order = order;
+
 	return t_page;
 }
 
 void insert_page(page* new_page, int order) {
+	if(new_page -> val < 0 || order < 0) {
+		uart_send_string("Error: insert_page ");
+		page_info(new_page);
+		uart_send_string(" with val < 0\n");
+		while(1);
+	}
 	new_page->val = order;
 	new_page->order = order;
 	new_page->next = free_list[order].head;
 	if (free_list[order].head != 0) {
-		free_list[order].head->prev = new_page;
+		free_list[order].head -> prev = new_page;
 	}
 	free_list[order].head = new_page;
 	free_list[order].cnt++;
+	return;
 }
 
 page* pop_page(int order) {
+	if(free_list[order].cnt == 0) {
+		uart_send_string("Error: pop_page from free_list[");
+		uart_hex(order);
+		uart_send_string("] with cnt = 0\n");
+		while(1);
+	}
 	page* ret = free_list[order].head;
 	free_list[order].head = ret->next;
-	if (ret->next != 0) {
-		ret->next->prev = 0;
+	if (free_list[order].head -> next != 0) {
+		free_list[order].head -> prev = 0;
 	}
 	free_list[order].cnt--;
 	return ret;
 }
 
 void erase_page(page* e_page, int order) {
-	if (e_page->prev != 0) {
-		e_page->prev->next = e_page->next;
+	if(e_page -> val < 0) {
+		uart_send_string("Error: erase_page ");
+		page_info(e_page);
+		uart_send_string(" with val < 0\n");
+		while(1);
+	}
+	if(e_page -> order != order) {
+		uart_send_string("Error: erase_page ");
+		page_info(e_page);
+		uart_send_string(" with order ");
+		uart_hex(e_page->order);
+		uart_send_string(" but want to erase with order ");
+		uart_hex(order);
+		uart_send_string("\n");
+		while(1);
+	}
+	if (e_page -> prev != 0) {
+		e_page -> prev->next = e_page -> next;
 	}
 	else {
 		free_list[order].head = e_page->next;
@@ -310,15 +373,22 @@ void* chunk_alloc(int idx) {
 		chunk_info_arr[idx].page_head = new_page;
 
 		// split page to chunk
-		for(unsigned char* addr = new_page + PAGE_SIZE - chunk_size; addr > new_page + sizeof(page_info_t); addr -= chunk_size) {
+		for(
+			unsigned char* addr = new_page + PAGE_SIZE - chunk_size; 
+			addr > new_page + sizeof(page_info_t); 
+			addr -= chunk_size
+		) {
 			chunk* new_chunk = (chunk*)addr;
 			new_chunk -> addr = addr;
 			new_chunk -> next = chunk_info_arr[idx].chunk_head;
 			chunk_info_arr[idx].chunk_head = new_chunk;
 			chunk_info_arr[idx].cnt ++;
-			if(debug) {
+			if(0 && debug) {
+				// uart_hex(chunk_size);
 				uart_send_string("new chunk: 0x");
 				uart_hex((unsigned long long)addr);
+				uart_send_string("\n");
+				uart_hex((unsigned char*)new_page + sizeof(page_info_t));
 				uart_send_string("\n");
 			}
 		}
@@ -347,7 +417,7 @@ void* chunk_free(void* addr) {
 	}
 	// convert chunk addr to page addr
 	void* page_addr = (void*)((uint64_t)addr & (~(PAGE_SIZE - 1)));
-	page_info_t* chunk_page = page_addr;
+	page_info_t* chunk_page = (page_info_t*)page_addr;
 	int idx = chunk_page -> idx;
 	chunk* new_chunk = (chunk*)addr;
 	new_chunk -> addr = addr;
@@ -369,7 +439,7 @@ void alloc_init()
 	// reserve memory
 	memory_reserve((void*)0x0000, (void*)0x1000); // spin tables
 	memory_reserve((void*)ramfs_base, (void*)ramfs_end); // ramfs
-	memory_reserve((void*)dtb_base, (void*)dtb_end); // dtb
+	// memory_reserve((void*)dtb_base, (void*)dtb_end); // dtb
 
 	// kernel, bss, stack
 	// 0x80000 = _start
@@ -386,14 +456,14 @@ void alloc_init()
 	}
 	// heap
 	memory_reserve((void*)old_heap_top, (void*)heap_top);
-	debug = 0;
+	// debug = 0;	
 	init_page_allocator();
-	debug = 1;
+	// debug = 1;
 	check_free_list();
 	// print the number of free pages for each order
-	if(1 || debug) {
-		free_list_info();
-	}
+	// if(debug) {
+	// }
+	free_list_info();
 	// init chunk info
 	init_chunk_info();
 }
@@ -406,11 +476,17 @@ void memory_reserve(void* start, void* end) {
 		uart_hex((unsigned long)end);
 		uart_send_string("\n");
 	}
-	uint64_t s_idx = (start - PAGE_BASE) / PAGE_SIZE;
-	uint64_t e_idx = (end - PAGE_BASE) / PAGE_SIZE;
-	for(uint64_t i=s_idx; i<e_idx; i++) {
-		page_arr[i].val = RESERVED;
-	}
+	 // Align start to the nearest page boundary (round down)
+    uint64_t aligned_start = (uint64_t)start & ~(PAGE_SIZE - 1);
+    // Align end to the nearest page boundary (round up)
+    uint64_t aligned_end = ((uint64_t)end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+    uint64_t s_idx = (aligned_start - (uint64_t)PAGE_BASE) / PAGE_SIZE;
+    uint64_t e_idx = (aligned_end - (uint64_t)PAGE_BASE) / PAGE_SIZE;
+
+    for (uint64_t i = s_idx; i < e_idx; i++) {
+        page_arr[i].val = RESERVED;
+    }
 }
 
 void* page_alloc(unsigned long long size) {
@@ -437,13 +513,13 @@ void* page_alloc(unsigned long long size) {
 		}
 	}
 	if(!res_page){
-		if(debug) {
+		if(0 && debug) {
 			uart_send_string("No enough memory\n");
 		}
 		return 0;
 	}
-	res_page = truncate(res_page, order);
 	res_page -> val = ALLOCATED;
+	truncate(res_page, order);
 	if(debug) {
 		uart_send_string("Allocated ");
 		page_info(res_page);
@@ -453,7 +529,7 @@ void* page_alloc(unsigned long long size) {
 }
 
 void page_free(void* addr) {
-	int idx = ((unsigned long long)addr - (unsigned long long)PAGE_BASE) / PAGE_SIZE;
+	unsigned int idx = ((unsigned long long)addr - (unsigned long long)PAGE_BASE) / PAGE_SIZE;
 	if(debug) {
 		uart_send_string("0x");
 		uart_hex((unsigned long long)addr);
@@ -467,21 +543,42 @@ void page_free(void* addr) {
 }
 
 void* kmalloc(unsigned long long size) {
-	int idx = size2chunkidx(size);
-	if(idx >= 0) {
-		return chunk_alloc(idx);
-	} else {
-		return page_alloc(size);
+	el1_interrupt_disable();
+	if(size == 0){
+		el1_interrupt_enable();
+		return 0;
 	}
+	// void* addr = page_alloc(size);
+	// free_list_info();
+	// return addr;
+	int idx = size2chunkidx(size);
+
+	void* addr;
+	int use_page_only = 0;
+	if(use_page_only) {
+		addr = page_alloc(size);
+	} else if(idx >= 0) {
+		addr = chunk_alloc(idx);
+	} else {
+		addr = page_alloc(size);
+	}
+	el1_interrupt_enable();
+	return addr;
 }
 
 void kfree(void* addr) {
+	if(!addr) return;
+	el1_interrupt_disable();
 	if(is_page(addr)) {
+		// uart_send_string("page addr release\n");
 		page_free(addr);
 	}
 	else {
+		// uart_send_string("chunk addr release\n");
 		chunk_free(addr);
 	}
+	// free_list_info();
+	el1_interrupt_enable();
 }
 
 void *simple_malloc(unsigned long long size)
