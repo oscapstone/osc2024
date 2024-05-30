@@ -53,7 +53,7 @@ Goals of this lab:
 * Understand how to multiplex a timer.
 * Understand how to concurrently handle I/O devices.
 
-### Lab 4: Booting
+### Lab 4: Allocator
 In Lab 4, you need to implement memory allocators. They’ll be used in all later labs.
 
 Goals of this lab:
