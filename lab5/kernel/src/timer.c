@@ -50,7 +50,7 @@ void set_timeout(void (*callback)(void *), void *arg, int delay) {
 static void empty() {}
 
 void timer_irq_handler() {
-    print_string("\n[timer_irq_handler] \n");
+    // print_string("\n[timer_irq_handler] \n");
 #ifdef SCHED_DEBUG
     static int count = 0;
     if (count++ % 1 == 0) {
@@ -66,7 +66,7 @@ void timer_irq_handler() {
         head->func(head->arg);
         timer_t *temp = head;
         head = head->next;
-        // kfree(temp);
+        // kfree(temp); // if free this multi_thread will crash
     }
 
     if (head != 0) core_timer_enable();

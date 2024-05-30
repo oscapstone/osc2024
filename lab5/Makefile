@@ -1,4 +1,4 @@
-QEMU_OPTS = -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+QEMU_OPTS = -initrd new_initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 BUILD_DIR := $(CURDIR)/build
 
 .PHONY: all bootloader kernel run clean
@@ -20,5 +20,5 @@ run:
 run-bootloader: 
 	qemu-system-aarch64 -M raspi3b -kernel $(BUILD_DIR)/kernel8.img -display none -serial null -serial pty $(QEMU_OPTS)
 
-debug: 
+debug: clean kernel
 	qemu-system-aarch64 -M raspi3b -kernel $(BUILD_DIR)/kernel8.img -display none -serial null -serial stdio -s -S $(QEMU_OPTS)

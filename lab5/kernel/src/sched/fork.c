@@ -8,9 +8,10 @@ extern void ret_from_fork();
 
 int copy_process(unsigned long clone_flags, unsigned long func,
                  unsigned long arg, unsigned long stack) {
-    // print_string("[copy_process] begin\n");
+    print_string("[copy_process] begin\n");
     preempt_disable();  // copy process is not preemptable
 
+    print_string("[copy_process] kmalloc stack: ");
     task_struct_t *new_task = (task_struct_t *)kmalloc(STACK_SIZE);
     // struct task_struct *new_task =
         // (task_struct_t *)kmalloc(sizeof(task_struct_t));

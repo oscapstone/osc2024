@@ -83,7 +83,6 @@ int sys_mbox_call(unsigned char ch, unsigned int* mbox) {
     sys_debug_msg("Mailbox call");
     int r = mailbox_call(ch, mbox);
     print_string("Mailbox call end\n");
-    while(1) {}
     return r;
 }
 

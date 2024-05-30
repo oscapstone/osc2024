@@ -27,6 +27,7 @@ void init_console(struct Console *console) { console->num_commands = 0; }
 
 void run_console(struct Console *console) {
     char input[256];
+
     while (1) {
         print_string("\n>>> ");
 

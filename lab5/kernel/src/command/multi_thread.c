@@ -3,6 +3,7 @@
 #include <kernel/io.h>
 #include <kernel/sched.h>
 #include <lib/utils.h>
+#include <bsp/asm/mailbox.h>
 
 #define delay(x) \
     for (int i = 0; i < x; i++) asm volatile("nop");

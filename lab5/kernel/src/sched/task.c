@@ -87,17 +87,17 @@ void delete_run_queue(task_struct_t *task) {
 }
 
 static void switch_to(task_struct_t *current, task_struct_t *next) {
-    print_string("[switch_to] task: ");
-    print_d(current ->pid);
-    print_string(", ");
-    print_d(next->pid);
-    print_string("\n");
-    print_task_list();
-    if (current == next) {
-        // return;
-        while(1);
-    }
-
+    // print_string("[switch_to] task: ");
+    // print_d(current ->pid);
+    // print_string(", ");
+    // print_d(next->pid);
+    // print_string("\n");
+    // print_task_list();
+    // if (current == next) {
+    //     // return;
+    //     while(1);
+    // }
+    //
 #ifdef SCHED_DEBUG
     print_string("[switch_to] ");
     print_string("(");
@@ -138,8 +138,8 @@ static void switch_to(task_struct_t *current, task_struct_t *next) {
     print_string(")");
     print_string("\n");
 
-    print_string("[switch_to] print_task_list\n");
-    print_task_list();
+    // print_string("[switch_to] print_task_list\n");
+    // print_task_list();
 // }
 #endif
 
@@ -235,13 +235,13 @@ void _schedule() {
         } while (current_task != start_point);
     }
 
-// #ifdef SCHED_DEBUG
+#ifdef SCHED_DEBUG
     print_string("[_schedule] switch_to: ");
     print_d(get_current()->pid);
     print_string(" -> ");
     print_d(next_task->pid);
     print_string("\n");
-// #endif
+#endif
 
     switch_to(get_current(), next_task);
     preempt_enable();
@@ -323,8 +323,10 @@ void sched_init() {
     static task_struct_t init_task = INIT_TASK;
 
     enqueue_run_queue(&init_task);
-    nr_count = 1;
+        nr_count = 1;
+    asm volatile("msr tpidr_el1, %0" ::"r"((unsigned long)&init_task));
 
+    print_string("[sched init] create root task\n");
     copy_process(PF_KTHREAD, (unsigned long)&root_task, 0, 0);
 }
 
@@ -350,7 +352,7 @@ void exit_process() {
     
 
     preempt_enable();
-    print_task_list();
+    // print_task_list();
     schedule();
 }
 
