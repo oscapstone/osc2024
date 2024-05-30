@@ -5,14 +5,13 @@
 #include "schedule.h"
 #include "mailbox.h"
 #include "allocator.h"
+#include "mm.h"
 #include "exception.h"
 
 #define AUX_MU_IO ((volatile unsigned int *)(MMIO_BASE + 0x00215040))
 #define AUX_MU_IER ((volatile unsigned int *)(MMIO_BASE + 0x00215044))
 #define AUX_MU_IIR ((volatile unsigned int *)(MMIO_BASE + 0x00215048))
 #define AUX_MU_LSR ((volatile unsigned int *)(MMIO_BASE + 0x00215054))
-
-#define CORE0_INTERRUPT_SOURCE (volatile unsigned int *)0x40000060
 
 #define TX_PRIORITY 4
 #define RX_PRIORITY 4
@@ -63,9 +62,23 @@ void exception_entry()
     return;
 }
 
-void sync_handler_entry()
+void el1_sync_handler_entry()
 {
     uart_puts("Into sync handler\n");
+    unsigned long long esr;
+    unsigned long long addr;
+    asm volatile(
+        "mrs %0, esr_el1\n"
+        "mrs %1, far_el1\n"
+        : "=r"(esr), "=r"(addr));
+
+    int DFSC = esr & 0b111111;
+    uart_puts("DFSC: ");
+    uart_hex_lower_case(DFSC);
+    uart_puts(", OS can't handle it.\n");
+
+    while (1)
+        ;
 }
 
 void el0_svc_handler_entry(struct ucontext *trapframe)
@@ -103,12 +116,77 @@ void el0_svc_handler_entry(struct ucontext *trapframe)
     case SYS_SIGNAL_KILL:
         sys_signal_kill(trapframe);
         break;
+    case SYS_MMAP:
+        sys_mmap(trapframe);
+        break;
     case SYS_SIGRETURN:
         sys_sigreturn(trapframe);
         break;
 
     default:
         break;
+    }
+}
+
+void el0_da_handler_entry()
+{
+    unsigned long long esr;
+    unsigned long long addr;
+    asm volatile(
+        "mrs %0, esr_el1\n"
+        "mrs %1, far_el1\n"
+        : "=r"(esr), "=r"(addr));
+
+    int DFSC = esr & 0b111111;
+
+    if (DFSC == TRANSLATION_FAULT_L0 || DFSC == TRANSLATION_FAULT_L1 || DFSC == TRANSLATION_FAULT_L2 || DFSC == TRANSLATION_FAULT_L3)
+    {
+        do_translation_fault(addr);
+    }
+    else if (DFSC == PERMISSION_FAULT_L0 || DFSC == PERMISSION_FAULT_L1 || DFSC == PERMISSION_FAULT_L2 || DFSC == PERMISSION_FAULT_L3)
+    {
+        do_permission_fault(addr);
+    }
+    else
+    {
+        uart_puts("DFSC: ");
+        uart_hex_lower_case(DFSC);
+        uart_puts(", v_add: ");
+        uart_hex_lower_case(addr);
+        uart_puts(", OS can't handle it.\n");
+        while (1)
+            ;
+    }
+}
+
+void el0_ia_handler_entry()
+{
+    unsigned long long esr;
+    unsigned long long addr;
+    asm volatile(
+        "mrs %0, esr_el1\n"
+        "mrs %1, far_el1\n"
+        : "=r"(esr), "=r"(addr));
+
+    int DFSC = esr & 0b111111;
+
+    if (DFSC == TRANSLATION_FAULT_L0 || DFSC == TRANSLATION_FAULT_L1 || DFSC == TRANSLATION_FAULT_L2 || DFSC == TRANSLATION_FAULT_L3)
+    {
+        do_translation_fault(addr);
+    }
+    else if (DFSC == PERMISSION_FAULT_L0 || DFSC == PERMISSION_FAULT_L1 || DFSC == PERMISSION_FAULT_L2 || DFSC == PERMISSION_FAULT_L3)
+    {
+        do_permission_fault(addr);
+    }
+    else
+    {
+        uart_puts("DFSC: ");
+        uart_hex_lower_case(DFSC);
+        uart_puts(", v_add: ");
+        uart_hex_lower_case(addr);
+        uart_puts(", OS can't handle it.\n");
+        while (1)
+            ;
     }
 }
 
@@ -235,6 +313,13 @@ void sys_exec(struct ucontext *trapframe)
 {
     const char *name = (const char *)trapframe->x[0];
     char **const argv = (char **const)trapframe->x[1];
+
+    task_struct *cur = get_current_task();
+    
+    unsigned long long page_idx = ((unsigned long long )(cur->ustack) - VA_START) >> 12;
+    if(page_arr[page_idx].refer_count > 1) // its ustack is used by other processes, so allocate a new space to it.
+        cur->ustack = (void *)((char *)kmalloc(4096 * 5) + 4096 * 4);
+
     do_exec(name, argv);
     trapframe->x[0] = -1; // if do_exec is falut
 }
@@ -242,19 +327,14 @@ void sys_exec(struct ucontext *trapframe)
 void sys_fork(struct ucontext *trapframe)
 {
     task_struct *parent = get_current_task();
-    task_struct *child = task_create(0, 0);
-    disable_interrupt();
-
+    task_struct *child = task_create(return_from_fork, 0);
     child->priority++;
+    kfree(child->ustack);
+    child->ustack = NULL;
 
     int kstack_offset = parent->kstack - (void *)trapframe;
-    int ustack_offset = (unsigned long long)parent->ustack - trapframe->sp_el0;
-
     for (int i = 0; i < kstack_offset; i++) // copy kstack content
         *((char *)child->kstack - i) = *((char *)parent->kstack - i);
-
-    for (int i = 0; i < ustack_offset; i++) // copy ustack content
-        *((char *)child->ustack - i) = *((char *)parent->ustack - i);
 
     for (int i = 0; i < SIG_NUM; i++) // copy signal handler
     {
@@ -262,13 +342,34 @@ void sys_fork(struct ucontext *trapframe)
         child->signal_handler[i] = parent->signal_handler[i];
     }
 
-    child->cpu_context = parent->cpu_context;
+    unsigned long long code_start, code_size;
+    for (struct vm_area_struct *cur = parent->mm_struct->mmap; cur != NULL; cur = cur->vm_next)
+    {
+        if (cur->vm_type == CODE) // find the code section in VMA of the parent process
+        {
+            code_start = translate_v_to_p(parent->mm_struct->pgd, cur->vm_start);
+            code_size = cur->vm_end - cur->vm_start;
+            break;
+        }
+    }
+
     child->cpu_context.sp = (unsigned long long)child->kstack - kstack_offset; // revise the right kernel stack pointer
     child->cpu_context.fp = (unsigned long long)child->kstack;
-    child->cpu_context.lr = (unsigned long long)return_from_fork;
+
+    init_mm_struct(child->mm_struct);
+    // map to code
+    mappages(child->mm_struct, CODE, 0, code_start, code_size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
+    // map to ustack
+    for (struct vm_area_struct *vma = parent->mm_struct->mmap; vma != NULL; vma = vma->vm_next)
+        if (vma->vm_type == STACK) // find the code section in VMA of the parent process
+            mappages(child->mm_struct, STACK, vma->vm_start, vma->pm_base, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    // map to MMIO_BASE
+    mappages(child->mm_struct, IO, 0x3c000000, 0x3c000000, 0x40000000 - 0x3c000000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+
+    change_all_pgd_prot(parent->mm_struct->pgd, PROT_READ);        // change parent prcess pte to read only
+    copy_pgd_table(parent->mm_struct->pgd, child->mm_struct->pgd); // child copy parent's page entry
 
     struct ucontext *child_trapframe = (struct ucontext *)child->cpu_context.sp;
-    child_trapframe->sp_el0 = (unsigned long long)child->ustack - ustack_offset; // revise the right user stack pointer
 
     trapframe->x[0] = child->id; // return child's id
     child_trapframe->x[0] = 0;
@@ -283,12 +384,15 @@ void sys_mbox_call(struct ucontext *trapframe)
 {
     unsigned char ch = (unsigned char)trapframe->x[0];
     unsigned int *mbox = (unsigned int *)trapframe->x[1];
-    for (int i = 0; i < 36; i++)
+
+    int size = mbox[0] / 4;
+
+    for (int i = 0; i < size; i++)
         mailbox[i] = mbox[i];
 
     trapframe->x[0] = mailbox_call(ch);
 
-    for (int i = 0; i < 36; i++)
+    for (int i = 0; i < size; i++)
         mbox[i] = mailbox[i];
 }
 
@@ -320,13 +424,72 @@ void sys_signal_kill(struct ucontext *trapframe)
             cur->received_signal = SIGNAL;
 }
 
+void sys_mmap(struct ucontext *trapframe)
+{
+    task_struct *cur_task = get_current_task();
+
+    unsigned long long addr = (unsigned long long)trapframe->x[0];
+    unsigned long long len = (unsigned long long)trapframe->x[1];
+    int prot = (int)trapframe->x[2];
+    int flags = (int)trapframe->x[3];
+
+    len = ((len >> 12) << 12) + ((len & 0xfff) == 0 ? 0 : 4096); // align len
+    unsigned long long p_addr = (unsigned long long)kmalloc(len);
+    for (int i = 0; i < len; i++)
+        *((char *)(p_addr) + i) = 0;
+
+    if (addr) // if addr is not NULL, then try to allocate it
+    {
+        int addr_is_free = 1;
+        addr = ((addr >> 12) << 12) + ((addr & 0xfff) == 0 ? 0 : 4096); // align len
+        for (struct vm_area_struct *vma = cur_task->mm_struct->mmap; vma != NULL; vma = vma->vm_next)
+        {
+            if ((vma->vm_end > addr && vma->vm_start <= addr) || (vma->vm_end > addr + len && vma->vm_start <= addr + len))
+                addr_is_free = 0;
+        }
+
+        if (addr_is_free == 0) // addr is overlay to other VMA, try to find the free region by brute-force
+        {
+            addr = 0x0;
+            while (1)
+            {
+                int overlay = 0;
+                for (struct vm_area_struct *vma = cur_task->mm_struct->mmap; vma != NULL; vma = vma->vm_next)
+                    if ((vma->vm_end > addr && vma->vm_start <= addr) || (vma->vm_end > addr + len && vma->vm_start <= addr + len))
+                        overlay = 1;
+
+                if (overlay == 0)
+                    break;
+                else
+                    addr += 0x1000;
+            }
+        }
+    }
+    else // addr is NULL, try to find the free region by brute-force
+    {
+        addr = 0x0;
+        while (1)
+        {
+            int overlay = 0;
+            for (struct vm_area_struct *vma = cur_task->mm_struct->mmap; vma != NULL; vma = vma->vm_next)
+                if ((vma->vm_end > addr && vma->vm_start <= addr) || (vma->vm_end > addr + len && vma->vm_start <= addr + len))
+                    overlay = 1;
+
+            if (overlay == 0)
+                break;
+            else
+                addr += 0x1000;
+        }
+    }
+
+    mappages(cur_task->mm_struct, DATA, addr, p_addr - VA_START, len, prot, flags); // map addr
+    trapframe->x[0] = addr;
+}
+
 void sys_sigreturn(struct ucontext *trapframe)
 {
-    task_struct *cur = get_current_task();
+    unsigned long long *sp_ptr = (unsigned long long *)trapframe->sp_el0;
 
     for (int i = 0; i < 34; i++)
-        *((unsigned long long *)trapframe + i) = *((unsigned long long *)cur->signal_stack - i);
-
-    kfree((char *)cur->signal_stack - 4096 * 2);
-    cur->signal_stack = NULL;
+        *((unsigned long long *)trapframe + i) = *(sp_ptr + (34 - i));
 }

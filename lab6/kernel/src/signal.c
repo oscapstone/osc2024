@@ -2,6 +2,7 @@
 #include "schedule.h"
 #include "allocator.h"
 #include "exception.h"
+#include "mm.h"
 #include "signal.h"
 
 void default_SIGKILL_handler()
@@ -14,14 +15,13 @@ void do_signal(struct ucontext *sigframe, void (*signal_handler)(void))
     task_struct *cur = get_current_task();
 
     disable_interrupt();
-    cur->signal_stack = (void *)((char *)kmalloc(4096 * 2) + 4096 * 2); // malloc a stack's space to deal with signal
-    enable_interrupt();
+    // map sigreturn system call
+    mappages(cur->mm_struct, SYSCALL, (unsigned long long)sigreturn - VA_START, (unsigned long long)sigreturn - VA_START, 4096, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
 
-    unsigned long long *sp_ptr = cur->signal_stack;
+    unsigned long long *sp_ptr = (unsigned long long *)sigframe->sp_el0;
 
     for (int i = 0; i < 34; i++)
         *(sp_ptr - i) = *((unsigned long long *)sigframe + i); // push sigframe to signal stack
-
     sp_ptr -= 34;
 
     asm volatile(
@@ -33,5 +33,5 @@ void do_signal(struct ucontext *sigframe, void (*signal_handler)(void))
         "mov sp, %3\n"
         "eret\n"
         :
-        : "r"(sp_ptr), "r"(signal_handler), "r"(sigreturn), "r"(cur->kstack));
+        : "r"(sp_ptr), "r"(signal_handler), "r"((unsigned long long)sigreturn - VA_START), "r"(cur->kstack));
 }
