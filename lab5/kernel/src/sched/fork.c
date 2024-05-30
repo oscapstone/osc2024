@@ -43,7 +43,7 @@ int copy_process(unsigned long clone_flags, unsigned long func,
 
     new_task->flags = clone_flags;
 
-    new_task->priority = get_current()->priority ? get_current()->priority : 1;
+    new_task->priority = 1;
     new_task->state = TASK_RUNNING;
     new_task->counter = new_task->priority;
     new_task->preempt_count = 1;  // disable preempt while creating process

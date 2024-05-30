@@ -32,7 +32,7 @@ enum task_state {
 
 typedef struct task_struct {
     struct cpu_context context;
-    long state;
+    enum task_state state;
     long counter;
     long priority;
     long preempt_count;
@@ -44,7 +44,7 @@ typedef struct task_struct {
 
 #define INIT_TASK \
 /*cpu_context*/	{ {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-/* state etc */	0, 0, 1, 0, 0, PF_KTHREAD, 0, 0, 0 \
+/* state etc */	2, 0, 1, 0, 0, PF_KTHREAD, 0, 0, 0 \
 }
 
 unsigned long get_new_pid();

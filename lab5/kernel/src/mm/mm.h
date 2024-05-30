@@ -1,9 +1,9 @@
 #ifndef __MM_TYPE_H__
 #define __MM_TYPE_H__
 
-#include <lib/stdlib.h>
+#include <lib/stddef.h>
 
-#define MAX_ORDER 10
+#define MAX_ORDER 16
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
 

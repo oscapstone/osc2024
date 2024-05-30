@@ -114,14 +114,14 @@ void *kmalloc(uint32_t size) {
         return NULL;
     }
 
-    if (order == 0) {
-        if (size >= (1 << KMEM_CACHE_MAX_ORDER)) {
-            return (void *)get_addr_by_page(alloc_pages(order));
-        }
-
-        uint32_t cache_order = get_cache_order_by_size(size);
-        return kmem_cache_alloc(cache_order);
-    }
+    // if (order == 0) {
+    //     if (size >= (1 << KMEM_CACHE_MAX_ORDER)) {
+    //         return (void *)get_addr_by_page(alloc_pages(order));
+    //     }
+    //
+    //     uint32_t cache_order = get_cache_order_by_size(size);
+    //     return kmem_cache_alloc(cache_order);
+    // }
 
     return (void *)get_addr_by_page(alloc_pages(order));
 }

@@ -32,9 +32,9 @@ void _exec_command(int argc, char **argv) {
     char *user_program = kmalloc(file_size);
     memcpy(user_program, file_contents, file_size);
 
-    char buf[100];
-    sprintf(buf, "User program pointer: %x\n", user_program);
-    print_string(buf);
+    // char buf[100];
+    // sprintf(buf, "User program pointer: %x\n", user_program);
+    // print_string(buf);
 
     preempt_disable();
     get_current()->state = TASK_STOPPED;

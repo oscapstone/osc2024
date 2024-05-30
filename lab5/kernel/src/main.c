@@ -22,15 +22,6 @@ void aa() {
     exit_process();
 }
 
-void bb() {
-    int count = 0;
-    while(++count < 10) {
-        for(int i = 0; i < 100000000; i++);
-        // print_string("--------------bb\n");
-    }
-    exit_process();
-}
-
 int main() {
     // lab1
     uart_init();
@@ -54,8 +45,6 @@ int main() {
     register_all_commands(console);
 
     uart_puts("\nWelcome to YJack0000's shell\n");
-
-    copy_process(PF_KTHREAD, (unsigned long)(void *)&bb, 0, 0);
 
     copy_process(PF_KTHREAD, (unsigned long)(void *)&run_console,
                  (unsigned long)console, 0);

@@ -1,3 +1,4 @@
+#include <bsp/asm/mailbox.h>
 #include <kernel/bsp_port/mailbox.h>
 
 int mailbox_call(unsigned char ch, unsigned int *mailbox) {
@@ -24,7 +25,9 @@ int mailbox_call(unsigned char ch, unsigned int *mailbox) {
 
         // If not, then you can read from Mailbox 0 Read/Write register.
         // Check if the value is the same as you wrote in step 1.
-        if (r == *MAILBOX_READ) return mailbox[1] == REQUEST_SUCCEED;
+        if (r == *MAILBOX_READ) {
+            return mailbox[1] == REQUEST_SUCCEED;
+        }
     }
 
     return 0;

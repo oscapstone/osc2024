@@ -64,9 +64,9 @@ void handle_invaild_entry(int type, unsigned long spsr, unsigned long elr,
 
 void el0_irq_entry(int type, unsigned long spsr, unsigned long elr,
                    unsigned long esr) {
-    // disable_irq();
+    disable_irq();
     show_irq_debug_msg(type, spsr, elr, esr);
-    // enable_irq();
+    enable_irq();
 }
 
 // void svc_exception_entry(int type, unsigned long spsr, unsigned long elr,

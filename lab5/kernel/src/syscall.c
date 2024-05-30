@@ -64,12 +64,12 @@ int sys_exec(const char* name, char* argv[]) {
 
 int sys_fork() {
     // print_string("Forking new process\n");
-    unsigned long stack = (unsigned long)kmalloc(STACK_SIZE);
+    unsigned long stack = (unsigned long)kmalloc(2*STACK_SIZE);
     if ((void*)stack == NULL) return -1;
     // print_string("Forking new process with stack at ");
     // print_h(stack);
     // print_string("\n");
-    memset((void*)stack, 0, STACK_SIZE);
+    memset((void*)stack, 0, 2*STACK_SIZE);
 
     return copy_process(0, 0, 0, stack);
 }
@@ -80,7 +80,11 @@ void sys_exit(int status) {
 }
 
 int sys_mbox_call(unsigned char ch, unsigned int* mbox) {
-    return mailbox_call(ch, mbox);
+    sys_debug_msg("Mailbox call");
+    int r = mailbox_call(ch, mbox);
+    print_string("Mailbox call end\n");
+    while(1) {}
+    return r;
 }
 
 void sys_kill(int pid) { kill_process(pid); }

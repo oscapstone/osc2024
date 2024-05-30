@@ -86,27 +86,34 @@ void delete_run_queue(task_struct_t *task) {
     }
 }
 
-static void switch_to(task_struct_t *next) {
-    if(get_current() == next) {
+static void switch_to(task_struct_t *current, task_struct_t *next) {
+    print_string("[switch_to] task: ");
+    print_d(current ->pid);
+    print_string(", ");
+    print_d(next->pid);
+    print_string("\n");
+    print_task_list();
+    if (current == next) {
         // return;
-        print_string("[switch_to] same task\n");
+        while(1);
     }
+
 #ifdef SCHED_DEBUG
     print_string("[switch_to] ");
     print_string("(");
-    print_d(get_current()->pid);
+    print_d(current->pid);
     print_string(", ");
-    print_d(get_current()->counter);
+    print_d(current->counter);
     print_string(", ");
-    print_d(get_current()->priority);
+    print_d(current->priority);
     print_string(", ");
-    print_d(get_current()->preempt_count);
+    print_d(current->preempt_count);
     print_string(", ");
-    print_h((unsigned long)get_current()->context.x19);
+    print_h((unsigned long)current->context.x19);
     print_string(", ");
-    print_h((unsigned long)get_current()->context.x20);
+    print_h((unsigned long)current->context.x20);
     print_string(", ");
-    print_h((unsigned long)get_current()->context.sp);
+    print_h((unsigned long)current->context.sp);
     // print_string(", ");
     // print_h((unsigned long)get_current()->context.pc);
     print_string(") -> (");
@@ -136,11 +143,7 @@ static void switch_to(task_struct_t *next) {
 // }
 #endif
 
-    if (get_current() == next) {
-        return;
-    }
-
-    cpu_switch_to(get_current(), next);
+    cpu_switch_to(current, next);
 }
 
 void print_task_list() {
@@ -156,9 +159,17 @@ void print_task_list() {
         print_string(", ");
         print_d(task->priority);
         print_string(", ");
+        print_d(task->preempt_count);
+        print_string(", state: ");
+        print_d(task->state);
+        print_string(", ");
+        // print_string("context: x19, x20, pc, sp: ");
+        // print_string(", ");
         print_h((unsigned long)task->context.x19);
         print_string(", ");
         print_h((unsigned long)task->context.x20);
+        print_string(", ");
+        print_h(task->context.fp);
         print_string(", ");
         print_h((unsigned long)task->context.pc);
         print_string(", ");
@@ -171,6 +182,8 @@ void print_task_list() {
 }
 
 void _schedule() {
+    // print_task_list();
+
     preempt_disable();
     task_struct_t *current_task;
     task_struct_t *next_task = NULL;
@@ -222,13 +235,15 @@ void _schedule() {
         } while (current_task != start_point);
     }
 
-#ifdef SCHED_DEBUG
+// #ifdef SCHED_DEBUG
     print_string("[_schedule] switch_to: ");
-    print_h((unsigned long)next_task);
+    print_d(get_current()->pid);
+    print_string(" -> ");
+    print_d(next_task->pid);
     print_string("\n");
-#endif
+// #endif
 
-    switch_to(next_task);
+    switch_to(get_current(), next_task);
     preempt_enable();
 }
 
@@ -286,7 +301,7 @@ static void _kill_zombies() {
         if (task->state == TASK_ZOMBIE) {
             task_struct_t *next = task->next;
             delete_run_queue(task);
-            kfree(task);
+            // kfree(task);
             task = next;
         } else {
             task = task->next;
@@ -319,15 +334,29 @@ void exit_process() {
     task_struct_t *current = get_current();
     current->state = TASK_ZOMBIE;
     if (current->stack) {
-        kfree((void *)current->stack);
+        // kfree((void *)current->stack);
     }
 
+    task_struct_t *tmp = current->next;
+    while(tmp != current) {
+        print_string("[exit_process] ");
+        if(tmp->state == TASK_STOPPED && tmp->pid+1 == current->pid) {
+            print_string("[exit_process] continue parent task: ");
+            tmp->state = TASK_RUNNING;
+            break;
+        }
+        tmp = tmp->next;
+    }
+    
+
     preempt_enable();
+    print_task_list();
     schedule();
 }
 
 void kill_process(long pid) {
     task_struct_t *task = get_task(pid);
+            
     if (task) {
         task->state = TASK_ZOMBIE;
         schedule();
