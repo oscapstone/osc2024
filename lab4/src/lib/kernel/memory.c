@@ -39,20 +39,15 @@ static struct list_head chunk[CHUNK_MAX_ORDER + 1];
 
 void *s_allocator(unsigned int size)
 {
-    char *r = __heap_top + 0x10;
+    char *r = __heap_top;
     size += 0x10 - (size % 0x10);
-    *(unsigned int *)(r - 0x8) = size;
     __heap_top += size;
     return r;
 }
 
 void init_allocator()
 {
-    // uart_hex(&__heap_start);
-    // Initialize the frame pool from 0x10000000 to 0x20000000
     frame_pool = s_allocator(sizeof(frame_t) * MAX_PAGES);
-    // frame_pool = (frame_t *)BUDDY_MEMORY_START;
-    // uart_hex(&frame_pool[MAX_PAGES - 1]);
 
     for (int i = 0; i < MAX_PAGES; i++) {
         if (i % (1 << FRAME_MAX_ORDER) == 0) {
@@ -262,13 +257,6 @@ void *kmalloc(unsigned int size)
     uart_printf("================================\r\n");
 
     return (size > 0x800) ? page_malloc(size) : chunk_malloc(size);
-
-    // if (size >= 0x800) {
-    //     return page_malloc(size);
-    // }
-    // else {
-    //     return chunk_malloc(size);
-    // }
 }
 
 void kfree(void *addr)
@@ -281,14 +269,6 @@ void kfree(void *addr)
             frame_pool[((unsigned long long)addr - BUDDY_MEMORY_START) >> 12].chunk_order == CHUNK_NONE)
                ? page_free(addr)
                : chunk_free(addr);
-
-    // if ((unsigned long long)addr % PAGE_SIZE == 0 &&
-    //     frame_pool[((unsigned long long)addr - BUDDY_MEMORY_START) >> 12].chunk_order == CHUNK_NONE) {
-    //     page_free(addr);
-    // }
-    // else {
-    //     chunk_free(addr);
-    // }
 }
 
 void memory_reserve(unsigned long long start, unsigned long long end)
