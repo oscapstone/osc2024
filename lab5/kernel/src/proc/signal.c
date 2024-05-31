@@ -34,6 +34,9 @@ void signal_check(TRAP_FRAME* trap_frame) {
             signal_run(trap_frame, i);
         }
     }
+    lock_interrupt();
+    task_get_current_el1()->current_signal = -1;
+    unlock_interrupt();
 }
 
 /**
@@ -62,10 +65,12 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
     current_signal->cpu_regs = kzalloc(sizeof(CPU_REGS));
     current_signal->stack = kzalloc(TASK_STACK_SIZE);
 
+    current_signal->handled = FALSE;
+
     // save the current context
     task_asm_store_context(current_signal->cpu_regs);
 
-    if (task_get_current_el1()->current_signal == -1) {
+    if (current_signal->handled) {
         // signal exited. return
         return;
     }
@@ -132,7 +137,7 @@ void signal_exit() {
     // free the
     NS_DPRINT("[SIGNAL] goback to process, pid = %d, signal: %d\n", task->pid, task->current_signal);
 
-    task->current_signal = -1;
+    current_signal->handled = TRUE;
 
     // restore current context
     utils_write_sysreg(sp_el0, current_signal->sp0);
