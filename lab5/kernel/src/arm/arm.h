@@ -48,10 +48,10 @@ struct arm_core_regs {
 #define ISS_TF_LEVEL2 0b000110
 #define ISS_TF_LEVEL3 0b000111
 
-#define ISS_PF_LEVEL0 0xc0
-#define ISS_PF_LEVEL1 0xc1
-#define ISS_PF_LEVEL2 0xc2
-#define ISS_PF_LEVEL3 0xc3
+#define ISS_PF_LEVEL0 0xc
+#define ISS_PF_LEVEL1 0xd
+#define ISS_PF_LEVEL2 0xe
+#define ISS_PF_LEVEL3 0xf
 
 // armv8 pg. 1900
 #define ESR_ELx_EC_SVC64                0x15
