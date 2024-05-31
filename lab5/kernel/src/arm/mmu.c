@@ -320,21 +320,26 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
     // assmue new_task is pure new task
     for (U64 i = 0; i < src_task->mm.user_pages_count; i++) {
         USER_PAGE_INFO* user_page = &src_task->mm.user_pages[i];
+        U64 ori_vam_flags = user_page->flags;
         U64 mmu_flags = 0;
 
         mmu_flags |= MMU_PXN;                       // cannot be execute in kernel mode
         if (user_page->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
             mmu_flags |= MMU_AP_EL0_UK_ACCESS;      // can be access in user mode
         }
-        mmu_flags |= MMU_AP_EL0_READ_ONLY;          // only readable for child process
+        mmu_flags |= MMU_AP_EL0_READ_ONLY;          // only readable for both parent child process
         if (!(user_page->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
             mmu_flags |= MMU_UNX;                   // cannot be execute in user mode
         }
 
+        // modify parent page to read only
+        USER_PAGE_INFO* parent_page = mmu_map_page(src_task, user_page->v_addr, user_page->p_addr, mmu_flags);
+        parent_page->flags = ori_vam_flags;
+
         USER_PAGE_INFO* new_task_user_page = mmu_map_page(new_task, user_page->v_addr, user_page->p_addr, mmu_flags);
-        mem_reference(user_page->p_addr);
+        mem_reference(user_page->p_addr);       // reference the page once to indicate child process reference this page
         // if this page it writable then later the page fault handler will know this and do the copy on write instead of segementation fault.
-        new_task_user_page->flags = user_page->flags;
+        new_task_user_page->flags = parent_page->flags;
     }
 }
 
@@ -354,6 +359,7 @@ void mmu_memfail_handler(U64 esr) {
     U64 iss = ESR_ELx_ISS(esr);
     NS_DPRINT("iss: 0x%x\n", iss);
 
+    // not found virtual mapping info kill process
     if (!current_page_info) {
         NS_DPRINT("[MMU][ERROR] [Segmentation fault: Kill process]\n");
         NS_DPRINT("addr: %x\n", far_el1);
@@ -361,27 +367,7 @@ void mmu_memfail_handler(U64 esr) {
         // will not go anywhere
     }
 
-    // not assign page for it, it is damand paging (anonymous page allocation)
-    if (current_page_info->p_addr == 0) {
-        NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
-        NS_DPRINT("[MMU][TRACE] page not present yet.\n");
-        U64 page_flags = 0;
-        page_flags |= MMU_PXN;
-        if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
-            page_flags |= MMU_AP_EL0_UK_ACCESS;
-        }
-        if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
-            page_flags |= MMU_AP_EL0_READ_ONLY;
-        }
-        if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
-            page_flags |= MMU_UNX;
-        }
-        U64 new_page = kzalloc(PD_PAGE_SIZE);
-        mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
-        return;
-    }
-
-    // is copy on write
+    // is this fault need to handle copy on write
     if (ISS_IS_WRITE(iss) && (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
         NS_DPRINT("[MMU][TRACE] Writing operation permission fault and can be write, doing copy on write.\n");
         U64 page_flags = 0;       // flag for page descriptor entry
@@ -399,12 +385,33 @@ void mmu_memfail_handler(U64 esr) {
         return;
     }
 
+    // armv8 pg.1528 translation fault iss code
     if ((iss & 0x3f) == ISS_TF_LEVEL0 ||
         (iss & 0x3f) == ISS_TF_LEVEL1 ||
         (iss & 0x3f) == ISS_TF_LEVEL2 ||
         (iss & 0x3f) == ISS_TF_LEVEL3)
     {
-        // Will not go here probably?
+        // not assign page for it, it is damand paging (anonymous page allocation)
+        if (current_page_info->p_addr == 0) {
+            NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
+            U64 page_flags = 0;
+            page_flags |= MMU_PXN;    // can't execute in EL1
+            if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
+                page_flags |= MMU_AP_EL0_UK_ACCESS;
+            }
+            if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
+                page_flags |= MMU_AP_EL0_READ_ONLY;
+            }
+            if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
+                page_flags |= MMU_UNX;
+            }
+            U64 new_page = kzalloc(PD_PAGE_SIZE);
+            mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
+            return;
+        } else {
+            printf("[MMU][ERROR] page has info while having translation fault, kill process\n");
+            task_exit(-1);
+        }
     } else {
         printf("[MMU][ERROR] [Segmentation fault]: other fault.\n");
         printf("iss: 0x%x\n", iss);
