@@ -37,6 +37,7 @@ typedef struct _USER_PAGE_INFO {
 #define TASK_USER_PAGE_INFO_FLAGS_READ      0x1
 #define TASK_USER_PAGE_INFO_FLAGS_WRITE     0x2
 #define TASK_USER_PAGE_INFO_FLAGS_EXEC      0x4
+#define TASK_USER_PAGE_INFO_FLAGS_ANONYMOUS 0x8
 
 typedef struct _MM_STRUCT {
     U64         kernel_pages_count;

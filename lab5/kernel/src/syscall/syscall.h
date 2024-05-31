@@ -48,3 +48,4 @@ void sys_close(TRAP_FRAME* regs);
 void sys_signal_register(TRAP_FRAME* regs);
 void sys_signal(TRAP_FRAME* trap_frame);
 void sys_sigreturn(TRAP_FRAME* trap_frame);
+void sys_mmap(TRAP_FRAME* trap_frame);
