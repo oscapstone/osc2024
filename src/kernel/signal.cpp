@@ -16,7 +16,7 @@ SYSCALL_DEFINE2(signal_kill, int, pid, int, signal) {
   return 0;
 }
 
-Signal::Signal(Kthread* thread) : cur(thread), list{}, stack{} {
+Signal::Signal(Kthread* thread) : cur(thread), list{} {
   setall(signal_handler_nop);
   actions[SIGKILL] = {
       .in_kernel = true,
@@ -24,8 +24,7 @@ Signal::Signal(Kthread* thread) : cur(thread), list{}, stack{} {
   };
 }
 
-Signal::Signal(Kthread* thread, const Signal& other)
-    : cur(thread), list{}, stack{} {
+Signal::Signal(Kthread* thread, const Signal& other) : cur(thread), list{} {
   for (int i = 0; i < NSIG; i++)
     actions[i] = other.actions[i];
 }
@@ -62,23 +61,21 @@ void Signal::handle(TrapFrame* frame) {
     delete it;
 
     auto& act = actions[sig];
-    klog("thread %d handle signal %d @ %p\n", cur->tid, sig, act.handler);
 
     if (act.in_kernel) {
+      klog("t%d handle signal %d @ kernel %p\n", cur->tid, sig, act.handler);
       act.handler(sig);
     } else {
-      if (frame) {
-        if (not stack.alloc(PAGE_SIZE, true))
-          panic("[signal::handle] can't alloc new stack");
-        auto stack_addr =
-            map_user_phy_pages(USER_SIGNAL_STACK, va2pa(stack.addr), PAGE_SIZE,
-                               ProtFlags::RWX, "[signal_stack]");
+      if (frame and is_invlid_addr(stack_addr)) {
+        stack_addr = mmap(USER_SIGNAL_STACK, PAGE_SIZE, ProtFlags::RWX,
+                          MmapFlags::NONE, "[signal_stack]");
         auto backup_frame = (char*)stack_addr + PAGE_SIZE - sizeof(TrapFrame);
         memcpy(backup_frame, frame, sizeof(TrapFrame));
         frame->sp_el0 = (uint64_t)backup_frame;
         frame->elr_el1 = (uint64_t)act.handler;
         frame->X[0] = sig;
         frame->lr = (uint64_t)va2vsys(el0_sig_return);
+        klog("t%d handle signal %d @ user %p\n", cur->tid, sig, act.handler);
       } else {
         list.push_front(new SignalItem{sig});
       }
@@ -104,7 +101,9 @@ void signal_return(TrapFrame* frame) {
   klog("thread %d signal_return\n", current_thread()->tid);
   auto backup_frame = (void*)frame->sp_el0;
   memcpy(frame, backup_frame, sizeof(TrapFrame));
-  current_thread()->signal.stack.dealloc();
+  auto& stack_addr = current_thread()->signal.stack_addr;
+  munmap(stack_addr, PAGE_SIZE);
+  stack_addr = INVALID_ADDRESS;
 }
 
 // run on EL0

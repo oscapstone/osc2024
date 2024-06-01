@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ds/list.hpp"
-#include "ds/mem.hpp"
 #include "int/exception.hpp"
+#include "mm/mmu.hpp"
 
 struct Kthread;
 
@@ -25,7 +25,7 @@ struct Signal {
   Kthread* cur;
   ListHead<SignalItem> list;
   SigAction actions[NSIG];
-  Mem stack;
+  uint64_t stack_addr = INVALID_ADDRESS;
 
   Signal(Kthread*);
   Signal(Kthread*, const Signal& other);
