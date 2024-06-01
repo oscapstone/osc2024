@@ -85,6 +85,11 @@ const Cmd cmds[] = {
         .help = "ps",
         .fp = cmd_ps,
     },
+    {
+        .name = "vmmap",
+        .help = "vmmap",
+        .fp = cmd_vmmap,
+    },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);
 

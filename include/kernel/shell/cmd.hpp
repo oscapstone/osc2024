@@ -18,6 +18,7 @@ int cmd_demo(int, char*[]);
 int cmd_schedule(int, char*[]);
 int cmd_ps(int, char*[]);
 int cmd_kill(int, char*[]);
+int cmd_vmmap(int, char*[]);
 
 using cmd_fp = int (*)(int, char*[]);
 
