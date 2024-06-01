@@ -420,23 +420,16 @@ void mmu_memfail_handler(U64 esr) {
             printf("[MMU][ERROR] page has info while having translation fault, kill process\n");
             task_exit(-1);
         }
-    }
-
-
-    // armv8 pg.1528 permission fault iss code
-    if ((iss & 0x3f) == ISS_PF_LEVEL0 ||
-        (iss & 0x3f) == ISS_PF_LEVEL1 ||
-        (iss & 0x3f) == ISS_PF_LEVEL2 ||
-        (iss & 0x3f) == ISS_PF_LEVEL3    
-        ) {
-        printf("[MMU][ERROR] [Permission fault] .\n");
+    } else {
+        printf("[MMU][ERROR] [Segmentation fault]: other fault.\n");
         NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
         NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
         NS_DPRINT("addr: 0x%08x%08x\n", far_el1 >> 32, far_el1);
+        task_exit(-1);
     }
 
-    // what ever goes here just kill it
-    task_exit(-1);
+
+
 }
 
 void* mmu_va2pa(UPTR v_addr) {
