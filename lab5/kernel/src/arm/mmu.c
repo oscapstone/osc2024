@@ -358,8 +358,9 @@ void mmu_memfail_handler(U64 esr) {
         (iss & 0x3f) == ISS_TF_LEVEL2 ||
         (iss & 0x3f) == ISS_TF_LEVEL3)
     {
+        // stack 
+        NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%08x%08x\n", far_el1 >> 32, far_el1);
         if (fault_page_addr >= MMU_USER_STACK_BASE - TASK_STACK_SIZE && fault_page_addr <= MMU_USER_STACK_BASE) {
-            NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%08x%08x\n", far_el1 >> 32, far_el1);
             UPTR offset = fault_page_addr - (MMU_USER_STACK_BASE - TASK_STACK_SIZE);
             U64 pte = mmu_get_pte(task, fault_page_addr);
             mmu_map_table_entry((pd_t*)(pte + 0), fault_page_addr, (UPTR)task->user_stack + offset, MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
