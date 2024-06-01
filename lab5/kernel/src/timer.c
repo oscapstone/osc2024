@@ -2,6 +2,7 @@
 #include "uart1.h"
 #include "memory.h"
 #include "utils.h"
+#include "dtb.h"
 
 #define STR(x) #x
 #define XSTR(s) STR(s)
@@ -9,6 +10,11 @@
 struct list_head* timer_event_list;  // first head has nothing, store timer_event_t after it 
 
 void timer_list_init(){
+    uint64_t tmp;
+    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+    tmp |= 1; //This control does not cause any instructions to be trapped.
+    asm volatile("msr cntkctl_el1, %0" ::"r"(tmp));
+
     timer_event_list = malloc(sizeof(list_head_t));
     INIT_LIST_HEAD(timer_event_list);
 }
@@ -101,16 +107,24 @@ void timer_set2sAlert(char* str)
     //     ++i;
     // }
 
-    add_timer(timer_set2sAlert,2,"2sAlert");
+    add_timer(timer_set2sAlert,2,"2sAlert",0);
 }
 
 
-void add_timer(void *callback, unsigned long long timeout, char* args){
+void add_timer(void *callback, unsigned long long timeout, char* args, int isTickFormat){
     timer_event_t* the_timer_event = malloc(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
     the_timer_event->args = malloc(strlen(args)+1);
     strcpy(the_timer_event -> args,args);
-    the_timer_event->interrupt_time = get_tick_plus_s(timeout);
+
+    if(isTickFormat == 0)
+    {
+        the_timer_event->interrupt_time = get_tick_plus_s(timeout); // store interrupt time into timer_event
+    }else
+    {
+        the_timer_event->interrupt_time = get_tick_plus_s(0) + timeout;
+    }
+
     the_timer_event->callback = callback;
     INIT_LIST_HEAD(&the_timer_event->listhead);
     // uart_sendline("OKOK");

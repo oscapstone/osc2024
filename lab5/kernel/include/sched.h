@@ -32,11 +32,13 @@ typedef struct thread
 {
     list_head_t      listhead;                            // Freelist node
     thread_context_t context;                             // Thread registers
-    int              iszombie;                            // Process statement
     int              pid;                                 // Process ID
+    int              iszombie;                            // Process statement
     int              isused;                              // Freelist node statement
-    char*            stack_alloced_ptr;                   // Process Stack (Process itself)
-    char*            kernel_stack_alloced_ptr;            // Process Stack (Kernel syscall)
+    char*            stack_allocated_base;                   // Process Stack (Process itself)
+    char*            kernel_stack_allocated_base;            // Process Stack (Kernel syscall)
+    char*            data;                                // Process itself
+    unsigned int     datasize;                            // Process size
 } thread_t;
 
 void init_thread_sched();
@@ -45,6 +47,8 @@ void schedule();
 void kill_zombies();
 void thread_exit();
 thread_t *thread_create(void *start);
+int exec_thread(char *data, unsigned int filesize);
+void schedule_timer();
 
 void foo();
 

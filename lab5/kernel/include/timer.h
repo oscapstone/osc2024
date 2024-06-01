@@ -18,7 +18,7 @@ typedef struct timer_event {
 
 //now the callback only support "funcion(char *)", char* in args
 void timer_event_callback(timer_event_t * timer_event);
-void add_timer(void *callback, unsigned long long timeout, char* args);
+void add_timer(void *callback, unsigned long long timeout, char* args, int inTickFormat);
 unsigned long long get_tick_plus_s(unsigned long long second);
 void set_core_timer_interrupt(unsigned long long expired_time);
 void set_core_timer_interrupt_by_tick(unsigned long long tick);

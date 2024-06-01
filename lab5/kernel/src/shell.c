@@ -14,7 +14,7 @@
 #define USTACK_SIZE 0x10000
 
 extern char* dtb_ptr;
-void* CPIO_DEFAULT_PLACE;
+extern void* CPIO_DEFAULT_START;
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD]=
 {
@@ -132,7 +132,7 @@ void cli_print_banner()
 
 void start_shell()
 {
-    uart_sendline("In start_shell\n");
+    // uart_sendline("In start_shell\n");
     char input_buffer[CMD_MAX_LEN];
     cli_print_banner();
     while (1)
@@ -208,7 +208,7 @@ void do_cmd_cat(char* filepath)
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
 
     while(header_ptr!=0)
     {
@@ -236,7 +236,7 @@ void do_cmd_ls(char* workdir)
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
 
     while(header_ptr!=0)
     {
@@ -277,9 +277,9 @@ void do_cmd_dtb()
 void do_cmd_exec(char* filepath)
 {
     char* c_filepath;
-    char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    char* c_filedata;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;;
 
     while(header_ptr!=0)
     {
@@ -294,6 +294,7 @@ void do_cmd_exec(char* filepath)
         if(strcmp(c_filepath, filepath)==0)
         {
             //exec c_filedata
+            /*lab3
             char* ustack = malloc(USTACK_SIZE);
             asm("mov x1, 0x3c0\n\t"
                 "msr spsr_el1, x1\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
@@ -303,6 +304,10 @@ void do_cmd_exec(char* filepath)
                 :: "r" (c_filedata),
                    "r" (ustack+USTACK_SIZE));
             break;
+            */
+
+            /*lab5*/
+            exec_thread(c_filedata, c_filesize);
         }
 
         //if this is TRAILER!!! (last of file)
@@ -313,12 +318,12 @@ void do_cmd_exec(char* filepath)
 
 void do_cmd_setTimeout(char* msg, char* sec)
 {
-    add_timer(uart_sendline,atoi(sec),msg);
+    add_timer(uart_sendline,atoi(sec),msg, 0);
 }
 
 void do_cmd_set2sAlert()
 {
-    add_timer(timer_set2sAlert,2,"2sAlert");
+    add_timer(timer_set2sAlert,2,"2sAlert", 0);
 }
 
 void do_cmd_memory_tester()
