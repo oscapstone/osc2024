@@ -324,11 +324,11 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
         U64 mmu_flags = 0;
 
         mmu_flags |= MMU_PXN;                       // cannot be execute in kernel mode
-        if (ori_vam_flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
+        if (user_page->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
             mmu_flags |= MMU_AP_EL0_UK_ACCESS;      // can be access in user mode
         }
         mmu_flags |= MMU_AP_EL0_READ_ONLY;          // only readable for both parent child process
-        if (!(ori_vam_flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
+        if (!(user_page->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
             mmu_flags |= MMU_UNX;                   // cannot be execute in user mode
         }
 
@@ -347,7 +347,6 @@ void mmu_memfail_handler(U64 esr) {
     TASK* task = task_get_current_el1();        // get the current task
 
     U64 far_el1 = utils_read_sysreg(FAR_EL1);
-    U64 elr_el1 = utils_read_sysreg(elr_el1);
     USER_PAGE_INFO* current_page_info = NULL;
     for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {
         USER_PAGE_INFO* page_info = &task->mm.user_pages[i];
@@ -363,9 +362,7 @@ void mmu_memfail_handler(U64 esr) {
     // not found virtual mapping info kill process
     if (!current_page_info) {
         NS_DPRINT("[MMU][ERROR] [Segmentation fault: Kill process]\n");
-        NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
-        NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
-        NS_DPRINT("addr: 0x%08x%08x\n", far_el1 >> 32, far_el1);
+        NS_DPRINT("addr: %x\n", far_el1);
         task_exit(-1);
         // will not go anywhere
     }
