@@ -21,6 +21,9 @@ all : testProgram test_fork test_cow test_mbox
 clean :
 	rm -rf testProgram test_fork test_cow
 
+cpio :
+	find . | cpio -o -H newc > ../initramfs.cpio
+
 test_fork : test_fork.o $(LIB)
 	$(LD) $^ -T linker.ld -o test_fork.elf
 	$(OBJCOPY) -O binary test_fork.elf $@

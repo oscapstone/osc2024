@@ -344,6 +344,7 @@ void mmu_memfail_handler(U64 esr) {
     UPTR fault_page_addr = far_el1 & ~(0xfff);
     U64 iss = ESR_ELx_ISS(esr);
     U64 sp = utils_read_genreg(sp);
+    U64 sp_el0 = utils_read_sysreg(sp_el0);
 
     NS_DPRINT("[MMU][TRACE] memfail() start.\n");
     NS_DPRINT("page:    0x%08x%08x\n", fault_page_addr >> 32, fault_page_addr);
@@ -351,6 +352,7 @@ void mmu_memfail_handler(U64 esr) {
     NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
     NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
     NS_DPRINT("sp:      0x%08x%08x\n", sp >> 32, sp);
+    NS_DPRINT("sp_el0:  0x%08x%08x\n", sp_el0 >> 32, sp_el0);
 
     USER_PAGE_INFO* current_page_info = NULL;
     for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {

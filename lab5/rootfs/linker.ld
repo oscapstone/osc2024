@@ -10,6 +10,7 @@ SECTIONS
     /* read only data section */
     .rodata :
     {
+        . = ALIGN(8);
         *(.rodata .rodata.* .gnu.linkonce.r*)
     }
     /* data section */
