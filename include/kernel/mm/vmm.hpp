@@ -70,6 +70,7 @@ class VMM {
   void ensure_ttbr0();
   [[nodiscard]] uint64_t mmap(uint64_t va, uint64_t size, ProtFlags prot,
                               MmapFlags flags, const char* name);
+  int munmap(uint64_t va, uint64_t size);
   [[nodiscard]] uint64_t map_user_phy_pages(uint64_t va, uint64_t pa,
                                             uint64_t size, ProtFlags prot,
                                             const char* name);
@@ -89,6 +90,11 @@ template <typename T>
 [[nodiscard]] uint64_t mmap(T va, uint64_t size, ProtFlags prot,
                             MmapFlags flags, const char* name) {
   return current_vmm()->mmap((uint64_t)va, size, prot, flags, name);
+}
+
+template <typename T>
+int munmap(T va, uint64_t size) {
+  return current_vmm()->munmap((uint64_t)va, size);
 }
 
 template <typename T, typename U>

@@ -5,11 +5,15 @@
 
 constexpr uint64_t PAGE_SIZE = 0x1000;
 
-inline bool isPageAlign(void* ptr) {
+template <typename T>
+inline bool isPageAlign(T ptr) {
   return 0 == (uint64_t)ptr % PAGE_SIZE;
 }
-inline void* getPage(void* ptr) {
-  return (void*)((uint64_t)ptr & (~(PAGE_SIZE - 1)));
+
+template <typename T,
+          typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
+inline R getPage(T ptr) {
+  return (R)((uint64_t)ptr & (~(PAGE_SIZE - 1)));
 }
 
 void mm_reserve_p(void* start, void* end);

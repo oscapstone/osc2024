@@ -11,9 +11,8 @@ SYSCALL_DEFINE6(mmap, void*, addr, size_t, len, int, prot, int, flags, int, fd,
                 int, file_offset) {
   klog("mmap(%p, 0x%lx, %b, %b, %d, 0x%x)\n", addr, len, prot, flags, fd,
        file_offset);
-  return current_thread()->vmm.mmap((uint64_t)addr, len,
-                                    cast_enum<ProtFlags>(prot),
-                                    cast_enum<MmapFlags>(flags), nullptr);
+  return current_vmm()->mmap((uint64_t)addr, len, cast_enum<ProtFlags>(prot),
+                             cast_enum<MmapFlags>(flags), nullptr);
 }
 
 VMM::VMM(const VMM& o)
@@ -104,6 +103,24 @@ uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
   vma_add(name ? name : "[anon_" + to_hex_string(va) + "]", va, size, prot);
 
   return va;
+}
+
+int VMM::munmap(uint64_t va, uint64_t size) {
+  if (not isPageAlign(va) or not isPageAlign(size))
+    return -1;
+
+  auto vma = vma_find(va);
+  if (not vma or vma->start() != va or vma->size() != size)
+    return -1;
+
+  vmas.erase(vma);
+  for (auto it = vma->start(); it < vma->end(); it += PAGE_SIZE) {
+    auto entry = ttbr0->get_entry(it);
+    if (entry)
+      entry->dealloc_page();
+  }
+
+  return 0;
 }
 
 uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,

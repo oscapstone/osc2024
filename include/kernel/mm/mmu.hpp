@@ -234,6 +234,7 @@ struct PT_Entry {
 
   void alloc_table(int level);
   void alloc_user_page(ProtFlags prot);
+  void dealloc_page();
   PT_Entry copy(int level);
   void copy_on_write();
 };
