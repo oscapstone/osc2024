@@ -429,12 +429,12 @@ void mmu_memfail_handler(U64 esr) {
         (iss & 0x3f) == ISS_PF_LEVEL2 ||
         (iss & 0x3f) == ISS_PF_LEVEL3    
         ) {
-        printf("[MMU][ERROR] [Permission fault] level: %d.\n", iss & 0x3);
+        printf("[MMU][ERROR] [Permission fault] .\n");
+        NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
+        NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
+        NS_DPRINT("addr: 0x%08x%08x\n", far_el1 >> 32, far_el1);
     }
 
-    NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
-    NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
-    NS_DPRINT("addr: 0x%08x%08x\n", far_el1 >> 32, far_el1);
     // what ever goes here just kill it
     task_exit(-1);
 }
