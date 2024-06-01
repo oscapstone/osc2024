@@ -171,7 +171,7 @@ void task_to_user_func() {
     task_get_current_el1()->cpu_regs.fp = MMU_USER_STACK_BASE;
     unlock_interrupt();
 
-    asm("msr tpidr_el1, %0\n\t"
+    asm volatile("msr tpidr_el1, %0\n\t"
         "msr elr_el1, %1\n\t"       // user start code
         "msr spsr_el1, xzr\n\t"     // enable interrupt
         "msr sp_el0, %2\n\t"
@@ -184,7 +184,7 @@ void task_to_user_func() {
         "eret\n\t"
         :
         :   "r"(task_get_current_el1()),
-            "r"(0x0),
+            "r"(0x0L),
             "r"(task_get_current_el1()->cpu_regs.sp),
             "r"(task_get_current_el1()->kernel_stack + TASK_STACK_SIZE),
             "r"(task_get_current_el1()->cpu_regs.pgd)
