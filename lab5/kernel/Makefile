@@ -13,7 +13,7 @@ CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding \
 		  -fno-stack-protector\
 		  -O0\
 		  -I src\
-		  #-D NS_DEBUG
+		  -D NS_DEBUG
 
 BIN_DIR = bin
 
