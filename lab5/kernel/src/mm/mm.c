@@ -689,8 +689,8 @@ void* kmalloc(U64 size) {
     void* ptr = NULL;
 
     if (size > MEM_MIN_OBJECT_SIZE * MEM_MEMORY_POOL_ORDER) {
-        U64 page_size = size / MEM_FRAME_SIZE;
-        U8 order = (U8)(utils_highestOneBit(page_size));
+        U64 page_size = (size + PD_PAGE_SIZE - 1) / PD_PAGE_SIZE;
+        U8 order = (U8)(utils_highestOneBit(page_size) - 1);
         if (page_size - (1 << (order)) > 0) {
             order++;
         }

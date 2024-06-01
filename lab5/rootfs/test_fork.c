@@ -39,4 +39,6 @@ int main(int argc, char** argv) {
     else {
         printf("parent here, pid %d, child %d\n", getpid(), ret);
     }
+
+    return 0;
 }

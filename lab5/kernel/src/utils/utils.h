@@ -31,5 +31,11 @@ U32 utils_get_el();
 #define utils_write_sysreg(r, __val) ({                  \
 	asm volatile("msr " #r ", %0" :: "r" (__val)); \
 })
+#define utils_read_genreg(r) ({             \
+    unsigned long long __val;               \
+    __asm__ __volatile__ ("mov %0, sp"      \
+        : "=r" (__val));                    \
+    __val;                                  \
+    })
 
 #endif

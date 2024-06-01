@@ -110,10 +110,8 @@ pd_t mmu_map_table(pd_t* table, U64 shift, U64 v_addr, BOOL* gen_new_table) {
     U64 index = v_addr >> shift;
     index = index & (PD_PTRS_PER_TABLE - 1);
     pd_t* table_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)table);
-    //////////////
-    /// WIRED bug it didn't translate to virtual address!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    printf("table phy addr: 0x%x, virt addr: 0x%x%x\n", table, (U64)table_virt >> 32, table_virt);
+    //printf("table phy addr: 0x%x, virt addr: 0x%x%x\n", table, (U64)table_virt >> 32, table_virt);
     if (!table_virt[index]) {        // no entry
         *gen_new_table = TRUE;
         U64 next_level_table = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
@@ -133,7 +131,7 @@ U64 mmu_get_pud(TASK* task, U64 v_addr) {
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = task->cpu_regs.pgd;
     }
     pgd = task->cpu_regs.pgd;
-    NS_DPRINT("[MMU][TRACE] PGD table. pid = %d, addr: 0x%x%x\n", task->pid, task->cpu_regs.pgd >> 32, task->cpu_regs.pgd);
+    //NS_DPRINT("[MMU][TRACE] PGD table. pid = %d, addr: 0x%x%x\n", task->pid, task->cpu_regs.pgd >> 32, task->cpu_regs.pgd);
     BOOL gen_new_table = FALSE;
     U64 pud = mmu_map_table(pgd, PD_PGD_SHIFT, v_addr, &gen_new_table);
     if (gen_new_table) {
@@ -181,7 +179,7 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
  *      the allocated page physical address
 */
 USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
-    NS_DPRINT("[MMU][DEBUG] mmu map page start, task[%d] v_addr: %x, page: %x.\n", task->pid, v_addr, page);
+    NS_DPRINT("[MMU][DEBUG] mmu map page start, task[%d] v_addr: 0x%08x%08x, page: 0x%08x%08x.\n", task->pid, v_addr >> 32, v_addr, page >> 32, page);
     U64 pte = mmu_get_pte(task, v_addr);
     mmu_map_table_entry((pd_t*)(pte), v_addr, page, flags);
     U8 user_flags = 0;
@@ -204,7 +202,7 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
         }
     }
     if (user_page == NULL) {
-        NS_DPRINT("[MMU][DEBUG] New user page. v_addr: 0x%x, p_addr: 0x%x\n", v_addr, page);
+        NS_DPRINT("[MMU][DEBUG] New user page.\n");
         user_page = &task->mm.user_pages[task->mm.user_pages_count++];
     }
 
@@ -342,11 +340,17 @@ void mmu_memfail_handler(U64 esr) {
     TASK* task = task_get_current_el1();        // get the current task
 
     U64 far_el1 = utils_read_sysreg(FAR_EL1);
+    U64 elr_el1 = utils_read_sysreg(ELR_EL1);
     UPTR fault_page_addr = far_el1 & ~(0xfff);
     U64 iss = ESR_ELx_ISS(esr);
+    U64 sp = utils_read_genreg(sp);
 
     NS_DPRINT("[MMU][TRACE] memfail() start.\n");
-    NS_DPRINT("addr: 0x%08x%08x.\n", fault_page_addr >> 32, fault_page_addr);
+    NS_DPRINT("page:    0x%08x%08x\n", fault_page_addr >> 32, fault_page_addr);
+    NS_DPRINT("far_el1: 0x%08x%08x\n", far_el1 >> 32, far_el1);
+    NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
+    NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
+    NS_DPRINT("sp:      0x%08x%08x\n", sp >> 32, sp);
 
     USER_PAGE_INFO* current_page_info = NULL;
     for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {
@@ -357,19 +361,17 @@ void mmu_memfail_handler(U64 esr) {
         }
     }
 
-    NS_DPRINT("iss: 0x%x\n", iss);
-
     if (!current_page_info) {
-        NS_DPRINT("[MMU][ERROR] [Segmentation fault: Kill process]\n");
-        NS_DPRINT("addr: %x\n", far_el1);
+        printf("[MMU][ERROR] [Segmentation fault]\n");
         task_exit(-1);
-        // will not go anywhere
     }
 
-    // not assign page for it, it is damand paging (anonymous page allocation)
-    if (current_page_info->p_addr == 0) {
-        NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
-        NS_DPRINT("[MMU][TRACE] page not present yet.\n");
+    if ((iss & 0x3f) == ISS_TF_LEVEL0 ||
+        (iss & 0x3f) == ISS_TF_LEVEL1 ||
+        (iss & 0x3f) == ISS_TF_LEVEL2 ||
+        (iss & 0x3f) == ISS_TF_LEVEL3)
+    {
+        NS_DPRINT("[MMU][WARN] [Translation fault]\n");
         U64 page_flags = 0;
         page_flags |= MMU_PXN;
         if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
@@ -381,43 +383,46 @@ void mmu_memfail_handler(U64 esr) {
         if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
             page_flags |= MMU_UNX;
         }
-        U64 new_page = kzalloc(PD_PAGE_SIZE);
-        mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
-        return;
-    }
 
-    // is copy on write
-    if (ISS_IS_WRITE(iss) && (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
-        NS_DPRINT("[MMU][TRACE] Writing operation permission fault and can be write, doing copy on write.\n");
-        U64 page_flags = 0;       // flag for page descriptor entry
-        page_flags |= MMU_PXN;      // cannot be executed in kernel mode
-        page_flags |= MMU_AP_EL0_UK_ACCESS; // can write not can read is wired
-        if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) page_flags |= MMU_UNX;
-        NS_DPRINT("[MMU][TRACE] origin page addr: 0x%x\n", current_page_info->p_addr);
-        U64 new_page = kmalloc(PD_PAGE_SIZE);
-        memcpy((void*)MMU_PHYS_TO_VIRT(current_page_info->p_addr), (void*)new_page, PD_PAGE_SIZE);
-        mem_dereference(current_page_info->p_addr);     // detach the old page (parent page)
-
-        // replace the page to modify the new page
-        NS_DPRINT("[MMU][TRACE] new page addr: 0x%x%x\n", new_page >> 32, new_page);
-        mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
-        return;
-    }
-
-    if ((iss & 0x3f) == ISS_TF_LEVEL0 ||
-        (iss & 0x3f) == ISS_TF_LEVEL1 ||
-        (iss & 0x3f) == ISS_TF_LEVEL2 ||
-        (iss & 0x3f) == ISS_TF_LEVEL3)
+        UPTR map_page;
+        
+        // not assign page for it, it is damand paging (anonymous page allocation)
+        if (current_page_info->p_addr == 0) {
+            NS_DPRINT("[MMU][TRACE] page not present yet.\n");
+            map_page = kzalloc(PD_PAGE_SIZE);
+            return;
+        } else {
+            map_page = current_page_info->p_addr;
+        }
+        mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(map_page), page_flags);
+    } else if ( (iss & 0x3f) == ISS_PF_LEVEL0 ||
+                (iss & 0x3f) == ISS_PF_LEVEL1 ||
+                (iss & 0x3f) == ISS_PF_LEVEL2 ||
+                (iss & 0x3f) == ISS_PF_LEVEL3)
     {
-        // Will not go here probably?
-    } else {
-        printf("[MMU][ERROR] [Segmentation fault]: other fault.\n");
-        printf("iss: 0x%x\n", iss);
-        printf("addr: %x\n", far_el1);
+        // check if it is copy on write
+        if (ISS_IS_WRITE(iss) && (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_WRITE)) {
+            NS_DPRINT("[MMU][TRACE] Writing operation permission fault and can be write, doing copy on write.\n");
+            U64 page_flags = 0;       // flag for page descriptor entry
+            page_flags |= MMU_PXN;      // cannot be executed in kernel mode
+            page_flags |= MMU_AP_EL0_UK_ACCESS; // can write not can read is wired
+            if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) page_flags |= MMU_UNX;
+            NS_DPRINT("[MMU][TRACE] origin page addr: 0x%x\n", current_page_info->p_addr);
+            U64 new_page = kmalloc(PD_PAGE_SIZE);
+            memcpy((void*)MMU_PHYS_TO_VIRT(current_page_info->p_addr), (void*)new_page, PD_PAGE_SIZE);
+            mem_dereference(current_page_info->p_addr);     // detach the old page (parent page)
+
+            // replace the page to modify the new page
+            NS_DPRINT("[MMU][TRACE] new page addr: 0x%x%x\n", new_page >> 32, new_page);
+            mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
+        } else {
+            printf("[MMU][WARN] [Permission fault]\n"); 
+            task_exit(-1);
+        }
+    } else
+    {
         task_exit(-1);
     }
-
-
 
 }
 

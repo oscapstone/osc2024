@@ -342,16 +342,15 @@ TASK* task_create_kernel(const char* name, U32 flags) {
 
 void task_copy_program(TASK* task, void* program_start, size_t program_size) {
     size_t offset = 0;
-    printf("program size: %d\n", program_size);
+    NS_DPRINT("[TASK][DEBUG] copy program. program size: %d bytes\n", program_size);
     while (offset < program_size) {
         size_t size = offset + PD_PAGE_SIZE > program_size ? program_size - offset : PD_PAGE_SIZE;
-        printf("current size: %d\n", size);
+
         U64 page = kzalloc(PD_PAGE_SIZE);
-        mmu_map_page(task, offset, MMU_VIRT_TO_PHYS(page), MMU_AP_EL0_UK_ACCESS | MMU_PXN);
-        NS_DPRINT("program offset: %x\n", program_start + offset);
         memcpy((char*)program_start + offset, (void*)page, size);
+        mmu_map_page(task, offset, MMU_VIRT_TO_PHYS(page), MMU_AP_EL0_UK_ACCESS | MMU_PXN);
+
         offset += size;
-        NS_DPRINT("[TASK][DEBUG] task copying offset: %d\n", offset);
     }
     NS_DPRINT("[TASK][DEBUG] Task copied. pid = %d\n", task->pid);
 }
