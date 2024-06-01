@@ -20,7 +20,6 @@ void exception_sync_el0_handler(TRAP_FRAME* trap_frame) {
     // using svc instruction
     case ESR_ELx_EC_SVC64:
     {
-        enable_interrupt();
         syscall_handler(trap_frame);
     }
         break;

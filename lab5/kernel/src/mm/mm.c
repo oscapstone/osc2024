@@ -87,6 +87,7 @@ void mm_init() {
     // put the memory reserve code here
     mem_memory_reserve(          0, 0x1000);       // spin table for multiboot
     mem_memory_reserve(     0x1000, 0x3000);       // identity MMU map
+    mem_memory_reserve(MEM_KERNEL_STACK_BASE - TASK_STACK_SIZE, MEM_KERNEL_STACK_BASE);
     mem_memory_reserve((UPTR)&__kernel_start__, (UPTR)&__kernel_end__);     // kernel code
 
     // device tree

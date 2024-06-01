@@ -90,6 +90,8 @@ typedef struct _MEMORY_MANAGER {
 
 #define MEM_FRAME_SIZE          PD_PAGE_SIZE
 
+#define MEM_KERNEL_STACK_BASE   MMU_PHYS_TO_VIRT(0x80000)
+
 void mm_init();
 
 U64 mem_addr2idx(UPTR x);

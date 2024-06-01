@@ -9,6 +9,7 @@
 #define MMU_USER_STACK_BASE         0xfffffffff000L
 #define MMU_SINGAL_ENTRY_BASE       (MMU_USER_STACK_BASE - TASK_STACK_SIZE - 2 * PD_PAGE_SIZE)    // only one page
 #define MMU_SINGAL_STACK_BASE       MMU_SINGAL_ENTRY_BASE           // grow down not grown up
+#define MMU_HEAP_BASE               0x100000000000L
 
 #define MMU_PHYS_TO_VIRT(x)   (x + 0xffff000000000000L)
 #define MMU_VIRT_TO_PHYS(x)   (x - 0xffff000000000000L)

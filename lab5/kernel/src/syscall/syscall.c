@@ -19,7 +19,7 @@ SYS_CALL syscall_table[NR_SYSCALLS] = {
     [SYS_KILL] = &sys_kill,
     [SYS_SIGNAL_REGISTER] = &sys_signal_register,
     [SYS_SIGNAL] = &sys_signal,
-    [SYS_MMAP] = &sys_none,
+    [SYS_MMAP] = &sys_mmap,
     [SYS_OPEN] = &sys_open,
     [SYS_CLOSE] = &sys_close,
     [SYS_WRITE] = &sys_none,
@@ -50,5 +50,5 @@ void syscall_handler(TRAP_FRAME* trap_frame) {
 }
 
 void sys_none(TRAP_FRAME* tf) {
-    // do nothing
+    tf->regs[0] = -1;
 }
