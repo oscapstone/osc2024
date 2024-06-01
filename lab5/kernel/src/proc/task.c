@@ -89,6 +89,7 @@ void task_schedule() {
     if (current_task == task_manager->running_queue[0]) {
         return;
     }
+    enable_interrupt();
     task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
 }
 
@@ -132,7 +133,6 @@ void task_run_to_el0(TASK* task) {
     task_manager->running++;
     unlock_interrupt();
     NS_DPRINT("[TASK][TRACE] new task running. pid = %d\n", task->pid);
-    task_switch_to(task_get_current_el1(), task);
 }
 
 void task_run(TASK* task) {

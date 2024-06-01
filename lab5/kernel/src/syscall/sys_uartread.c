@@ -9,7 +9,8 @@ void sys_uartread(TRAP_FRAME *regs) {
     enable_interrupt();                 // enable other interrupt
     for (U64 i = 0; i < size; i++) {
         while (uart_async_empty()) {
-            task_schedule();            // just schedule this task
+            asm volatile("nop");
+            //task_schedule();            // just schedule this task
         }
         char c = uart_async_get_char();
         buf[i] = c;

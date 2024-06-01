@@ -342,6 +342,12 @@ void mmu_memfail_handler(U64 esr) {
     TASK* task = task_get_current_el1();        // get the current task
 
     U64 far_el1 = utils_read_sysreg(FAR_EL1);
+    UPTR fault_page_addr = far_el1 & ~(0xfff);
+    U64 iss = ESR_ELx_ISS(esr);
+
+    NS_DPRINT("[MMU][TRACE] memfail() start.\n");
+    NS_DPRINT("addr: 0x%08x%08x.\n", fault_page_addr >> 32, fault_page_addr);
+
     USER_PAGE_INFO* current_page_info = NULL;
     for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {
         USER_PAGE_INFO* page_info = &task->mm.user_pages[i];
@@ -351,7 +357,6 @@ void mmu_memfail_handler(U64 esr) {
         }
     }
 
-    U64 iss = ESR_ELx_ISS(esr);
     NS_DPRINT("iss: 0x%x\n", iss);
 
     if (!current_page_info) {
