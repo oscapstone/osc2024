@@ -98,7 +98,11 @@ uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
 
   va = vma_addr(va, size);
   if (va == INVALID_ADDRESS)
-    return INVALID_ADDRESS;
+    return MAP_FAILED;
+
+  // TODO: handle not anonymous page map
+  if (not has(flags, MmapFlags::MAP_ANONYMOUS))
+    return MAP_FAILED;
 
   vma_add(name ? name : "[anon_" + to_hex_string(va) + "]", va, size, prot);
 
@@ -132,7 +136,7 @@ uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
 
   va = vma_addr(va, size);
   if (va == INVALID_ADDRESS)
-    return INVALID_ADDRESS;
+    return MAP_FAILED;
 
   vma_add(name ? name : "[phy_" + to_hex_string(pa) + "]", va, size, prot);
 

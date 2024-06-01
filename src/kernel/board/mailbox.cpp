@@ -24,6 +24,8 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
       klog("mbox: buf 0x%x ~ 0x%x\n", base_addr, base_addr + length);
       auto va = map_user_phy_pages(base_addr, base_addr, length, ProtFlags::RW,
                                    "[frame_buffer]");
+      if (va == MAP_FAILED)
+        return false;
       if (va != (uint32_t)va)
         return false;
       msg->value_buf[0] = (uint32_t)va;

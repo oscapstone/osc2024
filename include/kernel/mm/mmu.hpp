@@ -33,6 +33,7 @@ constexpr uint64_t USER_SPACE_END = USER_SPACE + ADDRESS_SPACE_SIZE;
 constexpr uint64_t KERNEL_SPACE_START = USER_SPACE;
 constexpr uint64_t KERNEL_SPACE_END = KERNEL_SPACE + ADDRESS_SPACE_SIZE;
 constexpr uint64_t INVALID_ADDRESS = (USER_SPACE_END + KERNEL_SPACE_START) / 2;
+constexpr uint64_t MAP_FAILED = -1;
 
 template <typename T>
 inline bool is_invlid_addr(T x) {

@@ -68,7 +68,7 @@ void Signal::handle(TrapFrame* frame) {
     } else {
       if (frame and is_invlid_addr(stack_addr)) {
         stack_addr = mmap(USER_SIGNAL_STACK, PAGE_SIZE, ProtFlags::RWX,
-                          MmapFlags::NONE, "[signal_stack]");
+                          MmapFlags::MAP_ANONYMOUS, "[signal_stack]");
         auto backup_frame = (char*)stack_addr + PAGE_SIZE - sizeof(TrapFrame);
         memcpy(backup_frame, frame, sizeof(TrapFrame));
         frame->sp_el0 = (uint64_t)backup_frame;

@@ -32,17 +32,18 @@ int exec(ExecCtx* ctx) {
 
   thread->vmm.reset();
 
-  auto text_addr =
-      mmap(USER_TEXT_START, file.size(), ProtFlags::RX, MmapFlags::NONE, name);
-  if (text_addr == INVALID_ADDRESS) {
+  // TODO: map from fs
+  auto text_addr = mmap(USER_TEXT_START, file.size(), ProtFlags::RX,
+                        MmapFlags::MAP_ANONYMOUS, name);
+  if (text_addr == MAP_FAILED) {
     klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
          thread->tid, file.size());
     return -1;
   }
 
   auto stack_addr = mmap(USER_STACK_START, USER_STACK_SIZE, ProtFlags::RW,
-                         MmapFlags::NONE, "[stack]");
-  if (stack_addr == INVALID_ADDRESS) {
+                         MmapFlags::MAP_ANONYMOUS, "[stack]");
+  if (stack_addr == MAP_FAILED) {
     klog("%s: can't alloc user_stack for thread %d / size = %lx\n", __func__,
          thread->tid, USER_STACK_SIZE);
     return -1;
