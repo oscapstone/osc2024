@@ -117,8 +117,11 @@ class ListHead {
 
   void clear() {
     save_DAIF_disable_interrupt();
-    while (size() > 0)
-      erase(begin());
+    while (size() > 0) {
+      auto it = begin();
+      erase(it);
+      delete it;
+    }
     restore_DAIF();
   }
 
