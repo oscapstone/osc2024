@@ -6,6 +6,9 @@
 // predefine the struct
 struct _CPU_REGS;
 
+struct _TASK;
+
+
 typedef struct _TASK_SIGNAL
 {
     void (*handler)(void);      // function pointer of this signal (in user space)
@@ -22,3 +25,5 @@ typedef struct _TASK_SIGNAL
 
 void signal_check(TRAP_FRAME* trap_frame);
 void signal_exit();
+
+void signal_task_init(struct _TASK* task);

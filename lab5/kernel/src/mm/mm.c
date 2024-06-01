@@ -781,6 +781,14 @@ void mem_dereference(UPTR p_addr) {
     }
 }
 
+void memzero(void *dst, size_t size) {
+    char* _dst = dst;
+
+    while (size--) {
+        *_dst++ = 0;
+    }
+}
+
 
 void memcpy(const void* src, void* dst, size_t size) {
     char *_dst = dst;

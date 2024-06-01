@@ -17,26 +17,26 @@ void core0_timer_enable();
 
 void timer_init() {
 
-    timer_manager.tasks = 0;
+    memzero(&timer_manager, sizeof(TIMER_MANAGER));
 
     // system timer
-    current_value_1 = REGS_TIMER->counter_low;
-    current_value_1 += interval_1;
-    REGS_TIMER->compare[1] = current_value_1;
-
-    core0_timer_enable();
-}
-
-void core0_timer_enable() {
-
-    // core0 timer init
-    utils_write_sysreg(cntp_ctl_el0, 1); // enable
+    //current_value_1 = REGS_TIMER->counter_low;
+    //current_value_1 += interval_1;
+    //REGS_TIMER->compare[1] = current_value_1;
 
     // enable access in EL0 for lab5 (armv8 pg. 2177)
     U64 timer_ctl_value = utils_read_sysreg(cntkctl_el1);
     timer_ctl_value |= 1;
     utils_write_sysreg(cntkctl_el1, timer_ctl_value);
-    
+
+}
+
+void core0_timer_enable(U32 millisecond) {
+
+    // core0 timer init
+    utils_write_sysreg(cntp_ctl_el0, 1); // enable
+    U32 freq = utils_read_sysreg(cntfrq_el0);
+    utils_write_sysreg(cntp_tval_el0, freq * millisecond / 1000);
     REGS_ARM_CORE->timer_control[0] = 2; // enable irq
 
 }
@@ -65,10 +65,14 @@ void timer_core_timer_0_handler() {
     if (timer_manager.tasks) {
         TIMER_TASK* current_task = timer_manager.tasks;
         void (*callback)() = current_task->callback;
-        kfree(current_task);
         timer_manager.tasks = current_task->next;
-        U32 freq = utils_read_sysreg(cntfrq_el0);
-        utils_write_sysreg(cntp_tval_el0, freq * timer_manager.tasks->timeout / 1000);
+        kfree(current_task);
+
+        if (timer_manager.tasks) {
+            disable_interrupt();
+            core0_timer_enable(timer_manager.tasks->timeout);
+            enable_interrupt();
+        }
         callback();
     }
 
@@ -109,6 +113,8 @@ void timer_sleep(U32 ms) {
 }
 
 void timer_add(void (*callback)(), U32 millisecond) {
+
+    U64 flags = irq_disable();
     TIMER_TASK* timer_task = kmalloc(sizeof(TIMER_TASK));
     timer_task->callback = callback;
     timer_task->next = NULL;
@@ -116,30 +122,34 @@ void timer_add(void (*callback)(), U32 millisecond) {
 
     if (!timer_manager.tasks) {
         timer_manager.tasks = timer_task;
-        
-        U64 freq = utils_read_sysreg(cntfrq_el0) / 1000;
-        // for test
-        utils_write_sysreg(cntp_tval_el0, freq * timer_task->timeout);    
-        return;
-    }
-    TIMER_TASK* current_task = timer_manager.tasks;
-    TIMER_TASK* prev_task = current_task;
-    while (current_task) {
-        if (current_task->timeout > timer_task->timeout) {
-            current_task->timeout -= timer_task->timeout;
-            timer_task->next = current_task;
-            if (timer_manager.tasks == current_task) {
-                timer_manager.tasks = timer_task;
+
+        // setup the next interrupt
+        disable_interrupt();
+        core0_timer_enable(timer_manager.tasks->timeout);
+        enable_interrupt();  
+    } else {
+
+        TIMER_TASK* current_task = timer_manager.tasks;
+        TIMER_TASK* prev_task = current_task;
+        while (current_task) {
+            if (current_task->timeout > timer_task->timeout) {
+                current_task->timeout -= timer_task->timeout;
+                timer_task->next = current_task;
+                if (timer_manager.tasks == current_task) {
+                    timer_manager.tasks = timer_task;
+                } else {
+                    prev_task->next = timer_task;
+                }
+                return;
             } else {
-                prev_task->next = timer_task;
+                timer_task->timeout -= current_task->timeout;
             }
-            return;
-        } else {
-            timer_task->timeout -= current_task->timeout;
+
+            prev_task = current_task;
+            current_task = current_task->next;
         }
 
-        prev_task = current_task;
-        current_task = current_task->next;
+        prev_task->next = timer_task;
     }
-    prev_task->next = timer_task;
+    irq_restore(flags);
 }

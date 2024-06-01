@@ -108,7 +108,7 @@ void mem_reference(UPTR p_addr);
 void mem_dereference(UPTR p_addr);
 
 // mmutiilASM
-void memzero(void* src, U32 n);
+void memzero(void *dst, size_t size);
 void memcpy(const void* src, void* dst, size_t size);
 
 

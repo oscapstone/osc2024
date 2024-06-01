@@ -144,3 +144,10 @@ void signal_exit() {
     task_asm_load_context(current_signal->cpu_regs);
 
 }
+
+
+void signal_task_init(TASK* task) {
+    task->current_signal = -1;
+    
+    memzero(&task->signals, sizeof(TASK_SIGNAL) * SIGNAL_NUM);
+}

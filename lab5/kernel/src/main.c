@@ -85,11 +85,8 @@ void main() {
 
 	// enabling the interrupt
 	TASK* task_a = task_create_kernel("kernel_tty", TASK_FLAGS_KERNEL);
-	printf("test.\n");
 	task_a->cpu_regs.lr = (U64)func_task_a;
-	printf("test.\n");
 	task_run(task_a);
-	printf("test.\n");
 	// TASK* task_b = task_create_user("task_b", NULL);
 	// NS_DPRINT("task b pid = %d\n", task_b->pid);
 	// task_copy_program(task_b, func_task_b, (U64)&func_task_c - (U64)&func_task_b);
@@ -101,7 +98,6 @@ void main() {
 
 	// init idle
 	while (1) {
-		//printf("a\n");
 		task_kill_dead();
 		task_schedule();
 	}

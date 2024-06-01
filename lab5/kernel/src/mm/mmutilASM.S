@@ -1,13 +1,4 @@
 
-
-.global memzero
-
-memzero:
-    str     xzr, [x0], #8
-    subs    x1, x1, #8
-    b.gt    memzero
-    ret
-
 // memset(void* src, U8 c, size_t size);
 .global memset
 memset:

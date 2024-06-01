@@ -15,7 +15,6 @@ void task_timer_callback();
 void task_init() {
     NS_DPRINT("task_init start.\n");
 
-
     task_manager = kzalloc(sizeof(TASK_MANAGER));
 
     for (U32 i = 0; i < TASK_MAX_TASKS; i++) {
@@ -34,6 +33,7 @@ void task_init() {
     init->cpu_regs.pgd = PD_KERNEL_ENTRY;
     init->current_signal = -1;      // no signal starting run
     utils_char_fill(init->name, "init", 4);
+    signal_task_init(init);
     
     // set the tpidr_el1 register to init
     utils_write_sysreg(tpidr_el1, init);
@@ -57,7 +57,7 @@ void task_timer_callback() {
 }
 
 void task_schedule() {
-    U64 flags = irq_disable();
+    disable_interrupt();
     if (task_manager->running == 0) {
         printf("[TASK][FATAL] No running task!\n");
         for (;;) {} // hlt here
@@ -85,12 +85,11 @@ void task_schedule() {
     }
 
     //NS_DPRINT("[TASK][TRACE] next task pid: %d\n", task_manager->running_queue[0]->pid);
-	irq_restore(flags);
-    if (current_task == task_manager->running_queue[0]) {
-        return;
-    }
+    
     enable_interrupt();
-    task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
+    if (current_task != task_manager->running_queue[0]) {
+        task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
+    }
 }
 
 TASK* task_get(int pid) {
@@ -137,7 +136,7 @@ void task_run_to_el0(TASK* task) {
 
 void task_run(TASK* task) {
     // 先這樣
-    lock_interrupt();
+    U64 flags = irq_disable();
     task->status = TASK_STATUS_RUNNING;
     task->preempt = task->priority;
     task->current_signal = -1;      // no signal starting run
@@ -160,16 +159,16 @@ void task_run(TASK* task) {
     task_manager->running_queue[task_manager->running] = task;
     //NS_DPRINT("[TASK][TRACE] adding task to running queue[%d], pid = %d\n", task_manager->running, task->pid);
     task_manager->running++;
-    unlock_interrupt();
+    irq_restore(flags);
     NS_DPRINT("[TASK][TRACE] new task running. pid = %d\n", task->pid);
 }
 
 void task_to_user_func() {
 
-    lock_interrupt();
     task_get_current_el1()->cpu_regs.sp = MMU_USER_STACK_BASE;
     task_get_current_el1()->cpu_regs.fp = MMU_USER_STACK_BASE;
-    unlock_interrupt();
+
+    UPTR program_entry = 0x0L;
 
     asm volatile("msr tpidr_el1, %0\n\t"
         "msr elr_el1, %1\n\t"       // user start code
@@ -184,7 +183,7 @@ void task_to_user_func() {
         "eret\n\t"
         :
         :   "r"(task_get_current_el1()),
-            "r"(0x0L),
+            "r"(program_entry),
             "r"(task_get_current_el1()->cpu_regs.sp),
             "r"(task_get_current_el1()->kernel_stack + TASK_STACK_SIZE),
             "r"(task_get_current_el1()->cpu_regs.pgd)
@@ -294,6 +293,9 @@ TASK* task_create_user(const char* name, U32 flags) {
     task->preempt = task->priority;              // default value
     utils_char_fill(task->name, name, utils_strlen(name));
 
+    // init signal
+    signal_task_init(task);
+
     task->pwd = fs_get_root_node();     // just use the root node now for user process, will change if this user process load by tty
 
     task_manager->count++;
@@ -315,6 +317,9 @@ TASK* task_create_kernel(const char* name, U32 flags) {
         printf("[TASK][ERROR] Failed to create task.\n");
         return NULL;
     }
+
+    memzero(task, sizeof(TASK));
+
     task->flags = TASK_FLAGS_ALLOC | flags; // only allocate, not running
     //task->user_stack = kzalloc(TASK_STACK_SIZE);
     task->kernel_stack = kzalloc(TASK_STACK_SIZE); // allocate the stack
@@ -327,6 +332,9 @@ TASK* task_create_kernel(const char* name, U32 flags) {
     task->preempt = task->priority;              // default value
     utils_char_fill(task->name, name, utils_strlen(name));
     
+    // init signal
+    signal_task_init(task);
+
     task->pwd = fs_get_root_node();     // just use the root node now for kernel process
 
     task_manager->count++;
