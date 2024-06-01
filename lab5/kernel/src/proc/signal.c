@@ -71,8 +71,6 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
     task_asm_store_context(current_signal->cpu_regs);
 
     if (current_signal->handled) {
-        kfree(current_signal->stack);
-        kfree(current_signal->cpu_regs);
         // signal exited. return
         return;
     }
@@ -128,6 +126,7 @@ void signal_exit() {
     TASK_SIGNAL* current_signal = &task->signals[task->current_signal];
 
     // restore the user stack in page table
+    lock_interrupt();
     U64 stack_ptr = (U64)MMU_VIRT_TO_PHYS((U64)task->user_stack);
     U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
     for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
@@ -142,8 +141,12 @@ void signal_exit() {
 
     // restore current context
     utils_write_sysreg(sp_el0, current_signal->sp0);
+    kfree(current_signal->stack);
     current_signal->sp0 = NULL;
-
-    task_asm_load_context(current_signal->cpu_regs);
+    CPU_REGS tmp_reg;
+    memcpy(current_signal->cpu_regs, &tmp_reg, sizeof(CPU_REGS));
+    kfree(current_signal->cpu_regs);
+    unlock_interrupt();
+    task_asm_load_context(&tmp_reg);
 
 }
