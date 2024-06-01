@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
             while (cnt < 5) {
                 asm volatile("mov %0, sp" : "=r"(cur_sp));
                 printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
-                delay(1000000);
+                delay(10000);
                 ++cnt;
             }
         }
