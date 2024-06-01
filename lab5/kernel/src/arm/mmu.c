@@ -220,14 +220,16 @@ void mmu_task_init(TASK* task) {
 
     // initalize the user mode stack for user page table
 
-    U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
-    for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
-        USER_PAGE_INFO* stack_page_info = &task->mm.user_pages[task->mm.user_pages_count++];
-        stack_page_info->v_addr = stack_v_addr;
-        stack_page_info->p_addr = 0;
-        stack_page_info->flags = TASK_USER_PAGE_INFO_FLAGS_ANON | TASK_USER_PAGE_INFO_FLAGS_READ | TASK_USER_PAGE_INFO_FLAGS_WRITE;
+    if (!(task->flags & TASK_FLAGS_KERNEL)) {
+        U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
+        for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
+            USER_PAGE_INFO* stack_page_info = &task->mm.user_pages[task->mm.user_pages_count++];
+            stack_page_info->v_addr = stack_v_addr;
+            stack_page_info->p_addr = 0;
+            stack_page_info->flags = TASK_USER_PAGE_INFO_FLAGS_ANON | TASK_USER_PAGE_INFO_FLAGS_READ | TASK_USER_PAGE_INFO_FLAGS_WRITE;
 
-        stack_v_addr += PD_PAGE_SIZE;
+            stack_v_addr += PD_PAGE_SIZE;
+        }
     }
 
     // 這個玩具OS可以讓應用程式隨意存取peripheral的I/O喔 這麼蝦
@@ -320,21 +322,33 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
     // assmue new_task is pure new task
     for (U64 i = 0; i < src_task->mm.user_pages_count; i++) {
         USER_PAGE_INFO* user_page = &src_task->mm.user_pages[i];
+        U8 vma_flags = user_page->flags;
         U64 mmu_flags = 0;
 
         mmu_flags |= MMU_PXN;                       // cannot be execute in kernel mode
         if (user_page->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
             mmu_flags |= MMU_AP_EL0_UK_ACCESS;      // can be access in user mode
         }
-        mmu_flags |= MMU_AP_EL0_READ_ONLY;          // only readable for child process
+        mmu_flags |= MMU_AP_EL0_READ_ONLY;          // only readable for both parent child process
         if (!(user_page->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) {
             mmu_flags |= MMU_UNX;                   // cannot be execute in user mode
         }
 
-        USER_PAGE_INFO* new_task_user_page = mmu_map_page(new_task, user_page->v_addr, user_page->p_addr, mmu_flags);
+        USER_PAGE_INFO* parent_page_info;
+        USER_PAGE_INFO* new_task_user_page;
+        if (user_page->p_addr) {
+            new_task_user_page = mmu_map_page(new_task, user_page->v_addr, user_page->p_addr, mmu_flags);
+            parent_page_info = mmu_map_page(src_task, user_page->v_addr, user_page->p_addr, mmu_flags);
+        } else {
+            new_task_user_page = &new_task->mm.user_pages[new_task->mm.user_pages_count++];
+            new_task_user_page->v_addr = user_page->v_addr;
+            parent_page_info = user_page;
+        }
+
         mem_reference(user_page->p_addr);
         // if this page it writable then later the page fault handler will know this and do the copy on write instead of segementation fault.
-        new_task_user_page->flags = user_page->flags;
+        new_task_user_page->flags = vma_flags;
+        parent_page_info->flags = vma_flags;
     }
 }
 
