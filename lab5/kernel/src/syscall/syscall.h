@@ -14,8 +14,8 @@ enum {
     SYS_EXIT,           // done
     SYS_MBOX_CALL,      // doen
     SYS_KILL,           // done
-    SYS_SIGNAL_REGISTER,// done
-    SYS_SIGNAL,         // done
+    SYS_SIGNAL_REGISTER,// 8
+    SYS_SIGNAL,         // 9
     SYS_MMAP,           // 10
     SYS_OPEN,
     SYS_CLOSE,
@@ -27,7 +27,7 @@ enum {
     SYS_LSEEK64,
     SYS_IOCTL,
     SYS_SYNC,
-    SYS_SIGRETURN,      // done
+    SYS_SIGRETURN,
     NR_SYSCALLS
 };
 
