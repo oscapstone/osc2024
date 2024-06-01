@@ -28,8 +28,6 @@ extern volatile unsigned int mailbox[36];
 int mailbox_call();
 /**
  * calling mailbox using custom structure
- * @param ch
- *      channel
  * @param mailbox_ptr
  *      the physical address (not kernel address) of the structure in memory
 */

@@ -221,14 +221,14 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
 void mmu_task_init(TASK* task) {
 
     // initalize the user mode stack for user page table
-    // U64 stack_ptr = (U64)MMU_VIRT_TO_PHYS((U64)task->user_stack);
+    U64 stack_ptr = (U64)MMU_VIRT_TO_PHYS((U64)task->user_stack);
 
-    // U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
-    // for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
-    //     U64 pte = mmu_get_pte(task, stack_v_addr);
-    //     mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
-    //     stack_v_addr += PD_PAGE_SIZE;
-    // }
+    U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
+    for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
+        U64 pte = mmu_get_pte(task, stack_v_addr);
+        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
+        stack_v_addr += PD_PAGE_SIZE;
+    }
 
     // 這個玩具OS可以讓應用程式隨意存取peripheral的I/O喔 這麼蝦
     U64 peripheral_ptr = 0x3c000000;
@@ -348,29 +348,7 @@ void mmu_memfail_handler(U64 esr) {
 
     U64 far_el1 = utils_read_sysreg(FAR_EL1);
     U64 elr_el1 = utils_read_sysreg(elr_el1);
-    U64 iss = ESR_ELx_ISS(esr);
-    UPTR fault_page_addr = far_el1 & ~(0xfff);
-
-    
-    // 因為要搞demand stack太麻煩了，直接搬
-    if ((iss & 0x3f) == ISS_TF_LEVEL0 ||
-        (iss & 0x3f) == ISS_TF_LEVEL1 ||
-        (iss & 0x3f) == ISS_TF_LEVEL2 ||
-        (iss & 0x3f) == ISS_TF_LEVEL3)
-    {
-        // stack 
-        NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%08x%08x\n", far_el1 >> 32, far_el1);
-        if (fault_page_addr >= MMU_USER_STACK_BASE - TASK_STACK_SIZE && fault_page_addr <= MMU_USER_STACK_BASE) {
-            UPTR offset = fault_page_addr - (MMU_USER_STACK_BASE - TASK_STACK_SIZE);
-            U64 pte = mmu_get_pte(task, fault_page_addr);
-            mmu_map_table_entry((pd_t*)(pte + 0), fault_page_addr, (UPTR)task->user_stack + offset, MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
-            return;
-        }
-    }
-    
-    
     USER_PAGE_INFO* current_page_info = NULL;
-
     for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {
         USER_PAGE_INFO* page_info = &task->mm.user_pages[i];
         if (page_info->v_addr <= far_el1 && page_info->v_addr + PD_PAGE_SIZE >= far_el1) {
@@ -378,6 +356,9 @@ void mmu_memfail_handler(U64 esr) {
             break;
         }
     }
+
+    U64 iss = ESR_ELx_ISS(esr);
+    NS_DPRINT("iss: 0x%x\n", iss);
 
     // not found virtual mapping info kill process
     if (!current_page_info) {
@@ -418,17 +399,9 @@ void mmu_memfail_handler(U64 esr) {
         (iss & 0x3f) == ISS_TF_LEVEL2 ||
         (iss & 0x3f) == ISS_TF_LEVEL3)
     {
-        // stack 
-        NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%08x%08x\n", far_el1 >> 32, far_el1);
-        if (fault_page_addr >= MMU_USER_STACK_BASE - TASK_STACK_SIZE && fault_page_addr <= MMU_USER_STACK_BASE) {
-            UPTR offset = fault_page_addr - (MMU_USER_STACK_BASE - TASK_STACK_SIZE);
-            U64 pte = mmu_get_pte(task, fault_page_addr);
-            mmu_map_table_entry((pd_t*)(pte + 0), fault_page_addr, (UPTR)task->user_stack + offset, MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
-            return;
-        }
-
         // not assign page for it, it is damand paging (anonymous page allocation)
         if (current_page_info->p_addr == 0) {
+            NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%08x%08x\n", far_el1 >> 32, far_el1);
             U64 page_flags = 0;
             page_flags |= MMU_PXN;    // can't execute in EL1
             if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
