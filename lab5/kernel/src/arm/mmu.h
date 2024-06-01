@@ -7,9 +7,6 @@
 #define MMU_PERIPHERAL_END          0x3f000000L
 #define MMU_USER_KERNEL_BASE        0x00000000L
 #define MMU_USER_STACK_BASE         0xfffffffff000L
-
-#define MMU_HEAP_BASE               0x100000000000L
-
 #define MMU_SINGAL_ENTRY_BASE       (MMU_USER_STACK_BASE - TASK_STACK_SIZE - 2 * PD_PAGE_SIZE)    // only one page
 
 #define MMU_PHYS_TO_VIRT(x)   (x + 0xffff000000000000L)
@@ -104,9 +101,6 @@
 #define PD_KERNEL_ENTRY_VA ((pd_t *)MMU_PHYS_TO_VIRT(0x1000L))
 #define PD_FIRST_PUD_ENTRY_VA ((pd_t *)MMU_PHYS_TO_VIRT(0x2000L))
 
-
-///
-//
 void setup_kernel_space_mapping();
 
 // for task process

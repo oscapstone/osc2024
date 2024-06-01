@@ -378,12 +378,7 @@ void mmu_memfail_handler(U64 esr) {
         page_flags |= MMU_AP_EL0_UK_ACCESS; // can write not can read is wired
         if (!(current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_EXEC)) page_flags |= MMU_UNX;
         NS_DPRINT("[MMU][TRACE] origin page addr: 0x%x\n", current_page_info->p_addr);
-        U64 new_page;
-        if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_ANONYMOUS) {
-            new_page = kzalloc(PD_PAGE_SIZE);
-        } else {
-            new_page = kmalloc(PD_PAGE_SIZE);
-        }
+        U64 new_page = kmalloc(PD_PAGE_SIZE);
         memcpy((void*)MMU_PHYS_TO_VIRT(current_page_info->p_addr), (void*)new_page, PD_PAGE_SIZE);
         mem_dereference(current_page_info->p_addr);     // detach the old page (parent page)
 
@@ -401,7 +396,7 @@ void mmu_memfail_handler(U64 esr) {
     {
         // not assign page for it, it is damand paging (anonymous page allocation)
         if (current_page_info->p_addr == 0) {
-            NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%08x%08x\n", far_el1 >> 32, far_el1);
+            NS_DPRINT("[MMU][WARN] [Translation fault]: 0x%x\n", far_el1);
             U64 page_flags = 0;
             page_flags |= MMU_PXN;    // can't execute in EL1
             if (current_page_info->flags & TASK_USER_PAGE_INFO_FLAGS_READ) {
@@ -422,9 +417,8 @@ void mmu_memfail_handler(U64 esr) {
         }
     } else {
         printf("[MMU][ERROR] [Segmentation fault]: other fault.\n");
-        NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
-        NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
-        NS_DPRINT("addr: 0x%08x%08x\n", far_el1 >> 32, far_el1);
+        printf("iss: 0x%x\n", iss);
+        printf("addr: %x\n", far_el1);
         task_exit(-1);
     }
 

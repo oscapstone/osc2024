@@ -30,7 +30,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/arm/elutilsASM.o src/arm/mmu.o\
 				src/proc/task.o src/proc/task_s.o src/proc/signal.o \
 				src/syscall/syscall.o src/syscall/sys_getpid.o src/syscall/sys_uartread.o src/syscall/sys_uartwrite.o src/syscall/sys_exec.o src/syscall/sys_fork.o src/syscall/sys_exit.o src/syscall/sys_mbox_call.o src/syscall/sys_kill.o\
-				src/syscall/sys_open.o src/syscall/sys_close.o src/syscall/sys_signal.o src/syscall/sys_mmap.o \
+				src/syscall/sys_open.o src/syscall/sys_close.o src/syscall/sys_signal.o \
 				src/lib/fork.o src/lib/getpid.o\
 				)
 
