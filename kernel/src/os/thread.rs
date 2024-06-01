@@ -141,8 +141,8 @@ pub fn create_thread(
         stack,
         stack_size,
         state: ThreadState::Waiting(ThreadContext {
-            pc: program as usize,
-            sp: stack as usize + stack_size,
+            pc: (program as u64 & 0xFFFFFFFF) as usize,
+            sp: (stack as u64 & 0xFFFFFFFF) as usize + stack_size,
             ..Default::default()
         }),
     });
@@ -151,6 +151,7 @@ pub fn create_thread(
     id
 }
 
+#[no_mangle]
 pub fn run_thread(id: Option<usize>) {
     unsafe {
         let threads = THREADS.as_mut().unwrap();
@@ -162,9 +163,9 @@ pub fn run_thread(id: Option<usize>) {
                 .expect("Thread not found"),
             None => threads
                 .iter_mut()
-                .find(|thread| match &thread.state {
-                    ThreadState::Waiting(_) => true,
-                    _ => false,
+                .find(|thread| {
+                    let state = &thread.state;
+                    matches!(ThreadState::Waiting, state)
                 })
                 .expect("No running thread"),
         };
@@ -226,11 +227,8 @@ pub fn save_context(trap_frame_ptr: *mut u64) -> bool {
         let current_thread = threads
             .iter_mut()
             .find(|thread| {
-                if let ThreadState::Running(_) = &thread.state {
-                    true
-                } else {
-                    false
-                }
+                let state = &thread.state;
+                matches!(ThreadState::Running, state)
             })
             .expect("SAVE_CONTEXT: No running thread");
 

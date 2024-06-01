@@ -2,7 +2,6 @@ use crate::cpu::{device_tree::DeviceTree, mailbox, uart};
 use crate::os::stdio::{print_hex_now, println_now};
 use crate::os::{allocator, shell, thread, timer};
 use crate::println;
-use alloc::boxed::Box;
 use core::arch::{asm, global_asm};
 
 global_asm!(include_str!("boot.s"));
@@ -13,14 +12,15 @@ pub unsafe fn _start_rust() {
     timer::init();
     thread::init();
     allocator::init();
-    allocator::reserve(0x0000_0000 as *mut u8, 0x0000_1000); // Device reserved memory
-    allocator::reserve(0x0003_0000 as *mut u8, 0x0004_0000); // Stack
-    allocator::reserve(0x0007_5000 as *mut u8, 0x0000_0004); // CS counter
-    allocator::reserve(0x0007_5100 as *mut u8, 0x0000_0004); // device tree address
-    allocator::reserve(0x0008_0000 as *mut u8, 0x0008_0000); // Code
-    allocator::reserve(0x0800_0000 as *mut u8, 0x0010_0000); // Initramfs
+    allocator::reserve(0xFFFF_0000_0000_2000 as *mut u8, 0x3000);
+    allocator::reserve(0xFFFF_0000_0000_0000 as *mut u8, 0x0000_1000); // Device reserved memory
+    allocator::reserve(0xFFFF_0000_0003_0000 as *mut u8, 0x0004_0000); // Stack
+    allocator::reserve(0xFFFF_0000_0007_5000 as *mut u8, 0x0000_0004); // CS counter
+    allocator::reserve(0xFFFF_0000_0007_5100 as *mut u8, 0x0000_0004); // device tree address
+    allocator::reserve(0xFFFF_0000_0008_0000 as *mut u8, 0x0008_0000); // Code
+    allocator::reserve(0xFFFF_0000_0800_0000 as *mut u8, 0x0010_0000); // Initramfs
     allocator::reserve(DeviceTree::get_address(), 0x0100_0000); // Device Tree
-    allocator::reserve(0x0880_0000 as *mut u8, 0x0780_0000); // Simple Allocator
+    allocator::reserve(0xFFFF_0000_0880_0000 as *mut u8, 0x0780_0000); // Simple Allocator
 
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
@@ -51,7 +51,8 @@ pub unsafe fn _start_rust() {
     print_information();
 
     shell::start(initrd_start);
-    loop {}
+
+    panic!("Shell stoped.");
 }
 
 fn print_information() {

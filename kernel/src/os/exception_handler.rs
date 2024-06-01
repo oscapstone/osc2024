@@ -6,11 +6,15 @@ use core::{
     ptr::read_volatile,
 };
 
-use super::stdio::println_now;
 mod system_call;
 pub mod trap_frame;
 
 global_asm!(include_str!("exception_handler/exception_handler.s"));
+
+#[no_mangle]
+unsafe extern "C" fn exception_handler_rust(trap_frame_ptr: *mut u64) {
+    panic!("Unknown exception");
+}
 
 #[no_mangle]
 unsafe extern "C" fn irq_handler_rust(trap_frame_ptr: *mut u64) {
@@ -25,7 +29,7 @@ unsafe extern "C" fn irq_handler_rust(trap_frame_ptr: *mut u64) {
     if read_volatile(0x3F21_5000 as *const u32) & 0x1 == 0x1 {
         uart::irq_handler();
     }
-
+    
     thread::TRAP_FRAME_PTR = None;
 }
 

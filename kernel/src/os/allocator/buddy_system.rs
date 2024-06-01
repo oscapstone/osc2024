@@ -1,13 +1,11 @@
 use super::super::stdio::{print_hex_now, println_now};
 use super::SimpleAllocator;
 use crate::println;
-use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec::Vec;
 use core::{
     alloc::{GlobalAlloc, Layout},
     cmp,
-    ops::Deref,
     ptr::null_mut,
 };
 
@@ -15,7 +13,7 @@ static mut PRINT_DEBUG: bool = false;
 const FRAME_MAX_ORDER: u32 = 25;
 const MIN_FRAME_SIZE: usize = 32;
 const MAX_FRAME_SIZE: usize = MIN_FRAME_SIZE * 2usize.pow(FRAME_MAX_ORDER - 1);
-const START_ADDRESS: usize = 0x0000_0000;
+const START_ADDRESS: usize = 0xFFFF_0000_0000_0000;
 
 static mut FRAMES: Option<BTreeMap<usize, BTreeSet<*mut u8, &SimpleAllocator>, &SimpleAllocator>> =
     None;
@@ -197,6 +195,7 @@ pub unsafe fn reserve(ptr: *mut u8, size: usize) {
             Some(frame) => {
                 if PRINT_DEBUG {
                     print_hex_now(frame.clone() as u32);
+                    print_hex_now(((frame.clone() as u64) >> 32) as u32);
                 }
                 buddy_set.remove(&frame.clone());
             }
