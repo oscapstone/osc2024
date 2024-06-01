@@ -34,6 +34,9 @@ void signal_check(TRAP_FRAME* trap_frame) {
             signal_run(trap_frame, i);
         }
     }
+    lock_interrupt();
+    task_get_current_el1()->current_signal = -1;
+    unlock_interrupt();
 }
 
 /**
@@ -51,9 +54,6 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
     }
 
     if (!current_signal->handler) {
-        lock_interrupt();
-        task_get_current_el1()->current_signal = -1;
-        unlock_interrupt();
         printf("[SYSCALL][SIGNAL][WARN] no signal handler. pid: %d, signal: %d\n", task_get_current_el1()->pid, signal);
         return;
     }
@@ -61,11 +61,14 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
     // allocate signal
     current_signal->cpu_regs = kzalloc(sizeof(CPU_REGS));
     current_signal->stack = kzalloc(TASK_STACK_SIZE);
+    current_signal->is_handled = FALSE;
 
     // save the current context
     task_asm_store_context(current_signal->cpu_regs);
 
-    if (task_get_current_el1()->current_signal == -1) {
+    if (current_signal->is_handled) {
+        kfree(current_signal->stack);
+        kfree(current_signal->cpu_regs);
         // signal exited. return
         return;
     }
@@ -73,9 +76,9 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
     lock_interrupt();
     current_signal->sp0 = utils_read_sysreg(sp_el0);
 
-    // replace the user stack in page table
+    // add the signal user stack in page table
     U64 stack_ptr = (U64)MMU_VIRT_TO_PHYS((U64)current_signal->stack);
-    U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
+    U64 stack_v_addr = MMU_SINGAL_STACK_BASE - TASK_STACK_SIZE;
     for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
         U64 pte = mmu_get_pte(task_get_current_el1(), stack_v_addr);
         mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
@@ -93,7 +96,7 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
         "eret\n\t"
         :
         : "r"(entry_ptr),        // 我map兩的page
-          "r"(MMU_USER_STACK_BASE),
+          "r"(MMU_SINGAL_STACK_BASE),
           "r"(current_signal->handler)
     );
 
@@ -120,28 +123,24 @@ void signal_exit() {
     }
     TASK_SIGNAL* current_signal = &task->signals[task->current_signal];
 
-    // restore the user stack in page table
+    // remove the signal user stack in page table
     lock_interrupt();
-    U64 stack_ptr = (U64)MMU_VIRT_TO_PHYS((U64)task->user_stack);
-    U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
+    U64 stack_v_addr = MMU_SINGAL_STACK_BASE - TASK_STACK_SIZE;
     for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
         U64 pte = mmu_get_pte(task, stack_v_addr);
-        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
+        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, 0, MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
         stack_v_addr += PD_PAGE_SIZE;
     }
     // free the
     NS_DPRINT("[SIGNAL] goback to process, pid = %d, signal: %d\n", task->pid, task->current_signal);
 
-    task->current_signal = -1;
+    task->signals[task->current_signal].is_handled = TRUE;
 
     // restore current context
     utils_write_sysreg(sp_el0, current_signal->sp0);
-    kfree(current_signal->stack);
     current_signal->sp0 = NULL;
-    CPU_REGS tmp_reg;
-    memcpy(current_signal->cpu_regs, &tmp_reg, sizeof(CPU_REGS));
-    kfree(current_signal->cpu_regs);
     unlock_interrupt();
-    task_asm_load_context(&tmp_reg);
+
+    task_asm_load_context(current_signal->cpu_regs);
 
 }

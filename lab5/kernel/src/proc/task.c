@@ -242,10 +242,6 @@ void task_delete(TASK* task) {
         kfree(task->kernel_stack);
         task->kernel_stack = NULL;
     }
-    if (task->user_stack) {
-        kfree(task->user_stack);
-        task->user_stack = NULL;
-    }
     task->status = 0;
     task->flags = 0;
     task_manager->count--;
@@ -286,7 +282,6 @@ TASK* task_create_user(const char* name, U32 flags) {
         return NULL;
     }
     task->flags = TASK_FLAGS_ALLOC | flags; // only allocate, not running
-    task->user_stack = kzalloc(TASK_STACK_SIZE);
     task->kernel_stack = kzalloc(TASK_STACK_SIZE); // allocate the stack
 
     // map the stack to page table

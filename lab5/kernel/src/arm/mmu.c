@@ -219,12 +219,14 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
 void mmu_task_init(TASK* task) {
 
     // initalize the user mode stack for user page table
-    U64 stack_ptr = (U64)MMU_VIRT_TO_PHYS((U64)task->user_stack);
 
     U64 stack_v_addr = MMU_USER_STACK_BASE - TASK_STACK_SIZE;
     for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
-        U64 pte = mmu_get_pte(task, stack_v_addr);
-        mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
+        USER_PAGE_INFO* stack_page_info = &task->mm.user_pages[task->mm.user_pages_count++];
+        stack_page_info->v_addr = stack_v_addr;
+        stack_page_info->p_addr = 0;
+        stack_page_info->flags = TASK_USER_PAGE_INFO_FLAGS_ANON | TASK_USER_PAGE_INFO_FLAGS_READ | TASK_USER_PAGE_INFO_FLAGS_WRITE;
+
         stack_v_addr += PD_PAGE_SIZE;
     }
 
@@ -392,7 +394,6 @@ void mmu_memfail_handler(U64 esr) {
         if (current_page_info->p_addr == 0) {
             NS_DPRINT("[MMU][TRACE] page not present yet.\n");
             map_page = kzalloc(PD_PAGE_SIZE);
-            return;
         } else {
             map_page = current_page_info->p_addr;
         }
@@ -423,6 +424,7 @@ void mmu_memfail_handler(U64 esr) {
         }
     } else
     {
+            printf("[MMU][WARN] [Unknown fault]\n"); 
         task_exit(-1);
     }
 

@@ -27,9 +27,8 @@ void sys_fork(TRAP_FRAME* regs) {
 
     task_run(new_task);
 
-    // copy the stacks
+    // copy the stack
     memcpy(task->kernel_stack, new_task->kernel_stack, TASK_STACK_SIZE);
-    memcpy(task->user_stack, new_task->user_stack, TASK_STACK_SIZE);
 
     // record the current context specialy return address to split the child and parent task
     task_asm_store_context(task_get_current_el1());
