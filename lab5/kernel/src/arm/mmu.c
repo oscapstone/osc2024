@@ -342,6 +342,7 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
         } else {
             new_task_user_page = &new_task->mm.user_pages[new_task->mm.user_pages_count++];
             new_task_user_page->v_addr = user_page->v_addr;
+            new_task_user_page->p_addr = 0;
             parent_page_info = user_page;
         }
 
