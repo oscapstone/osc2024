@@ -749,7 +749,7 @@ void mem_reference(UPTR p_addr) {
     for (U64 i = 1; i < number_of_frames_in_block; i++) {
         mem_manager.frames[frame_index + i].ref_count++;
     }
-    printf("[MEMORY][TRACE] referencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
+    NS_DPRINT("[MEMORY][TRACE] referencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
 }
 /**
  * Dereference a memory in buddy system
@@ -766,7 +766,7 @@ void mem_dereference(UPTR p_addr) {
         printf("[MEMORY][ERROR] this frame is not the first frame in block. cannot dereference. index: %d\n", frame_index);
         return;
     }
-    printf("[MEMORY][TRACE] dereferencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
+    NS_DPRINT("[MEMORY][TRACE] dereferencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
     U8 ref_count = mem_manager.frames[frame_index].ref_count;
     if (ref_count == 1) {           // there only one reference, free the block
         mem_buddy_free(frame_index);

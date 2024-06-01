@@ -339,6 +339,7 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
         if (user_page->p_addr) {
             new_task_user_page = mmu_map_page(new_task, user_page->v_addr, user_page->p_addr, mmu_flags);
             parent_page_info = mmu_map_page(src_task, user_page->v_addr, user_page->p_addr, mmu_flags);
+            mem_reference(user_page->p_addr);
         } else {
             new_task_user_page = &new_task->mm.user_pages[new_task->mm.user_pages_count++];
             new_task_user_page->v_addr = user_page->v_addr;
@@ -346,7 +347,6 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
             parent_page_info = user_page;
         }
 
-        mem_reference(user_page->p_addr);
         // if this page it writable then later the page fault handler will know this and do the copy on write instead of segementation fault.
         new_task_user_page->flags = vma_flags;
         parent_page_info->flags = vma_flags;

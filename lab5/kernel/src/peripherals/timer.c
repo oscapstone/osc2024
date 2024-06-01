@@ -32,11 +32,6 @@ void core0_timer_enable() {
     // core0 timer init
     utils_write_sysreg(cntp_ctl_el0, 1); // enable
 
-    U64 freq = utils_read_sysreg(cntfrq_el0) / 1000;
-    // for test
-    utils_write_sysreg(cntp_tval_el0, freq * 30LL);
-    
-    
     // enable access in EL0 for lab5 (armv8 pg. 2177)
     U64 timer_ctl_value = utils_read_sysreg(cntkctl_el1);
     timer_ctl_value |= 1;
@@ -121,6 +116,10 @@ void timer_add(void (*callback)(), U32 millisecond) {
 
     if (!timer_manager.tasks) {
         timer_manager.tasks = timer_task;
+        
+        U64 freq = utils_read_sysreg(cntfrq_el0) / 1000;
+        // for test
+        utils_write_sysreg(cntp_tval_el0, freq * timer_task->timeout);    
         return;
     }
     TIMER_TASK* current_task = timer_manager.tasks;

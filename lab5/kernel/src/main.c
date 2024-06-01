@@ -84,8 +84,6 @@ void main() {
 	task_init();
 
 	// enabling the interrupt
-	enable_interrupt();
-	printf("test.\n");
 	TASK* task_a = task_create_kernel("kernel_tty", TASK_FLAGS_KERNEL);
 	printf("test.\n");
 	task_a->cpu_regs.lr = (U64)func_task_a;
@@ -99,6 +97,7 @@ void main() {
 	// TASK* task_c = task_create("task_c", TASK_FLAGS_KERNEL, &func_task_c);
 	// NS_DPRINT("task c pid = %d\n", task_c->pid);
 	// task_run(task_c);
+	enable_interrupt();
 
 	// init idle
 	while (1) {
