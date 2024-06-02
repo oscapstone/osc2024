@@ -4,7 +4,7 @@ import os.path
 import sys
 import time
 
-port = '/dev/pts/13'
+port = '/dev/pts/14'
 s = serial.Serial(port, baudrate=115200)
 
 def read_line(s):
@@ -40,11 +40,10 @@ received_content = read_line(s)
 print(received_content)
 while(True):
     # while s.in_waiting > 0:
-    for i in range(10):
+    for i in range(50):
         received_content = read_line(s)
         print(received_content.strip().replace("\n", "").replace("\r", ""))
-        time.sleep(1)
-    # inp = input()
-    # bytes_to_send = inp.encode('utf-8')
-    # s.write(bytes_to_send)
-    # print(received_content)
+    inp = input()
+    bytes_to_send = inp.encode('utf-8')
+    s.write(bytes_to_send)
+    print(received_content)
