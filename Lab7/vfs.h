@@ -1,7 +1,7 @@
 #include <stddef.h>
 #define MAX_FS 64
-#define MAX_PATH 255
-#define MAX_DIR 255
+#define MAX_PATH 256
+#define MAX_DIR 256
 #define MAX_ENTRY 16
 
 //use vfs instruction for all, then it will call specific instruction by api (set by file systems)
@@ -58,7 +58,7 @@ struct file_operations {
   int (*read)(struct file* file, void* buf, size_t len);
   int (*open)(struct vnode* file_node, struct file** target);
   int (*close)(struct file* file);
-  long (*lseek64)(struct file* file, long offset, int whence);
+  //long (*lseek64)(struct file* file, long offset, int whence);
 };
 
 struct vnode_operations {
