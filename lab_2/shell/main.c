@@ -30,13 +30,43 @@
 
 
 void main(int argc, char* argv[]){
-   uart_init();
-   cpio_ls();
-   cpio_cat("hello2.txt");
-   cpio_ls();
-   cpio_cat("hello.txt");
+   asm volatile(
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+      "mov x0, x10;"
+   );
+   // uart_init();
+   // uart_puts("uart_not_bugged\n");
+   // cpio_ls();
+   // cpio_cat("hello2.txt");
+   // cpio_ls();
+   // cpio_cat("hello.txt");
    int* data = (int *)simple_malloc((unsigned long) sizeof(int)*8);
    int* b = (int *)simple_malloc((unsigned long) sizeof(int)*8);
-   uart_puts("exit normally");
+   uart_puts("exit normally\n");
+   // asm volatile(
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "mov x0, x10;"
+   //    "ret;"
+   // );
    return;
 }

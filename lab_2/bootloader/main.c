@@ -35,27 +35,27 @@ void load_img(){
 	    size_buffer[i] = uart_getc();
     uart_puts("size-check correct\n");
 
+    uart_puts("Kernel size received: ");
+    uart_hex(size);
+    uart_puts("\n");
+
     char *kernel = (char *) 0x80000;
     while(size--) *kernel++ = uart_getc();
 
     uart_puts("kernel-loaded\n");
-    
-    asm volatile(
-       "mov x30, 0x80000;"
-       "ret;"
-    );
+    return;
 
 }
 
-void main(int argc, char* argv[]){
+void relocator(int argc, char* argv[]){
     asm volatile(
        "mov x10, x0"
     );
     uart_init();
     load_img();
     asm volatile(
-       "mov x30, 0x80000;"
        "mov x0, x10;"
+       "mov x30, 0x80000;"
        "ret;"
     );
 }

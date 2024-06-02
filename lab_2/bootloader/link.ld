@@ -22,13 +22,24 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-
 SECTIONS
 {
     . = 0x60000;
     PROVIDE(_head = .);
-    .text : { KEEP(*(.text.boot)) *(.text .text.*) }
-    .rodata : { *(.rodata .rodata.*) }
+    .relocate : {
+        KEEP(*(.text.relocate))
+    }
+    . = ALIGN(4096);
+
+    .imgLoader : {
+        KEEP(*(.text.load_img))
+    }
+    . = ALIGN(4096);
+    .text : {
+        KEEP(*(.text.boot))
+        *(.text)
+    }
+    . = ALIGN(4096);
     PROVIDE(_data = .);
     .data : { *(.data .data.*) }
     .bss : {
