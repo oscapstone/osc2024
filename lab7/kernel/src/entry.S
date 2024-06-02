@@ -123,6 +123,8 @@ el1h_sync:
     save_all
     mov x0,4
     bl invalid_exception_router
+    # mov x0, sp // trapframe
+    # bl sync_64_router
     load_all
     eret
 el1h_irq:

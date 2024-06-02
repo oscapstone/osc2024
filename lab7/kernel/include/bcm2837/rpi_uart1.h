@@ -16,4 +16,6 @@
 #define AUX_MU_STAT_REG ((volatile unsigned int*)(PERIPHERAL_BASE+0x00215064))
 #define AUX_MU_BAUD_REG ((volatile unsigned int*)(PERIPHERAL_BASE+0x00215068))
 
+#define _AUX_MU_IO_REG 0xFFFF00003F215040
+
 #endif  /*_RPI_UART1_H_ */

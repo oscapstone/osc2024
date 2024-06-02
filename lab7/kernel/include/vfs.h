@@ -13,7 +13,8 @@
 enum fsnode_type
 {
     dir_t,
-    file_t
+    file_t,
+    img_t
 };
 
 
@@ -43,6 +44,7 @@ struct mount
 struct filesystem
 {
     const char *name;
+    // char name[20];
     int (*setup_mount)(struct filesystem *fs, struct mount *mount);
 };
 
@@ -64,6 +66,8 @@ struct vnode_operations
                   const char *component_name);
     int (*mkdir)(struct vnode *dir_node, struct vnode **target,
                  const char *component_name);
+    int (*list)(struct vnode *dir_node);
+    enum fsnode_type (*gettype) (struct vnode *node);
 };
 
 int register_filesystem(struct filesystem *fs);
@@ -77,6 +81,9 @@ int vfs_mkdir(const char *pathname);
 int vfs_mount(const char *target, const char *filesystem);
 int vfs_lookup(const char *pathname, struct vnode **target);
 int vfs_mknod(char* pathname, int id);
+int vfs_list_dir(char *pathname);
+int vfs_cd(char *pathname);
+
 
 void init_rootfs();
 void vfs_test();

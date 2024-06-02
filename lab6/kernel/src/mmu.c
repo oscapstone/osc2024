@@ -71,7 +71,7 @@ void* set_2M_kernel_mmu(void* x0)
     
     for (int i = 0; i < 512; i++)
     {
-        unsigned long addr = 0x200000L * i;
+        unsigned long addr = 0x200000L * i; // 0x200000L = 2MB
         if ( addr >= PERIPHERAL_END )
         {
             pte_table1[i] = ( 0x00000000 + addr ) + BOOT_PTE_ATTR_nGnRnE;
@@ -92,7 +92,7 @@ void* set_2M_kernel_mmu(void* x0)
 /*
     the function is used to map one page
     @param virt_pgd_p: the pointer of the page table
-    @param va: the virtual address
+    @param va: the user virtual address
     @param pa: the physical address
     @param flag: the flag of the page
 */
@@ -128,7 +128,7 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
 /*
     the function is used to add a vma to the list
     @param t: the thread
-    @param va: the virtual address
+    @param va: the user virtual address
     @param size: the size of the vma
     @param pa: the physical address
     @param rwx: the permission of the vma

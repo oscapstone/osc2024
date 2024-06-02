@@ -3,7 +3,14 @@
 #include "uart1.h"
 #include "memory.h"
 
-struct file_operations dev_file_operations = {dev_uart_write, dev_uart_read, dev_uart_open, dev_uart_close, (void *)dev_uart_op_deny, (void *)dev_uart_op_deny};
+struct file_operations dev_file_operations = {
+    dev_uart_write, 
+    dev_uart_read, 
+    dev_uart_open, 
+    dev_uart_close, 
+    (void *)dev_uart_op_deny, 
+    (void *)dev_uart_op_deny
+};
 
 int init_dev_uart()
 {

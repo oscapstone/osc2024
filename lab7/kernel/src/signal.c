@@ -45,7 +45,7 @@ void run_signal(trapframe_t* tpf,int signal)
     asm("msr elr_el1, %0\n\t"
         "msr sp_el0, %1\n\t"
         "msr spsr_el1, %2\n\t"
-	"mov x0, %3\n\t"
+        "mov x0, %3\n\t"
         "eret\n\t"
         :: "r"(USER_SIGNAL_WRAPPER_VA + ((size_t)signal_handler_wrapper % 0x1000)),
            "r"(tpf->sp_el0),
@@ -64,5 +64,7 @@ void signal_handler_wrapper()
 
 void signal_default_handler()
 {
-    kill(0,curr_thread->pid);
+    trapframe_t tpf;
+    tpf.x0 = curr_thread->pid;
+    sys_kill(&tpf);
 }

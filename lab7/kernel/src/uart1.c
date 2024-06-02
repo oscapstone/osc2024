@@ -48,13 +48,27 @@ void uart_init()
     *AUX_MU_CNTL_REG = 3;      // enable TX/RX
 }
 
+void uart_flush_FIFO()
+{
+    // https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf Pg.13
+    // On write:
+    //  Writing with bit 1 set will clear the receive FIFO
+    //  Writing with bit 2 set will clear the transmit FIFOF
+    *AUX_MU_IER_REG |= 6;
+}
 char uart_recv() {
     char r;
     while(!(*AUX_MU_LSR_REG & 0x01)){};
     r = (char)(*AUX_MU_IO_REG);
-    if(uart_recv_echo_flag){
-        uart_send(r);
-        if(r =='\r') {uart_send('\r');uart_send('\n');}
+    if(uart_recv_echo_flag == 1){
+        if(r =='\t') {
+            // tab to do nothing
+        }
+        else
+            uart_send(r);
+        if(r =='\r') {
+            uart_send('\r');
+        }
     }
     return r=='\r'?'\n':r;
 }
@@ -97,7 +111,11 @@ int  uart_sendline(char* fmt, ...) {
 char uart_async_getc() {
     *AUX_MU_IER_REG |=1; // enable read interrupt
     // do while if buffer empty
-    while (uart_rx_buffer_ridx == uart_rx_buffer_widx) *AUX_MU_IER_REG |=1; // enable read interrupt
+    while (uart_rx_buffer_ridx == uart_rx_buffer_widx) {
+        // uart_sendline("waiting for uart input\r\n");   
+        *AUX_MU_IER_REG |=1; // enable read interrupt
+    }
+    // uart_sendline("uart input received\r\n");
     lock();
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
     if (uart_rx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE) uart_rx_buffer_ridx = 0;

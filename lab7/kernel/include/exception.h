@@ -47,13 +47,19 @@ typedef struct trapframe
     unsigned long sp_el0;
 } trapframe_t;
 
-#define MEMFAIL_DATA_ABORT_LOWER 0b100100 // esr_el1
-#define MEMFAIL_INST_ABORT_LOWER 0b100000 // EC, bits [31:26]
+#define MEMFAIL_DATA_ABORT_LOWER 0b100100 // 0x24 esr_el1
+#define MEMFAIL_INST_ABORT_LOWER 0b100000 // 0x20 EC, bits [31:26]
+#define ESR_ELx_EC_SVC64 0b010101 // 0x15 EC, bits [31:26]
 
 #define TF_LEVEL0 0b000100 // iss IFSC, bits [5:0]
 #define TF_LEVEL1 0b000101
 #define TF_LEVEL2 0b000110
 #define TF_LEVEL3 0b000111
+
+#define PERMISSON_FAULT_LEVEL0 0b001100
+#define PERMISSON_FAULT_LEVEL1 0b001101
+#define PERMISSON_FAULT_LEVEL2 0b001110
+#define PERMISSON_FAULT_LEVEL3 0b001111
 
 typedef struct{
     unsigned int iss : 25, // Instruction specific syndrome

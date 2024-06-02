@@ -11,6 +11,7 @@ struct mount *rootfs;
 struct filesystem reg_fs[MAX_FS_REG];
 struct file_operations reg_dev[MAX_DEV_REG];
 
+
 int register_filesystem(struct filesystem *fs)
 {
     for (int i = 0; i < MAX_FS_REG;i++)
@@ -72,11 +73,14 @@ int vfs_open(const char *pathname, int flags, struct file **target)
 
         char dirname[MAX_PATH_NAME+1];
         strcpy(dirname, pathname);
+
         dirname[last_slash_idx] = 0;
+
+
         // update dirname to node
-        if (vfs_lookup(dirname,&node)!=0)
+        if (vfs_lookup(dirname,&node) != 0)
         {
-            uart_sendline("cannot ocreate no dir name\r\n");
+            uart_sendline(" cannot opne no such file name\r\n");
             return -1;
         }
         // create a new file node on node, &node is new file, 3rd arg is filename
@@ -130,10 +134,11 @@ int vfs_read(struct file *file, void *buf, size_t len)
 // file ops
 int vfs_mkdir(const char *pathname)
 {
+    // uart_sendline("vfs_mkdir %s\n", pathname);  
     char dirname[MAX_PATH_NAME] = {};    // before add folder
     char newdirname[MAX_PATH_NAME] = {}; // after  add folder
 
-    // search for last directory
+    // search for last directory and it will be the parent directory
     int last_slash_idx = 0;
     for (int i = 0; i < strlen(pathname); i++)
     {
@@ -143,9 +148,8 @@ int vfs_mkdir(const char *pathname)
         }
     }
 
-    memcpy(dirname, pathname, last_slash_idx);
-    strcpy(newdirname, pathname + last_slash_idx + 1);
-
+    memcpy(dirname, pathname, last_slash_idx);          // dirname is the parent directory
+    strcpy(newdirname, pathname + last_slash_idx + 1);  // newdirname is the new directory or the child of parent directory
     // create new directory if upper directory is found
     struct vnode *node;
     if(vfs_lookup(dirname,&node)==0)
@@ -155,7 +159,7 @@ int vfs_mkdir(const char *pathname)
         return 0;
     }
 
-    uart_sendline("vfs_mkdir cannot find pathname");
+    uart_sendline("vfs_mkdir cannot find pathname\n");
     return -1;
 }
 
@@ -183,10 +187,14 @@ int vfs_mount(const char *target, const char *filesystem)
     return 0;
 }
 
+/*
+    pathname is the absulate path
+    target is the vnode of the file
+*/
 int vfs_lookup(const char *pathname, struct vnode **target)
 {
     // if no path input, return root
-    if(strlen(pathname)==0)
+    if(strlen(pathname)==0 || strcmp(pathname,"/")==0)
     {
         *target = rootfs->root;
         return 0;
@@ -198,11 +206,15 @@ int vfs_lookup(const char *pathname, struct vnode **target)
     // deal with directory
     for (int i = 1; i < strlen(pathname); i++)
     {
+
         if (pathname[i] == '/')
         {
             component_name[c_idx++] = 0;
             // if fs's v_ops error, return -1
-            if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0) return -1;
+            if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0) {
+                uart_sendline("cannot find directory\r\n");   
+                return -1;
+            }
             // redirect to mounted filesystem
             while (dirnode->mount)
             {
@@ -216,10 +228,14 @@ int vfs_lookup(const char *pathname, struct vnode **target)
         }
     }
 
+
     // deal with file
     component_name[c_idx++] = 0;
     // if fs's v_ops error, return -1
-    if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0) return -1;
+    if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0) {
+        // uart_sendline("cannot find file\r\n");
+        return -1;
+    }
     // redirect to mounted filesystem
     while (dirnode->mount)
     {
@@ -258,34 +274,77 @@ void init_rootfs()
     vfs_mkdir("/dev");
     int uart_id = init_dev_uart();
     vfs_mknod("/dev/uart", uart_id);
+
     int framebuffer_id = init_dev_framebuffer();
     vfs_mknod("/dev/framebuffer", framebuffer_id);
 }
+int vfs_list_dir(char *pathname)
+{
 
+    struct vnode *dirnode;
+    if(vfs_lookup(pathname, &dirnode) != 0)
+    {
+        uart_sendline("cannot find directory\n");
+        return -1;
+    }
+    dirnode->v_ops->list(dirnode);
+    return 0;
+}
+
+int vfs_cd(char *pathname)
+{
+    struct vnode *dirnode;
+    if(vfs_lookup(pathname, &dirnode) != 0)
+    {
+        uart_sendline("cannot find directory\n");
+        return -1;
+    }
+
+    // dirnode->mount->fs->name;
+    if (dirnode->v_ops->gettype(dirnode) == dir_t)
+    {
+        return 0;
+    }
+    else
+    {
+        uart_sendline("%s not a directory\n", pathname);
+        return -1;
+    }
+
+}
 void vfs_test()
 {
     // test read/write
     vfs_mkdir("/lll");
+    vfs_mkdir("/eee");
     vfs_mkdir("/lll/ddd");
+    // vfs_list_dir("/");
     // test mount
-    vfs_mount("/lll/ddd", "tmpfs");
+    // vfs_mount("/lll/ddd", "tmpfs");
 
-    struct file* testfilew;
-    struct file *testfiler;
-    char testbufw[0x30] = "ABCDEABBBBBBDDDDDDDDDDD";
-    char testbufr[0x30] = {};
-    vfs_open("/lll/ddd/ggg", O_CREAT, &testfilew);
-    vfs_open("/lll/ddd/ggg", O_CREAT, &testfiler);
-    vfs_write(testfilew, testbufw, 10);
-    vfs_read(testfiler, testbufr, 10);
-    uart_sendline("%s",testbufr);
+    // struct file* testfilew;
+    // struct file *testfiler;
+    // char testbufw[0x30] = "ABCDEABBBBBBDDDDDDDDDDD";
+    // char testbufr[0x30] = {};
+    // vfs_open("/lll/ddd/ggg", O_CREAT, &testfilew);
+    // vfs_open("/lll/ddd/ggg", O_CREAT, &testfiler);
+    // vfs_write(testfilew, testbufw, 10);
+    // vfs_read(testfiler, testbufr, 10);
+    // uart_sendline("testbuf: %s\n",testbufr);
 
-    struct file *testfile_initramfs;
-    vfs_open("/initramfs/get_simpleexec.sh", O_CREAT, &testfile_initramfs);
-    vfs_read(testfile_initramfs, testbufr, 30);
-    uart_sendline("%s", testbufr);
+    // struct file *testfile_initramfs;
+    // vfs_open("/initramfs/get_simpleexec.sh", O_CREAT, &testfile_initramfs);
+    // vfs_read(testfile_initramfs, testbufr, 30);
+    // uart_sendline("%s", testbufr);
 }
 
+
+/*
+    * Get the absolute path of a relative path
+    * @param path: the relative path
+    * @param curr_working_dir: the current working directory
+    * @return the absolute path
+*/
 char *get_absolute_path(char *path, char *curr_working_dir)
 {
     // if relative path -> add root path
@@ -300,17 +359,18 @@ char *get_absolute_path(char *path, char *curr_working_dir)
 
     char absolute_path[MAX_PATH_NAME+1] = {};
     int idx = 0;
+
+    // handle /../ and /./
     for (int i = 0; i < strlen(path); i++)
     {
         // meet /..
         if (path[i] == '/' && path[i+1] == '.' && path[i+2] == '.')
         {
-            for (int j = idx; j >= 0;j--)
-            {
-                if(absolute_path[j] == '/')
-                {
-                    absolute_path[j] = 0;
-                    idx = j;
+            // Backtrack to the previous directory
+            if (idx > 0) {
+                idx--; // Step back to the previous character
+                while (idx > 0 && absolute_path[idx] != '/') {
+                    idx--;
                 }
             }
             i += 2;
@@ -325,6 +385,11 @@ char *get_absolute_path(char *path, char *curr_working_dir)
         }
 
         absolute_path[idx++] = path[i];
+    }
+
+    if (idx == 0)
+    {
+        absolute_path[idx++] = '/';
     }
     absolute_path[idx] = 0;
 

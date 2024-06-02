@@ -46,6 +46,10 @@ static frame_t*           frame_array;                    // store memory's stat
 static list_head_t        frame_freelist[FRAME_MAX_IDX];  // store available block for page
 static list_head_t        cache_list[CACHE_MAX_IDX];      // store available block for cache
 
+frame_t *get_frame_array(){
+    return frame_array;
+}
+
 void init_allocator()
 {
     frame_array = s_allocator(BUDDY_MEMORY_PAGE_COUNT * sizeof(frame_t));
@@ -57,6 +61,7 @@ void init_allocator()
         {
             frame_array[i].val = FRAME_IDX_FINAL;
             frame_array[i].used = FRAME_FREE;
+            
         }
     }
 
@@ -78,6 +83,7 @@ void init_allocator()
         INIT_LIST_HEAD(&frame_array[i].listhead);
         frame_array[i].idx = i;
         frame_array[i].cache_order = CACHE_NONE;
+        frame_array[i].counter = 0;
 
         // add init frame (FRAME_IDX_FINAL) into freelist
         if (i % (1 << FRAME_IDX_FINAL) == 0)
@@ -98,7 +104,7 @@ void init_allocator()
     dtb_find_and_store_reserved_memory(); // find spin tables in dtb
     memory_reserve(PHYS_TO_VIRT(MMU_PGD_ADDR), PHYS_TO_VIRT(MMU_PTE_ADDR+0x2000)); // // PGD's page frame at 0x1000 // PUD's page frame at 0x2000 PMD 0x3000-0x5000
     memory_reserve((unsigned long long)&_kernel_start, (unsigned long long)&_kernel_end); // kernel
-    memory_reserve((unsigned long long)&_stack_end, (unsigned long long)&_stack_top);  // heap & stack -> simple allocator
+    // memory_reserve((unsigned long long)&_stack_end, (unsigned long long)&_stack_top);  // heap & stack -> simple allocator
     memory_reserve((unsigned long long)CPIO_DEFAULT_START, (unsigned long long)CPIO_DEFAULT_END);
 }
 
@@ -121,12 +127,11 @@ void* page_malloc(unsigned int size)
 
         if ( i == FRAME_IDX_FINAL)
         {
-            memory_sendline("[!] request size exceeded for page_malloc!!!!\r\n");
+            uart_sendline("[!] request size exceeded for page_malloc!!!!\r\n");
             return (void*)0;
         }
 
     }
-
     // find the smallest larger frame in freelist
     int target_val;
     for (target_val = val; target_val <= FRAME_IDX_FINAL; target_val++)
@@ -137,36 +142,46 @@ void* page_malloc(unsigned int size)
     }
     if (target_val > FRAME_IDX_FINAL)
     {
-        memory_sendline("[!] No available frame in freelist, page_malloc ERROR!!!!\r\n");
+        // memory_sendline("[!] No available frame in freelist, page_malloc ERROR!!!!\r\n");
+        uart_sendline("[!] No available frame in freelist, page_malloc ERROR!!!!\r\n");
         return (void*)0;
     }
-
     // get the available frame from freelist
     frame_t *target_frame_ptr = (frame_t*)frame_freelist[target_val].next;
     list_del_entry((struct list_head *)target_frame_ptr);
-
+    
     // Release redundant memory block to separate into pieces
     for (int j = target_val; j > val; j--) // ex: 10000 -> 01111
     {
         release_redundant(target_frame_ptr);
     }
 
+    // for (int i = 0; i < (1<<target_val); i++){
+    //     frame_array[target_frame_ptr->idx + i].counter = 1;
+    // }
+
     // Allocate it
     target_frame_ptr->used = FRAME_ALLOCATED;
-    memory_sendline("        physical address : 0x%x\n", BUDDY_MEMORY_BASE + (PAGESIZE*(target_frame_ptr->idx)));
+    memory_sendline("        physical address : 0x%x\n", PAGE_INDEX_TO_PTR(target_frame_ptr->idx));
+    // uart_sendline("        physical address : 0x%x\n", PAGE_INDEX_TO_PTR(target_frame_ptr->idx));
     memory_sendline("        After\r\n");
     dump_page_info();
 
-    return (void *) BUDDY_MEMORY_BASE + (PAGESIZE * (target_frame_ptr->idx));
+    return PAGE_INDEX_TO_PTR(target_frame_ptr->idx);
 }
 
 void page_free(void* ptr)
 {
-    frame_t *target_frame_ptr = &frame_array[((unsigned long long)ptr - BUDDY_MEMORY_BASE) >> 12]; // PAGESIZE * Available Region -> 0x1000 * 0x10000000 // SPEC #1, #2
+    frame_t *target_frame_ptr = &frame_array[PTR_TO_PAGE_INDEX(ptr)]; // PAGESIZE * Available Region -> 0x1000 * 0x10000000 // SPEC #1, #2
     memory_sendline("    [+] Free page: 0x%x, val = %d\r\n",ptr, target_frame_ptr->val);
     memory_sendline("        Before\r\n");
     dump_page_info();
     target_frame_ptr->used = FRAME_FREE;
+    for (int i = 0; i < (1<<target_frame_ptr->val); i++)
+    {
+        frame_array[target_frame_ptr->idx + i].counter = 0;
+    }
+
     frame_t* temp;
     while ((temp = coalesce(target_frame_ptr)) != (frame_t *)-1)target_frame_ptr = temp;
     list_add(&target_frame_ptr->listhead, &frame_freelist[target_frame_ptr->val]);
@@ -306,10 +321,12 @@ void *kmalloc(unsigned int size)
     // if size is larger than cache size, go for page
     if (size > (32 << CACHE_IDX_FINAL))
     {
+        // uart_sendline("if\r\n");
         void *r = page_malloc(size);
         unlock();
         return r;
     }
+    // uart_sendline("kamalloc\r\n");
     // go for cache
     void *r = cache_malloc(size);
     unlock();
@@ -360,6 +377,7 @@ void memory_reserve(unsigned long long start, unsigned long long end)
                 memory_sendline("        Before\n");
                 dump_page_info();
                 list_del_entry(pos);
+            
                 memory_sendline("        Remove usable block for reserved memory: order %d\r\n", order);
                 memory_sendline("        After\n");
                 dump_page_info();

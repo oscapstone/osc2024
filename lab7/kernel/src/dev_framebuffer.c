@@ -12,7 +12,14 @@
 unsigned int width, height, pitch, isrgb; /* dimensions and channel order */
 unsigned char *lfb;                       /* raw frame buffer address */
 
-struct file_operations dev_framebuffer_operations = {dev_framebuffer_write, (void *)dev_framebuffer_op_deny, dev_framebuffer_open, dev_framebuffer_close, dev_framebuffer_lseek64, (void *)dev_framebuffer_op_deny};
+struct file_operations dev_framebuffer_operations = {
+    dev_framebuffer_write, 
+    (void *)dev_framebuffer_op_deny, 
+    dev_framebuffer_open, 
+    dev_framebuffer_close, 
+    dev_framebuffer_lseek64, 
+    (void *)dev_framebuffer_op_deny
+};
 
 // https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
 int init_dev_framebuffer()

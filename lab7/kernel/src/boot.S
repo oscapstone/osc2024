@@ -21,10 +21,12 @@ set_mmu_configuration:
     ldr x4, = MMU_PGD_ADDR // PGD's page frame at 0x1000
     ldr x1, = MMU_PUD_ADDR // PUD's page frame at 0x2000
 
+    // setup PGD
     ldr x2, = BOOT_PGD_ATTR
     orr x2, x1, x2         // combine the physical address of next level page with attribute.
     str x2, [x4]           // [MMU_PGD_ADDR] = MMU_PUD_ADDR | BOOT_PGD_ATTR
 
+    // setup PUD
     ldr x2, = BOOT_PUD_ATTR
     mov x3, 0x00000000
     orr x3, x2, x3         // [MMU_PUD_ADDR] = 0x00000000 | BOOT_PUD_ATTR
@@ -39,6 +41,7 @@ set_mmu_configuration:
     mov sp, 0x3c000000     // temp stack
     bl set_2M_kernel_mmu
 
+    // enable MMU
     mrs x2, sctlr_el1      // sctlr_el1: Provides top level control of the system, including its memory system, at EL1 and EL0.
     orr x2 , x2, 1         // sctlr_el1[0]: EL1&0 stage 1 address translation enabled/disabled.
     msr sctlr_el1, x2

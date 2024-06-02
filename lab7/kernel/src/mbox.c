@@ -2,7 +2,7 @@
 #include "mbox.h"
 
 /* Aligned to 16-byte boundary while we have 28-bits for VC */
-volatile unsigned int  __attribute__((aligned(16))) pt[36];
+volatile unsigned int  __attribute__((aligned(16))) pt[64];
 
 int mbox_call( mbox_channel_type channel, unsigned int value )
 {
