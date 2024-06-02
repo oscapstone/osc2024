@@ -135,8 +135,7 @@ void task_run_to_el0(TASK* task) {
     NS_DPRINT("[TASK][TRACE] new task running. pid = %d\n", task->pid);
 }
 
-void task_run(TASK* task) {
-    // 先這樣
+void task_add_to_run_list(TASK* task) {
     U64 flags = irq_disable();
     task->status = TASK_STATUS_RUNNING;
     task->preempt = task->priority;
@@ -157,11 +156,17 @@ void task_run(TASK* task) {
             return;
         }
     }
-    task_manager->running_queue[task_manager->running] = task;
+    task_manager->running_queue[task_manager->running++] = task;
     //NS_DPRINT("[TASK][TRACE] adding task to running queue[%d], pid = %d\n", task_manager->running, task->pid);
-    task_manager->running++;
     irq_restore(flags);
-    NS_DPRINT("[TASK][TRACE] new task running. pid = %d\n", task->pid);
+}
+
+void task_run(TASK* task) {
+    if (!(task->flags & TASK_FLAGS_ALLOC)) {
+        NS_DPRINT("[TASK][ERROR] task not allcated.");
+        return;
+    }
+    task_add_to_run_list(task);
 }
 
 void task_to_user_func() {
@@ -273,8 +278,8 @@ void task_kill_dead() {
     enable_interrupt();
 }
 
-TASK* task_create_user(const char* name, U32 flags) {
-
+// common task for task creation not called by any system
+TASK* task_alloc(const char* name, U32 flags) {
     TASK* task = NULL;
     U64 irq_flags = irq_disable();
     for (U32 i = 0; i < TASK_MAX_TASKS; i++) {
@@ -313,39 +318,21 @@ TASK* task_create_user(const char* name, U32 flags) {
     return task;
 }
 
-TASK* task_create_kernel(const char* name, U32 flags) {
-
-    TASK* task = NULL;
-    for (U32 i = 0; i < TASK_MAX_TASKS; i++) {
-        if (!(task_manager->tasks[i].flags & TASK_FLAGS_ALLOC)) {
-            task = &task_manager->tasks[i];
-            break;
-        }
-    }
-    if (task == NULL) {
-        printf("[TASK][ERROR] Failed to create task.\n");
+TASK* task_create_user(const char* name, U32 flags) {
+    TASK* task = task_alloc(name, flags);
+    if (!task) {
         return NULL;
     }
 
-    task->flags = TASK_FLAGS_ALLOC | flags; // only allocate, not running
-    //task->user_stack = kzalloc(TASK_STACK_SIZE);
-    task->kernel_stack = kzalloc(TASK_STACK_SIZE); // allocate the stack
+    return task;
+}
+
+TASK* task_create_kernel(const char* name, U32 flags) {
+    TASK* task = task_alloc(name, flags | TASK_FLAGS_KERNEL);
+    if (!task) {
+        return NULL;
+    }
     task->cpu_regs.pgd = PD_KERNEL_ENTRY;           // kernel process using just kernel paging
-
-    task->cpu_regs.lr = 0;
-    task->cpu_regs.sp = (U64)((char*)task->kernel_stack + TASK_STACK_SIZE);
-    task->cpu_regs.fp = task->cpu_regs.sp;
-    task->priority = 0;              // default value
-    task->preempt = task->priority;              // default value
-    utils_char_fill(task->name, name, utils_strlen(name));
-    
-    // init signal
-    signal_task_init(task);
-
-    task->pwd = fs_get_root_node();     // just use the root node now for kernel process
-
-    task_manager->count++;
-    NS_DPRINT("[TASK][TRACE] task allocated. pid = %d\n", task->pid);
 
     return task;
 }
@@ -372,4 +359,27 @@ void task_wait(pid_t pid) {
         }
         task_schedule();
     }
+}
+
+/**
+ * Remove from running queue, called by current task(process)
+*/
+void task_sleep() {
+    disable_interrupt();
+    task_remove_from_run_list(task_get_current_el1());
+    task_get_current_el1()->status = TASK_STATUS_SLEEPING;
+    task_schedule();
+}
+
+void task_awake(pid_t pid) {
+    if (task_manager->tasks[pid].status != TASK_STATUS_SLEEPING)
+        return;
+    task_add_to_run_list(&task_manager->tasks[pid]);
+}
+
+BOOL task_is_running(TASK* task) {
+    return task->status == TASK_STATUS_RUNNING;
+}
+pid_t task_get_pid(TASK* task) {
+    return task->pid;
 }

@@ -113,6 +113,7 @@ typedef struct _TASK
 #define TASK_STATUS_RUNNING     1
 #define TASK_STATUS_WAITING     2
 #define TASK_STATUS_DEAD        3
+#define TASK_STATUS_SLEEPING    4
 
 #define TASK_FLAGS_ALLOC        0x01            // it is allocated or not
 #define TASK_FLAGS_KERNEL       0x04            // it is a kernel task or not
@@ -160,6 +161,21 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size);
  *      the task to wait
 */
 void task_wait(pid_t pid);
+
+/**
+ * Remove the current running task from run list
+*/
+void task_sleep();
+
+/**
+ * Wake up the task of pid
+ * @param pid
+ *      the pid the task to awake.
+*/
+void task_awake(pid_t pid);
+
+BOOL task_is_running(TASK* task);
+pid_t task_get_pid(TASK* task);
 
 // asm
 void task_asm_switch_to(TASK* current, TASK* next);
