@@ -256,7 +256,6 @@ void shell() {
 				char_size++;
 			}
 			char_size--;
-			printf("char size: %d\n", char_size);
 			pid_t pid = utils_atou_dec(number_ptr, char_size);
 			task_kill(pid, -2);
 		} else if (utils_strncmp(cmd_space, "setTimeout ", 11) == 0) {

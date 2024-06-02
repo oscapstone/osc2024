@@ -66,15 +66,8 @@ void timer_core_timer_0_handler() {
     if (timer_manager.tasks) {
         TIMER_TASK* current_task = timer_manager.tasks;
         void (*callback)() = current_task->callback;
-        U32 timeout = current_task->timeout;
         timer_manager.tasks = current_task->next;
         kfree(current_task);
-
-        current_task = timer_manager.tasks;
-        while (current_task) {
-            current_task->timeout -= timeout;
-            current_task = current_task->next;
-        }
 
         if (timer_manager.tasks) {
             core0_timer_enable(timer_manager.tasks->timeout);
@@ -142,6 +135,8 @@ void timer_add(void (*callback)(), U32 millisecond) {
         if (current_task->timeout > timer_task->timeout) {
             timer_manager.tasks = timer_task;
             timer_task->next = current_task;
+            current_task->timeout -= timer_task->timeout;
+            
             // setup the next interrupt
             core0_timer_enable(timer_manager.tasks->timeout);
             irq_restore(flags);
@@ -152,17 +147,20 @@ void timer_add(void (*callback)(), U32 millisecond) {
             if (current_task->timeout < timer_task->timeout && next_task->timeout >= timer_task->timeout) {
                 current_task->next = timer_task;
                 timer_task->next = next_task;
+                timer_task->timeout -= current_task->timeout;
+
                 irq_restore(flags);
                 return;
             }
 
-            // continue subtract
+            // continue subtract because current_task is before
             timer_task->timeout -= current_task->timeout;
 
             current_task = next_task;
             next_task = next_task->next;
         }
 
+        timer_task->timeout -= current_task->timeout;
         current_task->next = timer_task;
     }
     irq_restore(flags);
