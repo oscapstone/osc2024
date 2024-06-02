@@ -13,6 +13,7 @@
 #include "lib/fork.h"
 #include "lib/getpid.h"
 #include "fs/fs.h"
+#include "proc/worker.h"
 
 // in exception.S
 void set_exception_vector_table();
@@ -82,6 +83,9 @@ void main() {
 	fs_init();
 
 	task_init();
+
+	// init worker
+	worker_init();
 
 	// enabling the interrupt
 	TASK* task_a = task_create_kernel("kernel_tty", TASK_FLAGS_KERNEL);

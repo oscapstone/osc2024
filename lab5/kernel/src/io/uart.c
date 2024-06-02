@@ -7,6 +7,7 @@
 #include "utils/printf.h"
 #include "utils/fifo_buffer.h"
 #include "peripherals/irq.h"
+#include "proc/worker.h"
 
 static struct FIFO_BUFFER uart_read_fifo;
 static char uart_read_buffer[UART_BUFFER_SIZE];
@@ -128,10 +129,10 @@ void uart_hex64(U64 value) {
     }
 }
 
-// the mini uart interrupt handler
-void uart_handle_int() {
-    // disable when handling current
-    uart_disable_int();
+/**
+ * the uart job if interrupt happen
+*/
+void uart_work() {
 
     // pg. 13 in the read write bit
     // 10: Receiver holds valid byte
@@ -152,6 +153,12 @@ void uart_handle_int() {
     }
 
     uart_enable_int();
+}
+
+// the mini uart interrupt handler
+void uart_handle_int() {
+    uart_disable_int();
+    worker_add(uart_work);
 }
 
 void uart_set_transmit_int() {
