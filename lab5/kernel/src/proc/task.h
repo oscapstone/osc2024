@@ -115,6 +115,7 @@ typedef struct _TASK
 #define TASK_STATUS_DEAD        3
 #define TASK_STATUS_SLEEPING    4
 
+#define TASK_FLAGS_NONE         0
 #define TASK_FLAGS_ALLOC        0x01            // it is allocated or not
 #define TASK_FLAGS_KERNEL       0x04            // it is a kernel task or not
 

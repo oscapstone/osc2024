@@ -177,7 +177,7 @@ void shell() {
 			
 			printf("Executing %s\n", fileName);
 
-			TASK* user_task = task_create_user(programName, NULL);
+			TASK* user_task = task_create_user(programName, TASK_FLAGS_NONE);
 			user_task->pwd = file->vnode->parent;				// Just Hard coded now, can change to shell working directory
 			task_copy_program(user_task, buf, contentSize);
 			kfree(buf);
@@ -211,8 +211,8 @@ void shell() {
 			for (U32 level = 0; level < mem_manager.levels; level++) {
 				FREE_INFO* info = &mem_manager.free_list[level];
 				//printf("Level %d\n", level);
-				for(int i = 0;i < info->size;i++) {
-					if (info->info[i] == -1)
+				for(U32 i = 0;i < info->size;i++) {
+					if (info->info[i] == MEM_FREE_INFO_UNUSED)
 						break;
 					//printf("    frame idx     : %d\n", info->info[i]);
 					free_size += (1 << level) * MEM_FRAME_SIZE;
@@ -340,7 +340,7 @@ void cmd_setTimeout(U32 second, const char* msg, U32 len) {
 		}
 
 		while (next_package) {
-			if (current_package->timeout < second && next_package->timeout >= second) {
+			if (current_package->timeout < (int) second && next_package->timeout >= (int) second) {
 				current_package->next = package;
 				package->next = next_package;
 				return;

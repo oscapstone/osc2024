@@ -158,7 +158,7 @@ void* mem_chunk_alloc(U32 size) {
                 slot->flag |= MEM_CHUNK_SLOT_FLAG_USED;
                 chunk_info->ref_count++;
 
-                char* return_addr = mem_idx2addr(chunk_info->frame_index);
+                UPTR return_addr = mem_idx2addr(chunk_info->frame_index);
                 return_addr = return_addr + (j * order_pool->obj_size);
 
                 //NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", chunk_info->frame_index, j);
@@ -188,7 +188,7 @@ void* mem_chunk_alloc(U32 size) {
  * A clumsy approach to Linux slab
 */
 void mem_chunk_free(void* ptr) {
-    U32 frame_index = mem_addr2idx(ptr);
+    U32 frame_index = mem_addr2idx((UPTR) ptr);
 
     FRAME_INFO* frame_info = &mem_manager.frames[frame_index];
 
@@ -678,7 +678,7 @@ U64 mem_addr2idx(UPTR x) {
 }
 
 UPTR mem_idx2addr(U32 x) {
-    return ((x * MEM_FRAME_SIZE) + (char*)mem_manager.base_ptr);
+    return ((UPTR)(x * MEM_FRAME_SIZE) + (UPTR)mem_manager.base_ptr);
 }
 
 void* kmalloc(U64 size) {
@@ -702,7 +702,7 @@ void* kmalloc(U64 size) {
         ptr = mem_chunk_alloc(size);
     }
     
-    ptr = MMU_PHYS_TO_VIRT((U64)ptr);
+    ptr = (void*) MMU_PHYS_TO_VIRT((U64)ptr);
     irq_restore(flag);
     return ptr;
 }

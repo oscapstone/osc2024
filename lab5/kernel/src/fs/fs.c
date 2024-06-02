@@ -65,7 +65,7 @@ int fs_find_node(const char* pathname, FS_VNODE** parent, FS_VNODE** target, cha
 */
 int vfs_lookup(const char* pathname, FS_VNODE** target) {
     FS_VNODE* parent = NULL, *child = NULL;
-    char* node_name[20];
+    char node_name[20];
     fs_find_node(pathname, &parent, &child, node_name);
     if (child) {
         *target = child;

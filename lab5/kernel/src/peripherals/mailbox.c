@@ -25,7 +25,7 @@ int mailbox_call()
 }
 
 int mailbox_call_user(U8 ch, void* mailbox_ptr) {
-    U32 r = ((U32)((U32) mailbox_ptr) & ~0xf) | (ch & 0xf);
+    U32 r = ((U32)((U64) mailbox_ptr) & ~0xf) | (ch & 0xf);
 
     do { asm volatile("nop"); } while (*MBOX_STATUS & MBOX_FULL);
     *MBOX_WRITE = r;
