@@ -50,7 +50,7 @@ void get_cpio_addr(int token, const char* name, const void *data, unsigned int s
 		//uart_send_string("CPIO address: 0x");
 		//uart_hex64(realCPIOAddr);
 		//uart_send_string("\n");
-		cpio_addr = (char*)realCPIOAddr;
+		cpio_addr = (char*) MMU_PHYS_TO_VIRT(realCPIOAddr);
 	}
 }
 
@@ -163,9 +163,13 @@ void shell() {
 			fileName[--len] = '\0';
 
 			FS_FILE* file;
-			int ret = vfs_open(fileName, FS_FILE_FLAGS_READ, &file);
+			int ret = vfs_open(task_get_current_el1()->pwd, fileName, FS_FILE_FLAGS_READ, &file);
 			if (ret != 0) {
 				printf("Program %s not found. result = %d\n", fileName, ret);
+				continue;
+			}
+			if (S_ISDIR(file->vnode->mode)) {
+				printf("%s is directory.\n", file->vnode->name);
 				continue;
 			}
 			unsigned long contentSize = file->vnode->content_size;

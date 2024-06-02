@@ -130,6 +130,7 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags);
 void mmu_task_init(TASK* task);
 void mmu_map_io(TASK* task);
 
+void mmu_delete_user(TASK* task);
 /**
  * Delete all page descriptor and mapped page for this task
 */

@@ -285,6 +285,16 @@ int mmu_set_entry(TASK* task, U64 v_addr, U64 mmu_flags) {
     return 0;
 }
 
+void mmu_delete_user(TASK* task) {
+    // delete block descriptors
+    for (U64 i = 0; i < task->mm.user_pages_count; i++) {
+        if (task->mm.user_pages[i].p_addr)      // because it probably not loaded yet.
+            mem_dereference(task->mm.user_pages[i].p_addr);
+    }
+    task->mm.user_pages_count = 0;
+
+}
+
 void mmu_delete_mm(TASK* task) {
 
     // delete table descriptors
@@ -293,13 +303,7 @@ void mmu_delete_mm(TASK* task) {
     }
     task->mm.kernel_pages_count = 0;
     
-    // delete block descriptors
-    for (U64 i = 0; i < task->mm.user_pages_count; i++) {
-        if (task->mm.user_pages[i].p_addr)      // because it probably not loaded yet.
-            mem_dereference(task->mm.user_pages[i].p_addr);
-    }
-    task->mm.user_pages_count = 0;
-
+    mmu_delete_user(task);
     // delete mmap
     // VMA_STRUCT* mmap = task->mm.mmap;
     // while (mmap) {

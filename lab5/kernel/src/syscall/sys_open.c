@@ -26,7 +26,7 @@ void sys_open(TRAP_FRAME* regs) {
         regs->regs[0] = -1;
         return;
     }
-    int result = vfs_open(pathname, flags, &current_task->file_table[fd].file);
+    int result = vfs_open(current_task->pwd, pathname, flags, &current_task->file_table[fd].file);
     if (result) {
         NS_DPRINT("[SYSCALL][OPEN] Failed to open file: %s\n", pathname);
         current_task->file_table[fd].file = NULL;

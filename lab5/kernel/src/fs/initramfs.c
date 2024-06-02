@@ -142,9 +142,9 @@ static long lseek64(FS_FILE *file, long offset, int whence) {
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
     FS_VNODE* vnode = NULL;
-    NS_DPRINT("[FS] initramfs: lookup() finding name: %s, length: %d\n", component_name, utils_strlen(component_name));
+    NS_DPRINT("[FS] initramfs: lookup() finding name: %s\n", component_name);
     LLIST_FOR_EACH_ENTRY(vnode, &dir_node->childs, self) {
-        NS_DPRINT("name name: %s, length: %d\n", vnode->name, utils_strlen(vnode->name));
+        //NS_DPRINT("name name: %s, length: %d\n", vnode->name, utils_strlen(vnode->name));
         if (utils_strncmp(vnode->name, component_name, utils_strlen(vnode->name)) == 0) {
             *target = vnode;
             return 0;
