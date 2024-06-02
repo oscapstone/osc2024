@@ -24,7 +24,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/io/uart.o src/io/dtb.o src/io/reboot.o src/io/exception.o src/io/exception_c.o\
 				src/utils/utils.o src/utils/utilsASM.o src/utils/printf.o src/utils/fifo_buffer.o src/utils/link_list.o \
 				src/shell/shell.o \
-				src/fs/cpio.o src/fs/fs.o src/fs/rootfs.o src/fs/initramfs.o \
+				src/fs/cpio.o src/fs/fs.o src/fs/rootfs.o src/fs/initramfs.o src/fs/uartfs.o \
 				src/peripherals/gpio.o src/peripherals/irq.o src/peripherals/timer.o src/peripherals/mailbox.o src/peripherals/irq_s.o\
 				src/mm/mmutilASM.o src/mm/mm.o\
 				src/arm/elutilsASM.o src/arm/mmu.o\

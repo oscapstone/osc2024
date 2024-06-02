@@ -28,8 +28,9 @@ typedef struct _FS_FILE {
 }FS_FILE;
 
 #define FS_FILE_FLAGS_NONE      0x0
-#define FS_FILE_FLAGS_CREATE    0x1
-#define FS_FILE_FLAGS_READ      0x2
+#define FS_FILE_FLAGS_READ      0x1
+#define FS_FILE_FLAGS_WRITE     0x2
+#define FS_FILE_FLAGS_CREATE    0x4
 
 
 #define O_CREAT                 FS_FILE_FLAGS_CREATE

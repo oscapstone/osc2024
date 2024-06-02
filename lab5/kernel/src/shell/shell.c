@@ -90,7 +90,7 @@ void shell() {
 
         input_ptr = cmd_space;
         if (utils_strncmp(cmd_space, "help", 4) == 0) {
-            printf("NS shell ver 0.02\n");
+            printf("NS shell ver 0.12\n");
             printf("help   : print this help menu\n");
 			printf("hello  : print Hello World!\n");
 			printf("info   : show board info\n");
@@ -99,6 +99,7 @@ void shell() {
 			printf("cat    : Show file content\n");
 			printf("dtb    : Load DTB data\n");
 			printf("async  : mini uart async test\n");
+			printf("set    : set timeout message for lab3. format: set [msg] [second].\n");
         } else if (utils_strncmp(cmd_space, "hello", 4) == 0) {
 			printf("Hello World!\n");
         } else if (utils_strncmp(cmd_space,"info", 4) == 0) {
@@ -237,14 +238,6 @@ void shell() {
 			kfree(ptr3);
 			kfree(ptr2);
 			kfree(ptr1);
-		} else if (utils_strncmp(cmd_space, "svctest", 7) == 0) {
-			int pid = fork();
-			if (pid == 0) {
-				printf("child task\n");
-			} else {
-				printf("parent task. pid = %d\n", pid);
-			}
-			printf("SVC end\n");
 		} else if (utils_strncmp(cmd_space, "ps ", 3) == 0) {
 			printf("Current running task: %d\n", task_manager->running);
 			for (U32 i = 0; i < task_manager->running; i++) {
@@ -262,14 +255,23 @@ void shell() {
 			char_size--;
 			pid_t pid = utils_atou_dec(number_ptr, char_size);
 			task_kill(pid, -2);
-		} else if (utils_strncmp(cmd_space, "setTimeout ", 11) == 0) {
+		} else if (utils_strncmp(cmd_space, "set ", 4) == 0) {
 			U32 len = 0;
-			while (cmd_space[11 + len++] != ' ');
+			while (cmd_space[4 + len++] != ' ');
 			if (len == 0)
 				continue;
 			len -= 1;
-			U32 timeout = utils_str2uint_dec(&cmd_space[11 + len + 1]);
-			cmd_setTimeout(timeout, &cmd_space[11], len);
+			U32 timeout = utils_str2uint_dec(&cmd_space[4 + len + 1]);
+			cmd_setTimeout(timeout, &cmd_space[4], len);
+		} else if (utils_strncmp(cmd_space, "uart", 4) == 0) {
+			FS_FILE* uart_file = NULL;
+			if (vfs_open(NULL, "/dev/uart", FS_FILE_FLAGS_WRITE | FS_FILE_FLAGS_READ, &uart_file)) {
+				printf("Failed to open /dev/uart.\n");
+				continue;
+			}
+			char buf = 'a';
+			vfs_write(uart_file, &buf, 1);
+			vfs_close(uart_file);
 		}
 		 else {
 			uart_send_string("Unknown command\n");

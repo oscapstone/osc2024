@@ -6,6 +6,8 @@
 #include "utils/utils.h"
 #include "utils/printf.h"
 
+#include "uartfs.h"
+
 FS_MANAGER* fs_manager;
 
 FS_FILE_SYSTEM* fs_get(const char *name);
@@ -225,6 +227,32 @@ void fs_init() {
         printf("[FS][ERROR] Failed to make /dev directory\n");
         return;
     }
+
+    // uart
+    if (fs_register(uartfs_create())) {
+        printf("[FS][ERROR] Failed to register uartfs\n");
+        return;
+    }
+    fs = fs_get(UART_FS_NAME);
+    if (!fs) {
+        printf("[FS][ERROR] Failed to get uart file system.\n");
+        return;
+    }
+    if (vfs_mkdir(NULL, "/dev/uart")) {
+        printf("[FS][ERROR] Failed to make /dev/uart directory\n");
+    }
+    FS_VNODE* uartfsroot = NULL;
+    if (vfs_lookup(NULL, "/dev/uart", &uartfsroot)) {
+        printf("[FS][ERROR] Failed to get /dev/uart directory\n");
+    }
+    mount = kzalloc(sizeof(FS_MOUNT));
+    mount->fs = fs;
+    mount->root = uartfsroot;
+    if (fs->setup_mount(fs, mount)) {
+        printf("[FS][ERROR] Failed to mount uartfs.\n");
+        return;
+    }
+
     NS_DPRINT("[FS][TRACE] fs_init() success.\n");
 }
 
