@@ -434,12 +434,12 @@ void mmu_memfail_handler(U64 esr) {
             NS_DPRINT("[MMU][TRACE] new page addr: 0x%x%x\n", new_page >> 32, new_page);
             mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
         } else {
-            printf("[MMU][WARN] [Permission fault]\n"); 
+            printf("[MMU][ERROR] [Permission fault]\n"); 
             task_exit(-1);
         }
     } else
     {
-            printf("[MMU][WARN] [Unknown fault]\n"); 
+            printf("[MMU][ERROR] [Unknown fault]\n"); 
         task_exit(-1);
     }
 

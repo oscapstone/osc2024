@@ -17,6 +17,8 @@ U64 utils_strlen(const char *s);
 U64 utils_highestOneBit(U64 number);
 void utils_char_fill(char* dst, char* content, U64 size);
 
+unsigned int utils_str2uint_dec(const char *str);
+
 // in assembly file utilsASM.S
 void utils_delay(U64 cycle);
 U32 utils_get_el();

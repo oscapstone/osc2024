@@ -1,5 +1,6 @@
 
 #include "utils/utils.h"
+#include "utils/printf.h"
 
 unsigned long utils_atoi(const char *s, int char_size) {
     unsigned long num = 0;
@@ -85,4 +86,16 @@ void utils_char_fill(char* dst, char* content, U64 size) {
     for (U64 i = 0; i < size; i++) {
         dst[i] = content[i];
     }
+}
+
+U32 utils_str2uint_dec(const char *str)
+{
+    U32 value = 0;
+
+    while (*str >= '0' && *str <= '9')
+    {
+        value = (value * 10) + (*str - '0');
+        ++str;
+    }
+    return value;
 }

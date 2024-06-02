@@ -62,6 +62,7 @@ void timer_sys_timer_3_handler() {
 
 void timer_core_timer_0_handler() {
 
+    U64 flags = irq_disable();
     if (timer_manager.tasks) {
         TIMER_TASK* current_task = timer_manager.tasks;
         void (*callback)() = current_task->callback;
@@ -69,12 +70,13 @@ void timer_core_timer_0_handler() {
         kfree(current_task);
 
         if (timer_manager.tasks) {
-            disable_interrupt();
             core0_timer_enable(timer_manager.tasks->timeout);
-            enable_interrupt();
         }
+        irq_restore(flags);
         callback();
+        return;
     }
+    irq_restore(flags);
 
     // just use the core 0 timer to do multitasking
     // U64 freq = utils_read_sysreg(cntfrq_el0) / 1000;
@@ -124,32 +126,42 @@ void timer_add(void (*callback)(), U32 millisecond) {
         timer_manager.tasks = timer_task;
 
         // setup the next interrupt
-        disable_interrupt();
         core0_timer_enable(timer_manager.tasks->timeout);
-        enable_interrupt();  
     } else {
 
         TIMER_TASK* current_task = timer_manager.tasks;
-        TIMER_TASK* prev_task = current_task;
-        while (current_task) {
-            if (current_task->timeout > timer_task->timeout) {
-                current_task->timeout -= timer_task->timeout;
-                timer_task->next = current_task;
-                if (timer_manager.tasks == current_task) {
-                    timer_manager.tasks = timer_task;
-                } else {
-                    prev_task->next = timer_task;
-                }
-                return;
-            } else {
-                timer_task->timeout -= current_task->timeout;
-            }
+        TIMER_TASK* next_task = current_task->next;
 
-            prev_task = current_task;
-            current_task = current_task->next;
+        if (current_task->timeout > timer_task->timeout) {
+            timer_manager.tasks = timer_task;
+            timer_task->next = current_task;
+            current_task->timeout -= timer_task->timeout;
+            
+            // setup the next interrupt
+            core0_timer_enable(timer_manager.tasks->timeout);
+            irq_restore(flags);
+            return;
         }
 
-        prev_task->next = timer_task;
+        while (next_task) {
+            if (current_task->timeout < timer_task->timeout && next_task->timeout >= timer_task->timeout) {
+                current_task->next = timer_task;
+                timer_task->next = next_task;
+                timer_task->timeout -= current_task->timeout;
+
+                irq_restore(flags);
+                return;
+            }
+
+            // continue subtract because current_task is before
+            timer_task->timeout -= current_task->timeout;
+
+            current_task = next_task;
+            next_task = next_task->next;
+        }
+
+        timer_task->timeout -= current_task->timeout;
+        current_task->next = timer_task;
     }
     irq_restore(flags);
 }

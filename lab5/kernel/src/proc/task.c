@@ -31,7 +31,6 @@ void task_init() {
     init->flags = TASK_FLAGS_ALLOC | TASK_FLAGS_KERNEL;
     init->kernel_stack = NULL;
     init->cpu_regs.pgd = PD_KERNEL_ENTRY;
-    init->current_signal = -1;      // no signal starting run
     utils_char_fill(init->name, "init", 4);
     signal_task_init(init);
     
@@ -57,7 +56,8 @@ void task_timer_callback() {
 }
 
 void task_schedule() {
-    disable_interrupt();
+    
+    U64 flags = irq_disable();
     if (task_manager->running == 0) {
         printf("[TASK][FATAL] No running task!\n");
         for (;;) {} // hlt here
@@ -83,10 +83,10 @@ void task_schedule() {
         //NS_DPRINT("[TASK][TRACE] Not preempt put the task to the back\n");
         task_manager->running_queue[task_manager->running - 1] = current_task;
     }
+    irq_restore(flags);
 
     //NS_DPRINT("[TASK][TRACE] next task pid: %d\n", task_manager->running_queue[0]->pid);
     
-    enable_interrupt();
     if (current_task != task_manager->running_queue[0]) {
         task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
     }
@@ -101,6 +101,7 @@ TASK* task_get(int pid) {
 }
 
 void task_switch_to(TASK* current, TASK* next) {
+    enable_interrupt();
     task_asm_switch_to(current, next);
 }
 
@@ -211,6 +212,11 @@ void task_remove_from_run_list(TASK* task) {
 }
 
 int task_kill(pid_t pid, int exitcode) {
+    if (pid == 0) {
+        printf("You can not kill the init process.\n");
+        return -1;
+    }
+
     TASK* task = &task_manager->tasks[pid];
     if (task->status != TASK_STATUS_RUNNING) {
         printf("[TASK][WARN] task does not run. pid = %d, status = %d\n", pid, task->status);
@@ -317,8 +323,6 @@ TASK* task_create_kernel(const char* name, U32 flags) {
         printf("[TASK][ERROR] Failed to create task.\n");
         return NULL;
     }
-
-    memzero(task, sizeof(TASK));
 
     task->flags = TASK_FLAGS_ALLOC | flags; // only allocate, not running
     //task->user_stack = kzalloc(TASK_STACK_SIZE);

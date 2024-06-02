@@ -11,6 +11,7 @@
 #include "arm/elutils.h"
 #include "lib/fork.h"
 #include "fs/fs.h"
+#include "peripherals/timer.h"
 
 extern char* _dtb_ptr;
 
@@ -18,8 +19,24 @@ extern char* _dtb_ptr;
 extern MEMORY_MANAGER mem_manager;
 extern TASK_MANAGER* task_manager;
 
-
 char* cpio_addr;
+
+// for setTimeout command
+#define CMD_TIMEOUT_MSG_BUF_SIZE 256
+#define CMD_TIMEOUT_PACK_SIZE	10
+char* timeout_msg_buf;
+U32 timeout_msg_ptr;
+
+typedef struct _SET_TIMEOUT_PACKAGE {
+	U32 offset;
+	U32 len;
+	int timeout;
+	struct _SET_TIMEOUT_PACKAGE* next;
+}SET_TIMEOUT_PACKAGE;
+
+SET_TIMEOUT_PACKAGE* timeout_packages;
+
+void cmd_setTimeout(U32 second, const char* msg, U32 len);
 
 void get_cpio_addr(int token, const char* name, const void *data, unsigned int size) {
 	if(token == FDT_PROP && (utils_strncmp(name, "linux,initrd-start", 18) == 0)) {
@@ -39,7 +56,12 @@ void get_cpio_addr(int token, const char* name, const void *data, unsigned int s
 
 void shell() {
 
-    
+
+	// init for setTimout command
+	timeout_msg_buf = kzalloc(CMD_TIMEOUT_MSG_BUF_SIZE);
+	timeout_msg_ptr = 0;
+	timeout_packages = NULL;
+
     char cmd_space[256];
 
     char* input_ptr = cmd_space;
@@ -234,11 +256,16 @@ void shell() {
 				char_size++;
 			}
 			char_size--;
-			printf("char size: %d\n", char_size);
 			pid_t pid = utils_atou_dec(number_ptr, char_size);
 			task_kill(pid, -2);
 		} else if (utils_strncmp(cmd_space, "setTimeout ", 11) == 0) {
-			// TODO
+			U32 len = 0;
+			while (cmd_space[11 + len++] != ' ');
+			if (len == 0)
+				continue;
+			len -= 1;
+			U32 timeout = utils_str2uint_dec(&cmd_space[11 + len + 1]);
+			cmd_setTimeout(timeout, &cmd_space[11], len);
 		}
 		 else {
 			uart_send_string("Unknown command\n");
@@ -248,4 +275,82 @@ void shell() {
 
     }
 
+}
+
+void shell_setTimeout_callback() {
+
+	if (!timeout_packages) {
+		return;
+	}
+
+	SET_TIMEOUT_PACKAGE* package = timeout_packages;
+
+	int cur_timeout = package->timeout;
+
+	while (package) {
+		package->timeout -= cur_timeout;
+
+		if (package->timeout <= 0) {
+			uart_send_string("[SETTIMEOUT] msg: ");
+			for (U32 i = 0; i < package->len; i++) {
+				U32 offset_ptr = package->offset + i;
+				uart_send_char(timeout_msg_buf[offset_ptr]);
+				if (offset_ptr >= CMD_TIMEOUT_MSG_BUF_SIZE) {
+					offset_ptr -= CMD_TIMEOUT_MSG_BUF_SIZE;
+				}
+			}
+			uart_send_string("\n");
+			SET_TIMEOUT_PACKAGE* toFree = package;
+			package = package->next;
+			timeout_packages = package;
+			kfree(toFree);
+			continue;
+		}
+
+		package = package->next;
+	}
+}
+
+void cmd_setTimeout(U32 second, const char* msg, U32 len) {
+
+	SET_TIMEOUT_PACKAGE* package = kzalloc(sizeof(SET_TIMEOUT_PACKAGE));
+	package->offset = timeout_msg_ptr;
+	package->len = len;
+	package->timeout = second;
+	package->next = NULL;
+
+	for (U32 i = 0; i < len; i++) {
+		timeout_msg_buf[timeout_msg_ptr++] = msg[i];
+		if (timeout_msg_ptr >= CMD_TIMEOUT_MSG_BUF_SIZE) {
+			timeout_msg_ptr -= CMD_TIMEOUT_MSG_BUF_SIZE;
+		}
+	}
+
+	timer_add(shell_setTimeout_callback, second * 1000);
+	if (!timeout_packages) {
+		timeout_packages = package;	
+	} else {
+		SET_TIMEOUT_PACKAGE* current_package = timeout_packages;
+		SET_TIMEOUT_PACKAGE* next_package = timeout_packages->next;
+
+		if (current_package->timeout > package->timeout) {
+			package->next = current_package;
+			timeout_packages = package;
+			return;
+		}
+
+		while (next_package) {
+			if (current_package->timeout < second && next_package->timeout >= second) {
+				current_package->next = package;
+				package->next = next_package;
+				return;
+			}
+			current_package = next_package;
+			next_package = next_package->next;
+		}
+		current_package->next = package;
+	}
+
+
+	// overflow
 }
