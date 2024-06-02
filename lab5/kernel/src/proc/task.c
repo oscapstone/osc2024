@@ -217,8 +217,8 @@ void task_remove_from_run_list(TASK* task) {
 }
 
 int task_kill(pid_t pid, int exitcode) {
-    if (pid == 0) {
-        printf("You can not kill the init process.\n");
+    if (task_manager->tasks[pid].flags & TASK_FLAGS_KERNEL) {
+        printf("You can not kill the kernel process.\n");
         return -1;
     }
 

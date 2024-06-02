@@ -107,10 +107,11 @@ void* kzalloc(U64 size);
 void mem_reference(UPTR p_addr);
 void mem_dereference(UPTR p_addr);
 
-// mmutiilASM
 void memzero(void *dst, size_t size);
 void memcpy(const void* src, void* dst, size_t size);
 
+// mmutiilASM
+void memset(void* src, char c, size_t size);
 
 
 #endif

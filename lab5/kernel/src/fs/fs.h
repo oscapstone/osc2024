@@ -71,6 +71,7 @@ typedef struct _FS_MANAGER {
 */
 // called by main (kernel)
 void fs_init();
+int fs_register(FS_FILE_SYSTEM* fs);
 
 FS_VNODE* fs_get_root_node();
 

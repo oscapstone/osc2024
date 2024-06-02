@@ -44,10 +44,7 @@ static void init_cpio_files(FS_MOUNT* mount) {
     while (utils_strncmp((char*)(addr + sizeof(struct cpio_newc_header)), "TRAILER!!!", 10) != 0) {
         struct cpio_newc_header* header = (struct cpio_newc_header*) addr;
         if (utils_strncmp(header->c_magic, "070701", 6)) {
-            printf("Error CPIO type!! addr: 0x%x\n", addr);
-            uart_send_nstring(6, header->c_magic);
-            uart_send_string("\n");
-            return 0;
+            return;
         }
 
         unsigned long pathname_size = utils_atoi(header->c_namesize,(int)sizeof(header->c_namesize));;
@@ -60,7 +57,7 @@ static void init_cpio_files(FS_MOUNT* mount) {
         utils_align(&file_size, 4);
 
         if (lookup(dir, &target, name) == 0) {
-            printf("[FS] initramfs: init_cpio_files() file already exist. file: %s\n", name);
+            printf("[FS][WARN] initramfs: init_cpio_files() file already exist. file: %s\n", name);
         } else {
             target = vnode_create(name, S_IFREG);
             target->mount = dir->mount;

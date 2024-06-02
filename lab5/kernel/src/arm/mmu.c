@@ -6,6 +6,7 @@
 #include "arm/sysregs.h"
 #include "utils/printf.h"
 #include "peripherals/irq.h"
+#include "mm/mm.h"
 
 void signal_entry();
 

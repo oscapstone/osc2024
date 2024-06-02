@@ -60,16 +60,15 @@ static int write(FS_FILE *file, const void *buf, size_t len) {
     if (vnode->content_size <= file->pos + len) {
         size_t new_size = file->pos + len + 1;
         void* new_content = kzalloc(new_size);
-        memcpy(new_content, vnode->content, vnode->content_size);
         if (vnode->content) {
+            memcpy(vnode->content, new_content, vnode->content_size);
             kfree(vnode->content);
         }
-
         vnode->content = new_content;
         vnode->content_size = new_size;
     }
 
-    memcpy((const void*)((char*)vnode->content + file->pos), buf, len);
+    memcpy(buf, (void*)((char*)vnode->content + file->pos), len);
     file->pos += len;
 
     return len;
