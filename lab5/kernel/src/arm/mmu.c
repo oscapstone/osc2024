@@ -5,6 +5,7 @@
 #include "mm/mm.h"
 #include "arm/sysregs.h"
 #include "utils/printf.h"
+#include "peripherals/irq.h"
 
 void signal_entry();
 
@@ -209,7 +210,6 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
     user_page->p_addr = page;
     user_page->v_addr = v_addr;
     user_page->flags = user_flags;
-    NS_DPRINT("[MMU][DEBUG] mmu map page end.\n");
     return user_page;
 }
 
@@ -320,6 +320,7 @@ void mmu_delete_mm(TASK* task) {
 */
 void mmu_fork_mm(TASK* src_task, TASK* new_task) {
     // assmue new_task is pure new task
+    U64 flags = irq_disable();
     for (U64 i = 0; i < src_task->mm.user_pages_count; i++) {
         USER_PAGE_INFO* user_page = &src_task->mm.user_pages[i];
         U8 vma_flags = user_page->flags;
@@ -351,6 +352,7 @@ void mmu_fork_mm(TASK* src_task, TASK* new_task) {
         new_task_user_page->flags = vma_flags;
         parent_page_info->flags = vma_flags;
     }
+    irq_restore(flags);
 }
 
 void mmu_memfail_handler(U64 esr) {

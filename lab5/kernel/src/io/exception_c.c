@@ -32,3 +32,19 @@ void exception_sync_el0_handler(TRAP_FRAME* trap_frame) {
     }
 
 }
+
+void exception_sync_el1_handler(TRAP_FRAME* tf) {
+    U64 esr = utils_read_sysreg(esr_el1);
+    U32 ec = ESR_ELx_EC(esr);
+
+    switch (ec)
+    {
+    case ESR_ELx_EC_IABT:
+    case ESR_ELx_EC_DABT:
+        mmu_memfail_handler(esr);
+        break;
+    default:
+        break;
+    }
+
+}

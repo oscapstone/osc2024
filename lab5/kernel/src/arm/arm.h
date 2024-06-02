@@ -57,6 +57,8 @@ struct arm_core_regs {
 #define ESR_ELx_EC_SVC64                0x15
 #define ESR_ELx_EC_DABT_LOW             0x24
 #define ESR_ELx_EC_IABT_LOW             0x20
+#define ESR_ELx_EC_DABT                 0x25
+#define ESR_ELx_EC_IABT                 0x21
 
 // kernel space
 #define PHYS_OFFSET 0xffff000000000000L

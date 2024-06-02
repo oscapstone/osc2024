@@ -127,7 +127,7 @@ error_invalid_el1t:
 
 handle_el1_sync:
     kernel_entry 1
-    bl exception_sync_el0_handler // test
+    bl exception_sync_el1_handler // test
     kernel_exit 1
     eret
 

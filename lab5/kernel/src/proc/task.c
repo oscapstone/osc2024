@@ -276,6 +276,7 @@ void task_kill_dead() {
 TASK* task_create_user(const char* name, U32 flags) {
 
     TASK* task = NULL;
+    U64 irq_flags = irq_disable();
     for (U32 i = 0; i < TASK_MAX_TASKS; i++) {
         if (!(task_manager->tasks[i].flags & TASK_FLAGS_ALLOC)) {
             task = &task_manager->tasks[i];
@@ -287,6 +288,8 @@ TASK* task_create_user(const char* name, U32 flags) {
         return NULL;
     }
     task->flags = TASK_FLAGS_ALLOC | flags; // only allocate, not running
+    irq_restore(irq_flags);
+
     task->kernel_stack = kzalloc(TASK_STACK_SIZE); // allocate the stack
 
     // map the stack to page table
