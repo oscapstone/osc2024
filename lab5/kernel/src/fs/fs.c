@@ -10,63 +10,141 @@ FS_MANAGER* fs_manager;
 
 FS_FILE_SYSTEM* fs_get(const char *name);
 
-int fs_find_node(const char* pathname, FS_VNODE** parent, FS_VNODE** target, char* node_name) {
-    FS_VNODE* vnode = fs_manager->rootfs->root;
-    FS_VNODE* parent_ret = NULL;
+/**
+ * @param cwd
+ *      current working directory
+ * @param pathname
+ *      path to search
+ * @param parent
+ *      parent directory to return
+ * @param target
+ *      target to return
+ * @param node_name
+ *      final node name to return whatever it can be find
+*/
+int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNODE** target, char* node_name) {
 
-    char name[20];
-    U32 name_offset = 0;
-    U32 pathname_offset = 0;
-    if (pathname[pathname_offset++] != '/') {
-        printf("[FS] fs_find_node(): pathname not start with root. pathname: %s\n", pathname);
-        return -1;
+    char tmp_name[FS_MAX_NAME_SIZE];
+    size_t name_offset = 0;
+    FS_VNODE* current_dir = cwd;
+
+    size_t offset = 0;
+
+    if (pathname[offset] == '/' || current_dir == NULL) {
+        current_dir = fs_get_root_node();
+        offset++;
     }
 
-    NS_DPRINT("[FS] fs_find_node(): finding path %s\n", pathname);
-    while (pathname[pathname_offset] != 0) {
-        name_offset = 0;
-        while (pathname[pathname_offset] != '/' && pathname[pathname_offset] != '\0') {
-            name[name_offset++] = pathname[pathname_offset++];
-        }
-        pathname_offset++;
-        name[name_offset++] = '\0';
-        NS_DPRINT("[FS] fs_find_node(): finding node: %s\n", name);
-        if (pathname[pathname_offset - 1] == '\0') {
-            memcpy(name, node_name, name_offset);       // copy the name to return
-            NS_DPRINT("[FS] fs_find_node(): final node name %s copied.\n", node_name);
-        }
+    while (pathname[offset]) {
 
-        FS_VNODE* next_node;
-        int result = vnode->v_ops->lookup(vnode, &next_node, name);
-        if (result != 0 && pathname[pathname_offset - 1] == '\0') {
-            *parent = vnode;
-            NS_DPRINT("[FS] fs_find_node(): has parent but no target. parent = %s.\n", vnode->name);
-            return FS_FIND_NODE_HAS_PARENT_NO_TARGET;
-        }
-        if (result != 0) {
-            NS_DPRINT("[FS] fs_find_node(): no parent and no target.\n");
-            return result;
-        }
-        parent_ret = vnode;
-        vnode = next_node;
-        if (pathname[pathname_offset - 1] == '\0') {
-            break;
+        if (utils_strncmp(&pathname[offset], "..", 2) == 0) {
+            if (!current_dir->parent) {
+                NS_DPRINT("[FS] fs_find_node(): error no parent!\n");
+                return -1;
+            }
+            current_dir = current_dir->parent;
+            offset += 2;
+        } else if (utils_strncmp(&pathname[offset], ".", 1) == 0) {
+            offset++;
+        } else if (utils_strncmp(&pathname[offset], "/", 1) == 0) {
+            if (name_offset == 0) {
+                offset++;
+                continue;
+            }
+            tmp_name[name_offset] = 0;      // end pointer
+            FS_VNODE* next_node;
+            int result = current_dir->v_ops->lookup(current_dir, &next_node, tmp_name);
+            if (result != 0) {
+                NS_DPRINT("[FS] fs_find_node(): file name not found. name: %s, path: %s\n", tmp_name, pathname);
+                return result;
+            }
+            if (!S_ISDIR(next_node->mode)) {
+                NS_DPRINT("[FS] fs_find_node(): file is not a directory. name: %s, path: %s\n", tmp_name, pathname);
+                return -1;
+            }
+            current_dir = next_node;
+
+            offset++;
+            name_offset = 0;
+        } else {
+            while (pathname[offset] != '/' && pathname[offset]) {
+                tmp_name[name_offset++] = pathname[offset++];
+            }
         }
     }
-    *parent = parent_ret;
-    *target = vnode;
-    NS_DPRINT("[FS] fs_find_node(): node found %s.\n", vnode->name);
+
+    // copy the final file name
+    tmp_name[name_offset] = 0;      // end pointer
+    memcpy(tmp_name, node_name, name_offset);
+
+    FS_VNODE* final_node;
+    int result = current_dir->v_ops->lookup(current_dir, &final_node, tmp_name);
+
+    *parent = current_dir;
+    if (result != 0) {
+        return FS_FIND_NODE_HAS_PARENT_NO_TARGET;
+    }
+    *target = final_node;
     return FS_FIND_NODE_SUCCESS;
+
+    ///////////////////////////////////////////////
+
+    // FS_VNODE* vnode = fs_manager->rootfs->root;
+    // FS_VNODE* parent_ret = NULL;
+
+    // char name[20];
+    // U32 name_offset = 0;
+    // U32 pathname_offset = 0;
+    // if (pathname[pathname_offset++] != '/') {
+    //     printf("[FS] fs_find_node(): pathname not start with root. pathname: %s\n", pathname);
+    //     return -1;
+    // }
+
+    // NS_DPRINT("[FS] fs_find_node(): finding path %s\n", pathname);
+    // while (pathname[pathname_offset] != 0) {
+    //     name_offset = 0;
+    //     while (pathname[pathname_offset] != '/' && pathname[pathname_offset] != '\0') {
+    //         name[name_offset++] = pathname[pathname_offset++];
+    //     }
+    //     pathname_offset++;
+    //     name[name_offset++] = '\0';
+    //     NS_DPRINT("[FS] fs_find_node(): finding node: %s\n", name);
+    //     if (pathname[pathname_offset - 1] == '\0') {
+    //         memcpy(name, node_name, name_offset);       // copy the name to return
+    //         NS_DPRINT("[FS] fs_find_node(): final node name %s copied.\n", node_name);
+    //     }
+
+    //     FS_VNODE* next_node;
+    //     int result = vnode->v_ops->lookup(vnode, &next_node, name);
+    //     if (result != 0 && pathname[pathname_offset - 1] == '\0') {
+    //         *parent = vnode;
+    //         NS_DPRINT("[FS] fs_find_node(): has parent but no target. parent = %s.\n", vnode->name);
+    //         return FS_FIND_NODE_HAS_PARENT_NO_TARGET;
+    //     }
+    //     if (result != 0) {
+    //         NS_DPRINT("[FS] fs_find_node(): no parent and no target.\n");
+    //         return result;
+    //     }
+    //     parent_ret = vnode;
+    //     vnode = next_node;
+    //     if (pathname[pathname_offset - 1] == '\0') {
+    //         break;
+    //     }
+    // }
+    // *parent = parent_ret;
+    // *target = vnode;
+    // NS_DPRINT("[FS] fs_find_node(): node found %s.\n", vnode->name);
+    // return FS_FIND_NODE_SUCCESS;
 }
 
 /**
  * @param pathname
  *      absolute path
 */
-int vfs_lookup(const char* pathname, FS_VNODE** target) {
+int vfs_lookup(FS_VNODE* cwd, const char* pathname, FS_VNODE** target) {
     FS_VNODE* parent = NULL, *child = NULL;
-    char node_name[20];
-    fs_find_node(pathname, &parent, &child, node_name);
+    char node_name[FS_MAX_NAME_SIZE];
+    fs_find_node(cwd, pathname, &parent, &child, node_name);
     if (child) {
         *target = child;
         return 0;
@@ -74,11 +152,11 @@ int vfs_lookup(const char* pathname, FS_VNODE** target) {
     return -1;
 }
 
-int vfs_mkdir(const char* pathname) {
+int vfs_mkdir(FS_VNODE* cwd, const char* pathname) {
     FS_VNODE* parent = NULL,* vnode = NULL;
 
-    char node_name[20];
-    int ret = fs_find_node(pathname, &parent, &vnode, node_name);
+    char node_name[FS_MAX_NAME_SIZE];
+    int ret = fs_find_node(cwd, pathname, &parent, &vnode, node_name);
 
     if (ret != FS_FIND_NODE_HAS_PARENT_NO_TARGET) {
         return ret;
@@ -110,7 +188,7 @@ void fs_init() {
     fs_manager->rootfs->root = vnode_create("", S_IFDIR);
     fs_manager->rootfs->fs->setup_mount(fs, fs_manager->rootfs);
 
-    ret = vfs_mkdir("/initramfs"); 
+    ret = vfs_mkdir(NULL, "/initramfs"); 
     if (ret != 0) {
         printf("[FS][ERROR] Failed to make /initramfs directory\n");
         return;
@@ -126,7 +204,7 @@ void fs_init() {
         return;
     }
     FS_VNODE* initramfsroot = NULL;
-    ret = vfs_lookup("/initramfs", &initramfsroot);
+    ret = vfs_lookup(NULL, "/initramfs", &initramfsroot);
     if (ret != 0) {
         printf("[FS][ERROR] Failed to get /initramfs directory\n");
         return;
@@ -141,6 +219,12 @@ void fs_init() {
         return;
     }
 
+    // making dev directory for devices to mounting
+    ret = vfs_mkdir(NULL, "/dev"); 
+    if (ret != 0) {
+        printf("[FS][ERROR] Failed to make /dev directory\n");
+        return;
+    }
     NS_DPRINT("[FS][TRACE] fs_init() success.\n");
 }
 
@@ -160,10 +244,10 @@ int fs_register(FS_FILE_SYSTEM* fs) {
  * @param target
  *      the file struct to return
 */
-int vfs_open(const char* pathname, U32 flags, FS_FILE** target) {
+int vfs_open(FS_VNODE* cwd,const char* pathname, U32 flags, FS_FILE** target) {
     FS_VNODE *parent = NULL, * vnode = NULL;
-    char node_name[20];
-    int ret = fs_find_node(pathname, &parent, &vnode, node_name);
+    char node_name[FS_MAX_NAME_SIZE];
+    int ret = fs_find_node(cwd, pathname, &parent, &vnode, node_name);
 
     if (ret != 0 && !(flags & FS_FILE_FLAGS_CREATE)) {
         return ret;

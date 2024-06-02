@@ -75,11 +75,21 @@ int fs_register(FS_FILE_SYSTEM* fs);
 
 FS_VNODE* fs_get_root_node();
 
+#define FS_MAX_NAME_SIZE        256
+
 /**
+ * @param cwd
+ *      current working directory
+ * @param pathname
+ *      path to search
+ * @param parent
+ *      parent directory to return
+ * @param target
+ *      target to return
  * @param node_name
- *      target node name to return
+ *      final node name to return whatever it can be find
 */
-int fs_find_node(const char* pathname, FS_VNODE** parent, FS_VNODE** target, char* node_name);
+int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNODE** target, char* node_name);
 #define FS_FIND_NODE_HAS_PARENT_NO_TARGET           -10
 #define FS_FIND_NODE_SUCCESS                        0
 
@@ -92,10 +102,10 @@ FS_VNODE *vnode_create(const char *name, U32 flags);
  * @return
  *      0 = success
 */
-int vfs_open(const char* pathname, U32 flags, FS_FILE** target);
+int vfs_open(FS_VNODE* cwd, const char* pathname, U32 flags, FS_FILE** target);
 int vfs_close(FS_FILE* file);
 int vfs_write(FS_FILE* file, const void* buf, size_t len);
 int vfs_read(FS_FILE* file, void* buf, size_t len);
 
-int vfs_lookup(const char* pathname, FS_VNODE** target);
-int vfs_mkdir(const char* pathname);
+int vfs_lookup(FS_VNODE* cwd, const char* pathname, FS_VNODE** target);
+int vfs_mkdir(FS_VNODE* cwd, const char* pathname);

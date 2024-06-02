@@ -40,7 +40,7 @@ void sys_exec(TRAP_FRAME* regs) {
     NS_DPRINT("[SYSCALL][EXEC] Start executing %s\n", name);
 
     FS_FILE* file;
-    if (vfs_open(name, O_READ, &file)) {
+    if (vfs_open(task_get_current_el1()->pwd, name, O_READ, &file)) {
         NS_DPRINT("[SYSCALL][EXEC] Failed to open file: %s\n", name);
         regs->regs[0] = -1;
         return;
@@ -49,7 +49,7 @@ void sys_exec(TRAP_FRAME* regs) {
     TASK* current_task = task_get_current_el1();
 
     lock_interrupt();
-    // clean all user program page and current page table
+    // clean all user program page
     mmu_delete_mm(current_task);
     // init the stack
     mmu_task_init(current_task);
@@ -64,6 +64,7 @@ void sys_exec(TRAP_FRAME* regs) {
     vfs_read(file, buf, contentSize);
     vfs_close(file);
 
+    NS_DPRINT("testtest\n");
     task_copy_program(current_task, buf, contentSize);
     kfree(buf);
     jump_user_prog();

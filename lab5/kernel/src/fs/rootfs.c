@@ -106,8 +106,8 @@ static long lseek64(FS_FILE *file, long offset, int whence) {
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
     FS_VNODE* vnode = NULL;
+    NS_DPRINT("[FS] rootfs: lookup() finding file: %s\n", component_name);
     LLIST_FOR_EACH_ENTRY(vnode, &dir_node->childs, self) {
-        NS_DPRINT("[FS] lookup() iterating children: %s\n", vnode->name);
         if (utils_strncmp(vnode->name, component_name, utils_strlen(vnode->name)) == 0) {
             *target = vnode;
             return 0;
