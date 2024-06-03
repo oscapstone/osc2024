@@ -60,6 +60,12 @@ int strncmp(const char* s1, const char* s2, size_t n) {
 const char* strchr(const char* s, char c) {
   while (*s and *s != c)
     s++;
+  return *s ? s : NULL;
+}
+
+const char* strchr_or_e(const char* s, char c) {
+  while (*s and *s != c)
+    s++;
   return s;
 }
 

@@ -4,7 +4,7 @@ bool path_equal(string_view a, string_view b) {
   auto nxt_part = [](const char* s) {
     while (*s == '/')
       s++;
-    auto e = strchr(s, '/');
+    auto e = strchr_or_e(s, '/');
     return string_view{s, e - s};
   };
 
