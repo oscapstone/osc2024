@@ -3,9 +3,18 @@
 
 #include "list.h"
 #include "stdint.h"
+#include "bcm2837/rpi_mmu.h"
 
 #define UART_IRQ_PRIORITY 2
 #define TIMER_IRQ_PRIORITY 1
+
+#define MEMFAIL_DATA_ABORT_LOWER 0b100100 // esr_el1
+#define MEMFAIL_INST_ABORT_LOWER 0b100000 // EC, bits [31:26]
+
+#define TF_LEVEL0 0b000100 // iss IFSC, bits [5:0]
+#define TF_LEVEL1 0b000101
+#define TF_LEVEL2 0b000110
+#define TF_LEVEL3 0b000111
 
 typedef struct trapframe
 {
@@ -52,13 +61,20 @@ typedef struct irqtask
     void *task_function; // task function pointer
 } irqtask_t;
 
+typedef struct
+{
+    uint32_t iss : 25, // Instruction specific syndrome
+        il : 1,        // Instruction length bit
+        ec : 6;        // Exception class
+} esr_el1_t;
+
 void irqtask_add(void *task_function, uint64_t priority);
 void irqtask_run(irqtask_t *the_task);
 void irqtask_run_preemptive();
 void irqtask_list_init();
 
 // https://github.com/Tekki/raspberrypi-documentation/blob/master/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf p16
-#define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)(0x40000060))
+#define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)(PHYS_TO_VIRT(0x40000060)))
 
 #define INTERRUPT_SOURCE_CNTPNSIRQ (1 << 1)
 #define INTERRUPT_SOURCE_GPU (1 << 8)
@@ -70,9 +86,9 @@ void el1_interrupt_disable();
 void __lock_interrupt();
 void __unlock_interrupt();
 
-void el1h_irq_router(trapframe_t* tpf);
-void el0_sync_router(trapframe_t* tpf);
-void el0_irq_64_router(trapframe_t* tpf);
+void el1h_irq_router(trapframe_t *tpf);
+void el0_sync_router(trapframe_t *tpf);
+void el0_irq_64_router(trapframe_t *tpf);
 
 void invalid_exception_router(uint64_t x0); // exception_handler.S
 

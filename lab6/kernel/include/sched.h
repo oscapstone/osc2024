@@ -4,6 +4,7 @@
 #include "list.h"
 #include "stdint.h"
 #include "signal.h"
+#include "mmu.h"
 
 #define MAX_PID 32768
 #define MAX_SIGNAL 31
@@ -33,6 +34,7 @@ typedef struct cpu_context
     uint64_t fp;  // x29: base pointer for local variable in stack
     uint64_t lr;  // x30: store return address
     uint64_t sp;  // stack pointer, varys from function calls
+    void* pgd;   // use for MMU mapping (user space)
 }cpu_context_t;
 
 enum thread_status
@@ -64,6 +66,8 @@ typedef struct child_node
     int64_t             pid;
 } child_node_t;
 
+typedef struct vm_area_struct vm_area_struct_t;
+
 typedef struct thread_struct
 {
     struct list_head    listhead;                              // Freelist node
@@ -78,6 +82,7 @@ typedef struct thread_struct
     char*               user_stack_base;                       // User space Stack (Process itself)
     char*               kernel_stack_base;                     // Kernel space Stack (Kernel syscall)
     char*               name;                                  // Process name
+    vm_area_struct_t*   vma_list;                              // Virtual Memory Area
 } thread_t;
 
 int8_t thread_code_can_free(thread_t *thread);

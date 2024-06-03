@@ -16,7 +16,7 @@ void main(char *arg)
 {
     kernel_lock_interrupt();
 
-    dtb_init(arg);
+    dtb_init(PHYS_TO_VIRT(arg));
 
     uart_init();
     uart_interrupt_enable();

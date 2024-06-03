@@ -4,6 +4,8 @@
 #include "uart1.h"
 #include "list.h"
 #include "exception.h"
+#include "mmu.h"
+#include "bcm2837/rpi_mmu.h"
 
 // Address           0k    4k    8k    12k   16k   20k   24k   28k   32k   36k   40k   44k   48k   52k   56k   60k
 //                   ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
@@ -17,8 +19,10 @@
 // #define X_FRAME_VAL -2 // This frame is already allocated.
 
 extern uint8_t _heap_top;
-extern char _start;
-extern char _end;
+extern char _kernel_start;
+extern char _kernel_end;
+extern char _kernel_stack_top;
+extern char _kernel_stack_end;
 extern char *CPIO_START;
 extern char *CPIO_END;
 extern char *DTB_START;
@@ -43,14 +47,14 @@ static inline size_t frame_to_index(frame_t *frame)
     return (size_t)((frame_t *)frame - frame_array);
 }
 
-static inline frame_t *phy_addr_to_frame(void *ptr)
+static inline frame_t *virt_addr_to_frame(void *ptr)
 {
-    return (frame_t *)&frame_array[(uint64_t)ptr / PAGE_FRAME_SIZE];
+    return (frame_t *)&frame_array[((uint64_t)ptr - PHYS_BASE) / PAGE_FRAME_SIZE];
 }
 
-static inline void *frame_addr_to_phy_addr(frame_t *frame)
+static inline void *frame_addr_to_virt_addr(frame_t *frame)
 {
-    return (void *)(frame_to_index(frame) * PAGE_FRAME_SIZE);
+    return (void *)(frame_to_index(frame) * PAGE_FRAME_SIZE + PHYS_BASE);
 }
 
 static inline frame_t *find_end_frame_of_block(frame_t *start_frame, int8_t val)
@@ -65,7 +69,7 @@ static inline frame_t *index_to_frame(size_t index)
 
 static inline frame_t *cache_to_frame(void *ptr)
 {
-    return phy_addr_to_frame(ptr);
+    return virt_addr_to_frame(ptr);
 }
 
 static inline size_t cache_to_index(void *ptr)
@@ -174,11 +178,15 @@ void memory_init()
 {
     allocate_frame();
     init_cache();
+    
 
     // INFO_BLOCK(test_memory(););
-    memory_reserve(0x0000, 0x1000); // Spin tables for multicore boot (0x0000 - 0x1000)
-    INFO("_start: 0x%x, _end: 0x%x\n", &_start, &_end);
-    memory_reserve((size_t)&_start, (size_t)&_end);
+    memory_reserve(PHYS_TO_VIRT(0x0000), PHYS_TO_VIRT(MMU_PTE_ADDR + 0x2000)); // // PGD's page frame at 0x1000 // PUD's page frame at 0x2000 PMD 0x3000-0x5000
+    // memory_reserve(PHYS_TO_VIRT(0x0000), PHYS_TO_VIRT(0x1000));                      // Spin tables for multicore boot (0x0000 - 0x1000)
+    INFO("_kernel_start: 0x%x, _kernel_end: 0x%x\n", &_kernel_start, &_kernel_end);
+    memory_reserve((size_t)&_kernel_start, (size_t)&_kernel_end);
+    INFO("_kernel_stack_end: 0x%x, _kernel_stack_top: 0x%x\n", &_kernel_stack_end, &_kernel_stack_top);
+    memory_reserve((size_t)&_kernel_stack_top, (size_t)&_kernel_stack_end);
     INFO("CPIO_START: 0x%x, CPIO_END: 0x%x\n", CPIO_START, CPIO_END);
     memory_reserve((size_t)CPIO_START, (size_t)CPIO_END);
     INFO("DTB_START: 0x%x, DTB_END: 0x%x\n", DTB_START, DTB_END);
@@ -204,7 +212,7 @@ void *kmalloc(size_t size)
     if (size >= PAGE_FRAME_SIZE / 2)
     {
         void *ptr = page_malloc(size);
-        // DEBUG("use page_malloc: ptr: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, phy_addr_to_frame(ptr)->order, phy_addr_to_frame(ptr)->cache_used_count, phy_addr_to_frame(ptr)->val);
+        // DEBUG("use page_malloc: ptr: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, virt_addr_to_frame(ptr)->order, virt_addr_to_frame(ptr)->cache_used_count, virt_addr_to_frame(ptr)->val);
         kernel_unlock_interrupt();
         return ptr;
     }
@@ -220,14 +228,14 @@ void *kmalloc(size_t size)
         curr = cache_freelist[(size_t)order]->next;
         list_del_entry(curr);
         curr->next = curr->prev = curr;
-        phy_addr_to_frame(curr)->cache_used_count++;
-        // DEBUG("kmalloc: find the exact size, cache address: 0x%x, frame->cache_used_count: %d, frame->val: %d, frame address: 0x%x\n", curr, phy_addr_to_frame(curr)->cache_used_count, phy_addr_to_frame(curr)->val, phy_addr_to_frame(curr));
+        virt_addr_to_frame(curr)->cache_used_count++;
+        // DEBUG("kmalloc: find the exact size, cache address: 0x%x, frame->cache_used_count: %d, frame->val: %d, frame address: 0x%x\n", curr, virt_addr_to_frame(curr)->cache_used_count, virt_addr_to_frame(curr)->val, virt_addr_to_frame(curr));
         kernel_unlock_interrupt();
         return (void *)curr;
     }
 
     void *ptr = page_malloc(PAGE_FRAME_SIZE);
-    frame_t *frame = phy_addr_to_frame(ptr);
+    frame_t *frame = virt_addr_to_frame(ptr);
     // DEBUG("kmalloc: split a new frame, ptr address: 0x%x\n", ptr);
     frame->order = order;
     frame->cache_used_count = 1;
@@ -262,7 +270,7 @@ void kfree(void *ptr)
         // DEBUG("remove the cache with the same frame from freelist\r\n");
         for (size_t i = 0; i < PAGE_FRAME_SIZE / order_size; i++)
         {
-            list_del_entry((list_head_t *)((void *)frame_addr_to_phy_addr(frame) + i * order_size));
+            list_del_entry((list_head_t *)((void *)frame_addr_to_virt_addr(frame) + i * order_size));
         }
         frame->order = NOT_CACHE;
         page_free(ptr);
@@ -278,13 +286,15 @@ void kfree(void *ptr)
 int memory_reserve(size_t start, size_t end)
 {
     kernel_lock_interrupt();
-    size_t start_index = start / PAGE_FRAME_SIZE;                                    // align
-    size_t end_index = end / PAGE_FRAME_SIZE + (end % PAGE_FRAME_SIZE == 0 ? 0 : 1); // padding
+    DEBUG("end - start: 0x%x, start: 0x%x, end: 0x%x\n", end - start, start, end);
+    size_t start_index = frame_to_index(virt_addr_to_frame(start));
+    // size_t start_index = start / PAGE_FRAME_SIZE;                                    // align
+    size_t end_index = frame_to_index(virt_addr_to_frame(end) + (end % PAGE_FRAME_SIZE == 0 ? 0 : 1)); // padding
     // split the start frame to fit the start address
     frame_t *start_frame = index_to_frame(start_index);
     frame_t *end_frame = index_to_frame(end_index);
     size_t curr_index = start_index;
-    INFO("start reserve: start_index: (0x%x, 0x%x), end_index: (0x%x, 0x%x)\n", start_index, frame_addr_to_phy_addr(start_frame), end_index, frame_addr_to_phy_addr(end_frame));
+    INFO("start reserve: start_index: (0x%x, 0x%x), end_index: (0x%x, 0x%x)\n", start_index, frame_addr_to_virt_addr(start_frame), end_index, frame_addr_to_virt_addr(end_frame));
 
     while (index_to_frame(curr_index)->val == F_FRAME_VAL)
     {
@@ -295,13 +305,13 @@ int memory_reserve(size_t start, size_t end)
         frame_t *curr_frame = index_to_frame(curr_index);
         if (list_empty((list_head_t *)curr_frame))
         {
-            ERROR("curr_frame is allocated, curr_index: (0x%x, 0x%x), curr_frame->val: %d\n", curr_index, frame_addr_to_phy_addr(curr_frame), curr_frame->val);
+            ERROR("curr_frame is allocated, curr_index: (0x%x, 0x%x), curr_frame->val: %d\n", curr_index, frame_addr_to_virt_addr(curr_frame), curr_frame->val);
             while (1)
                 ;
         }
         if (curr_index < start_index) // split when curr_index is before start_index
         {
-            INFO("curr_index is before start_index, curr_index: (0x%x, 0x%x), start_index: (0x%x, 0x%x)\n", curr_index, frame_addr_to_phy_addr(curr_frame), start_index, frame_addr_to_phy_addr(start_frame));
+            INFO("curr_index is before start_index, curr_index: (0x%x, 0x%x), start_index: (0x%x, 0x%x)\n", curr_index, frame_addr_to_virt_addr(curr_frame), start_index, frame_addr_to_virt_addr(start_frame));
             size_t split_val = curr_frame->val - 1;
             size_t buddy_index = get_buddy_index(split_val, curr_index);
             frame_t *buddy_frame = index_to_frame(buddy_index);
@@ -312,25 +322,25 @@ int memory_reserve(size_t start, size_t end)
             page_insert(split_val, buddy_frame);
             if (buddy_index <= start_index)
             {
-                INFO("curr_index = buddy_index, buddy_index: (0x%x, 0x%x), buddy_index->val: %d\n", buddy_index, frame_addr_to_phy_addr(buddy_frame), buddy_frame->val);
+                INFO("curr_index = buddy_index, buddy_index: (0x%x, 0x%x), buddy_index->val: %d\n", buddy_index, frame_addr_to_virt_addr(buddy_frame), buddy_frame->val);
                 curr_index = buddy_index;
             }
         }
         else if (start_index <= curr_index && curr_index + val_to_num_of_frame(curr_frame->val) - 1 <= end_index) // all frame is in the range
         {
-            INFO("reserve frame: (0x%x -> 0x%x), curr_frame->val: %d\n", frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), curr_frame->val);
+            INFO("reserve frame: (0x%x -> 0x%x), curr_frame->val: %d\n", frame_addr_to_virt_addr(curr_frame), frame_addr_to_virt_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), curr_frame->val);
             list_del_entry((list_head_t *)curr_frame);
             curr_index += val_to_num_of_frame(curr_frame->val);
         }
         else if (start_index <= curr_index && end_index < curr_index + val_to_num_of_frame(curr_frame->val) - 1) // split when frame is over end_index
         {
-            INFO("curr_index is over end_index, curr_index: %d, end_index: %d, curr->val: %d, curr: (0x%x -> 0x%x), end: (0x%x)\n", curr_index, end_index, curr_frame->val, frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), frame_addr_to_phy_addr(end_frame));
+            INFO("curr_index is over end_index, curr_index: %d, end_index: %d, curr->val: %d, curr: (0x%x -> 0x%x), end: (0x%x)\n", curr_index, end_index, curr_frame->val, frame_addr_to_virt_addr(curr_frame), frame_addr_to_virt_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), frame_addr_to_virt_addr(end_frame));
             size_t split_val = curr_frame->val - 1;
             size_t buddy_index = get_buddy_index(split_val, curr_index);
             frame_t *buddy_frame = index_to_frame(buddy_index);
             curr_frame->val = split_val;
             buddy_frame->val = split_val;
-            INFO("split: (0x%x -> 0x%x), buddy: (0x%x -> 0x%x)\n", frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), frame_addr_to_phy_addr(buddy_frame), frame_addr_to_phy_addr(buddy_frame + val_to_num_of_frame(buddy_frame->val)));
+            INFO("split: (0x%x -> 0x%x), buddy: (0x%x -> 0x%x)\n", frame_addr_to_virt_addr(curr_frame), frame_addr_to_virt_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), frame_addr_to_virt_addr(buddy_frame), frame_addr_to_virt_addr(buddy_frame + val_to_num_of_frame(buddy_frame->val)));
             list_del_entry((list_head_t *)curr_frame);
             page_insert(split_val, curr_frame);
             page_insert(split_val, buddy_frame);
@@ -342,7 +352,7 @@ int memory_reserve(size_t start, size_t end)
                 ;
         }
     }
-    INFO("end reserve: (0x%x -> 0x%x)\n", frame_addr_to_phy_addr(start_frame), frame_addr_to_phy_addr(end_frame + 1));
+    INFO("end reserve: (0x%x -> 0x%x)\n", frame_addr_to_virt_addr(start_frame), frame_addr_to_virt_addr(end_frame + 1));
     kernel_unlock_interrupt();
     return 0;
 }
@@ -421,7 +431,7 @@ void *page_malloc(size_t size)
     frame->order = NOT_CACHE;
     frame->cache_used_count = 0;
     kernel_unlock_interrupt();
-    return frame_addr_to_phy_addr(frame);
+    return frame_addr_to_virt_addr(frame);
 }
 
 frame_t *get_free_frame(int val)
@@ -435,7 +445,8 @@ frame_t *get_free_frame(int val)
     else
     {
         curr = split_frame(val);
-        if(curr == 1){
+        if (curr == 1)
+        {
             return 1;
         }
     }
@@ -483,7 +494,8 @@ frame_t *split_frame(int8_t val)
             break;
         upper_val++;
     }
-    if(upper_val > MAX_VAL){
+    if (upper_val > MAX_VAL)
+    {
         return 1;
     }
 
@@ -501,7 +513,7 @@ frame_t *split_frame(int8_t val)
 int page_free(void *ptr)
 {
     kernel_lock_interrupt();
-    frame_t *curr = phy_addr_to_frame(ptr);
+    frame_t *curr = virt_addr_to_frame(ptr);
     int8_t val = curr->val;
     curr->val = F_FRAME_VAL;
     // int new_val = val;
@@ -513,7 +525,7 @@ int page_free(void *ptr)
             break;
         }
         list_del_entry((list_head_t *)buddy); // buddy is free and be able to merge
-        // uart_puts("val: %2d, merge: address(0x%x, 0x%x), frame(0x%x, 0x%x)\n", val, frame_addr_to_phy_addr((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)buddy), curr, buddy);
+        // uart_puts("val: %2d, merge: address(0x%x, 0x%x), frame(0x%x, 0x%x)\n", val, frame_addr_to_virt_addr((frame_t *)curr), frame_addr_to_virt_addr((frame_t *)buddy), curr, buddy);
 
         buddy->val = F_FRAME_VAL;
         curr->val = F_FRAME_VAL;
@@ -522,7 +534,7 @@ int page_free(void *ptr)
         // val++;
     }
     curr->val = val;
-    // uart_puts("curr address: 0x%x, curr->prev address: 0x%x, curr->next address: 0x%x\n", frame_addr_to_phy_addr(curr), frame_addr_to_phy_addr(curr->listhead.prev), frame_addr_to_phy_addr(curr->listhead.next));
+    // uart_puts("curr address: 0x%x, curr->prev address: 0x%x, curr->next address: 0x%x\n", frame_addr_to_virt_addr(curr), frame_addr_to_virt_addr(curr->listhead.prev), frame_addr_to_virt_addr(curr->listhead.next));
     page_insert(val, curr);
     kernel_unlock_interrupt();
     return 0;
@@ -551,9 +563,9 @@ void dump_frame()
         list_for_each(curr, frame_freelist[i])
         {
 #ifdef QEMU
-            uart_puts("│       index:%7d, address: 0x%8x, val:%2d      │\n", frame_to_index((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)curr), ((frame_t *)curr)->val);
+            uart_puts("│       index:%7d, address: 0x%8x, val:%2d      │\n", frame_to_index((frame_t *)curr), frame_addr_to_virt_addr((frame_t *)curr), ((frame_t *)curr)->val);
 #elif RPI
-            uart_puts("|       index:%7d, address: 0x%8x, val:%2d      |\n", frame_to_index((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)curr), ((frame_t *)curr)->val);
+            uart_puts("|       index:%7d, address: 0x%8x, val:%2d      |\n", frame_to_index((frame_t *)curr), frame_addr_to_virt_addr((frame_t *)curr), ((frame_t *)curr)->val);
 #endif
         }
 #ifdef QEMU

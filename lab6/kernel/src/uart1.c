@@ -4,6 +4,7 @@
 #include "uart1.h"
 #include "stdio.h"
 #include "exception.h"
+#include "syscall.h"
 
 // implement first in first out buffer with a read index and a write index
 char uart_tx_buffer[VSPRINT_MAX_BUF_SIZE] = {0};

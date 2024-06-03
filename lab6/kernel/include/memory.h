@@ -4,6 +4,7 @@
 #include "list.h"
 #include "stdint.h"
 
+#define PHYS_BASE 0xFFFF000000000000L // base of direct mapping physical address to virtual address
 #define PAGE_FRAME_SHIFT 12 // 4KB
 #define PAGE_FRAME_SIZE (1 << PAGE_FRAME_SHIFT)
 #define MAX_VAL 17 // max buddy frame size: 4KB * 2^6

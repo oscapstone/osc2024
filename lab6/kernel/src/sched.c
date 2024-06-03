@@ -14,30 +14,16 @@ struct list_head *run_queue;
 
 thread_t *threads[MAX_PID + 1];
 thread_t *curr_thread;
-extern char _start;
-extern char _end;
+extern char _kernel_start;
+extern char _kernel_end;
 
 static int64_t pid_history = 0;
 int8_t need_to_schedule = 0;
 
-// void _SIGNAL_COPY(thread_t *dest_thread, thread_t *src_thread)
-// {
-// 	dest_thread->signal = src_thread->signal;
-// 	dest_thread->signal.pending_list = kmalloc(sizeof(signal_node_t));
-// 	INIT_LIST_HEAD((list_head_t *)dest_thread->signal.pending_list);
-// 	list_head_t *curr;
-// 	list_for_each(curr, (list_head_t *)src_thread->signal.pending_list)
-// 	{
-// 		signal_node_t *new_node = kmalloc(sizeof(signal_node_t));
-// 		new_node->signal = ((signal_node_t *)curr)->signal;
-// 		list_add_tail((list_head_t *)new_node, (list_head_t *)dest_thread->signal.pending_list);
-// 	}
-// }
-
 static inline int8_t in_kernel_img_space(uint64_t addr)
 {
-	DEBUG("addr: 0x%x, _start: 0x%x, _end: 0x%x\n", addr, &_start, &_end);
-	return addr >= &_start && addr < &_end;
+	DEBUG("addr: 0x%x, _start: 0x%x, _end: 0x%x\n", addr, &_kernel_start, &_kernel_end);
+	return addr >= &_kernel_start && addr < &_kernel_end;
 }
 
 static inline thread_t *child_node_to_thread(child_node_t *node)
@@ -102,7 +88,7 @@ void init_thread_sched()
 	strcpy(thread_name, "idle");
 	curr_thread = _init_create_thread(thread_name, 0, 0, idle);
 	set_current_thread_context(&(threads[0]->context));
-	
+
 	// init process
 	thread_name = kmalloc(5);
 	strcpy(thread_name, "init");
@@ -114,8 +100,8 @@ void init_thread_sched()
 	sprintf(thread_name, "kshell");
 	thread_t *kshell = thread_create(start_shell, thread_name);
 	kshell->datasize = 0x100000;
-
-    schedule_timer();
+	schedule_timer();
+	DEBUG("init_thread: 0x%x, kshell: 0x%x\n", init_thread, kshell);
 	kernel_unlock_interrupt();
 }
 
