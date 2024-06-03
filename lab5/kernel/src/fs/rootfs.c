@@ -9,13 +9,15 @@ static int read(FS_FILE *file, void *buf, size_t len);
 static int open(FS_VNODE *file_node, FS_FILE **target);
 static int close(FS_FILE *file);
 static long lseek64(FS_FILE *file, long offset, int whence);
+static int ioctl(FS_FILE *file, unsigned long request, ...);
 
 FS_FILE_OPERATIONS rootfs_f_ops = {
     write,
     read,
     open,
     close,
-    lseek64
+    lseek64,
+    ioctl
 };
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name);
@@ -45,7 +47,7 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
 
 FS_FILE_SYSTEM* rootfs_create() {
     FS_FILE_SYSTEM* fs = kmalloc(sizeof(FS_FILE_SYSTEM));
-    fs->name = "rootfs";
+    fs->name = ROOT_FS_NAME;
     fs->setup_mount = &setup_mount;
     link_list_init(&fs->list);
     return fs;
@@ -81,11 +83,11 @@ static int read(FS_FILE *file, void *buf, size_t len) {
         return -1;
     }
 
-    int min = (len > vnode->content_size - file->pos - 1) ? vnode->content_size - file->pos - 1 : len;
+    int min = (file->pos + len >= vnode->content_size) ? vnode->content_size - file->pos - 1 : len;
     if (min == 0) {
         return -1;
     }
-    memcpy(buf, (void*)((char*)vnode->content + file->pos), min);
+    memcpy((void*)((char*)vnode->content + file->pos), buf, min);
     file->pos += min;
     return min;
 }
@@ -101,7 +103,18 @@ static int close(FS_FILE *file) {
 }
 
 static long lseek64(FS_FILE *file, long offset, int whence) {
-    return 0;
+    switch (whence)
+    {
+    case SEEK_SET:
+    {
+        file->pos = offset;
+        return offset;
+    }    
+        break;
+    default:
+        return -1;
+        break;
+    }
 }
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
@@ -155,4 +168,8 @@ static int mkdir(FS_VNODE* dir_node, FS_VNODE** target, const char* component_na
     NS_DPRINT("[FS][TRACE] rootfs: mkdir(): dir %s created.\n", component_name);
     return 0;
 
+}
+
+static int ioctl(FS_FILE *file, unsigned long request, ...) {
+    return -1;
 }

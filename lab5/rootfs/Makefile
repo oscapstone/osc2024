@@ -14,9 +14,10 @@ CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding \
 		  -I src -I lib\
 		  -D NS_DEBUG
 
-LIB		= lib/fork.o lib/uartwrite.o lib/printf.o lib/getpid.o start.o lib/exit.o lib/mbox_call.o
+LIB		= lib/fork.o lib/uartwrite.o lib/printf.o lib/getpid.o start.o lib/exit.o lib/mbox_call.o \
+		  lib/open.o lib/close.o lib/read.o lib/write.o lib/lseek64.o lib/ioctl.o
 
-all : testProgram test_fork test_cow test_mbox
+all : testProgram test_fork test_cow test_mbox test_fb
 
 clean :
 	rm -rf testProgram test_fork test_cow
@@ -27,6 +28,10 @@ cpio :
 test_fork : test_fork.o $(LIB)
 	$(LD) $^ -T linker.ld -o test_fork.elf
 	$(OBJCOPY) -O binary test_fork.elf $@
+
+test_fb : test_fb.o $(LIB)
+	$(LD) $^ -T linker.ld -o test_fb.elf
+	$(OBJCOPY) -O binary test_fb.elf $@
 
 test_cow : test_cow.o $(LIB)
 	$(LD) $^ -T linker.ld -o test_cow.elf

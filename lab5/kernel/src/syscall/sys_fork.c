@@ -10,9 +10,9 @@
 extern TASK_MANAGER* task_manager;
 
 void sys_fork(TRAP_FRAME* regs) {
-    const TASK* task = task_get_current_el1();
+    TASK* task = task_get_current_el1();
     NS_DPRINT("[SYSCALL][TRACE] fork called pid = %d\n", task->pid);
-    int parent_pid = task->pid;
+    pid_t parent_pid = task->pid;
     
     char name[20];
     sprintf(name, "%s_child", task->name);
@@ -31,7 +31,7 @@ void sys_fork(TRAP_FRAME* regs) {
     memcpy(task->kernel_stack, new_task->kernel_stack, TASK_STACK_SIZE);
 
     // record the current context specialy return address to split the child and parent task
-    task_asm_store_context(task_get_current_el1());
+    task_asm_store_context(&task_get_current_el1()->cpu_regs);
 
     // split here
     task = task_get_current_el1();
@@ -65,8 +65,18 @@ void sys_fork(TRAP_FRAME* regs) {
 
     // TODO: copy file system api
     new_task->pwd = task->pwd;
+    
+    if (task->program_file) {
+        if (vfs_open(task->program_file->vnode->parent, task->program_file->vnode->name, FS_FILE_FLAGS_READ, &new_task->program_file)) {
+            printf("[FORK] Error failed to open file: %s\n", task->program_file->vnode->name);
+            task_kill(new_task, -2);
+            regs->regs[0] = -1;
+            return;
+        }
+    }
 
     // copy handler
+    signal_task_init(new_task);
     for(int i = 0; i < SIGNAL_NUM; i++) {
         new_task->signals[i].handler = task->signals[i].handler;
     }

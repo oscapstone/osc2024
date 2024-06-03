@@ -6,6 +6,7 @@
 #include "utils/printf.h"
 
 void sys_close(TRAP_FRAME* regs) {
+    NS_DPRINT("[SYSCALL][CLOSE] start.\n");
     
     TASK* current_task = task_get_current_el1();
 
@@ -31,4 +32,5 @@ void sys_close(TRAP_FRAME* regs) {
 
     // success
     regs->regs[0] = 0;
+    NS_DPRINT("[SYSCALL][CLOSE] success. fd: %d\n", fd);
 }

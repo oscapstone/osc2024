@@ -197,6 +197,10 @@ USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
     }
     USER_PAGE_INFO* user_page = NULL;
     for (U64 i = 0; i < task->mm.user_pages_count; i++) {
+        if (i >= TASK_MAX_USER_PAGES) {
+            printf("[ERROR] user page overflow!\n");
+            return 0;
+        }
         USER_PAGE_INFO* cur_page = &task->mm.user_pages[i];
         if (cur_page->v_addr == v_addr) {
             user_page = cur_page;
@@ -287,6 +291,7 @@ int mmu_set_entry(TASK* task, U64 v_addr, U64 mmu_flags) {
 
 void mmu_delete_user(TASK* task) {
     // delete block descriptors
+    NS_DPRINT("user page count: %d\n", task->mm.user_pages_count);
     for (U64 i = 0; i < task->mm.user_pages_count; i++) {
         if (task->mm.user_pages[i].p_addr)      // because it probably not loaded yet.
             mem_dereference(task->mm.user_pages[i].p_addr);
@@ -297,20 +302,13 @@ void mmu_delete_user(TASK* task) {
 
 void mmu_delete_mm(TASK* task) {
 
+    mmu_delete_user(task);
     // delete table descriptors
     for (U64 i = 0; i < task->mm.kernel_pages_count; i++) {
         kfree(task->mm.kernel_pages[i]);
     }
     task->mm.kernel_pages_count = 0;
     
-    mmu_delete_user(task);
-    // delete mmap
-    // VMA_STRUCT* mmap = task->mm.mmap;
-    // while (mmap) {
-    //     VMA_STRUCT* next = mmap->next;
-    //     kfree(mmap);
-    //     mmap = next;
-    // }
 
     task->cpu_regs.pgd = NULL;
     NS_DPRINT("[MMU][DEBUG] task[%d] mm deleted.\n", task->pid);
@@ -371,6 +369,7 @@ void mmu_memfail_handler(U64 esr) {
     U64 sp_el0 = utils_read_sysreg(sp_el0);
 
     NS_DPRINT("[MMU][TRACE] memfail() start.\n");
+    NS_DPRINT("pid:     %d\n", task->pid);
     NS_DPRINT("page:    0x%08x%08x\n", fault_page_addr >> 32, fault_page_addr);
     NS_DPRINT("far_el1: 0x%08x%08x\n", far_el1 >> 32, far_el1);
     NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
@@ -381,7 +380,7 @@ void mmu_memfail_handler(U64 esr) {
     USER_PAGE_INFO* current_page_info = NULL;
     for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {
         USER_PAGE_INFO* page_info = &task->mm.user_pages[i];
-        if (page_info->v_addr <= far_el1 && page_info->v_addr + PD_PAGE_SIZE >= far_el1) {
+        if (page_info->v_addr == fault_page_addr) {
             current_page_info = page_info;
             break;
         }
@@ -416,8 +415,15 @@ void mmu_memfail_handler(U64 esr) {
         if (current_page_info->p_addr == 0) {
             NS_DPRINT("[MMU][TRACE] page not present yet.\n");
             map_page = kzalloc(PD_PAGE_SIZE);
+            // check if it is .text section (whatever)
+            if (task->program_file) {
+                if (fault_page_addr < task->program_file->vnode->content_size) {
+                    vfs_lseek64(task->program_file, fault_page_addr, SEEK_SET);
+                    vfs_read(task->program_file, (void*)map_page, PD_PAGE_SIZE);
+                }
+            }
         } else {
-            map_page = current_page_info->p_addr;
+            map_page = MMU_PHYS_TO_VIRT(current_page_info->p_addr);
         }
         mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(map_page), page_flags);
     } else if ( (iss & 0x3f) == ISS_PF_LEVEL0 ||

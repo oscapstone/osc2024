@@ -163,29 +163,36 @@ void shell() {
 			}
 			fileName[--len] = '\0';
 
-			FS_FILE* file;
-			int ret = vfs_open(task_get_current_el1()->pwd, fileName, FS_FILE_FLAGS_READ, &file);
-			if (ret != 0) {
-				printf("Program %s not found. result = %d\n", fileName, ret);
-				continue;
-			}
-			if (S_ISDIR(file->vnode->mode)) {
-				printf("%s is directory.\n", file->vnode->name);
-				continue;
-			}
-			unsigned long contentSize = file->vnode->content_size;
-			char programName[20];
-			utils_char_fill(programName, file->vnode->name, utils_strlen(file->vnode->name));
-			char* buf = kmalloc(file->vnode->content_size);
-			vfs_read(file, buf, contentSize);
-			vfs_close(file);
+			// FS_FILE* file;
+			// int ret = vfs_open(task_get_current_el1()->pwd, fileName, FS_FILE_FLAGS_READ, &file);
+			// if (ret != 0) {
+			// 	printf("Program %s not found. result = %d\n", fileName, ret);
+			// 	continue;
+			// }
+			// if (S_ISDIR(file->vnode->mode)) {
+			// 	printf("%s is directory.\n", file->vnode->name);
+			// 	continue;
+			// }
+			// unsigned long contentSize = file->vnode->content_size;
+			// char programName[20];
+			// utils_char_fill(programName, file->vnode->name, utils_strlen(file->vnode->name));
+			// char* buf = kmalloc(file->vnode->content_size);
+			// vfs_read(file, buf, contentSize);
+			// vfs_close(file);
 			
-			printf("Executing %s\n", fileName);
+			// printf("Executing %s\n", fileName);
 
-			TASK* user_task = task_create_user(programName, TASK_FLAGS_NONE);
-			user_task->pwd = file->vnode->parent;				// Just Hard coded now, can change to shell working directory
-			task_copy_program(user_task, buf, contentSize);
-			kfree(buf);
+			// TASK* user_task = task_create_user(programName, TASK_FLAGS_NONE);
+			// user_task->pwd = file->vnode->parent;				// Just Hard coded now, can change to shell working directory
+
+			// task_copy_program(user_task, buf, contentSize);
+			// kfree(buf);
+			// task_run_to_el0(user_task);
+			TASK* user_task = task_create_user("", TASK_FLAGS_NONE);
+			if (task_run_program(NULL/* change this to shell cwd*/, user_task, fileName) == -1) {
+				printf("Failed to execute program: %s\n", fileName);
+				continue;
+			}
 			task_run_to_el0(user_task);
 
 

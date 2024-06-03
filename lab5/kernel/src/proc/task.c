@@ -227,7 +227,7 @@ int task_kill(pid_t pid, int exitcode) {
         printf("[TASK][WARN] task does not run. pid = %d, status = %d\n", pid, task->status);
         return -1;
     }
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     task_remove_from_run_list(task);
     task->exitcode = exitcode;
     
@@ -238,7 +238,7 @@ int task_kill(pid_t pid, int exitcode) {
     // TODO: Signal the parent task to know by waiting
     // exitcode
 
-    unlock_interrupt();
+    irq_restore(irq_flags);
     NS_DPRINT("[TASK][TRACE] task killed. pid = %d\n", task->pid);
     if (task_get_current_el1() == task)
         task_schedule();
@@ -246,17 +246,7 @@ int task_kill(pid_t pid, int exitcode) {
 }
 
 void task_delete(TASK* task) {
-    lock_interrupt();
-    mmu_delete_mm(task);            // free page table
-    if (task->kernel_stack) {
-        kfree(task->kernel_stack);
-        task->kernel_stack = NULL;
-    }
-    task->status = 0;
-    task->flags = 0;
-    task_manager->count--;
-    unlock_interrupt();
-
+    
     // clean up the file that had been allocated.
     for (U32 i = 0; i < MAX_FILE_DESCRIPTOR; i++) {
         FILE_DESCRIPTOR* descriptor = &task->file_table[i];
@@ -265,17 +255,32 @@ void task_delete(TASK* task) {
             descriptor->file = NULL;
         }
     }
+    if (task->program_file) {
+        vfs_close(task->program_file);
+        task->program_file = NULL;
+    }
+    lock_interrupt();
+    mmu_delete_mm(task);            // free page table
+    if (task->kernel_stack) {
+        kfree(task->kernel_stack);
+        task->kernel_stack = NULL;
+    }
+    task->status = TASK_STATUS_DEAD;
+    task->flags = 0;
+    task_manager->count--;
+    unlock_interrupt();
+
     NS_DPRINT("[TASK][TRACE] task deleted. pid = %d\n", task->pid);
 }
 
 void task_kill_dead() {
-    disable_interrupt();
+    U64 irq_flags = irq_disable();
     for (U32 i = 0; i < task_manager->dead_count; i++) {
         task_delete(task_manager->dead_list[i]);
         task_manager->dead_list[i] = NULL;
     }
     task_manager->dead_count = 0;
-    enable_interrupt();
+    irq_restore(irq_flags);
 }
 
 // common task for task creation not called by any system
@@ -310,7 +315,13 @@ TASK* task_alloc(const char* name, U32 flags) {
     // init signal
     signal_task_init(task);
 
+    // initialize the
     task->pwd = fs_get_root_node();     // just use the root node now for user process, will change if this user process load by tty
+    for (int i = 0; i < 3; i++) {
+        if(vfs_open(NULL, "/dev/uart", FS_FILE_FLAGS_READ | FS_FILE_FLAGS_WRITE, &task->file_table[i].file)) {
+            printf("[TASK] failed to create uart file for task %d\n", task->pid);
+        }
+    }
 
     task_manager->count++;
     NS_DPRINT("[TASK][TRACE] task allocated. pid = %d\n", task->pid);
@@ -350,6 +361,28 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size) {
         offset += size;
     }
     NS_DPRINT("[TASK][DEBUG] Task copied. pid = %d\n", task->pid);
+}
+
+int task_run_program(FS_VNODE* cwd, TASK* task, const char* program_path) {
+    FS_FILE* program_file;
+    if (vfs_open(cwd, program_path, FS_FILE_FLAGS_READ, &program_file)) {
+        printf("[TASK] Error failed to open program: %s\n", program_path);
+        return -1;
+    }
+    
+    task->program_file = program_file;
+    
+    size_t name_len = utils_strlen(program_file->vnode->name);
+    memcpy(program_file->vnode->name, task->name, name_len > 20 ? 20 : name_len);
+
+    U64 page_count = (task->program_file->vnode->content_size + PD_PAGE_SIZE - 1) / PD_PAGE_SIZE;
+    for (U64 i = 0; i < page_count; i++) {
+        USER_PAGE_INFO* page_info = &task->mm.user_pages[task->mm.user_pages_count++];
+        page_info->p_addr = 0;
+        page_info->v_addr = i * PD_PAGE_SIZE;
+        page_info->flags = TASK_USER_PAGE_INFO_FLAGS_READ | TASK_USER_PAGE_INFO_FLAGS_EXEC | TASK_USER_PAGE_INFO_FLAGS_WRITE;
+    }
+    return 0;
 }
 
 void task_wait(pid_t pid) {

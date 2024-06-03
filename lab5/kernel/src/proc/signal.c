@@ -48,6 +48,7 @@ void signal_check(TRAP_FRAME* trap_frame) {
 */
 void signal_run(TRAP_FRAME* trap_frame, int signal) {
     TASK_SIGNAL* current_signal = &task_get_current_el1()->signals[signal];
+    NS_DPRINT("pid: %d, signal: %d, count: %d\n", task_get_current_el1()->pid, signal, current_signal->count);
 
     if (signal == SIGNAL_KILL && !current_signal->handler) {
         task_exit(-2);  // kill by other process
@@ -87,6 +88,7 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
     unlock_interrupt();
 
     NS_DPRINT("[SYSCALL][SIGNAL] doing signal. pid: %d, signal: %d\n", task_get_current_el1()->pid, signal);
+    NS_DPRINT("[SYSCALL][SIGNAL] handler addr: 0x%08x%08x", (U64)current_signal->handler >> 32, current_signal->handler);
     UPTR entry_ptr = MMU_SINGAL_ENTRY_BASE + ((UPTR)signal_entry & 0xfff);
     asm volatile(
         "msr elr_el1, %0\n\t"
