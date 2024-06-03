@@ -64,22 +64,27 @@ int vfs_close(struct file *file) {
     return 0;
 }
 
+int vfs_write(struct file* file, const void* buf, size_t len) {
+    // 1. write len byte from buf to the opened file.
+    // 2. return written size or error code if an error occurs.
+    return file->f_ops->write(file,buf,len);
+}
 
-// int vfs_write(struct file* file, const void* buf, size_t len) {
-//   // 1. write len byte from buf to the opened file.
-//   // 2. return written size or error code if an error occurs.
-// }
-
-// int vfs_read(struct file* file, void* buf, size_t len) {
-//   // 1. read min(len, readable size) byte to buf from the opened file.
-//   // 2. block if nothing to read for FIFO type
-//   // 2. return read size or error code if an error occurs.
-// }
+int vfs_read(struct file* file, void* buf, size_t len) {
+    // 1. read min(len, readable size) byte to buf from the opened file.
+    // 2. block if nothing to read for FIFO type
+    // 2. return read size or error code if an error occurs.
+    return file->f_ops->read(file, buf, len);
+}
 
 // int vfs_mkdir(const char* pathname);
 // int vfs_mount(const char* target, const char* filesystem);
 
 int vfs_lookup(const char* pathname, struct vnode** target){
+    if(pathname[0] == 0 || strcmp(pathname, "/") == 0){
+        *target = rootfs -> root;
+        return 0; 
+    }
     int idx = 0;
     char vnode_name[256];
     struct vnode * cur_node = rootfs -> root;
@@ -103,6 +108,7 @@ int vfs_lookup(const char* pathname, struct vnode** target){
     }
 
     vnode_name[idx+1] = 0;
+
     if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0) //not found
         return -1; //get next vnode
     
@@ -118,11 +124,67 @@ void init_rootfs(){
     int idx = reg_tmpfs();
     fs_register[idx].setup_mount(&fs_register[idx], rootfs);
     current_dir = rootfs -> root;
+    please_nobug();
 }
 
 void pwd(){ 
     uart_puts((char *) (current_dir -> internal));
     newline();
+}
+
+int vfs_ls(char * dir_name){
+    struct vnode * temp;
+    if (vfs_lookup(dir_name,&temp)!=0){
+        uart_puts("ERROR DIRECTORY NOTFOUND\n\r");
+        return -1;
+    }
+    struct tmpfs_node * internal = temp -> internal;
+    uart_puts("Name\t\tType\n\r");
+    for(int i=0; i < MAX_ENTRY; i++){
+        if(internal -> entry[i] == 0)
+            break;
+        struct tmpfs_node * inode = internal -> entry[i] -> internal;
+        uart_puts(inode -> name);
+        uart_puts("\t\t");
+        if(inode -> type == 3){
+            uart_puts("file");
+        }
+        else if(inode -> type == 2){
+            uart_puts("mount");
+        }
+        else if (inode -> type == 1){
+            uart_puts("folder");
+        }
+        newline();
+    }
+    return 0;
+}
+
+
+void please_nobug(){
+    struct file* test; //file handle
+    vfs_open("/file1", 1, &test);
+    vfs_open("/jerry", 1, &test);
+    vfs_open("/file3", 1, &test);
+    struct vnode * node;
+    char * buf = "hello world!\n";
+    vfs_write(test, buf, 7);
+    char buf2[10];
+    vfs_read(test, buf2, 5);
+    uart_puts(buf2);
+    newline();
+
+    
+    // struct tmpfs_node * nd = test -> vnode -> internal;
+    // uart_puts(nd -> data);
+    // newline();
+
+    int ret = vfs_lookup("/jerry", &node);
+    struct tmpfs_node * inode = node -> internal;
+    uart_puts(inode -> name);
+    newline();
+    //vfs_ls("/");
+    //uart_puts(rootfs -> )
 }
 
 void shell_with_dir(){

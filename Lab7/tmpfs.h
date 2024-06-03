@@ -3,6 +3,7 @@ struct tmpfs_node{
     int type; // directory, mount, file
     struct vnode * entry[MAX_ENTRY];    
     char * data;
+    int size;
 };
 
 int reg_tmpfs();

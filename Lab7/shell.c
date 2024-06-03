@@ -446,6 +446,9 @@ int shell(char * cmd){
     else if(strcmp(cmd, "pwd") == 0){
         pwd();
     }
+    else if(strcmp(cmd, "ls") == 0){
+        vfs_ls("/");
+    }
     else
         return 0;
     return 1;

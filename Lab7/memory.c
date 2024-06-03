@@ -502,7 +502,7 @@ void * malloc(unsigned long size){
             continue;
         }
     }
-    uart_puts("The input size is too large for malloc, assign page instead! (please use free page instead of free)\n\r");
+    //uart_puts("The input size is too large for malloc, assign page instead! (please use free page instead of free)\n\r");
     return allocate_page(size);
 }
 
