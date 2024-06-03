@@ -113,7 +113,8 @@ class string {
 bool operator==(string_view, string_view);
 string operator+(const string& a, const string& b);
 string to_hex_string(uint64_t value);
-template <typename T, typename = std::enable_if_t<!std::is_integral_v<T>>>
+template <typename T>
+  requires(!std::is_integral_v<T>)
 string to_hex_string(T value) {
   return to_hex_string((uint64_t)value);
 }

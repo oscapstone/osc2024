@@ -22,10 +22,9 @@ inline void unlink(ListItem* it) {
   it->prev = it->next = nullptr;
 }
 
-template <typename T,
-          typename P = std::conditional_t<std::is_pointer_v<T>, T,
-                                          std::add_pointer_t<T>>,
-          typename = std::enable_if_t<std::is_convertible_v<P, ListItem*>>>
+template <typename T, typename P = std::conditional_t<std::is_pointer_v<T>, T,
+                                                      std::add_pointer_t<T>>>
+  requires std::is_convertible_v<P, ListItem*>
 class ListHead {
  public:
   class iterator {
