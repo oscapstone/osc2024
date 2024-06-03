@@ -9,8 +9,8 @@
 
 SYSCALL_DEFINE6(mmap, void*, addr, size_t, len, int, prot, int, flags, int, fd,
                 int, file_offset) {
-  klog("mmap(%p, 0x%lx, %b, %b, %d, 0x%x)\n", addr, len, prot, flags, fd,
-       file_offset);
+  klog("mmap(%p, 0x%lx, 0b%03b, 0x%05x, %d, 0x%x)\n", addr, len, prot, flags,
+       fd, file_offset);
   return current_vmm()->mmap((uint64_t)addr, len, cast_enum<ProtFlags>(prot),
                              cast_enum<MmapFlags>(flags), nullptr);
 }
