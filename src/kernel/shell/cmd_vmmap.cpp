@@ -13,6 +13,6 @@ int cmd_vmmap(int argc, char* argv[]) {
     kprintf("%s: couldn't find pid %ld\n", argv[0], pid);
     return -1;
   }
-  th->vmm.vma_print();
+  th->vma_print();
   return 0;
 }

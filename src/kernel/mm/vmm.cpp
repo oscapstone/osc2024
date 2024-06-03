@@ -81,13 +81,13 @@ VMA* VMM::vma_find(uint64_t va) {
   return nullptr;
 }
 
-void VMM::vma_print() {
-  klog("==== maps ====\n");
-  klog("vma size = %d\n", vmas.size());
+void VMM::vma_print(int tid) {
+  kprintf("==== t%d maps ====\n", tid);
+  kprintf("vma size = %d\n", vmas.size());
   for (auto vma : vmas)
-    klog("0x%016lx ~ 0x%016lx %s\n", vma->start(), vma->end(),
-         vma->name.data());
-  klog("--------------\n");
+    kprintf("0x%016lx ~ 0x%016lx %s\n", vma->start(), vma->end(),
+            vma->name.data());
+  kprintf("--------------\n");
 }
 
 uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,

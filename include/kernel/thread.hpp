@@ -51,6 +51,9 @@ struct Kthread : ListItem<Kthread> {
   void reset_kernel_stack() {
     regs.sp = kernel_stack.end(0x10);
   }
+  void vma_print() {
+    vmm.vma_print(tid);
+  }
 };
 
 inline void set_current_thread(Kthread* thread) {
