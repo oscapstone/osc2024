@@ -6,17 +6,18 @@
 #include "utils/printf.h"
 
 void sys_open(TRAP_FRAME* regs) {
+    //NS_DPRINT("[SYSCALL][OPEN] start.\n");
     
     TASK* current_task = task_get_current_el1();
 
     const char* pathname = (const char*)regs->regs[0];
     int flags = (int)regs->regs[1];
 
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     int fd = -1;
     for (int i = 0; i < MAX_FILE_DESCRIPTOR; i++) {
         FILE_DESCRIPTOR* descriptor = &current_task->file_table[i];
-        if (descriptor->file == NULL) {
+        if (!descriptor->file) {
             fd = i;
             break;
         }
@@ -33,7 +34,9 @@ void sys_open(TRAP_FRAME* regs) {
         regs->regs[0] = -1;
         return;
     }
-    unlock_interrupt();
+    irq_restore(irq_flags);
+
+    //NS_DPRINT("[SYSCALL][OPEN] successfully open file: %s, fd: %d\n", pathname, fd);
 
     regs->regs[0] = fd;
 }

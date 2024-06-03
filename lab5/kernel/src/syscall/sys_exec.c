@@ -6,6 +6,7 @@
 #include "utils/printf.h"
 #include "peripherals/irq.h"
 #include "mm/mm.h"
+#include "utils/utils.h"
 
 void jump_user_prog() {
 
@@ -13,6 +14,8 @@ void jump_user_prog() {
     task_get_current_el1()->cpu_regs.sp = MMU_USER_STACK_BASE;
     task_get_current_el1()->cpu_regs.fp = MMU_USER_STACK_BASE;
     unlock_interrupt();
+
+    U64 kernel_stack_ptr = (U64)task_get_current_el1()->kernel_stack + TASK_STACK_SIZE - sizeof(TRAP_FRAME);
 
     asm("msr tpidr_el1, %0\n\t"
         "msr elr_el1, %1\n\t"       // user start code
@@ -29,7 +32,7 @@ void jump_user_prog() {
         :   "r"(task_get_current_el1()),
             "r"(0x0),
             "r"(task_get_current_el1()->cpu_regs.sp),
-            "r"(task_get_current_el1()->kernel_stack + TASK_STACK_SIZE - sizeof(TRAP_FRAME)),
+            "r"(kernel_stack_ptr),
             "r"(task_get_current_el1()->cpu_regs.pgd)
         );
 }

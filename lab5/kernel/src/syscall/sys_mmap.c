@@ -44,7 +44,7 @@ void sys_mmap(TRAP_FRAME* trap_frame) {
 
     if (len == 0) {
         // error len == 0
-        trap_frame->regs[0] == 0;
+        trap_frame->regs[0] = 0;
         return;
     }
 
@@ -52,7 +52,7 @@ void sys_mmap(TRAP_FRAME* trap_frame) {
 
     NS_DPRINT("[SYSCALL][MMAP] try mapping. v_addr = 0x%08x%08x, page_count = %d\n", v_addr >> 32, v_addr, page_count);
 
-    if (v_addr == NULL) {
+    if (v_addr == 0) {
         v_addr = mmap_find_region_in_heap(page_count);
     } else {
         v_addr = v_addr % 0x1000 ? v_addr + (0x1000 - v_addr % 0x1000) : v_addr;
@@ -93,11 +93,11 @@ void sys_mmap(TRAP_FRAME* trap_frame) {
         for (U32 i = 0; i < page_count; i++) {
             UPTR new_page;
             if (flags & MAP_ANONYMOUS) {
-                new_page = kzalloc(PD_PAGE_SIZE);
+                new_page = (UPTR) kzalloc(PD_PAGE_SIZE);
             } else {
-                new_page = kmalloc(PD_PAGE_SIZE);
+                new_page = (UPTR) kmalloc(PD_PAGE_SIZE);
             }
-            mmu_map_page(task, v_addr + i * PD_PAGE_SIZE, new_page, page_flags);
+            mmu_map_page(task, v_addr + i * PD_PAGE_SIZE, MMU_VIRT_TO_PHYS(new_page), page_flags);
         }
     } else {
         // because we already know the page in not in user page now

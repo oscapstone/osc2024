@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdarg.h>
+
 #include "base.h"
 #include "utils/link_list.h"
 
@@ -27,10 +29,10 @@ typedef struct _FS_FILE {
     U32 flags;
 }FS_FILE;
 
-#define FS_FILE_FLAGS_NONE      0x0
-#define FS_FILE_FLAGS_READ      0x1
-#define FS_FILE_FLAGS_WRITE     0x2
-#define FS_FILE_FLAGS_CREATE    0x4
+#define FS_FILE_FLAGS_READ      0x0
+#define FS_FILE_FLAGS_WRITE     0x1
+#define FS_FILE_FLAGS_RDWR      0x2
+#define FS_FILE_FLAGS_CREATE    0x40
 
 
 #define O_CREAT                 FS_FILE_FLAGS_CREATE
@@ -53,6 +55,7 @@ typedef struct _FS_FILE_OPERATIONS {
     int (*open) (FS_VNODE* file_node, FS_FILE** target);
     int (*close) (FS_FILE* file);
     long (*lseek64)(FS_FILE* file, long offset, int whence);
+    int (*ioctl)(FS_FILE *file, unsigned long request, ...);
 }FS_FILE_OPERATIONS;
 
 typedef struct _FS_VNODE_OPERATIONS {
@@ -62,7 +65,7 @@ typedef struct _FS_VNODE_OPERATIONS {
 }FS_VNODE_OPERATIONS;
 
 typedef struct _FS_MANAGER {
-    FS_MOUNT* rootfs;                       // where root is mount
+    FS_MOUNT rootfs;                       // where root is mount
     LINK_LIST filesystems;                  // list of file systems
 }FS_MANAGER;
 
@@ -73,6 +76,7 @@ typedef struct _FS_MANAGER {
 // called by main (kernel)
 void fs_init();
 int fs_register(FS_FILE_SYSTEM* fs);
+FS_FILE_SYSTEM* fs_get(const char *name);
 
 FS_VNODE* fs_get_root_node();
 
@@ -107,6 +111,8 @@ int vfs_open(FS_VNODE* cwd, const char* pathname, U32 flags, FS_FILE** target);
 int vfs_close(FS_FILE* file);
 int vfs_write(FS_FILE* file, const void* buf, size_t len);
 int vfs_read(FS_FILE* file, void* buf, size_t len);
+#define SEEK_SET 0
+long vfs_lseek64(FS_FILE* file, long offset, int whence);
 
 int vfs_lookup(FS_VNODE* cwd, const char* pathname, FS_VNODE** target);
 int vfs_mkdir(FS_VNODE* cwd, const char* pathname);

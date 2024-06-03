@@ -9,13 +9,15 @@ static int read(FS_FILE *file, void *buf, size_t len);
 static int open(FS_VNODE *file_node, FS_FILE **target);
 static int close(FS_FILE *file);
 static long lseek64(FS_FILE *file, long offset, int whence);
+static int ioctl(FS_FILE *file, unsigned long request, ...);
 
 FS_FILE_OPERATIONS uartfs_f_ops = {
     write,
     read,
     open,
     close,
-    lseek64
+    lseek64,
+    ioctl
 };
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name);
@@ -56,7 +58,7 @@ static int write(FS_FILE *file, const void *buf, size_t len) {
     }
     uart_set_transmit_int();
 
-    return 0;
+    return len;
 }
 
 static int read(FS_FILE* file, void* buf, size_t len) {
@@ -67,7 +69,7 @@ static int read(FS_FILE* file, void* buf, size_t len) {
         }
         ((char*)buf)[i] = uart_async_get_char();
     }
-    return 0;
+    return len;
 }
 
 static int open(FS_VNODE *file_node, FS_FILE **target) {
@@ -98,3 +100,6 @@ static int mkdir(FS_VNODE* dir_node, FS_VNODE** target, const char* component_na
 
 }
 
+static int ioctl(FS_FILE *file, unsigned long request, ...) {
+    return -1;
+}

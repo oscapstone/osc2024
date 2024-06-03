@@ -26,7 +26,7 @@ typedef U64 pid_t;
 
 
 #define TASK_MAX_KERNEL_PAGES       20
-#define TASK_MAX_USER_PAGES         100
+#define TASK_MAX_USER_PAGES         150
 
 typedef struct _USER_PAGE_INFO {
     pd_t        p_addr;
@@ -100,6 +100,7 @@ typedef struct _TASK
     int current_signal;
 
     // FS
+    FS_FILE* program_file;      // the program file that this task run
     FS_VNODE* pwd;              // current working directory
     FILE_DESCRIPTOR file_table[MAX_FILE_DESCRIPTOR];
 }TASK;
@@ -155,6 +156,8 @@ void task_kill_dead();
  * 
 */
 void task_copy_program(TASK* task, void* program_start, size_t program_size);
+
+int task_run_program(FS_VNODE* cwd, TASK* task, const char* program_path);
 
 /**
  * Poorly waiting task for pid

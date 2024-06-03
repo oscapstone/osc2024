@@ -13,13 +13,15 @@ static int read(FS_FILE *file, void *buf, size_t len);
 static int open(FS_VNODE *file_node, FS_FILE **target);
 static int close(FS_FILE *file);
 static long lseek64(FS_FILE *file, long offset, int whence);
+static int ioctl(FS_FILE *file, unsigned long request, ...);
 
 FS_FILE_OPERATIONS initramfs_f_ops = {
     write,
     read,
     open,
     close,
-    lseek64
+    lseek64,
+    ioctl
 };
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name);
@@ -137,7 +139,18 @@ static int close(FS_FILE *file) {
 }
 
 static long lseek64(FS_FILE *file, long offset, int whence) {
-    return 0;
+    switch (whence)
+    {
+    case SEEK_SET:
+    {
+        file->pos = offset;
+        return offset;
+    }    
+        break;
+    default:
+        return -1;
+        break;
+    }
 }
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
@@ -162,4 +175,8 @@ static int mkdir(FS_VNODE* dir_node, FS_VNODE** target, const char* component_na
     // cannot mkdir in read only file system
     return -1;
 
+}
+
+static int ioctl(FS_FILE *file, unsigned long request, ...) {
+    return -1;
 }

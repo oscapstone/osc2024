@@ -7,6 +7,7 @@
 #include "utils/printf.h"
 
 #include "uartfs.h"
+#include "framebufferfs.h"
 
 FS_MANAGER* fs_manager;
 
@@ -29,7 +30,6 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
     char tmp_name[FS_MAX_NAME_SIZE];
     size_t name_offset = 0;
     FS_VNODE* current_dir = cwd;
-
     size_t offset = 0;
 
     if (pathname[offset] == '/' || current_dir == NULL) {
@@ -44,6 +44,8 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
                 NS_DPRINT("[FS] fs_find_node(): error no parent!\n");
                 return -1;
             }
+            NS_DPRINT("[FS] fs_find_node(): current directory: %s\n", current_dir->name);
+            NS_DPRINT("[FS] fs_find_node(): change to parent directory: %s\n", current_dir->parent->name);
             current_dir = current_dir->parent;
             offset += 2;
         } else if (utils_strncmp(&pathname[offset], ".", 1) == 0) {
@@ -66,6 +68,7 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
             }
             current_dir = next_node;
 
+            
             offset++;
             name_offset = 0;
         } else {
@@ -75,9 +78,16 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
         }
     }
 
+    // is root node
+    if (name_offset == 0 && current_dir == fs_get_root_node()) {
+        *parent = NULL;
+        *target = current_dir;
+        return FS_FIND_NODE_SUCCESS;
+    }
+
     // copy the final file name
     tmp_name[name_offset] = 0;      // end pointer
-    memcpy(tmp_name, node_name, name_offset);
+    memcpy(tmp_name, node_name, name_offset + 1);
 
     FS_VNODE* final_node;
     int result = current_dir->v_ops->lookup(current_dir, &final_node, tmp_name);
@@ -181,14 +191,15 @@ void fs_init() {
         printf("[FS][ERROR] Failed to register rootfs\n");
         return;
     }
-    FS_FILE_SYSTEM* fs = fs_get("rootfs");
+    FS_FILE_SYSTEM* fs = fs_get(ROOT_FS_NAME);
     if (!fs) {
         printf("[FS][ERROR] Failed to get root file system.\n");
         return;
     }
-    fs_manager->rootfs->fs = fs;
-    fs_manager->rootfs->root = vnode_create("", S_IFDIR);
-    fs_manager->rootfs->fs->setup_mount(fs, fs_manager->rootfs);
+
+    fs_manager->rootfs.fs = fs;
+    fs_manager->rootfs.root = vnode_create("", S_IFDIR);
+    fs_manager->rootfs.fs->setup_mount(fs, &fs_manager->rootfs);
 
     ret = vfs_mkdir(NULL, "/initramfs"); 
     if (ret != 0) {
@@ -253,11 +264,37 @@ void fs_init() {
         return;
     }
 
+    // framebuffferfs
+    if (fs_register(framebufferfs_create())) {
+        printf("[FS][ERROR] Failed to register framebufferfs\n");
+        return;
+    }
+    fs = fs_get(FRAMEBUFFER_FS_NAME);
+    if (!fs) {
+        printf("[FS][ERROR] Failed to get framebuffer file system.\n");
+        return;
+    }
+    if (vfs_mkdir(NULL, "/dev/framebuffer")) {
+        printf("[FS][ERROR] Failed to make /dev/framebuffer directory\n");
+    }
+    FS_VNODE* framebufferfsroot = NULL;
+    if (vfs_lookup(NULL, "/dev/framebuffer", &framebufferfsroot)) {
+        printf("[FS][ERROR] Failed to get /dev/framebuffer directory\n");
+    }
+    mount = kzalloc(sizeof(FS_MOUNT));
+    mount->fs = fs;
+    mount->root = framebufferfsroot;
+    if (fs->setup_mount(fs, mount)) {
+        printf("[FS][ERROR] Failed to mount framebufferfs.\n");
+        return;
+    }
+
+
     NS_DPRINT("[FS][TRACE] fs_init() success.\n");
 }
 
 FS_VNODE* fs_get_root_node() {
-    return fs_manager->rootfs->root;
+    return fs_manager->rootfs.root;
 }
 
 int fs_register(FS_FILE_SYSTEM* fs) {
@@ -273,22 +310,24 @@ int fs_register(FS_FILE_SYSTEM* fs) {
  *      the file struct to return
 */
 int vfs_open(FS_VNODE* cwd,const char* pathname, U32 flags, FS_FILE** target) {
+    NS_DPRINT("[FS] vfs_open(): opening %s, flags: %x\n", pathname, flags);
     FS_VNODE *parent = NULL, * vnode = NULL;
     char node_name[FS_MAX_NAME_SIZE];
     int ret = fs_find_node(cwd, pathname, &parent, &vnode, node_name);
 
-    if (ret != 0 && !(flags & FS_FILE_FLAGS_CREATE)) {
+    if (ret && !(flags & FS_FILE_FLAGS_CREATE)) {
         return ret;
     }
 
     if (vnode == NULL && ret == FS_FIND_NODE_HAS_PARENT_NO_TARGET) {
+        NS_DPRINT("[FS] vfs_open(): try create file: %s\n", node_name);
         ret = parent->v_ops->create(parent, &vnode, node_name);
-        if (ret != 0) {
+        if (ret) {
             return ret;
         }
         // ret will be 0
     }
-    if (ret != 0) {
+    if (ret) {
         return ret;
     }
 
@@ -318,9 +357,11 @@ int vfs_write(FS_FILE* file, const void* buf, size_t len) {
 }
 
 int vfs_read(FS_FILE* file, void* buf, size_t len) {
-    if (!(file->flags & FS_FILE_FLAGS_READ))
-        return -1;
     return file->vnode->f_ops->read(file, buf, len);
+}
+
+long vfs_lseek64(FS_FILE* file, long offset, int whence) {
+    return file->vnode->f_ops->lseek64(file, offset, whence);
 }
 
 FS_FILE_SYSTEM* fs_get(const char *name)
