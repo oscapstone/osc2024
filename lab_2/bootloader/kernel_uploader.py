@@ -36,14 +36,18 @@ with open("../shell/shell_kernel.img","rb") as f:
 #     s.write(f.read())
 
 # get response of whether kernel is loaded successfully or not
-received_content = read_line(s)
-print(received_content)
+time.sleep(1)
 while(True):
-    # while s.in_waiting > 0:
-    for i in range(50):
+    while s.in_waiting > 0:
         received_content = read_line(s)
-        print(received_content.strip().replace("\n", "").replace("\r", ""))
+        print(received_content)
     inp = input()
+    if(inp == ""):
+        continue
+    inp += "\n"
     bytes_to_send = inp.encode('utf-8')
     s.write(bytes_to_send)
-    print(received_content)
+    while s.in_waiting > 0:
+        received_content = read_line(s)
+        print(received_content)
+    time.sleep(2)

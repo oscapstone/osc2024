@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-#define MAX_BUFFER 10
+#define MAX_BUFFER 50
 #include "include/uart.h"
 #include "include/utils.h"
 #include "include/mbox.h"
@@ -30,43 +30,69 @@
 
 
 void main(int argc, char* argv[]){
-   asm volatile(
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-      "mov x0, x10;"
-   );
-   // uart_init();
-   // uart_puts("uart_not_bugged\n");
-   cpio_ls();
-   cpio_cat("hello2.txt");
-   cpio_ls();
-   cpio_cat("hello.txt");
-   int* data = (int *)simple_malloc((unsigned long) sizeof(int)*8);
-   int* b = (int *)simple_malloc((unsigned long) sizeof(int)*8);
-   uart_puts("exit normally\n");
-   // asm volatile(
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "mov x0, x10;"
-   //    "ret;"
-   // );
+   uart_init();
+   while(1){
+      char command[MAX_BUFFER];
+      char c = '\0';
+      int length=0;
+      for(int i=0; i<MAX_BUFFER; i++){
+         command[i] = '\0';
+      }
+      for(length=0; c != '\n' && length<MAX_BUFFER; length++){
+         c = uart_getc();
+         command[length] = c;
+         // print what user input to screen
+         // uart_send(c);
+      }
+      command[length==MAX_BUFFER?length-2:length-1] = '\0';
+      if(strcmp(command, "help") == 0){
+         uart_puts("help\t: print this help menu\n");
+         uart_puts("ls\t: list all files in the root filesystem\n");
+         uart_puts("cat <filename>\t: print the content of file in root filesystem\n");
+         uart_puts("hello\t: print hello world!\n");
+         uart_puts("reboot\t: reboot the device\n");
+      }
+      else if(strcmp(command, "hello") == 0){
+         uart_puts("Hello World!\n");
+      }
+      else if(strcmp(command, "ls") == 0){
+         cpio_ls();
+      }
+      else if(strcmp(command, "reboot") == 0){
+         reset();
+      }
+      // command with arguments
+      else{
+         char arguments[3][MAX_BUFFER];
+         // initialize
+         for(int i=0;i<3;i++){
+            for(int j=0;j<MAX_BUFFER;j++){
+               arguments[i][j] = '\0';
+            }
+         }
+         int argument_index =0;
+         for(int j=0, indicater = 0; ; j++, indicater++){
+            if(command[j] == ' '){
+               arguments[argument_index][indicater+1] = '\0';
+               argument_index++;
+               indicater=-1;
+            }
+            else if(command[j] == '\0'){
+               arguments[argument_index][indicater+1] = '\0';
+               break;
+            }
+            else{
+               arguments[argument_index][indicater]=command[j];
+            }
+         }
+         // invalid input
+         if(argument_index == 0){
+            uart_puts("invalid\n");
+         }
+         if(strcmp(arguments[0], "cat") == 0){
+            cpio_cat(arguments[1]);
+         }
+      }
+   }
    return;
 }
