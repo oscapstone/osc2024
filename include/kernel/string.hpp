@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include_next "string.hpp"
 
 char* strdup(const char* s);

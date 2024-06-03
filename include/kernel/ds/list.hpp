@@ -22,15 +22,18 @@ inline void unlink(ListItem* it) {
   it->prev = it->next = nullptr;
 }
 
-template <std::derived_from<ListItem> T>
+template <typename T,
+          typename P = std::conditional_t<std::is_pointer_v<T>, T,
+                                          std::add_pointer_t<T>>,
+          typename = std::enable_if_t<std::is_convertible_v<P, ListItem*>>>
 class ListHead {
  public:
   class iterator {
    public:
-    iterator(T* it) : it_(it) {}
-    iterator(ListItem* it) : it_((T*)it) {}
+    iterator(P it) : it_(it) {}
+    iterator(ListItem* it) : it_((P)it) {}
     iterator& operator++() {
-      it_ = (T*)it_->next;
+      it_ = (P)it_->next;
       return *this;
     }
     iterator operator++(int) {
@@ -39,7 +42,7 @@ class ListHead {
       return copy;
     }
     iterator& operator--() {
-      it_ = (T*)it_->prev;
+      it_ = (P)it_->prev;
       return *this;
     }
     iterator operator--(int) {
@@ -47,10 +50,10 @@ class ListHead {
       ++*this;
       return copy;
     }
-    T& operator*() const {
+    std::add_lvalue_reference_t<std::remove_pointer_t<P>> operator*() const {
       return *it_;
     }
-    T* operator->() const {
+    P operator->() const {
       return it_;
     }
     bool operator==(const iterator& other) const {
@@ -59,12 +62,12 @@ class ListHead {
     bool operator!=(const iterator& other) const {
       return !(*this == other);
     }
-    operator T*() {
+    operator P() {
       return it_;
     }
 
    private:
-    T* it_;
+    P it_;
   };
 
  private:
@@ -78,7 +81,7 @@ class ListHead {
 
   ListHead(const ListHead& o) : ListHead{} {
     for (auto& it : o) {
-      push_back(new T(it));
+      push_back(new std::remove_pointer_t<P>(it));
     }
   }
 
@@ -92,20 +95,20 @@ class ListHead {
     link(&head_, &tail_);
   }
 
-  void insert(iterator it, T* node) {
+  void insert(iterator it, P node) {
     save_DAIF_disable_interrupt();
     size_++;
     link(node, it->next);
     link(it, node);
     restore_DAIF();
   }
-  void insert_before(iterator it, T* node) {
+  void insert_before(iterator it, P node) {
     insert(--it, node);
   }
-  void push_front(T* node) {
+  void push_front(P node) {
     insert(&head_, node);
   }
-  void push_back(T* node) {
+  void push_back(P node) {
     insert(tail_.prev, node);
   }
   void erase(iterator it) {
@@ -125,7 +128,7 @@ class ListHead {
     restore_DAIF();
   }
 
-  T* pop_front() {
+  P pop_front() {
     if (empty())
       return nullptr;
     auto it = begin();
@@ -133,7 +136,7 @@ class ListHead {
     return it;
   }
 
-  T* front() {
+  P front() {
     if (empty())
       return nullptr;
     return begin();
@@ -147,12 +150,12 @@ class ListHead {
   }
 
   iterator head() const {
-    return (T*)&head_;
+    return (P)&head_;
   }
   iterator begin() const {
-    return (T*)head_.next;
+    return (P)head_.next;
   }
   iterator end() const {
-    return (T*)&tail_;
+    return (P)&tail_;
   }
 };
