@@ -44,18 +44,11 @@ struct VMA : ListItem<VMA> {
   }
 };
 
-struct PageItem : ListItem<PageItem> {
-  uint64_t addr;
-  template <typename T>
-  PageItem(T addr) : ListItem{}, addr((uint64_t)addr) {}
-  PageItem(const PageItem& o) : ListItem{}, addr(o.addr) {}
-};
-
 class VMM {
  public:
   PT* ttbr0 = (PT*)INVALID_ADDRESS;
   ListHead<VMA*> vmas{};
-  ListHead<PageItem*> user_ro_pages{};
+  list<void*> user_ro_pages{};
 
   VMM() = default;
   VMM(const VMM& o);

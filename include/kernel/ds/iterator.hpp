@@ -9,7 +9,7 @@ template <typename T, auto next, auto get = nullptr, auto prev = nullptr>
   requires transform<T*, next>
 class Iterator {
  public:
-  Iterator(T* p) : p_(p) {}
+  Iterator(T* p = nullptr) : p_(p) {}
   Iterator& operator++() {
     p_ = next(p_);
     return *this;
@@ -33,22 +33,22 @@ class Iterator {
     return copy;
   }
   T* operator*() const
-    requires(!std::is_invocable_v<decltype(get), T>)
+    requires(!std::invocable<decltype(get), T*>)
   {
     return p_;
   }
   T* operator->() const
-    requires(!std::is_invocable_v<decltype(get), T>)
+    requires(!std::invocable<decltype(get), T*>)
   {
     return p_;
   }
-  std::invoke_result<decltype(get), T>& operator*() const
-    requires(std::is_invocable_v<decltype(get), T>)
+  auto operator*() const
+    requires(std::invocable<decltype(get), T*>)
   {
-    return *get(p_);
+    return get(p_);
   }
-  std::invoke_result<decltype(get), T>* operator->() const
-    requires(std::is_invocable_v<decltype(get), T>)
+  auto operator->() const
+    requires(std::invocable<decltype(get), T*>)
   {
     return get(p_);
   }

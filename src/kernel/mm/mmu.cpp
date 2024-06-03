@@ -323,7 +323,7 @@ int fault_handler(int el) {
     case ESR_ELx_IIS_DFSC_PERM_FAULT_L3:
       if (el == 1) {
         entry->AP = AP::KERNEL_RW;
-        current_vmm()->user_ro_pages.push_back(new PageItem{fpage});
+        current_vmm()->user_ro_pages.push_back(fpage);
       } else if (vma and has(vma->prot, ProtFlags::WRITE)) {
         // copy on write fault
         klog("t%d [CoW fault]: %016lx\n", tid, (uint64_t)faddr);

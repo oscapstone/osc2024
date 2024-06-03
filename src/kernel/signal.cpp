@@ -16,7 +16,7 @@ SYSCALL_DEFINE2(signal_kill, int, pid, int, signal) {
   return 0;
 }
 
-Signal::Signal(Kthread* thread) : cur(thread), list{} {
+Signal::Signal(Kthread* thread) : cur(thread), signals{} {
   setall(signal_handler_nop);
   actions[SIGKILL] = {
       .in_kernel = true,
@@ -24,7 +24,7 @@ Signal::Signal(Kthread* thread) : cur(thread), list{} {
   };
 }
 
-Signal::Signal(Kthread* thread, const Signal& other) : cur(thread), list{} {
+Signal::Signal(Kthread* thread, const Signal& other) : cur(thread), signals{} {
   for (int i = 0; i < NSIG; i++)
     actions[i] = other.actions[i];
 }
@@ -51,14 +51,12 @@ void Signal::operator()(int sig) {
   if (sig >= NSIG)
     return;
   klog("thread %d signal %d\n", cur->tid, sig);
-  list.push_back(new SignalItem{sig});
+  signals.push_back(sig);
 }
 
 void Signal::handle(TrapFrame* frame) {
-  while (not list.empty()) {
-    auto it = list.pop_front();
-    auto sig = it->signal;
-    delete it;
+  while (not signals.empty()) {
+    auto sig = signals.pop_front();
 
     auto& act = actions[sig];
 
@@ -77,7 +75,7 @@ void Signal::handle(TrapFrame* frame) {
         frame->lr = (uint64_t)va2vsys(el0_sig_return);
         klog("t%d handle signal %d @ user %p\n", cur->tid, sig, act.handler);
       } else {
-        list.push_front(new SignalItem{sig});
+        signals.push_front(sig);
       }
       break;
     }

@@ -10,11 +10,6 @@
 
 constexpr uint64_t KTHREAD_STACK_SIZE = PAGE_SIZE;
 
-struct KthreadItem : ListItem<KthreadItem> {
-  struct Kthread* thread;
-  KthreadItem(Kthread* th) : ListItem{}, thread{th} {}
-};
-
 enum class KthreadStatus {
   kNone = 0,
   kReady,
@@ -29,9 +24,9 @@ struct Kthread : ListItem<Kthread> {
   using fp = void (*)(void*);
   int tid;
   KthreadStatus status = KthreadStatus::kReady;
+  list<Kthread*>::iterator it;
   int exit_code = 0;
   Mem kernel_stack;
-  KthreadItem* item;
   Signal signal;
   VMM vmm;
 

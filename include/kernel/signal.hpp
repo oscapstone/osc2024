@@ -16,14 +16,9 @@ struct SigAction {
   signal_handler handler;
 };
 
-struct SignalItem : ListItem<SignalItem> {
-  int signal;
-  SignalItem(int sig) : ListItem{}, signal(sig) {}
-};
-
 struct Signal {
   Kthread* cur;
-  ListHead<SignalItem*> list;
+  list<int> signals;
   SigAction actions[NSIG];
   uint64_t stack_addr = INVALID_ADDRESS;
 

@@ -46,7 +46,6 @@ Kthread::Kthread()
       tid(new_tid()),
       status(KthreadStatus::kReady),
       exit_code(0),
-      item(new KthreadItem(this)),
       signal{this} {
   signal.setall([](int) {
     klog("kill init cause reboot!\n");
@@ -64,7 +63,6 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
       status(KthreadStatus::kReady),
       exit_code(0),
       kernel_stack(KTHREAD_STACK_SIZE, true),
-      item(new KthreadItem(this)),
       signal{this} {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
@@ -77,7 +75,6 @@ Kthread::Kthread(const Kthread* o)
       status(o->status),
       exit_code(0),
       kernel_stack(o->kernel_stack),
-      item(new KthreadItem(this)),
       signal{this, o->signal},
       vmm(o->vmm) {
   fix(*o, &regs, sizeof(regs));
@@ -88,7 +85,6 @@ Kthread::Kthread(const Kthread* o)
 
 Kthread::~Kthread() {
   del_list(this);
-  delete item;
 }
 
 void Kthread::fix(const Kthread& o, Mem& mem) {
