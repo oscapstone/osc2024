@@ -4,33 +4,38 @@
 
 #include "int/interrupt.hpp"
 
+template <typename T>
 struct ListItem {
   ListItem *prev, *next;
   ListItem() : prev(nullptr), next(nullptr) {}
   ListItem(const ListItem&) = delete;
+  T* get() const {
+    return (T*)this;
+  }
 };
 
-inline void link(ListItem* prev, ListItem* next) {
+template <typename T>
+inline void link(ListItem<T>* prev, ListItem<T>* next) {
   if (prev)
     prev->next = next;
   if (next)
     next->prev = prev;
 }
 
-inline void unlink(ListItem* it) {
+template <typename T>
+inline void unlink(ListItem<T>* it) {
   link(it->prev, it->next);
   it->prev = it->next = nullptr;
 }
 
-template <typename T, typename P = std::conditional_t<std::is_pointer_v<T>, T,
-                                                      std::add_pointer_t<T>>>
-  requires std::is_convertible_v<P, ListItem*>
+template <typename P, typename T = std::remove_pointer_t<P>>
+  requires std::is_convertible_v<P, ListItem<T>*>
 class ListHead {
  public:
   class iterator {
    public:
     iterator(P it) : it_(it) {}
-    iterator(ListItem* it) : it_((P)it) {}
+    iterator(ListItem<T>* it) : it_((P)it) {}
     iterator& operator++() {
       it_ = (P)it_->next;
       return *this;
@@ -49,8 +54,8 @@ class ListHead {
       ++*this;
       return copy;
     }
-    std::add_lvalue_reference_t<std::remove_pointer_t<P>> operator*() const {
-      return *it_;
+    P operator*() const {
+      return it_;
     }
     P operator->() const {
       return it_;
@@ -64,6 +69,9 @@ class ListHead {
     operator P() {
       return it_;
     }
+    operator ListItem<T>*() {
+      return it_;
+    }
 
    private:
     P it_;
@@ -71,7 +79,7 @@ class ListHead {
 
  private:
   int size_ = 0;
-  ListItem head_{}, tail_{};
+  ListItem<T> head_{}, tail_{};
 
  public:
   ListHead() {
@@ -79,8 +87,8 @@ class ListHead {
   }
 
   ListHead(const ListHead& o) : ListHead{} {
-    for (auto& it : o) {
-      push_back(new std::remove_pointer_t<P>(it));
+    for (auto it : o) {
+      push_back(new T(*it));
     }
   }
 
@@ -91,14 +99,14 @@ class ListHead {
   void init() {
     size_ = 0;
     head_.prev = tail_.next = nullptr;
-    link(&head_, &tail_);
+    link<T>(&head_, &tail_);
   }
 
   void insert(iterator it, P node) {
     save_DAIF_disable_interrupt();
     size_++;
-    link(node, it->next);
-    link(it, node);
+    link<T>(node, it->next);
+    link<T>(it, node);
     restore_DAIF();
   }
   void insert_before(iterator it, P node) {
@@ -113,7 +121,7 @@ class ListHead {
   void erase(iterator it) {
     save_DAIF_disable_interrupt();
     size_--;
-    unlink(it);
+    unlink<T>(it);
     restore_DAIF();
   }
 
@@ -122,7 +130,7 @@ class ListHead {
     while (size() > 0) {
       auto it = begin();
       erase(it);
-      delete it;
+      delete *it;
     }
     restore_DAIF();
   }

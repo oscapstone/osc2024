@@ -27,7 +27,7 @@ void switch_to(Kthread* prev, Kthread* next) {
   switch_to_regs(&prev->regs, &next->regs, next, va2pa(next->vmm.ttbr0));
 }
 
-ListHead<KthreadItem> rq;
+ListHead<KthreadItem*> rq;
 void push_rq(Kthread* thread) {
   rq.push_back(thread->item);
 }
@@ -40,7 +40,7 @@ Kthread* pop_rq() {
   return rq.pop_front()->thread;
 }
 
-ListHead<KthreadItem> deadq;
+ListHead<KthreadItem*> deadq;
 void push_dead(Kthread* thread) {
   deadq.push_back(thread->item);
 }

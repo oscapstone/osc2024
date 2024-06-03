@@ -47,7 +47,7 @@ class PageSystem {
     }
   };
 
-  struct FreePage : ListItem {};
+  struct FreePage : ListItem<FreePage> {};
   using AllocatedPage = void*;
 
  private:
@@ -56,7 +56,7 @@ class PageSystem {
   uint64_t length_;
   uint8_t total_order_;
   Frame* array_;
-  ListHead<FreePage>* free_list_;
+  ListHead<FreePage*>* free_list_;
 
   void release(AllocatedPage apage);
   AllocatedPage alloc(FreePage* fpage, bool head);

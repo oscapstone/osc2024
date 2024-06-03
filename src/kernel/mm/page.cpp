@@ -41,8 +41,8 @@ void PageSystem::info() {
     if (not free_list_[o].empty()) {
       kprintf("  free_list %d: ", o);
       save_DAIF_disable_interrupt();
-      for (auto& p : free_list_[o])
-        kprintf("%p -> ", &p);
+      for (auto p : free_list_[o])
+        kprintf("%p -> ", p);
       restore_DAIF();
       kprintf("\n");
     }
@@ -65,7 +65,7 @@ void PageSystem::preinit(uint64_t p_start, uint64_t p_end) {
   array_ = new Frame[length_];
   for (uint64_t i = 0; i < length_; i++)
     array_[i] = {.type = FRAME_TYPE::ALLOCATED, .order = 0, .ref = 0};
-  free_list_ = new ListHead<FreePage>[total_order_];
+  free_list_ = new ListHead<FreePage*>[total_order_];
 }
 
 void PageSystem::reserve(void* p_start, void* p_end) {

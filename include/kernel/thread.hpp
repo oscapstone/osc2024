@@ -10,7 +10,7 @@
 
 constexpr uint64_t KTHREAD_STACK_SIZE = PAGE_SIZE;
 
-struct KthreadItem : ListItem {
+struct KthreadItem : ListItem<KthreadItem> {
   struct Kthread* thread;
   KthreadItem(Kthread* th) : ListItem{}, thread{th} {}
 };
@@ -23,7 +23,7 @@ enum class KthreadStatus {
   kDead,
 };
 
-struct Kthread : ListItem {
+struct Kthread : ListItem<Kthread> {
   Regs regs;
 
   using fp = void (*)(void*);
@@ -60,7 +60,7 @@ inline Kthread* current_thread() {
   return (Kthread*)read_sysreg(TPIDR_EL1);
 }
 
-extern ListHead<Kthread> kthreads;
+extern ListHead<Kthread*> kthreads;
 void add_list(Kthread* thread);
 void del_list(Kthread* thread);
 Kthread* find_thread_by_tid(int tid);

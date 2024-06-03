@@ -29,7 +29,7 @@ inline int chunk_idx(uint64_t size) {
 
 static_assert(max_chunk_size < PAGE_SIZE);
 
-struct FreeChunk : ListItem {};
+struct FreeChunk : ListItem<FreeChunk> {};
 
 static_assert(sizeof(FreeChunk) <= chunk_size[0]);
 
@@ -49,7 +49,7 @@ static_assert(sizeof(PageHeader) == 0x10);
 struct Info {
   int idx;
   PageHeader* pages;
-  ListHead<FreeChunk> list;
+  ListHead<FreeChunk*> list;
   Info(int idx_ = -1) : idx(idx_), pages(nullptr), list() {}
 
   void split_page(PageHeader* hdr) {

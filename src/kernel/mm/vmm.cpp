@@ -35,8 +35,8 @@ void VMM::ensure_ttbr0() {
 }
 
 bool VMM::vma_overlap(uint64_t va, uint64_t size) {
-  for (auto& vma : vmas)
-    if (vma.overlap(va, size))
+  for (auto vma : vmas)
+    if (vma->overlap(va, size))
       return true;
   return false;
 }
@@ -75,17 +75,18 @@ void VMM::vma_add(string name, uint64_t addr, uint64_t size, ProtFlags prot) {
 }
 
 VMA* VMM::vma_find(uint64_t va) {
-  for (auto& vma : vmas)
-    if (vma.contain(va))
-      return &vma;
+  for (auto vma : vmas)
+    if (vma->contain(va))
+      return vma;
   return nullptr;
 }
 
 void VMM::vma_print() {
   klog("==== maps ====\n");
   klog("vma size = %d\n", vmas.size());
-  for (auto& vma : vmas)
-    klog("0x%016lx ~ 0x%016lx %s\n", vma.start(), vma.end(), vma.name.data());
+  for (auto vma : vmas)
+    klog("0x%016lx ~ 0x%016lx %s\n", vma->start(), vma->end(),
+         vma->name.data());
   klog("--------------\n");
 }
 
@@ -176,8 +177,8 @@ void VMM::reset() {
 }
 
 void VMM::return_to_user() {
-  for (auto& page : user_ro_pages) {
-    auto entry = ttbr0->get_entry(page.addr);
+  for (auto page : user_ro_pages) {
+    auto entry = ttbr0->get_entry(page->addr);
     if (entry)
       entry->AP = AP::USER_RO;
   }

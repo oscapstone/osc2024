@@ -24,7 +24,7 @@ SYSCALL_DEFINE1(kill, int, pid) {
   return 0;
 }
 
-ListHead<Kthread> kthreads;
+ListHead<Kthread*> kthreads;
 
 void add_list(Kthread* thread) {
   kthreads.push_back(thread);
@@ -35,9 +35,9 @@ void del_list(Kthread* thread) {
 
 // TODO: don't use linear search
 Kthread* find_thread_by_tid(int tid) {
-  for (auto& thread : kthreads)
-    if (thread.tid == tid)
-      return &thread;
+  for (auto thread : kthreads)
+    if (thread->tid == tid)
+      return thread;
   return nullptr;
 }
 

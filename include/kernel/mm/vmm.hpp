@@ -6,7 +6,7 @@
 #include "string.hpp"
 #include "util.hpp"
 
-struct VMA : ListItem {
+struct VMA : ListItem<VMA> {
  private:
   uint64_t addr_, size_;
 
@@ -44,7 +44,7 @@ struct VMA : ListItem {
   }
 };
 
-struct PageItem : ListItem {
+struct PageItem : ListItem<PageItem> {
   uint64_t addr;
   template <typename T>
   PageItem(T addr) : ListItem{}, addr((uint64_t)addr) {}
@@ -54,8 +54,8 @@ struct PageItem : ListItem {
 class VMM {
  public:
   PT* ttbr0 = (PT*)INVALID_ADDRESS;
-  ListHead<VMA> vmas{};
-  ListHead<PageItem> user_ro_pages{};
+  ListHead<VMA*> vmas{};
+  ListHead<PageItem*> user_ro_pages{};
 
   VMM() = default;
   VMM(const VMM& o);
