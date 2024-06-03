@@ -2,6 +2,7 @@
 
 #include <concepts>
 
+#include "ds/iterator.hpp"
 #include "int/interrupt.hpp"
 
 template <typename T>
@@ -32,50 +33,8 @@ template <typename P, typename T = std::remove_pointer_t<P>>
   requires std::is_convertible_v<P, ListItem<T>*>
 class ListHead {
  public:
-  class iterator {
-   public:
-    iterator(P it) : it_(it) {}
-    iterator(ListItem<T>* it) : it_((P)it) {}
-    iterator& operator++() {
-      it_ = (P)it_->next;
-      return *this;
-    }
-    iterator operator++(int) {
-      iterator copy = *this;
-      ++*this;
-      return copy;
-    }
-    iterator& operator--() {
-      it_ = (P)it_->prev;
-      return *this;
-    }
-    iterator operator--(int) {
-      iterator copy = *this;
-      ++*this;
-      return copy;
-    }
-    P operator*() const {
-      return it_;
-    }
-    P operator->() const {
-      return it_;
-    }
-    bool operator==(const iterator& other) const {
-      return other.it_ == it_;
-    }
-    bool operator!=(const iterator& other) const {
-      return !(*this == other);
-    }
-    operator P() {
-      return it_;
-    }
-    operator ListItem<T>*() {
-      return it_;
-    }
-
-   private:
-    P it_;
-  };
+  using iterator = Iterator<T, [](P x) { return x->next->get(); }, nullptr,
+                            [](P x) { return x->prev->get(); }>;
 
  private:
   int size_ = 0;
@@ -113,10 +72,10 @@ class ListHead {
     insert(--it, node);
   }
   void push_front(P node) {
-    insert(&head_, node);
+    insert(head_.get(), node);
   }
   void push_back(P node) {
-    insert(tail_.prev, node);
+    insert(tail_.prev->get(), node);
   }
   void erase(iterator it) {
     save_DAIF_disable_interrupt();
