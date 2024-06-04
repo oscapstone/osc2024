@@ -4,6 +4,8 @@
 #include "exception.h"
 #include "timer.h"
 #include "memory.h"
+#include "syscall.h"
+#include "sched.h"
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable(){
@@ -19,11 +21,13 @@ void lock()
 {
     el1_interrupt_disable();
     lock_count++;
+    // uart_sendline("lock_count++: %d\n", lock_count);
 }
 
 void unlock()
 {
     lock_count--;
+    // uart_sendline("lock_count--: %d\n", lock_count);
     if (lock_count == 0)
         el1_interrupt_enable();
 }
@@ -60,10 +64,13 @@ void el1h_irq_router(){
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         irqtask_run_preemptive();
         core_timer_enable();
+        //at least two threads running -> schedule for any timer irq
+        if (list_size(run_queue) >2 ) schedule();
     }
 }
 
-void el0_sync_router(){
+void el0_sync_router(trapframe_t *tpf){
+    /*lab3
     unsigned long long spsr_el1;
     __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r" (spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
     unsigned long long elr_el1;
@@ -81,6 +88,39 @@ void el0_sync_router(){
     //     }
     //     ++i;
     // }
+    */
+
+    // Lab5 Basic #3
+    el1_interrupt_enable(); // Allow UART input during exception
+    unsigned long long syscall_no = tpf->x8;
+    switch( syscall_no ){
+        case 0:
+            getpid(tpf);
+            break;
+        case 1:
+            uartread(tpf, (char*)tpf->x0, tpf->x1);
+            break;
+        case 2:
+            uartwrite(tpf, (char*)tpf->x0, tpf->x1);
+            break;
+        case 3:
+            exec(tpf, (char*)tpf->x0, (char**)tpf->x1);
+            break;
+        case 4:
+            fork(tpf);
+            break;
+        case 5:
+            exit(tpf);
+            break;
+        case 6:
+            syscall_mbox_call(tpf, (unsigned char)tpf->x0, (unsigned int *)tpf->x1);
+            break;
+        case 7:
+            kill(tpf, tpf->x0);
+            break;
+        default:
+            break;
+    }
 }
 
 // void el0_irq_64_router(){
@@ -116,6 +156,8 @@ void el0_irq_64_router(){
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         irqtask_run_preemptive();
         core_timer_enable();
+
+        if (list_size(run_queue) >2 ) schedule();
     }
 }
 

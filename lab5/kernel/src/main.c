@@ -24,12 +24,11 @@ void main(char* arg){
     timer_list_init();
     uart_interrupt_enable();
     uart_flush_FIFO();
-    el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
 
-    core_timer_enable();
     init_allocator();
-
     init_thread_sched();
+    
+    el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
     load_context(&curr_thread->context);
     // cli_print_banner();
 

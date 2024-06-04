@@ -16,13 +16,14 @@
     stp x24, x25, [sp ,16 * 12]
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
-    str x30, [sp, 16 * 15]
+    // str x30, [sp, 16 * 15]
     // information for nested interrupt
     mrs x0, spsr_el1
-    str x0, [sp, 16 * 16]
+    stp x30, x0, [sp ,16 * 15]
     mrs x0, elr_el1
-    str x0, [sp, 16 * 17]
-    //ldp x0, x1, [sp ,16 * 0]  // restore x0 instead of elr_el1
+    mrs x1, sp_el0
+    stp x0, x1, [sp ,16 * 16]
+    //ldp x0, x1, [sp ,16 * 0]  // Debug: restore x0 instead of elr_el1
 .endm
 
 // load general registers from stack
@@ -42,12 +43,13 @@
     ldp x24, x25, [sp ,16 * 12]
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
-    ldr x30, [sp, 16 * 15]
+    // ldr x30, [sp, 16 * 15]
     // information for nested interrupt
-    ldr x0, [sp, 16 * 16]
+    ldp x30, x0, [sp ,16 * 15]
     msr spsr_el1,x0
-    ldr x0, [sp, 16 * 17]
+    ldp x0, x1, [sp ,16 * 16]
     msr elr_el1, x0
+    msr sp_el0, x1
     ldp x0, x1, [sp ,16 * 0]  // restore x0 instead of elr_el1
     add sp, sp, 32 * 9
 .endm
@@ -122,7 +124,7 @@ el1h_sync:
     eret
 el1h_irq:
     save_all
-    mov x0,5
+    mov x0, sp
     bl el1h_irq_router
     load_all
     eret
@@ -141,13 +143,13 @@ el1h_error_invalid:
 
 el0_sync_64:
     save_all
-    mov x0,8
+    mov x0, sp
     bl el0_sync_router
     load_all
     eret
 el0_irq_64:
     save_all
-    mov x0,9
+    mov x0, sp
     bl el0_irq_64_router
     load_all
     eret

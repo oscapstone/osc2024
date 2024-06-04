@@ -4,6 +4,13 @@
 #define CMD_MAX_LEN 32
 #define MSG_MAX_LEN 128
 
+#include "sched.h"
+
+extern char *dtb_ptr;
+extern void *CPIO_DEFAULT_START;
+extern int   uart_recv_echo_flag;
+extern thread_t *curr_thread;
+
 typedef struct CLI_CMDS
 {
     char command[CMD_MAX_LEN];
@@ -29,6 +36,7 @@ void do_cmd_setTimeout(char* msg, char* sec);
 void do_cmd_set2sAlert();
 void do_cmd_memory_tester();
 void do_cmd_thread_tester();
+void do_cmd_fork_tester();
 void do_cmd_reboot();
 
 #endif /* _SHELL_H_ */

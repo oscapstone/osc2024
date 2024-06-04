@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "utils.h"
 #include "dtb.h"
+#include "exception.h"
 
 #define STR(x) #x
 #define XSTR(s) STR(s)
@@ -130,6 +131,7 @@ void add_timer(void *callback, unsigned long long timeout, char* args, int isTic
     // uart_sendline("OKOK");
     // add the timer_event into timer_event_list (sorted)
     struct list_head* curr;
+    lock();
     list_for_each(curr,timer_event_list)
     {
         if(((timer_event_t*)curr)->interrupt_time > the_timer_event->interrupt_time)
@@ -145,6 +147,7 @@ void add_timer(void *callback, unsigned long long timeout, char* args, int isTic
     }
     // set interrupt to first event
     set_core_timer_interrupt_by_tick(((timer_event_t*)timer_event_list->next)->interrupt_time);
+    unlock();
 }
 
 // get cpu tick add some second

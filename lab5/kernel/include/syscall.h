@@ -1,0 +1,22 @@
+#ifndef _SYSCALL_H_
+#define _SYSCALL_H_
+
+#include "exception.h"
+#include <stddef.h>
+
+extern void* get_current();
+extern void store_context(void *curr_context);
+
+int    getpid(trapframe_t *tpf);
+size_t uartread(trapframe_t *tpf, char buf[], size_t size);
+size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size);
+int    exec(trapframe_t *tpf, const char *name, char *const argv[]);
+int    fork(trapframe_t *tpf);
+void   exit(trapframe_t *tpf);
+int    syscall_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox);
+void   kill(trapframe_t *tpf, int pid);
+
+unsigned int get_file_size(char *thefilepath);
+char *get_file_start(char *thefilepath);
+
+#endif /* _SYSCALL_H_*/

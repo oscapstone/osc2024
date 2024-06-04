@@ -3,6 +3,7 @@
 #include "exception.h"
 #include "memory.h"
 #include "shell.h"
+#include "syscall.h"
 
 #include "timer.h"
 // #include "signal.h"
@@ -42,6 +43,7 @@ void init_thread_sched()
 
 void idle()
 {
+    core_timer_enable();
     while (1)
     {
         // uart_sendline("This is idle\n"); // debug
@@ -53,12 +55,13 @@ void idle()
 void schedule()
 {
     lock();
+    // uart_sendline("This is curr_thread->pid %d\n", curr_thread->pid);
     do
     {
-        // uart_sendline("This is in do-while loop curr_thread->pid %d\n", curr_thread->pid);
+        // uart_sendline("This is in schedule curr_thread->pid %d\n", curr_thread->pid);
         curr_thread = (thread_t *)curr_thread->listhead.next;
     } while (list_is_head(&curr_thread->listhead, run_queue) || curr_thread->iszombie == 1); // find a runnable thread
-    // uart_sendline("This is curr_thread->pid %d\n", curr_thread->pid);
+    // uart_sendline("This is finish schedule curr_thread->pid %d\n", curr_thread->pid);
     unlock();
     switch_to(get_current(), &curr_thread->context);
 }
@@ -78,7 +81,6 @@ void kill_zombies()
             // kfree(((thread_t *)curr)->data);                   // Don't free data because children may use data
             ((thread_t *)curr)->iszombie = 0;
             ((thread_t *)curr)->isused = 0;
-            uart_sendline("kill_zombies\n");
         }
     }
     unlock();
@@ -95,7 +97,7 @@ thread_t *thread_create(void *start)
     {
         r = &threads[pid_history];
         pid_history += 1;
-        // uart_sendline("This is run_queue->pid %d\n", r->pid);  // for Debug
+        // uart_sendline("This is thread_create->pid %d\n", r->pid);  // for Debug
     }
     else
         return 0;
@@ -142,18 +144,18 @@ int exec_thread(char *data, unsigned int filesize)
     {
         t->data[i] = data[i];
     }
-
+    curr_thread = t;
+    add_timer(schedule_timer, 2, "", 0); // start scheduler
     // eret to exception level 0
     asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
         "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
         "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
         "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process, user program stack pointer set to new stack.
         "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-        "eret\n\t" ::"r"(&t->context),"r"(t->context.lr), "r"(t->stack_allocated_base + USTACK_SIZE), "r"(t->context.sp));
+        ::"r"(&t->context),"r"(t->context.lr), "r"(t->stack_allocated_base + USTACK_SIZE), "r"(t->context.sp));
     unlock();
 
-    curr_thread = t;
-    add_timer(schedule_timer, 1, "", 0); // start scheduler
+    asm("eret\n\t");
 
     return 0;
 }
