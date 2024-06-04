@@ -332,10 +332,12 @@ int vfs_open(FS_VNODE* cwd,const char* pathname, U32 flags, FS_FILE** target) {
     }
 
 
+
     FS_FILE* file = kzalloc(sizeof(FS_FILE));
     file->vnode = vnode;
     file->flags = flags;
     file->pos = 0;
+    vnode->f_ops->open(vnode, &file);
     *target = file;
 
     return 0;

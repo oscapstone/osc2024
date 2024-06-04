@@ -13,7 +13,7 @@ CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding \
 		  -fno-stack-protector\
 		  -O0\
 		  -I src\
-		  #-D NS_DEBUG
+		  -D NS_DEBUG
 
 BIN_DIR = bin
 
@@ -39,7 +39,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
-QEMU_DEVICE = /dev/pts/5
+QEMU_DEVICE = /dev/pts/4
 
 all : kernel.img
 

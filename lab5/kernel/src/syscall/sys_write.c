@@ -27,6 +27,8 @@ void sys_write(TRAP_FRAME* regs) {
         return;
     }
 
+    U64 irq_flags = irq_disable();
     regs->regs[0] = vfs_write(descriptor->file, buf, count);
+    irq_restore(irq_flags);
     //NS_DPRINT("[SYSCALL][WRITE] end. result: %d\n", regs->regs[0]);
 }

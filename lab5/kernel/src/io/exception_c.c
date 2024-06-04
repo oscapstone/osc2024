@@ -37,6 +37,8 @@ void exception_sync_el1_handler(TRAP_FRAME* tf) {
     U64 esr = utils_read_sysreg(esr_el1);
     U32 ec = ESR_ELx_EC(esr);
 
+    NS_DPRINT("EL1 SYNC EXCEPTION: ec: 0x%x", ec);
+
     switch (ec)
     {
     case ESR_ELx_EC_IABT:
