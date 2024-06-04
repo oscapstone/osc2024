@@ -115,6 +115,8 @@ thread_t *_init_create_thread(char *name, int64_t pid, int64_t ppid, void *start
 	thread->ppid = ppid;
 	thread->child_list = (child_node_t *)kmalloc(sizeof(child_node_t));
 	INIT_LIST_HEAD((list_head_t *)thread->child_list);
+	thread->vma_list = (vm_area_struct_t *)kmalloc(sizeof(vm_area_struct_t));
+	INIT_LIST_HEAD((list_head_t *)thread->vma_list);
 	thread->status = THREAD_READY;
 	thread->user_stack_base = kmalloc(USTACK_SIZE);
 	thread->kernel_stack_base = kmalloc(KSTACK_SIZE);
@@ -257,6 +259,8 @@ thread_t *thread_create(void *start, char *name)
 	r->ppid = curr_thread->pid;
 	r->child_list = (child_node_t *)kmalloc(sizeof(child_node_t));
 	INIT_LIST_HEAD((list_head_t *)r->child_list);
+	r->vma_list = (vm_area_struct_t *)kmalloc(sizeof(vm_area_struct_t));
+	INIT_LIST_HEAD((list_head_t *)r->vma_list);
 	r->status = THREAD_READY;
 	r->user_stack_base = kmalloc(USTACK_SIZE);
 	DEBUG("new_pid: %d, user_stack_base: 0x%x\n", new_pid, r->user_stack_base);
