@@ -6,8 +6,9 @@
 #include "utils/printf.h"
 
 void sys_write(TRAP_FRAME* regs) {
+    disable_interrupt();
     //NS_DPRINT("[SYSCALL][WRITE] start.\n");
-    U64 irq_flags = irq_disable();
+    //U64 irq_flags = irq_disable();
     TASK* task = task_get_current_el1();
 
     int fd = (int)regs->regs[0];
@@ -30,5 +31,5 @@ void sys_write(TRAP_FRAME* regs) {
     //NS_DPRINT("[FS] write addr: 0x%p\n", file->vnode);
     regs->regs[0] = file->vnode->f_ops->write(file, buf, count);
     //NS_DPRINT("[SYSCALL][WRITE] end. result: %d\n", regs->regs[0]);
-    irq_restore(irq_flags);
+    //irq_restore(irq_flags);
 }
