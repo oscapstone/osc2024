@@ -25,6 +25,7 @@ void sys_open(TRAP_FRAME* regs) {
     if (fd == -1) {
         NS_DPRINT("[SYSCALL][OPEN] Failed to register file descriptor.\n");
         regs->regs[0] = -1;
+        irq_restore(irq_flags);
         return;
     }
     int result = vfs_open(current_task->pwd, pathname, flags, &current_task->file_table[fd].file);
@@ -32,6 +33,7 @@ void sys_open(TRAP_FRAME* regs) {
         NS_DPRINT("[SYSCALL][OPEN] Failed to open file: %s\n", pathname);
         current_task->file_table[fd].file = NULL;
         regs->regs[0] = -1;
+        irq_restore(irq_flags);
         return;
     }
     irq_restore(irq_flags);

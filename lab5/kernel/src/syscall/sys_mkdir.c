@@ -10,7 +10,7 @@ void sys_mkdir(TRAP_FRAME* regs) {
     TASK* current_task = task_get_current_el1();
 
     const char* pathname = (const char*) regs->regs[0];
-    unsigned mode = (unsigned)regs->regs[1];
+    //unsigned mode = (unsigned)regs->regs[1];
 
     FS_VNODE* parent;
     FS_VNODE* target;

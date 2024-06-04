@@ -37,7 +37,28 @@ void exception_sync_el1_handler(TRAP_FRAME* tf) {
     U64 esr = utils_read_sysreg(esr_el1);
     U32 ec = ESR_ELx_EC(esr);
 
-    NS_DPRINT("EL1 SYNC EXCEPTION: ec: 0x%x", ec);
+    NS_DPRINT("EL1 SYNC EXCEPTION: ec: 0x%x\n", ec);
+
+#ifdef NS_DEBUG
+
+    TASK* task = task_get_current_el1();
+
+    U64 far_el1 = utils_read_sysreg(FAR_EL1);
+    U64 elr_el1 = utils_read_sysreg(ELR_EL1);
+    UPTR fault_page_addr = far_el1 & ~(0xfff);
+    U64 iss = ESR_ELx_ISS(esr);
+    U64 sp = utils_read_genreg(sp);
+    U64 sp_el0 = utils_read_sysreg(sp_el0);
+
+    NS_DPRINT("[MMU][TRACE] memfail() start.\n");
+    NS_DPRINT("pid:     %d\n", task->pid);
+    NS_DPRINT("page:    0x%p\n", fault_page_addr);
+    NS_DPRINT("far_el1: 0x%p\n", far_el1);
+    NS_DPRINT("elr_el1: 0x%p\n", elr_el1);
+    NS_DPRINT("esr_el1: 0x%p\n", esr);
+    NS_DPRINT("sp:      0x%p\n", sp);
+    NS_DPRINT("sp_el0:  0x%p\n", sp_el0);
+#endif
 
     switch (ec)
     {
@@ -46,6 +67,10 @@ void exception_sync_el1_handler(TRAP_FRAME* tf) {
         mmu_memfail_handler(esr);
         break;
     default:
+    {
+        printf("[ERROR] kernel mode crash\n");
+        task_exit(-1);
+    }
         break;
     }
 

@@ -43,10 +43,10 @@ struct arm_core_regs {
 
 #define ISS_IS_WRITE(iss) (iss & 0x40)
 
-#define ISS_TF_LEVEL0 0b000100 // iss IFSC, bits [5:0]
-#define ISS_TF_LEVEL1 0b000101
-#define ISS_TF_LEVEL2 0b000110
-#define ISS_TF_LEVEL3 0b000111
+#define ISS_TF_LEVEL0 0x4 // iss IFSC, bits [5:0]
+#define ISS_TF_LEVEL1 0x5
+#define ISS_TF_LEVEL2 0x6
+#define ISS_TF_LEVEL3 0x7
 
 #define ISS_PF_LEVEL0 0xc
 #define ISS_PF_LEVEL1 0xd

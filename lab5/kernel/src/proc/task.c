@@ -51,7 +51,6 @@ void task_init() {
 void task_timer_callback() {
 
     timer_add(task_timer_callback, TASK_SCHE_FREQ);
-    enable_interrupt();
     task_schedule();
 }
 
@@ -87,12 +86,12 @@ void task_schedule() {
 
     //NS_DPRINT("[TASK][TRACE] next task pid: %d\n", task_manager->running_queue[0]->pid);
     
-    if (current_task != task_manager->running_queue[0]) {
-        task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
-    }
+    task_switch_to(task_get_current_el1(), task_manager->running_queue[0]);
 }
 
 TASK* task_get(int pid) {
+    if (pid < 0 || pid >= TASK_MAX_TASKS)
+        return NULL;
     TASK* task = &task_manager->tasks[pid];
     if (!(task->flags & TASK_FLAGS_ALLOC)) {
         return NULL;
@@ -101,14 +100,13 @@ TASK* task_get(int pid) {
 }
 
 void task_switch_to(TASK* current, TASK* next) {
-    enable_interrupt();
     task_asm_switch_to(current, next);
 }
 
 
 void task_run_to_el0(TASK* task) {
     // 先這樣
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     task->status = TASK_STATUS_RUNNING;
     task->preempt = task->priority;
     task->cpu_regs.lr = task_to_user_func;
@@ -131,7 +129,7 @@ void task_run_to_el0(TASK* task) {
     task_manager->running_queue[task_manager->running] = task;
     //NS_DPRINT("[TASK][TRACE] adding task to running queue[%d], pid = %d\n", task_manager->running, task->pid);
     task_manager->running++;
-    unlock_interrupt();
+    irq_restore(irq_flags);
     NS_DPRINT("[TASK][TRACE] new task running. pid = %d\n", task->pid);
 }
 
@@ -259,7 +257,7 @@ void task_delete(TASK* task) {
         vfs_close(task->program_file);
         task->program_file = NULL;
     }
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     mmu_delete_mm(task);            // free page table
     if (task->kernel_stack) {
         kfree(task->kernel_stack);
@@ -268,7 +266,7 @@ void task_delete(TASK* task) {
     task->status = TASK_STATUS_DEAD;
     task->flags = 0;
     task_manager->count--;
-    unlock_interrupt();
+    irq_restore(irq_flags);
 
     NS_DPRINT("[TASK][TRACE] task deleted. pid = %d\n", task->pid);
 }
@@ -354,7 +352,7 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size) {
     while (offset < program_size) {
         size_t size = offset + PD_PAGE_SIZE > program_size ? program_size - offset : PD_PAGE_SIZE;
 
-        U64 page = kzalloc(PD_PAGE_SIZE);
+        UPTR page = (UPTR)kzalloc(PD_PAGE_SIZE);
         memcpy((char*)program_start + offset, (void*)page, size);
         mmu_map_page(task, offset, MMU_VIRT_TO_PHYS(page), MMU_AP_EL0_UK_ACCESS | MMU_PXN);
 
@@ -364,14 +362,17 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size) {
 }
 
 int task_run_program(FS_VNODE* cwd, TASK* task, const char* program_path) {
+    NS_DPRINT("[TASK] let task to be program: %s\n", program_path);
     FS_FILE* program_file;
+    U64 irq_flags = irq_disable();
     if (vfs_open(cwd, program_path, FS_FILE_FLAGS_READ, &program_file)) {
         printf("[TASK] Error failed to open program: %s\n", program_path);
+        irq_restore(irq_flags);
         return -1;
     }
 
     if (!cwd) {
-        task->pwd = program_file->vnode->parent;
+        task->pwd = cwd;
     }
     
     task->program_file = program_file;
@@ -386,6 +387,7 @@ int task_run_program(FS_VNODE* cwd, TASK* task, const char* program_path) {
         page_info->v_addr = i * PD_PAGE_SIZE;
         page_info->flags = TASK_USER_PAGE_INFO_FLAGS_READ | TASK_USER_PAGE_INFO_FLAGS_EXEC | TASK_USER_PAGE_INFO_FLAGS_WRITE;
     }
+    irq_restore(irq_flags);
     return 0;
 }
 
@@ -402,9 +404,10 @@ void task_wait(pid_t pid) {
  * Remove from running queue, called by current task(process)
 */
 void task_sleep() {
-    disable_interrupt();
+    U64 irq_flags = irq_disable();
     task_remove_from_run_list(task_get_current_el1());
     task_get_current_el1()->status = TASK_STATUS_SLEEPING;
+    irq_restore(irq_flags);
     task_schedule();
 }
 

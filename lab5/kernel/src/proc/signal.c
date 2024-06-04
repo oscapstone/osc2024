@@ -17,26 +17,26 @@ void signal_entry();
 */
 void signal_check(TRAP_FRAME* trap_frame) {
     TASK* task = task_get_current_el1();
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     if (task->current_signal != -1) {   // is running a signal now
-        unlock_interrupt();
+        irq_restore(irq_flags);
         return;
     }
-    unlock_interrupt();
+    irq_restore(irq_flags);
 
     for (int i = 0; i < SIGNAL_NUM; i++) {
         TASK_SIGNAL* signal = &task->signals[i];
         if (signal->count > 0) {
-            lock_interrupt();
+            irq_flags = irq_disable();
             signal->count--;
             task_get_current_el1()->current_signal = i;
-            unlock_interrupt();
+            irq_restore(irq_flags);
             signal_run(trap_frame, i);
         }
     }
-    lock_interrupt();
+    irq_flags = irq_disable();
     task_get_current_el1()->current_signal = -1;
-    unlock_interrupt();
+    irq_restore(irq_flags);
 }
 
 /**
@@ -74,7 +74,7 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
         return;
     }
 
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     current_signal->sp0 = utils_read_sysreg(sp_el0);
 
     // add the signal user stack in page table
@@ -85,10 +85,10 @@ void signal_run(TRAP_FRAME* trap_frame, int signal) {
         mmu_map_table_entry((pd_t*)(pte + 0), stack_v_addr, stack_ptr + (i * PD_PAGE_SIZE), MMU_AP_EL0_UK_ACCESS | MMU_UNX /* stack為不可執行 */ | MMU_PXN/* 還沒看懂到底要不要家: 要加因為user stack不可在EL1執行*/);
         stack_v_addr += PD_PAGE_SIZE;
     }
-    unlock_interrupt();
+    irq_restore(irq_flags);
 
     NS_DPRINT("[SYSCALL][SIGNAL] doing signal. pid: %d, signal: %d\n", task_get_current_el1()->pid, signal);
-    NS_DPRINT("[SYSCALL][SIGNAL] handler addr: 0x%08x%08x", (U64)current_signal->handler >> 32, current_signal->handler);
+    NS_DPRINT("[SYSCALL][SIGNAL] handler addr: 0x%p", current_signal->handler);
     UPTR entry_ptr = MMU_SINGAL_ENTRY_BASE + ((UPTR)signal_entry & 0xfff);
     asm volatile(
         "msr elr_el1, %0\n\t"
@@ -126,7 +126,7 @@ void signal_exit() {
     TASK_SIGNAL* current_signal = &task->signals[task->current_signal];
 
     // remove the signal user stack in page table
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     U64 stack_v_addr = MMU_SINGAL_STACK_BASE - TASK_STACK_SIZE;
     for (int i = 0; i < TASK_STACK_PAGE_COUNT; i++) {
         U64 pte = mmu_get_pte(task, stack_v_addr);
@@ -140,8 +140,8 @@ void signal_exit() {
 
     // restore current context
     utils_write_sysreg(sp_el0, current_signal->sp0);
-    current_signal->sp0 = NULL;
-    unlock_interrupt();
+    current_signal->sp0 = 0;
+    irq_restore(irq_flags);
 
     task_asm_load_context(current_signal->cpu_regs);
 

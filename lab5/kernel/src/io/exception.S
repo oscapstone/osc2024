@@ -69,6 +69,7 @@
     .if \el == 0
     ldr     x9, [sp, 16 * 0]
     msr     sp_el0, x9
+    msr     spsr_el1, xzr
     .endif
 
     add     sp, sp, 2 * 16

@@ -2,7 +2,7 @@
 #include "uartfs.h"
 #include "io/uart.h"
 #include "utils/printf.h"
-
+#include "peripherals/irq.h"
 
 static int write(FS_FILE *file, const void *buf, size_t len);
 static int read(FS_FILE *file, void *buf, size_t len);

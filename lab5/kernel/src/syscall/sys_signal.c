@@ -38,10 +38,10 @@ void sys_signal(TRAP_FRAME* trap_frame) {
         trap_frame->regs[0] = -1;
         return;
     }
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     task->signals[signal].count++;
     NS_DPRINT("[SYSCALL][SIGNAL] signaled. pid: %d, signal: %d, count: %d\n", task->pid, signal, task->signals[signal].count);
-    unlock_interrupt();
+    irq_restore(irq_flags);
 
     trap_frame->regs[0] = 0;
     return;

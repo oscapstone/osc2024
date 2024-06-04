@@ -97,6 +97,7 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
         return FS_FIND_NODE_HAS_PARENT_NO_TARGET;
     }
     *target = final_node;
+    NS_DPRINT("[FS] fs_find_node() file %s found. addr: 0x%p\n", final_node->name, final_node);
     return FS_FIND_NODE_SUCCESS;
 
     ///////////////////////////////////////////////

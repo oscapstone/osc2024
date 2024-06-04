@@ -6,6 +6,7 @@
 #define MMU_PERIPHERAL_START        0x3c000000L
 #define MMU_PERIPHERAL_END          0x3f000000L
 #define MMU_USER_KERNEL_BASE        0x00000000L
+#define MMU_USER_ENTRY              0x00000000L
 #define MMU_USER_STACK_BASE         0xfffffffff000L
 #define MMU_SINGAL_ENTRY_BASE       (MMU_USER_STACK_BASE - TASK_STACK_SIZE - 2 * PD_PAGE_SIZE)    // only one page
 #define MMU_SINGAL_STACK_BASE       MMU_SINGAL_ENTRY_BASE           // grow down not grown up

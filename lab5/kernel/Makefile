@@ -7,7 +7,7 @@ OBJCOPY	= aarch64-linux-gnu-objcopy
 # NS_DEBUG: enable debug output 
 
 # nostdlib: No standard library
-CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding \
+CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding -Wunused-parameter \
 		  -nostdlib -nostartfiles \
 		  -mgeneral-regs-only\
 		  -fno-stack-protector\
@@ -39,7 +39,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
-QEMU_DEVICE = /dev/pts/4
+QEMU_DEVICE = /dev/pts/5
 
 all : kernel.img
 

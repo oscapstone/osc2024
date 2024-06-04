@@ -50,7 +50,7 @@ void sys_mmap(TRAP_FRAME* trap_frame) {
 
     U32 page_count = (len + PD_PAGE_SIZE - 1) / PD_PAGE_SIZE;
 
-    NS_DPRINT("[SYSCALL][MMAP] try mapping. v_addr = 0x%08x%08x, page_count = %d\n", v_addr >> 32, v_addr, page_count);
+    NS_DPRINT("[SYSCALL][MMAP] try mapping. v_addr = 0x%p, page_count = %d\n", v_addr, page_count);
 
     if (v_addr == 0) {
         v_addr = mmap_find_region_in_heap(page_count);
@@ -107,10 +107,10 @@ void sys_mmap(TRAP_FRAME* trap_frame) {
             user_page->v_addr = v_addr + i * PD_PAGE_SIZE;
             user_page->p_addr = 0;              // implement blank page
         }
-        NS_DPRINT("[SYSCALL][MMAP] Adding new blank virtual region. v_addr: 0x%08x%08x\n", v_addr >> 32, v_addr);
+        NS_DPRINT("[SYSCALL][MMAP] Adding new blank virtual region. v_addr: 0x%p\n", v_addr);
     }
 
-    NS_DPRINT("[SYSCALL][MMAP] map successfully. v_addr = 0x%08x%08x\n", v_addr >> 32, v_addr);
+    NS_DPRINT("[SYSCALL][MMAP] map successfully. v_addr = 0x%p\n", v_addr);
     trap_frame->regs[0] = v_addr;
     return;
 }

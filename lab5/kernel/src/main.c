@@ -20,7 +20,7 @@ void set_exception_vector_table();
 // in shell.c
 void get_cpio_addr(int token, const char* name, const void *data, unsigned int size);
 
-void putc(void *p, char c) {
+void _putchar(char c) {
 	if (c == '\n') {
 		uart_send_char('\r');
 	}
@@ -62,8 +62,6 @@ void main() {
 
     // initialze UART
     uart_init();
-
-	init_printf(0, putc);
 
 	// init memory management	
 	mm_init();

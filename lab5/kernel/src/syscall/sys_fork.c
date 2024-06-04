@@ -69,7 +69,7 @@ void sys_fork(TRAP_FRAME* regs) {
     if (task->program_file) {
         if (vfs_open(task->program_file->vnode->parent, task->program_file->vnode->name, FS_FILE_FLAGS_READ, &new_task->program_file)) {
             printf("[FORK] Error failed to open file: %s\n", task->program_file->vnode->name);
-            task_kill(new_task, -2);
+            task_kill(new_task->pid, -2);
             regs->regs[0] = -1;
             return;
         }

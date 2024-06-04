@@ -735,7 +735,7 @@ void mem_reference(UPTR p_addr) {
     U64 frame_index = mem_addr2idx(p_addr);
 
     if (frame_index >= mem_manager.number_of_frames) {
-        printf("[MEMORY][ERROR] wired address to reference. addr: 0x%08x%08x\n", p_addr >> 32, p_addr);
+        printf("[MEMORY][ERROR] wired address to reference. addr: 0x%p\n", p_addr);
         return;
     }
 
@@ -764,7 +764,7 @@ void mem_dereference(UPTR p_addr) {
     U64 frame_index = mem_addr2idx(p_addr);
 
     if (frame_index >= mem_manager.number_of_frames) {
-        printf("[MEMORY][ERROR] wired address to dereference. addr: 0x%08x%08x\n", p_addr >> 32, p_addr);
+        printf("[MEMORY][ERROR] wired address to dereference. addr: 0x%p\n", p_addr);
         return;
     }
 

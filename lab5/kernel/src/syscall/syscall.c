@@ -35,9 +35,6 @@ SYS_CALL syscall_table[NR_SYSCALLS] = {
 
 void syscall_handler(TRAP_FRAME* trap_frame) {
 
-    // enable interrupt because the lab require in lab5 kernel preemption
-    enable_interrupt();
-
     U64 syscall_index = trap_frame->regs[8];
 
     //NS_DPRINT("[SYSCALL][TRACE] index: %d\n", syscall_index);
@@ -45,6 +42,9 @@ void syscall_handler(TRAP_FRAME* trap_frame) {
         printf("[SYSCALL][ERROR] Invalid system call.\n");
         return;
     }
+
+    if (syscall_index != SYS_WRITE) 
+        enable_interrupt();
 
     (syscall_table[syscall_index])(trap_frame);
 }
