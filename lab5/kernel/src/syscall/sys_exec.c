@@ -43,8 +43,10 @@ void sys_exec(TRAP_FRAME* regs) {
     NS_DPRINT("[SYSCALL][EXEC] Start executing %s\n", name);
 
     FS_FILE* file;
-    if (vfs_open(task_get_current_el1()->pwd, name, O_READ, &file)) {
-        NS_DPRINT("[SYSCALL][EXEC] Failed to open file: %s\n", name);
+    int result;
+    if (result = vfs_open(task_get_current_el1()->pwd, name, O_READ, &file)) {
+        NS_DPRINT("[SYSCALL][EXEC] Failed to open file: %s, return code: %d\n", name, result);
+        NS_DPRINT("[SYSCALL][EXEC] parent directory: %s\n", task_get_current_el1()->pwd->name);
         regs->regs[0] = -1;
         return;
     }
@@ -67,7 +69,6 @@ void sys_exec(TRAP_FRAME* regs) {
     vfs_read(file, buf, contentSize);
     vfs_close(file);
 
-    NS_DPRINT("testtest\n");
     task_copy_program(current_task, buf, contentSize);
     kfree(buf);
     jump_user_prog();

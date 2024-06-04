@@ -4,3 +4,5 @@
 */.vscode/
 lab5/kernel/screenlog.txt
 */.vs
+*/bin
+*/bin-int

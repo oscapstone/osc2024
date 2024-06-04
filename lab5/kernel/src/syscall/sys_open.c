@@ -36,7 +36,7 @@ void sys_open(TRAP_FRAME* regs) {
     }
     irq_restore(irq_flags);
 
-    //NS_DPRINT("[SYSCALL][OPEN] successfully open file: %s, fd: %d\n", pathname, fd);
+    NS_DPRINT("[SYSCALL][OPEN] successfully open file: %s, fd: %d\n", pathname, fd);
 
     regs->regs[0] = fd;
 }

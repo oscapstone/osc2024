@@ -369,6 +369,10 @@ int task_run_program(FS_VNODE* cwd, TASK* task, const char* program_path) {
         printf("[TASK] Error failed to open program: %s\n", program_path);
         return -1;
     }
+
+    if (!cwd) {
+        task->pwd = program_file->vnode->parent;
+    }
     
     task->program_file = program_file;
     
