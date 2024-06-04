@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "shell.h"
 #include "tmpfs.h"
+#include "initramfs.h"
 
 //need ** so that can return handle and status
 
@@ -95,7 +96,36 @@ int vfs_mkdir(const char* pathname){
     //set temp to created vnode
     return temp -> v_ops -> mkdir(temp, &temp, pathname + idx + 1);//dir, target, filename
 }
-// int vfs_mount(const char* target, const char* filesystem);
+
+int vfs_mount(const char* target, const char* filesystem){
+    struct vnode * temp;
+    struct filesystem *fs = 0;
+    for(int i=0; i<MAX_FS;i++){
+        if(fs_register[i].name == 0)
+            break;
+        if(strcmp(filesystem, fs_register[i].name) == 0){
+            fs = &fs_register[i];
+            break;
+        }
+    }
+    if(!fs){
+        uart_puts("No such filesystem!\n\r");
+        return -1;
+    }
+
+    if(vfs_lookup(target, &temp) != 0){
+        uart_puts("No such directory!\n\r");
+        return -1;
+    }
+
+    struct tmpfs_node * inode = temp -> internal;
+    inode -> type = 2;
+    temp -> mount = allocate_page(4096);
+    uart_puts("Successfully mounted fs ");
+    uart_puts(filesystem);
+    newline();
+    return fs -> setup_mount(fs, temp -> mount);
+}
 
 int vfs_lookup(const char* pathname, struct vnode** target){
     if(pathname[0] == 0 || strcmp(pathname, "/") == 0){
@@ -137,6 +167,7 @@ int vfs_lookup(const char* pathname, struct vnode** target){
     while(cur_node -> mount){
         cur_node = cur_node -> mount -> root;
     }
+    
     *target = cur_node;
     
     return 0;
@@ -145,7 +176,12 @@ int vfs_lookup(const char* pathname, struct vnode** target){
 void init_rootfs(){
     int idx = reg_tmpfs();
     fs_register[idx].setup_mount(&fs_register[idx], rootfs);
-    current_dir = rootfs -> root;
+
+    reg_initramfs();
+    vfs_mkdir("/initramfs");
+    vfs_mount("/initramfs", "initramfs");
+
+    current_dir = rootfs -> root; //no_use
     please_nobug();
 }
 
@@ -182,60 +218,16 @@ int vfs_ls(char * dir_name){
     return 0;
 }
 
-
 void please_nobug(){
-    struct file* test; //file handle
-    struct file* test2;
-    // vfs_open("/file1", 1, &test);
-
-    split_line();
-    vfs_open("/jerry", 1, &test);
-    struct file* test3;
-    vfs_open("/file3", 1, &test);
-    vfs_open("/file3", 0, &test2);
-    struct vnode * node;
-
-    split_line();
-    int ret = vfs_lookup("/jerry", &node);
-    uart_int(ret);
-    newline();
-    split_line();
-
-
-    vfs_mkdir("/folder1");
-    split_line();
-
-    ret = vfs_lookup("/jerry", &node);
-    uart_int(ret);
-    newline();
-    split_line();
-
-
-    vfs_open("/folder1/file1", 1, &test3);
-    split_line();
-    
-    const char * fn = "/jerry";
-    ret = vfs_lookup(fn, &node);
-    uart_int(ret);
-    newline();
-    split_line();
-    char * buf = "hello world!\n";
-    vfs_write(test, buf, 7);
-    char buf2[10];
-    vfs_read(test2, buf2, 5);
-    uart_puts(buf2);
-    newline();
-
-    
-    // struct tmpfs_node * nd = test -> vnode -> internal;
-    // uart_puts(nd -> data);
-    // newline();
-
-    struct tmpfs_node * inode = node -> internal;
-    uart_puts(inode -> name);
-    newline();
     vfs_ls("/");
-
+    vfs_ls("/initramfs");
+    struct file * test;
+    vfs_open("/initramfs/file1", 0, &test);
+    char buf[100];
+    memset(buf, 100);
+    vfs_read(test, buf, 100);
+    uart_puts(buf);
+    newline();
 }
 
 void shell_with_dir(){
