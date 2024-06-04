@@ -45,17 +45,15 @@ int tmpfs_write(struct file *file, const void *buf, size_t len){
     }
     file -> f_pos += len;
     if(internal -> size < file -> f_pos)
-        internal -> size = f_pos;
+        internal -> size = file -> f_pos;
     return len;
 }
 
 int tmpfs_read(struct file *file, void *buf, size_t len){
     struct tmpfs_node * internal = file -> vnode -> internal;
+    if(file -> f_pos + len > internal -> size)
+        len = internal -> size - file -> f_pos;
     for(int i=0; i<len;i++){
-        if(internal -> data [i + file -> f_pos] == 0){
-            file -> f_pos += i;
-            return i;
-        }
         ((char *)buf)[i] = internal -> data[i + file -> f_pos];
     }
     file -> f_pos += len;
@@ -121,7 +119,35 @@ int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *comp
 }
 
 int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name){
-    
+    struct tmpfs_node * internal = dir_node -> internal;
+    if(internal -> type != 1 && internal -> type != 2){//2: mount
+        uart_puts("NOT A DIRECTORY!\n\r");
+        return -1;
+    }
+
+    int idx = -1;
+    for(int i=0; i<MAX_ENTRY; i++){
+        if(internal -> entry[i] == 0){
+            idx = i;
+            break;
+        }
+        struct tmpfs_node* infile = internal -> entry[i] -> internal;
+        if(strcmp(infile -> name, component_name) == 0){
+            uart_puts("FOLDER EXISTED!!!\n\r");
+            return -1;
+        }
+    }
+
+    if(idx == -1){
+        uart_puts("DIRECTORY FULL!!!\n\r");
+    }
+
+    struct vnode * node = tmpfs_create_vnode(1); //1: folder
+    struct tmpfs_node * inode = node -> internal;
+    strcpy(component_name, inode -> name);
+    internal -> entry[idx] = node;
+    *target = node;
+    return 0;
 }
 
 /*

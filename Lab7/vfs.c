@@ -60,8 +60,7 @@ int vfs_open(const char* pathname, int flags, struct file** target) { //target: 
 int vfs_close(struct file *file) {
     // 1. release the file handle
     // 2. Return error code if fails
-    file->f_ops->close(file);
-    return 0;
+    return file->f_ops->close(file);
 }
 
 int vfs_write(struct file* file, const void* buf, size_t len) {
@@ -77,7 +76,25 @@ int vfs_read(struct file* file, void* buf, size_t len) {
     return file->f_ops->read(file, buf, len);
 }
 
-// int vfs_mkdir(const char* pathname);
+int vfs_mkdir(const char* pathname){
+    struct vnode * temp;
+    char path_dir[MAX_PATH];
+    strcpy(pathname, path_dir);
+    int idx;
+    for(int i=0; i<strlen(pathname);i++){
+        if(pathname[i] == '/')
+            idx = i;
+    }
+    //get the name of folder and lookup for node
+    path_dir[idx] = 0;
+    if (vfs_lookup(path_dir,&temp)!=0){
+        uart_puts("ERROR DIRECTORY NOTFOUND\n\r");
+        return -1;
+    }
+
+    //set temp to created vnode
+    return temp -> v_ops -> mkdir(temp, &temp, pathname + idx + 1);//dir, target, filename
+}
 // int vfs_mount(const char* target, const char* filesystem);
 
 int vfs_lookup(const char* pathname, struct vnode** target){
@@ -93,8 +110,11 @@ int vfs_lookup(const char* pathname, struct vnode** target){
             //not sure use full path or only name
             vnode_name[idx] = '\0';
 
-            if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0)
+            if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0){
+                uart_puts("Parent lookup failed\n\r");
                 return -1; //get next vnode
+            }
+                
             
             while(cur_node -> mount){// check if the vnode is in different file system
                 cur_node = cur_node -> mount -> root;
@@ -107,10 +127,12 @@ int vfs_lookup(const char* pathname, struct vnode** target){
         }
     }
 
-    vnode_name[idx+1] = 0;
-
-    if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0) //not found
+    vnode_name[idx] = 0;
+    if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0){ //not found
+        //uart_puts("File not found\n\r");
         return -1; //get next vnode
+    }
+        
     
     while(cur_node -> mount){
         cur_node = cur_node -> mount -> root;
@@ -163,14 +185,44 @@ int vfs_ls(char * dir_name){
 
 void please_nobug(){
     struct file* test; //file handle
-    vfs_open("/file1", 1, &test);
+    struct file* test2;
+    // vfs_open("/file1", 1, &test);
+
+    split_line();
     vfs_open("/jerry", 1, &test);
+    struct file* test3;
     vfs_open("/file3", 1, &test);
+    vfs_open("/file3", 0, &test2);
     struct vnode * node;
+
+    split_line();
+    int ret = vfs_lookup("/jerry", &node);
+    uart_int(ret);
+    newline();
+    split_line();
+
+
+    vfs_mkdir("/folder1");
+    split_line();
+
+    ret = vfs_lookup("/jerry", &node);
+    uart_int(ret);
+    newline();
+    split_line();
+
+
+    vfs_open("/folder1/file1", 1, &test3);
+    split_line();
+    
+    const char * fn = "/jerry";
+    ret = vfs_lookup(fn, &node);
+    uart_int(ret);
+    newline();
+    split_line();
     char * buf = "hello world!\n";
     vfs_write(test, buf, 7);
     char buf2[10];
-    vfs_read(test, buf2, 5);
+    vfs_read(test2, buf2, 5);
     uart_puts(buf2);
     newline();
 
@@ -179,12 +231,11 @@ void please_nobug(){
     // uart_puts(nd -> data);
     // newline();
 
-    int ret = vfs_lookup("/jerry", &node);
     struct tmpfs_node * inode = node -> internal;
     uart_puts(inode -> name);
     newline();
-    //vfs_ls("/");
-    //uart_puts(rootfs -> )
+    vfs_ls("/");
+
 }
 
 void shell_with_dir(){
