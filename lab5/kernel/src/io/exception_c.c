@@ -15,6 +15,7 @@ void exception_sync_el0_handler(TRAP_FRAME* trap_frame) {
     U64 esr = utils_read_sysreg(esr_el1);
     U32 ec = ESR_ELx_EC(esr);
 
+
     switch (ec)
     {
     // using svc instruction
@@ -28,6 +29,9 @@ void exception_sync_el0_handler(TRAP_FRAME* trap_frame) {
         mmu_memfail_handler(esr);
         break;
     default:
+    {
+        printf("EL0 SYNC EXCEPTION: unhandle. ec: 0x%x\n", ec);
+    }
         break;
     }
 
@@ -37,7 +41,6 @@ void exception_sync_el1_handler(TRAP_FRAME* tf) {
     U64 esr = utils_read_sysreg(esr_el1);
     U32 ec = ESR_ELx_EC(esr);
 
-    NS_DPRINT("EL1 SYNC EXCEPTION: ec: 0x%x", ec);
 
     switch (ec)
     {
@@ -46,6 +49,9 @@ void exception_sync_el1_handler(TRAP_FRAME* tf) {
         mmu_memfail_handler(esr);
         break;
     default:
+    {
+        NS_DPRINT("EL1 SYNC EXCEPTION: unhandle. ec: 0x%x\n", ec);
+    }
         break;
     }
 
