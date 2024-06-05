@@ -3,6 +3,7 @@
 #define MAX_PATH 256
 #define MAX_DIR 256
 #define MAX_ENTRY 16
+#define O_CREAT 00000100
 
 //use vfs instruction for all, then it will call specific instruction by api (set by file systems)
 
@@ -76,5 +77,10 @@ struct directory{
     struct vnode* node;
 };
 
+int vfs_open(const char* pathname, int flags, struct file** target);
+int vfs_close(struct file *file);
+int vfs_write(struct file* file, const void* buf, size_t len);
+int vfs_read(struct file* file, void* buf, size_t len);
+const char * path_convert(char * relative, char * work_dir);
 void pwd();
 void shell_with_dir();

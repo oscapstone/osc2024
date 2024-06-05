@@ -1,4 +1,4 @@
-#define MAX_ORDER 5
+#define MAX_ORDER 9
 #define PAGE_SIZE 4096  // Assuming a page size of 4KB
 #define MEMORY_START 0x10000000
 #define MEMORY_SIZE 0x10000000  // Managing 256MB of memory

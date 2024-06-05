@@ -1,3 +1,4 @@
+
 //set the start running address of thread to lr
 struct registers {
 	unsigned long x19;
@@ -24,6 +25,8 @@ struct thread{
     void (*funct)(void); //task
     unsigned long sp_el1;
 	unsigned long sp_el0;
+	struct file * file_table[16];
+	char work_dir[256];
 	int preempt;
 };
 

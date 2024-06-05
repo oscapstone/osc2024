@@ -14,7 +14,7 @@ The index(slot) of memory can be lookup by first check which pool is the address
 
 extern char _end; //the end if kernel
 
-#define MAX_ORDER 6
+#define MAX_ORDER 9
 #define PAGE_SIZE 4096  // Assuming a page size of 4KB
 //#define MEMORY_START 0x00 //0x10000000
 //#define MEMORY_SIZE 0x3C000000 //simply hardcode, get 0x3B400000 in the device tree
@@ -179,7 +179,7 @@ void frames_init(){
     // get the start and end address of useable memory
     get_memory(dtb_start);
     memory_start = 0x000;
-    memory_end = 0x3C000000;
+    memory_end = 0x3B400000;
     split_line();
     frame_count = (memory_end - memory_start) / PAGE_SIZE;
     // startup allocation, allocate after the kernel

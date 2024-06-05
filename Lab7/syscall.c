@@ -4,6 +4,10 @@
 #include "dtb.h"
 #include "utils.h"
 #include "mbox.h"
+#include "vfs.h"
+#include "initramfs.h"
+#include "tmpfs.h"
+#include "syscall.h"
 
 // extern void enable_irq();
 // extern void disable_irq();
@@ -26,40 +30,25 @@ void getpid(trapframe * sp){
     sp -> x[0] =  get_current() -> pid;
 }
 
-void exec(trapframe * sp){
-    char * prog = (char *) sp -> x[0];
-    struct cpio_newc_header *fs = (struct cpio_newc_header *)cpio_base ;
-    char *current = (char *)cpio_base ;
-    int sz;
-    while (1) { //cpio in lab3
-        fs = (struct cpio_newc_header *)current;
-        int name_size = hex_to_int(fs->c_namesize, 8);
-        int file_size = hex_to_int(fs->c_filesize, 8);
-        sz = file_size;
-        current += 110; // size of cpio_newc_header
-        
-        if (strcmp(current, prog) == 0){
-            current += name_size;
-            if((current - (char *)fs) % 4 != 0)
-                current += (4 - (current - (char *)fs) % 4);
-            break;
-        }
-
-        current += name_size;
-        if((current - (char *)fs) % 4 != 0)
-            current += (4 - (current - (char *)fs) % 4);
-        
-        current += file_size;
-        if((current - (char *)fs) % 4 != 0)
-            current += (4 - (current - (char *)fs) % 4);
+void exec(char * prog_name){
+    struct vnode * node;
+    uart_puts(prog_name);
+    newline();
+    if(vfs_lookup(prog_name, &node)!=0){
+        uart_puts("File not found");
+        return;
     }
-    uart_puts("found user program\n");
 
+    struct initramfs_node * inode = node -> internal;
+    
+    int sz = inode -> size;
+    char * current = inode -> data;
     //copy program to allocated place
     char *new_program_pos = (char *)allocate_page(sz);
     for (int i = 0; i < sz; i++) {
         *(new_program_pos+i) = *(current+i);
     }
+    uart_puts("found user program\n");
 
     // current is the file address
     asm volatile ("mov x0, 0x340"); //switch to el0 with interrupt enabled
@@ -68,6 +57,11 @@ void exec(trapframe * sp){
     asm volatile ("mov x0, %0": : "r"(get_current() -> sp_el0));// user space stack
     asm volatile ("msr sp_el0, x0");
     asm volatile ("eret");
+}
+
+void sys_exec(trapframe * sp){
+    char * prog = (char *) sp -> x[0];
+    exec(prog);
     sp -> x[0] = 0;
 }
 
@@ -175,6 +169,89 @@ void sys_mbox_call(trapframe * sp){
     sp -> x[0] = mbox_call(ch, mbox);
 }
 
+void open(trapframe * sp){
+    // need modify file path
+    char * tp = sp -> x[0];
+    const char * pathname = path_convert(tp, get_current()->work_dir);
+    int flags = sp -> x[1]; 
+    int idx = -1;
+    for(int i = 0; i < 16; i++){
+        if(get_current()->file_table[i] == 0){
+            idx = i;
+            break;
+        }
+    }
+
+    if(idx == -1){
+        sp -> x[0] = -1;
+        return;
+    }
+
+    struct file * f;
+    int ret = vfs_open(pathname, flags, &f);
+    get_current() -> file_table[idx] = f;
+    sp -> x[0] = idx;
+}
+
+void close(trapframe * sp){
+    int fd = sp -> x[0];
+    if(get_current() -> file_table[fd] == 0){
+        sp -> x[0] = -1;
+        uart_puts("No such file!\n\r");
+        return;
+    }
+
+    vfs_close(get_current()->file_table[fd]);
+    get_current() -> file_table[fd] = 0;
+    sp -> x[0] = 0;
+}
+
+void write(trapframe * sp){
+    int fd = sp -> x[0];
+    char * buf = sp -> x[1];
+    unsigned long count = sp -> x[2];
+    if(get_current() -> file_table[fd] == 0){
+        sp -> x[0] = -1;
+        uart_puts("No such file!\n\r");
+        return;
+    }
+    sp->x[0] = vfs_write(get_current() -> file_table[fd], buf, count);
+}
+
+void read(trapframe * sp){
+    int fd = sp -> x[0];
+    char * buf = sp -> x[1];
+    unsigned long count = sp -> x[2];
+    if(get_current() -> file_table[fd] == 0){
+        sp -> x[0] = -1;
+        uart_puts("No such file!\n\r");
+        return;
+    }
+    sp->x[0]= vfs_read(get_current() -> file_table[fd], buf, count);
+}
+
+
+void mkdir(trapframe * sp){
+    char * tp = sp -> x[0];
+    const char * pathname = path_convert(tp, get_current()->work_dir);
+    sp -> x[0] = vfs_mkdir(pathname); 
+}
+
+void mount(trapframe * sp){
+    char * src = sp -> x[0];
+    char * tp = sp -> x[1];
+    const char * target = path_convert(tp, get_current()->work_dir);
+    char * fs = sp -> x[2];
+    sp -> x[0] = vfs_mount(target, fs);
+}
+
+void chdir(trapframe * sp){
+    char * tp = sp -> x[0];
+    const char * ndir = path_convert(tp, get_current() -> work_dir);
+    strcpy(ndir, get_current()->work_dir);
+    sp -> x[0] = 0;
+}
+
 void sys_call(trapframe * sp){
     unsigned long num = sp -> x[8];
     switch (num){
@@ -188,7 +265,7 @@ void sys_call(trapframe * sp){
             uartwrite(sp);
             break;
         case 3:
-            exec(sp);
+            sys_exec(sp);
             break;
         case 4:
             fork(sp);
@@ -201,6 +278,30 @@ void sys_call(trapframe * sp){
             break;
         case 7:
             kill(sp);
+            break;
+        case 11:
+            open(sp);
+            break;
+        case 12:
+            close(sp);
+            break;
+        case 13:
+            write(sp);
+            break;
+        case 14:
+            read(sp);
+            break;
+        case 15:
+            mkdir(sp);
+            break;
+        case 16:
+            mount(sp);
+            break;
+        case 17:
+            chdir(sp);
+            break;
+        default:
+            uart_puts("Not Implemeted!\n\r");
             break;
     }
 }

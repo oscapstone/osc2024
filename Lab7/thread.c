@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "thread.h"
 #include "uart.h"
+#include "vfs.h"
 
 // kernel stack: trapframe,... etc
 // user stack: user variables ...
@@ -63,9 +64,10 @@ int create_thread(void * function, int priority){
         }
     }
 
-    for(int i = 0; i< sizeof(struct registers); i++){
-        ((char*)(&(t -> regs)))[i] = 0; 
-    }
+    memset(t, sizeof(struct thread));
+    // for(int i = 0; i< sizeof(struct registers); i++){
+    //     ((char*)(&(t -> regs)))[i] = 0; 
+    // }
 
     t -> pid = pid;
     t -> state = 1; //running
@@ -78,6 +80,7 @@ int create_thread(void * function, int priority){
     t -> regs.lr = thread_execute; // ret jumps to lr -> switch to will load lr and call ret
     t -> regs.sp = t -> sp_el1;
     t -> preempt = 1;
+    strcpy("/", t -> work_dir);
     update_min_priority();
     thread_pool[pid] = t; 
     return pid;
@@ -153,15 +156,16 @@ void idle(){
 void thread_init(){
     //make main process as a thread, will be placed in thread 0
     min_priority = 10;
-    thread * t = allocate_page(sizeof(thread));
-    for(int i = 0; i< sizeof(thread); i++){
-        ((char*)t)[i] = 0;
-    }
-    t -> pid = 0;
-    t -> state = 1;
-    t -> parent = -1;
-    t -> priority = 10;
-    t -> preempt = 1; //enabled
-    thread_pool[0] = t;
+    create_thread(0, 10);
+    // thread * t = allocate_page(sizeof(thread));
+    // for(int i = 0; i< sizeof(thread); i++){
+    //     ((char*)t)[i] = 0;
+    // }
+    // t -> pid = 0;
+    // t -> state = 1;
+    // t -> parent = -1;
+    // t -> priority = 10;
+    // t -> preempt = 1; //enabled
+    // thread_pool[0] = t;
     asm volatile ("msr tpidr_el1, %0"::"r"((unsigned long)thread_pool[0]));
 }

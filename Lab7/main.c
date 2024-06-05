@@ -28,7 +28,7 @@ void foo2(){
 }
 
 void test_svc(){
-    char* usr = "syscall.img";
+    char* usr = "/initramfs/vfs1.img";
     asm volatile("mov x0, %0" : : "r" (usr));
     asm volatile("mov x8, 3");
     asm volatile("svc 0");
@@ -66,6 +66,7 @@ void main(void* dtb)
     // say hello
     frames_init();
     init_rootfs();
+    thread_init();
     // show el
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
     el = el >> 2;
@@ -75,6 +76,10 @@ void main(void* dtb)
     uart_send('0' + el);
     uart_puts("\n");
 
+    create_thread(test_svc, 2);
+    schedule();
+    //exec("/initramfs/vfs1.img");
+    //idle();
     int idx = 0;
     char in_char;
     // echo everything backf

@@ -28,7 +28,7 @@ int vfs_open(const char* pathname, int flags, struct file** target) { //target: 
     // 1. Lookup pathname
     struct vnode *temp;
     if(vfs_lookup(pathname, &temp) != 0){ // file not found
-        if(flags != 1){//1: O_CREATE
+        if(!(flags & O_CREAT)){//1: O_CREATE
             uart_puts("ERROR OPENING FILE\n\r");
             return -1;
         }
@@ -121,9 +121,9 @@ int vfs_mount(const char* target, const char* filesystem){
     struct tmpfs_node * inode = temp -> internal;
     inode -> type = 2;
     temp -> mount = allocate_page(4096);
-    uart_puts("Successfully mounted fs ");
-    uart_puts(filesystem);
-    newline();
+    // uart_puts("Successfully mounted fs ");
+    // uart_puts(filesystem);
+    // newline();
     return fs -> setup_mount(fs, temp -> mount);
 }
 
@@ -218,22 +218,89 @@ int vfs_ls(char * dir_name){
     return 0;
 }
 
+
 void please_nobug(){
     vfs_ls("/");
     vfs_ls("/initramfs");
-    struct file * test;
-    vfs_open("/initramfs/file1", 0, &test);
-    char buf[100];
-    memset(buf, 100);
-    vfs_read(test, buf, 100);
-    uart_puts(buf);
-    newline();
+    // struct file * test;
+    // vfs_open("/initramfs/file1", 0, &test);
+    // char buf[100];
+    // memset(buf, 100);
+    // vfs_read(test, buf, 100);
+    // uart_puts(buf);
+    // newline();
 }
 
+#include "thread.h"
+extern thread * get_current();
 void shell_with_dir(){
     //will not show full path name, need to try other way, but current_dir can keep for ls
     //can still use char[MAX_PATH], also good for cd implementation
     uart_send('\r');
-    uart_puts((char *) (current_dir -> internal));
+    uart_puts(get_current() -> work_dir);
     uart_puts(" # ");
+}
+
+const char * path_convert(char * relative, char * work_dir){
+    //case absolute
+    if(relative[0] == '/'){
+        return relative;
+    }
+    
+    char temp[256];
+    const char * ret = malloc(255);
+    //case current folder
+    if(relative[0] == '.' && relative[1] == '/'){
+        //copy workdir
+        for(int i=0;i<strlen(work_dir);i++){
+            temp[i] = work_dir[i];
+        }
+        temp[strlen(work_dir)] = 0;
+        int base = strlen(temp);
+        for(int i = 1; i< strlen(relative);i++){
+            temp[base + i - 1] = relative[i];
+        }
+        temp[base + strlen(relative) - 1] = 0;
+        for(int i = 0; i< strlen(temp) ;i++){
+            if(temp[i] == '\n')
+                temp[i] = 0;
+        }
+        if(temp[0] == '/' && temp[1] == '/'){
+            strcpy(temp + 1, ret);
+            return ret;
+        }
+        strcpy(temp, ret);
+        return ret;
+    }
+
+    //case last folder
+    if(relative[0] == '.' && relative[1] == '.'){
+        int idx = -1;
+        for(int i = 0;i<strlen(work_dir); i++){
+            temp[i] = work_dir[i];
+            if(work_dir[i]=='/'){
+                idx = i;
+            }
+        }
+        temp[idx] = 0;
+        int base = strlen(temp);
+
+        for(int i=2;i<strlen(relative); i++){
+            temp[base - 2 + i] = relative[i];
+        }
+        temp[base - 2 + strlen(relative)] = 0;
+        strcpy(temp, ret);
+        return ret;
+    }
+
+    for(int i=0;i<strlen(work_dir);i++){
+        temp[i] = work_dir[i];
+    }
+    temp[strlen(work_dir)] = '/';
+    
+    for(int i = 0; i<strlen(relative);i++){
+        temp[strlen(work_dir)+1+i] = relative[i];
+    }
+    strcpy(temp, ret);
+    return ret;
 }

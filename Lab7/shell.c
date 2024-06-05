@@ -3,6 +3,8 @@
 #include "timer.h"
 #include "dtb.h"
 #include "vfs.h"
+#include "thread.h"
+extern thread * get_current();
 
 #define BUFFER_SIZE 1024
 #define MAX_TIMER 10
@@ -447,7 +449,7 @@ int shell(char * cmd){
         pwd();
     }
     else if(strcmp(cmd, "ls") == 0){
-        vfs_ls("/");
+        vfs_ls(get_current()->work_dir);
     }
     else
         return 0;
