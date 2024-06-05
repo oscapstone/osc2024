@@ -62,7 +62,6 @@ void schedule_init() {
   rq.init();
   deadq.init();
   schedule_nesting = 0;
-  schedule_timer();
 }
 
 void schedule_lock() {

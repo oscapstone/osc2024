@@ -61,6 +61,7 @@ void kernel_main(void* dtb_addr) {
   enable_interrupt();
 
   mini_uart_use_async(true);
+  schedule_timer();
 
   init_vfs();
 
