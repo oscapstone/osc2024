@@ -539,6 +539,22 @@ int page_free(void *ptr)
     return 0;
 }
 
+void get_page(void *phys_ptr){
+    void *kernel_virt_ptr = PHYS_TO_KERNEL_VIRT(phys_ptr);
+    frame_t *curr = virt_addr_to_frame((kernel_virt_ptr));
+    curr->refcount++;
+}
+
+void put_page(void *phys_ptr){
+    void *kernel_virt_ptr = PHYS_TO_KERNEL_VIRT(phys_ptr);
+    frame_t *curr = virt_addr_to_frame(kernel_virt_ptr);
+    curr->refcount--;
+    if(curr->refcount == 0){
+        DEBUG("put_page: free page: 0x%x\n", kernel_virt_ptr);
+        page_free(kernel_virt_ptr);
+    }
+}
+
 void dump_frame()
 {
     kernel_lock_interrupt();

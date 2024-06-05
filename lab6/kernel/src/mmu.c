@@ -99,22 +99,23 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
  * @param rwx: read/write/execute
  * @param need_to_free: need to free the physical page
  */
-void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint8_t rwx, uint8_t need_to_free)
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free)
 {
     if (is_addr_not_align_to_page_size(va) || is_addr_not_align_to_page_size(pa))
     {
         ERROR("mmu_add_vma: Address is not aligned to 4KB.\r\n");
-        ERROR("VA: 0x%x, PA: 0x%x, Size: 0x%x, RWX: 0x%x, Need to free: 0x%x\r\n", va, pa, size, rwx, need_to_free);
+        ERROR("VA: 0x%x, PA: 0x%x, Size: 0x%x, vm_page_prot: 0x%x, vm_flags: 0x%x, need_to_free: 0x%x\r\n", va, pa, size, vm_page_prot, vm_flags, need_to_free);
         return;
     }
     vm_area_struct_t *new_area = kmalloc(sizeof(vm_area_struct_t));
     size = ALIGN_UP(size, PAGE_FRAME_SIZE);
-    new_area->rwx = rwx;
     new_area->name = name;
     new_area->virt_addr_area.start = va;
     new_area->virt_addr_area.end = va + size;
     new_area->phys_addr_area.start = pa;
     new_area->phys_addr_area.end = pa + size;
+    new_area->vm_page_prot = vm_page_prot;
+    new_area->vm_flags = vm_flags;
     new_area->need_to_free = need_to_free;
     list_add_tail((list_head_t *)new_area, (list_head_t *)(t->vma_list));
 }
@@ -217,11 +218,11 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         dump_vma(curr_thread);
 
         uint8_t flag = 0;
-        if (!(the_area_ptr->rwx & (0b1 << 0)))
+        if (!(the_area_ptr->vm_page_prot & PROT_EXEC))
             flag |= PD_UNX; // executable
-        if (!(the_area_ptr->rwx & (0b1 << 1)))
+        if (!(the_area_ptr->vm_page_prot & PROT_WRITE))
             flag |= PD_RDONLY; // writable
-        if (the_area_ptr->rwx & (0b1 << 2))
+        if (the_area_ptr->vm_page_prot & PROT_READ)
             flag |= PD_UK_ACCESS; // readable / accessible
         DEBUG("PGD: 0x%x\r\n", curr_thread->context.pgd);
         map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, pa_to_map, flag);

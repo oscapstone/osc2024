@@ -5,7 +5,7 @@
 #include "stdint.h"
 
 #define PHYS_BASE 0xFFFF000000000000L // base of direct mapping physical address to virtual address
-#define PAGE_FRAME_SHIFT 12 // 4KB
+#define PAGE_FRAME_SHIFT 12			  // 4KB
 #define PAGE_FRAME_SIZE (1 << PAGE_FRAME_SHIFT)
 #define MAX_VAL 17 // max buddy frame size: 4KB * 2^6
 // min cache size: 2^(5) = 32B
@@ -20,6 +20,7 @@ typedef struct frame
 	int8_t val;
 	int8_t order;			  // 2^(BASE_ORDER + order) = size
 	uint8_t cache_used_count; // 4KB / 2^(BASE_ORDER) = 128. max count is 128. Max num of type is 256
+	uint8_t refcount;		  // reference count
 } frame_t;
 
 void memory_init();
@@ -34,6 +35,9 @@ int page_free(void *frame);
 
 frame_t *get_free_frame(int val);
 frame_t *split_frame(int8_t val);
+
+void get_page(void *phys_ptr);
+void put_page(void *phys_ptr);
 
 void dump_frame();
 void dump_cache();

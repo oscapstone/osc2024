@@ -27,7 +27,7 @@
 #define USER_SIGNAL_WRAPPER_VA 0x0000FFFFFFFE0000L
 #define USER_RUN_USER_TASK_WRAPPER_VA 0x0000FFFFFFFD0000L
 
-#define MMU_PGD_BASE 0x1000L
+#define MMU_PGD_BASE 0x2000L
 #define MMU_PGD_ADDR (MMU_PGD_BASE + 0x0000L)
 #define MMU_PUD_ADDR (MMU_PGD_BASE + 0x1000L)
 #define MMU_PTE_ADDR (MMU_PGD_BASE + 0x2000L)
@@ -37,6 +37,41 @@
 #define BOOT_PUD_ATTR (PD_TABLE | PD_ACCESS)
 #define BOOT_PTE_ATTR_nGnRnE (PD_BLOCK | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_UNX | PD_KNX | PD_UK_ACCESS) // p.17
 #define BOOT_PTE_ATTR_NOCACHE (PD_BLOCK | PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2))
+
+#define PROT_NONE 0
+#define PROT_READ 1
+#define PROT_WRITE 2
+#define PROT_EXEC 4
+
+#define VM_NONE 0x00000000
+#define VM_READ 0x00000001
+#define VM_WRITE 0x00000002
+#define VM_EXEC 0x00000004
+#define VM_SHARED 0x00000008
+#define VM_GROWSDOWN 0x00000100
+
+// 假設頁表的基本條件
+#define PAGE_OFFSET_BITS 12
+#define PTE_INDEX_BITS 9
+#define PMD_INDEX_BITS 9
+#define PUD_INDEX_BITS 9
+#define PGD_INDEX_BITS 9
+
+// 取得頁表索引的宏
+#define PGD_INDEX(addr) (((addr) >> (PAGE_OFFSET_BITS + PTE_INDEX_BITS + PMD_INDEX_BITS + PUD_INDEX_BITS)) & ((1ULL << PGD_INDEX_BITS) - 1))
+#define PUD_INDEX(addr) (((addr) >> (PAGE_OFFSET_BITS + PTE_INDEX_BITS + PMD_INDEX_BITS)) & ((1ULL << PUD_INDEX_BITS) - 1))
+#define PMD_INDEX(addr) (((addr) >> (PAGE_OFFSET_BITS + PTE_INDEX_BITS)) & ((1ULL << PMD_INDEX_BITS) - 1))
+#define PTE_INDEX(addr) (((addr) >> PAGE_OFFSET_BITS) & ((1ULL << PTE_INDEX_BITS) - 1))
+
+// 物理地址轉換宏
+#define VIRT_TO_PHYS(phys_pgd_ptr, virt_addr) ({                                                           \
+    uint64_t *pgd = (uint64_t *)(PHYS_TO_KERNEL_VIRT(phys_pgd_ptr));                                       \
+    uint64_t *pud = (uint64_t *)(pgd[PGD_INDEX(virt_addr)] & ENTRY_ADDR_MASK);                             \
+    uint64_t *pmd = (uint64_t *)(pud[PUD_INDEX(virt_addr)] & ENTRY_ADDR_MASK);                             \
+    uint64_t *pte = (uint64_t *)(pmd[PMD_INDEX(virt_addr)] & ENTRY_ADDR_MASK);                             \
+    uint64_t phys_addr = (pte[PTE_INDEX(virt_addr)] & ENTRY_ADDR_MASK) | ((virt_addr) & ~ENTRY_ADDR_MASK); \
+    phys_addr;                                                                                             \
+})
 
 #ifndef __ASSEMBLER__
 
@@ -69,8 +104,10 @@ typedef struct vm_area_struct
     list_head_t listhead;
     area_t virt_addr_area;
     area_t phys_addr_area;
-    uint8_t rwx;
+    uint64_t vm_page_prot;
+    uint64_t vm_flags;
     uint8_t need_to_free;
+    void *vm_file;
     char *name;
 } vm_area_struct_t;
 
@@ -105,7 +142,8 @@ typedef struct thread_struct thread_t;
 
 void *set_2M_kernel_mmu(void *x0);
 void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag);
-void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint8_t rwx, uint8_t need_to_free);
+// void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, char *file, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free)
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free);
 void mmu_free_all_vma(thread_t *t);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1);
