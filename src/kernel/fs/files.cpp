@@ -1,8 +1,12 @@
 #include "fs/files.hpp"
 
+#include "fs/log.hpp"
+#include "syscall.hpp"
 #include "thread.hpp"
 
-Files::Files() : fd_bitmap(-1), files{} {}
+#define FS_TYPE "files"
+
+Files::Files() : cwd(root_node), fd_bitmap(-1), files{} {}
 
 int Files::alloc_fd(File* file) {
   int fd = __builtin_clz(fd_bitmap);
@@ -20,10 +24,24 @@ void Files::close(int fd) {
   files[fd] = nullptr;
 }
 
+int Files::chdir(const char* path) {
+  Vnode* target;
+  if (int r = vfs_lookup(path, target); r < 0)
+    return r;
+  cwd = target;
+  return 0;
+}
+
 Files* current_files() {
   return &current_thread()->files;
 }
 
 File* fd_to_file(int fd) {
   return current_files()->get(fd);
+}
+
+SYSCALL_DEFINE1(chdir, const char*, path) {
+  int r = current_files()->chdir(path);
+  FS_INFO("chdir('%s') = %d\n", path, r);
+  return r;
 }

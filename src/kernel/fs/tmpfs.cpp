@@ -18,6 +18,7 @@ int Vnode::create(const char* component_name, ::Vnode*& vnode) {
   if (vnode == nullptr)
     return -1;
   add_child(component_name, vnode);
+  vnode->set_parent(this);
   return 0;
 }
 
@@ -26,6 +27,7 @@ int Vnode::mkdir(const char* component_name, ::Vnode*& vnode) {
   if (vnode == nullptr)
     return -1;
   add_child(component_name, vnode);
+  vnode->set_parent(this);
   return 0;
 }
 

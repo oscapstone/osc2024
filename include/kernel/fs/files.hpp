@@ -5,6 +5,7 @@
 constexpr int MAX_OPEN_FILE = 16;
 
 struct Files {
+  Vnode* cwd;
   unsigned fd_bitmap;
   File* files[MAX_OPEN_FILE];
   Files();
@@ -13,6 +14,7 @@ struct Files {
   File* get(int fd) const {
     return files[fd];
   }
+  int chdir(const char* path);
 };
 
 Files* current_files();

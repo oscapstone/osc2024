@@ -48,12 +48,7 @@ int Vnode::del_child(const char* name) {
 }
 
 void Vnode::set_parent(Vnode* parent) {
-  if (_parent) {
-    _parent->del_child(_name);
-    del_child("..");
-  }
   _parent = parent;
-  parent->add_child(_name, this);
   add_child("..", parent);
 }
 
@@ -87,7 +82,9 @@ int Vnode::mount(const char* component_name, Vnode* new_vnode) {
     return -1;
   for (auto& n : _childs) {
     if (n == component_name) {
-      new_vnode->_prev = n.node;
+      auto old_node = n.node;
+      new_vnode->_prev = old_node;
+      new_vnode->set_parent(old_node->parent());
       n.node = new_vnode;
       return 0;
     }
@@ -145,6 +142,7 @@ void init_vfs() {
   register_filesystem(tmpfs::init());
 
   root_node = get_filesystem("tmpfs")->mount("");
+  root_node->set_parent(root_node);
 }
 
 FileSystem* filesystems = nullptr;
@@ -203,15 +201,16 @@ int vfs_open(const char* pathname, fcntl flags, File*& target) {
   char* basename{};
   int r = 0;
   if ((r = vfs_lookup(pathname, dir, basename)) < 0) {
-    if (not has(flags, O_CREAT)) {
+    goto cleanup;
+  } else {
+    if (not has(flags, O_CREAT))
       r = dir->lookup(basename, vnode);
-    } else {
+    else
       r = dir->create(basename, vnode);
-      flags = O_RDWR;
-    }
     if (r < 0)
       goto cleanup;
     // XXX: ????
+    flags = O_RDWR;
   }
   if ((r = vnode->open(target, flags)) < 0)
     goto cleanup;
@@ -333,7 +332,9 @@ int vfs_mount(const char* target, const char* filesystem) {
 }
 
 int vfs_lookup(const char* pathname, Vnode*& target) {
-  auto vnode_itr = root_node;
+  auto vnode_itr = current_files()->cwd;
+  if (pathname[0] == '/')
+    vnode_itr = root_node;
   for (auto component_name : Path(pathname)) {
     Vnode* next_vnode;
     auto ret = vnode_itr->lookup(component_name, next_vnode);
@@ -347,12 +348,11 @@ int vfs_lookup(const char* pathname, Vnode*& target) {
 
 int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
   const char* basename_ptr = "";
-  auto vnode_itr = root_node;
+  auto vnode_itr = current_files()->cwd;
   auto path = Path(pathname);
   auto it = path.begin();
-  if (strcmp(*it, "") == 0) {
-    it++;
-  }
+  if (pathname[0] == '/')
+    vnode_itr = root_node;
   while (it != path.end()) {
     auto component_name = *it;
     if (++it == path.end()) {
