@@ -75,6 +75,7 @@ class Vnode {
   virtual ~Vnode();
   int lookup(const char* component_name, Vnode*& vnode);
   int mount(const char* component_name, Vnode* new_vnode);
+  virtual long size() const;
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
   virtual int open(File*& file, fcntl flags);
@@ -104,7 +105,6 @@ class File {
 
   File(Vnode* vnode, fcntl flags) : vnode{vnode}, flags{flags} {}
   virtual ~File() = default;
-  virtual long size() const;
   virtual bool can_seek() const;
 
   virtual int write(const void* buf, size_t len);
@@ -137,5 +137,6 @@ int vfs_write(File* file, const void* buf, size_t len);
 int vfs_read(File* file, void* buf, size_t len);
 int vfs_mkdir(const char* pathname);
 int vfs_mount(const char* target, const char* filesystem);
+Vnode* vfs_lookup(const char* pathname);
 int vfs_lookup(const char* pathname, Vnode*& target);
 int vfs_lookup(const char* pathname, Vnode*& target, char*& basename);

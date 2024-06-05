@@ -13,6 +13,10 @@ namespace tmpfs {
   return fs;
 }
 
+long Vnode::size() const {
+  return content.size();
+}
+
 int Vnode::create(const char* component_name, ::Vnode*& vnode) {
   vnode = new Vnode{kFile, component_name};
   if (vnode == nullptr)
@@ -36,10 +40,6 @@ int Vnode::open(::File*& file, fcntl flags) {
   if (file == nullptr)
     return -1;
   return 0;
-}
-
-long File::size() const {
-  return get()->content.size();
 }
 
 bool File::can_seek() const {

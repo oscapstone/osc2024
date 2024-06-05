@@ -18,4 +18,5 @@ struct Files {
 };
 
 Files* current_files();
+Vnode* current_cwd();
 File* fd_to_file(int fd);

@@ -13,6 +13,7 @@ class Vnode final : public ::Vnode {
 
   using ::Vnode::Vnode;
   virtual ~Vnode() = default;
+  virtual long size() const;
   virtual int create(const char* component_name, ::Vnode*& vnode);
   virtual int mkdir(const char* component_name, ::Vnode*& vnode);
   virtual int open(::File*& file, fcntl flags);
@@ -26,7 +27,6 @@ class File final : public ::File {
 
   using ::File::File;
   virtual ~File() = default;
-  virtual long size() const;
   virtual bool can_seek() const;
 
   virtual int write(const void* buf, size_t len);

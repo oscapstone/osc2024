@@ -77,6 +77,10 @@ int Vnode::lookup(const char* component_name, Vnode*& vnode) {
   return -1;
 }
 
+long Vnode::size() const {
+  return -1;
+}
+
 int Vnode::mount(const char* component_name, Vnode* new_vnode) {
   if (not isDir())
     return -1;
@@ -106,9 +110,6 @@ int Vnode::close(File* file) {
   return 0;
 }
 
-long File::size() const {
-  return -1;
-}
 bool File::can_seek() const {
   return true;
 }
@@ -296,7 +297,7 @@ int vfs_mkdir(const char* pathname) {
   if ((r = vfs_lookup(pathname, dir, basename)) < 0)
     goto end;
   if (dir->lookup(basename, vnode) >= 0) {
-    r = -1;
+    r = 0;  // XXX: ignore exist error
     goto end;
   }
   r = dir->mkdir(basename, vnode);
@@ -331,8 +332,15 @@ int vfs_mount(const char* target, const char* filesystem) {
   return 0;
 }
 
+Vnode* vfs_lookup(const char* pathname) {
+  Vnode* target;
+  if (vfs_lookup(pathname, target) < 0)
+    return nullptr;
+  return target;
+}
+
 int vfs_lookup(const char* pathname, Vnode*& target) {
-  auto vnode_itr = current_files()->cwd;
+  auto vnode_itr = current_cwd();
   if (pathname[0] == '/')
     vnode_itr = root_node;
   for (auto component_name : Path(pathname)) {
@@ -348,7 +356,7 @@ int vfs_lookup(const char* pathname, Vnode*& target) {
 
 int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
   const char* basename_ptr = "";
-  auto vnode_itr = current_files()->cwd;
+  auto vnode_itr = current_cwd();
   auto path = Path(pathname);
   auto it = path.begin();
   if (pathname[0] == '/')
@@ -361,7 +369,7 @@ int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
     }
     Vnode* next_vnode;
     auto ret = vnode_itr->lookup(component_name, next_vnode);
-    if (ret)
+    if (ret < 0)
       return ret;
     vnode_itr = next_vnode;
   }

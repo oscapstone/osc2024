@@ -36,6 +36,10 @@ Files* current_files() {
   return &current_thread()->files;
 }
 
+Vnode* current_cwd() {
+  return current_files()->cwd;
+}
+
 File* fd_to_file(int fd) {
   return current_files()->get(fd);
 }
