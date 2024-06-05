@@ -1,8 +1,5 @@
 #include "fs/tmpfs.hpp"
 
-#include "ds/list.hpp"
-#include "io.hpp"
-
 namespace tmpfs {
 
 ::FileSystem* init() {
@@ -34,11 +31,8 @@ int Vnode::mkdir(const char* component_name, ::Vnode*& vnode) {
   return 0;
 }
 
-int Vnode::open(const char* name, ::File*& file, fcntl flags) {
-  file = new File{name, this, flags};
-  if (file == nullptr)
-    return -1;
-  return 0;
+int Vnode::open(const char* component_name, ::File*& file, fcntl flags) {
+  return _open<File>(component_name, file, flags);
 }
 
 int File::write(const void* buf, size_t len) {
@@ -51,7 +45,7 @@ int File::write(const void* buf, size_t len) {
 }
 
 int File::read(void* buf, size_t len) {
-  return ::File::read(get()->content.data(), buf, len);
+  return _read(get()->content.data(), buf, len);
 }
 
 FileSystem::FileSystem() : ::FileSystem{"tmpfs"} {}

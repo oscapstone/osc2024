@@ -75,6 +75,17 @@ int Vnode::lookup(const char* component_name, Vnode*& vnode) {
   return -1;
 }
 
+const char* Vnode::lookup(const char* component_name) {
+  if (not isDir())
+    return nullptr;
+  if (component_name[0] == 0)
+    return "";
+  for (auto& n : _childs)
+    if (n == component_name)
+      return n.name;
+  return nullptr;
+}
+
 long Vnode::size() const {
   return -1;
 }
@@ -112,7 +123,7 @@ int Vnode::close(File* file) {
 int File::write(const void* /*buf*/, size_t /*len*/) {
   return -1;
 }
-int File::read(const void* data, void* buf, size_t len) {
+int File::_read(const void* data, void* buf, size_t len) {
   size_t r = size() - f_pos;
   if (r > len)
     r = len;
@@ -186,6 +197,10 @@ int register_filesystem(FileSystem* fs) {
 }
 
 SYSCALL_DEFINE2(open, const char*, pathname, fcntl, flags) {
+  return vfs_do_open(pathname, flags);
+}
+
+int vfs_do_open(const char* pathname, fcntl flags) {
   int r;
   File* file{};
   if ((r = vfs_open(pathname, flags, file)) < 0)
@@ -197,7 +212,7 @@ SYSCALL_DEFINE2(open, const char*, pathname, fcntl, flags) {
 
 end:
   FS_INFO("open('%s', 0o%o) -> %d\n", pathname, flags, r);
-  return 0;
+  return r;
 }
 
 int vfs_open(const char* pathname, fcntl flags, File*& target) {
@@ -223,7 +238,7 @@ int vfs_open(const char* pathname, fcntl flags, File*& target) {
     // XXX: ????
     flags = O_RDWR;
   }
-  if ((r = vnode->open(basename, target, flags)) < 0)
+  if ((r = vnode->open(dir->lookup(basename), target, flags)) < 0)
     goto cleanup;
 cleanup:
   kfree(basename);
@@ -231,6 +246,10 @@ cleanup:
 }
 
 SYSCALL_DEFINE1(close, int, fd) {
+  return vfs_do_close(fd);
+}
+
+int vfs_do_close(int fd) {
   auto file = fd_to_file(fd);
   int r;
   if (not file) {
@@ -252,6 +271,10 @@ int vfs_close(File* file) {
 }
 
 SYSCALL_DEFINE3(write, int, fd, const void*, buf, unsigned long, count) {
+  return vfs_do_write(fd, buf, count);
+}
+
+long vfs_do_write(int fd, const void* buf, unsigned long count) {
   auto file = fd_to_file(fd);
   int r;
   if (not file) {
@@ -273,6 +296,10 @@ int vfs_write(File* file, const void* buf, size_t len) {
 }
 
 SYSCALL_DEFINE3(read, int, fd, void*, buf, unsigned long, count) {
+  return vfs_do_read(fd, buf, count);
+}
+
+long vfs_do_read(int fd, void* buf, unsigned long count) {
   auto file = fd_to_file(fd);
   int r = -1;
   if (not file) {

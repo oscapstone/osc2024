@@ -45,14 +45,11 @@ long Vnode::size() const {
 }
 
 int Vnode::open(const char* component_name, ::File*& file, fcntl flags) {
-  file = new File{component_name, this, flags};
-  if (file == nullptr)
-    return -1;
-  return 0;
+  return _open<File>(component_name, file, flags);
 }
 
 int File::read(void* buf, size_t len) {
-  return ::File::read(get()->_content, buf, len);
+  return _read(get()->_content, buf, len);
 }
 
 FileSystem::FileSystem() : ::FileSystem{"initramfs"} {

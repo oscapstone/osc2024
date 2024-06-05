@@ -69,12 +69,20 @@ class Vnode {
 
   virtual ~Vnode() = default;
   int lookup(const char* component_name, Vnode*& vnode);
+  const char* lookup(const char* component_name);
   int mount(const char* component_name, Vnode* new_vnode);
   virtual long size() const;
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
   virtual int open(const char* component_name, File*& file, fcntl flags);
   virtual int close(File* file);
+  template <typename F>
+  int _open(const char* component_name, File*& file, fcntl flags) {
+    file = new F{component_name, this, flags};
+    if (file == nullptr)
+      return -1;
+    return 0;
+  }
 };
 
 // file handle
@@ -109,7 +117,7 @@ class File {
   virtual ~File() = default;
 
   virtual int write(const void* buf, size_t len);
-  int read(const void* data, void* buf, size_t len);
+  int _read(const void* data, void* buf, size_t len);
   virtual int read(void* buf, size_t len);
   virtual long lseek64(long offset, seek_type whence);
   int close();
@@ -132,6 +140,11 @@ extern FileSystem* filesystems;
 FileSystem** find_filesystem(const char* name);
 FileSystem* get_filesystem(const char* name);
 int register_filesystem(FileSystem* fs);
+
+int vfs_do_open(const char* pathname, fcntl flags);
+int vfs_do_close(int fd);
+long vfs_do_write(int fd, const void* buf, unsigned long count);
+long vfs_do_read(int fd, void* buf, unsigned long count);
 
 int vfs_open(const char* pathname, fcntl flags, File*& target);
 int vfs_close(File* file);
