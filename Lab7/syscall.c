@@ -32,8 +32,6 @@ void getpid(trapframe * sp){
 
 void exec(char * prog_name){
     struct vnode * node;
-    uart_puts(prog_name);
-    newline();
     if(vfs_lookup(prog_name, &node)!=0){
         uart_puts("File not found");
         return;

@@ -113,15 +113,16 @@ int vfs_mount(const char* target, const char* filesystem){
         uart_puts("No such filesystem!\n\r");
         return -1;
     }
-
+    
     if(vfs_lookup(target, &temp) != 0){
         uart_puts("No such directory!\n\r");
         return -1;
     }
-
+    
     struct tmpfs_node * inode = temp -> internal;
     inode -> type = 2;
     temp -> mount = allocate_page(4096);
+    
     // uart_puts("Successfully mounted fs ");
     // uart_puts(filesystem);
     // newline();
@@ -129,7 +130,8 @@ int vfs_mount(const char* target, const char* filesystem){
 }
 
 int vfs_lookup(const char* pathname, struct vnode** target){
-    if(pathname[0] == 0 || strcmp(pathname, "/") == 0){
+    //in create in open will set / to 0
+    if(pathname[0] == 0){
         *target = rootfs -> root;
         return 0; 
     }
@@ -175,6 +177,11 @@ int vfs_lookup(const char* pathname, struct vnode** target){
 }
 
 void init_rootfs(){
+    // cannot use vfs_mount because starting point is vfs_root, and it has nothing yet
+    // will mount at rootfs -> root -> mount -> root instead of rootfs -> root
+    // reg_tmpfs();
+    // vfs_mount("/", "tmpfs");
+    // mount tmpfs on rootfs
     int idx = reg_tmpfs();
     fs_register[idx].setup_mount(&fs_register[idx], rootfs);
 
@@ -190,6 +197,8 @@ void init_rootfs(){
     current_dir = rootfs -> root; //no_use
 }
 
+
+// just for fun, not good
 void pwd(){ 
     uart_puts((char *) (current_dir -> internal));
     newline();
@@ -223,7 +232,6 @@ int vfs_ls(char * dir_name){
     return 0;
 }
 
-
 #include "thread.h"
 extern thread * get_current();
 void shell_with_dir(){
@@ -232,6 +240,14 @@ void shell_with_dir(){
     uart_send('\r');
     uart_puts(get_current() -> work_dir);
     uart_puts(" # ");
+}
+
+void cd(char * relative){
+    const char * ndir = path_convert(relative, get_current() -> work_dir);
+    if(ndir[1] == '/') 
+        strcpy(ndir+1, get_current()->work_dir);
+    else
+        strcpy(ndir, get_current()->work_dir);
 }
 
 const char * path_convert(char * relative, char * work_dir){

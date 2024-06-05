@@ -410,6 +410,27 @@ void cpio_cat(){
     }
 }
 
+void switch_dir(){
+    uart_send('\r');
+    uart_puts("dirname: ");
+    char in_char;
+    char filename[255];
+    int idx = 0;
+    while(1){
+        in_char = uart_getc();
+        uart_send(in_char);
+        if(in_char == '\n'){
+            filename[idx] = '\0';
+            idx = 0;
+            break;
+        }
+        else{
+            filename[idx] = in_char;
+            idx++;
+        }
+    }
+    cd(filename);
+}
 
 int shell(char * cmd){
     if(strcmp(cmd, "help") == 0){
@@ -450,6 +471,9 @@ int shell(char * cmd){
     }
     else if(strcmp(cmd, "ls") == 0){
         vfs_ls(get_current()->work_dir);
+    }
+    else if(strcmp(cmd, "cd") == 0){
+        switch_dir();
     }
     else
         return 0;

@@ -11,7 +11,6 @@ struct file_operations uart_dev_file_operations = {uart_dev_write,uart_dev_read,
 struct vnode_operations uart_dev_vnode_operations = {uart_dev_lookup,uart_dev_create,uart_dev_mkdir};
 
 struct vnode * uart_dev_create_vnode(const char * name, char * data, int size, int type){
-    uart_puts("Create uart_dev file name: ");
     struct vnode * node = allocate_page(4096);
     memset(node, 4096);
     node -> f_ops = &uart_dev_file_operations;
