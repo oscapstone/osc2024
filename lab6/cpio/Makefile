@@ -4,10 +4,11 @@
 USER_PROC_DIR := user_proc
 _USER_PROC_IMG := user_proc.img
 SYSCALL_IMG := syscall.img
+VM_IMG := vm.img
 USER_PROC_IMG := rootfs/$(_USER_PROC_IMG)
 HELLO_FILE := rootfs/Hello
 WORLD_FILE := rootfs/World
-SYSTEM_FILES :=  $(HELLO_FILE) $(WORLD_FILE) $(USER_PROC_IMG) $(SYSCALL_IMG)
+SYSTEM_FILES :=  $(HELLO_FILE) $(WORLD_FILE) $(USER_PROC_IMG) $(SYSCALL_IMG) $(VM_IMG)
 SUBDIRS := $(USER_PROC_DIR)
 
 
@@ -30,6 +31,10 @@ rootfs/World: rootfs
 
 syscall.img: rootfs
 	cp syscall.img rootfs/
+
+
+vm.img: rootfs
+	cp vm.img rootfs/
 
 $(SUBDIRS):
 	$(MAKE) -C $@
