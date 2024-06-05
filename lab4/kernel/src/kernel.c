@@ -4,6 +4,7 @@
 #include "dtb.h"
 #include "timer.h"
 #include "exception.h"
+#include "memory.h"
 
 extern char* dtb_ptr;
 
@@ -22,6 +23,8 @@ void kernel_main(char* arg) {
 
 	core_timer_enable();
 	el1_interrupt_enable();
+
+	allocator_init();
 	
 	cli_print_welcome_msg();
 

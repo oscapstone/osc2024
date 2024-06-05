@@ -8,7 +8,6 @@
 #include "dtb.h"
 #include "exception.h"
 #include "timer.h"
-#include <stddef.h>
 
 #define CLI_MAX_CMD 8
 #define MAX_ARGS 10
