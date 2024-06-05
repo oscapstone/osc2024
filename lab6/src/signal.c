@@ -19,18 +19,18 @@ void kill(int pid, int sig)
 void do_signal(trap_frame *regs)
 {
     // Prevent nested signal handling
-    if (get_current()->sighandling)
+    if (get_current()->siglock)
         return;
 
     int signum = 1;
     while (get_current()->sigpending) {
         if (get_current()->sigpending & 0x1) {
             get_current()->sigpending &= ~(0x1);
-            get_current()->sighandling = 1;
+            get_current()->siglock = 1;
 
             if (get_current()->sighand[signum] == 0) {
                 kthread_exit(); // Default handler (exit the process)
-                get_current()->sighandling = 0;
+                get_current()->siglock = 0;
                 return; // Jump to the previous context (user program) after eret
             }
 

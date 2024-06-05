@@ -15,12 +15,39 @@
 
 #define PD_TABLE       0b11
 #define PD_BLOCK       0b01
+#define PD_ENTRY       0b11
+#define PD_UK_ACCESS   (1 << 6)
+#define PD_RDONLY      (1 << 7)
 #define PD_ACCESS      (1 << 10)
 #define PD_NORMAL_ATTR (PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_BLOCK)
 #define PD_DEVICE_ATTR (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)
-// TODO: PD_USER_KERNEL_ACCESS (1 << 6)
+#define PE_NORMAL_ATTR \
+    (PD_ACCESS | PD_UK_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_ENTRY)
 
 #define PHYS_TO_VIRT(x) (x + 0xFFFF000000000000)
 #define VIRT_TO_PHYS(x) (x - 0xFFFF000000000000)
+
+#ifndef __ASSEMBLER__
+
+// #define PROT_NONE  0
+// #define PROT_READ  1
+// #define PROT_WRITE 2
+// #define PROT_EXEC  4
+
+// #define MAP_ANONYMOUS 0x0020
+// #define MAP_POPULATE  0x4000
+
+struct vm_area_struct {
+    unsigned long vm_start;
+    unsigned long vm_end;
+    unsigned long vm_page_prot;
+    struct vm_area_struct *vm_prev;
+    struct vm_area_struct *vm_next;
+};
+
+void map_pages(unsigned long pgd, unsigned long va, unsigned long size,
+               unsigned long pa, unsigned long prot);
+
+#endif // __ASSEMBLER__
 
 #endif // VM_H

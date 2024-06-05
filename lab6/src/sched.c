@@ -7,6 +7,7 @@ static int thread_count = 0;
 static struct task_struct *run_queue;
 
 extern void switch_to(struct task_struct *prev, struct task_struct *next);
+extern void switch_mm(unsigned long pgd);
 
 static void enqueue(struct task_struct **queue, struct task_struct *task)
 {
@@ -45,6 +46,7 @@ void display_run_queue()
 
 void schedule()
 {
+    switch_mm(get_current()->next->pgd);
     switch_to(get_current(), get_current()->next);
 }
 
@@ -96,7 +98,9 @@ struct task_struct *kthread_create(void (*func)())
     task->user_stack = kmalloc(STACK_SIZE);
     memset(task->sighand, 0, sizeof(task->sighand));
     task->sigpending = 0;
-    task->sighandling = 0;
+    task->siglock = 0;
+    task->pgd = 0;
+    task->mmap = 0;
     task->context.lr = (unsigned long)func;
     task->context.sp = (unsigned long)task->user_stack + STACK_SIZE;
     task->context.fp = (unsigned long)task->user_stack + STACK_SIZE;

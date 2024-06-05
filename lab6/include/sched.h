@@ -3,8 +3,9 @@
 
 #include "signal.h"
 #include "traps.h"
+#include "vm.h"
 
-#define STACK_SIZE 4096
+#define STACK_SIZE 0x4000
 
 struct thread_struct {
     unsigned long x19;
@@ -35,9 +36,11 @@ struct task_struct {
     void *user_stack;
     void (*sighand[NSIG + 1])();
     int sigpending;
-    int sighandling;
+    int siglock;
     trap_frame sigframe;
     void *sig_stack;
+    unsigned long pgd;
+    struct vm_area_struct *mmap;
     struct task_struct *prev;
     struct task_struct *next;
 };

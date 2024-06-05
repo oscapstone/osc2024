@@ -20,6 +20,15 @@ switch_to:
     msr tpidr_el1, x1
     ret
 
+.global switch_mm
+switch_mm:
+    dsb ish
+    msr ttbr0_el1, x0
+    tlbi vmalle1is
+    dsb ish
+    isb
+    ret
+
 .global get_current
 get_current:
     mrs x0, tpidr_el1

@@ -13,7 +13,6 @@ extern void *DTB_BASE;
 #define CACHE_MAX_ORDER 6
 
 #define NUM_PAGES 0x3C000
-#define PAGE_SIZE 0x1000
 
 static struct page *mem_map;
 static struct page *free_area[BUDDY_MAX_ORDER + 1];

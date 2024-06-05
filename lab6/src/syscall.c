@@ -96,7 +96,7 @@ void sys_sigreturn(trap_frame *regs)
     // Restore the sigframe
     memcpy(regs, &get_current()->sigframe, sizeof(trap_frame));
     kfree(get_current()->sig_stack);
-    get_current()->sighandling = 0;
+    get_current()->siglock = 0;
     return; // Jump to the previous context (user program) after eret
 }
 
