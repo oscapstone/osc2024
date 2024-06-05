@@ -398,7 +398,7 @@ void do_cmd_thread_tester()
 {
     for (int i = 0; i < 5; ++i)
     { // N should > 2
-        uart_sendline("Debug do_cmd_thread_tester i %d\n", i);
+        // uart_sendline("Debug do_cmd_thread_tester i %d\n", i);
         thread_create(foo);
     }
     schedule();

@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "exception.h"
 #include "mbox.h"
+#include "memory.h"
 
 #include "cpio.h"
 
@@ -54,6 +55,12 @@ int exec(trapframe_t *tpf, const char *name, char *const argv[])
         curr_thread->data[i] = file_start[i];
     }
 
+    // inital signal handler
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        curr_thread->signal.handler_table[i] = signal_default_handler;
+    }
+
     tpf->elr_el1 = (unsigned long) curr_thread->data;
     tpf->sp_el0 = (unsigned long) curr_thread->stack_allocated_base + USTACK_SIZE;
     tpf->x0 = 0;
@@ -67,6 +74,12 @@ int fork(trapframe_t *tpf)
     int parent_pid = parent_thread->pid;
 
     thread_t *child_thread = thread_create(parent_thread->data);
+
+    //copy signal handler
+    for (int i = 0; i < SIGNAL_MAX;i++)
+    {
+        child_thread->signal.handler_table[i] = parent_thread->signal.handler_table[i];
+    }
 
     //copy user stack into new process
     for (int i = 0; i < USTACK_SIZE; i++)
@@ -145,6 +158,27 @@ void kill(trapframe_t *tpf, int pid)
     threads[pid].iszombie = 1;
     unlock();
     schedule();
+}
+
+void signal_register(int signal, void (*handler)())
+{
+    if (signal > SIGNAL_MAX || signal < 0) return;
+    curr_thread->signal.handler_table[signal] = handler;
+}
+
+void signal_kill(int pid, int signal)
+{
+    if (pid > PIDMAX || pid < 0 || !threads[pid].isused)return;
+    lock();
+    threads[pid].signal.pending[signal]++;
+    unlock();
+}
+
+void sigreturn()
+{
+    // unsigned long signal_ustack = tpf->sp_el0 % USTACK_SIZE == 0 ? tpf->sp_el0 - USTACK_SIZE : tpf->sp_el0 & (~(USTACK_SIZE - 1));
+    kfree((char*)curr_thread->signal.stack_base);
+    load_context(&curr_thread->signal.saved_context);
 }
 
 

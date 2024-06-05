@@ -32,7 +32,7 @@ void unlock()
         el1_interrupt_enable();
 }
 
-void el1h_irq_router(){
+void el1h_irq_router(trapframe_t *tpf){
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -66,6 +66,12 @@ void el1h_irq_router(){
         core_timer_enable();
         //at least two threads running -> schedule for any timer irq
         if (list_size(run_queue) >2 ) schedule();
+    }
+    //only do signal handler when return to user mode
+    if ((tpf->spsr_el1 & 0b1111) == 0)
+    {
+        // uart_sendline("tpf->spsr_el1: %x\n", tpf->spsr_el1);
+        check_signal(tpf);
     }
 }
 
@@ -118,6 +124,15 @@ void el0_sync_router(trapframe_t *tpf){
         case 7:
             kill(tpf, tpf->x0);
             break;
+        case 8:
+            signal_register(tpf->x0, (void (*)())tpf->x1);
+            break;
+        case 9:
+            signal_kill(tpf->x0, tpf->x1);
+            break;
+        case 10:
+            sigreturn(tpf);
+            break;
         default:
             break;
     }
@@ -131,7 +146,7 @@ void el0_sync_router(trapframe_t *tpf){
 //         core_timer_handler();
 //     }
 // }
-void el0_irq_64_router(){
+void el0_irq_64_router(trapframe_t *tpf){
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -158,6 +173,12 @@ void el0_irq_64_router(){
         core_timer_enable();
 
         if (list_size(run_queue) >2 ) schedule();
+    }
+    //only do signal handler when return to user mode
+    if ((tpf->spsr_el1 & 0b1111) == 0)
+    {
+        // uart_sendline("tpf->spsr_el1: %x\n", tpf->spsr_el1);
+        check_signal(tpf);
     }
 }
 

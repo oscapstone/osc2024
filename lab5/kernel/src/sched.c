@@ -6,7 +6,7 @@
 #include "syscall.h"
 
 #include "timer.h"
-// #include "signal.h"
+#include "signal.h"
 
 list_head_t *run_queue;
 
@@ -74,7 +74,7 @@ void kill_zombies()
     {
         if (((thread_t *)curr)->iszombie)
         {
-            uart_sendline("This is zombie pid %d\n", ((thread_t *)curr)->pid);
+            // uart_sendline("This is zombie pid %d\n", ((thread_t *)curr)->pid);
             list_del_entry(curr);
             kfree(((thread_t *)curr)->stack_allocated_base);        // free stack
             kfree(((thread_t *)curr)->kernel_stack_allocated_base); // free stack
@@ -110,13 +110,15 @@ thread_t *thread_create(void *start)
     r->context.sp = (unsigned long long)r->kernel_stack_allocated_base + KSTACK_SIZE;
     r->context.fp = r->context.sp; // frame pointer for local variable, which is also in stack.
 
-    // r->signal_inProcess = 0;
-    // //initial all signal handler with signal_default_handler (kill thread)
-    // for (int i = 0; i < SIGNAL_MAX;i++)
-    // {
-    //     r->signal_handler[i] = signal_default_handler;
-    //     r->sigcount[i] = 0;
-    // }
+    //Lab5- Advanced Exercise 1
+    r->signal.lock = 0;
+    //initial all signal handler with signal_default_handler (kill thread)
+    for (int i = 0; i < SIGNAL_MAX;i++)
+    {
+        r->signal.handler_table[i] = signal_default_handler;
+        r->signal.pending[i] = 0;
+    }
+
     list_add_tail(&r->listhead, run_queue);
     unlock();
     return r;

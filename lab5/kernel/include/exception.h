@@ -73,8 +73,8 @@ void el1_interrupt_disable();
 void lock();
 void unlock();
 
-void el1h_irq_router();
+void el1h_irq_router(trapframe_t *tpf);
 void el0_sync_router(trapframe_t* tpf);
-void el0_irq_64_router();
+void el0_irq_64_router(trapframe_t *tpf);
 
 #endif /*_EXCEPTION_H_*/

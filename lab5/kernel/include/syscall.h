@@ -16,6 +16,10 @@ void   exit(trapframe_t *tpf);
 int    syscall_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox);
 void   kill(trapframe_t *tpf, int pid);
 
+void   signal_register(int signal, void (*handler)());
+void   signal_kill(int pid, int signal);
+void   sigreturn();
+
 unsigned int get_file_size(char *thefilepath);
 char *get_file_start(char *thefilepath);
 
