@@ -10,6 +10,16 @@ Vnode* root_node = nullptr;
 Vnode::child::child(const char* name, Vnode* node)
     : name{strdup(name)}, node{node} {}
 
+Vnode::child::child(const child& o) : name{strdup(o.name)}, node{o.node} {}
+
+Vnode::child& Vnode::child::operator=(const child& o) {
+  if (name)
+    kfree(name);
+  name = strdup(o.name);
+  node = o.node;
+  return *this;
+}
+
 Vnode::child::~child() {
   kfree(name);
 }
@@ -34,20 +44,34 @@ int Vnode::del_child(const char* name) {
 }
 
 void Vnode::set_parent(Vnode* parent) {
-  if (_parent)
+  if (_parent) {
     _parent->del_child(_name);
+    del_child("..");
+  }
   _parent = parent;
-  _parent->add_child(_name, this);
+  parent->add_child(_name, this);
+  add_child("..", parent);
 }
 
-Vnode::Vnode(filetype type, const char* name) : _name(name), type(type) {}
+Vnode::Vnode(filetype type, const char* name)
+    : _name(strdup(name)), type(type) {
+  if (isDir()) {
+    add_child("", this);
+    add_child(".", this);
+  }
+}
+
+Vnode::~Vnode() {
+  kfree(_name);
+}
 
 int Vnode::lookup(const char* component_name, Vnode*& vnode) {
-  for (auto& n : _childs)
+  for (auto& n : _childs) {
     if (n == component_name) {
       vnode = n.node;
       return 0;
     }
+  }
   vnode = nullptr;
   return -1;
 }
@@ -60,6 +84,10 @@ int Vnode::mkdir(const char* /*component_name*/, Vnode*& /*vnode*/) {
 }
 int Vnode::open(File*& /*file*/, fcntl /*flags*/) {
   return -1;
+}
+int Vnode::close(File* file) {
+  delete file;
+  return 0;
 }
 
 long File::size() const {
@@ -85,6 +113,9 @@ long File::lseek64(long offset, seek_type whence) {
       return -1;
   }
   return f_pos;
+}
+int File::close() {
+  return vnode->close(this);
 }
 
 Vnode* FileSystem::mount(const char* /*name*/) {

@@ -32,6 +32,8 @@ class Vnode {
     char* name;
     Vnode* node;
     child(const char* name, Vnode* node);
+    child(const child&);
+    child& operator=(const child&);
     ~child();
     bool operator==(const char* name) const;
   };
@@ -41,7 +43,7 @@ class Vnode {
   // TODO: hard link
   Vnode* _parent = nullptr;
   list<child> _childs{};
-  const char* _name;
+  char* _name;
 
  protected:
   int add_child(const char* name, Vnode* vnode);
@@ -59,6 +61,9 @@ class Vnode {
   Vnode* parent() const {
     return _parent;
   }
+  const list<child>& childs() const {
+    return _childs;
+  }
 
   bool isDir() const {
     return type == kDir;
@@ -67,11 +72,12 @@ class Vnode {
     return type == kFile;
   }
 
-  virtual ~Vnode() = default;
+  virtual ~Vnode();
   int lookup(const char* component_name, Vnode*& vnode);
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
   virtual int open(File*& file, fcntl flags);
+  virtual int close(File* file);
 };
 
 // file handle
@@ -82,6 +88,9 @@ class File {
   const fcntl flags;
 
  public:
+  const char* name() const {
+    return vnode->name();
+  }
   fcntl accessmode() const {
     return flags & O_ACCMODE;
   }
@@ -100,6 +109,7 @@ class File {
   virtual int write(const void* buf, size_t len);
   virtual int read(void* buf, size_t len);
   virtual long lseek64(long offset, seek_type whence);
+  int close();
 };
 
 class FileSystem {
