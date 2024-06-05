@@ -43,7 +43,6 @@ class Vnode {
   // TODO: hard link
   Vnode *_parent = nullptr, *_prev = nullptr;
   list<child> _childs{};
-  char* _name;
 
  protected:
   int add_child(const char* name, Vnode* vnode);
@@ -53,11 +52,8 @@ class Vnode {
   const filetype type;
 
   void set_parent(Vnode* parent);
-  Vnode(filetype type, const char* name);
+  Vnode(filetype type);
 
-  const char* name() const {
-    return _name;
-  }
   Vnode* parent() const {
     return _parent;
   }
@@ -72,26 +68,29 @@ class Vnode {
     return type == kFile;
   }
 
-  virtual ~Vnode();
+  virtual ~Vnode() = default;
   int lookup(const char* component_name, Vnode*& vnode);
   int mount(const char* component_name, Vnode* new_vnode);
   virtual long size() const;
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
-  virtual int open(File*& file, fcntl flags);
+  virtual int open(const char* component_name, File*& file, fcntl flags);
   virtual int close(File* file);
 };
 
 // file handle
 class File {
  protected:
+  const char* _name;
   Vnode* vnode;
   size_t f_pos = 0;  // RW position of this file handle
   const fcntl flags;
 
  public:
+  const bool can_seek = true;
+
   const char* name() const {
-    return vnode->name();
+    return _name;
   }
   fcntl accessmode() const {
     return flags & O_ACCMODE;
@@ -103,9 +102,9 @@ class File {
     return accessmode() == O_WRONLY or accessmode() == O_RDWR;
   }
 
-  File(Vnode* vnode, fcntl flags) : vnode{vnode}, flags{flags} {}
+  File(const char* name, Vnode* vnode, fcntl flags)
+      : _name(name), vnode{vnode}, flags{flags} {}
   virtual ~File() = default;
-  virtual bool can_seek() const;
 
   virtual int write(const void* buf, size_t len);
   virtual int read(void* buf, size_t len);
@@ -120,7 +119,7 @@ class FileSystem {
 
   FileSystem(const char* name) : name(name) {}
 
-  virtual Vnode* mount(const char* name);
+  virtual Vnode* mount();
 };
 
 extern Vnode* root_node;
@@ -139,4 +138,7 @@ int vfs_mkdir(const char* pathname);
 int vfs_mount(const char* target, const char* filesystem);
 Vnode* vfs_lookup(const char* pathname);
 int vfs_lookup(const char* pathname, Vnode*& target);
+int vfs_lookup(Vnode* base, const char* pathname, Vnode*& target);
 int vfs_lookup(const char* pathname, Vnode*& target, char*& basename);
+int vfs_lookup(Vnode* base, const char* pathname, Vnode*& target,
+               char*& basename);

@@ -7,9 +7,8 @@ namespace tmpfs {
 
 ::FileSystem* init() {
   static FileSystem* fs = nullptr;
-  if (not fs) {
+  if (not fs)
     fs = new FileSystem;
-  }
   return fs;
 }
 
@@ -18,7 +17,7 @@ long Vnode::size() const {
 }
 
 int Vnode::create(const char* component_name, ::Vnode*& vnode) {
-  vnode = new Vnode{kFile, component_name};
+  vnode = new Vnode{kFile};
   if (vnode == nullptr)
     return -1;
   add_child(component_name, vnode);
@@ -27,7 +26,7 @@ int Vnode::create(const char* component_name, ::Vnode*& vnode) {
 }
 
 int Vnode::mkdir(const char* component_name, ::Vnode*& vnode) {
-  vnode = new Vnode{kDir, component_name};
+  vnode = new Vnode{kDir};
   if (vnode == nullptr)
     return -1;
   add_child(component_name, vnode);
@@ -35,22 +34,18 @@ int Vnode::mkdir(const char* component_name, ::Vnode*& vnode) {
   return 0;
 }
 
-int Vnode::open(::File*& file, fcntl flags) {
-  file = new File{this, flags};
+int Vnode::open(const char* name, ::File*& file, fcntl flags) {
+  file = new File{name, this, flags};
   if (file == nullptr)
     return -1;
   return 0;
-}
-
-bool File::can_seek() const {
-  return true;
 }
 
 int File::write(const void* buf, size_t len) {
   auto& content = get()->content;
   if (content.size() < f_pos + len)
     content.resize(f_pos + len);
-  memcpy(content.data(), buf, len);
+  memcpy(content.data() + f_pos, buf, len);
   f_pos += len;
   return len;
 }
@@ -58,15 +53,15 @@ int File::write(const void* buf, size_t len) {
 int File::read(void* buf, size_t len) {
   auto& content = get()->content;
   int r = content.size() - f_pos;
-  memcpy(buf, content.data(), r);
+  memcpy(buf, content.data() + f_pos, r);
   f_pos += r;
   return r;
 }
 
 FileSystem::FileSystem() : ::FileSystem{"tmpfs"} {}
 
-::Vnode* FileSystem::mount(const char* name) {
-  return new Vnode{kDir, name};
+::Vnode* FileSystem::mount() {
+  return new Vnode{kDir};
 }
 
 }  // namespace tmpfs

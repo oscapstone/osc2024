@@ -52,16 +52,11 @@ void Vnode::set_parent(Vnode* parent) {
   add_child("..", parent);
 }
 
-Vnode::Vnode(filetype type, const char* name)
-    : _name(strdup(name)), type(type) {
+Vnode::Vnode(filetype type) : type(type) {
   if (isDir()) {
     add_child("", this);
     add_child(".", this);
   }
-}
-
-Vnode::~Vnode() {
-  kfree(_name);
 }
 
 int Vnode::lookup(const char* component_name, Vnode*& vnode) {
@@ -102,7 +97,8 @@ int Vnode::create(const char* /*component_name*/, Vnode*& /*vnode*/) {
 int Vnode::mkdir(const char* /*component_name*/, Vnode*& /*vnode*/) {
   return -1;
 }
-int Vnode::open(File*& /*file*/, fcntl /*flags*/) {
+int Vnode::open(const char* /*component_name*/, File*& /*file*/,
+                fcntl /*flags*/) {
   return -1;
 }
 int Vnode::close(File* file) {
@@ -110,9 +106,6 @@ int Vnode::close(File* file) {
   return 0;
 }
 
-bool File::can_seek() const {
-  return true;
-}
 int File::write(const void* /*buf*/, size_t /*len*/) {
   return -1;
 }
@@ -120,7 +113,7 @@ int File::read(void* /*buf*/, size_t /*len*/) {
   return -1;
 }
 long File::lseek64(long offset, seek_type whence) {
-  if (not can_seek())
+  if (not can_seek)
     return false;
   switch (whence) {
     case SEEK_SET:
@@ -135,14 +128,14 @@ int File::close() {
   return vnode->close(this);
 }
 
-Vnode* FileSystem::mount(const char* /*name*/) {
+Vnode* FileSystem::mount() {
   return nullptr;
 }
 
 void init_vfs() {
   register_filesystem(tmpfs::init());
 
-  root_node = get_filesystem("tmpfs")->mount("");
+  root_node = get_filesystem("tmpfs")->mount();
   root_node->set_parent(root_node);
 }
 
@@ -208,12 +201,14 @@ int vfs_open(const char* pathname, fcntl flags, File*& target) {
       r = dir->lookup(basename, vnode);
     else
       r = dir->create(basename, vnode);
+    if (vnode->isDir())
+      r = -1;
     if (r < 0)
       goto cleanup;
     // XXX: ????
     flags = O_RDWR;
   }
-  if ((r = vnode->open(target, flags)) < 0)
+  if ((r = vnode->open(basename, target, flags)) < 0)
     goto cleanup;
 cleanup:
   kfree(basename);
@@ -302,6 +297,7 @@ int vfs_mkdir(const char* pathname) {
   }
   r = dir->mkdir(basename, vnode);
 end:
+  kfree(basename);
   return r;
 }
 
@@ -317,19 +313,24 @@ int vfs_mount(const char* target, const char* filesystem) {
   if (not fs)
     return -1;
 
-  Vnode* dir;
+  Vnode *dir, *new_vnode;
   char* basename;
-  if (int r = vfs_lookup(target, dir, basename); r < 0)
-    return r;
+  int r;
+  if ((r = vfs_lookup(target, dir, basename)) < 0)
+    goto end;
 
-  auto new_vnode = fs->mount(basename);
-  if (not new_vnode)
-    return -1;
+  new_vnode = fs->mount();
+  if (not new_vnode) {
+    r = -1;
+    goto cleanup;
+  }
 
-  if (int r = dir->mount(basename, new_vnode); r < 0)
-    return r;
+  r = dir->mount(basename, new_vnode);
 
-  return 0;
+cleanup:
+  kfree(basename);
+end:
+  return r;
 }
 
 Vnode* vfs_lookup(const char* pathname) {
@@ -339,8 +340,14 @@ Vnode* vfs_lookup(const char* pathname) {
   return target;
 }
 
+Vnode* vfs_lookup(Vnode* base, const char* pathname);
+
 int vfs_lookup(const char* pathname, Vnode*& target) {
-  auto vnode_itr = current_cwd();
+  return vfs_lookup(current_cwd(), pathname, target);
+}
+
+int vfs_lookup(Vnode* base, const char* pathname, Vnode*& target) {
+  auto vnode_itr = base;
   if (pathname[0] == '/')
     vnode_itr = root_node;
   for (auto component_name : Path(pathname)) {
@@ -355,8 +362,13 @@ int vfs_lookup(const char* pathname, Vnode*& target) {
 }
 
 int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
+  return vfs_lookup(current_cwd(), pathname, target, basename);
+}
+
+int vfs_lookup(Vnode* base, const char* pathname, Vnode*& target,
+               char*& basename) {
+  auto vnode_itr = base;
   const char* basename_ptr = "";
-  auto vnode_itr = current_cwd();
   auto path = Path(pathname);
   auto it = path.begin();
   if (pathname[0] == '/')

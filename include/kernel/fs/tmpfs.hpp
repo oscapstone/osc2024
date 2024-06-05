@@ -16,7 +16,7 @@ class Vnode final : public ::Vnode {
   virtual long size() const;
   virtual int create(const char* component_name, ::Vnode*& vnode);
   virtual int mkdir(const char* component_name, ::Vnode*& vnode);
-  virtual int open(::File*& file, fcntl flags);
+  virtual int open(const char* component_name, ::File*& file, fcntl flags);
 };
 
 class File final : public ::File {
@@ -27,7 +27,6 @@ class File final : public ::File {
 
   using ::File::File;
   virtual ~File() = default;
-  virtual bool can_seek() const;
 
   virtual int write(const void* buf, size_t len);
   virtual int read(void* buf, size_t len);
@@ -37,7 +36,7 @@ class FileSystem final : public ::FileSystem {
  public:
   FileSystem();
 
-  virtual ::Vnode* mount(const char* name);
+  virtual ::Vnode* mount();
 };
 
 }  // namespace tmpfs
