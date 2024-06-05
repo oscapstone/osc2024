@@ -28,8 +28,8 @@ void kprint(string_view view);
 
 int kgetline_echo(char* buffer, int size);
 
-unsigned kread(char buf[], unsigned size);
-unsigned kwrite(const char buf[], unsigned size);
+unsigned kread(void* buf, unsigned size);
+unsigned kwrite(const void* buf, unsigned size);
 
 #define panic(reason, ...)                                                \
   do {                                                                    \

@@ -158,13 +158,15 @@ int kgetline_echo(char* buffer, int size) {
   return r;
 }
 
-unsigned kread(char buf[], unsigned size) {
+unsigned kread(void* buf_p, unsigned size) {
+  auto buf = (char*)buf_p;
   for (unsigned i = 0; i < size; i++)
     buf[i] = kgetc();
   return size;
 }
 
-unsigned kwrite(const char buf[], unsigned size) {
+unsigned kwrite(const void* buf_p, unsigned size) {
+  auto buf = (const char*)buf_p;
   for (unsigned i = 0; i < size; i++)
     kputc(buf[i]);
   return size;
