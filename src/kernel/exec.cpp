@@ -34,6 +34,7 @@ int exec(ExecCtx* ctx) {
   auto thread = current_thread();
 
   thread->vmm.reset();
+  thread->files.reset();
   thread->reset_kernel_stack();
 
   // TODO: map from fs
@@ -58,6 +59,10 @@ int exec(ExecCtx* ctx) {
 
   file->read((void*)text_addr, file->size());
   file->close();
+
+  vfs_do_open("/dev/uart", O_RDWR);
+  vfs_do_open("/dev/uart", O_RDWR);
+  vfs_do_open("/dev/uart", O_RDWR);
 
   thread->vmm.return_to_user();
   exec_user_prog((void*)text_addr, (void*)stack_end, thread->regs.sp);

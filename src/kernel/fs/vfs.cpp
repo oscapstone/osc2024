@@ -5,6 +5,7 @@
 #include "fs/log.hpp"
 #include "fs/path.hpp"
 #include "fs/tmpfs.hpp"
+#include "fs/uartfs.hpp"
 #include "string.hpp"
 #include "syscall.hpp"
 
@@ -157,12 +158,17 @@ Vnode* FileSystem::mount() {
 void init_vfs() {
   register_filesystem(tmpfs::init());
   register_filesystem(initramfs::init());
+  register_filesystem(uartfs::init());
 
   root_node = get_filesystem("tmpfs")->mount();
   root_node->set_parent(root_node);
 
   vfs_mkdir("/initramfs");
   vfs_mount("/initramfs", "initramfs");
+
+  vfs_mkdir("/dev");
+  vfs_mkdir("/dev/uart");
+  vfs_mount("/dev/uart", "uartfs");
 }
 
 FileSystem* filesystems = nullptr;
