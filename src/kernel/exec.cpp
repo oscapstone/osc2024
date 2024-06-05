@@ -1,6 +1,5 @@
 #include "exec.hpp"
 
-#include "fs/initramfs.hpp"
 #include "io.hpp"
 #include "mm/vmm.hpp"
 #include "syscall.hpp"
@@ -17,27 +16,31 @@ int exec(ExecCtx* ctx) {
 
   klog("%s(%s)\n", __func__, name);
 
-  auto hdr = initramfs::cpio.find(name);
-  if (hdr == nullptr) {
+  auto vnode = vfs_lookup(name);
+  if (vnode == nullptr) {
     klog("%s: %s: No such file or directory\n", __func__, name);
     return -1;
   }
-  if (hdr->isdir()) {
+  if (vnode->isDir()) {
     klog("%s: %s: Is a directory\n", __func__, name);
     return -1;
   }
 
-  auto file = hdr->file();
+  File* file;
+  if (vfs_open(name, O_RDONLY, file) < 0) {
+    klog("%s: %s: can't open\n", __func__, name);
+    return -1;
+  }
   auto thread = current_thread();
 
   thread->vmm.reset();
 
   // TODO: map from fs
-  auto text_addr = mmap(USER_TEXT_START, file.size(), ProtFlags::RX,
+  auto text_addr = mmap(USER_TEXT_START, file->size(), ProtFlags::RX,
                         MmapFlags::MAP_ANONYMOUS, name);
   if (text_addr == MAP_FAILED) {
     klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
-         thread->tid, file.size());
+         thread->tid, file->size());
     return -1;
   }
 
@@ -52,7 +55,8 @@ int exec(ExecCtx* ctx) {
 
   delete ctx;
 
-  memcpy((void*)text_addr, file.data(), file.size());
+  file->read((void*)text_addr, file->size());
+  file->close();
   thread->reset_kernel_stack();
 
   thread->vmm.return_to_user();
