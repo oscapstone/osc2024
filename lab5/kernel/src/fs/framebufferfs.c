@@ -39,6 +39,7 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
     mount->root->f_ops = &framebufferfs_f_ops;
     mount->root->v_ops = &framebufferfs_v_ops;
     mount->fs = fs;
+    framebuffer_manager.lfb_addr = 0;
 
     NS_DPRINT("[FS] framebuffer root addr: 0x%p\n", mount->root);
     NS_DPRINT("[FS] framebufferfs mounted\n");

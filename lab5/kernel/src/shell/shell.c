@@ -193,6 +193,7 @@ void shell() {
 			TASK* user_task = task_create_user("", TASK_FLAGS_NONE);
 			if (task_run_program(NULL/* change this to shell cwd*/, user_task, fileName) == -1) {
 				printf("Failed to execute program: %s\n", fileName);
+				task_delete(user_task);
 				continue;
 			}
 			task_run_to_el0(user_task);

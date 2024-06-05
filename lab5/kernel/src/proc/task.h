@@ -150,6 +150,7 @@ void task_exit(int exitcode);
  *      -2 exit by killing
 */
 int task_kill(pid_t pid, int exitcode);
+void task_delete(TASK* task);
 void task_kill_dead();
 
 /***

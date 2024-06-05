@@ -307,7 +307,7 @@ void mmu_delete_mm(TASK* task) {
     mmu_delete_user(task);
     // delete table descriptors
     for (U64 i = 0; i < task->mm.kernel_pages_count; i++) {
-        kfree(task->mm.kernel_pages[i]);
+        kfree((void*)MMU_PHYS_TO_VIRT(task->mm.kernel_pages[i]));
     }
     task->mm.kernel_pages_count = 0;
     

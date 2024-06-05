@@ -315,11 +315,6 @@ TASK* task_alloc(const char* name, U32 flags) {
 
     // initialize the
     task->pwd = fs_get_root_node();     // just use the root node now for user process, will change if this user process load by tty
-    for (int i = 0; i < 3; i++) {
-        if(vfs_open(NULL, "/dev/uart", FS_FILE_FLAGS_READ | FS_FILE_FLAGS_WRITE, &task->file_table[i].file)) {
-            printf("[TASK] failed to create uart file for task %d\n", task->pid);
-        }
-    }
 
     task_manager->count++;
     NS_DPRINT("[TASK][TRACE] task allocated. pid = %d\n", task->pid);
@@ -331,6 +326,13 @@ TASK* task_create_user(const char* name, U32 flags) {
     TASK* task = task_alloc(name, flags);
     if (!task) {
         return NULL;
+    }
+    for (int i = 0; i < 3; i++) {
+        FS_FILE* file = NULL;
+        if(vfs_open(NULL, "/dev/uart", FS_FILE_FLAGS_READ | FS_FILE_FLAGS_WRITE, &file)) {
+            printf("[TASK] failed to create uart file for task %d\n", task->pid);
+        }
+        task->file_table[i].file = file;
     }
 
     return task;
@@ -363,7 +365,7 @@ void task_copy_program(TASK* task, void* program_start, size_t program_size) {
 
 int task_run_program(FS_VNODE* cwd, TASK* task, const char* program_path) {
     NS_DPRINT("[TASK] let task to be program: %s\n", program_path);
-    FS_FILE* program_file;
+    FS_FILE* program_file = NULL;
     U64 irq_flags = irq_disable();
     if (vfs_open(cwd, program_path, FS_FILE_FLAGS_READ, &program_file)) {
         printf("[TASK] Error failed to open program: %s\n", program_path);
