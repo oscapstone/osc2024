@@ -91,17 +91,17 @@ void timer_set2sAlert(char* str)
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
     //Test Preemptive
     uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
-    // int i = 0;
-    // while(1){
-    //     if( i == 999999999){
-    //         // uart_sendline("%d\t", i);
-    //         uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
-    //         break;
-    //     }
-    //     ++i;
-    // }
+     int i = 0;
+     while(1){
+         if( i == 999999999){
+             // uart_sendline("%d\t", i);
+             uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
+             break;
+         }
+         ++i;
+     }
 
-    add_timer(timer_set2sAlert,2,"2sAlert");
+    //add_timer(timer_set2sAlert,2,"2sAlert");
 }
 
 
