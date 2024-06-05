@@ -44,11 +44,10 @@ class Vnode {
   Vnode *_parent = nullptr, *_prev = nullptr;
   list<child> _childs{};
 
- protected:
+ public:
   int add_child(const char* name, Vnode* vnode);
   int del_child(const char* name);
 
- public:
   const filetype type;
 
   void set_parent(Vnode* parent);

@@ -1,6 +1,7 @@
 #include "fs/vfs.hpp"
 
 #include "fs/files.hpp"
+#include "fs/initramfs.hpp"
 #include "fs/log.hpp"
 #include "fs/path.hpp"
 #include "fs/tmpfs.hpp"
@@ -53,15 +54,17 @@ void Vnode::set_parent(Vnode* parent) {
 }
 
 Vnode::Vnode(filetype type) : type(type) {
-  if (isDir()) {
-    add_child("", this);
+  if (isDir())
     add_child(".", this);
-  }
 }
 
 int Vnode::lookup(const char* component_name, Vnode*& vnode) {
   if (not isDir())
     return -1;
+  if (component_name[0] == 0) {
+    vnode = this;
+    return 0;
+  }
   for (auto& n : _childs) {
     if (n == component_name) {
       vnode = n.node;
@@ -134,9 +137,13 @@ Vnode* FileSystem::mount() {
 
 void init_vfs() {
   register_filesystem(tmpfs::init());
+  register_filesystem(initramfs::init());
 
   root_node = get_filesystem("tmpfs")->mount();
   root_node->set_parent(root_node);
+
+  vfs_mkdir("/initramfs");
+  vfs_mount("/initramfs", "initramfs");
 }
 
 FileSystem* filesystems = nullptr;

@@ -17,7 +17,7 @@ int exec(ExecCtx* ctx) {
 
   klog("%s(%s)\n", __func__, name);
 
-  auto hdr = initramfs.find(name);
+  auto hdr = initramfs::cpio.find(name);
   if (hdr == nullptr) {
     klog("%s: %s: No such file or directory\n", __func__, name);
     return -1;

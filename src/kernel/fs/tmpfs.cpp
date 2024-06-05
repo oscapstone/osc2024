@@ -52,7 +52,9 @@ int File::write(const void* buf, size_t len) {
 
 int File::read(void* buf, size_t len) {
   auto& content = get()->content;
-  int r = content.size() - f_pos;
+  size_t r = get()->size() - f_pos;
+  if (r > len)
+    r = len;
   memcpy(buf, content.data() + f_pos, r);
   f_pos += r;
   return r;

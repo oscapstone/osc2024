@@ -10,4 +10,9 @@
 #endif
 
 #define FS_INFO(fmt, ...) \
-  FS_INFO_PRINT("[" FS_TYPE "] " fmt __VA_OPT__(, ) __VA_ARGS__)
+  FS_INFO_PRINT("[" FS_TYPE "] [*] " fmt __VA_OPT__(, ) __VA_ARGS__)
+
+#define FS_WARN_PRINT(fmt, ...) klog(fmt __VA_OPT__(, ) __VA_ARGS__)
+
+#define FS_WARN(fmt, ...) \
+  FS_WARN_PRINT("[" FS_TYPE "] [!] " fmt __VA_OPT__(, ) __VA_ARGS__)
