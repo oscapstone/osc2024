@@ -42,11 +42,7 @@ Kthread* find_thread_by_tid(int tid) {
 }
 
 Kthread::Kthread()
-    : regs{},
-      tid(new_tid()),
-      status(KthreadStatus::kReady),
-      exit_code(0),
-      signal{this} {
+    : regs{}, tid(new_tid()), status(kReady), exit_code(0), signal{this} {
   signal.setall([](int) {
     klog("kill init cause reboot!\n");
     reboot();
@@ -60,7 +56,7 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
            .x20 = (uint64_t)ctx,
            .lr = (void*)kthread_start},
       tid(new_tid()),
-      status(KthreadStatus::kReady),
+      status(kReady),
       exit_code(0),
       kernel_stack(KTHREAD_STACK_SIZE, true),
       signal{this} {
@@ -135,7 +131,7 @@ void kthread_start() {
 // TODO: wq
 void kthread_wait(int pid) {
   Kthread* th;
-  while ((th = find_thread_by_tid(pid)) and th->status != KthreadStatus::kDead)
+  while ((th = find_thread_by_tid(pid)) and th->status != kDead)
     schedule();
 }
 
@@ -146,7 +142,7 @@ void kthread_kill(int pid) {
 }
 
 void kthread_kill(Kthread* thread) {
-  if (thread == nullptr or thread->status == KthreadStatus::kDead)
+  if (thread == nullptr or thread->status == kDead)
     return;
   klog("kill thread %d\n", thread->tid);
   if (thread == current_thread()) {
@@ -155,7 +151,7 @@ void kthread_kill(Kthread* thread) {
     save_DAIF_disable_interrupt();
 
     thread->exit_code = -1;
-    thread->status = KthreadStatus::kDead;
+    thread->status = kDead;
     erase_rq(thread);
     push_dead(thread);
 
@@ -170,7 +166,7 @@ void kthread_exit(int status) {
 
 void kthread_fini() {
   klog("fini thread %d\n", current_thread()->tid);
-  current_thread()->status = KthreadStatus::kDead;
+  current_thread()->status = kDead;
   schedule();
 }
 

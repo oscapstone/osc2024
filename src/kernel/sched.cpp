@@ -84,22 +84,22 @@ void schedule() {
   if (schedule_nesting == 0) {
     auto cur = current_thread();
     switch (cur->status) {
-      case KthreadStatus::kRunning:
-        cur->status = KthreadStatus::kReady;
-      case KthreadStatus::kReady:
+      case kRunning:
+        cur->status = kReady;
+      case kReady:
         push_rq(cur);
         break;
-      case KthreadStatus::kWaiting:
+      case kWaiting:
         // TODO:
         break;
-      case KthreadStatus::kDead:
+      case kDead:
         push_dead(cur);
         break;
       default:
         break;
     }
     auto nxt = pop_rq();
-    nxt->status = KthreadStatus::kRunning;
+    nxt->status = kRunning;
     if (cur != nxt)
       switch_to(cur, nxt);
   }
