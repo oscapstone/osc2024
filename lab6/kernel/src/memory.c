@@ -178,11 +178,10 @@ void memory_init()
 {
     allocate_frame();
     init_cache();
-    
 
     // INFO_BLOCK(test_memory(););
-    memory_reserve(PHYS_TO_VIRT(0x0000), PHYS_TO_VIRT(MMU_PTE_ADDR + 0x2000)); // // PGD's page frame at 0x1000 // PUD's page frame at 0x2000 PMD 0x3000-0x5000
-    // memory_reserve(PHYS_TO_VIRT(0x0000), PHYS_TO_VIRT(0x1000));                      // Spin tables for multicore boot (0x0000 - 0x1000)
+    memory_reserve(PHYS_TO_KERNEL_VIRT(0x0000), PHYS_TO_KERNEL_VIRT(MMU_PTE_ADDR + 0x2000)); // // PGD's page frame at 0x1000 // PUD's page frame at 0x2000 PMD 0x3000-0x5000
+    // memory_reserve(PHYS_TO_KERNEL_VIRT(0x0000), PHYS_TO_KERNEL_VIRT(0x1000));                      // Spin tables for multicore boot (0x0000 - 0x1000)
     INFO("_kernel_start: 0x%x, _kernel_end: 0x%x\n", &_kernel_start, &_kernel_end);
     memory_reserve((size_t)&_kernel_start, (size_t)&_kernel_end);
     INFO("_kernel_stack_end: 0x%x, _kernel_stack_top: 0x%x\n", &_kernel_stack_end, &_kernel_stack_top);

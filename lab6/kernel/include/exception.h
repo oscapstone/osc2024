@@ -74,7 +74,7 @@ void irqtask_run_preemptive();
 void irqtask_list_init();
 
 // https://github.com/Tekki/raspberrypi-documentation/blob/master/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf p16
-#define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)(PHYS_TO_VIRT(0x40000060)))
+#define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)(_PHYS_TO_KERNEL_VIRT(0x40000060)))
 
 #define INTERRUPT_SOURCE_CNTPNSIRQ (1 << 1)
 #define INTERRUPT_SOURCE_GPU (1 << 8)

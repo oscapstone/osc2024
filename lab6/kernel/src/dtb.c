@@ -133,10 +133,10 @@ void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_
 	// linux,initrd-start will be assigned by start.elf based on config.txt
 	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-start") == 0)
 	{
-		CPIO_START = (void *)PHYS_TO_VIRT((uint64_t)uint32_endian_big2little(*(uint32_t *)value));
+		CPIO_START = (void *)PHYS_TO_KERNEL_VIRT((uint64_t)uint32_endian_big2little(*(uint32_t *)value));
 	}
 	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0)
 	{
-		CPIO_END = (void *)PHYS_TO_VIRT((uint64_t)uint32_endian_big2little(*(uint32_t *)value));
+		CPIO_END = (void *)PHYS_TO_KERNEL_VIRT((uint64_t)uint32_endian_big2little(*(uint32_t *)value));
 	}
 }

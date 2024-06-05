@@ -79,8 +79,8 @@ typedef struct thread_struct
     int64_t             pid;                                   // Process ID
     int64_t             ppid;                                  // Parent Process ID
     child_node_t*       child_list;                            // Child Process List
-    char*               user_stack_base;                       // User space Stack (Process itself)
-    char*               kernel_stack_base;                     // Kernel space Stack (Kernel syscall)
+    char*               user_stack_bottom;                     // User space Stack (Process itself)
+    char*               kernel_stack_bottom;                   // Kernel space Stack (Kernel syscall)
     char*               name;                                  // Process name
     vm_area_struct_t*   vma_list;                              // Virtual Memory Area
 } thread_t;

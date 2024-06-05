@@ -111,3 +111,14 @@ void *memcpy(void *dest, const void *src, size_t count)
 		*tmp++ = *s++;
 	return dest;
 }
+
+void *memset(void *s, int c, size_t n)
+{
+	char *start = s;
+	for (size_t i = 0; i < n; i++)
+	{
+		start[i] = c;
+	}
+
+	return s;
+}

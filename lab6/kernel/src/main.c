@@ -16,7 +16,7 @@ void main(char *arg)
 {
     kernel_lock_interrupt();
 
-    dtb_init(PHYS_TO_VIRT(arg));
+    dtb_init(PHYS_TO_KERNEL_VIRT(arg));
 
     uart_init();
     uart_interrupt_enable();
@@ -31,6 +31,7 @@ void main(char *arg)
     timer_list_init();
     DEBUG("sched_init\r\n");
     init_thread_sched();
-
+    
+    set_current_thread_context(&curr_thread->context);
     load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
 }

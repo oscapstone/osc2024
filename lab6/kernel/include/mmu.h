@@ -22,9 +22,10 @@
 
 #define PERIPHERAL_START 0x3C000000L
 #define PERIPHERAL_END 0x40000000L
-#define USER_KERNEL_BASE 0x00000000L
-#define USER_STACK_BASE 0xfffffffff000L
-#define USER_SIGNAL_WRAPPER_VA 0xffffffff9000L
+#define USER_CODE_BASE 0x0000000000000000L
+#define USER_STACK_BASE 0x0000FFFFFFFFF000L // top of stack
+#define USER_SIGNAL_WRAPPER_VA 0x0000FFFFFFFE0000L
+#define USER_RUN_USER_TASK_WRAPPER_VA 0x0000FFFFFFFD0000L
 
 #define MMU_PGD_BASE 0x1000L
 #define MMU_PGD_ADDR (MMU_PGD_BASE + 0x0000L)
@@ -42,27 +43,72 @@
 #include "sched.h"
 #include "exception.h"
 
+/**
+ * @brief memory area
+ *
+ * @param start: start address (included)
+ * @param end: end address (excluded)
+ */
+typedef struct area
+{
+    size_t start;
+    size_t end;
+} area_t;
+
+/**
+ * @brief virtual memory area
+ *
+ * @param listhead
+ * @param virt_addr_area vma start address in user space virtual address
+ * @param phys_addr_area vma start address in physical address
+ * @param rwx 3-bit: read/write/execute
+ * @param need_to_free when free vma, free the physical page
+ */
 typedef struct vm_area_struct
 {
-
     list_head_t listhead;
-    size_t virt_addr;
-    size_t phys_addr;
-    size_t area_size;
-    uint8_t rwx; // 1, 2, 4
-    int is_alloced;
-
+    area_t virt_addr_area;
+    area_t phys_addr_area;
+    uint8_t rwx;
+    uint8_t need_to_free;
 } vm_area_struct_t;
 
+typedef enum PAGE_TABLE_LEVEL
+{
+    LEVEL_PGD = 0,
+    LEVEL_PUD = 1,
+    LEVEL_PMD = 2,
+    LEVEL_PTE = 3,
+} PAGE_TABLE_LEVEL;
+
+typedef struct thread_struct thread_t;
+
+#define VMA_COPY(dest_thread, src_thread)                                                      \
+    do                                                                                         \
+    {                                                                                          \
+        DEBUG("Copy vma_list from %d to %d\n", src_thread->pid, dest_thread->pid);             \
+        dest_thread->vma_list = (vm_area_struct_t *)kmalloc(sizeof(vm_area_struct_t));         \
+        DEBUG("kmalloc vma_list 0x%x\n", dest_thread->vma_list);                               \
+        INIT_LIST_HEAD((list_head_t *)dest_thread->vma_list);                                  \
+        DEBUG("INIT_LIST_HEAD vma_list\n");                                                    \
+        list_head_t *curr;                                                                     \
+        list_for_each(curr, (list_head_t *)src_thread->vma_list)                               \
+        {                                                                                      \
+            vm_area_struct_t *new_vma = (vm_area_struct_t *)kmalloc(sizeof(vm_area_struct_t)); \
+            DEBUG("kmalloc new_vma 0x%x\n", new_vma);                                          \
+            new_vma = (vm_area_struct_t *)curr;                                                \
+            DEBUG("Copy vma 0x%x -> 0x%x\n", curr, new_vma);                                   \
+            list_add_tail((list_head_t *)new_vma, (list_head_t *)dest_thread->vma_list);       \
+        }                                                                                      \
+    } while (0)
+
 void *set_2M_kernel_mmu(void *x0);
-// void map_one_page(size_t *pgd_p, size_t va, size_t pa, size_t flag);
-
-// void mmu_add_vma(thread_t *t, size_t va, size_t size, size_t pa, size_t rwx, int is_alloced);
-// void mmu_del_vma(thread_t *t);
-// void mmu_map_pages(size_t *pgd_p, size_t va, size_t size, size_t pa, size_t flag);
-// void mmu_free_page_tables(size_t *page_table, int level);
-
-// void mmu_memfail_abort_handle(esr_el1_t *esr_el1);
+void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag);
+void mmu_add_vma(thread_t *t, size_t va, size_t size, size_t pa, uint8_t rwx, uint8_t need_to_free);
+void mmu_free_all_vma(thread_t *t);
+void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);
+void mmu_memfail_abort_handle(esr_el1_t *esr_el1);
+void dump_vma(thread_t *t);
 
 #endif //__ASSEMBLER__
 

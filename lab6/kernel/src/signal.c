@@ -4,6 +4,7 @@
 #include "syscall.h"
 #include "memory.h"
 #include "list.h"
+#include "exception.h"
 
 extern thread_t *curr_thread;
 extern thread_t *threads[];
@@ -92,7 +93,7 @@ int8_t has_pending_signal()
 	return !list_empty((list_head_t *)(curr_thread->signal.pending_list));
 }
 
-void run_pending_signal()
+void run_pending_signal(trapframe_t *tpf)
 {
 	kernel_lock_interrupt();
 	// DEBUG("Run pending signal\n");
@@ -106,12 +107,14 @@ void run_pending_signal()
 	kernel_unlock_interrupt();
 
 	store_context(&curr_thread->signal.saved_context);
+	// DEBUG("curr_thread->signal.saved_context.lr: 0x%x\n", &curr_thread->signal.saved_context.lr);
+	// DEBUG("tpf->sp_el0: 0x%x\n", tpf->sp_el0);
 
 	kernel_lock_interrupt();
 	if (!has_pending_signal()){
-		// DEBUG("No pending signal\n");
 		kernel_unlock_signal(curr_thread);
 		kernel_unlock_interrupt();
+		// DEBUG("No pending signal\n");
 		return;
 	}
 	signal_node_t *curr = get_pending_signal_node_from_thread(curr_thread);
@@ -120,23 +123,25 @@ void run_pending_signal()
 	list_del_entry((list_head_t *)curr);
 	kernel_unlock_interrupt();
 	kfree(curr);
-	run_signal(signal);
+	run_signal(signal, tpf->sp_el0);
 }
 
-void run_signal(int signal)
+void run_signal(int signal, uint64_t sp_el0)
 {
 	DEBUG("Run signal %d\n", signal);
 	void (*signal_handler)() = get_signal_handler_frome_thread(curr_thread, signal);
+	DEBUG("signal_handler: 0x%x\n", signal_handler);
+	DEBUG("sp_el0: 0x%x\n", sp_el0);
 	// run registered handler in userspace
-	curr_thread->signal.signal_stack_base = kmalloc(USTACK_SIZE);
+	// curr_thread->signal.signal_stack_base = kmalloc(USTACK_SIZE);
 	kernel_lock_interrupt();
-	JUMP_TO_USER_SPACE(signal_handler_wrapper, signal_handler, curr_thread->signal.signal_stack_base + USTACK_SIZE, NULL);
+	JUMP_TO_USER_SPACE(USER_SIGNAL_WRAPPER_VA, signal_handler, sp_el0, NULL);
 }
 
-void signal_handler_wrapper(char *dest)
+void  __attribute__((aligned(PAGE_FRAME_SIZE))) signal_handler_wrapper(char *dest)
 {
-	DEBUG("Signal handler wrapper\n");
-	run_user_task_wrapper(dest);
+	// DEBUG("Signal handler wrapper\n");
+	((void (*)())USER_RUN_USER_TASK_WRAPPER_VA)(dest);
 	// system call sigreturn
 	CALL_SYSCALL(SYSCALL_SIGNAL_RETURN);
 }
@@ -144,6 +149,7 @@ void signal_handler_wrapper(char *dest)
 void signal_return()
 {
 	DEBUG("Signal return\n");
-	kfree((void *)curr_thread->signal.signal_stack_base);
+	// kfree((void *)curr_thread->signal.signal_stack_base);
+	DEBUG("curr_thread->signal.saved_context.lr: 0x%x\n", &curr_thread->signal.saved_context.lr);
 	load_context(&curr_thread->signal.saved_context);
 }

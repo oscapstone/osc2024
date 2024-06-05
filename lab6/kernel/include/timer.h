@@ -5,7 +5,7 @@
 #include "stdint.h"
 #include "bcm2837/rpi_mmu.h"
 
-#define CORE0_TIMER_IRQ_CTRL PHYS_TO_VIRT(0x40000040)
+#define CORE0_TIMER_IRQ_CTRL _PHYS_TO_KERNEL_VIRT(0x40000040)
 
 void core_timer_enable();
 void core_timer_disable();

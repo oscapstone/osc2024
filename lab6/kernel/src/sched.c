@@ -31,10 +31,6 @@ static inline thread_t *child_node_to_thread(child_node_t *node)
 	return threads[(node)->pid];
 }
 
-void block()
-{
-}
-
 static inline int free_child_thread(thread_t *child_thread)
 {
 	list_head_t *curr;
@@ -50,16 +46,17 @@ static inline int free_child_thread(thread_t *child_thread)
 		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
 	}
 
-	if (thread_code_can_free(child_thread))
-	{
-		kfree(child_thread->code);
-	}
+	// if (thread_code_can_free(child_thread))
+	// {
+	// 	kfree(child_thread->code);
+	// }
 	threads[child_thread->pid] = NULL;
+	mmu_free_all_vma(child_thread);
+	kfree(child_thread->vma_list);
 	kfree(child_thread->child_list);
-	kfree(child_thread->user_stack_base);
-	kfree(child_thread->kernel_stack_base);
+	// kfree(child_thread->user_stack_bottom);
+	kfree(child_thread->kernel_stack_bottom);
 	kfree(child_thread->name);
-	block();
 	kfree(child_thread);
 	DEBUG("child_thread: 0x%x, curr_thread: 0x%x\n", child_thread, curr_thread);
 	// dump_run_queue();
@@ -118,10 +115,10 @@ thread_t *_init_create_thread(char *name, int64_t pid, int64_t ppid, void *start
 	thread->vma_list = (vm_area_struct_t *)kmalloc(sizeof(vm_area_struct_t));
 	INIT_LIST_HEAD((list_head_t *)thread->vma_list);
 	thread->status = THREAD_READY;
-	thread->user_stack_base = kmalloc(USTACK_SIZE);
-	thread->kernel_stack_base = kmalloc(KSTACK_SIZE);
+	thread->user_stack_bottom = kmalloc(USTACK_SIZE);
+	thread->kernel_stack_bottom = kmalloc(KSTACK_SIZE);
 	thread->context.lr = (uint64_t)start;
-	thread->context.sp = (uint64_t)thread->kernel_stack_base + KSTACK_SIZE;
+	thread->context.sp = (uint64_t)thread->kernel_stack_bottom + KSTACK_SIZE;
 	thread->context.fp = thread->context.sp; // frame pointer for local variable, which is also in stack.
 	list_add((list_head_t *)thread, run_queue);
 	return thread;
@@ -262,15 +259,18 @@ thread_t *thread_create(void *start, char *name)
 	r->vma_list = (vm_area_struct_t *)kmalloc(sizeof(vm_area_struct_t));
 	INIT_LIST_HEAD((list_head_t *)r->vma_list);
 	r->status = THREAD_READY;
-	r->user_stack_base = kmalloc(USTACK_SIZE);
-	DEBUG("new_pid: %d, user_stack_base: 0x%x\n", new_pid, r->user_stack_base);
-	r->kernel_stack_base = kmalloc(KSTACK_SIZE);
-	DEBUG("new_pid: %d, kernel_stack_base: 0x%x\n", new_pid, r->kernel_stack_base);
+	r->user_stack_bottom = kmalloc(USTACK_SIZE);
+	DEBUG("new_pid: %d, user_stack_bottom: 0x%x\n", new_pid, r->user_stack_bottom);
+	r->kernel_stack_bottom = kmalloc(KSTACK_SIZE);
+	DEBUG("new_pid: %d, kernel_stack_bottom: 0x%x\n", new_pid, r->kernel_stack_bottom);
 	r->code = start;
 	r->context.lr = (uint64_t)start;
-	r->context.sp = (uint64_t)r->kernel_stack_base + KSTACK_SIZE;
+	r->context.sp = (uint64_t)r->kernel_stack_bottom + KSTACK_SIZE;
 	DEBUG("new_pid: %d, context.sp: 0x%x\n", new_pid, r->context.sp);
 	r->context.fp = r->context.sp; // frame pointer for local variable, which is also in stack.
+
+	r->context.pgd = KERNEL_VIRT_TO_PHYS(kmalloc(PAGE_FRAME_SIZE));
+    memset(PHYS_TO_KERNEL_VIRT(r->context.pgd), 0, PAGE_FRAME_SIZE);
 
 	child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
 	child->pid = new_pid;
@@ -296,7 +296,7 @@ void schedule()
 	do
 	{
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
+		DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 	curr_thread->status = THREAD_RUNNING;
 	kernel_unlock_interrupt();

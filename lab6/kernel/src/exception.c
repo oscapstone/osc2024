@@ -7,8 +7,10 @@
 #include "stdio.h"
 #include "stdint.h"
 #include "syscall.h"
+#include "sched.h"
 
 extern int8_t need_to_schedule;
+extern thread_t *curr_thread;
 
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable()
@@ -42,6 +44,7 @@ void __unlock_interrupt()
     }
     else if (lock_counter == 0)
     {
+        // DEBUG("unlock\r\n");
         el1_interrupt_enable();
     }
 }
@@ -88,7 +91,8 @@ void el1h_irq_router(trapframe_t *tpf)
     // only do signal handler when return to user mode
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
-        run_pending_signal();
+        run_pending_signal(tpf);
+        DEBUG("el1 end run_pending_signal\r\n");
     }
 }
 
@@ -175,10 +179,18 @@ const char *get_exception_name(uint64_t esr_el1)
 void el0_sync_router(trapframe_t *tpf)
 {
     static int count = 0;
-    uint64_t esr_el1 = read_esr_el1();
-    if (!is_el0_syscall())
+    uint64_t esr_el1_value = read_esr_el1();
+    uint64_t elr_el1_value = read_elr_el1();
+    // esr_el1: Holds syndrome information for an exception taken to EL1.
+    esr_el1_t *esr = (esr_el1_t *)&esr_el1_value;
+    if (esr->ec == MEMFAIL_DATA_ABORT_LOWER || esr->ec == MEMFAIL_INST_ABORT_LOWER)
     {
-        const char *exception_name = get_exception_name(esr_el1);
+        mmu_memfail_abort_handle(esr);
+        return;
+    }
+    else if (!is_el0_syscall())
+    {
+        const char *exception_name = get_exception_name(esr_el1_value);
         if (count == 0)
             ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
         count++;
@@ -188,6 +200,13 @@ void el0_sync_router(trapframe_t *tpf)
     uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
     // DEBUG("syscall_no: %d\r\n", syscall_no);
     // only work with GCC
+    DEBUG("syscall_no: %d\r\n", syscall_no);
+    if (syscall_no == 12)
+    {
+        ERROR("lock_interrupt in el0_sync_router\r\n");
+        while (1)
+            ;
+    }
     void *syscall_router[] = {&&__getpid_label,           // 0
                               &&__uart_read_label,        // 1
                               &&__uart_write_label,       // 2
@@ -198,10 +217,11 @@ void el0_sync_router(trapframe_t *tpf)
                               &&__kill_label,             // 7
                               &&__signal_register_label,  // 8
                               &&__signal_kill_label,      // 9
-                              &&__signal_return_label,    // 10
-                              &&__lock_interrupt_label,   // 11
-                              &&__unlock_interrupt_label, // 12
-                              &&__invalid_syscall_label}; // 13
+                              &&__mmap_label,             // 10
+                              &&__signal_return_label,    // 11
+                              &&__lock_interrupt_label,   // 12
+                              &&__unlock_interrupt_label, // 13
+                              &&__invalid_syscall_label}; // 14
 
     goto *syscall_router[syscall_no];
 
@@ -256,6 +276,11 @@ __signal_kill_label:
     tpf->x0 = sys_signal_kill(tpf, (int)tpf->x0, (int)tpf->x1);
     return;
 
+__mmap_label:
+    DEBUG("sys_mmap\r\n");
+    // tpf->x0 = sys_mmap(tpf, (void *)tpf->x0, (size_t)tpf->x1, (int)tpf->x2, (int)tpf->x3, (int)tpf->x4, (off_t)tpf->x5);
+    return;
+
 __signal_return_label:
     DEBUG("sys_signal_return\r\n");
     sys_signal_return(tpf);
@@ -268,6 +293,8 @@ __lock_interrupt_label:
 
 __unlock_interrupt_label:
     DEBUG("sys_unlock_interrupt\r\n");
+    DEBUG("syscall_no: %d\r\n", syscall_no);
+    DEBUG("curr_thread->pid: %d\r\n", curr_thread->pid);
     sys_unlock_interrupt(tpf);
     return;
 
@@ -318,7 +345,8 @@ void el0_irq_64_router(trapframe_t *tpf)
     // only do signal handler when return to user mode
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
-        run_pending_signal();
+        run_pending_signal(tpf);
+        DEBUG("el0 end run_pending_signal\r\n");
     }
 }
 

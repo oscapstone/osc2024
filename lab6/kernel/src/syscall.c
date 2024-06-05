@@ -15,6 +15,7 @@
 #include "list.h"
 #include "syscall.h"
 #include "signal.h"
+#include "memory.h"
 
 // External references to the current thread and the thread array
 extern thread_t *curr_thread;
@@ -32,10 +33,12 @@ extern thread_t *curr_thread;
 /**
  * @brief Wrapper function to run the user task pointed to by curr_thread->code.
  */
-void run_user_task_wrapper(char *dest)
+void __attribute__((aligned(PAGE_FRAME_SIZE))) run_user_task_wrapper(char *dest)
 {
-	DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
-	unlock_interrupt();
+	// DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
+	// unlock_interrupt();
+	CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
+
 	((void (*)(void))dest)();
 }
 
@@ -173,9 +176,9 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	curr_thread->name = filepath;
 	curr_thread->code = kmalloc(filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
-	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
+	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 	tpf->elr_el1 = (uint64_t)curr_thread->code;
-	tpf->sp_el0 = (uint64_t)curr_thread->user_stack_base + USTACK_SIZE;
+	tpf->sp_el0 = (uint64_t)curr_thread->user_stack_bottom + USTACK_SIZE;
 	kernel_unlock_interrupt();
 	return 0;
 }
@@ -203,26 +206,37 @@ int sys_fork(trapframe_t *tpf)
 	MEMCPY(child->code, parent->code, parent->datasize);
 	DEBUG("fork child process, pid: %d, datasize: %d, code: 0x%x\r\n", child->pid, child->datasize, child->code);
 
-	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
-	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
+	MEMCPY(child->user_stack_bottom, parent->user_stack_bottom, USTACK_SIZE);
+	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
+
+	mmu_add_vma(child, USER_CODE_BASE, child->datasize, (size_t)KERNEL_VIRT_TO_PHYS(child->code), 0b101, 1);
+	mmu_add_vma(child, USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(child->user_stack_bottom), 0b110, 1);
+	mmu_add_vma(child, PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b110, 0);
+	mmu_add_vma(child, USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), 0b101, 0);
+	mmu_add_vma(child, USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), 0b101, 0);
+	DEBUG("-------------- Child VMA --------------\r\n");
+	dump_vma(child);
+	DEBUG("-------------- Parent VMA --------------\r\n");
+	dump_vma(parent);
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
 	store_context(&(child->context));
 	DEBUG("child: 0x%x, parent: 0x%x\r\n", child, parent);
+	DEBUG("parent->context.pgd: 0x%x, child->context.pgd: 0x%x\r\n", parent->context.pgd, child->context.pgd);
 
 	if (child->pid != curr_thread->pid) // Parent process
 	{
 		DEBUG("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
-		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
+		child->context.fp += child->kernel_stack_bottom - parent->kernel_stack_bottom;
+		child->context.sp += child->kernel_stack_bottom - parent->kernel_stack_bottom;
 		kernel_unlock_interrupt();
 		return child->pid;
 	}
 	else // Child process
 	{
 		DEBUG("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		tpf = (trapframe_t *)((char *)tpf + (uint64_t)child->kernel_stack_base - (uint64_t)parent->kernel_stack_base); // move tpf
-		tpf->sp_el0 += (uint64_t)child->user_stack_base - (uint64_t)parent->user_stack_base;
+		tpf = (trapframe_t *)((char *)tpf + (uint64_t)child->kernel_stack_bottom - (uint64_t)parent->kernel_stack_bottom); // move tpf
+		// tpf->sp_el0 += (uint64_t)child->user_stack_bottom - (uint64_t)parent->user_stack_bottom;
 		return 0;
 	}
 }
@@ -247,12 +261,22 @@ int sys_exit(trapframe_t *tpf, int status)
  * @param mbox Pointer to the mailbox buffer.
  * @return Status code of the mailbox call.
  */
-int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
+int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox_user)
 {
 	// kernel_lock_interrupt();
-	enum mbox_buffer_status_code status = mbox_call(ch, mbox);
+	// enum mbox_buffer_status_code status = mbox_call(ch, mbox);
 	// kernel_unlock_interrupt();
-	return status;
+
+	kernel_lock_interrupt();
+
+	unsigned int size_of_mbox = mbox_user[0];
+	memcpy((char *)pt, mbox_user, size_of_mbox);
+	mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt));
+	memcpy(mbox_user, (char *)pt, size_of_mbox);
+
+	kernel_unlock_interrupt();
+
+	return 8;
 }
 
 /**
@@ -343,9 +367,9 @@ int kernel_fork()
 	child->code = parent->code;
 	DEBUG("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
 	DEBUG("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
-
-	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
-	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
+	
+	MEMCPY(child->user_stack_bottom, parent->user_stack_bottom, USTACK_SIZE);
+	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
 	store_context(get_current_thread_context());
@@ -355,8 +379,8 @@ int kernel_fork()
 	{
 		DEBUG("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
 		child->context = curr_thread->context;
-		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
-		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
+		child->context.fp += child->kernel_stack_bottom - parent->kernel_stack_bottom;
+		child->context.sp += child->kernel_stack_bottom - parent->kernel_stack_bottom;
 		kernel_unlock_interrupt();
 		return child->pid;
 	}
@@ -397,6 +421,7 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 		kfree(curr_thread->code);
 	}
 	kernel_lock_interrupt();
+
 	char *filepath = kmalloc(strlen(program_name) + 1);
 	strcpy(filepath, program_name);
 	curr_thread->datasize = filesize;
@@ -404,9 +429,22 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	curr_thread->code = kmalloc(filesize);
 	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d\r\n", program_name, curr_thread->code, filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
-	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
+	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 
-	JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
+	mmu_add_vma(curr_thread, USER_CODE_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->code), 0b101, 1);
+	mmu_add_vma(curr_thread, USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), 0b110, 1);
+	mmu_add_vma(curr_thread, PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b110, 0);
+	mmu_add_vma(curr_thread, USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), 0b101, 0);
+	mmu_add_vma(curr_thread, USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), 0b101, 0);
+	// DEBUG("physical address of run_user_task_wrapper: 0x%x\r\n", (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper));
+	uint64_t ttbr0_el1_value;
+	asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
+	DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
+
+	// 讀取 TTBR0_EL1 的值
+	DEBUG("VA of run_user_task_wrapper: 0x%x, USER_RUN_USER_TASK_WRAPPER_VA: 0x%x\r\n", run_user_task_wrapper, USER_RUN_USER_TASK_WRAPPER_VA);
+	DEBUG("VA of signal_handler_wrapper: 0x%x, USER_SIGNAL_WRAPPER_VA: 0x%x\r\n", signal_handler_wrapper, USER_SIGNAL_WRAPPER_VA);
+	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE);
 	return 0;
 }
 

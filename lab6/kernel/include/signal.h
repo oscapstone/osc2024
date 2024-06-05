@@ -5,6 +5,7 @@
 #include "sched.h"
 #include "list.h"
 #include "cpu_context.h"
+#include "memory.h"
 
 
 #define SIGHUP      1       /* Hangup (POSIX).  */
@@ -47,10 +48,13 @@
 typedef struct thread_struct thread_t;
 
 #define SIGNAL_COPY(dest_thread, src_thread)                                                         \
-    do{                                                                                              \
+    do                                                                                               \
+    {                                                                                                \
         dest_thread->signal = src_thread->signal;                                                    \
         DEBUG("Copy signal from %d to %d\n", src_thread->pid, dest_thread->pid);                     \
-        dest_thread->signal.pending_list = kmalloc(sizeof(signal_node_t));                           \
+        DEBUG("handler_table[9]: 0x%x -> 0x%x\n", src_thread->signal.handler_table[SIGKILL],         \
+              dest_thread->signal.handler_table[SIGKILL]);                                           \
+        dest_thread->signal.pending_list = (signal_node_t *)kmalloc(sizeof(signal_node_t));          \
         DEBUG("kmalloc pending_list 0x%x\n", dest_thread->signal.pending_list);                      \
         INIT_LIST_HEAD((list_head_t *)dest_thread->signal.pending_list);                             \
         DEBUG("INIT_LIST_HEAD pending_list\n");                                                      \
@@ -60,10 +64,10 @@ typedef struct thread_struct thread_t;
             signal_node_t *new_node = kmalloc(sizeof(signal_node_t));                                \
             DEBUG("kmalloc new_node 0x%x\n", new_node);                                              \
             new_node->signal = ((signal_node_t *)curr)->signal;                                      \
-            DEBUG("Copy signal 0x%x -> 0x%x\n", ((signal_node_t *)curr)->signal, new_node->signal); \
+            DEBUG("Copy signal 0x%x -> 0x%x\n", ((signal_node_t *)curr)->signal, new_node->signal);  \
             list_add_tail((list_head_t *)new_node, (list_head_t *)dest_thread->signal.pending_list); \
         }                                                                                            \
-    }while(0)
+    } while (0)
 
 void init_thread_signal(thread_t *thread);
 
@@ -77,7 +81,8 @@ void signal_register_handler(int signal, void (*handler)());
 void signal_default_handler();
 void signal_killsig_handler();
 int8_t has_pending_signal();
-void run_signal(int signal);
+void run_pending_signal(trapframe_t *tpf);
+void run_signal(int signal, uint64_t sp_el0);
 void signal_handler_wrapper(char *dest);
 void signal_return();
 

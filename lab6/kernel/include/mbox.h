@@ -1,6 +1,8 @@
 #ifndef _MBOX_H_
 #define _MBOX_H_
 
+#include "stdint.h"
+
 extern volatile unsigned int pt[64];
 
 // Mailbox Register MMIO
@@ -61,6 +63,6 @@ typedef enum
 #define MBOX_TAG_REQUEST_CODE 0x00000000
 #define MBOX_TAG_LAST_BYTE 0x00000000
 
-int mbox_call(mbox_channel_type, unsigned int);
+int mbox_call(mbox_channel_type, uint64_t value);
 
 #endif /*_MBOX_H_*/
