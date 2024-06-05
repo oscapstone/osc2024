@@ -1,11 +1,14 @@
 #include "fs/vfs.hpp"
 
 #include "fs/files.hpp"
+#include "fs/log.hpp"
 #include "fs/path.hpp"
 #include "fs/tmpfs.hpp"
 #include "io.hpp"
 #include "string.hpp"
 #include "syscall.hpp"
+
+#define FS_TYPE "vfs"
 
 Vnode* root_node = nullptr;
 
@@ -155,7 +158,7 @@ int register_filesystem(FileSystem* fs) {
   auto p = find_filesystem(fs->name);
   if (not p)
     return -1;
-  klog("[vfs] register fs '%s'\n", fs->name);
+  FS_INFO("register fs '%s'\n", fs->name);
   *p = fs;
 
   return 0;
@@ -172,7 +175,7 @@ SYSCALL_DEFINE2(open, const char*, pathname, fcntl, flags) {
     file->close();
 
 end:
-  klog("[vfs] open(%s, 0o%o) -> %d\n", pathname, flags, r);
+  FS_INFO("open(%s, 0o%o) -> %d\n", pathname, flags, r);
   return 0;
 }
 
@@ -214,7 +217,7 @@ SYSCALL_DEFINE1(close, int, fd) {
     goto end;
   current_files()->close(fd);
 end:
-  klog("[vfs] close(%d) = %d\n", fd, r);
+  FS_INFO("close(%d) = %d\n", fd, r);
   return 0;
 }
 
@@ -233,7 +236,7 @@ SYSCALL_DEFINE3(write, int, fd, const void*, buf, unsigned long, count) {
   }
   r = vfs_write(file, buf, count);
 end:
-  klog("[vfs] write(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  FS_INFO("write(%d, %p, %ld) = %d\n", fd, buf, count, r);
   return r;
 }
 
@@ -254,7 +257,7 @@ SYSCALL_DEFINE3(read, int, fd, void*, buf, unsigned long, count) {
   }
   r = vfs_read(file, buf, count);
 end:
-  klog("[vfs] read(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  FS_INFO("read(%d, %p, %ld) = %d\n", fd, buf, count, r);
   return r;
 }
 
@@ -293,7 +296,7 @@ int vfs_mount(const char* target, const char* filesystem) {
 }
 
 int vfs_lookup(const char* pathname, Vnode*& target) {
-  klog("[vfs] lookup %s\n", pathname);
+  FS_INFO("lookup %s\n", pathname);
   auto vnode_itr = root_node;
   for (auto component_name : Path(pathname)) {
     Vnode* next_vnode;
@@ -307,7 +310,7 @@ int vfs_lookup(const char* pathname, Vnode*& target) {
 }
 
 int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
-  klog("[vfs] lookup %s\n", pathname);
+  FS_INFO("lookup %s\n", pathname);
   const char* basename_ptr = "";
   auto vnode_itr = root_node;
   auto prev_iter = vnode_itr;
