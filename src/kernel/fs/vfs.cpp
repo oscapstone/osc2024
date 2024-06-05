@@ -4,7 +4,6 @@
 #include "fs/log.hpp"
 #include "fs/path.hpp"
 #include "fs/tmpfs.hpp"
-#include "io.hpp"
 #include "string.hpp"
 #include "syscall.hpp"
 
