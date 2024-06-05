@@ -209,11 +209,11 @@ int sys_fork(trapframe_t *tpf)
 	MEMCPY(child->user_stack_bottom, parent->user_stack_bottom, USTACK_SIZE);
 	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
 
-	mmu_add_vma(child, USER_CODE_BASE, child->datasize, (size_t)KERNEL_VIRT_TO_PHYS(child->code), 0b101, 1);
-	mmu_add_vma(child, USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(child->user_stack_bottom), 0b110, 1);
-	mmu_add_vma(child, PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b110, 0);
-	mmu_add_vma(child, USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), 0b101, 0);
-	mmu_add_vma(child, USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), 0b101, 0);
+	mmu_add_vma(child, "Code", USER_CODE_BASE, child->datasize, (size_t)KERNEL_VIRT_TO_PHYS(child->code), 0b101, 1);
+	mmu_add_vma(child, "User stack", USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(child->user_stack_bottom), 0b110, 1);
+	mmu_add_vma(child, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b110, 0);
+	mmu_add_vma(child, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), 0b101, 0);
+	mmu_add_vma(child, "Run user task wrapper", USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), 0b101, 0);
 	DEBUG("-------------- Child VMA --------------\r\n");
 	dump_vma(child);
 	DEBUG("-------------- Parent VMA --------------\r\n");
@@ -367,7 +367,7 @@ int kernel_fork()
 	child->code = parent->code;
 	DEBUG("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
 	DEBUG("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
-	
+
 	MEMCPY(child->user_stack_bottom, parent->user_stack_bottom, USTACK_SIZE);
 	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
 	// Because make a function call, so lr is the next instruction address
@@ -431,11 +431,11 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	MEMCPY(curr_thread->code, filedata, filesize);
 	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 
-	mmu_add_vma(curr_thread, USER_CODE_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->code), 0b101, 1);
-	mmu_add_vma(curr_thread, USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), 0b110, 1);
-	mmu_add_vma(curr_thread, PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b110, 0);
-	mmu_add_vma(curr_thread, USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), 0b101, 0);
-	mmu_add_vma(curr_thread, USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), 0b101, 0);
+	mmu_add_vma(curr_thread, "Code", USER_CODE_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->code), 0b101, 1);
+	mmu_add_vma(curr_thread, "User Stack", USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), 0b110, 1);
+	mmu_add_vma(curr_thread, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b110, 0);
+	mmu_add_vma(curr_thread, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), 0b101, 0);
+	mmu_add_vma(curr_thread, "Run user task wrapper", USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), 0b101, 0);
 	// DEBUG("physical address of run_user_task_wrapper: 0x%x\r\n", (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper));
 	uint64_t ttbr0_el1_value;
 	asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));

@@ -99,7 +99,7 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
  * @param rwx: read/write/execute
  * @param need_to_free: need to free the physical page
  */
-void mmu_add_vma(thread_t *t, size_t va, size_t size, size_t pa, uint8_t rwx, uint8_t need_to_free)
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint8_t rwx, uint8_t need_to_free)
 {
     if (is_addr_not_align_to_page_size(va) || is_addr_not_align_to_page_size(pa))
     {
@@ -110,6 +110,7 @@ void mmu_add_vma(thread_t *t, size_t va, size_t size, size_t pa, uint8_t rwx, ui
     vm_area_struct_t *new_area = kmalloc(sizeof(vm_area_struct_t));
     size = ALIGN_UP(size, PAGE_FRAME_SIZE);
     new_area->rwx = rwx;
+    new_area->name = name;
     new_area->virt_addr_area.start = va;
     new_area->virt_addr_area.end = va + size;
     new_area->phys_addr_area.start = pa;
@@ -166,14 +167,18 @@ static inline vm_area_struct_t *find_vma(thread_t *t, size_t va)
 {
     list_head_t *pos;
     vm_area_struct_t *vma;
-    DEBUG("----------------------- find vma: 0x%x -----------------------\r\n", va);
+    DEBUG("---------------------------------------------- find vma: 0x%x ----------------------------------------------\r\n", va);
     list_for_each(pos, (list_head_t *)(t->vma_list))
     {
         vma = (vm_area_struct_t *)pos;
         DEBUG("vma: 0x%x, va: 0x%x - 0x%x\r\n", vma, vma->virt_addr_area.start, vma->virt_addr_area.end);
         if (vma->virt_addr_area.start <= va && vma->virt_addr_area.end > va)
+        {
+            DEBUG("----------------------------------------------------- end -----------------------------------------------------\r\n", va);
             return vma;
+        }
     }
+    DEBUG("----------------------------------------------------- end -----------------------------------------------------\r\n", va);
     return 0;
 }
 
@@ -233,15 +238,21 @@ void dump_vma(thread_t *t)
 {
     list_head_t *pos;
     vm_area_struct_t *vma;
-    DEBUG("======================================= VMA =======================================\r\n");
+    INFO("=================================================================== VMA ===================================================================\r\n");
     list_for_each(pos, (list_head_t *)(t->vma_list))
     {
         vma = (vm_area_struct_t *)pos;
-        INFO("VMA: 0x%x, VA: 0x%x - 0x%x, PA: 0x%x - 0x%x, RWX: 0x%x, Need to free: 0x%x\r\n",
-             vma,
-             vma->virt_addr_area.start, vma->virt_addr_area.end,
-             vma->phys_addr_area.start, vma->phys_addr_area.end,
-             vma->rwx, vma->need_to_free);
+        INFO_BLOCK({
+            int len = strlen(vma->name);
+            INFO("%s ", vma->name);
+            for (int i = 0; i < 23 - len; i++)
+                uart_puts(" ");
+            uart_puts("VMA: 0x%x, VA: 0x%x - 0x%x, PA: 0x%x - 0x%x, RWX: 0x%x, Need to free: 0x%x\r\n",
+                      vma,
+                      vma->virt_addr_area.start, vma->virt_addr_area.end,
+                      vma->phys_addr_area.start, vma->phys_addr_area.end,
+                      vma->rwx, vma->need_to_free);
+        });
     }
-    DEBUG("======================================= END =======================================\r\n");
+    INFO("=================================================================== END ===================================================================\r\n");
 }

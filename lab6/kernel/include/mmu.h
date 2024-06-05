@@ -71,6 +71,7 @@ typedef struct vm_area_struct
     area_t phys_addr_area;
     uint8_t rwx;
     uint8_t need_to_free;
+    char *name;
 } vm_area_struct_t;
 
 typedef enum PAGE_TABLE_LEVEL
@@ -104,7 +105,7 @@ typedef struct thread_struct thread_t;
 
 void *set_2M_kernel_mmu(void *x0);
 void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag);
-void mmu_add_vma(thread_t *t, size_t va, size_t size, size_t pa, uint8_t rwx, uint8_t need_to_free);
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint8_t rwx, uint8_t need_to_free);
 void mmu_free_all_vma(thread_t *t);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1);

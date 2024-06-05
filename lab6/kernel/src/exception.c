@@ -92,7 +92,6 @@ void el1h_irq_router(trapframe_t *tpf)
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
         run_pending_signal(tpf);
-        DEBUG("el1 end run_pending_signal\r\n");
     }
 }
 
@@ -196,17 +195,11 @@ void el0_sync_router(trapframe_t *tpf)
         count++;
         return;
     }
-    // Basic #3 - Based on System Call Format in Video Player’s Test Program
+
     uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
     // DEBUG("syscall_no: %d\r\n", syscall_no);
+
     // only work with GCC
-    DEBUG("syscall_no: %d\r\n", syscall_no);
-    if (syscall_no == 12)
-    {
-        ERROR("lock_interrupt in el0_sync_router\r\n");
-        while (1)
-            ;
-    }
     void *syscall_router[] = {&&__getpid_label,           // 0
                               &&__uart_read_label,        // 1
                               &&__uart_write_label,       // 2
@@ -293,8 +286,6 @@ __lock_interrupt_label:
 
 __unlock_interrupt_label:
     DEBUG("sys_unlock_interrupt\r\n");
-    DEBUG("syscall_no: %d\r\n", syscall_no);
-    DEBUG("curr_thread->pid: %d\r\n", curr_thread->pid);
     sys_unlock_interrupt(tpf);
     return;
 
@@ -346,7 +337,6 @@ void el0_irq_64_router(trapframe_t *tpf)
     if ((tpf->spsr_el1 & 0b1100) == 0)
     {
         run_pending_signal(tpf);
-        DEBUG("el0 end run_pending_signal\r\n");
     }
 }
 
