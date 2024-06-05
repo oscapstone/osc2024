@@ -91,13 +91,20 @@ typedef struct area
 } area_t;
 
 /**
- * @brief virtual memory area
+ * @brief Structure representing a virtual memory area (VMA).
  *
- * @param listhead
- * @param virt_addr_area vma start address in user space virtual address
- * @param phys_addr_area vma start address in physical address
- * @param rwx 3-bit: read/write/execute
- * @param need_to_free when free vma, free the physical page
+ * This structure defines a virtual memory area within a process's address space,
+ * including its virtual and physical address ranges, protection attributes,
+ * and other properties.
+ *
+ * @param listhead List head for linking this VMA into a list of VMAs.
+ * @param virt_addr_area The start and end addresses of the VMA in the process's virtual address space.
+ * @param phys_addr_area The start and end addresses of the VMA in physical memory.
+ * @param vm_page_prot Page protection attributes for the VMA (e.g., read, write, execute permissions).
+ * @param vm_flags Flags indicating various properties and permissions of the VMA.
+ * @param need_to_free Indicates whether the physical pages associated with this VMA should be freed when the VMA is freed.
+ * @param vm_file Pointer to the file associated with this VMA, if any.
+ * @param name Name of the VMA for identification purposes.
  */
 typedef struct vm_area_struct
 {

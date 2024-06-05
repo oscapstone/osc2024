@@ -92,12 +92,14 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
 /**
  * @brief Add a virtual memory area to a thread
  *
- * @param t: thread
- * @param va: virtual address
- * @param pa: physical address area
- * @param size: size of the area
- * @param rwx: read/write/execute
- * @param need_to_free: need to free the physical page
+ * @param t Pointer to the thread structure to which the VMA will be added.
+ * @param name Name of the virtual memory area.
+ * @param va Virtual address where the VMA starts.
+ * @param size Size of the VMA in bytes. This will be aligned up to the nearest page size.
+ * @param pa Physical address corresponding to the start of the VMA.
+ * @param vm_page_prot Page protection attributes for the VMA.
+ * @param vm_flags Flags indicating the properties and permissions of the VMA.
+ * @param need_to_free Flag indicating whether the physical page needs to be freed.
  */
 void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free)
 {
