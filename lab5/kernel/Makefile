@@ -7,7 +7,7 @@ OBJCOPY	= aarch64-linux-gnu-objcopy
 # NS_DEBUG: enable debug output 
 
 # nostdlib: No standard library
-CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding \
+CFLAGS	= -Wall -Wextra -Wpedantic -ffreestanding -Wunused-parameter \
 		  -nostdlib -nostartfiles \
 		  -mgeneral-regs-only\
 		  -fno-stack-protector\

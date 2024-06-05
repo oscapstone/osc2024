@@ -6,8 +6,9 @@
 #include "utils/printf.h"
 
 void sys_write(TRAP_FRAME* regs) {
+    //disable_interrupt();
     //NS_DPRINT("[SYSCALL][WRITE] start.\n");
-
+    U64 irq_flags = irq_disable();
     TASK* task = task_get_current_el1();
 
     int fd = (int)regs->regs[0];
@@ -19,16 +20,16 @@ void sys_write(TRAP_FRAME* regs) {
         regs->regs[0] = -1;
         return;
     }
-    FILE_DESCRIPTOR* descriptor = &task->file_table[fd];
+    FS_FILE* file = task->file_table[fd].file;
 
-    if (!descriptor->file) {
+    if (!file) {
         NS_DPRINT("[SYSCALL][CLOSE] file descriptor not open yet. fd: %d\n", fd);
         regs->regs[0] = -1;
         return;
     }
 
-    U64 irq_flags = irq_disable();
-    regs->regs[0] = vfs_write(descriptor->file, buf, count);
-    irq_restore(irq_flags);
+    //NS_DPRINT("[FS] write addr: 0x%p\n", file->vnode);
+    regs->regs[0] = vfs_write(file, buf, count);
     //NS_DPRINT("[SYSCALL][WRITE] end. result: %d\n", regs->regs[0]);
+    irq_restore(irq_flags);
 }

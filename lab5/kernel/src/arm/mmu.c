@@ -113,7 +113,7 @@ pd_t mmu_map_table(pd_t* table, U64 shift, U64 v_addr, BOOL* gen_new_table) {
     index = index & (PD_PTRS_PER_TABLE - 1);
     pd_t* table_virt = (pd_t*)MMU_PHYS_TO_VIRT((U64)table);
 
-    //printf("table phy addr: 0x%x, virt addr: 0x%x%x\n", table, (U64)table_virt >> 32, table_virt);
+    //printf("table phy addr: 0x%x, virt addr: 0x%p\n", table, table_virt);
     if (!table_virt[index]) {        // no entry
         *gen_new_table = TRUE;
         U64 next_level_table = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
@@ -133,7 +133,7 @@ U64 mmu_get_pud(TASK* task, U64 v_addr) {
         task->mm.kernel_pages[task->mm.kernel_pages_count++] = task->cpu_regs.pgd;
     }
     pgd = task->cpu_regs.pgd;
-    //NS_DPRINT("[MMU][TRACE] PGD table. pid = %d, addr: 0x%x%x\n", task->pid, task->cpu_regs.pgd >> 32, task->cpu_regs.pgd);
+    //NS_DPRINT("[MMU][TRACE] PGD table. pid = %d, addr: 0x%p\n", task->pid, task->cpu_regs.pgd);
     BOOL gen_new_table = FALSE;
     U64 pud = mmu_map_table(pgd, PD_PGD_SHIFT, v_addr, &gen_new_table);
     if (gen_new_table) {
@@ -181,7 +181,7 @@ U64 mmu_get_pte(TASK* task, U64 v_addr) {
  *      the allocated page physical address
 */
 USER_PAGE_INFO* mmu_map_page(TASK* task, U64 v_addr, U64 page, U64 flags) {
-    NS_DPRINT("[MMU][DEBUG] mmu map page start, task[%d] v_addr: 0x%08x%08x, page: 0x%08x%08x.\n", task->pid, v_addr >> 32, v_addr, page >> 32, page);
+    NS_DPRINT("[MMU][DEBUG] mmu map page start, task[%d] v_addr: 0x%p, page: 0x%p.\n", task->pid, v_addr, page);
     U64 pte = mmu_get_pte(task, v_addr);
     mmu_map_table_entry((pd_t*)(pte), v_addr, page, flags);
     U8 user_flags = 0;
@@ -256,6 +256,8 @@ void mmu_task_init(TASK* task) {
     mmu_map_table_entry((pd_t*)pte, signal_entry_v_addr, signal_entry_first_page_p_addr, MMU_AP_EL0_UK_ACCESS | MMU_AP_EL0_READ_ONLY | MMU_PXN);
     mmu_map_table_entry((pd_t*)pte, signal_entry_v_addr + PD_PAGE_SIZE, signal_entry_first_page_p_addr + PD_PAGE_SIZE, MMU_AP_EL0_UK_ACCESS | MMU_AP_EL0_READ_ONLY | MMU_PXN);
 
+    NS_DPRINT("[MMU] task mm inited.\n");
+
     return;
 }
 
@@ -305,7 +307,7 @@ void mmu_delete_mm(TASK* task) {
     mmu_delete_user(task);
     // delete table descriptors
     for (U64 i = 0; i < task->mm.kernel_pages_count; i++) {
-        kfree(task->mm.kernel_pages[i]);
+        kfree((void*)MMU_PHYS_TO_VIRT(task->mm.kernel_pages[i]));
     }
     task->mm.kernel_pages_count = 0;
     
@@ -370,12 +372,12 @@ void mmu_memfail_handler(U64 esr) {
 
     NS_DPRINT("[MMU][TRACE] memfail() start.\n");
     NS_DPRINT("pid:     %d\n", task->pid);
-    NS_DPRINT("page:    0x%08x%08x\n", fault_page_addr >> 32, fault_page_addr);
-    NS_DPRINT("far_el1: 0x%08x%08x\n", far_el1 >> 32, far_el1);
-    NS_DPRINT("elr_el1: 0x%08x%08x\n", elr_el1 >> 32, elr_el1);
-    NS_DPRINT("esr_el1: 0x%08x%08x\n", esr >> 32, esr);
-    NS_DPRINT("sp:      0x%08x%08x\n", sp >> 32, sp);
-    NS_DPRINT("sp_el0:  0x%08x%08x\n", sp_el0 >> 32, sp_el0);
+    NS_DPRINT("page:    0x%p\n", fault_page_addr);
+    NS_DPRINT("far_el1: 0x%p\n", far_el1);
+    NS_DPRINT("elr_el1: 0x%p\n", elr_el1);
+    NS_DPRINT("esr_el1: 0x%p\n", esr);
+    NS_DPRINT("sp:      0x%p\n", sp);
+    NS_DPRINT("sp_el0:  0x%p\n", sp_el0);
 
     USER_PAGE_INFO* current_page_info = NULL;
     for (U32 i = 0; i < TASK_MAX_USER_PAGES; i++) {
@@ -444,7 +446,7 @@ void mmu_memfail_handler(U64 esr) {
             mem_dereference(current_page_info->p_addr);     // detach the old page (parent page)
 
             // replace the page to modify the new page
-            NS_DPRINT("[MMU][TRACE] new page addr: 0x%x%x\n", new_page >> 32, new_page);
+            NS_DPRINT("[MMU][TRACE] new page addr: 0x%p\n", new_page);
             mmu_map_page(task, current_page_info->v_addr, MMU_VIRT_TO_PHYS(new_page), page_flags);
         } else {
             printf("[MMU][ERROR] [Permission fault]\n"); 
@@ -455,7 +457,7 @@ void mmu_memfail_handler(U64 esr) {
             printf("[MMU][ERROR] [Unknown fault]\n"); 
         task_exit(-1);
     }
-
+    NS_DPRINT("[MMU][TRACE] memfail() end.\n");
 }
 
 void* mmu_va2pa(UPTR v_addr) {
@@ -469,7 +471,7 @@ void* mmu_va2pa(UPTR v_addr) {
 
     U64 offset = v_addr & 0xfff;
     
-    return (offset | page_p_addr);
+    return (void*)(offset | page_p_addr);
 }
 
 // int mmu_vma_alloc(TASK *task, UPTR v_start, U32 page_count, U32 flags) {

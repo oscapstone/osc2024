@@ -125,6 +125,7 @@ static int read(FS_FILE *file, void *buf, size_t len) {
     }
     memcpy((void*)((char*)vnode->content + file->pos), buf, min);
     file->pos += min;
+    NS_DPRINT("[FS] initramfs: read() read %d bytes\n", min);
     return min;
 }
 

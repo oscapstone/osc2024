@@ -35,5 +35,3 @@ void enable_interrupt();
 void disable_interrupt();
 void irq_restore(U64 flag);
 U64 irq_disable();
-void lock_interrupt();
-void unlock_interrupt();

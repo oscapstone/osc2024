@@ -69,6 +69,7 @@
     .if \el == 0
     ldr     x9, [sp, 16 * 0]
     msr     sp_el0, x9
+    msr     spsr_el1, xzr
     .endif
 
     add     sp, sp, 2 * 16
@@ -84,8 +85,6 @@
     mrs     x3, spsr_el1
     bl      show_invalid_entry_message
     bl      err_hang
-    kernel_exit 1
-    eret
 .endm
 
 .macro  ventry      label

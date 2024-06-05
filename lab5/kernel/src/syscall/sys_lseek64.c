@@ -8,6 +8,7 @@
 
 void sys_lseek64(TRAP_FRAME* regs) {
     
+    U64 irq_flags = irq_disable();
     TASK* task = task_get_current_el1();
 
     int fd = (int)regs->regs[0];
@@ -18,6 +19,7 @@ void sys_lseek64(TRAP_FRAME* regs) {
     if (fd > MAX_FILE_DESCRIPTOR || fd < 0) {
         NS_DPRINT("[SYSCALL][CLOSE] illegal file descriptor id. fd: %d\n", fd);
         regs->regs[0] = -1;
+        irq_restore(irq_flags);
         return;
     }
     FILE_DESCRIPTOR* descriptor = &task->file_table[fd];
@@ -25,10 +27,10 @@ void sys_lseek64(TRAP_FRAME* regs) {
     if (!descriptor->file) {
         NS_DPRINT("[SYSCALL][CLOSE] file descriptor not open yet. fd: %d\n", fd);
         regs->regs[0] = -1;
+        irq_restore(irq_flags);
         return;
     }
 
-    U64 irq_flags = irq_disable();
     regs->regs[0] = descriptor->file->vnode->f_ops->lseek64(descriptor->file, offset, whence);
     //NS_DPRINT("[SYSCALL][LSEEK64] result: %d.\n", regs->regs[0]);
     irq_restore(irq_flags);

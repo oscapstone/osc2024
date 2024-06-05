@@ -25,10 +25,10 @@ void sys_close(TRAP_FRAME* regs) {
         return;
     }
 
-    lock_interrupt();
+    U64 irq_flags = irq_disable();
     vfs_close(descriptor->file);
     descriptor->file = NULL;
-    unlock_interrupt();
+    irq_restore(irq_flags);
 
     // success
     regs->regs[0] = 0;

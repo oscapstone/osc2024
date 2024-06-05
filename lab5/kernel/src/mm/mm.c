@@ -99,7 +99,7 @@ void mm_init() {
         printf("[MEMORY][ERROR] Device tree magic not correct. magic: %x\n", magic);
     }
     mem_memory_reserve((UPTR)_dtb_ptr, (UPTR)_dtb_ptr + totalSize);
-    NS_DPRINT("[MEMORY][TRACE] Device tree reserve. offset: %x, size: %d\n", (U64)_dtb_ptr, totalSize);
+    NS_DPRINT("[MEMORY][TRACE] Device tree reserve. offset: %p, size: %d\n", (U64)_dtb_ptr, totalSize);
 
     fdt_traverse(get_reserve_memory_addr);
 
@@ -735,7 +735,7 @@ void mem_reference(UPTR p_addr) {
     U64 frame_index = mem_addr2idx(p_addr);
 
     if (frame_index >= mem_manager.number_of_frames) {
-        printf("[MEMORY][ERROR] wired address to reference. addr: 0x%08x%08x\n", p_addr >> 32, p_addr);
+        printf("[MEMORY][ERROR] wired address to reference. addr: 0x%p\n", p_addr);
         return;
     }
 
@@ -764,7 +764,7 @@ void mem_dereference(UPTR p_addr) {
     U64 frame_index = mem_addr2idx(p_addr);
 
     if (frame_index >= mem_manager.number_of_frames) {
-        printf("[MEMORY][ERROR] wired address to dereference. addr: 0x%08x%08x\n", p_addr >> 32, p_addr);
+        printf("[MEMORY][ERROR] wired address to dereference. addr: 0x%p\n", p_addr);
         return;
     }
 

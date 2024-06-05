@@ -39,7 +39,9 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
     mount->root->f_ops = &framebufferfs_f_ops;
     mount->root->v_ops = &framebufferfs_v_ops;
     mount->fs = fs;
+    framebuffer_manager.lfb_addr = 0;
 
+    NS_DPRINT("[FS] framebuffer root addr: 0x%p\n", mount->root);
     NS_DPRINT("[FS] framebufferfs mounted\n");
     return 0;
 }
@@ -66,7 +68,8 @@ static int write(FS_FILE *file, const void *buf, size_t len) {
     UPTR write_addr = framebuffer_manager.lfb_addr + file->pos;
 
     memcpy(buf, (void*)(write_addr), len);
-    //NS_DPRINT("[FS] pos: %d, buf addr: 0x%08x%08x\n", file->pos, (UPTR)buf >> 32, buf);
+    //NS_DPRINT("[FS] write addr: 0x%p\n", write_addr);
+    //NS_DPRINT("[FS] pos: %d, buf addr: 0x%p\n", file->pos, buf);
     file->pos += len;
     irq_restore(flags);
 
@@ -81,7 +84,7 @@ static int read(FS_FILE* file, void* buf, size_t len) {
 }
 
 static int open(FS_VNODE *file_node, FS_FILE **target) {
-    
+    (*target)->pos = 0;
     return 0;
 }
 
@@ -124,7 +127,7 @@ static int ioctl(FS_FILE *file, unsigned long request, ...) {
     va_list args;
     va_start(args, request);
     FRAMEBUFFER_INFO* info = (FRAMEBUFFER_INFO*) va_arg(args, FRAMEBUFFER_INFO*);
-    NS_DPRINT("[FS][IOCTL] info addr: 0x%08x%08x\n", (UPTR)info >> 32, info);
+    NS_DPRINT("[FS][IOCTL] info addr: 0x%p, size: %d\n", info, sizeof(FRAMEBUFFER_INFO));
     va_end(args);
 
     // initialize the framebuffer to lab7 require
@@ -180,6 +183,7 @@ static int ioctl(FS_FILE *file, unsigned long request, ...) {
         framebuffer_manager.info.pitch = mailbox[33];
         framebuffer_manager.info.isrgb = mailbox[24];
         framebuffer_manager.lfb_addr = MMU_PHYS_TO_VIRT((UPTR)mailbox[28]);
+        NS_DPRINT("FB addr: 0x%p\n", framebuffer_manager.lfb_addr);
         NS_DPRINT("settings isrgb: %d\n", info->isrgb);
         NS_DPRINT("FB width: %d, height: %d, pitch: %d, isrgb: %d\n", framebuffer_manager.info.width, framebuffer_manager.info.height, framebuffer_manager.info.pitch, framebuffer_manager.info.isrgb);
         file->vnode->content_size = framebuffer_manager.info.width * framebuffer_manager.info.height * 4;

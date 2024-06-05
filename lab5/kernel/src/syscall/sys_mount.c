@@ -11,13 +11,13 @@ void sys_mount(TRAP_FRAME* regs) {
     
     TASK* current_task = task_get_current_el1();
 
-    const char* src = (const char*)regs->regs[0];
+    //const char* src = (const char*)regs->regs[0];
     const char* target = (const char*) regs->regs[1];
     const char* filesystem = (const char*)regs->regs[2];
-    unsigned long flags = (unsigned long) regs->regs[3];
-    const void* data = (const void*)regs->regs[4];
+    //unsigned long flags = (unsigned long) regs->regs[3];
+    //const void* data = (const void*)regs->regs[4];
 
-    NS_DPRINT("file system addr: %08x%08x\n", (U64)filesystem >> 32, filesystem);
+    NS_DPRINT("file system addr: 0x%p\n", filesystem);
 
     FS_FILE_SYSTEM* fs = fs_get(filesystem);
 

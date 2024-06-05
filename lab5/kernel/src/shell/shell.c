@@ -12,6 +12,7 @@
 #include "lib/fork.h"
 #include "fs/fs.h"
 #include "peripherals/timer.h"
+#include "peripherals/irq.h"
 
 extern char* _dtb_ptr;
 
@@ -75,6 +76,7 @@ void shell() {
         
         while (TRUE) {
 			while (uart_async_empty()) {
+            	enable_interrupt();             // make sure it can be interrupt
 				asm volatile("nop");
 			}
             char c = uart_async_get_char();
@@ -191,6 +193,7 @@ void shell() {
 			TASK* user_task = task_create_user("", TASK_FLAGS_NONE);
 			if (task_run_program(NULL/* change this to shell cwd*/, user_task, fileName) == -1) {
 				printf("Failed to execute program: %s\n", fileName);
+				task_delete(user_task);
 				continue;
 			}
 			task_run_to_el0(user_task);
@@ -279,6 +282,17 @@ void shell() {
 			char buf = 'a';
 			vfs_write(uart_file, &buf, 1);
 			vfs_close(uart_file);
+		} else if (utils_strncmp(cmd_space, "taskinfo ", 9) == 0) {
+			pid_t pid = utils_str2uint_dec(&cmd_space[9]);
+			TASK* task = task_get(pid);
+			if (!task) {
+				printf("task not found!\n");
+				continue;
+			}
+			printf("   pid:  %d\n", task->pid);
+			printf("    lr:  0x%p\n", task->cpu_regs.lr);
+			printf("    sp:  0x%p\n", task->cpu_regs.sp);
+			printf("   pgd:  0x%p\n", task->cpu_regs.pgd);
 		}
 		 else {
 			uart_send_string("Unknown command\n");
