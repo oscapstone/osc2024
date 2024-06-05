@@ -5,6 +5,8 @@
 #include "sched.hpp"
 #include "thread.hpp"
 
+#define MMU_DEBUG 0
+
 void PT_Entry::print(int level) const {
   kprintf("0x%08lx Attr%d %s %s", (uint64_t)addr(), AttrIdx, PT_levelstr(level),
           kindstr());
@@ -313,7 +315,9 @@ int fault_handler(int el) {
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L1:
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L2:
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L3:
+#if MMU_DEBUG > 0
       klog("t%d [Translation fault]: %016lx\n", tid, (uint64_t)faddr);
+#endif
       if (!vma)
         return -1;
       entry = current_vmm()->ttbr0->get_entry(fpage, true);
@@ -326,7 +330,9 @@ int fault_handler(int el) {
         current_vmm()->user_ro_pages.push_back(fpage);
       } else if (vma and has(vma->prot, ProtFlags::WRITE)) {
         // copy on write fault
+#if MMU_DEBUG > 0
         klog("t%d [CoW fault]: %016lx\n", tid, (uint64_t)faddr);
+#endif
         entry->copy_on_write();
       } else {
         return -1;

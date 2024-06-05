@@ -85,7 +85,7 @@ struct Info {
     kprintf("\n");
 #if MM_LOG_LEVEL >= 3
     kprintf("  free chk (%d): ", list.size());
-    for (auto& chk : list)
+    for (auto chk : list)
       kprintf("%p -> ", &chk);
     kprintf("\n");
 #else
@@ -114,8 +114,8 @@ void* heap_malloc(uint64_t req_size) {
     return nullptr;
 
   save_DAIF_disable_interrupt();
-  // MM_DEBUG("alloc 0x%lx -> 0x%x\n", req_size, chunk_size[idx]);
   auto ptr = info[idx].alloc();
+  MM_DEBUG("alloc 0x%lx -> %p\n", req_size, ptr);
   restore_DAIF();
 
   return ptr;
@@ -124,6 +124,7 @@ void* heap_malloc(uint64_t req_size) {
 void heap_free(void* ptr) {
   save_DAIF_disable_interrupt();
 
+  MM_DEBUG("free %p\n", ptr);
   auto hdr = (PageHeader*)getPage(ptr);
   info[hdr->idx].free(ptr);
 
