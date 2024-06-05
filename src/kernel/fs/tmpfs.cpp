@@ -49,7 +49,6 @@ int File::write(const void* buf, size_t len) {
   if (content.size() < f_pos + len)
     content.resize(f_pos + len);
   memcpy(content.data(), buf, len);
-  content += len;
   f_pos += len;
   return len;
 }
@@ -57,7 +56,8 @@ int File::write(const void* buf, size_t len) {
 int File::read(void* buf, size_t len) {
   auto& content = get()->content;
   int r = content.size() - f_pos;
-  memcpy(buf, content.data(), len);
+  memcpy(buf, content.data(), r);
+  f_pos += r;
   return r;
 }
 

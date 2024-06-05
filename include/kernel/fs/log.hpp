@@ -1,6 +1,6 @@
 #pragma once
 
-#define FS_LOG_LEVEL 1
+#define FS_LOG_LEVEL 0
 
 #if FS_LOG_LEVEL >= 1
 #define FS_INFO_PRINT(fmt, ...) klog(fmt __VA_OPT__(, ) __VA_ARGS__)

@@ -71,6 +71,8 @@ Vnode::~Vnode() {
 }
 
 int Vnode::lookup(const char* component_name, Vnode*& vnode) {
+  if (not isDir())
+    return -1;
   for (auto& n : _childs) {
     if (n == component_name) {
       vnode = n.node;
@@ -78,6 +80,19 @@ int Vnode::lookup(const char* component_name, Vnode*& vnode) {
     }
   }
   vnode = nullptr;
+  return -1;
+}
+
+int Vnode::mount(const char* component_name, Vnode* new_vnode) {
+  if (not isDir())
+    return -1;
+  for (auto& n : _childs) {
+    if (n == component_name) {
+      new_vnode->_prev = n.node;
+      n.node = new_vnode;
+      return 0;
+    }
+  }
   return -1;
 }
 
@@ -130,7 +145,7 @@ Vnode* FileSystem::mount(const char* /*name*/) {
 void init_vfs() {
   register_filesystem(tmpfs::init());
 
-  vfs_mount("", "tmpfs");
+  root_node = get_filesystem("tmpfs")->mount("");
 }
 
 FileSystem* filesystems = nullptr;
@@ -138,7 +153,7 @@ FileSystem* filesystems = nullptr;
 FileSystem** find_filesystem(const char* name) {
   auto p = &filesystems;
   for (; *p; p = &(*p)->next)
-    if ((*p)->name == name)
+    if (strcmp((*p)->name, name) == 0)
       break;
   return p;
 }
@@ -146,7 +161,7 @@ FileSystem** find_filesystem(const char* name) {
 FileSystem* get_filesystem(const char* name) {
   auto p = filesystems;
   for (; p; p = p->next)
-    if (p->name == name)
+    if (strcmp(p->name, name) == 0)
       break;
   return p;
 }
@@ -175,7 +190,7 @@ SYSCALL_DEFINE2(open, const char*, pathname, fcntl, flags) {
     file->close();
 
 end:
-  FS_INFO("open(%s, 0o%o) -> %d\n", pathname, flags, r);
+  FS_INFO("open('%s', 0o%o) -> %d\n", pathname, flags, r);
   return 0;
 }
 
@@ -270,33 +285,55 @@ int vfs_read(File* file, void* buf, size_t len) {
   return file->read(buf, len);
 }
 
+SYSCALL_DEFINE2(mkdir, const char*, pathname, unsigned, mode) {
+  int r = vfs_mkdir(pathname);
+  FS_INFO("mkdir('%s', 0o%o) = %d\n", pathname, mode, r);
+  return r;
+}
+
 int vfs_mkdir(const char* pathname) {
-  return -1;
+  Vnode *dir{}, *vnode{};
+  char* basename{};
+  int r = 0;
+  if ((r = vfs_lookup(pathname, dir, basename)) < 0)
+    goto end;
+  if (dir->lookup(basename, vnode) >= 0) {
+    r = -1;
+    goto end;
+  }
+  r = dir->mkdir(basename, vnode);
+end:
+  return r;
+}
+
+SYSCALL_DEFINE5(mount, const char*, src, const char*, target, const char*,
+                filesystem, unsigned long, flags, const void*, data) {
+  int r = vfs_mount(target, filesystem);
+  FS_INFO("mount('%s', '%s') = %d\n", target, filesystem, r);
+  return r;
 }
 
 int vfs_mount(const char* target, const char* filesystem) {
-  auto p_fs = find_filesystem(filesystem);
-  if (not p_fs)
-    return -1;
-  auto fs = *p_fs;
-
-  Vnode** p_mnt = nullptr;
-
-  if (strcmp(target, "") == 0)
-    p_mnt = &root_node;
-
-  if (not p_mnt)
+  auto fs = get_filesystem(filesystem);
+  if (not fs)
     return -1;
 
-  auto r = fs->mount(target);
-  if (not r)
+  Vnode* dir;
+  char* basename;
+  if (int r = vfs_lookup(target, dir, basename); r < 0)
+    return r;
+
+  auto new_vnode = fs->mount(basename);
+  if (not new_vnode)
     return -1;
-  *p_mnt = r;
+
+  if (int r = dir->mount(basename, new_vnode); r < 0)
+    return r;
+
   return 0;
 }
 
 int vfs_lookup(const char* pathname, Vnode*& target) {
-  FS_INFO("lookup %s\n", pathname);
   auto vnode_itr = root_node;
   for (auto component_name : Path(pathname)) {
     Vnode* next_vnode;
@@ -310,10 +347,8 @@ int vfs_lookup(const char* pathname, Vnode*& target) {
 }
 
 int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
-  FS_INFO("lookup %s\n", pathname);
   const char* basename_ptr = "";
   auto vnode_itr = root_node;
-  auto prev_iter = vnode_itr;
   auto path = Path(pathname);
   auto it = path.begin();
   if (strcmp(*it, "") == 0) {
@@ -329,10 +364,9 @@ int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
     auto ret = vnode_itr->lookup(component_name, next_vnode);
     if (ret)
       return ret;
-    prev_iter = vnode_itr;
     vnode_itr = next_vnode;
   }
-  target = prev_iter;
+  target = vnode_itr;
   basename = strdup(basename_ptr);
   return 0;
 }

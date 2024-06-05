@@ -41,7 +41,7 @@ class Vnode {
  private:
   // TODO: ref cnt
   // TODO: hard link
-  Vnode* _parent = nullptr;
+  Vnode *_parent = nullptr, *_prev = nullptr;
   list<child> _childs{};
   char* _name;
 
@@ -74,6 +74,7 @@ class Vnode {
 
   virtual ~Vnode();
   int lookup(const char* component_name, Vnode*& vnode);
+  int mount(const char* component_name, Vnode* new_vnode);
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
   virtual int open(File*& file, fcntl flags);
