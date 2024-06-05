@@ -4,6 +4,7 @@
 #include "shell.h"
 #include "tmpfs.h"
 #include "initramfs.h"
+#include "dev_uart.h"
 
 //need ** so that can return handle and status
 
@@ -180,6 +181,11 @@ void init_rootfs(){
     reg_initramfs();
     vfs_mkdir("/initramfs");
     vfs_mount("/initramfs", "initramfs");
+
+    reg_uart_dev();
+    vfs_mkdir("/dev");
+    vfs_mkdir("/dev/uart");
+    vfs_mount("/dev/uart", "uart");
 
     current_dir = rootfs -> root; //no_use
     please_nobug();

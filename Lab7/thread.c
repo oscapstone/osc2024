@@ -83,6 +83,9 @@ int create_thread(void * function, int priority){
     strcpy("/", t -> work_dir);
     update_min_priority();
     thread_pool[pid] = t; 
+    vfs_open("/dev/uart", 0, &t->file_table[0]); // stdin
+    vfs_open("/dev/uart", 0, &t->file_table[1]); // stdout
+    vfs_open("/dev/uart", 0, &t->file_table[2]); 
     return pid;
 }
 
