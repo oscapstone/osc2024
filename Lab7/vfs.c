@@ -188,7 +188,6 @@ void init_rootfs(){
     vfs_mount("/dev/uart", "uart");
 
     current_dir = rootfs -> root; //no_use
-    please_nobug();
 }
 
 void pwd(){ 
@@ -224,18 +223,6 @@ int vfs_ls(char * dir_name){
     return 0;
 }
 
-
-void please_nobug(){
-    vfs_ls("/");
-    vfs_ls("/initramfs");
-    // struct file * test;
-    // vfs_open("/initramfs/file1", 0, &test);
-    // char buf[100];
-    // memset(buf, 100);
-    // vfs_read(test, buf, 100);
-    // uart_puts(buf);
-    // newline();
-}
 
 #include "thread.h"
 extern thread * get_current();
