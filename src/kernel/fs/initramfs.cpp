@@ -52,13 +52,7 @@ int Vnode::open(const char* component_name, ::File*& file, fcntl flags) {
 }
 
 int File::read(void* buf, size_t len) {
-  auto content = get()->_content;
-  size_t r = get()->size() - f_pos;
-  if (r > len)
-    r = len;
-  memcpy(buf, content + f_pos, r);
-  f_pos += r;
-  return r;
+  return ::File::read(get()->_content, buf, len);
 }
 
 FileSystem::FileSystem() : ::FileSystem{"initramfs"} {

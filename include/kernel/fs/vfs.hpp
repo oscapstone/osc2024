@@ -91,6 +91,9 @@ class File {
   const char* name() const {
     return _name;
   }
+  size_t size() const {
+    return vnode->size();
+  }
   fcntl accessmode() const {
     return flags & O_ACCMODE;
   }
@@ -106,6 +109,7 @@ class File {
   virtual ~File() = default;
 
   virtual int write(const void* buf, size_t len);
+  int read(const void* data, void* buf, size_t len);
   virtual int read(void* buf, size_t len);
   virtual long lseek64(long offset, seek_type whence);
   int close();
