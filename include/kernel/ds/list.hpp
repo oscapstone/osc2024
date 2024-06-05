@@ -132,9 +132,9 @@ class list {
   struct Item : ListItem<Item> {
     T value;
     Item(T value) : ListItem<Item>{}, value(value) {}
-    Item(const Item& o) : ListItem<Item>{}, value(value) {}
+    Item(const Item& o) : ListItem<Item>{}, value(o.value) {}
   };
-  using listtype = ListHead<Item*, [](Item* it) { return it->value; }>;
+  using listtype = ListHead<Item*, [](Item* it) -> T& { return it->value; }>;
   listtype data;
 
  public:

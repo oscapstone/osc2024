@@ -42,12 +42,21 @@ class Iterator {
   {
     return p_;
   }
-  auto operator*() const
+  // XXX: ???
+  template <typename R = std::invoke_result_t<
+                std::conditional_t<std::is_invocable_v<decltype(get), T*>,
+                                   decltype(get), void(T*)>,
+                T*>>
+  R operator*() const
     requires(std::invocable<decltype(get), T*>)
   {
     return get(p_);
   }
-  auto operator->() const
+  template <typename R = std::invoke_result_t<
+                std::conditional_t<std::is_invocable_v<decltype(get), T*>,
+                                   decltype(get), void(T*)>,
+                T*>>
+  R operator->() const
     requires(std::invocable<decltype(get), T*>)
   {
     return get(p_);
