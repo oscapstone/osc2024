@@ -65,6 +65,7 @@ static int read(FS_FILE* file, void* buf, size_t len) {
 
     for (size_t i = 0; i < len; i++) {
         while(uart_async_empty()) {
+            enable_interrupt();             // make sure it can be interrupt
             asm volatile("nop");
         }
         ((char*)buf)[i] = uart_async_get_char();

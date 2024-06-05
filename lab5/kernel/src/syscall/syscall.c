@@ -43,7 +43,8 @@ void syscall_handler(TRAP_FRAME* trap_frame) {
         return;
     }
 
-    enable_interrupt();
+    if (syscall_index != SYS_WRITE)
+        enable_interrupt();
 
     (syscall_table[syscall_index])(trap_frame);
 }

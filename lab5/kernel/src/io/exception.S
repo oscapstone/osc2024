@@ -85,8 +85,6 @@
     mrs     x3, spsr_el1
     bl      show_invalid_entry_message
     bl      err_hang
-    kernel_exit 1
-    eret
 .endm
 
 .macro  ventry      label

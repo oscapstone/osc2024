@@ -8,6 +8,7 @@ void sys_uartread(TRAP_FRAME *regs) {
     U64 size = (U64)regs->regs[1];
     for (U64 i = 0; i < size; i++) {
         while (uart_async_empty()) {
+            enable_interrupt();             // make sure it can be interrupt
             asm volatile("nop");
             //task_schedule();            // just schedule this task
         }

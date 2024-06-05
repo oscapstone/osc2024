@@ -99,7 +99,7 @@ void mm_init() {
         printf("[MEMORY][ERROR] Device tree magic not correct. magic: %x\n", magic);
     }
     mem_memory_reserve((UPTR)_dtb_ptr, (UPTR)_dtb_ptr + totalSize);
-    NS_DPRINT("[MEMORY][TRACE] Device tree reserve. offset: %x, size: %d\n", (U64)_dtb_ptr, totalSize);
+    NS_DPRINT("[MEMORY][TRACE] Device tree reserve. offset: %p, size: %d\n", (U64)_dtb_ptr, totalSize);
 
     fdt_traverse(get_reserve_memory_addr);
 

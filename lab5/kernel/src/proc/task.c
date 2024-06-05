@@ -100,6 +100,7 @@ TASK* task_get(int pid) {
 }
 
 void task_switch_to(TASK* current, TASK* next) {
+    enable_interrupt();
     task_asm_switch_to(current, next);
 }
 
@@ -246,6 +247,7 @@ int task_kill(pid_t pid, int exitcode) {
 void task_delete(TASK* task) {
     
     // clean up the file that had been allocated.
+    U64 irq_flags = irq_disable();
     for (U32 i = 0; i < MAX_FILE_DESCRIPTOR; i++) {
         FILE_DESCRIPTOR* descriptor = &task->file_table[i];
         if (descriptor->file) {
@@ -257,7 +259,6 @@ void task_delete(TASK* task) {
         vfs_close(task->program_file);
         task->program_file = NULL;
     }
-    U64 irq_flags = irq_disable();
     mmu_delete_mm(task);            // free page table
     if (task->kernel_stack) {
         kfree(task->kernel_stack);

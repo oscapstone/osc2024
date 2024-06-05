@@ -130,7 +130,7 @@ static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_n
 }
 
 static int create(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
-    if (!lookup(dir_node, target, component_name)) {
+    if (lookup(dir_node, target, component_name) == 0) {
         printf("[FS] rootfs: create(): file is already exist. name: %d\n", component_name);
         return -1;
     }

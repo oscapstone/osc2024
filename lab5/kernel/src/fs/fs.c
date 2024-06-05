@@ -56,7 +56,7 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
                 continue;
             }
             tmp_name[name_offset] = 0;      // end pointer
-            FS_VNODE* next_node;
+            FS_VNODE* next_node = NULL;
             int result = current_dir->v_ops->lookup(current_dir, &next_node, tmp_name);
             if (result != 0) {
                 NS_DPRINT("[FS] fs_find_node(): file name not found. name: %s, path: %s\n", tmp_name, pathname);
@@ -89,7 +89,7 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
     tmp_name[name_offset] = 0;      // end pointer
     memcpy(tmp_name, node_name, name_offset + 1);
 
-    FS_VNODE* final_node;
+    FS_VNODE* final_node = NULL;
     int result = current_dir->v_ops->lookup(current_dir, &final_node, tmp_name);
 
     *parent = current_dir;

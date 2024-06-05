@@ -75,8 +75,8 @@ void shell() {
         printf("# ");
         
         while (TRUE) {
-			enable_interrupt();
 			while (uart_async_empty()) {
+            	enable_interrupt();             // make sure it can be interrupt
 				asm volatile("nop");
 			}
             char c = uart_async_get_char();

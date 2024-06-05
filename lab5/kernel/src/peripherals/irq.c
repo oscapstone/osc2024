@@ -9,32 +9,6 @@
 #include "arm/arm.h"
 #include "proc/signal.h"
 
-const char entry_error_messages[16][32] = {
-	"SYNC_INVALID_EL1t",
-	"IRQ_INVALID_EL1t",		
-	"FIQ_INVALID_EL1t",		
-	"ERROR_INVALID_EL1T",		
-
-	"SYNC_INVALID_EL1h",
-	"IRQ_INVALID_EL1h",		
-	"FIQ_INVALID_EL1h",		
-	"ERROR_INVALID_EL1h",		
-
-	"SYNC_INVALID_EL0_64",		
-	"IRQ_INVALID_EL0_64",		
-	"FIQ_INVALID_EL0_64",		
-	"ERROR_INVALID_EL0_64",	
-
-	"SYNC_INVALID_EL0_32",		
-	"IRQ_INVALID_EL0_32",		
-	"FIQ_INVALID_EL0_32",		
-	"ERROR_INVALID_EL0_32"	
-};
-
-void show_invalid_entry_message(U32 type, U64 esr, U64 address, U64 spsr) {
-    printf("ERROR exception: %s - %d, ESR: %X, Address: %X SPSR: %x\n", entry_error_messages[type], type, esr, address, spsr);
-}
-
 void enable_interrupt_controller() {
     // enable the interrupt
     // AUX: Mini uart interrupt
@@ -50,6 +24,12 @@ void handle_irq(TRAP_FRAME* trap_frame) {
 
     // has AUX interrupt and uart pending
     BOOL uart = (REGS_AUX->mu_iir & 0x1) == 0; // pg. 13 interrupt pending bit
+    
+    // core 0 timer interrupt
+    if (core_0_irq & 0x2) {
+        timer_core_timer_0_handler();
+    }
+    
     if ((irq & AUX_IRQ) && uart) {
         irq &= ~AUX_IRQ;
 
@@ -68,10 +48,6 @@ void handle_irq(TRAP_FRAME* trap_frame) {
         timer_sys_timer_3_handler();
     }
 
-    // core 0 timer interrupt
-    if (core_0_irq & 0x2) {
-        timer_core_timer_0_handler();
-    }
     if ((trap_frame->pstate & 0xc) == 0) {
         signal_check(trap_frame);
     }

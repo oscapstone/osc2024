@@ -19,7 +19,7 @@ void sys_exec(TRAP_FRAME* regs) {
 
     TASK* current_task = task_get_current_el1();
 
-    FS_VNODE* target_vnode;
+    FS_VNODE* target_vnode = NULL;
     if (vfs_lookup(current_task->pwd, tmp_name, &target_vnode)) {
         NS_DPRINT("[SYSCALL][EXEC] Failed to open file: %s\n", tmp_name);
         //NS_DPRINT("[SYSCALL][EXEC] parent directory: %s\n", current_task->pwd->name);
@@ -32,11 +32,18 @@ void sys_exec(TRAP_FRAME* regs) {
     asm volatile("dsb ish\n\t");
     // clean all user program page
     mmu_delete_mm(current_task);
-    asm("tlbi vmalle1is\n\t" // invalidate all TLB entries
-        "dsb ish\n\t"        // ensure completion of TLB invalidatation
-        "isb\n\t");          // clear pipeline
     // init the stack
     mmu_task_init(current_task);
+    asm volatile(
+        "msr ttbr0_el1, %0\n\t" // put the new pgd addr
+        "tlbi vmalle1is\n\t" // invalidate all TLB entries
+        "dsb ish\n\t"        // ensure completion of TLB invalidatation
+        "isb\n\t"            // clear pipeline
+        :
+        :
+        "r"(task_get_current_el1()->cpu_regs.pgd)
+        );
+    
 
     signal_task_init(current_task);
 
