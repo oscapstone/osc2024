@@ -2,6 +2,7 @@
 
 #include "ds/list.hpp"
 #include "ds/mem.hpp"
+#include "fs/files.hpp"
 #include "mm/mm.hpp"
 #include "mm/vmm.hpp"
 #include "sched.hpp"
@@ -28,6 +29,7 @@ struct Kthread : ListItem<Kthread> {
   Mem kernel_stack;
   Signal signal;
   VMM vmm;
+  Files files;
 
  private:
   Kthread();

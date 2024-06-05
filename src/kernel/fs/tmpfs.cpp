@@ -1,6 +1,7 @@
 #include "fs/tmpfs.hpp"
 
 #include "ds/list.hpp"
+#include "io.hpp"
 
 namespace tmpfs {
 
@@ -45,8 +46,10 @@ bool File::can_seek() const {
 
 int File::write(const void* buf, size_t len) {
   auto& content = get()->content;
-  content.reserve(f_pos + len);
+  if (content.size() < f_pos + len)
+    content.resize(f_pos + len);
   memcpy(content.data(), buf, len);
+  content += len;
   f_pos += len;
   return len;
 }

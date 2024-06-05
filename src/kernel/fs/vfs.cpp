@@ -1,9 +1,11 @@
 #include "fs/vfs.hpp"
 
+#include "fs/files.hpp"
 #include "fs/path.hpp"
 #include "fs/tmpfs.hpp"
 #include "io.hpp"
 #include "string.hpp"
+#include "syscall.hpp"
 
 Vnode* root_node = nullptr;
 
@@ -153,37 +155,116 @@ int register_filesystem(FileSystem* fs) {
   auto p = find_filesystem(fs->name);
   if (not p)
     return -1;
+  klog("[vfs] register fs '%s'\n", fs->name);
   *p = fs;
 
   return 0;
 }
 
-int vfs_open(const char* pathname, int flags, File*& target) {
+SYSCALL_DEFINE2(open, const char*, pathname, fcntl, flags) {
+  int r;
+  File* file{};
+  if ((r = vfs_open(pathname, flags, file)) < 0)
+    goto end;
+
+  r = current_files()->alloc_fd(file);
+  if (r < 0)
+    file->close();
+
+end:
+  klog("[vfs] open(%s, 0o%o) -> %d\n", pathname, flags, r);
+  return 0;
+}
+
+int vfs_open(const char* pathname, fcntl flags, File*& target) {
   // 1. Lookup pathname
   // 2. Create a new file handle for this vnode if found.
   // 3. Create a new file if O_CREAT is specified in flags and vnode not found
   // lookup error code shows if file exist or not or other error occurs
   // 4. Return error code if fails
-  return -1;
+  Vnode *dir{}, *vnode{};
+  char* basename{};
+  int r = 0;
+  if ((r = vfs_lookup(pathname, dir, basename)) < 0) {
+    if (not has(flags, O_CREAT)) {
+      r = dir->lookup(basename, vnode);
+    } else {
+      r = dir->create(basename, vnode);
+      flags = O_RDWR;
+    }
+    if (r < 0)
+      goto cleanup;
+    // XXX: ????
+  }
+  if ((r = vnode->open(target, flags)) < 0)
+    goto cleanup;
+cleanup:
+  kfree(basename);
+  return r;
 }
 
-int vfs_close(File*& file) {
+SYSCALL_DEFINE1(close, int, fd) {
+  auto file = fd_to_file(fd);
+  int r;
+  if (not file) {
+    r = -1;
+    goto end;
+  }
+  if ((r = vfs_close(file)) < 0)
+    goto end;
+  current_files()->close(fd);
+end:
+  klog("[vfs] close(%d) = %d\n", fd, r);
+  return 0;
+}
+
+int vfs_close(File* file) {
   // 1. release the file handle
   // 2. Return error code if fails
-  return -1;
+  return file->close();
+}
+
+SYSCALL_DEFINE3(write, int, fd, const void*, buf, unsigned long, count) {
+  auto file = fd_to_file(fd);
+  int r;
+  if (not file) {
+    r = -1;
+    goto end;
+  }
+  r = vfs_write(file, buf, count);
+end:
+  klog("[vfs] write(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  return r;
 }
 
 int vfs_write(File* file, const void* buf, size_t len) {
   // 1. write len byte from buf to the opened file.
   // 2. return written size or error code if an error occurs.
-  return -1;
+  if (not file->canWrite())
+    return -1;
+  return file->write(buf, len);
+}
+
+SYSCALL_DEFINE3(read, int, fd, void*, buf, unsigned long, count) {
+  auto file = fd_to_file(fd);
+  int r = -1;
+  if (not file) {
+    r = -1;
+    goto end;
+  }
+  r = vfs_read(file, buf, count);
+end:
+  klog("[vfs] read(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  return r;
 }
 
 int vfs_read(File* file, void* buf, size_t len) {
   // 1. read min(len, readable size) byte to buf from the opened file.
   // 2. block if nothing to read for FIFO type
   // 2. return read size or error code if an error occurs.
-  return -1;
+  if (not file->canRead())
+    return -1;
+  return file->read(buf, len);
 }
 
 int vfs_mkdir(const char* pathname) {
@@ -212,6 +293,7 @@ int vfs_mount(const char* target, const char* filesystem) {
 }
 
 int vfs_lookup(const char* pathname, Vnode*& target) {
+  klog("[vfs] lookup %s\n", pathname);
   auto vnode_itr = root_node;
   for (auto component_name : Path(pathname)) {
     Vnode* next_vnode;
@@ -221,5 +303,33 @@ int vfs_lookup(const char* pathname, Vnode*& target) {
     vnode_itr = next_vnode;
   }
   target = vnode_itr;
+  return 0;
+}
+
+int vfs_lookup(const char* pathname, Vnode*& target, char*& basename) {
+  klog("[vfs] lookup %s\n", pathname);
+  const char* basename_ptr = "";
+  auto vnode_itr = root_node;
+  auto prev_iter = vnode_itr;
+  auto path = Path(pathname);
+  auto it = path.begin();
+  if (strcmp(*it, "") == 0) {
+    it++;
+  }
+  while (it != path.end()) {
+    auto component_name = *it;
+    if (++it == path.end()) {
+      basename_ptr = component_name;
+      break;
+    }
+    Vnode* next_vnode;
+    auto ret = vnode_itr->lookup(component_name, next_vnode);
+    if (ret)
+      return ret;
+    prev_iter = vnode_itr;
+    vnode_itr = next_vnode;
+  }
+  target = prev_iter;
+  basename = strdup(basename_ptr);
   return 0;
 }

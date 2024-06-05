@@ -82,6 +82,10 @@ class string {
       cap_ = nstr + new_cap;
     }
   }
+  void resize(size_t new_cap) {
+    reserve(new_cap);
+    end_ = beg_ + new_cap;
+  }
 
   char* data() const {
     return beg_;
