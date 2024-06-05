@@ -3,6 +3,7 @@
 #include "board/mini-uart.hpp"
 #include "fdt.hpp"
 #include "fs/initramfs.hpp"
+#include "fs/vfs.hpp"
 #include "int/exception.hpp"
 #include "int/interrupt.hpp"
 #include "int/irq.hpp"
@@ -60,6 +61,8 @@ void kernel_main(void* dtb_addr) {
   enable_interrupt();
 
   mini_uart_use_async(true);
+
+  init_vfs();
 
   kthread_create(shell);
 
