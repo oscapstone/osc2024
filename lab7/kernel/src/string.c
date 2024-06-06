@@ -125,13 +125,6 @@ unsigned long long strlen(const char *str)
     return count;
 }
 
-char* strcat (char *dest, const char *src)
-{
-  strcpy (dest + strlen (dest), src);
-  return dest;
-}
-
-
 int strcmp(const char* p1, const char* p2)
 {
     const unsigned char *s1 = (const unsigned char*) p1;
@@ -199,6 +192,14 @@ char* strcpy (char *dest, const char *src)
     return memcpy (dest, src, strlen (src) + 1);
 }
 
+char* strcat (char *dest, const char *src)
+{
+  strcpy (dest + strlen (dest), src);
+  return dest;
+}
+
+
+
 void *memset(void *s, int c, size_t n)
 {
   char *start = s;
@@ -221,25 +222,49 @@ char* strchr (register const char *s, int c)
   return (0);
 }
 
-char* str_SepbySpace(char* head)
+int str_SepbySomething(char* head, char* words[], char sep)
 {
-    char* end;
-    while(1){
-        if(*head == '\0')
+    int count = 0;
+    char *cur = head;
+
+    while (1)
+    {
+        if (*cur == sep)
         {
-            end = head;
+            *cur = '\0';
+            words[count++] = head;
+            head = cur + 1;
+        }
+        else if (*cur == '\0')
+        {
+            words[count++] = head;
             break;
         }
-        if(*head == ' ')
-        {
-            *head = '\0';
-            end = head + 1;
-            break;
-        }
-        head++;
+        cur++;
     }
-    return end;
+    return count;
 }
+// {
+//     int count = 0;
+//     char *cur = head;
+
+//     while (1)
+//     {
+//         if (*cur == ' ')
+//         {
+//             *cur = '\0';
+//             words[count++] = head;
+//             head = cur + 1;
+//         }
+//         else if (*cur == '\0')
+//         {
+//             words[count++] = head;
+//             break;
+//         }
+//         cur++;
+//     }
+//     return count;
+// }
 
 // A simple atoi() function
 int atoi(char* str)

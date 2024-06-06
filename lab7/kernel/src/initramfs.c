@@ -4,53 +4,135 @@
 #include "memory.h"
 #include "cpio.h"
 #include "uart1.h"
+#include "colourful.h"
 
-struct file_operations initramfs_file_operations = {initramfs_write, initramfs_read, initramfs_open, initramfs_close, initramfs_lseek64,initramfs_getsize};
-struct vnode_operations initramfs_vnode_operations = {initramfs_lookup, initramfs_create, initramfs_mkdir};
+
+struct file_operations initramfs_file_operations = {
+    initramfs_write, 
+    initramfs_read, 
+    initramfs_open, 
+    initramfs_close, 
+    initramfs_lseek64,
+    initramfs_getsize
+};
+struct vnode_operations initramfs_vnode_operations = {
+    initramfs_lookup, 
+    initramfs_create, 
+    initramfs_mkdir,
+    initramfs_list,
+    initramfs_gettype
+};
 
 int register_initramfs()
 {
     struct filesystem fs;
-    fs.name = "initramfs";
+    char temp[] = "initramfs";
+    char *name = kmalloc(20);
+    strcpy(name, temp);
+
+    fs.name = name;
     fs.setup_mount = initramfs_setup_mount;
     return register_filesystem(&fs);
+}
+
+int initramfs_insert_the_new_entry(struct vnode *dirvnode, struct vnode *newvnode)
+{
+    struct initramfs_inode *dirinode = dirvnode->internal;
+    int child_idx = 0;
+    for (; child_idx <= INITRAMFS_MAX_DIR_ENTRY; child_idx++)
+    {
+        if (!dirinode->entry[child_idx]) break;
+    }
+    if (child_idx == INITRAMFS_MAX_DIR_ENTRY) return -1;
+    dirinode->entry[child_idx] = newvnode;
+    return 0;
 }
 
 int initramfs_setup_mount(struct filesystem *fs, struct mount *_mount)
 {
     _mount->fs = fs;
     _mount->root = initramfs_create_vnode(0, dir_t);
+    
     // create entry under _mount, cpio files should be attached on it
-    struct initramfs_inode *ramdir_inode = _mount->root->internal;
+    // struct initramfs_inode *ramdir_inode = _mount->root->internal;
 
     // add all file in initramfs to filesystem
-    char *filepath;
-    char *filedata;
-    unsigned int filesize;
+    int num_cpio = 10;
+    int idx_cpio = 0;
+    char *filepath[num_cpio];
+    char *filedata[num_cpio];
+    unsigned int filesize[num_cpio];
     struct cpio_newc_header *header_pointer = CPIO_DEFAULT_START;
-    int idx = 0;
+
 
     while (header_pointer != 0)
     {
-        int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
+        int error = cpio_newc_parse_header(header_pointer, &filepath[idx_cpio], &filesize[idx_cpio], &filedata[idx_cpio], &header_pointer);
         //if parse header error
         if (error)
         {
-            uart_sendline("%s", "error\r\n");
+            uart_puts("%s", "error\r\n");
             break;
         }
 
         //if this is not TRAILER!!! (last of file)
         if (header_pointer != 0)
         {
-            // only support file (no dir)
-            struct vnode * filevnode = initramfs_create_vnode(0, file_t);
-            struct initramfs_inode *fileinode = filevnode->internal;
-            fileinode->data = filedata;
-            fileinode->datasize = filesize;
-            fileinode->name = filepath;
-            ramdir_inode->entry[idx++] = filevnode;
+            if (strcmp(filepath[idx_cpio], ".") == 0)
+            {
+                continue;
+            }
+            idx_cpio++;
+
         }
+    }
+    idx_cpio--;
+
+    for (; idx_cpio >= 0; idx_cpio--){
+        char *sub_path[10];
+        int file_num = str_SepbySomething(filepath[idx_cpio], sub_path, '/');
+        int i = 0;
+        struct vnode *curr_dirvnode = _mount->root;
+        struct vnode *dirvnode;
+
+        for (; i < file_num - 1; i++)
+        {
+            if (initramfs_lookup(curr_dirvnode, &dirvnode, sub_path[i]) != 0)
+            {
+                struct vnode *newdirvnode = initramfs_create_vnode(_mount, dir_t);
+                struct initramfs_inode *newdirinode = newdirvnode->internal;
+                newdirinode->name = sub_path[i];
+
+                initramfs_insert_the_new_entry (curr_dirvnode, newdirvnode);
+
+                curr_dirvnode = newdirvnode;
+            }
+            else
+            {
+                curr_dirvnode = dirvnode;
+            }
+        }
+
+        if (initramfs_lookup(curr_dirvnode, &dirvnode, sub_path[i]) == 0)
+        {
+            continue;
+        }
+
+        struct vnode *newfilevnode;
+
+        if (!strcmp(sub_path[i] + strlen(sub_path[i]) - 3, "img")) 
+            newfilevnode = initramfs_create_vnode(_mount, img_t);
+        else
+            newfilevnode = initramfs_create_vnode(_mount, file_t);
+        
+        struct initramfs_inode *newfileinode = newfilevnode->internal;
+        newfileinode->data     = filedata[idx_cpio];
+        newfileinode->datasize = filesize[idx_cpio];
+        newfileinode->name     = sub_path[i];
+        
+
+        initramfs_insert_the_new_entry(curr_dirvnode, newfilevnode);
+
     }
 
     return 0;
@@ -59,9 +141,11 @@ int initramfs_setup_mount(struct filesystem *fs, struct mount *_mount)
 struct vnode *initramfs_create_vnode(struct mount *_mount, enum fsnode_type type)
 {
     struct vnode *v = kmalloc(sizeof(struct vnode));
+    memset(v, 0, sizeof(struct vnode));
     v->f_ops = &initramfs_file_operations;
     v->v_ops = &initramfs_vnode_operations;
-    v->mount = _mount;
+    // v->mount = _mount;
+    v->mount = 0;
     struct initramfs_inode *inode = kmalloc(sizeof(struct initramfs_inode));
     memset(inode, 0, sizeof(struct initramfs_inode));
     inode->type = type;
@@ -80,15 +164,20 @@ int initramfs_write(struct file *file, const void *buf, size_t len)
 int initramfs_read(struct file *file, void *buf, size_t len)
 {
     struct initramfs_inode *inode = file->vnode->internal;
+    if (len == 0)
+        return inode->datasize;
+    
     // overflow, shrink size
     if (len + file->f_pos > inode->datasize)
     {
+        uart_puts("read overflow\n");
         memcpy(buf, inode->data + file->f_pos, inode->datasize - file->f_pos);
         file->f_pos += inode->datasize - file->f_pos;
         return inode->datasize - file->f_pos;
     }
     else
     {
+        // uart_sendline("read %d bytes\n", len);
         memcpy(buf, inode->data + file->f_pos, len);
         file->f_pos += len;
         return len;
@@ -150,6 +239,39 @@ int initramfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *c
     // read-only
     return -1;
 }
+
+int initramfs_list(struct vnode *dir_node)
+{
+    struct initramfs_inode *inode = dir_node->internal;
+    int child_idx = 0;
+    for (; child_idx <= INITRAMFS_MAX_DIR_ENTRY; child_idx++)
+    {
+        if (!inode->entry[child_idx]) break;
+        struct initramfs_inode *child_inode = inode->entry[child_idx]->internal;
+        // uart_sendline("child_inode->type: %d\n", child_inode->type);
+        if (child_inode->type == dir_t)
+        {
+            uart_puts( GRN "%s\t" RESET, child_inode->name );
+        }
+        else if (child_inode->type == img_t)
+        {
+            uart_puts( RED "%s\t" RESET, child_inode->name );
+        }
+        else if (child_inode->type == file_t)
+        {
+            uart_puts( "%s\t", child_inode->name);
+        }
+    }
+    uart_puts("\n");
+    return 0;
+}
+
+enum fsnode_type initramfs_gettype(struct vnode *node)
+{
+    struct initramfs_inode *inode = node->internal;
+    return inode->type;
+}
+
 
 long initramfs_getsize(struct vnode *vd)
 {

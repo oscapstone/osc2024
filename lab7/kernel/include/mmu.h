@@ -31,11 +31,12 @@
 #define MMU_PUD_ADDR            (MMU_PGD_BASE + 0x1000L)
 #define MMU_PTE_ADDR            (MMU_PGD_BASE + 0x2000L)
 
+
 // Used for EL1
 #define BOOT_PGD_ATTR           (PD_TABLE)
 #define BOOT_PUD_ATTR           (PD_TABLE | PD_ACCESS)
-#define BOOT_PTE_ATTR_nGnRnE    (PD_BLOCK | PD_ACCESS | (MAIR_DEVICE_nGnRnE << 2) | PD_UNX | PD_KNX | PD_UK_ACCESS)  // p.17
-#define BOOT_PTE_ATTR_NOCACHE   (PD_BLOCK | PD_ACCESS | (MAIR_NORMAL_NOCACHE << 2))
+#define BOOT_PTE_ATTR_nGnRnE    (PD_BLOCK | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_UNX | PD_KNX | PD_UK_ACCESS)  // p.17
+#define BOOT_PTE_ATTR_NOCACHE   (PD_BLOCK | PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2))
 
 #ifndef __ASSEMBLER__
 
@@ -51,18 +52,23 @@ typedef struct vm_area_struct
     unsigned long area_size;
     unsigned long rwx;   // 1, 2, 4
     int is_alloced;
-
+    char name[32];
 } vm_area_struct_t;
 
 void *set_2M_kernel_mmu(void *x0);
 void map_one_page(size_t *pgd_p, size_t va, size_t pa, size_t flag);
 
-void mmu_add_vma(struct thread *t, size_t va, size_t size, size_t pa, size_t rwx, int is_alloced);
+void mmu_add_vma(struct thread *t, size_t va, size_t size, size_t pa, size_t rwx, char *name, int is_alloced);
 void mmu_del_vma(struct thread *t);
 void mmu_map_pages(size_t *pgd_p, size_t va, size_t size, size_t pa, size_t flag);
 void mmu_free_page_tables(size_t *page_table, int level);
 
 void mmu_memfail_abort_handle(esr_el1_t* esr_el1);
+void copy_PTE(size_t *virt_pgd_parent, size_t *virt_pgd_child, int level);
+void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level);
+vm_area_struct_t *get_vma_by_va(thread_t *t, size_t va);
+void show_vma_list(int *highlight_array, int size);
+size_t virt_to_phys_paging_table(size_t *virt_pgd_p, size_t va);
 
 #endif //__ASSEMBLER__
 

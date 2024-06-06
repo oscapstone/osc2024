@@ -2,6 +2,8 @@
 #define	_UART1_H_
 
 void uart_init();
+void uart_flush_FIFO();
+
 char uart_recv();
 void uart_send(char c);
 int  uart_sendline(char* fmt, ...);

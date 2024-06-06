@@ -3,14 +3,31 @@
 #include "string.h"
 #include "memory.h"
 #include "uart1.h"
+#include "colourful.h"
 
-struct file_operations tmpfs_file_operations = {tmpfs_write,tmpfs_read,tmpfs_open,tmpfs_close,tmpfs_lseek64,tmpfs_getsize};
-struct vnode_operations tmpfs_vnode_operations = {tmpfs_lookup,tmpfs_create,tmpfs_mkdir};
+struct file_operations tmpfs_file_operations = {
+    tmpfs_write,
+    tmpfs_read,
+    tmpfs_open,
+    tmpfs_close,
+    tmpfs_lseek64,
+    tmpfs_getsize
+};
+struct vnode_operations tmpfs_vnode_operations = {
+    tmpfs_lookup,
+    tmpfs_create,
+    tmpfs_mkdir, 
+    tmpfs_list,
+    tmpfs_gettype
+};
 
 int register_tmpfs()
 {
     struct filesystem fs;
-    fs.name = "tmpfs";
+    char *name = kmalloc(20); 
+    char temp[] = "tmpfs\0";
+    strcpy(name, temp);
+    fs.name = name;
     fs.setup_mount = tmpfs_setup_mount;
     return register_filesystem(&fs);
 }
@@ -19,6 +36,7 @@ int tmpfs_setup_mount(struct filesystem *fs, struct mount *_mount)
 {
     _mount->fs = fs;
     _mount->root = tmpfs_create_vnode(0, dir_t);
+    ((struct tmpfs_inode*)(_mount->root->internal))->name[0] = '/';
     return 0;
 }
 
@@ -28,6 +46,7 @@ struct vnode* tmpfs_create_vnode(struct mount* _mount, enum fsnode_type type)
     v->f_ops = &tmpfs_file_operations;
     v->v_ops = &tmpfs_vnode_operations;
     v->mount = 0;
+    // v->mount = _mount;
     struct tmpfs_inode* inode = kmalloc(sizeof(struct tmpfs_inode));
     memset(inode, 0, sizeof(struct tmpfs_inode));
     inode->type = type;
@@ -199,6 +218,34 @@ int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *compo
     *target = _vnode;
     return 0;
 }
+
+int tmpfs_list(struct vnode *dir_node)
+{
+    struct tmpfs_inode *inode = dir_node->internal;
+    int child_idx = 0;
+    for (; child_idx <= MAX_DIR_ENTRY; child_idx++)
+    {
+        if (!inode->entry[child_idx]) break;
+        struct tmpfs_inode *child_inode = inode->entry[child_idx]->internal;
+        if (child_inode->type == dir_t)
+        {
+            uart_puts( GRN"%s\t" RESET, child_inode->name );
+        }
+        else
+        {
+            uart_puts( "%s\t", child_inode->name);
+        }
+    }
+    uart_puts("\n");
+    return 0;
+}
+
+enum fsnode_type tmpfs_gettype(struct vnode *node)
+{
+    struct tmpfs_inode *inode = node->internal;
+    return inode->type;
+}
+
 
 long tmpfs_getsize(struct vnode* vd)
 {

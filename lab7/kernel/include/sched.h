@@ -3,11 +3,14 @@
 
 #include "list.h"
 #include "vfs.h"
-
 #define PIDMAX      32768
 #define USTACK_SIZE 0x4000
 #define KSTACK_SIZE 0x4000
 #define SIGNAL_MAX  64
+
+#define IDLE_PRIORITY 100
+#define SHELL_PRIORITY 100
+#define NORMAL_PRIORITY 50
 
 extern void switch_to(void *curr_context, void *next_context);
 extern void store_context(void *curr_context);
@@ -36,6 +39,7 @@ typedef struct thread
 {
     list_head_t      listhead;
     thread_context_t context;
+    int              priority;                            // Thread priority 
     char*            data;
     unsigned int     datasize;
     int              iszombie;
@@ -59,12 +63,15 @@ extern list_head_t *wait_queue;
 extern thread_t    threads[PIDMAX + 1];
 
 void      schedule_timer(char *notuse);
+void      add_task_to_runqueue(thread_t *t);
 void      init_thread_sched();
 void      idle();
 void      schedule();
 void      kill_zombies();
 void      thread_exit();
-thread_t *thread_create(void *start, unsigned int filesize);
+thread_t *thread_create(void *start, unsigned int filesize, int priority);
 int       thread_exec(char *data, unsigned int filesize);
-
+int thread_exec_vfs(char *abs_path);
+void      run_user_code();
+void foo();
 #endif /* _SCHED_H_ */

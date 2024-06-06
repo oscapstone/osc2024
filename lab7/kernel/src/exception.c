@@ -7,11 +7,18 @@
 #include "sched.h"
 #include "signal.h"
 #include "mmu.h"
+#include "colourful.h"
+
+extern int finish_init_thread_sched;
+// extern int syscall_num;
+// extern SYSCALL_TABLE_T *syscall_table;
+extern char *syscall_table;
 
 void sync_64_router(trapframe_t* tpf)
 {
     unsigned long long esr_el1;
     __asm__ __volatile__("mrs %0, esr_el1\n\t": "=r"(esr_el1));
+
     // esr_el1: Holds syndrome information for an exception taken to EL1.
     esr_el1_t *esr = (esr_el1_t *)&esr_el1;
     if (esr->ec == MEMFAIL_DATA_ABORT_LOWER || esr->ec == MEMFAIL_INST_ABORT_LOWER)
@@ -19,58 +26,82 @@ void sync_64_router(trapframe_t* tpf)
         mmu_memfail_abort_handle(esr);
         return;
     }
-
     el1_interrupt_enable();
-    unsigned long long syscall_no = tpf->x8;
-    if (syscall_no == 0)       { getpid(tpf);                                                                 }
-    else if(syscall_no == 1)   { uartread(tpf,(char *) tpf->x0, tpf->x1);                                     }
-    else if (syscall_no == 2)  { uartwrite(tpf,(char *) tpf->x0, tpf->x1);                                    }
-    else if (syscall_no == 3)  { exec(tpf,(char *) tpf->x0, (char **)tpf->x1);                                }
-    else if (syscall_no == 4)  { fork(tpf);                                                                   }
-    else if (syscall_no == 5)  { exit(tpf,tpf->x0);                                                           }
-    else if (syscall_no == 6)  { syscall_mbox_call(tpf,(unsigned char)tpf->x0, (unsigned int *)tpf->x1);      }
-    else if (syscall_no == 7)  { kill(tpf, (int)tpf->x0);                                                     }
-    else if (syscall_no == 8)  { signal_register(tpf->x0, (void (*)())tpf->x1);                               }
-    else if (syscall_no == 9)  { signal_kill(tpf->x0, tpf->x1);                                               }
-    else if (syscall_no == 10) { mmap(tpf,(void *)tpf->x0,tpf->x1,tpf->x2,tpf->x3,tpf->x4,tpf->x5);           }
-    else if (syscall_no == 11) { open(tpf, (char*)tpf->x0, tpf->x1);                                                     }
-    else if (syscall_no == 12) { close(tpf, tpf->x0);                                                                    }
-    else if (syscall_no == 13) { write(tpf, tpf->x0, (char *)tpf->x1, tpf->x2);                                          }
-    else if (syscall_no == 14) { read(tpf, tpf->x0, (char *)tpf->x1, tpf->x2);                                           }
-    else if (syscall_no == 15) { mkdir(tpf, (char *)tpf->x0, tpf->x1);                                                   }
-    else if (syscall_no == 16) { mount(tpf, (char *)tpf->x0, (char *)tpf->x1, (char *)tpf->x2, tpf->x3, (void*)tpf->x4); }
-    else if (syscall_no == 17) { chdir(tpf, (char *)tpf->x0);                                                            }
-    else if (syscall_no == 18) { lseek64(tpf, tpf->x0, tpf->x1, tpf->x2);                                                }
-    else if (syscall_no == 19) { ioctl(tpf, tpf->x0, tpf->x1, (void*)tpf->x2);                                           }
-    else if (syscall_no == 50) { sigreturn(tpf);                                                                         }
-    el1_interrupt_disable();
+
+
+    // uart_sendline("Hello World el1 64 router!\r\n");
+
+    // check whether it is a syscall 
+    if (esr->ec == ESR_ELx_EC_SVC64){
+        unsigned long long syscall_no = tpf->x8;
+        // uart_sendline("syscall number: %d  ", syscall_no);
+        if (syscall_no > SYSCALL_TABLE_SIZE || syscall_no < 0 )
+        {
+            // invalid syscall number
+            uart_puts("Invalid syscall number: %d\r\n", syscall_no);
+            tpf->x0 = -1;
+            return;
+        }
+        if (((void **) syscall_table)[syscall_no] == 0)
+        {
+            uart_puts("Unregisted syscall number: %d\r\n", syscall_no);
+            tpf->x0 = -1;
+            return;
+        }
+        if (syscall_no > 10)
+        {
+            // uart_puts("syscall number: %d  ", syscall_no);
+            // uart_sendline("syscall number: %d  ", syscall_no);
+        }
+        ((int (*)(trapframe_t *))(((&syscall_table)[syscall_no])))(tpf);
+    }
 }
 
 void irq_router(trapframe_t* tpf)
 {
-    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) {
-        if (*AUX_MU_IIR_REG & (1 << 1)) // can write
+    lock();
+    // decouple the handler into irqtask queue
+    // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
+    // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
+    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
+    {
+        if (*AUX_MU_IER_REG & 2)
         {
-            *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
+            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            irqtask_run_preemptive();
+            unlock();
+            irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
-        else if (*AUX_MU_IIR_REG & (0b10 << 1)) // can read
+        else if (*AUX_MU_IER_REG & 1)
         {
-            *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
+            *AUX_MU_IER_REG &= ~(1); // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive();
         }
-    } else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) {
+    }
+    else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
+    {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock();
         irqtask_run_preemptive();
         core_timer_enable();
-        el1_interrupt_disable();
-        if (run_queue->next->next != run_queue) schedule();
+
+        // check whether init_thread_sched is finished
+        if (finish_init_thread_sched == 1)
+            schedule();
     }
-    if ((tpf->spsr_el1 & 0b1100) == 0) { check_signal(tpf); }
-    el1_interrupt_disable();
+    else
+    {
+        uart_puts("Hello World el1 64 router other interrupt!\r\n");
+    }
+    //only do signal handler when return to user mode
+    if ((tpf->spsr_el1 & 0b1100) == 0)
+    {
+        check_signal(tpf);
+        
+    }
 }
 
 void invalid_exception_router(unsigned long long x0){

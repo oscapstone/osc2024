@@ -134,4 +134,26 @@ static inline int list_size(const struct list_head *head)
 	return i;
 }
 
+/*
+ * list_entry - get the struct for this entry
+ * @ptr:	the &struct list_head pointer.
+ * @type:	the type of the struct this is embedded in.
+ * @member:	the name of the list_head within the struct.
+ 
+*/
+static inline int find_list_entry(const struct list_head *head, const struct list_head *entry)
+{
+	list_head_t *pos;
+	int i= 0;
+	list_for_each(pos, head)
+	{
+		if (pos == entry)
+		{
+			return i;
+		}
+		i++;
+	}
+	return -1;
+}
+
 #endif
