@@ -69,16 +69,6 @@ int uart_dev_close(struct file *file){
 }
 
 int uart_dev_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name){
-    // int idx = 0;
-    // struct uart_dev_node * internal = dir_node -> internal;
-    // while(internal -> entry[idx]){
-    //     struct uart_dev_node * entry_node = internal -> entry[idx] -> internal;
-    //     if(strcmp(entry_node -> name, component_name) == 0){
-    //         *target = internal -> entry[idx];
-    //         return 0;
-    //     }
-    //     idx++;
-    // }
     return -1;
 }
 
