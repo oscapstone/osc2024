@@ -12,7 +12,8 @@ int cmd_ls(int argc, char* argv[]) {
     }
   }
   for (auto& it : vnode->childs()) {
-    kprintf("%c\t%ld\t%s\n", "-d"[it.node->isDir()], it.node->size(), it.name);
+    kprintf("%c\t%ld\t%p\t%s\n", "-d"[it.node->isDir()], it.node->size(),
+            it.node, it.name);
   }
   return 0;
 }

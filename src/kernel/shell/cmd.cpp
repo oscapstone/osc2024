@@ -36,6 +36,11 @@ const Cmd cmds[] = {
         .fp = cmd_cat,
     },
     {
+        .name = "cd",
+        .help = "change current working directory",
+        .fp = cmd_cd,
+    },
+    {
         .name = "mm",
         .help = "memory allocation",
         .fp = cmd_mm,
