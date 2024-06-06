@@ -91,16 +91,17 @@ int vfs_open(const char* pathname, fcntl flags, File*& target) {
   if ((r = vfs_lookup(pathname, dir, basename)) < 0) {
     goto cleanup;
   } else {
-    if (not has(flags, O_CREAT))
+    if (not has(flags, O_CREAT)) {
       r = dir->lookup(basename, vnode);
-    else
+    } else {
       r = dir->create(basename, vnode);
+      // XXX: ????
+      flags = O_RDWR;
+    }
     if (vnode->isDir())
       r = -1;
     if (r < 0)
       goto cleanup;
-    // XXX: ????
-    flags = O_RDWR;
   }
   if ((r = vnode->open(dir->lookup(basename), target, flags)) < 0)
     goto cleanup;
