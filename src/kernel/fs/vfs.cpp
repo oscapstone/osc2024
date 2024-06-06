@@ -304,7 +304,6 @@ int vfs_lookup(Vnode* base, const char* pathname, Vnode*& target) {
   for (auto component_name : Path(pathname)) {
     Vnode* next_vnode;
     auto ret = vnode_itr->lookup(component_name, next_vnode);
-    klog("vfs_lookup: '%s' %d %p\n", component_name, ret, next_vnode);
     if (ret)
       return ret;
     vnode_itr = next_vnode;
