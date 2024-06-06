@@ -128,11 +128,11 @@ void kthread_stop(int pid) {
 
 void thread_test() {
     for (int i = 0; i < 5; ++i) {
-        // uart_puts("Thread id: ");
-        // uart_hex(get_current()->pid);
-        // uart_puts(" ");
-        // uart_hex(i);
-        // uart_puts("\n");
+        print_string("Thread id: ");
+        print_d(get_current()->pid);
+        print_string(" ");
+        print_d(i);
+        print_string("\n");
         for (int i = 0; i < 1000000; i++);
         schedule();
     }

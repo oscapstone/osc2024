@@ -74,6 +74,7 @@ void register_all_commands() {
     register_command(&test_kmalloc_command);
     register_command(&test_kfree_command);
     register_command(&test_multi_thread_command);
+    register_command(&test_thread_command);
 }
 
 static void read_command(char *x) {

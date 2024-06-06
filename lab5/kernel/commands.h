@@ -19,5 +19,6 @@ extern command_t set_timeout_command;
 extern command_t test_kmalloc_command;
 extern command_t test_kfree_command;
 extern command_t test_multi_thread_command;
+extern command_t test_thread_command;
 
 #endif
