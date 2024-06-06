@@ -58,7 +58,9 @@ class FileImpl : public File {
 
 template <class V, class F>
 class FileImplRW : public FileImpl<V, F> {
-  virtual void ensure_size(size_t /*new_size*/) {}
+  virtual bool resize(size_t /*new_size*/) {
+    return false;
+  }
   virtual char* write_ptr() {
     return nullptr;
   }
@@ -72,7 +74,8 @@ class FileImplRW : public FileImpl<V, F> {
 
   virtual int write(const void* buf, size_t len) {
     if (this->size() < this->f_pos + len)
-      ensure_size(this->f_pos + len);
+      if (not resize(this->f_pos + len))
+        return -1;
     auto p = write_ptr();
     if (not p)
       return -1;

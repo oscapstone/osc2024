@@ -25,9 +25,9 @@ class File final : public ::FileImplRW<Vnode, File> {
   auto& content() {
     return get()->content;
   }
-  virtual void ensure_size(size_t new_size) {
-    if (content().size() < new_size)
-      content().resize(new_size);
+  virtual bool resize(size_t new_size) {
+    content().resize(new_size);
+    return true;
   }
   virtual char* write_ptr() {
     return content().data();
