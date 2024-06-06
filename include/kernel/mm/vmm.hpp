@@ -76,6 +76,8 @@ VMM* current_vmm();
 template <typename T,
           typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
 R translate_va_to_pa(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
+  if (isKernelSpace(va))
+    return va2pa(va);
   return (R)current_vmm()->ttbr0->translate_va((uint64_t)va, start, level);
 }
 

@@ -6,9 +6,21 @@
 #include "syscall.hpp"
 
 SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
+  return mailbox_call(ch, mbox);
+}
+
+bool mailbox_call(uint8_t ch, MboxBuf* mbox, bool kernel) {
   auto phy_mbox = translate_va_to_pa(mbox);
   // kprintf("%p -> %p\n", mbox, phy_mbox);
-  mailbox_call(ch, phy_mbox);
+
+  uint32_t data = (((uint32_t)(unsigned long)phy_mbox) & ~0xf) | ch;
+  while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_FULL) != 0)
+    NOP;
+  set32(pa2va(MAILBOX_WRITE), data);
+  while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_EMPTY) != 0)
+    NOP;
+  while (get32(pa2va(MAILBOX_READ)) != data)
+    NOP;
 
   for (uint64_t offset = 0, size; offset < mbox->buf_size; offset += size) {
     auto idx = offset / sizeof(uint32_t);
@@ -35,17 +47,6 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
   return true;
 }
 
-void mailbox_call(uint8_t ch, MboxBuf* phy_mbox) {
-  uint32_t data = (((uint32_t)(unsigned long)phy_mbox) & ~0xf) | ch;
-  while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_FULL) != 0)
-    NOP;
-  set32(pa2va(MAILBOX_WRITE), data);
-  while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_EMPTY) != 0)
-    NOP;
-  while (get32(pa2va(MAILBOX_READ)) != data)
-    NOP;
-}
-
 uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx) {
   int max_value_buffer_size = sizeof(uint32_t) * (value_length + 1);
   int size = sizeof(MboxBuf) + sizeof(MboxMessage) + max_value_buffer_size;
@@ -68,7 +69,7 @@ uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx) {
     msg->value_buf[i] = 0;
   msg->value_buf[value_length] = MBOX_END_TAG;
 
-  mailbox_call(8, va2pa(mailbox));
+  mailbox_call(8, mailbox);
 
   return msg->value_buf[idx];
 }
