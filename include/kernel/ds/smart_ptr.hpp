@@ -21,7 +21,7 @@ class smart_ptr {
 
  public:
   smart_ptr() : p{nullptr} {}
-  smart_ptr(T* p) : p{p ? new P{1, p} : nullptr} {}
+  smart_ptr(T* t) : p{t ? new P{1, t} : nullptr} {}
   smart_ptr(const smart_ptr& o) : p{copy(o)} {}
   smart_ptr& operator=(const smart_ptr& o) {
     release();
@@ -33,8 +33,10 @@ class smart_ptr {
   }
   void release() {
     if (p and --p->cnt == 0) {
-      delete p->ptr;
-      delete p;
+      // FIXME
+      // delete p->ptr;
+      // p->ptr = nullptr;
+      // delete p;
     }
     p = nullptr;
   }
