@@ -31,6 +31,7 @@ void getpid(trapframe * sp){
 }
 
 void exec(char * prog_name){
+    //use VFS interface to lookup
     struct vnode * node;
     if(vfs_lookup(prog_name, &node)!=0){
         uart_puts("File not found");
@@ -168,7 +169,7 @@ void sys_mbox_call(trapframe * sp){
 }
 
 void open(trapframe * sp){
-    // need modify file path
+    // open with path_convert first
     char * tp = sp -> x[0];
     const char * pathname = path_convert(tp, get_current()->work_dir);
     int flags = sp -> x[1]; 
@@ -230,12 +231,14 @@ void read(trapframe * sp){
 
 
 void mkdir(trapframe * sp){
+    //with path convert first
     char * tp = sp -> x[0];
     const char * pathname = path_convert(tp, get_current()->work_dir);
     sp -> x[0] = vfs_mkdir(pathname); 
 }
 
 void mount(trapframe * sp){
+    //with path convert first
     char * src = sp -> x[0];
     char * tp = sp -> x[1];
     const char * target = path_convert(tp, get_current()->work_dir);
@@ -244,6 +247,7 @@ void mount(trapframe * sp){
 }
 
 void chdir(trapframe * sp){
+    //with path convert first
     char * tp = sp -> x[0];
     const char * ndir = path_convert(tp, get_current() -> work_dir);
     strcpy(ndir, get_current()->work_dir);

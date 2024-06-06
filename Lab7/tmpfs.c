@@ -9,11 +9,12 @@ struct vnode_operations tmpfs_vnode_operations = {tmpfs_lookup,tmpfs_create,tmpf
 extern struct vnode * current_dir;
 
 struct vnode * tmpfs_create_vnode(int type){
+    //initialize vnode
     struct vnode * node = malloc(sizeof(struct vnode));
     memset(node, 4096);
-    //need to change to ops later
     node -> f_ops = &tmpfs_file_operations;
     node -> v_ops = &tmpfs_vnode_operations;
+    //internal
     struct tmpfs_node * tnode = malloc(sizeof(struct tmpfs_node));
     memset(tnode, 4096);
     tnode -> type = type;
@@ -25,6 +26,7 @@ struct vnode * tmpfs_create_vnode(int type){
 }
 
 int tmpfs_mount(struct filesystem *fs, struct mount *mt){
+    //create a new vnode and place on mount -> root
     mt -> fs = fs;
     mt -> root = tmpfs_create_vnode(2); //1: directory, 2: mount
     strcpy("/", ((struct tmpfs_node *)mt -> root -> internal) -> name);
@@ -39,6 +41,7 @@ int reg_tmpfs(){
 }
 
 int tmpfs_write(struct file *file, const void *buf, size_t len){
+    //write data to file -> vnode -> internal -> data
     struct tmpfs_node * internal = file -> vnode -> internal;
     for(int i=0; i<len; i++){
         (internal -> data)[file -> f_pos + i] = ((char* )buf)[i];
@@ -73,6 +76,7 @@ int tmpfs_close(struct file *file){
 }
 
 int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name){
+    //searcj all entry in current vndoe -> internal
     int idx = 0;
     struct tmpfs_node * internal = dir_node -> internal;
     while(internal -> entry[idx]){
@@ -87,6 +91,7 @@ int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
 }
 
 int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name){
+    //find an empty entry and initialize a vnode for it and set the name.
     struct tmpfs_node * internal = dir_node -> internal;
     if(internal -> type != 1 && internal -> type != 2){//2: mount
         uart_puts("NOT A DIRECTORY!\n\r");
@@ -119,6 +124,7 @@ int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *comp
 }
 
 int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name){
+    //same as create
     struct tmpfs_node * internal = dir_node -> internal;
     if(internal -> type != 1 && internal -> type != 2){//2: mount
         uart_puts("NOT A DIRECTORY!\n\r");

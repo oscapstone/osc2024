@@ -6,8 +6,6 @@
 #include "initramfs.h"
 #include "dev_uart.h"
 
-//need ** so that can return handle and status
-
 struct mount* rootfs;
 struct filesystem fs_register[MAX_FS];
 struct directory directories[MAX_DIR];
@@ -99,6 +97,7 @@ int vfs_mkdir(const char* pathname){
 }
 
 int vfs_mount(const char* target, const char* filesystem){
+    //mount filesystem on target's vnode -> mount
     struct vnode * temp;
     struct filesystem *fs = 0;
     for(int i=0; i<MAX_FS;i++){
@@ -140,7 +139,7 @@ int vfs_lookup(const char* pathname, struct vnode** target){
     struct vnode * cur_node = rootfs -> root;
     for(int i=1;i<strlen(pathname);i++){
         if(pathname[i] == '/'){
-            //not sure use full path or only name
+            //find name in current level
             vnode_name[idx] = '\0';
 
             if(cur_node -> v_ops -> lookup(cur_node, &cur_node, vnode_name)!=0){

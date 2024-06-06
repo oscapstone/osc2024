@@ -29,7 +29,7 @@ struct vnode * initramfs_create_vnode(const char * name, char * data, int size, 
 }
 
 int initramfs_mount(struct filesystem *_fs, struct mount *mt){
-    
+    //initialize all entries
     mt -> fs = _fs;
     //set root
     const char * fname = "initramfs";
