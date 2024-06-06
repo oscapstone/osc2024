@@ -154,6 +154,9 @@ long File::lseek64(long offset, seek_type whence) {
   }
   return f_pos;
 }
+int File::ioctl(unsigned long request, void* arg) {
+  return -1;
+}
 int File::close() {
   return vnode->close(this);
 }

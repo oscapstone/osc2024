@@ -1,6 +1,7 @@
 #include "fs/vfs.hpp"
 
 #include "fs/files.hpp"
+#include "fs/framebufferfs.hpp"
 #include "fs/initramfs.hpp"
 #include "fs/log.hpp"
 #include "fs/path.hpp"
@@ -17,6 +18,7 @@ void init_vfs() {
   register_filesystem(new tmpfs::FileSystem());
   register_filesystem(new initramfs::FileSystem());
   register_filesystem(new uartfs::FileSystem());
+  register_filesystem(new framebufferfs::FileSystem());
 
   root_node = get_filesystem("tmpfs")->mount();
   root_node->set_parent(root_node);
@@ -27,6 +29,8 @@ void init_vfs() {
   vfs_mkdir("/dev");
   vfs_mkdir("/dev/uart");
   vfs_mount("/dev/uart", "uartfs");
+  vfs_mkdir("/dev/framebuffer");
+  vfs_mount("/dev/framebuffer", "framebufferfs");
 }
 
 FileSystem* filesystems = nullptr;
@@ -95,13 +99,13 @@ int vfs_open(const char* pathname, fcntl flags, FilePtr& target) {
       r = dir->lookup(basename, vnode);
     } else {
       r = dir->create(basename, vnode);
-      // XXX: ????
-      flags = O_RDWR;
     }
     if (vnode->isDir())
       r = -1;
     if (r < 0)
       goto cleanup;
+    // XXX: ????
+    flags = O_RDWR;
   }
   if ((r = vnode->open(dir->lookup(basename), target, flags)) < 0)
     goto cleanup;
@@ -238,6 +242,48 @@ cleanup:
   kfree(basename);
 end:
   return r;
+}
+
+SYSCALL_DEFINE3(lseek64, int, fd, long, offset, seek_type, whence) {
+  return lseek64(fd, offset, whence);
+}
+
+int lseek64(int fd, long offset, seek_type whence) {
+  auto file = fd_to_file(fd);
+  int r = -1;
+  if (not file) {
+    r = -1;
+    goto end;
+  }
+  r = vfs_lseek64(file, offset, whence);
+end:
+  FS_INFO("lseek64(%d, 0x%lx, %d) = %d\n", fd, offset, whence, r);
+  return r;
+}
+
+int vfs_lseek64(FilePtr file, long offset, seek_type whence) {
+  return file->lseek64(offset, whence);
+}
+
+SYSCALL_DEFINE3(ioctl, int, fd, unsigned long, request, void*, arg) {
+  return ioctl(fd, request, arg);
+}
+
+int ioctl(int fd, unsigned long request, void* arg) {
+  auto file = fd_to_file(fd);
+  int r = -1;
+  if (not file) {
+    r = -1;
+    goto end;
+  }
+  r = vfs_ioctl(file, request, arg);
+end:
+  FS_INFO("ioctl(%d, %lu, %p) = %d\n", fd, request, arg, r);
+  return r;
+}
+
+int vfs_ioctl(FilePtr file, unsigned long request, void* arg) {
+  return file->ioctl(request, arg);
 }
 
 Vnode* vfs_lookup(const char* pathname) {

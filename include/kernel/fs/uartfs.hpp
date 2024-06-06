@@ -19,6 +19,7 @@ class Vnode final : public ::VnodeImpl<Vnode, File> {
 };
 
 class File final : public ::File {
+ public:
   using ::File::File;
   virtual ~File() = default;
 
