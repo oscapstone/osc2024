@@ -36,7 +36,7 @@ struct Kthread : ListItem<Kthread> {
   friend void kthread_init();
 
  public:
-  Kthread(Kthread::fp start, void* ctx);
+  Kthread(Kthread::fp start, void* ctx, Vnode* cwd);
   Kthread(const Kthread* o);
   Kthread(const Kthread& o) = delete;
   ~Kthread();
@@ -74,5 +74,6 @@ void kthread_kill(int pid);
 void kthread_kill(Kthread* thread);
 void kthread_exit(int status);
 void kthread_fini();
-Kthread* kthread_create(Kthread::fp start, void* ctx = nullptr);
+Kthread* kthread_create(Kthread::fp start, void* ctx = nullptr,
+                        Vnode* cwd = root_node);
 long kthread_fork();

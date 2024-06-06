@@ -51,7 +51,7 @@ Kthread::Kthread()
   add_list(this);
 }
 
-Kthread::Kthread(Kthread::fp start, void* ctx)
+Kthread::Kthread(Kthread::fp start, void* ctx, Vnode* cwd)
     : regs{.x19 = (uint64_t)start,
            .x20 = (uint64_t)ctx,
            .lr = (void*)kthread_start},
@@ -59,7 +59,8 @@ Kthread::Kthread(Kthread::fp start, void* ctx)
       status(kReady),
       exit_code(0),
       kernel_stack(KTHREAD_STACK_SIZE, true),
-      signal{this} {
+      signal{this},
+      files{cwd} {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
   add_list(this);
@@ -72,7 +73,8 @@ Kthread::Kthread(const Kthread* o)
       exit_code(0),
       kernel_stack(o->kernel_stack),
       signal{this, o->signal},
-      vmm(o->vmm) {
+      vmm(o->vmm),
+      files(o->files) {
   fix(*o, &regs, sizeof(regs));
   fix(*o, kernel_stack);
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o->tid, &o);
@@ -170,8 +172,8 @@ void kthread_fini() {
   schedule();
 }
 
-Kthread* kthread_create(Kthread::fp start, void* ctx) {
-  auto thread = new Kthread(start, ctx);
+Kthread* kthread_create(Kthread::fp start, void* ctx, Vnode* cwd) {
+  auto thread = new Kthread{start, ctx, cwd};
   push_rq(thread);
   return thread;
 }

@@ -41,6 +41,11 @@ const Cmd cmds[] = {
         .fp = cmd_cd,
     },
     {
+        .name = "pwd",
+        .help = "return working directory name",
+        .fp = cmd_pwd,
+    },
+    {
         .name = "mm",
         .help = "memory allocation",
         .fp = cmd_mm,

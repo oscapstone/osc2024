@@ -103,6 +103,14 @@ class ListHead {
     return it;
   }
 
+  P pop_back() {
+    if (empty())
+      return nullptr;
+    auto it = end();
+    erase(--it);
+    return it;
+  }
+
   P front() {
     if (empty())
       return nullptr;

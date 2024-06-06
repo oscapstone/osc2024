@@ -9,6 +9,7 @@ int cmd_reboot(int, char*[]);
 int cmd_ls(int, char*[]);
 int cmd_cat(int, char*[]);
 int cmd_cd(int, char*[]);
+int cmd_pwd(int, char*[]);
 int cmd_mm(int, char*[]);
 int cmd_devtree(int, char*[]);
 int cmd_exec(int, char*[]);

@@ -7,8 +7,10 @@ constexpr int MAX_OPEN_FILE = 16;
 struct Files {
   Vnode* cwd;
   unsigned fd_bitmap;
+  // TODO: ref File*
   File* files[MAX_OPEN_FILE];
-  Files();
+  Files(Vnode* cwd = root_node);
+  Files(const Files&) = default;
   ~Files();
   void reset();
   int alloc_fd(File* file);
