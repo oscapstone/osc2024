@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 library = { path = "../library" }
+tock-registers = "0.8.1"

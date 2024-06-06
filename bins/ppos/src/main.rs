@@ -1,10 +1,13 @@
 #![no_std]
 #![no_main]
+#![feature(trait_upcasting)]
 
 extern crate alloc;
 
+mod device;
 mod driver;
 mod exception;
+mod file_system;
 mod memory;
 mod pid;
 mod scheduler;
@@ -18,6 +21,7 @@ use core::{
     panic::PanicInfo,
 };
 use cpu::cpu::{enable_kernel_space_interrupt, switch_to_el1};
+use file_system::init_root_file_system;
 use library::{
     console::{console, ConsoleMode},
     println,
@@ -50,6 +54,7 @@ unsafe fn kernel_init_mmu() -> ! {
 unsafe fn kernel_init() -> ! {
     memory::init_allocator();
     exception::handling_init();
+    init_root_file_system().unwrap();
     driver::init().unwrap();
     pid_manager().init();
     scheduler::register_scheduler(&ROUND_ROBIN_SCHEDULER);

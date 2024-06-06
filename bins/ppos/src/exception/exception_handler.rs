@@ -2,10 +2,10 @@
 //
 // Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
+use crate::device::interrupt_manager;
 use aarch64_cpu::registers::*;
 use core::fmt;
 use cpu::cpu::enable_kernel_space_interrupt;
-use device::interrupt_manager;
 use library::println;
 use tock_registers::{interfaces::Readable, registers::InMemoryRegister};
 

@@ -3,7 +3,7 @@ use crate::{
     fork_test::fork_test,
     print, println,
     string::String,
-    system_call::{exec, exit, get_pid, kill, kill_with_signal, mbox_call, signal},
+    system_call::{exec, exit, get_pid, kill, kill_with_signal, mbox_call, mount, signal},
 };
 
 pub struct Shell {
@@ -54,6 +54,7 @@ impl Shell {
         println!("exec\t: execute system-call-test-program.img");
         println!("register\t: register the kill signal handler");
         println!("kill-with-signal <pid>\t: send a kill signal to a process");
+        println!("mount\t: mount tmpfs to /tmp");
     }
 
     fn info(&self) {
@@ -132,6 +133,16 @@ impl Shell {
 
     fn kill_with_signal(&self, pid: i32) {
         kill_with_signal(pid, 9);
+    }
+
+    fn mount(&self) {
+        mount(
+            0 as *const i8,
+            "/tmp".as_ptr() as *const i8,
+            "tmpfs".as_ptr() as *const i8,
+            0,
+            0 as *const (),
+        );
     }
 
     fn execute_command(&mut self) {

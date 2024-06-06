@@ -5,12 +5,8 @@ use crate::{
     scheduler::current,
 };
 
-pub fn exec(name: *const char, argv: *const *const char) -> i32 {
-    let filename = unsafe {
-        core::ffi::CStr::from_ptr(name as *const i8)
-            .to_str()
-            .unwrap()
-    };
+pub fn exec(name: *const i8, argv: *const *const char) -> i32 {
+    let filename = unsafe { core::ffi::CStr::from_ptr(name).to_str().unwrap() };
     let mut devicetree = unsafe {
         devicetree::FlattenedDevicetree::from_memory(phys_to_virt(memory::DEVICETREE_START_ADDR))
     };

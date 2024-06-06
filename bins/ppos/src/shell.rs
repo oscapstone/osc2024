@@ -1,17 +1,17 @@
 use core::time::Duration;
 
 use aarch64_cpu::registers::*;
+use alloc::boxed::Box;
+use alloc::rc::Rc;
 use alloc::string::String;
-use alloc::{boxed::Box, format};
-use cpio::CPIOArchive;
+use alloc::vec;
 use library::{console, print, println, sync::mutex::Mutex};
+use vfs::file::{Umode, UMODE};
 
-use crate::memory::phys_to_virt;
+use crate::driver::{self, mailbox};
+use crate::file_system::path::Path;
+use crate::file_system::{virtual_file_system, VFSMount};
 use crate::scheduler::current;
-use crate::{
-    driver::{self, mailbox},
-    memory,
-};
 
 pub static mut SLAB_ALLOCATOR_DEBUG_ENABLE: bool = false;
 pub static mut BUDDY_ALLOCATOR_DEBUG_ENABLE: bool = false;
@@ -61,7 +61,10 @@ impl Shell {
         println!("cancel-reboot\t: cancel reboot");
         println!("info\t: get hardware infomation");
         println!("ls\t: list files");
+        println!("cd\t: change directory");
         println!("cat\t: show file content");
+        println!("mkdir\t: create a directory");
+        println!("touch\t: create a file");
         println!("run-program\t: run a program (image)");
         println!("switch-2s-alert\t: enable/disable 2s alert");
         println!("set-timeout\t: print a message after period of time");
@@ -101,7 +104,10 @@ impl Shell {
                 "cancel-reboot" => self.cancel_reboot(),
                 "info" => self.info(),
                 "ls" => self.ls(),
+                "cd" => self.cd(args),
                 "cat" => self.cat(args),
+                "mkdir" => self.mkdir(args),
+                "touch" => self.touch(args),
                 "run-program" => self.run_program(args),
                 "test" => self.test(),
                 "switch-2s-alert" => self.switch_2s_alert(),
@@ -131,26 +137,38 @@ impl Shell {
     }
 
     fn ls(&self) {
-        let mut devicetree = unsafe {
-            devicetree::FlattenedDevicetree::from_memory(phys_to_virt(
-                memory::DEVICETREE_START_ADDR,
-            ))
-        };
-        devicetree
-            .traverse(&|device_name, property_name, property_value| {
-                if property_name == "linux,initrd-start" {
-                    let mut cpio_archive = unsafe {
-                        CPIOArchive::from_memory(phys_to_virt(u32::from_be_bytes(
-                            property_value.try_into().unwrap(),
-                        ) as usize))
-                    };
-                    while let Some(file) = cpio_archive.read_next() {
-                        println!("{}", file.name);
-                    }
-                }
-                Ok(())
-            })
-            .unwrap();
+        let current = unsafe { &*current() };
+        for entry in current
+            .current_working_directory()
+            .dentry
+            .upgrade()
+            .unwrap()
+            .children()
+        {
+            println!("{}", entry.upgrade().unwrap().name());
+        }
+    }
+
+    fn cd(&self, args: Box<[&str]>) {
+        if args.len() != 1 {
+            println!("Usage: cd <directory>");
+            return;
+        }
+        let directory_name = args[0];
+        let current = unsafe { &mut *current() };
+
+        match virtual_file_system().lookup(directory_name) {
+            Ok(dir) => current.set_current_working_directory(Path::new(
+                VFSMount::new(
+                    dir.super_block().upgrade().unwrap().root().unwrap(),
+                    dir.super_block().clone(),
+                ),
+                Rc::downgrade(&dir),
+            )),
+            Err(e) => {
+                println!("cd: {}", e);
+            }
+        }
     }
 
     fn cat(&self, args: Box<[&str]>) {
@@ -159,35 +177,31 @@ impl Shell {
             return;
         }
 
-        let t = format!("{}\0", args[0]);
-        let filename = t.as_str();
-        let mut devicetree = unsafe {
-            devicetree::FlattenedDevicetree::from_memory(phys_to_virt(
-                memory::DEVICETREE_START_ADDR,
-            ))
-        };
-        devicetree
-            .traverse(&move |device_name, property_name, property_value| {
-                if property_name == "linux,initrd-start" {
-                    let mut cpio_archive = unsafe {
-                        CPIOArchive::from_memory(phys_to_virt(u32::from_be_bytes(
-                            property_value.try_into().unwrap(),
-                        ) as usize))
-                    };
-                    while let Some(file) = cpio_archive.read_next() {
-                        if file.name == filename {
-                            for byte in file.content {
-                                print!("{}", *byte as char);
-                            }
-                            return Ok(());
-                        }
-                    }
-                    println!("cat: {}: No such file or directory", filename);
-                    return Ok(());
+        let filename = args[0];
+        let current = unsafe { &mut *current() };
+
+        match current.open_file(filename) {
+            Ok(fd) => {
+                let file_descriptor = current.get_file(fd).unwrap();
+                let file = virtual_file_system()
+                    .get_file(file_descriptor.file_handle_index())
+                    .unwrap();
+                let file_size = file.inode().size();
+                let mut buf = vec![0_u8; file_size].into_boxed_slice();
+                let len = file.read(&mut buf, file_size).unwrap();
+                current.close_file(fd).unwrap();
+                if len != file_size {
+                    println!("cat: {}: File is corrupted", filename);
+                    return;
                 }
-                Ok(())
-            })
-            .unwrap();
+                for i in 0..len {
+                    print!("{}", buf[i] as char);
+                }
+            }
+            Err(e) => {
+                println!("cat: {}", e);
+            }
+        }
     }
 
     fn run_program(&self, args: Box<[&str]>) {
@@ -196,37 +210,102 @@ impl Shell {
             return;
         }
 
-        let t = format!("{}\0", args[0]);
-        let filename = t.as_str();
-        let mut devicetree = unsafe {
-            devicetree::FlattenedDevicetree::from_memory(phys_to_virt(
-                memory::DEVICETREE_START_ADDR,
-            ))
-        };
-        devicetree
-            .traverse(&move |device_name, property_name, property_value| {
-                if property_name == "linux,initrd-start" {
-                    let mut cpio_archive = unsafe {
-                        CPIOArchive::from_memory(phys_to_virt(u32::from_be_bytes(
-                            property_value.try_into().unwrap(),
-                        ) as usize))
-                    };
-
-                    while let Some(file) = cpio_archive.read_next() {
-                        if file.name != filename {
-                            continue;
-                        }
-
-                        unsafe { &mut *current() }.run_user_program(file.content);
-                        return Ok(());
-                    }
-                    println!("run-program: {}: No such file or directory", filename);
-
-                    return Ok(());
+        let filename = args[0];
+        let current = unsafe { &mut *current() };
+        match current.open_file(filename) {
+            Ok(fd) => {
+                let file_descriptor = current.get_file(fd).unwrap();
+                let file = virtual_file_system()
+                    .get_file(file_descriptor.file_handle_index())
+                    .unwrap();
+                let file_size = file.inode().size();
+                let mut buf = vec![0_u8; file_size].into_boxed_slice();
+                let len = file.read(&mut buf, file_size).unwrap();
+                if len != file_size {
+                    println!("run-program: {}: File is corrupted", filename);
+                    return;
                 }
-                Ok(())
-            })
-            .unwrap();
+                current.run_user_program(&buf);
+            }
+            Err(e) => {
+                println!("run-program: {}", e);
+            }
+        }
+    }
+
+    fn mkdir(&self, args: Box<[&str]>) {
+        if args.len() != 1 {
+            println!("Usage: mkdir <directory>");
+            return;
+        }
+        let current = unsafe { &mut *current() };
+        match args[0].rsplit_once("/") {
+            Some((parent_path, directory_name)) => {
+                let parent_node = if parent_path == "" {
+                    virtual_file_system()
+                        .root()
+                        .unwrap()
+                        .root
+                        .upgrade()
+                        .unwrap()
+                } else {
+                    virtual_file_system().lookup(parent_path).unwrap()
+                };
+                parent_node.inode().upgrade().unwrap().mkdir(
+                    Umode::new(UMODE::OWNER_READ::SET),
+                    String::from(directory_name),
+                    Some(Rc::downgrade(&parent_node)),
+                );
+            }
+            None => {
+                current
+                    .current_working_directory()
+                    .dentry
+                    .upgrade()
+                    .unwrap()
+                    .inode()
+                    .upgrade()
+                    .unwrap()
+                    .mkdir(
+                        Umode::new(UMODE::OWNER_READ::SET),
+                        String::from(args[0]),
+                        Some(current.current_working_directory().dentry.clone()),
+                    );
+            }
+        }
+    }
+
+    fn touch(&self, args: Box<[&str]>) {
+        if args.len() != 1 {
+            println!("Usage: touch <file>");
+            return;
+        }
+        let current = unsafe { &mut *current() };
+        match args[0].rsplit_once("/") {
+            Some((parent_path, filename)) => {
+                let parent_node = virtual_file_system().lookup(parent_path).unwrap();
+                parent_node.inode().upgrade().unwrap().create(
+                    Umode::new(UMODE::OWNER_READ::SET),
+                    String::from(filename),
+                    Some(Rc::downgrade(&parent_node)),
+                );
+            }
+            None => {
+                current
+                    .current_working_directory()
+                    .dentry
+                    .upgrade()
+                    .unwrap()
+                    .inode()
+                    .upgrade()
+                    .unwrap()
+                    .create(
+                        Umode::new(UMODE::OWNER_READ::SET),
+                        String::from(args[0]),
+                        Some(current.current_working_directory().dentry.clone()),
+                    );
+            }
+        }
     }
 
     fn switch_2s_alert(&mut self) {

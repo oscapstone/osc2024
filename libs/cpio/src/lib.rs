@@ -70,6 +70,10 @@ pub struct CPIOArchive {
 }
 
 impl CPIOArchive {
+    pub const fn new() -> Self {
+        Self { current: 0 }
+    }
+
     pub const unsafe fn from_memory(mmio_start_addr: usize) -> Self {
         Self {
             current: mmio_start_addr,

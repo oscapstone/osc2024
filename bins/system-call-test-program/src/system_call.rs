@@ -49,3 +49,23 @@ pub fn signal(signal: i32, handler: fn()) {
 pub fn kill_with_signal(pid: i32, signal: i32) {
     unsafe { system_call(9, pid as usize, signal as usize, 0, 0, 0, 0) };
 }
+
+pub fn mount(
+    src: *const i8,
+    target: *const i8,
+    filesystem: *const i8,
+    flags: u32,
+    data: *const (),
+) -> i32 {
+    unsafe {
+        system_call(
+            16,
+            src as usize,
+            target as usize,
+            filesystem as usize,
+            flags as usize,
+            data as usize,
+            0,
+        ) as i32
+    }
+}

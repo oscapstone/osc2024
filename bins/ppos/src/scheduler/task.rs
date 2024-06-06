@@ -15,8 +15,13 @@ use cpu::cpu::enable_kernel_space_interrupt;
 use cpu::cpu::run_user_code;
 use cpu::thread::CPUContext;
 use cpu::thread::Thread;
+use library::collections::fixed_size_table::FixedSizeTable;
 use library::sync::mutex::Mutex;
 
+use crate::file_system::file_descriptor::FileDescriptor;
+use crate::file_system::file_system_info::FileSystemInfo;
+use crate::file_system::path::Path;
+use crate::file_system::virtual_file_system;
 use crate::memory::paging::memory_mapping::MemoryExecutePermission;
 use crate::memory::paging::memory_mapping::MemoryMapping;
 use crate::memory::paging::page::MemoryAccessPermission;
@@ -81,6 +86,8 @@ pub struct Task {
     signal_saved_context: Option<(u64, CPUContext)>,
     /// user space page table
     memory_mapping: Rc<MemoryMapping>,
+    file_system_info: FileSystemInfo,
+    file_descriptor_table: FixedSizeTable<FileDescriptor>,
 }
 
 impl Task {
@@ -89,9 +96,12 @@ impl Task {
     pub const USER_STACK_END: usize = Self::USER_STACK_START + Self::USER_STACK_SIZE;
     pub const KERNEL_STACK_SIZE: usize = PAGE_SIZE * 1024;
     const SIGNAL_HANDLER_WRAPPER_SHARE_START: usize = Self::USER_STACK_START - PAGE_SIZE;
+    const PROCESS_MAX_OPEN_FILES: usize = 256;
 
     pub fn new(stack: AllocatedMemory, memory_mapping: Option<Rc<MemoryMapping>>) -> Self {
-        Self {
+        let root = virtual_file_system().root().unwrap();
+        let root_path = Path::new(root.clone(), root.root);
+        let mut task = Self {
             thread: Thread::new(),
             state: TaskState::Running,
             kernel_stack: stack,
@@ -105,7 +115,13 @@ impl Task {
                 Some(memory_mapping) => memory_mapping,
                 None => Rc::new(MemoryMapping::new()),
             },
-        }
+            file_system_info: FileSystemInfo::new(root_path.clone(), root_path),
+            file_descriptor_table: FixedSizeTable::new(Self::PROCESS_MAX_OPEN_FILES),
+        };
+        task.open_file("/dev/uart").unwrap();
+        task.open_file("/dev/uart").unwrap();
+        task.open_file("/dev/uart").unwrap();
+        task
     }
 
     pub fn from_job(job: fn() -> !) -> Self {
@@ -145,6 +161,8 @@ impl Task {
             kernel_stack,
             Some(Rc::new(self.memory_mapping.copy().unwrap())),
         );
+        task.file_system_info = self.file_system_info.clone();
+        task.file_descriptor_table = self.file_descriptor_table.clone();
         task.thread.sp_el0 = SP_EL0.get();
         // copy the current thread context
         // the registers are stored in the stack in compiler generated function prologue
@@ -415,6 +433,35 @@ impl Task {
     #[inline(always)]
     pub fn memory_mapping(&self) -> Rc<MemoryMapping> {
         self.memory_mapping.clone()
+    }
+
+    pub fn current_working_directory(&self) -> Path {
+        self.file_system_info.current_working_directory.clone()
+    }
+
+    pub fn set_current_working_directory(&mut self, path: Path) {
+        self.file_system_info.current_working_directory = path;
+    }
+
+    pub fn open_file(&mut self, path: &str) -> Result<usize, &'static str> {
+        let inode = virtual_file_system()
+            .lookup(path)?
+            .inode()
+            .upgrade()
+            .unwrap();
+        let file = virtual_file_system().open(inode)?;
+        let file_descriptor = FileDescriptor::new(file);
+        let index = self.file_descriptor_table.add(file_descriptor.clone())?;
+        Ok(index)
+    }
+
+    pub fn close_file(&mut self, fd: usize) -> Result<(), &'static str> {
+        let file_descriptor = self.file_descriptor_table.remove(fd)?;
+        virtual_file_system().close(file_descriptor.file_handle_index())
+    }
+
+    pub fn get_file(&self, fd: usize) -> Result<&FileDescriptor, &'static str> {
+        self.file_descriptor_table.get(fd)
     }
 }
 

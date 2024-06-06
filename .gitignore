@@ -5,3 +5,5 @@ rootfs
 *.cpio
 *.dtb
 *.bak
+*.code-workspace
+.vscode

@@ -1,18 +1,18 @@
+use crate::device::device_driver::{driver_manager, DeviceDriverDescriptor};
+use crate::device::gpio::GPIO;
+use crate::device::interrupt_controller::{
+    InterruptController, InterruptNumber, LocalInterrupt, LocalInterruptType,
+    PendingInterruptQueue, PeripheralInterrupt, PeripherialInterruptType,
+};
+use crate::device::interrupt_manager::register_interrupt_manager;
+use crate::device::mailbox::Mailbox;
+use crate::device::mini_uart::MiniUart;
+use crate::device::timer::Timer;
+use crate::device::watchdog::Watchdog;
 use bsp::memory::{
     AUX_MMIO_BASE, CORE_INTERRUPT_SOURCE_MMIO_BASE, CORE_TIMER_INTERRUPT_CONTROLL_MMIO_BASE,
     GPIO_MMIO_BASE, INTERRUPT_CONTROLLER_MMIO_BASE, MAILBOX_MMIO_BASE, WATCHDOG_MMIO_BASE,
 };
-use device::device_driver::{driver_manager, DeviceDriverDescriptor};
-use device::gpio::GPIO;
-use device::interrupt_controller::{
-    InterruptController, InterruptNumber, LocalInterrupt, LocalInterruptType,
-    PendingInterruptQueue, PeripheralInterrupt, PeripherialInterruptType,
-};
-use device::interrupt_manager::register_interrupt_manager;
-use device::mailbox::Mailbox;
-use device::mini_uart::MiniUart;
-use device::timer::Timer;
-use device::watchdog::Watchdog;
 use library::console;
 
 use crate::memory::phys_to_virt;

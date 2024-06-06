@@ -8,7 +8,7 @@
 
 - Ubuntu 22.04
 - x86-64
-- Rust 1.76.0
+- Rust nightly-2024-05-23
 
 ## Rust Install
 
