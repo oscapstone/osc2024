@@ -14,9 +14,9 @@
 Vnode* root_node = nullptr;
 
 void init_vfs() {
-  register_filesystem(tmpfs::init());
-  register_filesystem(initramfs::init());
-  register_filesystem(uartfs::init());
+  register_filesystem(new tmpfs::FileSystem());
+  register_filesystem(new initramfs::FileSystem());
+  register_filesystem(new uartfs::FileSystem());
 
   root_node = get_filesystem("tmpfs")->mount();
   root_node->set_parent(root_node);

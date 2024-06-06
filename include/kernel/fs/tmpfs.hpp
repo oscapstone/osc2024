@@ -10,8 +10,6 @@ class Vnode;
 class File;
 class FileSystem;
 
-::FileSystem* init();
-
 class Vnode final : public ::VnodeImplRW<Vnode, File> {
  public:
   string content;

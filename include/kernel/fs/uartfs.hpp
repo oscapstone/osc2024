@@ -9,8 +9,6 @@ class Vnode;
 class File;
 class FileSystem;
 
-::FileSystem* init();
-
 class Vnode final : public ::VnodeImpl<Vnode, File> {
  public:
   Vnode() : ::VnodeImpl<Vnode, File>{kFile} {}

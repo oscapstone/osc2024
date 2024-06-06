@@ -29,13 +29,6 @@ void preinit() {
   }
 }
 
-::FileSystem* init() {
-  static FileSystem* fs = nullptr;
-  if (not fs)
-    fs = new FileSystem;
-  return fs;
-}
-
 FileSystem::FileSystem() {
   root = new ::Vnode{kDir};
   for (auto hdr : cpio) {

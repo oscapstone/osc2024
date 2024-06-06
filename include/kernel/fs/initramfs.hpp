@@ -20,7 +20,6 @@ class File;
 class FileSystem;
 
 void preinit();
-::FileSystem* init();
 
 class Vnode final : public ::VnodeImpl<Vnode, File> {
   friend File;
