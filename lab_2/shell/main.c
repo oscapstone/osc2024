@@ -30,7 +30,6 @@
 
 
 void main(int argc, char* argv[]){
-   uart_init();
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';

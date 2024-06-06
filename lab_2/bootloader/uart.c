@@ -68,6 +68,12 @@ void uart_init()
     r=150; while(r--) { asm volatile("nop"); }
     *GPPUDCLK0 = 0;        // flush GPIO setup
     *AUX_MU_CNTL = 3;      // enable Tx, Rx
+    /*EXTRA: Read from AUX_MU_IO until AUX_MU_LSR indicates no more data*/
+    while (*AUX_MU_LSR & 0x01) {
+        // Read and discard the data
+        volatile unsigned int data = *AUX_MU_IO;
+        (void)data;  // Prevent unused variable warning
+    }
 }
 
 /**
