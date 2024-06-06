@@ -1,12 +1,13 @@
 use crate::println;
+
 use alloc::collections::BinaryHeap;
 use alloc::string::String;
 use core::{panic, ptr::write_volatile};
-// globle variable
+
 
 struct TimerEntry {
     pub target_time: u64,
-    pub callback: fn(String),
+    pub callback: fn(String, *mut u64),
     pub message: String,
 }
 
@@ -36,9 +37,9 @@ impl core::cmp::Eq for TimerEntry {}
 
 static mut TIMER_ENTRY_QUEUE: Option<BinaryHeap<TimerEntry>> = None;
 
-pub fn add_timer(callback: fn(String), time_sec: u64, message: String) {
+pub fn add_timer(callback: fn(String, *mut u64), time_ms: u64, message: String) {
     let current_time = get_current_time();
-    let time_duration = sec_to_tick(time_sec);
+    let time_duration = ms_to_tick(time_ms);
     let target_time = time_duration + current_time;
     let mut entry: TimerEntry = TimerEntry {
         target_time: target_time, // the time to trigger the timer
@@ -69,13 +70,20 @@ fn timer_boink() {
     unsafe { core::arch::asm!("nop") };
 }
 
-pub fn timer_handler() {
-    timer_boink();
-    driver::uart::uart_write_str("Timer interrupt!\r\n");
+pub fn init_timer() {
+    unsafe {
+        let mut tmp: u64;
+        core::arch::asm!("mrs {0}, cntkctl_el1", out(reg) tmp);
+        tmp |= 1;
+        core::arch::asm!("msr cntkctl_el1, {0}", in(reg) tmp);
+    }
+}
+
+pub fn timer_handler(sp : *mut u64) {
     if let Some(queue) = unsafe {TIMER_ENTRY_QUEUE.as_mut()} {
         if let Some(entry) = queue.pop() {
             // execute the callback function
-            (entry.callback)(entry.message.clone());
+            (entry.callback)(entry.message.clone(), sp);
             if let Some(next_entry) = queue.peek() {
                 set_timer_interrupt(next_entry.target_time);
             } else {
@@ -109,6 +117,10 @@ pub fn sec_to_tick(sec: u64) -> u64 {
     sec * get_timer_freq()
 }
 
+pub fn ms_to_tick(ms: u64) -> u64 {
+    ms * get_timer_freq() / 1000
+}
+
 fn timer_callback(message: String) {
     let current_time = get_current_time() / get_timer_freq();
     println!("You have a timer after boot {}s, message: {}", current_time, message);
@@ -119,18 +131,19 @@ fn set_timer_interrupt(target_time: u64) {
         let addr: *mut u32 = 0x40000040 as *mut u32;
         let basic_irq_enable: *mut u32 = 0x3F00B218 as *mut u32;
         core::arch::asm!("msr cntp_cval_el0, {0}", in(reg) target_time);
-        println!(
-            "Debug: Set timer interrupt at {} tic, freq: {}, current {} tic",
-            target_time,
-            get_timer_freq(),
-            get_current_time()
-        );
+        // println!(
+        //     "Debug: Set timer interrupt at {} tic, freq: {}, current {} tic",
+        //     target_time,
+        //     get_timer_freq(),
+        //     get_current_time()
+        // );
         // enable timer interrupt
         // write_volatile(basic_irq_enable, 0b1);
         // enable the timer
         write_volatile(addr, 0x2);
     }
 }
+
 fn disable_timer_interrupt() {
     unsafe {
         let addr: *mut u32 = 0x40000040 as *mut u32;

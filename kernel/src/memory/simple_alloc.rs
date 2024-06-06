@@ -25,7 +25,7 @@ fn alloc(layout: Layout, memory: &mut HeapMemory) -> *mut u8 {
     let align = layout.align();
     let new_current = (memory.current + align - 1) & !(align - 1);
     if new_current + size > memory.heap_start + memory.heap_size {
-        panic!("Simple Allcator: Out of memory");
+        panic!("Simple Allocator: Out of memory");
     }
     memory.current = new_current + size;
     new_current as *mut u8

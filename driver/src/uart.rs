@@ -23,6 +23,10 @@ const GPPUD: u32 = 0x3F200094;
 const GPPUDCLK0: u32 = 0x3F200098;
 const GPPUDCLK1: u32 = 0x3F20009C;
 
+pub fn is_buf_empty() -> bool {
+    unsafe { READ_RING_BUFFER.is_empty() }
+}
+
 struct RingBuffer {
     buffer: [u8; 1024],
     head: usize,
@@ -249,8 +253,6 @@ impl Write for UartWriter {
         Ok(())
     }
 }
-
-
 
 impl Write for UartWriterPolling {
     fn write_str(&mut self, s: &str) -> fmt::Result {

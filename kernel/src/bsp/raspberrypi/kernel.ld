@@ -21,7 +21,6 @@ SECTIONS
 
     .data : { *(.data*) }
 
-
     .bss (NOLOAD): ALIGN(16)
     {
         __bss_start = .;

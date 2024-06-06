@@ -197,7 +197,6 @@ impl MemoryManager {
                 _ => {
                     panic!("Reserve a non free block");
                 }
-
             };
         }
         self.set_block_state(page_number, PageState::Rsv);

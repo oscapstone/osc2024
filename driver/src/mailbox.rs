@@ -10,32 +10,38 @@ const MAILBOX_FULL: u32 = 0x80000000;
 
 use core::ptr::{read_volatile, write_volatile};
 
-unsafe fn mailbox_call(mailbox: &mut [u32]) {
+#[no_mangle]
+#[inline(never)]
+pub fn mailbox_call(ch:u32, mailbox: *const u32) {
     // check if the mailbox is full
-    let mut status: u32;
-    loop {
-        status = read_volatile(MAILBOX_STATUS as *const u32);
-        if (status & MAILBOX_FULL) == 0 {
-            // mailbox is not full, we can write the message
-            break;
+    unsafe {
+        let mut status: u32;
+        loop {
+            status = read_volatile(MAILBOX_STATUS as *const u32);
+            if (status & MAILBOX_FULL) == 0 {
+                // mailbox is not full, we can write the message
+                break;
+            }
         }
-    }
-    // Combine the message address (upper 28 bits) with channel number (lower 4 bits)
-    let channel = 8;
-    let message_address = mailbox.as_ptr() as u32;
-    let combined_address = (message_address & 0xFFFFFFF0) | (channel & 0xF);
-    write_volatile(MAILBOX_WRITE as *mut u32, combined_address as u32);
+        // Combine the message address (upper 28 bits) with channel number (lower 4 bits)
+        let channel = ch;
+        let message_address = mailbox as u32;
+        let combined_address = (message_address & 0xFFFFFFF0) | (channel & 0xF);
+        write_volatile(MAILBOX_WRITE as *mut u32, combined_address as u32);
 
-    // check if the mailbox is empty
-    loop {
-        status = read_volatile(MAILBOX_STATUS as *const u32);
-        if (status & MAILBOX_EMPTY) == 0 {
-            // mailbox is not empty, we can read the message
-            break;
+        // check if the mailbox is empty
+        loop {
+            status = read_volatile(MAILBOX_STATUS as *const u32);
+            if (status & MAILBOX_EMPTY) == 0 {
+                // mailbox is not empty, we can read the message
+                break;
+            }
         }
+        if read_volatile(MAILBOX_READ as *const u32) != (message_address as u32) {}
     }
-    if read_volatile(MAILBOX_READ as *const u32) != (message_address as u32) {}
 }
+
+
 
 const GET_BOARD_REVISION: u32 = 0x00010002;
 const REQUEST_CODE: u32 = 0x00000000;
@@ -56,9 +62,7 @@ pub fn get_board_revisioin() -> u32 {
     mailbox[5 + idx_offset] = 0;
     mailbox[6 + idx_offset] = END_TAG;
 
-    unsafe {
-        mailbox_call(&mut mailbox[idx_offset..(idx_offset + 7)]);
-    }
+    mailbox_call(8,(mailbox[idx_offset..(idx_offset + 7)]).as_ptr());
     mailbox[5]
 }
 
@@ -77,7 +81,6 @@ pub fn get_arm_memory() -> (u32, u32) {
     mailbox[6 + idx_offset] = 0;
     mailbox[7 + idx_offset] = END_TAG;
 
-    unsafe {mailbox_call(&mut mailbox[idx_offset..(idx_offset + 8)]);
-    }
+    mailbox_call(8, mailbox[idx_offset..(idx_offset + 8)].as_ptr());
     (mailbox[5], mailbox[6])
 }
