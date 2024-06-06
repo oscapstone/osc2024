@@ -2,6 +2,7 @@
 
 #include "fdt.hpp"
 #include "fs/log.hpp"
+#include "fs/vfs.hpp"
 #include "io.hpp"
 #include "mm/mmu.hpp"
 

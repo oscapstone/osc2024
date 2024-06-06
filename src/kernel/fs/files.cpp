@@ -6,7 +6,7 @@
 
 #define FS_TYPE "files"
 
-Files::Files() : cwd(root_node), fd_bitmap(-1), files{} {}
+Files::Files(Vnode* cwd) : cwd(cwd), fd_bitmap(-1), files{} {}
 Files::~Files() {
   reset();
 }

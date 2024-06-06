@@ -1,7 +1,7 @@
 #pragma once
 
 #include "fs/cpio.hpp"
-#include "fs/vfs.hpp"
+#include "fs/ds.hpp"
 
 namespace initramfs {
 

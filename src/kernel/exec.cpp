@@ -1,5 +1,6 @@
 #include "exec.hpp"
 
+#include "fs/fs.hpp"
 #include "io.hpp"
 #include "mm/vmm.hpp"
 #include "syscall.hpp"

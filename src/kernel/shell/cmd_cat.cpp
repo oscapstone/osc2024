@@ -1,4 +1,4 @@
-#include "fs/vfs.hpp"
+#include "fs/fs.hpp"
 #include "io.hpp"
 #include "shell/cmd.hpp"
 

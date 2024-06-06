@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fs/vfs.hpp"
+#include "fs/ds.hpp"
 
 namespace uartfs {
 
