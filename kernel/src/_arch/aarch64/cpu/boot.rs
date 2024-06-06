@@ -5,7 +5,6 @@ global_asm!(
     CONST_CORE_ID_MASK = const 0b11
 );
 
-global_asm!(include_str!("interrupt.s"));
 
 // mod uart;
 

@@ -12,29 +12,37 @@ mod fdt;
 mod panic_wait;
 mod print;
 mod fs;
-mod timer;
 mod memory;
-
+mod kernel_thread;
+mod process;
 mod interrupt;
+
+use interrupt::timer;
 
 extern crate alloc;
 
 use core::alloc::GlobalAlloc;
 use core::panic;
-
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc::collections::BinaryHeap;
+use core::alloc::Layout;
+
 use fs::cpio::CpioHandler;
 use driver::mailbox;
 use driver::uart;
 use driver::addr_loader;
-use memory::{dynmemalloc, simple_alloc::SimpleAllocator};
-use core::alloc::Layout;
+use kernel_thread::Thread;
+use memory::{dynamic_memory_allocator, simple_alloc::SimpleAllocator};
 
 #[global_allocator]
 static mut ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+static mut PAGE_ALLOC: dynamic_memory_allocator::DynamicMemoryAllocator = dynamic_memory_allocator::DynamicMemoryAllocator::new();
+
+static mut CPIO_HANDLER: Option<CpioHandler> = None;
+
+static mut PROCESS_SCHEDULER: Option<process::ProcessScheduler> = None;
 
 fn get_initrd_addr(name: &str, data: *const u8, len: usize) -> Option<u32> {
     if name == "linux,initrd-start" {
@@ -42,6 +50,16 @@ fn get_initrd_addr(name: &str, data: *const u8, len: usize) -> Option<u32> {
     } else {
         None
     }
+}
+
+fn foo(){
+    let scheduler = kernel_thread::get_scheduler();
+    for i in 0..10 {
+        let cur_thread = scheduler.get_current_thread();
+        println!("Thread id: {}, i: {}", cur_thread.get_thread_id(), i);
+        kernel_thread::schedule();
+    }
+    exit_thread!();
 }
 
 #[no_mangle]
@@ -67,45 +85,59 @@ fn boink() {
     unsafe{core::arch::asm!("nop")};
 }
         
-fn timer_callback(message: String) {
+fn timer_callback(message: String, _: *mut u64) {
     let current_time = timer::get_current_time() / timer::get_timer_freq();
     println!("You have a timer after boot {}s, message: {}", current_time, message);
-
 }
 
 #[no_mangle]
 fn kernel_init() -> ! {
     let mut dtb_addr = addr_loader::load_dtb_addr();
     let dtb_parser = fdt::DtbParser::new(dtb_addr);
- 
+    // init process scheduler
+    unsafe {
+        PROCESS_SCHEDULER = Some(process::ProcessScheduler::new());
+    }
     // init uart
     uart::init_uart(true);
-    uart::uart_write_str("Kernel started\r\n");
+    timer::init_timer();
+    println_polling!("Kernel started");
     
     // find initrd value by dtb traverse
-
+    
     let mut initrd_start: *mut u8;
     if let Some(addr) = dtb_parser.traverse(get_initrd_addr) {
         initrd_start = addr as *mut u8;
-        println!("Initrd start address: {:#x}", initrd_start as u64)
+        println_polling!("Initrd start address: {:#x}", initrd_start as u64)
     } else {
         initrd_start = 0 as *mut u8;
     }
-    let mut handler: CpioHandler = CpioHandler::new(initrd_start as *mut u8);
+    unsafe {
+        CPIO_HANDLER = Some(CpioHandler::new(initrd_start as *mut u8));
+    }
+    let mut cpio_handler = unsafe {CPIO_HANDLER.as_mut().unwrap()};
     let mut bh: BinaryHeap<u32> = BinaryHeap::new();
     
+
     // load symbol address usr_load_prog_base
     
     let mut in_buf: [u8; 128] = [0; 128];
-    let mut alloc = dynmemalloc::DynMemAllocator::new();
- 
-    alloc.init(0x00000000, 0x3C000000 , 4096);
+    
+    let mut page_alloc = unsafe {&mut PAGE_ALLOC};
+    page_alloc.init(0x00000000, 0x3C000000 , 4096);
 
-    alloc.reserve_addr(0x0, 0x1000);
-    alloc.reserve_addr(0x60000, 0x80000); // stack
-    alloc.reserve_addr(0x80000, 0x100000); // code
-    alloc.reserve_addr(initrd_start as usize, initrd_start as usize + 4096); //initrd
-    alloc.reserve_addr(dtb_addr as usize, ((dtb_addr as usize + dtb_parser.get_dtb_size() as usize) + (4096 - 1)) & !(4096 - 1)); // dtb
+    page_alloc.reserve_addr(0x0, 0x1000);
+    page_alloc.reserve_addr(0x60000, 0x80000); // stack
+    page_alloc.reserve_addr(0x80000, 0x100000); // code
+    page_alloc.reserve_addr(initrd_start as usize, initrd_start as usize + 4096); //initrd
+    page_alloc.reserve_addr(dtb_addr as usize, ((dtb_addr as usize + dtb_parser.get_dtb_size() as usize) + (4096 - 1)) & !(4096 - 1)); // dtb
+    
+    // let scheduler = kernel_thread::get_scheduler();
+
+    
+    // scheduler.add_task(foo);
+    // scheduler.add_task(foo);
+    // scheduler.start();
 
     loop {
         print!("meow>> ");
@@ -120,7 +152,7 @@ fn kernel_init() -> ! {
                 break;
             }
             "ls" => {
-                for file in handler.get_files() {
+                for file in cpio_handler.get_files() {
                     println!("{}, size: {}", file.get_name(), file.get_size());
                 }
             }
@@ -129,7 +161,7 @@ fn kernel_init() -> ! {
                     println!("Usage: cat <file>");
                     continue;
                 }
-                let mut file = handler.get_files().find(|f| f.get_name() == cmd[1]);
+                let mut file = cpio_handler.get_files().find(|f| f.get_name() == cmd[1]);
                 if let Some(mut f) = file {
                     println!("File size: {}", f.get_size());
                     loop {
@@ -165,23 +197,30 @@ fn kernel_init() -> ! {
                     println!("Usage: exec <file>");
                     continue;
                 }
-                let mut file = handler.get_files().find(|f| {
+                let mut file = cpio_handler.get_files().find(|f| {
                     f.get_name() == cmd[1]}
+                );
+
+                let mut idle_proc_code = cpio_handler.get_files().find(|f| {
+                    f.get_name() == "prog"}
                 );
                 if let Some(mut f) = file {
                     let file_size = f.get_size();
                     println!("File size: {}", file_size);
                     let mut data = f.read(file_size);
-                    unsafe {
-                        let mut addr = usr_load_prog_base as *mut u8;
-                        for i in data {
-                            *addr = *i;
-                            addr = addr.add(1);
-                        }
-                        println!();
-                        let func: extern "C" fn() -> ! = core::mem::transmute(usr_load_prog_base);
-                        println!("Jump to user program at {:#x}", func as u64);
-                        exec(func);
+                    let process_scheduler = unsafe {PROCESS_SCHEDULER.as_mut().unwrap()};
+                    if let Some(mut f) = idle_proc_code {
+                        let idle_proc_size = f.get_size();
+                        println!("Idle process size: {}", idle_proc_size);
+                        let mut idle_proc_data = f.read(idle_proc_size);
+                        let idle_pid = process_scheduler.create_process(&idle_proc_data);
+                        println!("Idle process created with pid: {}", idle_pid);
+                    }
+                    let pid = process_scheduler.create_process(&data);
+                    
+                    println!("Process created with pid: {}", pid);
+                    if process_scheduler.is_running() == false{
+                        process_scheduler.start();
                     }
                 } else {
                     println!("File not found");
@@ -195,7 +234,7 @@ fn kernel_init() -> ! {
                 let time: u64 = cmd[1].parse().unwrap();
                 let mesg = cmd[2].to_string();
                 println!("Set timer after {}s, message :{}", time, mesg);                
-                timer::add_timer(timer_callback, time, mesg);
+                timer::add_timer(timer_callback, time * 1000, mesg);
             }
             "dalloc" => {
                 if cmd.len() < 3 {
@@ -217,7 +256,7 @@ fn kernel_init() -> ! {
                     }
                 };
 
-                let alloc_addr = unsafe {alloc.alloc(Layout::from_size_align(size, allign).unwrap())} as usize;
+                let alloc_addr = unsafe {page_alloc.alloc(Layout::from_size_align(size, allign).unwrap())} as usize;
                 println!("Allocated address: {:#x}", alloc_addr);
             }
             "dfree" => {
@@ -226,16 +265,16 @@ fn kernel_init() -> ! {
                     continue;
                 }
                 let size: usize = cmd[1].parse().unwrap();
-                unsafe {alloc.dealloc(size as *mut u8, Layout::from_size_align(1, 1).unwrap())};
+                unsafe {page_alloc.dealloc(size as *mut u8, Layout::from_size_align(1, 1).unwrap())};
             }
             "palloc" => {
                 let size: usize = cmd[1].parse().unwrap();
-                let pn = unsafe {alloc.palloc(size)} as usize;
+                let pn = unsafe {page_alloc.palloc(size)} as usize;
                 println!("Allocated page: {}", pn);
             }
             "pfree" => {
                 let addr: usize = cmd[1].parse().unwrap();
-                unsafe {alloc.pfree(addr)};
+                unsafe {page_alloc.pfree(addr)};
             }
             "show" => {
                 if cmd.len() < 2 {
@@ -244,10 +283,10 @@ fn kernel_init() -> ! {
                 }   
                 match cmd[1] {
                     "d" => {
-                        alloc.dshow();
+                        page_alloc.dshow();
                     }
                     "p" => {
-                        alloc.pshow();
+                        page_alloc.pshow();
                     }
                     _ => {
                         println!("Usage: show <d/p>");
@@ -261,12 +300,14 @@ fn kernel_init() -> ! {
                 }
                 let start: usize = cmd[1].parse().unwrap();
                 let end: usize = cmd[2].parse().unwrap();
-                unsafe {alloc.reserve_addr(start, end)};
+                unsafe {page_alloc.reserve_addr(start, end)};
             }
             "" => {}
+        
             _ => {
                 println!("Shell: Command not found");
             }
+            
         }
     }
 

@@ -12,6 +12,7 @@ include ./utils/os.mk
 QEMU_BINARY       = qemu-system-aarch64
 QEMU_MACHINE_TYPE = raspi3b
 QEMU_RELEASE_ARGS = -display none -serial null -serial stdio
+QEMU_DISPLAY_ARGS = -display gtk -serial null -serial stdio
 QEMU_DEBUG_ARGS   = -display none -S -s -serial null -serial stdio
 QEMU_TTY_ARGS   = -display none -serial null -serial pty
 QEMU_TTY_DEBUG_ARGS   = -display none -S -s -serial null -serial pty
@@ -64,9 +65,15 @@ kernel_elf:
 bootloader_elf:
 	make -C $(BOOTLOADER_PATH) all
 
+kernel_gtk: $(KERNEL_BIN) cpio
+	$(call color_header, "Launching QEMU")
+	$(EXEC_QEMU) $(QEMU_DISPLAY_ARGS) -initrd $(INITRD_PATH) -dtb $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
+
 kernel_qemu: $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU")
-	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -initrd $(INITRD_PATH) -dtb $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN)
+	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -initrd $(INITRD_PATH) -dtb $(QEMU_DTB_PATH) -kernel $(KERNEL_BIN) 
+
+
 
 kernel_gdb: $(KERNEL_BIN) cpio
 	$(call color_header, "Launching QEMU in background")
