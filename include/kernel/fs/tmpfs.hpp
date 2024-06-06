@@ -34,7 +34,9 @@ class File final : public ::File {
 
 class FileSystem final : public ::FileSystem {
  public:
-  FileSystem();
+  virtual const char* name() {
+    return "tmpfs";
+  }
 
   virtual ::Vnode* mount();
 };

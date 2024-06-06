@@ -48,8 +48,6 @@ int File::read(void* buf, size_t len) {
   return _read(get()->content.data(), buf, len);
 }
 
-FileSystem::FileSystem() : ::FileSystem{"tmpfs"} {}
-
 ::Vnode* FileSystem::mount() {
   return new Vnode{kDir};
 }

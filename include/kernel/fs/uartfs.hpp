@@ -29,7 +29,9 @@ class File final : public ::File {
 
 class FileSystem final : public ::FileSystem {
  public:
-  FileSystem();
+  virtual const char* name() {
+    return "uartfs";
+  }
 
   virtual ::Vnode* mount();
 };

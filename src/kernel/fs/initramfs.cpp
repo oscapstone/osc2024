@@ -53,7 +53,7 @@ int File::read(void* buf, size_t len) {
   return _read(get()->_content, buf, len);
 }
 
-FileSystem::FileSystem() : ::FileSystem{"initramfs"} {
+FileSystem::FileSystem() {
   root = new ::Vnode{kDir};
   for (auto hdr : cpio) {
     ::Vnode* dir;

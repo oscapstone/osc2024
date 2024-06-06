@@ -43,7 +43,11 @@ class File final : public ::File {
 class FileSystem final : public ::FileSystem {
  public:
   ::Vnode* root;
+
   FileSystem();
+  virtual const char* name() {
+    return "initramfs";
+  }
 
   virtual ::Vnode* mount();
 };

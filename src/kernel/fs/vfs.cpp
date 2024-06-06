@@ -34,7 +34,7 @@ FileSystem* filesystems = nullptr;
 FileSystem** find_filesystem(const char* name) {
   auto p = &filesystems;
   for (; *p; p = &(*p)->next)
-    if (strcmp((*p)->name, name) == 0)
+    if (strcmp((*p)->name(), name) == 0)
       break;
   return p;
 }
@@ -42,7 +42,7 @@ FileSystem** find_filesystem(const char* name) {
 FileSystem* get_filesystem(const char* name) {
   auto p = filesystems;
   for (; p; p = p->next)
-    if (strcmp(p->name, name) == 0)
+    if (strcmp(p->name(), name) == 0)
       break;
   return p;
 }
@@ -51,10 +51,10 @@ int register_filesystem(FileSystem* fs) {
   // register the file system to the kernel.
   // you can also initialize memory pool of the file system here.
 
-  auto p = find_filesystem(fs->name);
+  auto p = find_filesystem(fs->name());
   if (not p)
     return -1;
-  FS_INFO("register fs '%s'\n", fs->name);
+  FS_INFO("register fs '%s'\n", fs->name());
   *p = fs;
 
   return 0;

@@ -109,10 +109,9 @@ class File {
 
 class FileSystem {
  public:
-  const char* const name;
   FileSystem* next = nullptr;
-
-  FileSystem(const char* name) : name(name) {}
-
+  virtual const char* name() {
+    return "";
+  }
   virtual Vnode* mount();
 };

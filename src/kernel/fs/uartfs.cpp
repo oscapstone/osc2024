@@ -30,8 +30,6 @@ int File::read(void* buf, size_t len) {
   return kread(buf, len);
 }
 
-FileSystem::FileSystem() : ::FileSystem{"uartfs"} {}
-
 ::Vnode* FileSystem::mount() {
   return new Vnode;
 }
