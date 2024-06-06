@@ -40,13 +40,16 @@ class Vnode {
 
  private:
   // TODO: ref cnt
-  // TODO: hard link
   Vnode *_parent = nullptr, *_prev = nullptr;
   list<child> _childs{};
 
- public:
-  int add_child(const char* name, Vnode* vnode);
+ protected:
+  list<child>::iterator find_child(const char* name);
+  int set_child(const char* name, Vnode* vnode);
   int del_child(const char* name);
+
+ public:
+  int link(const char* name, Vnode* vnode);
 
   const filetype type;
 

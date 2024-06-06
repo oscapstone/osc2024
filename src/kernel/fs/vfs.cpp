@@ -34,29 +34,44 @@ bool Vnode::child::operator==(const char* component_name) const {
   return strcmp(name, component_name) == 0;
 }
 
-int Vnode::add_child(const char* name, Vnode* vnode) {
-  _childs.push_back({name, vnode});
+list<Vnode::child>::iterator Vnode::find_child(const char* name) {
+  auto it = _childs.begin();
+  while (it != _childs.end() and *it != name)
+    ++it;
+  return it;
+}
+
+int Vnode::set_child(const char* name, Vnode* vnode) {
+  auto it = find_child(name);
+  if (it == _childs.end())
+    _childs.push_back({name, vnode});
+  else
+    it->node = vnode;
   return 0;
 }
 
 int Vnode::del_child(const char* name) {
-  for (auto it = _childs.begin(); it != _childs.end(); ++it) {
-    if (*it == name) {
-      _childs.erase(it);
-      return 0;
-    }
-  }
-  return -1;
+  auto it = find_child(name);
+  if (it == _childs.end())
+    return -1;
+  _childs.erase(it);
+  return 0;
+}
+
+int Vnode::link(const char* name, Vnode* vnode) {
+  set_child(name, vnode);
+  vnode->set_parent(this);
+  return 0;
 }
 
 void Vnode::set_parent(Vnode* parent) {
   _parent = parent;
-  add_child("..", parent);
+  set_child("..", parent);
 }
 
 Vnode::Vnode(filetype type) : type(type) {
   if (isDir())
-    add_child(".", this);
+    set_child(".", this);
 }
 
 int Vnode::lookup(const char* component_name, Vnode*& vnode) {

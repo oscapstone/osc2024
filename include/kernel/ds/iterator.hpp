@@ -52,14 +52,14 @@ class Iterator {
   {
     return get(p_);
   }
-  template <typename R = std::invoke_result_t<
+  template <typename R = std::add_pointer_t<std::invoke_result_t<
                 std::conditional_t<std::is_invocable_v<decltype(get), T*>,
                                    decltype(get), void(T*)>,
-                T*>>
+                T*>>>
   R operator->() const
     requires(std::invocable<decltype(get), T*>)
   {
-    return get(p_);
+    return &get(p_);
   }
   bool operator==(const Iterator& other) const {
     return other.p_ == p_;
