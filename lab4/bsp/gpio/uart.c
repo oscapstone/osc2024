@@ -102,31 +102,31 @@ void uart_hex(unsigned long long int d) {
 }
 
 void uart_enable_tx_interrupt() {
-#ifdef DEBUG
+#ifdef IRQ_DEBUG
     uart_puts("[INFO] enable tx interrupt\n");
-#endif /* ifdef DEBUG */
+#endif /* ifdef IRQ_DEBUG */
 
     *AUX_MU_IER |= (1 << 1);
 }
 
 void uart_disable_tx_interrupt() {
-#ifdef DEBUG
+#ifdef IRQ_DEBUG
     uart_puts("[INFO] disable tx interrupt\n");
-#endif /* ifdef DEBUG */
+#endif /* ifdef IRQ_DEBUG */
     *AUX_MU_IER &= ~(1 << 1);
 }
 
 void uart_enable_rx_interrupt() {
-#ifdef DEBUG
+#ifdef IRQ_DEBUG
     uart_puts("[INFO] enable rx interrupt\n");
-#endif /* ifdef DEBUG */
+#endif /* ifdef IRQ_DEBUG */
     *AUX_MU_IER |= (1 << 0);
 }
 
 void uart_disable_rx_interrupt() {
-#ifdef DEBUG
+#ifdef IRQ_DEBUG
     uart_puts("[INFO] disable rx interrupt\n");
-#endif /* ifdef DEBUG */
+#endif /* ifdef IRQ_DEBUG */
     *AUX_MU_IER &= ~(1 << 0);
 }
 

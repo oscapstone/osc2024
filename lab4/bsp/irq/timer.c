@@ -2,7 +2,7 @@
 #include <kernel/io.h>
 
 void core_timer_enable() {
-#ifdef DEBUG
+#ifdef TIMER_DEBUG
     print_string("\n[core_timer_enable] ");
 #endif
     asm volatile(
@@ -16,7 +16,7 @@ void core_timer_enable() {
 }
 
 void core_timer_disable() {
-#ifdef DEBUG
+#ifdef TIMER_DEBUG
     print_string("\n[core_timer_disable] ");
 #endif
     asm volatile(

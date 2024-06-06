@@ -62,7 +62,7 @@ void _exec_command(int argc, char **argv) {
     print_string("\n");
 
     char *user_program = USER_PROGRAM_BASE;
-    memncpy(user_program, file_contents, file_size);
+    memcpy(user_program, file_contents, file_size);
     from_el1_to_el0(USER_PROGRAM_BASE, USER_STACK_POINTER_BASE);
 }
 

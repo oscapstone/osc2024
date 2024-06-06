@@ -12,7 +12,7 @@
 #define PAGE_CACHE 2
 #define PAGE_RESERVED 3
 
-typedef uintptr_t *phys_addr_t;  // 節點結構，代表自由區塊
+typedef uintptr_t phys_addr_t;  // 節點結構，代表自由區塊
 typedef struct page {
     struct page *prev, *next;  // 指向同一 order 的下一個節點
     unsigned long order;

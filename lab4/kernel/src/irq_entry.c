@@ -19,22 +19,16 @@ static void show_irq_debug_msg(int type, unsigned long spsr, unsigned long elr,
 
 void el1_irq_entry(int type, unsigned long spsr, unsigned long elr,
                    unsigned long esr) {
-    // #ifdef DEBUG
-    //     static int count = 0;
-    //     uart_puts("IRQ count: ");
-    //     uart_hex(count);
-    //     uart_puts("\n");
-    //     uart_puts("IRQ CORE0_IRQ_SOURCE: ");
-    //     uart_hex(get_irq());
-    //     uart_puts("\n");
-    //     // if (count++ == 6) {
-    //     //     uart_puts("IRQ count max\n");
-    //     //     while (1) {
-    //     //     }
-    //     // }
-    //     print_string("\n[el1_irq_entry] ");
-    //     show_irq_debug_msg(type, spsr, elr, esr);
-    // #endif
+    #ifdef IRQ_DEBUG
+        uart_puts("IRQ count: ");
+        uart_hex(count);
+        uart_puts("\n");
+        uart_puts("IRQ CORE0_IRQ_SOURCE: ");
+        uart_hex(get_irq());
+        uart_puts("\n");
+        print_string("\n[el1_irq_entry] ");
+        show_irq_debug_msg(type, spsr, elr, esr);
+    #endif
 
     el1_disable_interrupt();
 

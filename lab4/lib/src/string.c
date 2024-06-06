@@ -33,7 +33,7 @@ char *strncpy(char *dest, const char *src, int n) {
     return start;
 }
 
-char *memncpy(char *dest, const char *src, int n) {
+char *memcpy(char *dest, const char *src, int n) {
     char *start = dest;
     while (n > 0) {
         *dest = *src;
