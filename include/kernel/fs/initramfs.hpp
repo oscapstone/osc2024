@@ -25,7 +25,7 @@ class Vnode final : public ::Vnode {
   Vnode(const cpio_newc_header* hdr);
   virtual ~Vnode() = default;
   virtual long size() const;
-  virtual int open(const char* component_name, ::File*& file, fcntl flags);
+  virtual int open(const char* component_name, ::FilePtr& file, fcntl flags);
 };
 
 class File final : public ::File {

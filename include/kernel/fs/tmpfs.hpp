@@ -16,7 +16,7 @@ class Vnode final : public ::Vnode {
   virtual long size() const;
   virtual int create(const char* component_name, ::Vnode*& vnode);
   virtual int mkdir(const char* component_name, ::Vnode*& vnode);
-  virtual int open(const char* component_name, ::File*& file, fcntl flags);
+  virtual int open(const char* component_name, ::FilePtr& file, fcntl flags);
 };
 
 class File final : public ::File {

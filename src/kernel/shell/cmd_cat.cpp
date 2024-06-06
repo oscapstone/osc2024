@@ -22,7 +22,7 @@ int cmd_cat(int argc, char* argv[]) {
         r = -1;
         kprintf("%s: %s: Is a directory\n", argv[0], name);
       } else {
-        File* file;
+        FilePtr file;
         if (vfs_open(name, O_RDONLY, file) < 0) {
           r = -1;
           kprintf("%s: %s: can't open\n", argv[0], name);

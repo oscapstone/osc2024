@@ -45,7 +45,7 @@ long Vnode::size() const {
   return _size;
 }
 
-int Vnode::open(const char* component_name, ::File*& file, fcntl flags) {
+int Vnode::open(const char* component_name, ::FilePtr& file, fcntl flags) {
   return _open<File>(component_name, file, flags);
 }
 

@@ -27,7 +27,7 @@ int exec(ExecCtx* ctx) {
     return -1;
   }
 
-  File* file;
+  FilePtr file;
   if (vfs_open(name, O_RDONLY, file) < 0) {
     klog("%s: %s: can't open\n", __func__, name);
     return -1;

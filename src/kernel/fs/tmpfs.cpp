@@ -31,7 +31,7 @@ int Vnode::mkdir(const char* component_name, ::Vnode*& vnode) {
   return 0;
 }
 
-int Vnode::open(const char* component_name, ::File*& file, fcntl flags) {
+int Vnode::open(const char* component_name, ::FilePtr& file, fcntl flags) {
   return _open<File>(component_name, file, flags);
 }
 

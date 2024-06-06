@@ -66,7 +66,7 @@ SYSCALL_DEFINE2(open, const char*, pathname, fcntl, flags) {
 
 int open(const char* pathname, fcntl flags) {
   int r;
-  File* file{};
+  FilePtr file{};
   if ((r = vfs_open(pathname, flags, file)) < 0)
     goto end;
 
@@ -79,7 +79,7 @@ end:
   return r;
 }
 
-int vfs_open(const char* pathname, fcntl flags, File*& target) {
+int vfs_open(const char* pathname, fcntl flags, FilePtr& target) {
   // 1. Lookup pathname
   // 2. Create a new file handle for this vnode if found.
   // 3. Create a new file if O_CREAT is specified in flags and vnode not found
@@ -129,7 +129,7 @@ end:
   return 0;
 }
 
-int vfs_close(File* file) {
+int vfs_close(FilePtr file) {
   // 1. release the file handle
   // 2. Return error code if fails
   return file->close();
@@ -152,7 +152,7 @@ end:
   return r;
 }
 
-int vfs_write(File* file, const void* buf, size_t len) {
+int vfs_write(FilePtr file, const void* buf, size_t len) {
   // 1. write len byte from buf to the opened file.
   // 2. return written size or error code if an error occurs.
   if (not file->canWrite())
@@ -177,7 +177,7 @@ end:
   return r;
 }
 
-int vfs_read(File* file, void* buf, size_t len) {
+int vfs_read(FilePtr file, void* buf, size_t len) {
   // 1. read min(len, readable size) byte to buf from the opened file.
   // 2. block if nothing to read for FIFO type
   // 2. return read size or error code if an error occurs.

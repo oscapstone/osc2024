@@ -16,7 +16,7 @@ void Files::reset() {
     close(i);
 }
 
-int Files::alloc_fd(File* file) {
+int Files::alloc_fd(FilePtr file) {
   int fd = __builtin_ctz(fd_bitmap);
   if (fd >= MAX_OPEN_FILE)
     return -1;
@@ -48,7 +48,7 @@ Vnode* current_cwd() {
   return current_files()->cwd;
 }
 
-File* fd_to_file(int fd) {
+FilePtr fd_to_file(int fd) {
   return current_files()->get(fd);
 }
 

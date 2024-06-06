@@ -128,12 +128,11 @@ int Vnode::create(const char* /*component_name*/, Vnode*& /*vnode*/) {
 int Vnode::mkdir(const char* /*component_name*/, Vnode*& /*vnode*/) {
   return -1;
 }
-int Vnode::open(const char* /*component_name*/, File*& /*file*/,
+int Vnode::open(const char* /*component_name*/, FilePtr& /*file*/,
                 fcntl /*flags*/) {
   return -1;
 }
-int Vnode::close(File* file) {
-  delete file;
+int Vnode::close(FilePtr file) {
   return 0;
 }
 

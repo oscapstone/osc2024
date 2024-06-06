@@ -1,8 +1,11 @@
 #pragma once
 
 #include "ds/list.hpp"
+#include "ds/smart_ptr.hpp"
 #include "fs/fwd.hpp"
 #include "util.hpp"
+
+using FilePtr = smart_ptr<File>;
 
 class Vnode {
   struct child {
@@ -55,10 +58,10 @@ class Vnode {
   virtual long size() const;
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
-  virtual int open(const char* component_name, File*& file, fcntl flags);
-  virtual int close(File* file);
+  virtual int open(const char* component_name, FilePtr& file, fcntl flags);
+  virtual int close(FilePtr file);
   template <typename F>
-  int _open(const char* component_name, File*& file, fcntl flags) {
+  int _open(const char* component_name, FilePtr& file, fcntl flags) {
     file = new F{component_name, this, flags};
     if (file == nullptr)
       return -1;
