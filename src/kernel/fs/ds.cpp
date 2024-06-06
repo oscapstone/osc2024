@@ -132,7 +132,7 @@ int Vnode::open(const char* /*component_name*/, FilePtr& /*file*/,
                 fcntl /*flags*/) {
   return -1;
 }
-int Vnode::close(FilePtr file) {
+int Vnode::close(FilePtr /*file*/) {
   return 0;
 }
 

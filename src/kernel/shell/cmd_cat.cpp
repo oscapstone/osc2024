@@ -28,9 +28,10 @@ int cmd_cat(int argc, char* argv[]) {
           kprintf("%s: %s: can't open\n", argv[0], name);
         } else {
           char buf[128];
-          int r;
-          while ((r = file->read(buf, sizeof(buf))) > 0)
-            kwrite(buf, r);
+          int cur;
+          r = 0;
+          while ((cur = file->read(buf, sizeof(buf))) > 0)
+            kwrite(buf, cur);
         }
       }
     }

@@ -2,7 +2,7 @@
 #include "io.hpp"
 #include "shell/cmd.hpp"
 
-int cmd_pwd(int argc, char* argv[]) {
+int cmd_pwd(int /*argc*/, char* /*argv*/[]) {
   list<const char*> names{};
   auto vnode = current_cwd();
   while (vnode->parent() != vnode) {

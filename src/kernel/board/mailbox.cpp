@@ -9,7 +9,7 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
   return mailbox_call(ch, mbox);
 }
 
-bool mailbox_call(uint8_t ch, MboxBuf* mbox, bool kernel) {
+bool mailbox_call(uint8_t ch, MboxBuf* mbox) {
   auto phy_mbox = translate_va_to_pa(mbox);
   // kprintf("%p -> %p\n", mbox, phy_mbox);
 
