@@ -36,23 +36,6 @@ void preinit() {
   return fs;
 }
 
-Vnode::Vnode(const cpio_newc_header* hdr)
-    : ::Vnode{hdr->isdir() ? kDir : kFile},
-      _content{hdr->file_ptr()},
-      _size{hdr->filesize()} {}
-
-long Vnode::size() const {
-  return _size;
-}
-
-int Vnode::open(const char* component_name, ::FilePtr& file, fcntl flags) {
-  return _open<File>(component_name, file, flags);
-}
-
-int File::read(void* buf, size_t len) {
-  return _read(get()->_content, buf, len);
-}
-
 FileSystem::FileSystem() {
   root = new ::Vnode{kDir};
   for (auto hdr : cpio) {
@@ -66,10 +49,6 @@ FileSystem::FileSystem() {
       dir->link(basename, new Vnode{hdr});
     kfree(basename);
   }
-}
-
-::Vnode* FileSystem::mount() {
-  return root;
 }
 
 };  // namespace initramfs

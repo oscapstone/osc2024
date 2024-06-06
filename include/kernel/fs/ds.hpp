@@ -101,7 +101,6 @@ class File {
   virtual ~File() = default;
 
   virtual int write(const void* buf, size_t len);
-  int _read(const void* data, void* buf, size_t len);
   virtual int read(void* buf, size_t len);
   virtual long lseek64(long offset, seek_type whence);
   int close();

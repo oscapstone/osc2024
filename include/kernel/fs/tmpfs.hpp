@@ -1,35 +1,46 @@
 #pragma once
 
 #include "fs/ds.hpp"
+#include "fs/ds_impl.hpp"
 #include "string.hpp"
 
 namespace tmpfs {
 
+class Vnode;
+class File;
+class FileSystem;
+
 ::FileSystem* init();
 
-class Vnode final : public ::Vnode {
+class Vnode final : public ::VnodeImplRW<Vnode, File> {
  public:
   string content;
 
-  using ::Vnode::Vnode;
+  using ::VnodeImplRW<Vnode, File>::VnodeImplRW;
   virtual ~Vnode() = default;
-  virtual long size() const;
-  virtual int create(const char* component_name, ::Vnode*& vnode);
-  virtual int mkdir(const char* component_name, ::Vnode*& vnode);
-  virtual int open(const char* component_name, ::FilePtr& file, fcntl flags);
+  virtual long size() const {
+    return content.size();
+  }
 };
 
-class File final : public ::File {
-  Vnode* get() const {
-    // XXX: no rtii
-    return static_cast<Vnode*>(vnode);
+class File final : public ::FileImplRW<Vnode, File> {
+  auto& content() {
+    return get()->content;
+  }
+  virtual void ensure_size(size_t new_size) {
+    if (content().size() < new_size)
+      content().resize(new_size);
+  }
+  virtual char* write_ptr() {
+    return content().data();
+  }
+  virtual char* read_ptr() {
+    return content().data();
   }
 
-  using ::File::File;
+ public:
+  using ::FileImplRW<Vnode, File>::FileImplRW;
   virtual ~File() = default;
-
-  virtual int write(const void* buf, size_t len);
-  virtual int read(void* buf, size_t len);
 };
 
 class FileSystem final : public ::FileSystem {
@@ -38,7 +49,9 @@ class FileSystem final : public ::FileSystem {
     return "tmpfs";
   }
 
-  virtual ::Vnode* mount();
+  virtual ::Vnode* mount() {
+    return new Vnode{kDir};
+  }
 };
 
 }  // namespace tmpfs

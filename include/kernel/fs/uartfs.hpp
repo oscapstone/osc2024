@@ -1,25 +1,26 @@
 #pragma once
 
 #include "fs/ds.hpp"
+#include "fs/ds_impl.hpp"
 
 namespace uartfs {
 
+class Vnode;
+class File;
+class FileSystem;
+
 ::FileSystem* init();
 
-class Vnode final : public ::Vnode {
+class Vnode final : public ::VnodeImpl<Vnode, File> {
  public:
-  Vnode();
+  Vnode() : ::VnodeImpl<Vnode, File>{kFile} {}
   virtual ~Vnode() = default;
-  virtual long size() const;
-  virtual int open(const char* component_name, ::FilePtr& file, fcntl flags);
+  virtual long size() const {
+    return -1;
+  }
 };
 
 class File final : public ::File {
-  Vnode* get() const {
-    // XXX: no rtii
-    return static_cast<Vnode*>(vnode);
-  }
-
   using ::File::File;
   virtual ~File() = default;
 
@@ -33,7 +34,9 @@ class FileSystem final : public ::FileSystem {
     return "uartfs";
   }
 
-  virtual ::Vnode* mount();
+  virtual ::Vnode* mount() {
+    return new Vnode;
+  }
 };
 
 }  // namespace uartfs

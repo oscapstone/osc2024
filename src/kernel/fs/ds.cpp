@@ -139,14 +139,6 @@ int Vnode::close(FilePtr /*file*/) {
 int File::write(const void* /*buf*/, size_t /*len*/) {
   return -1;
 }
-int File::_read(const void* data, void* buf, size_t len) {
-  size_t r = size() - f_pos;
-  if (r > len)
-    r = len;
-  memcpy(buf, (char*)data + f_pos, r);
-  f_pos += r;
-  return r;
-}
 int File::read(void* /*buf*/, size_t /*len*/) {
   return -1;
 }

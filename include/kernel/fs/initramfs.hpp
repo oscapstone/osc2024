@@ -2,6 +2,7 @@
 
 #include "fs/cpio.hpp"
 #include "fs/ds.hpp"
+#include "fs/ds_impl.hpp"
 
 namespace initramfs {
 
@@ -14,30 +15,37 @@ inline void* endp() {
   return cpio.endp();
 }
 
+class Vnode;
+class File;
+class FileSystem;
+
 void preinit();
 ::FileSystem* init();
 
-class Vnode final : public ::Vnode {
- public:
+class Vnode final : public ::VnodeImpl<Vnode, File> {
+  friend File;
   const char* _content;
   int _size;
 
-  Vnode(const cpio_newc_header* hdr);
+ public:
+  Vnode(const cpio_newc_header* hdr)
+      : ::VnodeImpl<Vnode, File>{hdr->isdir() ? kDir : kFile},
+        _content{hdr->file_ptr()},
+        _size{hdr->filesize()} {}
   virtual ~Vnode() = default;
-  virtual long size() const;
-  virtual int open(const char* component_name, ::FilePtr& file, fcntl flags);
+  long size() const {
+    return _size;
+  }
 };
 
-class File final : public ::File {
-  Vnode* get() const {
-    // XXX: no rtii
-    return static_cast<Vnode*>(vnode);
+class File final : public ::FileImplRW<Vnode, File> {
+  virtual const char* read_ptr() {
+    return this->get()->_content;
   }
 
-  using ::File::File;
+ public:
+  using ::FileImplRW<Vnode, File>::FileImplRW;
   virtual ~File() = default;
-
-  virtual int read(void* buf, size_t len);
 };
 
 class FileSystem final : public ::FileSystem {
@@ -49,7 +57,9 @@ class FileSystem final : public ::FileSystem {
     return "initramfs";
   }
 
-  virtual ::Vnode* mount();
+  virtual ::Vnode* mount() {
+    return root;
+  }
 };
 
 };  // namespace initramfs
