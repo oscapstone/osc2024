@@ -1,9 +1,8 @@
 #include "thread.h"
 #include "memory.h"
-#include "timer.h"
 #include "mini_uart.h"
-#include "shell.h"
-#include "interrupt.h"
+#include "string.h"
+#include "vm.h"
 
 static int max_tid = 0;
 
@@ -87,6 +86,9 @@ void show_queue(thread *q){
 
 void thread_init(){
   idle_thread = thread_create(idle);
+  idle_thread->stack = kmalloc(THREAD_STACK_SIZE);
+  idle_thread->regs.sp = (unsigned long)((char*)idle_thread->stack + THREAD_STACK_SIZE);
+  idle_thread->regs.fp = idle_thread->regs.sp;
   asm volatile("msr tpidr_el1, %0" ::"r"(idle_thread));
 }
 
@@ -96,10 +98,15 @@ thread *thread_create(void (*func)(void)){
   t->state = TASK_RUNNING;
   // TODO: Implement implicit thread exit
   t->regs.lr = (unsigned long)func;
-  t->stack = kmalloc(THREAD_STACK_SIZE);
   t->kernel_stack = kmalloc(THREAD_STACK_SIZE);
-  t->regs.sp = (unsigned long)((char*)t->stack + 0x1000);
-  t->regs.fp = t->regs.sp;
+  t->kernel_stack = (void*)t->kernel_stack;
+
+  // page table
+  t->regs.pgd = (unsigned long)alloc_pages(0); // allocate a page table for the thread
+  memset((void*)t->regs.pgd, 0, PAGE_SIZE);
+  t->regs.pgd = virt_to_phys((void*)t->regs.pgd);
+  // vma list
+  t->vma_list = 0;
 
   // signal
   for(int i = 0; i < MAX_SIGNAL+1; i++){
@@ -151,8 +158,10 @@ void idle(){
 void kill_zombies(){
   while(terminated_queue){
     thread *t = dequeue(&terminated_queue);
-    kfree(t->stack);
+    // kfree(t->stack);
     kfree(t->kernel_stack);
+    clear_vma_list(&t->vma_list);
+    clear_pagetable((pagetable_t)t->regs.pgd, 0);
     kfree(t);
   }
 }
@@ -187,6 +196,7 @@ void foo(){
         for(int j = 0; j < 1000000; j++);
         schedule();
     }
+    thread_exit();
 }
 
 void thread_test(){

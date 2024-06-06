@@ -7,7 +7,7 @@
 #define TASK_WATING 1
 #define TASK_ZOMBIE 2
 
-#define THREAD_STACK_SIZE 4096
+#define THREAD_STACK_SIZE 0x4000
 
 typedef struct{
   unsigned long x19;
@@ -23,6 +23,7 @@ typedef struct{
   unsigned long fp;
   unsigned long lr;
   unsigned long sp;
+  unsigned long pgd;
 } callee_reg;
 
 typedef struct thread{
@@ -37,6 +38,9 @@ typedef struct thread{
   int signal_processing;
   int signal_pending;
   callee_reg signal_regs;
+
+  /* vma */
+  struct vm_area* vma_list;
 
   /* queue */
   struct thread *next;
