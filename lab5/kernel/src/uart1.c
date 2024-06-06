@@ -12,6 +12,7 @@ unsigned int uart_tx_buffer_ridx = 0;  //read index
 char uart_rx_buffer[VSPRINT_MAX_BUF_SIZE]={};
 unsigned int uart_rx_buffer_widx = 0;
 unsigned int uart_rx_buffer_ridx = 0;
+int uart_recv_echo_flag = 1;
 
 void uart_init()
 {
@@ -57,8 +58,10 @@ char uart_recv() {
     char r;
     while(!(*AUX_MU_LSR_REG & 0x01)){};
     r = (char)(*AUX_MU_IO_REG);
-    uart_send(r);
-    if(r =='\r') {uart_send('\r');uart_send('\n');}
+    if(uart_recv_echo_flag){
+        uart_send(r);
+        if(r =='\r') {uart_send('\r');uart_send('\n');}
+    }
     return r=='\r'?'\n':r;
 }
 
