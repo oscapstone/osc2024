@@ -203,10 +203,10 @@ int register_filesystem(FileSystem* fs) {
 }
 
 SYSCALL_DEFINE2(open, const char*, pathname, fcntl, flags) {
-  return vfs_do_open(pathname, flags);
+  return open(pathname, flags);
 }
 
-int vfs_do_open(const char* pathname, fcntl flags) {
+int open(const char* pathname, fcntl flags) {
   int r;
   File* file{};
   if ((r = vfs_open(pathname, flags, file)) < 0)
@@ -252,10 +252,10 @@ cleanup:
 }
 
 SYSCALL_DEFINE1(close, int, fd) {
-  return vfs_do_close(fd);
+  return close(fd);
 }
 
-int vfs_do_close(int fd) {
+int close(int fd) {
   auto file = fd_to_file(fd);
   int r;
   if (not file) {
@@ -277,10 +277,10 @@ int vfs_close(File* file) {
 }
 
 SYSCALL_DEFINE3(write, int, fd, const void*, buf, unsigned long, count) {
-  return vfs_do_write(fd, buf, count);
+  return write(fd, buf, count);
 }
 
-long vfs_do_write(int fd, const void* buf, unsigned long count) {
+long write(int fd, const void* buf, unsigned long count) {
   auto file = fd_to_file(fd);
   int r;
   if (not file) {
@@ -302,10 +302,10 @@ int vfs_write(File* file, const void* buf, size_t len) {
 }
 
 SYSCALL_DEFINE3(read, int, fd, void*, buf, unsigned long, count) {
-  return vfs_do_read(fd, buf, count);
+  return read(fd, buf, count);
 }
 
-long vfs_do_read(int fd, void* buf, unsigned long count) {
+long read(int fd, void* buf, unsigned long count) {
   auto file = fd_to_file(fd);
   int r = -1;
   if (not file) {

@@ -141,10 +141,10 @@ FileSystem** find_filesystem(const char* name);
 FileSystem* get_filesystem(const char* name);
 int register_filesystem(FileSystem* fs);
 
-int vfs_do_open(const char* pathname, fcntl flags);
-int vfs_do_close(int fd);
-long vfs_do_write(int fd, const void* buf, unsigned long count);
-long vfs_do_read(int fd, void* buf, unsigned long count);
+int open(const char* pathname, fcntl flags);
+int close(int fd);
+long write(int fd, const void* buf, unsigned long count);
+long read(int fd, void* buf, unsigned long count);
 
 int vfs_open(const char* pathname, fcntl flags, File*& target);
 int vfs_close(File* file);
