@@ -83,3 +83,11 @@ int atoi(char *s)
     }
     return n * sign;
 }
+
+void *memset(void *str, int c, unsigned long n) {
+    char *ptr = (char *)str;
+
+    while (n-- > 0)
+        *ptr++ = (char)c;
+    return str;
+}

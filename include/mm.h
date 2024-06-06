@@ -6,7 +6,7 @@
 #define MAX_ORDER                       (10)
 #define NR_PAGES                        (nr_pages)
 
-/* For virtual memory usage */
+/* For kernel virtual memory usage */
 #define KERNEL_VADDR_BASE               (0xffff000000000000)
 
 /* Paging is configured by TCR. The following basic configuration is used in lab5 */
@@ -75,6 +75,28 @@
 
 #define PERIPH_MMIO_BASE                (0x3F000000)
 
+/* For page table index */
+#define PGD_SHIFT                       (39)
+#define PUD_SHIFT                       (30)
+#define PMD_SHIFT                       (21)
+#define PTE_SHIFT                       (12)
+#define PT_INDEX_MASK                   (0x1FF)
+#define PGD_INDEX(x)                    (((x) >> PGD_SHIFT) & PT_INDEX_MASK)
+#define PUD_INDEX(x)                    (((x) >> PUD_SHIFT) & PT_INDEX_MASK)
+#define PMD_INDEX(x)                    (((x) >> PMD_SHIFT) & PT_INDEX_MASK)
+#define PTE_INDEX(x)                    (((x) >> PTE_SHIFT) & PT_INDEX_MASK)
+
+/* To get the physical address from page entry*/
+#define ENTRY_ADDR_MASK                 (0xfffffffff000L)
+
+#define ENTRY_IS_TABLE(x)               (((x) & 3) == 3)
+#define ENTRY_IS_BLOCK(x)               (((x) & 3) == 1)
+#define ENTRY_IS_PAGE(x)                (((x) & 3) == 3)
+
+#define USER_STACK_ADDR                 (0xffffffffb000)
+#define USER_STACK_TOP                  (0xfffffffff000)
+#define USER_STACK_SIZE                 (0x4000)
+
 #ifndef __ASSEMBLER__
 
 #include "list.h"
@@ -131,8 +153,10 @@ struct zone {
     // struct list_head inactive_list;
 };
 
-extern struct page *mem_map; // mem_map points to pages
+/* mem_map points to page frame array. */
+extern struct page *mem_map;
 
+/* macro used in physical memory allocator */
 #define pfn_to_page(pfn) (mem_map + pfn)
 #define page_to_pfn(page) ((unsigned long)((page) - mem_map))
 
@@ -141,6 +165,10 @@ extern struct page *mem_map; // mem_map points to pages
 
 #define page_to_phys(page) (pfn_to_phys(page_to_pfn(page)))
 #define phys_to_page(phys) (pfn_to_page(phys_to_pfn(phys)))
+
+/* Because in kernel space, the virtual address is start from 0xffff.... */
+#define phys_to_virt(phys) ((void *)((phys) | KERNEL_VADDR_BASE))
+#define virt_to_phys(virt) ((unsigned long)((virt) & (~KERNEL_VADDR_BASE)))
 
 
 /* Init buddy system and slab allocator. */
@@ -161,6 +189,11 @@ void reserve_mem(unsigned long start, unsigned long end);
 /* Kernel memory allocate, return physical address. */
 void *kmalloc(unsigned long size);
 void kfree(void *obj);
+
+/* Map physical memory to given virtual memory address */
+void map_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags);
+/* Walk from pgd, then allocate physical memory if needed. */
+void walk(unsigned long *virt_pgd, unsigned long va, unsigned long pa, int flag);
 
 #endif // __ASSEMBLER__
 #endif // __MM_H__

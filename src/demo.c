@@ -143,9 +143,3 @@ void demo_memory_allocator(void)
     uart_hex((unsigned long) addr[1]);
     uart_send('\n');
 }
-
-/* Demo osc2024 lab 5: fork test. */
-void demo_fork_test(void)
-{
-    do_exec(fork_test);
-}

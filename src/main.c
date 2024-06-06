@@ -9,6 +9,7 @@
 #include "demo.h"
 #include "exec.h"
 #include "syscall.h"
+#include "mm.h"
 
 // get the end of bss segment from linker
 extern unsigned char _end;
@@ -21,10 +22,11 @@ void main()
     timer_init();
     tasklet_init();
     mm_init();
-    // sched_init();
+    sched_init();
 
-    move_to_user_mode();
-    do_shell_user();
+
+    // do_shell_user();
+    // printf("shouldn not be here\n");
 
 
     /* sched_init() will make kernel be the task 0, then run shell in user mode. So there should not be returned. */

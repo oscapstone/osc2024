@@ -226,6 +226,10 @@ void core_timer_handler()
     timer_update();
 #endif
 
+#ifdef DEBUG_MULTITASKING
+    printf("[core_timer_handler] Core timer interrupt\n");
+#endif
+
     do_timer(); // do_timer() may context switch, so we put it after enable the timer interrupt.
 }
 

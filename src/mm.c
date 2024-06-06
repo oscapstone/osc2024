@@ -9,6 +9,7 @@
 #include "memblock.h"
 #include "stddef.h"
 #include "demo.h"
+#include "string.h"
 
 #ifdef DEMO
 int isDemo = 0;
@@ -340,7 +341,10 @@ void get_buddy_info(void)
     printf("=====================\n\n");
 }
 
-/* Kernel memory allocate, return physical address. */
+/**
+ * Kernel memory allocate, return physical address.
+ * With MMU enabled, we should use kernel virtual address instead of physical address.
+ */
 void *kmalloc(unsigned long size)
 {
     unsigned int order = 0;
@@ -351,11 +355,10 @@ void *kmalloc(unsigned long size)
             size >>= 1;
             order++;
         }
-        
-        return (void *) page_to_phys(__alloc_pages(order));
+        return (void *)phys_to_virt(page_to_phys(__alloc_pages(order)));
     } else {
         /* Use slab allocator to allocate memory. */
-        return (void *) get_object(size);
+        return (void *)phys_to_virt((unsigned long)get_object(size));
     }
 }
 
@@ -374,7 +377,7 @@ void kfree(void *obj)
     }
 }
 
-/* Setup PGD, PUD, PMD, PTE. (0x0000 ~ 0x3fff)*/
+/* Setup initial kernel PGD, PUD, PMD, PTE. (0x0000 ~ 0x3fff)*/
 void setup_page_table(void)
 {
     unsigned long addr = 0;
@@ -413,5 +416,65 @@ void setup_page_table(void)
 
     asm volatile("msr ttbr0_el1, %0" : : "r" (MMU_PGD_ADDR));
     asm volatile("msr ttbr1_el1, %0" : : "r" (MMU_PGD_ADDR));
+    return;
+}
+
+/** 
+ * virt_pgd is the virtual address in kernel of pgd. Linear mapped to physical address.
+ * pa is the physical address of a page frame.
+ * va is the virtual address that we want to map.
+ * flag attibute is not defined yet.
+ */
+void walk(unsigned long *virt_pgd, unsigned long va, unsigned long pa, int flag)
+{
+    unsigned long *table = virt_pgd;
+    unsigned long index;
+
+    /* Take the pgd table index from va */
+    index = PGD_INDEX(va);
+    if (!ENTRY_IS_TABLE(table[index])) { // table[index] is the entry in pgd table.
+        /* If the entry is not valid, allocate a new page table */
+        table[index] = virt_to_phys((unsigned long) kmalloc(PAGE_SIZE));
+        memset((void *) (phys_to_virt(table[index])), 0, PAGE_SIZE);
+        table[index] |= NORMAL_PAGE_ATTR;
+    }
+
+    /* Get the PUD table */
+    table = (unsigned long *) phys_to_virt(table[index] & ENTRY_ADDR_MASK);
+    index = PUD_INDEX(va);
+    if (!ENTRY_IS_TABLE(table[index])) {
+        table[index] = virt_to_phys((unsigned long) kmalloc(PAGE_SIZE));
+        memset((void *) (phys_to_virt(table[index])), 0, PAGE_SIZE);
+        table[index] |= NORMAL_PAGE_ATTR;
+    }
+
+    /* Get the PMD table */
+    table = (unsigned long *) phys_to_virt(table[index] & ENTRY_ADDR_MASK);
+    index = PMD_INDEX(va);
+    if (!ENTRY_IS_TABLE(table[index])) {
+        table[index] = virt_to_phys((unsigned long) kmalloc(PAGE_SIZE));
+        memset((void *) (phys_to_virt(table[index])), 0, PAGE_SIZE);
+        table[index] |= NORMAL_PAGE_ATTR;
+    }
+
+    /* Get the PTE table */
+    table = (unsigned long *) phys_to_virt(table[index] & ENTRY_ADDR_MASK);
+    index = PTE_INDEX(va);
+    /* Write the physical address to the entry in PTE table. */
+    table[index] |= pa | NORMAL_PAGE_ATTR | PXN | flag; // PXN: Privileged eXecute Never, so its for el0.
+
+    return;
+}
+
+/**
+ * Given virtual address of pgd in kernel space, starting virtual address, starting physical address, size.
+ * It will map the physical memory of size to the virtual address va in the virt_pgd address space.
+ */
+void map_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags)
+{
+    unsigned long i = 0;
+
+    for (i = 0; i < size; i += PAGE_SIZE)
+        walk(virt_pgd, va + i, pa + i, flags);
     return;
 }

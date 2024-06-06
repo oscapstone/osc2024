@@ -86,5 +86,10 @@ void do_shell_user(void)
 /* shell: kernel task. */
 void do_shell(void)
 {
-    do_exec(do_shell_user);
+    do_exec(do_shell_user, 1024);
+}
+
+void do_user_image(void)
+{
+    initrd_usr_prog("syscall.img");
 }

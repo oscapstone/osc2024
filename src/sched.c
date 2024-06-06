@@ -37,7 +37,9 @@ void task_init()
     update_current(&task_pool[0]);
     num_running_task = 1;
     // TODO: the task 0's stack are not in kstack_pool[0] and ustack_pool[0]. It is in the stack that start.S set up.
-    task_pool[0].tss.lr = (uint64_t) do_shell_user;
+    task_pool[0].tss.lr = (uint64_t) do_user_image;
+    // task_pool[0].tss.lr = (uint64_t) do_shell_user;
+    // task_pool[0].tss.lr = (uint64_t) do_shell;
     task_pool[0].tss.sp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
     task_pool[0].tss.fp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
 }
@@ -110,6 +112,9 @@ int privilege_task_create(void (*func)(), long priority)
 /* Select the task with the highest counter to run. If all tasks' counter is 0, then update all tasks' counter with their priority. */
 void schedule(void)
 {
+#ifdef DEBUG_MULTITASKING
+    printf("[schedule] current task %d\n", current->task_id);
+#endif
     int i = NR_TASKS, c = -1, next = 0;
     while (1) {
         while ((--i) >= 0) { // With `while (--i)`, the task 0 won't be selected.

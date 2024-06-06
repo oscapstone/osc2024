@@ -9,6 +9,6 @@ int memcmp(void *s1, void *s2, int n);
 int strlen(char *str);
 int strcpy(char *dst, char *src);
 int atoi(char *s);
-
+void *memset(void *str, int c, unsigned long n);
 
 #endif

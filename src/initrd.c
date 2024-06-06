@@ -129,7 +129,7 @@ void initrd_cat()
 }
 
 /* Return the user program execution address */
-void *_initrd_usr_prog(char *cmd)
+void *_initrd_usr_prog(char *cmd, unsigned int *size)
 {
     char *buf = cpio_base, *prog_addr, *prog_page;
     int ns, fs;
@@ -151,6 +151,7 @@ void *_initrd_usr_prog(char *cmd)
                 return NULL;
             } else {
                 printf("\nFound user_program: %s\n", buf + sizeof(cpio_f));
+                *size = fs;
                 /* get program start address */
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
@@ -171,10 +172,11 @@ void *_initrd_usr_prog(char *cmd)
 void initrd_usr_prog(char *cmd)
 {
     char *prog;
+    unsigned int size;
 
-    prog = (char *) _initrd_usr_prog(cmd);
+    prog = (char *) _initrd_usr_prog(cmd, &size);
     if (prog != NULL)
-        do_exec((void (*)(void)) prog);
+        do_exec((void (*)(void)) prog, size);
     else
         uart_puts("File not found\n");
     return;
