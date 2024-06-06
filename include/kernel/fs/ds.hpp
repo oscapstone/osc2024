@@ -60,13 +60,6 @@ class Vnode {
   virtual int mkdir(const char* component_name, Vnode*& vnode);
   virtual int open(const char* component_name, FilePtr& file, fcntl flags);
   virtual int close(FilePtr file);
-  template <typename F>
-  int _open(const char* component_name, FilePtr& file, fcntl flags) {
-    file = new F{component_name, this, flags};
-    if (file == nullptr)
-      return -1;
-    return 0;
-  }
 };
 
 // file handle
@@ -80,9 +73,6 @@ class File {
  public:
   const bool can_seek = true;
 
-  const char* name() const {
-    return _name;
-  }
   size_t size() const {
     return vnode->size();
   }
@@ -96,8 +86,7 @@ class File {
     return accessmode() == O_WRONLY or accessmode() == O_RDWR;
   }
 
-  File(const char* name, Vnode* vnode, fcntl flags)
-      : _name(name), vnode{vnode}, flags{flags} {}
+  File(Vnode* vnode, fcntl flags) : vnode{vnode}, flags{flags} {}
   virtual ~File() = default;
 
   virtual int write(const void* buf, size_t len);

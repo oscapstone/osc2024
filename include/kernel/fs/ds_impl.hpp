@@ -12,7 +12,7 @@ class VnodeImpl : public Vnode {
   virtual ~VnodeImpl() = default;
 
   virtual int open(const char* component_name, FilePtr& file, fcntl flags) {
-    file = new F{component_name, this, flags};
+    file = new F{this, flags};
     if (file == nullptr)
       return -1;
     return 0;
