@@ -78,7 +78,7 @@ int init_dev_framebuffer()
         height = pt[6];       // get actual physical height
         pitch = pt[33];       // get number of bytes per line
         isrgb = pt[24];       // get the actual channel order
-        lfb = PHYS_TO_VIRT((void *)((unsigned long)pt[28])); // raw frame buffer address
+        lfb = (unsigned char *)PHYS_TO_VIRT((void *)((unsigned long)pt[28])); // raw frame buffer address
     }
     else
     {
@@ -90,6 +90,16 @@ int init_dev_framebuffer()
 
 int dev_framebuffer_write(struct file *file, const void *buf, size_t len)
 {
+    // uart_sendline("dev_framebuffer_write\r\n");
+    // uart_sendline("buf: %d (0x%x)\n", *(int *)buf, buf);
+    // uart_sendline("file->f_pos: %d\n", file->f_pos);
+    // uart_sendline("lfb: %d (0x%x)\n", *(int *)lfb, lfb);
+    // uart_sendline("len %d\r\n", len);
+    // uart_sendline("pitch %d\r\n", pitch);
+    // uart_sendline("height %d\r\n", height);
+    for (int i = 0; i < 10; i++){
+        asm volatile("nop");
+    }
     lock();
     if (len + file->f_pos > pitch * height)
     {
@@ -99,11 +109,13 @@ int dev_framebuffer_write(struct file *file, const void *buf, size_t len)
     memcpy(lfb + file->f_pos, buf, len);
     file->f_pos += len;
     unlock();
+    // uart_sendline("====================\n");
     return len;
 }
 
 int dev_framebuffer_open(struct vnode *file_node, struct file **target)
 {
+    // uart_sendline("dev_framebuffer_open\r\n");
     (*target)->f_pos = 0;
     (*target)->vnode = file_node;
     (*target)->f_ops = &dev_framebuffer_operations;

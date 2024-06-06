@@ -103,7 +103,7 @@ SYSCALL_DEFINE1(exec, trapframe_t*, tpf)
 
     asm("dsb ish\n\t");      // ensure write has completed
     mmu_free_page_tables(curr_thread->context.pgd, 0);
-    memset(PHYS_TO_VIRT(curr_thread->context.pgd), 0, 0x1000);
+    memset((void *)PHYS_TO_VIRT(curr_thread->context.pgd), 0, 0x1000);
     asm("tlbi vmalle1is\n\t" // invalidate all TLB entries
         "dsb ish\n\t"        // ensure completion of TLB invalidatation
         "isb\n\t");          // clear pipeline
@@ -172,7 +172,7 @@ SYSCALL_DEFINE1(fork, trapframe_t*, tpf)
 
     void *temp_pgd = newt->context.pgd;
     newt->context = curr_thread->context;
-    newt->context.pgd = VIRT_TO_PHYS(temp_pgd);
+    newt->context.pgd = (void *)VIRT_TO_PHYS(temp_pgd);
     newt->context.fp += newt->kernel_stack_alloced_ptr - curr_thread->kernel_stack_alloced_ptr; // move fp
     newt->context.sp += newt->kernel_stack_alloced_ptr - curr_thread->kernel_stack_alloced_ptr; // move kernel sp
     
@@ -423,12 +423,15 @@ SYSCALL_DEFINE1(chdir, trapframe_t *, tpf)
 
 SYSCALL_DEFINE1(lseek64, trapframe_t *, tpf)
 {
+    // uart_sendline("lseek64\r\n");
+    lock();
     int fd = tpf->x0;
     long offset = tpf->x1;
     int whence = tpf->x2;
 
     if(whence == SEEK_SET) // used for dev_framebuffer
     {
+        // uart_sendline("offset : %d\r\n", offset);
         curr_thread->file_descriptors_table[fd]->f_pos = offset;
         tpf->x0 = offset;
     }
@@ -436,7 +439,7 @@ SYSCALL_DEFINE1(lseek64, trapframe_t *, tpf)
     {
         tpf->x0 = -1;
     }
-
+    unlock();
     return tpf->x0;
 }
 extern unsigned int height;
@@ -446,18 +449,26 @@ extern unsigned int width;
 SYSCALL_DEFINE1(ioctl, trapframe_t *, tpf)
 {
     // int fb = tpf->x0; 
+    lock();
     unsigned long request = tpf->x1;
-    void *info = (void *)tpf->x2;
+    size_t usr_virt_info = (size_t)tpf->x2;
+    size_t phys_info = virt_to_phys_paging_table( (unsigned long*)PHYS_TO_VIRT(curr_thread->context.pgd), usr_virt_info);
+    void *info = (void *)(PHYS_TO_VIRT(phys_info));
 
+    // void *info = (void *)tpf->x2;
+
+    uart_sendline("info : 0x%x\r\n", info);
+    // uart_sendline("request : 0x%x\r\n", request);
     if(request == 0) // used for get info (SPEC)
     {
+        // uart_sendline("request\n");
         struct framebuffer_info *fb_info = info;
         fb_info->height = height;
         fb_info->isrgb = isrgb;
         fb_info->pitch = pitch;
         fb_info->width = width;
     }
-
+    unlock();
     tpf->x0 = 0;
     return tpf->x0;
 }

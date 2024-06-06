@@ -10,12 +10,17 @@
 #include "colourful.h"
 #include "string.h"
 #include "vfs.h"
+#include "dtb.h"
+#include "syscall.h"
 
-thread_t *curr_thre    
+thread_t *curr_thread;
 list_head_t *run_queue;
 list_head_t *wait_queue;
 thread_t threads[PIDMAX + 1];
 int finish_init_thread_sched = 0;
+
+
+extern int uart_recv_echo_flag; // to prevent the syscall.img from using uart_send() in uart_recv()
 
 void init_thread_sched()
 {
@@ -36,7 +41,8 @@ void init_thread_sched()
      thread_create(idle,0x1000, IDLE_PRIORITY);
     curr_thread =thread_create(cli_cmd, 0x1000, SHELL_PRIORITY);
 
-    asm volatile("msr tpidr_el1, %0" ::"r"(curr_thread + sizeof(list_head_t)));
+    // asm volatile("msr tpidr_el1, %0" ::"r"(curr_thread + sizeof(list_head_t)));
+    asm volatile("msr tpidr_el1, %0" ::"r"(&curr_thread->context));
     finish_init_thread_sched = 1;
     // add_timer(schedule_timer, 1, "", 0); // start scheduler
     unlock();
@@ -99,7 +105,7 @@ void kill_zombies(){
             mmu_free_page_tables(t->context.pgd,0);
             mmu_del_vma(t);
             kfree(t->kernel_stack_alloced_ptr);
-            kfree(PHYS_TO_VIRT(t->context.pgd));
+            kfree((void *)PHYS_TO_VIRT(t->context.pgd));
             t->iszombie = 0;
             t->isused   = 0;
         }
@@ -109,37 +115,81 @@ void kill_zombies(){
 
 int thread_exec(char *data, unsigned int filesize)
 {
-    // uart_sendline("Thread exec\n");
-    // uart_sendline("filesize: %d\n", filesize);
     thread_t *t_thread = thread_create(run_user_code, filesize, NORMAL_PRIORITY);
-    // uart_sendline("t_thrad->size: %d\n", t_thread->datasize);
-    // uart_sendline("Thread %d exec\n", t_thread->pid);
-    // uart_sendline("t_thread->data: 0x%x\n", t_thread->data);
     lock();
     // copy file into data
     for (int i = 0; i < filesize;i++)
     {
-        // uart_sendline("data[%d]: %c\n", i, data[i]);
         t_thread->data[i] = data[i];
         // t_thread->data[i] = 1;
         // data[i];
     }
-    // uart_sendline("data: %s\n", t_thread->data);
     curr_thread = t_thread;
     
     // eret to exception level 0
     unlock();
-    // uart_sendline("11 Thread %d exec\n", curr_thread->pid);
+    switch_to(get_current(), &t_thread->context);
+
+
+    return 0;
+}
+int thread_exec_vfs(char *abs_path)
+{
+    // uart_sendline("exec file: %s\r\n", abs_path);
+    int fd;
+    size_t c_filesize = 0;
+    lock();
+
+
+    // copy file into data
+    trapframe_t *tpf = (trapframe_t *)kmalloc(sizeof(trapframe_t));
+
+    tpf->x0 = (uint64_t)abs_path;
+    tpf->x1 = O_CREAT;
+    fd = sys_open(tpf);
+    if (fd == -1){
+        uart_sendline("open file failed\n");
+        return -1;
+    }
+    // uart_sendline("fd: %d\r\n", fd);
+
+    // get the filesize
+    // size_t c_filesize = 0;
+    tpf->x0 = fd;
+    tpf->x1 = 0;
+    tpf->x2 = c_filesize;
+    c_filesize = sys_read(tpf);
+    uart_sendline("filesize: %d byte\r\n", c_filesize);
+    thread_t *t_thread = thread_create(run_user_code, c_filesize, NORMAL_PRIORITY);
+    uart_sendline("filesize: %d\r\n", c_filesize);
+
+    tpf->x0 = fd;
+    tpf->x1 = (uint64_t)t_thread->data;
+    tpf->x2 = c_filesize;
+    if (sys_read(tpf) == -1){
+        uart_sendline("read file failed\n");
+        return -1;
+    }
+
+    tpf->x0 = fd;
+    sys_close(tpf);
+    kfree(tpf);
+
+
+    curr_thread = t_thread;
+    
+    // eret to exception level 0
+    unlock();
     switch_to(get_current(), &t_thread->context);
 
 
     return 0;
 }
 
-
 void run_user_code()
 {
-    uart_sendline("run_user_code\r\n");
+    // uart_sendline("run user code\r\n");
+    // uart_puts("run user code\r\n");
     // lock();
     // add vma                        User Virtual Address,                              Size,                             Physical Address,            xwr,                            is_alloced
     mmu_add_vma(curr_thread,              USER_KERNEL_BASE,             curr_thread->datasize,                (size_t)VIRT_TO_PHYS(curr_thread->data), 0b111, "Code & Data Segment\0",            1);
@@ -147,7 +197,7 @@ void run_user_code()
     mmu_add_vma(curr_thread,              PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START,                                       PERIPHERAL_START, 0b011, "Peripheral\0",                     0);
     mmu_add_vma(curr_thread,        USER_SIGNAL_WRAPPER_VA,                            0x2000,           (size_t)VIRT_TO_PHYS(signal_handler_wrapper), 0b101, "Signal Handler Wrapper\0",         0);
 
-    curr_thread->context.pgd = VIRT_TO_PHYS(curr_thread->context.pgd);
+    curr_thread->context.pgd = (void *)VIRT_TO_PHYS(curr_thread->context.pgd);
     curr_thread->context.sp = USER_STACK_BASE;
     curr_thread->context.fp = USER_STACK_BASE;
 
@@ -198,7 +248,8 @@ thread_t *thread_create(void *start, unsigned int filesize, int priority)
     r->isused = 1;
     r->context.lr = (unsigned long long)start;
     r->stack_alloced_ptr = kmalloc(USTACK_SIZE);
-    r->kernel_stack_alloced_ptr = kmalloc(KSTACK_SIZE);
+    kmalloc(KSTACK_SIZE);
+    r->kernel_stack_alloced_ptr = (char *)kmalloc(KSTACK_SIZE);
     r->signal_is_checking = 0;
     r->data = kmalloc(filesize);
     r->datasize = filesize;

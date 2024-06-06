@@ -236,7 +236,7 @@ int tmpfs_list(struct vnode *dir_node)
             uart_puts( "%s\t", child_inode->name);
         }
     }
-    uart_sendline("\n");
+    uart_puts("\n");
     return 0;
 }
 

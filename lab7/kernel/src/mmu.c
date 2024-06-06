@@ -105,6 +105,8 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
         unsigned int idx = (va >> (39 - level * 9)) & 0x1ff; // p.14, 9-bit only
         if (level == 3)
         {
+            // align 11 bits
+            pa = pa - (pa % 0x1000);
             table_p[idx] = pa;
             table_p[idx] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_KNX | flag; // el0 only
             // table_p[idx] |= PD_ACCESS | PD_BLOCK | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_KNX | flag; // el0 only
@@ -241,7 +243,7 @@ void mmu_free_page_tables(size_t *page_table, int level)
             {
                 if(level!=2)mmu_free_page_tables(next_table, level + 1);
                 table_virt[i] = 0L;
-                kfree(PHYS_TO_VIRT((char *)next_table));
+                kfree((void*)PHYS_TO_VIRT((char *)next_table));
             }
         }
     }
@@ -330,7 +332,13 @@ vm_area_struct_t *get_vma_by_va(thread_t *t, size_t va)
 void show_vma_list(int *highlight_array, int size)
 {
     list_head_t *pos;
-    // vm_area_struct_t *vma;
+// #ifdef DEBUG
+// vm_area_struct_t *vma;
+// #endif
+    #ifdef DEBUG
+    vm_area_struct_t *vma;
+    #endif
+
     int counter = 0;
     int hightlight_idx = 0;
     // frame_t *frame_array = get_frame_array();
@@ -338,7 +346,9 @@ void show_vma_list(int *highlight_array, int size)
     mmu_sendline("     ================================================================ VMA List ================================================================\n");
     list_for_each(pos, &curr_thread->vma_list)
     {
-        // vma = (vm_area_struct_t *)pos;
+        #ifdef DEBUG
+        vma = (vm_area_struct_t *)pos;
+        #endif
 
         if (hightlight_idx < size && highlight_array[hightlight_idx] == counter)
         {
@@ -354,7 +364,8 @@ void show_vma_list(int *highlight_array, int size)
             );
             hightlight_idx++;
         }
-        else
+        else{
+
             mmu_sendline("     (%d) %s , virt_addr: 0x%12x, phys_addr: 0x%12x, area_size: 0x%7x, prot: %d (%s)\r\n", 
                 counter, 
                 vma->name, 
@@ -364,6 +375,7 @@ void show_vma_list(int *highlight_array, int size)
                 vma->rwx, 
                 VMA_prot_table[vma->rwx]
             );
+        }
         counter++;
     }
 
@@ -389,7 +401,7 @@ void handle_translation_fault(size_t error_addr, vm_area_struct_t *vma_area_ptr)
     if(!(vma_area_ptr->rwx & (0b1 << 1))) flag |= PD_RDONLY;     // 2: writable
     if(  vma_area_ptr->rwx & (0b1 << 0) ) flag |= PD_UK_ACCESS;  // 1: readable / accessible
     map_one_page(
-        PHYS_TO_VIRT(curr_thread->context.pgd), 
+        (size_t *)PHYS_TO_VIRT(curr_thread->context.pgd), 
         vma_area_ptr->virt_addr + addr_offset, 
         vma_area_ptr->phys_addr + addr_offset, 
         flag
@@ -434,7 +446,7 @@ void handle_permission_fault(size_t error_addr, vm_area_struct_t *vma_area_ptr)
     }
 
     frame_t *frame_array = get_frame_array();
-    size_t phy_error_addr = virt_to_phys_paging_table(PHYS_TO_VIRT(curr_thread->context.pgd), error_addr);
+    size_t phy_error_addr = virt_to_phys_paging_table( (unsigned long*)PHYS_TO_VIRT(curr_thread->context.pgd), error_addr);
     int error_frame_idx = PTR_TO_PAGE_INDEX(PHYS_TO_VIRT(phy_error_addr));
 
     frame_t *error_frame = &frame_array[error_frame_idx];
@@ -524,8 +536,10 @@ void mmu_memfail_abort_handle(esr_el1_t* esr_el1)
     __asm__ __volatile__("mrs %0, FAR_EL1\n\t": "=r"(far_el1));
 
     vm_area_struct_t *vma_area_ptr = 0;
-    // char *IFSC_error_message = IFSC_table[(esr_el1->iss & 0x3f)];
 
+    #ifdef DEBUG
+    char *IFSC_error_message = IFSC_table[(esr_el1->iss & 0x3f)];
+    #endif
     vma_area_ptr = get_vma_by_va(curr_thread, far_el1);
     
 
@@ -547,7 +561,7 @@ void mmu_memfail_abort_handle(esr_el1_t* esr_el1)
     {
         lock();
         mmu_sendline(RED "[!]" CYN "[Pid %d]" RED "[translation fault]: 0x%x" RESET " (Error Message: %s)\r\n" RESET,curr_thread->pid, far_el1, IFSC_error_message); // far_el1: Fault address register.
-        show_vma_list((int[]){find_list_entry(&curr_thread->vma_list, (list_head_t*)vma_area_ptr)}, 1);
+        // show_vma_list((int[]){find_list_entry(&curr_thread->vma_list, (list_head_t*)vma_area_ptr)}, 1);
         handle_translation_fault(far_el1, vma_area_ptr);
         unlock();
     }

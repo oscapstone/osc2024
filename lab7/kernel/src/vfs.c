@@ -58,6 +58,8 @@ int vfs_open(const char *pathname, int flags, struct file **target)
 {
     // 1. Lookup pathname
     // 3. Create a new file if O_CREAT is specified in flags and vnode not found
+    uart_sendline("");
+    // uart_sendline("vfs_open %s\n", pathname);
     struct vnode *node;
     if (vfs_lookup(pathname, &node) != 0 && (flags & O_CREAT))
     {
@@ -311,6 +313,11 @@ int vfs_cd(char *pathname)
         return -1;
     }
 
+}
+
+void vfs_exec()
+{
+    
 }
 void vfs_test()
 {

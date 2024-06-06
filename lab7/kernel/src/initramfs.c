@@ -71,7 +71,7 @@ int initramfs_setup_mount(struct filesystem *fs, struct mount *_mount)
         //if parse header error
         if (error)
         {
-            uart_sendline("%s", "error\r\n");
+            uart_puts("%s", "error\r\n");
             break;
         }
 
@@ -164,15 +164,20 @@ int initramfs_write(struct file *file, const void *buf, size_t len)
 int initramfs_read(struct file *file, void *buf, size_t len)
 {
     struct initramfs_inode *inode = file->vnode->internal;
+    if (len == 0)
+        return inode->datasize;
+    
     // overflow, shrink size
     if (len + file->f_pos > inode->datasize)
     {
+        uart_puts("read overflow\n");
         memcpy(buf, inode->data + file->f_pos, inode->datasize - file->f_pos);
         file->f_pos += inode->datasize - file->f_pos;
         return inode->datasize - file->f_pos;
     }
     else
     {
+        // uart_sendline("read %d bytes\n", len);
         memcpy(buf, inode->data + file->f_pos, len);
         file->f_pos += len;
         return len;
@@ -257,7 +262,7 @@ int initramfs_list(struct vnode *dir_node)
             uart_puts( "%s\t", child_inode->name);
         }
     }
-    uart_sendline("\n");
+    uart_puts("\n");
     return 0;
 }
 

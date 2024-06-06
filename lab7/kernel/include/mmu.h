@@ -68,6 +68,7 @@ void copy_PTE(size_t *virt_pgd_parent, size_t *virt_pgd_child, int level);
 void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level);
 vm_area_struct_t *get_vma_by_va(thread_t *t, size_t va);
 void show_vma_list(int *highlight_array, int size);
+size_t virt_to_phys_paging_table(size_t *virt_pgd_p, size_t va);
 
 #endif //__ASSEMBLER__
 

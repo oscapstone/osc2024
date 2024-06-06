@@ -29,21 +29,29 @@ void sync_64_router(trapframe_t* tpf)
     el1_interrupt_enable();
 
 
+    // uart_sendline("Hello World el1 64 router!\r\n");
+
     // check whether it is a syscall 
     if (esr->ec == ESR_ELx_EC_SVC64){
         unsigned long long syscall_no = tpf->x8;
+        // uart_sendline("syscall number: %d  ", syscall_no);
         if (syscall_no > SYSCALL_TABLE_SIZE || syscall_no < 0 )
         {
             // invalid syscall number
-            uart_sendline("Invalid syscall number: %d\r\n", syscall_no);
+            uart_puts("Invalid syscall number: %d\r\n", syscall_no);
             tpf->x0 = -1;
             return;
         }
         if (((void **) syscall_table)[syscall_no] == 0)
         {
-            uart_sendline("Unregisted syscall number: %d\r\n", syscall_no);
+            uart_puts("Unregisted syscall number: %d\r\n", syscall_no);
             tpf->x0 = -1;
             return;
+        }
+        if (syscall_no > 10)
+        {
+            // uart_puts("syscall number: %d  ", syscall_no);
+            // uart_sendline("syscall number: %d  ", syscall_no);
         }
         ((int (*)(trapframe_t *))(((&syscall_table)[syscall_no])))(tpf);
     }

@@ -315,30 +315,58 @@ DO_CMD_FUNC(do_cmd_help)
 
 DO_CMD_FUNC(do_cmd_exec)
 {
-    char* filepath = argv[0];
-    char* c_filepath;
-    char* c_filedata;
-    unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
-
-    filepath = "vfs1.img";
-    // filepath = "vm.img";
-    while(header_ptr!=0)
+    char abs_path[MAX_PATH_NAME] = "";
+    if (argv[0] == NULL)
     {
-        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        if(error) break;
-
-        if(strcmp(c_filepath, filepath)==0)
-        {
-            uart_sendline("executing %s ...\r\n", filepath);
-            uart_recv_echo_flag = 0; // syscall.img has different mechanism on uart I/O.
-            thread_exec(c_filedata, c_filesize);
-            break;
-        }
-        if(header_ptr==0) uart_puts("cat: %s: No such file or directory\n", filepath);
+        uart_puts("Usage: exec [FILENAME]\r\n");
+        return -1;
     }
+    strcpy(abs_path, argv[0]);
+    get_absolute_path(abs_path, current_dir);
+
+    struct vnode *target = NULL;
+    vfs_lookup(abs_path, &target);
+    if (target == NULL)
+    {
+        uart_puts("exec: %s: No such file or directory\n", abs_path);
+        return -1;
+    }
+
+    // strcpy(abs_path, "/initramfs/vfs1.img");
+
+    uart_sendline("executing %s ...\r\n", abs_path);
+    uart_recv_echo_flag = 0;
+    thread_exec_vfs(abs_path);
+
     return 0;
 }
+
+// DO_CMD_FUNC(do_cmd_exec)
+// {
+//     char* filepath = argv[0];
+//     char* c_filepath;
+//     char* c_filedata;
+//     unsigned int c_filesize;
+//     struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
+
+//     filepath = "vfs1.img";
+//     // filepath = "vm.img";
+//     while(header_ptr!=0)
+//     {
+//         int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+//         if(error) break;
+
+//         if(strcmp(c_filepath, filepath)==0)
+//         {
+//             uart_sendline("executing %s ...\r\n", filepath);
+//             uart_recv_echo_flag = 0; // syscall.img has different mechanism on uart I/O.
+//             thread_exec(c_filedata, c_filesize);
+//             break;
+//         }
+//         if(header_ptr==0) uart_puts("cat: %s: No such file or directory\n", filepath);
+//     }
+//     return 0;
+// }
 
 DO_CMD_FUNC(do_cmd_hello)
 {
@@ -515,8 +543,9 @@ DO_CMD_FUNC(do_cmd_write)
 
     char message[MAX_PATH_NAME];
     strcpy(message, argv[1]);
-    message[strlen(message)] = '\n';
-    message[strlen(message)] = '\0';
+    int len = strlen(message);
+    message[len] = '\n';
+    message[len+1] = '\0';
     if (message == NULL)
     {
         uart_puts("Usage: write [FILENAME] [MESSAGE]\r\n");

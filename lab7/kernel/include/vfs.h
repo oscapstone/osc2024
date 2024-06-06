@@ -30,7 +30,7 @@ struct vnode
 struct file
 {
     struct vnode *vnode;
-    size_t f_pos; // RW position of this file handle
+    size_t f_pos;                   // RW position of this file handle
     struct file_operations *f_ops;
     int flags;
 };

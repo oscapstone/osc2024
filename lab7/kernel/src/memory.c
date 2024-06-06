@@ -164,6 +164,7 @@ void* page_malloc(unsigned int size)
     target_frame_ptr->used = FRAME_ALLOCATED;
     memory_sendline("        physical address : 0x%x\n", PAGE_INDEX_TO_PTR(target_frame_ptr->idx));
     // uart_sendline("        physical address : 0x%x\n", PAGE_INDEX_TO_PTR(target_frame_ptr->idx));
+    // uart_sendline("%d", target_frame_ptr->idx);
     memory_sendline("        After\r\n");
     dump_page_info();
 
