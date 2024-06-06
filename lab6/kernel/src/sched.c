@@ -46,12 +46,10 @@ static inline int free_child_thread(thread_t *child_thread)
 		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
 	}
 
-	// if (thread_code_can_free(child_thread))
-	// {
-	// 	kfree(child_thread->code);
-	// }
 	threads[child_thread->pid] = NULL;
 	mmu_free_all_vma(child_thread);
+	mmu_clean_page_tables(child_thread->context.pgd, LEVEL_PGD);
+	kfree(PHYS_TO_KERNEL_VIRT(child_thread->context.pgd));
 	kfree(child_thread->vma_list);
 	kfree(child_thread->child_list);
 	// kfree(child_thread->user_stack_bottom);
@@ -121,8 +119,10 @@ thread_t *_init_create_thread(char *name, int64_t pid, int64_t ppid, void *start
 	thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 	thread->kernel_stack_bottom = kmalloc(KSTACK_SIZE);
 	thread->context.lr = (uint64_t)start;
-	thread->context.sp = (uint64_t)thread->kernel_stack_bottom + KSTACK_SIZE;
+	thread->context.sp = (uint64_t)thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP;
 	thread->context.fp = thread->context.sp; // frame pointer for local variable, which is also in stack.
+	thread->context.pgd = KERNEL_VIRT_TO_PHYS(kmalloc(PAGE_FRAME_SIZE));
+	memset(PHYS_TO_KERNEL_VIRT(thread->context.pgd), 0, PAGE_FRAME_SIZE);
 	list_add((list_head_t *)thread, run_queue);
 	return thread;
 }
@@ -268,12 +268,13 @@ thread_t *thread_create(void *start, char *name)
 	DEBUG("new_pid: %d, kernel_stack_bottom: 0x%x\n", new_pid, r->kernel_stack_bottom);
 	r->code = start;
 	r->context.lr = (uint64_t)start;
-	r->context.sp = (uint64_t)r->kernel_stack_bottom + KSTACK_SIZE;
+	r->context.sp = (uint64_t)r->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP;
 	DEBUG("new_pid: %d, context.sp: 0x%x\n", new_pid, r->context.sp);
 	r->context.fp = r->context.sp; // frame pointer for local variable, which is also in stack.
 
 	r->context.pgd = KERNEL_VIRT_TO_PHYS(kmalloc(PAGE_FRAME_SIZE));
-    memset(PHYS_TO_KERNEL_VIRT(r->context.pgd), 0, PAGE_FRAME_SIZE);
+	memset(PHYS_TO_KERNEL_VIRT(r->context.pgd), 0, PAGE_FRAME_SIZE);
+	DEBUG("new_pid: %d, context.pgd: 0x%x\n", new_pid, r->context.pgd);
 
 	child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
 	child->pid = new_pid;
@@ -302,6 +303,10 @@ void schedule()
 		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 	curr_thread->status = THREAD_RUNNING;
+	// uint64_t ttbr0_el1_value;
+	// asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
+	// DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
+	// DEBUG("curr_thread->pid: %d\r\n", curr_thread->pid);
 	kernel_unlock_interrupt();
 	switch_to(get_current_thread_context(), &(curr_thread->context));
 }

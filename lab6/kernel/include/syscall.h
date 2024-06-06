@@ -24,12 +24,12 @@
 		curr_thread->context.lr = (uint64_t)wrapper;                                                   \
 		if (kernel_sp != NULL)                                                                         \
 		{                                                                                              \
-			DEBUG("Set kernel stack pointer\n");                                                       \
+			DEBUG("Set kernel stack pointer: 0x%x\n", kernel_sp);                                      \
 			asm volatile("mov sp, %0\n\t" ::"r"(kernel_sp)); /* set kernel stack pointer */            \
 		}                                                                                              \
 		if (user_sp != NULL)                                                                           \
 		{                                                                                              \
-			DEBUG("Set user stack pointer\n");                                                         \
+			DEBUG("Set user stack pointer: 0x%x\n", user_sp);                                          \
 			asm volatile("msr sp_el0, %0\n\t" ::"r"(user_sp)); /* el0 stack pointer for el1 process */ \
 		}                                                                                              \
 		asm volatile(                                                                                  \
@@ -88,6 +88,7 @@ int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox);
 int sys_kill(trapframe_t *tpf, int pid);
 int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void));
 int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL);
+void *sys_mmap(trapframe_t *tpf, void *addr, size_t len, int prot, int flags, int fd, int file_offset);
 int sys_signal_return(trapframe_t *tpf);
 void sys_lock_interrupt(trapframe_t *tpf);
 void sys_unlock_interrupt(trapframe_t *tpf);

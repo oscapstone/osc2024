@@ -5,11 +5,18 @@
 .global _start
 
 _start:
-    // Switch from EL2 to EL1 .
-    bl from_el2_to_el1
+    // Switch from EL2 to EL1 
+    // save dtb addr
+    mov     x19, x0
+    mrs     x0, MPIDR_EL1
+    and     x0, x0, #0x3
+    cbz     x0, set_mmu_configuration
+	//cbz     x0, set_mmu_configuration		// Hang for all non-primary CPU
+    b       proc_hang
 
 set_mmu_configuration:
     // set paging configuration (up : 0xffff000000000000 low : 0x0000000000000000)
+    bl      from_el2_to_el1
     ldr x4, = TCR_CONFIG_DEFAULT
     msr tcr_el1, x4
 
@@ -67,6 +74,8 @@ init_bss:
     cbnz    w2, init_bss
 
 run_main:
+    // restore dtb addr
+    mov     x0, x19
     bl      main
 
 proc_hang:

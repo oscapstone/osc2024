@@ -180,6 +180,7 @@ void el0_sync_router(trapframe_t *tpf)
     static int count = 0;
     uint64_t esr_el1_value = read_esr_el1();
     uint64_t elr_el1_value = read_elr_el1();
+    uint64_t spsr_el1_value = read_spsr_el1();
     // esr_el1: Holds syndrome information for an exception taken to EL1.
     esr_el1_t *esr = (esr_el1_t *)&esr_el1_value;
     if (esr->ec == MEMFAIL_DATA_ABORT_LOWER || esr->ec == MEMFAIL_INST_ABORT_LOWER)
@@ -191,7 +192,12 @@ void el0_sync_router(trapframe_t *tpf)
     {
         const char *exception_name = get_exception_name(esr_el1_value);
         if (count == 0)
+        {
             ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
+            ERROR("spsr_el1: 0x%016lx\r\n", spsr_el1_value);
+            ERROR("elr_el1: 0x%016lx\r\n", elr_el1_value);
+            ERROR("esr_el1: 0x%016lx\r\n", esr_el1_value);
+        }
         count++;
         return;
     }
@@ -271,7 +277,7 @@ __signal_kill_label:
 
 __mmap_label:
     DEBUG("sys_mmap\r\n");
-    // tpf->x0 = sys_mmap(tpf, (void *)tpf->x0, (size_t)tpf->x1, (int)tpf->x2, (int)tpf->x3, (int)tpf->x4, (off_t)tpf->x5);
+    tpf->x0 = sys_mmap(tpf, (void *)tpf->x0, (size_t)tpf->x1, (int)tpf->x2, (int)tpf->x3, (int)tpf->x4, (int)tpf->x5);
     return;
 
 __signal_return_label:

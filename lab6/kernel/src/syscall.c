@@ -101,6 +101,7 @@ void unlock_interrupt()
  */
 int sys_getpid(trapframe_t *tpf)
 {
+	DEBUG("getpid: %d\r\n", curr_thread->pid);
 	return curr_thread->pid;
 }
 
@@ -165,10 +166,6 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	}
 
 	DEBUG("sys_exec: %s\r\n", name);
-	if (thread_code_can_free(curr_thread))
-	{
-		kfree(curr_thread->code);
-	}
 	kernel_lock_interrupt();
 	char *filepath = kmalloc(strlen(name) + 1);
 	strcpy(filepath, name);
@@ -177,8 +174,29 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	curr_thread->code = kmalloc(filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
 	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
-	tpf->elr_el1 = (uint64_t)curr_thread->code;
-	tpf->sp_el0 = (uint64_t)curr_thread->user_stack_bottom + USTACK_SIZE;
+
+	asm("dsb ish\n\t"); // ensure write has completed
+	mmu_clean_page_tables(curr_thread->context.pgd, LEVEL_PGD);
+	memset(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), 0, 0x1000);
+	asm("tlbi vmalle1is\n\t" // invalidate all TLB entries
+		"dsb ish\n\t"		 // ensure completion of TLB invalidatation
+		"isb\n\t");			 // clear pipeline
+	mmu_free_all_vma(curr_thread);
+
+	mmu_add_vma(curr_thread, "Code", USER_CODE_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
+	mmu_add_vma(curr_thread, "User Stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
+	mmu_add_vma(curr_thread, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
+	mmu_add_vma(curr_thread, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x1000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
+	// DEBUG("physical address of run_user_task_wrapper: 0x%x\r\n", (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper));
+	uint64_t ttbr0_el1_value;
+	asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
+	DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
+	DEBUG("curr_thread->pid: %d\r\n", curr_thread->pid);
+	DEBUG_BLOCK({
+		dump_vma(curr_thread);
+	});
+	tpf->elr_el1 = (uint64_t)USER_CODE_BASE;
+	tpf->sp_el0 = (uint64_t)USER_STACK_BASE - SP_OFFSET_FROM_TOP;
 	kernel_unlock_interrupt();
 	return 0;
 }
@@ -210,14 +228,16 @@ int sys_fork(trapframe_t *tpf)
 	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
 
 	mmu_add_vma(child, "Code", USER_CODE_BASE, child->datasize, (size_t)KERNEL_VIRT_TO_PHYS(child->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
-	mmu_add_vma(child, "User stack", USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(child->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
+	mmu_add_vma(child, "User stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(child->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
 	mmu_add_vma(child, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
 	mmu_add_vma(child, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
 	mmu_add_vma(child, "Run user task wrapper", USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
-	DEBUG("-------------- Child VMA --------------\r\n");
-	dump_vma(child);
-	DEBUG("-------------- Parent VMA --------------\r\n");
-	dump_vma(parent);
+	DEBUG_BLOCK({
+		DEBUG("-------------- Child VMA --------------\r\n");
+		dump_vma(child);
+		DEBUG("-------------- Parent VMA --------------\r\n");
+		dump_vma(parent);
+	});
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
 	store_context(&(child->context));
@@ -316,6 +336,47 @@ int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL)
 	signal_send(pid, SIGNAL);
 }
 
+// only need to implement the anonymous page mapping in this Lab.
+void *sys_mmap(trapframe_t *tpf, void *addr, size_t len, int prot, int flags, int fd, int file_offset)
+{
+	// Ignore flags as we have demand pages
+	DEBUG("mmap addr: 0x%x, len: 0x%x\r\n", addr, len);
+
+	// Req #3 Page size round up
+	len = ALIGN_UP(len, PAGE_FRAME_SIZE);
+	addr = ALIGN_UP((uint64_t)addr, PAGE_FRAME_SIZE);
+
+	// Req #2 check if overlap
+	list_head_t *pos;
+	vm_area_struct_t *vma;
+	size_t new_addr = (size_t)addr;
+	int found = 0;
+	while (!found)
+	{
+		found = 1; // 假設找到一個合適的位置
+		list_for_each(pos, (list_head_t *)curr_thread->vma_list)
+		{
+			vma = (vm_area_struct_t *)pos;
+			// Detect existing vma overlapped
+			if (!(vma->virt_addr_area.start >= (new_addr + len) || vma->virt_addr_area.end <= new_addr))
+			{
+				// 如果有重疊，則更新 new_addr 並重新檢查
+				new_addr = vma->virt_addr_area.end;
+				found = 0; // 還沒找到合適的位置
+				break;
+			}
+		}
+	}
+
+	// create new valid region, map and set the page attributes (prot)
+	DEBUG("mmap: new_addr: 0x%x, len: 0x%x, prot: 0x%x, flags: 0x%x\r\n", new_addr, len, prot, flags);
+	mmu_add_vma(curr_thread, "anon", new_addr, len, KERNEL_VIRT_TO_PHYS((size_t)kmalloc(len)), prot, flags, 1);
+	INFO_BLOCK({
+		dump_vma(curr_thread);
+	});
+	return (void *)new_addr;
+}
+
 /**
  * @brief Before returning to the execution of the signal handler.
  *
@@ -372,13 +433,14 @@ int kernel_fork()
 	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
-	store_context(get_current_thread_context());
+	store_context(&(child->context));
 	DEBUG("child: 0x%x, parent: 0x%x\r\n", child, parent);
+	DEBUG("curr_thread->pid: %d, curr_thread->context.pgd: 0x%x, parent->context.pgd: 0x%x, child->context.pgd: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, parent->context.pgd, child->context.pgd);
 
 	if (child->pid != curr_thread->pid) // Parent process
 	{
 		DEBUG("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		child->context = curr_thread->context;
+		// child->context = curr_thread->context;
 		child->context.fp += child->kernel_stack_bottom - parent->kernel_stack_bottom;
 		child->context.sp += child->kernel_stack_bottom - parent->kernel_stack_bottom;
 		kernel_unlock_interrupt();
@@ -427,24 +489,25 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	curr_thread->datasize = filesize;
 	curr_thread->name = filepath;
 	curr_thread->code = kmalloc(filesize);
-	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d\r\n", program_name, curr_thread->code, filesize);
+	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d, pid: %d\r\n", program_name, curr_thread->code, filesize, curr_thread->pid);
 	MEMCPY(curr_thread->code, filedata, filesize);
 	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 
 	mmu_add_vma(curr_thread, "Code", USER_CODE_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
-	mmu_add_vma(curr_thread, "User Stack", USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
+	mmu_add_vma(curr_thread, "User Stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
 	mmu_add_vma(curr_thread, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
-	mmu_add_vma(curr_thread, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
-	mmu_add_vma(curr_thread, "Run user task wrapper", USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
+	mmu_add_vma(curr_thread, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x1000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
+	mmu_add_vma(curr_thread, "Run user task wrapper", USER_RUN_USER_TASK_WRAPPER_VA, 0x1000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
 	// DEBUG("physical address of run_user_task_wrapper: 0x%x\r\n", (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper));
 	uint64_t ttbr0_el1_value;
 	asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
 	DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
-
+	DEBUG("curr_thread->pid: %d\r\n", curr_thread->pid);
 	// 讀取 TTBR0_EL1 的值
 	DEBUG("VA of run_user_task_wrapper: 0x%x, USER_RUN_USER_TASK_WRAPPER_VA: 0x%x\r\n", run_user_task_wrapper, USER_RUN_USER_TASK_WRAPPER_VA);
 	DEBUG("VA of signal_handler_wrapper: 0x%x, USER_SIGNAL_WRAPPER_VA: 0x%x\r\n", signal_handler_wrapper, USER_SIGNAL_WRAPPER_VA);
-	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE);
+	DEBUG("VA of user sp: 0x%x", USER_STACK_BASE);
+	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
 	return 0;
 }
 

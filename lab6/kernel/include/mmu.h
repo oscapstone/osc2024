@@ -21,11 +21,11 @@
 #define PD_UK_ACCESS (1L << 6) // 0 for only kernel access, 1 for user/kernel access.
 
 #define PERIPHERAL_START 0x3C000000L
-#define PERIPHERAL_END 0x40000000L
+#define PERIPHERAL_END 0x3F000000L
 #define USER_CODE_BASE 0x0000000000000000L
-#define USER_STACK_BASE 0x0000FFFFFFFFF000L // top of stack
-#define USER_SIGNAL_WRAPPER_VA 0x0000FFFFFFFE0000L
-#define USER_RUN_USER_TASK_WRAPPER_VA 0x0000FFFFFFFD0000L
+#define USER_STACK_BASE 0x0000FFFFFFFFF000L - 0x10 // top of stack
+#define USER_SIGNAL_WRAPPER_VA 0x0000FFFFFFFA0000L
+#define USER_RUN_USER_TASK_WRAPPER_VA 0x0000FFFFFFF00000L
 
 #define MMU_PGD_BASE 0x2000L
 #define MMU_PGD_ADDR (MMU_PGD_BASE + 0x0000L)
@@ -72,6 +72,11 @@
     uint64_t phys_addr = (pte[PTE_INDEX(virt_addr)] & ENTRY_ADDR_MASK) | ((virt_addr) & ~ENTRY_ADDR_MASK); \
     phys_addr;                                                                                             \
 })
+
+// e.g. size=0x13200, alignment=0x1000 -> 0x14000
+#define ALIGN_UP(size, alignment) (((size) + ((alignment) - 1)) & ~((alignment) - 1))
+// e.g. size=0x13200, alignment=0x1000 -> 0x13000
+#define ALIGN_DOWN(size, alignment) ((size) & ~((alignment) - 1))
 
 #ifndef __ASSEMBLER__
 
@@ -149,12 +154,12 @@ typedef struct thread_struct thread_t;
 
 void *set_2M_kernel_mmu(void *x0);
 void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag);
-// void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, char *file, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free)
 void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free);
 void mmu_free_all_vma(thread_t *t);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1);
 void dump_vma(thread_t *t);
+void dump_pagetable(unsigned long user_va, unsigned long pa);
 
 #endif //__ASSEMBLER__
 

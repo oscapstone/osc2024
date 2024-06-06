@@ -254,7 +254,7 @@ void kfree(void *ptr)
     // DEBUG("kfree: address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
     if (frame->order == NOT_CACHE)
     {
-        // DEBUG("kfree: page_free: 0x%x\n", ptr);
+        DEBUG("kfree: page_free: 0x%x\n", ptr);
         page_free(ptr);
         kernel_unlock_interrupt();
         return;
@@ -265,8 +265,8 @@ void kfree(void *ptr)
     list_add((list_head_t *)ptr, cache_freelist[(size_t)frame->order]);
     if (frame->cache_used_count == 0)
     {
-        // DEBUG("kfree: cache_used_count == 0, free frame: 0x%x\n", frame);
-        // DEBUG("remove the cache with the same frame from freelist\r\n");
+        DEBUG("kfree: cache_used_count == 0, free: 0x%x\n", frame_addr_to_virt_addr(frame));
+        DEBUG("remove the cache with the same frame from freelist\r\n");
         for (size_t i = 0; i < PAGE_FRAME_SIZE / order_size; i++)
         {
             list_del_entry((list_head_t *)((void *)frame_addr_to_virt_addr(frame) + i * order_size));
@@ -513,6 +513,11 @@ int page_free(void *ptr)
 {
     kernel_lock_interrupt();
     frame_t *curr = virt_addr_to_frame(ptr);
+    if(!list_empty((list_head_t *)curr)){
+        ERROR("page_free: frame is already free, address: 0x%x\n", ptr);
+        kernel_unlock_interrupt();
+        return 0;
+    }
     int8_t val = curr->val;
     curr->val = F_FRAME_VAL;
     // int new_val = val;

@@ -7,11 +7,6 @@
 #include "sched.h"
 #include "debug.h"
 
-// e.g. size=0x13200, alignment=0x1000 -> 0x14000
-#define ALIGN_UP(size, alignment) (((size) + ((alignment) - 1)) & ~((alignment) - 1))
-// e.g. size=0x13200, alignment=0x1000 -> 0x13000
-#define ALIGN_DOWN(size, alignment) ((size) & ~((alignment) - 1))
-
 extern thread_t *curr_thread;
 
 void *set_2M_kernel_mmu(void *x0)
@@ -135,7 +130,10 @@ void mmu_free_all_vma(thread_t *t)
     {
         vm_area_struct_t *vma = (vm_area_struct_t *)curr;
         if (vma->need_to_free)
+        {
+            DEBUG("VMA Kfree: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT(vma->phys_addr_area.start));
             kfree((void *)PHYS_TO_KERNEL_VIRT(vma->phys_addr_area.start));
+        }
         list_del_entry(curr);
         kfree(curr);
     }
@@ -157,9 +155,10 @@ void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level)
             size_t *next_table = (size_t *)(table_virt[i] & ENTRY_ADDR_MASK);
             if (table_virt[i] & PD_TABLE)
             {
-                if (level < LEVEL_PTE) // not the last level
+                if (level < LEVEL_PMD) // not the last level
                     mmu_clean_page_tables(next_table, level + 1);
                 table_virt[i] = 0L;
+                DEBUG("Clean table: 0x%x, level: %d\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table), level);
                 kfree(PHYS_TO_KERNEL_VIRT((char *)next_table));
             }
         }
@@ -185,6 +184,8 @@ static inline vm_area_struct_t *find_vma(thread_t *t, size_t va)
     return 0;
 }
 
+extern void switch_mm_irqs_off(unsigned long long *pgd);
+
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
 {
     uint64_t far_el1;
@@ -197,6 +198,9 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
     if (!the_area_ptr)
     {
         ERROR("[Segmentation fault]: 0x%x out of vma. Kill Process!\r\n", far_el1);
+        ERROR_BLOCK({
+            dump_vma(curr_thread);
+        });
         thread_exit();
         return;
     }
@@ -215,19 +219,35 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         addr_offset = ALIGN_DOWN(addr_offset, PAGE_FRAME_SIZE);
         size_t va_to_map = the_area_ptr->virt_addr_area.start + addr_offset;
         size_t pa_to_map = the_area_ptr->phys_addr_area.start + addr_offset;
-        DEBUG("va_to_map: 0x%x, pa_to_map: 0x%x, rwx: 0x%x\r\n", va_to_map, pa_to_map, the_area_ptr->rwx);
-
-        dump_vma(curr_thread);
+        DEBUG("va_to_map: 0x%x, pa_to_map: 0x%x, prot: 0x%x\r\n", va_to_map, pa_to_map, the_area_ptr->vm_page_prot);
+        INFO_BLOCK({
+            dump_vma(curr_thread);
+        });
 
         uint8_t flag = 0;
         if (!(the_area_ptr->vm_page_prot & PROT_EXEC))
+        {
+            DEBUG("add non-executable flag\r\n");
             flag |= PD_UNX; // executable
-        if (!(the_area_ptr->vm_page_prot & PROT_WRITE))
+            DEBUG("flag: 0x%x\r\n", flag);
+        }
+        if (the_area_ptr->vm_page_prot == PROT_READ)
+        {
+            DEBUG("add read-only flag\r\n");
             flag |= PD_RDONLY; // writable
+        }
         if (the_area_ptr->vm_page_prot & PROT_READ)
+        {
+            DEBUG("add accessible flag\r\n");
             flag |= PD_UK_ACCESS; // readable / accessible
-        DEBUG("PGD: 0x%x\r\n", curr_thread->context.pgd);
+        }
+        uint64_t ttbr0_el1_value;
+        asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
+        DEBUG("pid: %d, curr_thread->context.pgd: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, ttbr0_el1_value);
+
         map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, pa_to_map, flag);
+
+        switch_mm_irqs_off(curr_thread->context.pgd); // flush tlb and pipeline because page table is change
     }
     else
     {
@@ -241,21 +261,99 @@ void dump_vma(thread_t *t)
 {
     list_head_t *pos;
     vm_area_struct_t *vma;
-    INFO("=================================================================== VMA ===================================================================\r\n");
+    uart_puts("=================================================================== VMA ===================================================================\r\n");
     list_for_each(pos, (list_head_t *)(t->vma_list))
     {
         vma = (vm_area_struct_t *)pos;
-        INFO_BLOCK({
-            int len = strlen(vma->name);
-            INFO("%s ", vma->name);
-            for (int i = 0; i < 23 - len; i++)
-                uart_puts(" ");
-            uart_puts("VMA: 0x%x, VA: 0x%x - 0x%x, PA: 0x%x - 0x%x, RWX: 0x%x, Need to free: 0x%x\r\n",
-                      vma,
-                      vma->virt_addr_area.start, vma->virt_addr_area.end,
-                      vma->phys_addr_area.start, vma->phys_addr_area.end,
-                      vma->rwx, vma->need_to_free);
-        });
+        int len = strlen(vma->name);
+        uart_puts("%s ", vma->name);
+        for (int i = 0; i < 23 - len; i++)
+            uart_puts(" ");
+        uart_puts("VMA: 0x%x, VA: 0x%x - 0x%x, PA: 0x%x - 0x%x, Need to free: 0x%x, Page prot: (",
+                  vma,
+                  vma->virt_addr_area.start, vma->virt_addr_area.end,
+                  vma->phys_addr_area.start, vma->phys_addr_area.end,
+                  vma->need_to_free);
+        if (vma->vm_page_prot & PROT_READ)
+            uart_puts("R");
+        if (vma->vm_page_prot & PROT_WRITE)
+            uart_puts("W");
+        if (vma->vm_page_prot & PROT_EXEC)
+            uart_puts("X");
+        uart_puts("), Flags: 0x%x\r\n", vma->vm_flags);
     }
-    INFO("=================================================================== END ===================================================================\r\n");
+    uart_puts("=================================================================== END ===================================================================\r\n");
+}
+
+#define DUMP_NAME(number, name) \
+    case number:                \
+        uart_puts(name);        \
+        uart_puts("\n");        \
+        break;
+
+typedef enum
+{
+    UNKNOW_AREA = -1,
+    USER_DATA,
+    USER_STACK,
+    PERIPHERAL,
+    USER_SIGNAL_WRAPPER
+} vma_name_type;
+
+typedef enum
+{
+    PGD,
+    PUD,
+    PMD,
+    PTE,
+} pagetable_type;
+
+void dump_pagetable(unsigned long user_va, unsigned long pa)
+{
+    uart_puts("      +---------------------------+\n");
+    uart_puts("      | DUMP PAGE TABLE & ADDRESS |\n");
+    uart_puts("      +---------------------------+\n");
+    unsigned long *pagetable_pa = curr_thread->context.pgd;
+    unsigned long *pagetable_kernel_va = PHYS_TO_KERNEL_VIRT(pagetable_pa);
+
+    uart_puts("===============================================\n");
+    uart_puts("User Physical Address : 0x%x\n", pa);
+    uart_puts("User Vitural  Address : 0x%x\n", user_va);
+    unsigned long offset = user_va & 0xFFF;
+    uart_puts("Vitural Address offset: 0x%x\n", offset);
+    for (int level = 0; level < 4; level++)
+    {
+        uart_puts("-----------------------------------------------\n");
+        uart_puts("PAGE TABLE : ");
+        switch (level)
+        {
+            DUMP_NAME(PGD, "PGD")
+            DUMP_NAME(PUD, "PUD")
+            DUMP_NAME(PMD, "PMD")
+            DUMP_NAME(PTE, "PTE")
+        default:
+            uart_puts("unnamed: %d\n", level);
+            break;
+        }
+        uart_puts("Pagetable Vitural  Address: 0x%x\n", pagetable_kernel_va);
+        uart_puts("Pagetable Physical Address: 0x%x\n", pagetable_pa);
+
+        unsigned int idx = (user_va >> (39 - level * 9)) & 0x1FF;
+        uart_puts("Index of Pagetable: 0x%x\n", idx);
+        uart_puts("Entry %x of Pagetable: 0x%x\n", idx, pagetable_kernel_va[idx]);
+        if (level == PTE)
+        {
+            pagetable_pa = pagetable_kernel_va[idx] & ENTRY_ADDR_MASK;
+            uart_puts("The Page Base Physical Address: 0x%x\n", pagetable_pa);
+            uart_puts("The Physical Address: 0x%x\n", (unsigned long)pagetable_pa | offset);
+        }
+        else
+        {
+            pagetable_pa = pagetable_kernel_va[idx] & ENTRY_ADDR_MASK;
+            uart_puts("next Pagetable Physical Address: 0x%x\n", pagetable_pa);
+            pagetable_kernel_va = PHYS_TO_KERNEL_VIRT(pagetable_pa);
+            uart_puts("next Pagetable Vitural  Address: 0x%x\n", pagetable_kernel_va);
+        }
+        uart_puts("-----------------------------------------------\n");
+    }
 }

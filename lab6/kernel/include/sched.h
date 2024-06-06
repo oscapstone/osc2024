@@ -10,6 +10,7 @@
 #define MAX_SIGNAL 31
 #define USTACK_SIZE 0x10000
 #define KSTACK_SIZE 0x10000
+#define SP_OFFSET_FROM_TOP 0x10
 #define SIGNAL_MAX  64
 
 extern void  switch_to(void *curr_context, void *next_context);
