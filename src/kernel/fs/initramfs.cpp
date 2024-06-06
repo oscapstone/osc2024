@@ -61,7 +61,8 @@ FileSystem::FileSystem() : ::FileSystem{"initramfs"} {
       FS_WARN("lookup '%s' fail", hdr->name_ptr());
       continue;
     }
-    dir->link(basename, new Vnode{hdr});
+    if (not dir->lookup(basename))
+      dir->link(basename, new Vnode{hdr});
     kfree(basename);
   }
 }
