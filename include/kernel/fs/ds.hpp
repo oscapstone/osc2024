@@ -99,7 +99,7 @@ class File {
 class FileSystem {
  public:
   FileSystem* next = nullptr;
-  virtual const char* name() {
+  virtual const char* name() const {
     return "";
   }
   virtual Vnode* mount();

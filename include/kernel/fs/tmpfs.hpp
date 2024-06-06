@@ -43,7 +43,7 @@ class File final : public ::FileImplRW<Vnode, File> {
 
 class FileSystem final : public ::FileSystem {
  public:
-  virtual const char* name() {
+  virtual const char* name() const {
     return "tmpfs";
   }
 

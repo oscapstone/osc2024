@@ -54,7 +54,7 @@ class FileSystem final : public ::FileSystem {
  public:
   FileSystem();
 
-  virtual const char* name() {
+  virtual const char* name() const {
     return "framebufferfs";
   }
 

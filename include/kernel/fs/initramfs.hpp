@@ -52,7 +52,7 @@ class FileSystem final : public ::FileSystem {
   ::Vnode* root;
 
   FileSystem();
-  virtual const char* name() {
+  virtual const char* name() const {
     return "initramfs";
   }
 
