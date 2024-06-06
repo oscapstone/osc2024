@@ -28,6 +28,7 @@ typedef struct frame_node {
 typedef struct frame_entry {
   int16_t order;
   uint16_t status;
+  uint16_t ref_cnt;
   struct frame_node* node;
 } frame_entry;
 
@@ -43,6 +44,7 @@ typedef struct chunk_entry {
   uint16_t free_chunk_cnt;
 } chunk_entry;
 
+uint32_t address2idx(void* address);
 void init_mem();
 void* malloc(uint32_t size);
 void free(void* addr);

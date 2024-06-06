@@ -26,7 +26,7 @@ switch_to:
     tlbi vmalle1is     
     dsb ish             
     isb                 
-
+  
     ldr x1, =KERNEL_VIRT_BASE
     orr lr, lr, x1
     ret  

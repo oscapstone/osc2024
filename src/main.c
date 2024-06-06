@@ -9,7 +9,7 @@
 extern void *_dtb_ptr_start;
 
 void kernel_init(void *arg) {
-  _dtb_ptr_start = (void *)(KERNEL_VIRT_BASE | (uint64_t)arg);
+  _dtb_ptr_start = (void *)phy2vir((uint64_t)arg);
   shell_init();
   fdt_traverse(get_cpio_addr);
   init_mem();
@@ -25,13 +25,7 @@ void kernel_init(void *arg) {
 
 void main(void *arg) {
   kernel_init(arg);
-  // startup_thread_exec("vm.img");
   thread_create(user_thread_exec);
-
   idle_task();
-
-  // for (;;) {
-  //   schedule();
-  // }
   // shell_start();
 }

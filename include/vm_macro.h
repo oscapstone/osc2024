@@ -38,6 +38,7 @@
 #define PTE_SHIFT 12
 
 // Page Descriptor
+#define PD_INVAILD 0
 #define PD_TABLE \
   0b11  // A page frame whose entries point to the next level page tables,
         // blocks, or pages.
@@ -46,6 +47,10 @@
 #define PD_PAGE 0b11  // A chunk of virtual memory pointed by one entry of PTE.
 #define PD_ACCESS_FLAG \
   (1 << 10)  // The access flag, a page fault is generated if not set.
+#define PD_USER_RO_FLAG \
+  (0b11 << 6)  // user can read/write the region, then the kernel is
+               // automatically not executable in that region no matter what the
+               // value of Bits[53] is.
 #define PD_USER_RW_FLAG \
   (0b01 << 6)  // user can read/write the region, then the kernel is
                // automatically not executable in that region no matter what the
@@ -63,7 +68,5 @@
 
 #define SCTLR_VALUE_MMU_DISABLED 0
 #define SCTLR_VALUE_MMU_ENABLE 1
-
-#
 
 #endif

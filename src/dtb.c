@@ -4,6 +4,7 @@
 #include "string.h"
 #include "uart1.h"
 #include "utli.h"
+#include "vm.h"
 #include "vm_macro.h"
 
 void *_dtb_ptr_start;  // should be 0x2EFF7A00
@@ -117,11 +118,10 @@ void get_cpio_addr(int32_t token, const char *name, const void *data,
   UNUSED(size);
 
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-start")) {
-    cpio_start_addr =
-        (void *)((uint64_t)fdt_u32_le2be(data) | KERNEL_VIRT_BASE);
+    cpio_start_addr = (void *)phy2vir((uint64_t)fdt_u32_le2be(data));
   }
   if (token == FDT_PROP && !strcmp((char *)name, "linux,initrd-end")) {
-    cpio_end_addr = (void *)((uint64_t)fdt_u32_le2be(data) | KERNEL_VIRT_BASE);
+    cpio_end_addr = (void *)phy2vir((uint64_t)fdt_u32_le2be(data));
   }
   return;
 }

@@ -130,9 +130,7 @@ error_el1t:
 
 sync_el1h:
   save_all
-  mov x0, sp // for trapframe
-  bl  el0_64_sync_interrupt_handler
-  bl  check_signal
+  bl  el1h_sync_handler
   load_all
   eret
   
@@ -158,7 +156,7 @@ error_el1h:
 sync_el0_64:	
   save_all
   mov x0, sp // for trapframe
-  bl  el0_64_sync_interrupt_handler
+  bl  el0_64_sync_handler
   bl  check_signal
   load_all
   eret

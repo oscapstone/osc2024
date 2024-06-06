@@ -18,7 +18,7 @@ extern void* startup_alloc_start;
 extern void* startup_alloc_end;
 
 static uint32_t chunk_sizes[] = {16, 32, 64, 128, 256, 512, 1024, 2048};
-static frame_entry* frame_entry_arr;
+frame_entry* frame_entry_arr;
 static frame_node* free_frame_lists[MAX_ORDER + 1];
 static chunk_entry* chunk_entry_arr;
 static chunk_node* free_chunk_lists[CHUNK_SIZE_TYPES];
@@ -27,7 +27,7 @@ static void* idx2address(uint32_t idx) {
   return (void*)(MEM_START + (uint64_t)idx * FRAME_SIZE);
 }
 
-static uint32_t address2idx(void* address) {
+uint32_t address2idx(void* address) {
   return ((uint64_t)address - MEM_START) / FRAME_SIZE;
 }
 
@@ -96,6 +96,7 @@ static void init_frames() {
     frame_entry_arr[i].order = 0;
     frame_entry_arr[i].status = FREE;
     frame_entry_arr[i].node = (frame_node*)0;
+    frame_entry_arr[i].ref_cnt = 0;
   }
 
   for (int i = 0; i <= MAX_ORDER; i++) {

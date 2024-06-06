@@ -3,6 +3,7 @@
 #include "string.h"
 #include "uart1.h"
 #include "utli.h"
+#include "vm.h"
 #include "vm_macro.h"
 
 void *cpio_start_addr;
@@ -85,7 +86,7 @@ void cpio_cat(const char *filename) {
 }
 
 char *cpio_load(const char *filename, uint32_t *file_sz) {
-  char *file = (void *)(KERNEL_VIRT_BASE | (uint64_t)findFile(filename));
+  char *file = (void *)phy2vir((uint64_t)findFile(filename));
   if (file) {
     cpio_header *header = (cpio_header *)file;
     uint32_t filename_size =

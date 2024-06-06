@@ -155,21 +155,23 @@ void print_el1_sys_reg() {
                : "=r"(esr_el1));  // esr_el1: holds syndrome information for an
                                   // exception taken to EL1
   uart_send_string(
-      "SPSR_EL1 : ");  // bit[31](the N flag) may equal to 1 here, which is the
-                       // nagative condition flag, indicating whether the result
-                       // of an operation is negative or not.
+      "SPSR_EL1: ");  // bit[31](the N flag) may equal to 1 here, which is the
+                      // nagative condition flag, indicating whether the result
+                      // of an operation is negative or not.
   uart_hex(spsr_el1);
   uart_send_string("\r\n");
-  uart_send_string("ELR_EL1 : ");
+  uart_send_string("ELR_EL1: ");
   uart_hex(elr_el1);
   uart_send_string("\r\n");
-  uart_send_string("ESR_EL1 : ");  // EC(bits[31:26]): indicates the cause of
-  uart_hex(esr_el1);               // the exception; 0x15 here -> SVC
-  uart_send_string("\r\n");        // instruction from AArch64
-                                   // IL(bit[25]): the instrction length bit,
-                                   // for sync exceptions; is set to 1 here ->
-                                   // 32-bit trapped instruction
+  uart_send_string("ESR_EL1: ");  // EC(bits[31:26]): indicates the cause of
+  uart_hex(esr_el1);              // the exception; 0x15 here -> SVC
+  uart_send_string("\r\n");       // instruction from AArch64
+                                  // IL(bit[25]): the instrction length bit,
+                                  // for sync exceptions; is set to 1 here ->
+                                  // 32-bit trapped instruction
 }
+
+#include "multitask.h"
 
 void exec_in_el0(void *prog_st_addr, void *stk_ptr) {
   asm volatile(

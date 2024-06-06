@@ -7,7 +7,7 @@
 volatile uint32_t __attribute__((aligned(16))) mbox[36];
 
 uint32_t mbox_call(uint8_t ch) {
-  uint64_t r = (((uint64_t)((uint64_t)mbox) & ~0xF) | (ch & 0xF));
+  uint32_t r = ((uint32_t)((uint64_t)&mbox) | (ch & 0xF));
   /* wait until we can write to the mailbox */
   do {
     asm volatile("nop");

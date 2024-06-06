@@ -60,14 +60,18 @@ static void reclaim() {
   OS_enter_critical();
   for (int i = 0; i < PROC_NUM; i++) {
     if (threads[i].status == THREAD_DEAD) {
+      if (threads[i].mm.pgd != KER_PGD_ADDR) {
+        vm_free(&threads[i]);
+      }
+
+      free(threads[i].ker_stk);
+      free(threads[i].sig_stk);
+
+      init_thread_struct(&threads[i], i + 1);
+
       uart_send_string("\r\nidle task: reclaimed thread pid: ");
       uart_int(threads[i].pid);
       uart_send_string("\r\n");
-      free(threads[i].usr_stk);
-      free(threads[i].ker_stk);
-      free(threads[i].sig_stk);
-      free(threads[i].data);
-      init_thread_struct(&threads[i], i + 1);
     }
   }
   OS_exit_critical();
@@ -181,9 +185,18 @@ void user_thread_exec() {
     return;
   }
   current_thread->data_size = file_sz;
-  current_thread->data = map_pages(current_thread, USR_CODE_ADDR, file_sz);
+  current_thread->data = malloc(file_sz);
+  map_pages(current_thread, CODE, (uint64_t)current_thread->data, USR_CODE_ADDR,
+            file_sz, VM_PROT_READ | VM_PROT_EXEC, MAP_ANONYMOUS);
   memcpy(current_thread->data, usr_prog, file_sz);
-  current_thread->usr_stk = map_pages(current_thread, USR_STK_ADDR, USR_STK_SZ);
+  current_thread->usr_stk = malloc(USR_STK_SZ);
+
+  map_pages(current_thread, STACK, (uint64_t)current_thread->usr_stk,
+            USR_STK_ADDR, USR_STK_SZ, VM_PROT_READ | VM_PROT_WRITE,
+            MAP_ANONYMOUS);
+  map_pages(current_thread, IO, phy2vir(IO_PM_START_ADDR), IO_PM_START_ADDR,
+            IO_PM_END_ADDR - IO_PM_START_ADDR, VM_PROT_READ | VM_PROT_WRITE,
+            MAP_ANONYMOUS);
 
   uart_send_string("current_thread->mm.pgd: ");
   uart_hex_64(current_thread->mm.pgd);
@@ -199,24 +212,6 @@ void user_thread_exec() {
   uart_send_string("\r\n");
 
   set_current_pgd(current_thread->mm.pgd);
-  // uart_puts("check1");
-
-  // char* file = (char*)USR_CODE_ADDR;
-  // for (int i = 0; i < file_sz; i++) {
-  //   if (file[i] != usr_prog[i]) {
-  //     uart_puts("wrong");
-  //     break;
-  //   }
-  // }
-  // uart_puts("check2");
-
-  // uint64_t tmp;
-  // asm volatile("mrs %0, vbar_el1" : "=r"(tmp));
-  // uart_send_string("vbar_el1: ");
-  // uart_hex_64(tmp);
-  // uart_send_string("\r\n");
-
-  enable_uart_interrupt();
 
   asm volatile(
       "msr spsr_el1, xzr\n\t"
@@ -238,55 +233,6 @@ task_struct* thread_create(start_routine_t start_routine) {
   ready_que_push_back(new_thread);
 
   return new_thread;
-}
-
-void startup_thread_exec(char* file) {
-  uint32_t file_sz;
-
-  char* usr_prog = cpio_load(file, &file_sz);
-  if (!usr_prog) {
-    return;
-  }
-
-  uart_send_string("usr_prog: ");
-  uart_hex_64((uint64_t)usr_prog);
-  uart_send_string(", file_sz: ");
-  uart_int(file_sz);
-  uart_send_string("\r\n");
-
-  current_thread->data_size = file_sz;
-  current_thread->data = map_pages(current_thread, USR_CODE_ADDR, file_sz);
-  //  current_thread->data = malloc(file_sz);
-  memcpy(current_thread->data, usr_prog, file_sz);
-  // current_thread->usr_stk = malloc(USR_STK_SZ);
-  current_thread->usr_stk = map_pages(current_thread, USR_STK_ADDR, USR_STK_SZ);
-
-  uart_send_string("current_thread->mm.pgd: ");
-  uart_hex_64(current_thread->mm.pgd);
-  uart_send_string("\r\n");
-  uart_send_string("current_thread->data: ");
-  uart_hex_64((uint64_t)current_thread->data);
-  uart_send_string("\r\n");
-  uart_send_string("current_thread->usr_stk: ");
-  uart_hex_64((uint64_t)current_thread->usr_stk + USR_STK_SZ);
-  uart_send_string("\r\n");
-  uart_send_string("current_thread->ker_stk: ");
-  uart_hex_64((uint64_t)current_thread->ker_stk + KER_STK_SZ);
-  uart_send_string("\r\n");
-
-  uart_puts("check1");
-  set_current_pgd(current_thread->mm.pgd);
-  uart_puts("check2");
-
-  enable_uart_interrupt();
-  asm volatile(
-      "msr spsr_el1, xzr\n\t"
-      "msr elr_el1, %0\n\t"
-      "msr sp_el0, %1\n\t"
-      "mov sp, %2\n\t"
-      "eret\n\t" ::"r"(USR_CODE_ADDR),
-      "r"(USR_STK_ADDR + USR_STK_SZ),
-      "r"(current_thread->ker_stk + KER_STK_SZ));
 }
 
 void task_exit() {

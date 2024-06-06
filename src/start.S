@@ -12,7 +12,7 @@ proc_hang:
     wfe                     
     b       proc_hang
 setting:                            
-    mov     x27, x0
+    //mov     x27, x0
     ldr     x1, =SCTLR_VALUE_MMU_DISABLED   // diable MMU
     msr     sctlr_el1, x1
     bl      from_el2_to_el1
@@ -102,7 +102,7 @@ setup_pagetable:
     // set up PTE for normal memory
     mov     x3, xzr                 
     add     x4, x2, #PAGE_SIZE        // PTE0's page frame address
-    mov     x6, 0x3F000               // 0x3C000 PTEs for ARM memory size
+    mov     x6, 0x3C000               // 0x3C000 PTEs for ARM memory size
 2:
     ldr     x5, =PTE_NORAL_ATTR
     orr     x5, x3, x5

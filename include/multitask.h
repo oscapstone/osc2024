@@ -3,19 +3,21 @@
 #include "multitask.h"
 #include "syscall_.h"
 #include "types.h"
+#include "vm.h"
 #include "vm_macro.h"
 
-#define USR_STK_SZ (1 << 14)  // 16 KB
-#define KER_STK_SZ (1 << 14)  // 16 KB
+#define USR_STK_SZ (1 << 14)      // 16 KB
+#define USR_SIG_STK_SZ (1 << 12)  // 4 KB
+#define KER_STK_SZ (1 << 14)      // 16 KB
 
 #define USR_CODE_ADDR 0x0
 #define USR_STK_ADDR 0xffffffffb000
+#define USR_SIG_STK_ADDR 0xffffffff7000
+
+#define IO_PM_START_ADDR 0x3C000000
+#define IO_PM_END_ADDR 0x40000000
 
 #define PROC_NUM 1024
-
-extern char __pt_start;
-
-#define KER_PGD_ADDR ((uint64_t)(&__pt_start) ^ KERNEL_VIRT_BASE)
 
 #define current_thread get_current_thread()
 
@@ -54,10 +56,6 @@ typedef struct task_struct_node {
   struct task_struct_node *prev, *next;
   struct task_struct* ts;
 } task_struct_node;
-
-typedef struct mm_struct {
-  uint64_t pgd;
-} mm_struct;
 
 typedef struct task_struct {
   cpu_context_t cpu_context;
