@@ -73,8 +73,9 @@ class FileImplRW : public FileImpl<V, F> {
   virtual ~FileImplRW() = default;
 
   virtual int write(const void* buf, size_t len) {
-    if (this->size() < this->f_pos + len)
-      if (not resize(this->f_pos + len))
+    auto end = this->f_pos + len;
+    if (this->size() < end)
+      if (not resize(end))
         return -1;
     auto p = write_ptr();
     if (not p)

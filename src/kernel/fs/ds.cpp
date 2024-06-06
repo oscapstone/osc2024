@@ -104,6 +104,18 @@ const char* Vnode::lookup(Vnode* vnode) {
 }
 
 long Vnode::size() const {
+  if (isDir())
+    return dirsize();
+  if (isFile())
+    return filesize();
+  return -1;
+}
+
+long Vnode::dirsize() const {
+  return _childs.size();
+}
+
+long Vnode::filesize() const {
   return -1;
 }
 

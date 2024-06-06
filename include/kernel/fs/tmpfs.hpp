@@ -16,7 +16,7 @@ class Vnode final : public ::VnodeImplRW<Vnode, File> {
 
   using ::VnodeImplRW<Vnode, File>::VnodeImplRW;
   virtual ~Vnode() = default;
-  virtual long size() const {
+  virtual long filesize() const {
     return content.size();
   }
 };

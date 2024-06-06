@@ -32,7 +32,7 @@ class Vnode final : public ::VnodeImpl<Vnode, File> {
         _content{hdr->file_ptr()},
         _size{hdr->filesize()} {}
   virtual ~Vnode() = default;
-  long size() const {
+  virtual long filesize() const {
     return _size;
   }
 };

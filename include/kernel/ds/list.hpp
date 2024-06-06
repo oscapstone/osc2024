@@ -195,4 +195,7 @@ class list {
   auto clear() {
     return data.clear();
   }
+  auto size() const {
+    return data.size();
+  }
 };

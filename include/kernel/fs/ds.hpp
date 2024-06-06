@@ -56,6 +56,8 @@ class Vnode {
   const char* lookup(Vnode* node);
   int mount(const char* component_name, Vnode* new_vnode);
   virtual long size() const;
+  virtual long dirsize() const;
+  virtual long filesize() const;
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
   virtual int open(const char* component_name, FilePtr& file, fcntl flags);
