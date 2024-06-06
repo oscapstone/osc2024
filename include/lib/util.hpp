@@ -14,10 +14,11 @@
 #endif
 
 // ref:
-// https://github.com/bminor/glibc/blob/glibc-2.35/include/libc-symbols.h#L140-L144
-#define STRONG_ALIAS(name, aliasname) \
-  extern __typeof(name) aliasname __attribute__((alias(#name)));
+// https://github.com/bminor/glibc/blob/glibc-2.35/include/libc-symbols.h#L151-156
+#define weak_alias(name, aliasname) \
+  extern __typeof(name) aliasname __attribute__((weak, alias(#name)));
 
+#include <cstddef>
 #include <cstdint>
 using addr_t = volatile char*;
 

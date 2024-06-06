@@ -8,6 +8,8 @@ int cmd_hwinfo(int, char*[]);
 int cmd_reboot(int, char*[]);
 int cmd_ls(int, char*[]);
 int cmd_cat(int, char*[]);
+int cmd_cd(int, char*[]);
+int cmd_pwd(int, char*[]);
 int cmd_mm(int, char*[]);
 int cmd_devtree(int, char*[]);
 int cmd_exec(int, char*[]);
@@ -18,6 +20,7 @@ int cmd_demo(int, char*[]);
 int cmd_schedule(int, char*[]);
 int cmd_ps(int, char*[]);
 int cmd_kill(int, char*[]);
+int cmd_vmmap(int, char*[]);
 
 using cmd_fp = int (*)(int, char*[]);
 

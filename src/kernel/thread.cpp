@@ -24,7 +24,7 @@ SYSCALL_DEFINE1(kill, int, pid) {
   return 0;
 }
 
-ListHead<Kthread> kthreads;
+ListHead<Kthread*> kthreads;
 
 void add_list(Kthread* thread) {
   kthreads.push_back(thread);
@@ -35,19 +35,14 @@ void del_list(Kthread* thread) {
 
 // TODO: don't use linear search
 Kthread* find_thread_by_tid(int tid) {
-  for (auto& thread : kthreads)
-    if (thread.tid == tid)
-      return &thread;
+  for (auto thread : kthreads)
+    if (thread->tid == tid)
+      return thread;
   return nullptr;
 }
 
 Kthread::Kthread()
-    : regs{},
-      tid(new_tid()),
-      status(KthreadStatus::kReady),
-      exit_code(0),
-      item(new KthreadItem(this)),
-      signal{this} {
+    : regs{}, tid(new_tid()), status(kReady), exit_code(0), signal{this} {
   signal.setall([](int) {
     klog("kill init cause reboot!\n");
     reboot();
@@ -56,16 +51,16 @@ Kthread::Kthread()
   add_list(this);
 }
 
-Kthread::Kthread(Kthread::fp start, void* ctx)
+Kthread::Kthread(Kthread::fp start, void* ctx, Vnode* cwd)
     : regs{.x19 = (uint64_t)start,
            .x20 = (uint64_t)ctx,
            .lr = (void*)kthread_start},
       tid(new_tid()),
-      status(KthreadStatus::kReady),
+      status(kReady),
       exit_code(0),
       kernel_stack(KTHREAD_STACK_SIZE, true),
-      item(new KthreadItem(this)),
-      signal{this} {
+      signal{this},
+      files{cwd} {
   klog("new thread %d @ %p\n", tid, this);
   reset_kernel_stack();
   add_list(this);
@@ -77,9 +72,9 @@ Kthread::Kthread(const Kthread* o)
       status(o->status),
       exit_code(0),
       kernel_stack(o->kernel_stack),
-      item(new KthreadItem(this)),
       signal{this, o->signal},
-      vmm(o->vmm) {
+      vmm(o->vmm),
+      files(o->files) {
   fix(*o, &regs, sizeof(regs));
   fix(*o, kernel_stack);
   klog("fork thread %d @ %p from %d @ %p\n", tid, this, o->tid, &o);
@@ -88,7 +83,6 @@ Kthread::Kthread(const Kthread* o)
 
 Kthread::~Kthread() {
   del_list(this);
-  delete item;
 }
 
 void Kthread::fix(const Kthread& o, Mem& mem) {
@@ -139,7 +133,7 @@ void kthread_start() {
 // TODO: wq
 void kthread_wait(int pid) {
   Kthread* th;
-  while ((th = find_thread_by_tid(pid)) and th->status != KthreadStatus::kDead)
+  while ((th = find_thread_by_tid(pid)) and th->status != kDead)
     schedule();
 }
 
@@ -150,7 +144,7 @@ void kthread_kill(int pid) {
 }
 
 void kthread_kill(Kthread* thread) {
-  if (thread == nullptr or thread->status == KthreadStatus::kDead)
+  if (thread == nullptr or thread->status == kDead)
     return;
   klog("kill thread %d\n", thread->tid);
   if (thread == current_thread()) {
@@ -159,7 +153,7 @@ void kthread_kill(Kthread* thread) {
     save_DAIF_disable_interrupt();
 
     thread->exit_code = -1;
-    thread->status = KthreadStatus::kDead;
+    thread->status = kDead;
     erase_rq(thread);
     push_dead(thread);
 
@@ -174,12 +168,12 @@ void kthread_exit(int status) {
 
 void kthread_fini() {
   klog("fini thread %d\n", current_thread()->tid);
-  current_thread()->status = KthreadStatus::kDead;
+  current_thread()->status = kDead;
   schedule();
 }
 
-Kthread* kthread_create(Kthread::fp start, void* ctx) {
-  auto thread = new Kthread(start, ctx);
+Kthread* kthread_create(Kthread::fp start, void* ctx, Vnode* cwd) {
+  auto thread = new Kthread{start, ctx, cwd};
   push_rq(thread);
   return thread;
 }

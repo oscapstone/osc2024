@@ -27,27 +27,27 @@ void switch_to(Kthread* prev, Kthread* next) {
   switch_to_regs(&prev->regs, &next->regs, next, va2pa(next->vmm.ttbr0));
 }
 
-ListHead<KthreadItem> rq;
+list<Kthread*> rq;
 void push_rq(Kthread* thread) {
-  rq.push_back(thread->item);
+  thread->it = rq.push_back(thread);
 }
 void erase_rq(Kthread* thread) {
-  rq.erase(thread->item);
+  rq.erase(thread->it);
 }
 Kthread* pop_rq() {
   if (rq.empty())
     return nullptr;
-  return rq.pop_front()->thread;
+  return rq.pop_front();
 }
 
-ListHead<KthreadItem> deadq;
+list<Kthread*> deadq;
 void push_dead(Kthread* thread) {
-  deadq.push_back(thread->item);
+  thread->it = deadq.push_back(thread);
 }
 Kthread* pop_dead() {
   if (deadq.empty())
     return nullptr;
-  return deadq.pop_front()->thread;
+  return deadq.pop_front();
 }
 
 void kill_zombies() {
@@ -62,7 +62,6 @@ void schedule_init() {
   rq.init();
   deadq.init();
   schedule_nesting = 0;
-  schedule_timer();
 }
 
 void schedule_lock() {
@@ -84,22 +83,22 @@ void schedule() {
   if (schedule_nesting == 0) {
     auto cur = current_thread();
     switch (cur->status) {
-      case KthreadStatus::kRunning:
-        cur->status = KthreadStatus::kReady;
-      case KthreadStatus::kReady:
+      case kRunning:
+        cur->status = kReady;
+      case kReady:
         push_rq(cur);
         break;
-      case KthreadStatus::kWaiting:
+      case kWaiting:
         // TODO:
         break;
-      case KthreadStatus::kDead:
+      case kDead:
         push_dead(cur);
         break;
       default:
         break;
     }
     auto nxt = pop_rq();
-    nxt->status = KthreadStatus::kRunning;
+    nxt->status = kRunning;
     if (cur != nxt)
       switch_to(cur, nxt);
   }

@@ -3,7 +3,7 @@
 #include "ds/list.hpp"
 #include "int/exception.hpp"
 
-struct Task : ListItem {
+struct Task : ListItem<Task> {
   bool running;
   int prio;  // high priority task = high number
 
@@ -50,7 +50,7 @@ inline void unlink(Task* it) {
   link(it->prev, it->next);
 }
 
-extern ListHead<Task> irq_tasks;
+extern ListHead<Task*> irq_tasks;
 
 void irq_init();
 void irq_add_task(int prio, Task::fp callback, void* context = nullptr,

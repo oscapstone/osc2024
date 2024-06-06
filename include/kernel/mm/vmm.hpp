@@ -6,7 +6,7 @@
 #include "string.hpp"
 #include "util.hpp"
 
-struct VMA : ListItem {
+struct VMA : ListItem<VMA> {
  private:
   uint64_t addr_, size_;
 
@@ -44,18 +44,11 @@ struct VMA : ListItem {
   }
 };
 
-struct PageItem : ListItem {
-  uint64_t addr;
-  template <typename T>
-  PageItem(T addr) : ListItem{}, addr((uint64_t)addr) {}
-  PageItem(const PageItem& o) : ListItem{}, addr(o.addr) {}
-};
-
 class VMM {
  public:
   PT* ttbr0 = (PT*)INVALID_ADDRESS;
-  ListHead<VMA> vmas{};
-  ListHead<PageItem> user_ro_pages{};
+  ListHead<VMA*> vmas{};
+  list<void*> user_ro_pages{};
 
   VMM() = default;
   VMM(const VMM& o);
@@ -65,11 +58,12 @@ class VMM {
   uint64_t vma_addr(uint64_t va, uint64_t size);
   void vma_add(string name, uint64_t addr, uint64_t size, ProtFlags prot);
   VMA* vma_find(uint64_t va);
-  void vma_print();
+  void vma_print(int tid);
 
   void ensure_ttbr0();
   [[nodiscard]] uint64_t mmap(uint64_t va, uint64_t size, ProtFlags prot,
                               MmapFlags flags, const char* name);
+  int munmap(uint64_t va, uint64_t size);
   [[nodiscard]] uint64_t map_user_phy_pages(uint64_t va, uint64_t pa,
                                             uint64_t size, ProtFlags prot,
                                             const char* name);
@@ -82,6 +76,8 @@ VMM* current_vmm();
 template <typename T,
           typename R = std::conditional_t<sizeof(T) == sizeof(void*), T, void*>>
 R translate_va_to_pa(T va, uint64_t start = USER_SPACE, int level = PGD_LEVEL) {
+  if (isKernelSpace(va))
+    return va2pa(va);
   return (R)current_vmm()->ttbr0->translate_va((uint64_t)va, start, level);
 }
 
@@ -89,6 +85,11 @@ template <typename T>
 [[nodiscard]] uint64_t mmap(T va, uint64_t size, ProtFlags prot,
                             MmapFlags flags, const char* name) {
   return current_vmm()->mmap((uint64_t)va, size, prot, flags, name);
+}
+
+template <typename T>
+int munmap(T va, uint64_t size) {
+  return current_vmm()->munmap((uint64_t)va, size);
 }
 
 template <typename T, typename U>

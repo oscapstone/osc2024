@@ -3,6 +3,7 @@
 #include "board/mini-uart.hpp"
 #include "fdt.hpp"
 #include "fs/initramfs.hpp"
+#include "fs/vfs.hpp"
 #include "int/exception.hpp"
 #include "int/interrupt.hpp"
 #include "int/irq.hpp"
@@ -35,7 +36,7 @@ void kernel_main(void* dtb_addr) {
   klog("boot time      : " PRTval "s\n", FTval(tick2timeval(boot_timer_tick)));
 
   fdt.init(pa2va(dtb_addr));
-  initramfs_init();
+  initramfs::preinit();
 
   mm_preinit();
 
@@ -45,7 +46,7 @@ void kernel_main(void* dtb_addr) {
   mm_reserve(__kernel_beg, __kernel_end);
   mm_reserve(__stack_beg, __stack_end);
   // initramfs
-  mm_reserve(initramfs.startp(), initramfs.endp());
+  mm_reserve(initramfs::startp(), initramfs::endp());
   // flatten device tree
   mm_reserve(fdt.startp(), fdt.endp());
   // upper page table
@@ -60,6 +61,9 @@ void kernel_main(void* dtb_addr) {
   enable_interrupt();
 
   mini_uart_use_async(true);
+  schedule_timer();
+
+  init_vfs();
 
   kthread_create(shell);
 

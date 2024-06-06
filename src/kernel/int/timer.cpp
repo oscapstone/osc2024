@@ -4,7 +4,7 @@
 #include "int/irq.hpp"
 
 uint64_t freq_of_timer, boot_timer_tick;
-ListHead<Timer> timers;
+ListHead<Timer*> timers;
 
 void timer_init() {
   freq_of_timer = read_sysreg(CNTFRQ_EL0);
@@ -45,7 +45,7 @@ void timer_enqueue() {
     return;
   }
 
-  auto it = &*timers.begin();
+  auto it = *timers.begin();
   timers.erase(timers.begin());
 
   if (timers.empty())

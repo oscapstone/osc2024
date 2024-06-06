@@ -4,7 +4,7 @@
 #include "ds/list.hpp"
 #include "ds/timeval.hpp"
 
-struct Timer : ListItem {
+struct Timer : ListItem<Timer> {
   using fp = void (*)(void*);
   uint64_t tick;
   int prio;
@@ -22,7 +22,7 @@ struct Timer : ListItem {
 
 constexpr uint64_t S_TO_US = 1e6;
 extern uint64_t freq_of_timer, boot_timer_tick;
-extern ListHead<Timer> timers;
+extern ListHead<Timer*> timers;
 // cmds/timer.cpp
 extern bool show_timer;
 extern int timer_delay;

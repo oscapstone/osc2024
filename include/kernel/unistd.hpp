@@ -1,4 +1,4 @@
-#define NR_syscalls 11
+#define NR_syscalls 20
 
 #ifndef __SYSCALL
 #define __SYSCALL(x, y)
@@ -36,3 +36,30 @@ __SYSCALL(__NR_signal_kill, sys_signal_kill)
 
 #define __NR_mmap 10
 __SYSCALL(__NR_mmap, sys_mmap)
+
+#define __NR_open 11
+__SYSCALL(__NR_open, sys_open)
+
+#define __NR_close 12
+__SYSCALL(__NR_close, sys_close)
+
+#define __NR_write 13
+__SYSCALL(__NR_write, sys_write)
+
+#define __NR_read 14
+__SYSCALL(__NR_read, sys_read)
+
+#define __NR_mkdir 15
+__SYSCALL(__NR_mkdir, sys_mkdir)
+
+#define __NR_mount 16
+__SYSCALL(__NR_mount, sys_mount)
+
+#define __NR_chdir 17
+__SYSCALL(__NR_chdir, sys_chdir)
+
+#define __NR_lseek64 18
+__SYSCALL(__NR_lseek64, sys_lseek64)
+
+#define __NR_ioctl 19
+__SYSCALL(__NR_ioctl, sys_ioctl)

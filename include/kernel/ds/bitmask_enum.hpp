@@ -54,9 +54,8 @@ template <typename E, typename Enable = void>
 struct is_bitmask_enum : std::false_type {};
 
 template <typename E>
-struct is_bitmask_enum<
-    E, std::enable_if_t<sizeof(E::BITMASK_LARGEST_ENUMERATOR) >= 0>>
-    : std::true_type {};
+  requires(sizeof(E::BITMASK_LARGEST_ENUMERATOR) >= 0)
+struct is_bitmask_enum<E> : std::true_type {};
 
 template <typename E>
 inline constexpr bool is_bitmask_enum_v = is_bitmask_enum<E>::value;
@@ -65,8 +64,8 @@ template <typename E, typename Enable = void>
 struct largest_bitmask_enum_bit;
 
 template <typename E>
-struct largest_bitmask_enum_bit<
-    E, std::enable_if_t<sizeof(E::BITMASK_LARGEST_ENUMERATOR) >= 0>> {
+  requires(sizeof(E::BITMASK_LARGEST_ENUMERATOR) >= 0)
+struct largest_bitmask_enum_bit<E> {
   using UnderlyingTy = std::underlying_type_t<E>;
   static constexpr UnderlyingTy value =
       static_cast<UnderlyingTy>(E::BITMASK_LARGEST_ENUMERATOR);
@@ -85,45 +84,53 @@ constexpr std::underlying_type_t<E> Underlying(E Val) {
   return U;
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 constexpr E operator~(E Val) {
   return static_cast<E>(~Underlying(Val) & Mask<E>());
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 constexpr E operator|(E LHS, E RHS) {
   return static_cast<E>(Underlying(LHS) | Underlying(RHS));
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 constexpr E operator&(E LHS, E RHS) {
   return static_cast<E>(Underlying(LHS) & Underlying(RHS));
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 constexpr E operator^(E LHS, E RHS) {
   return static_cast<E>(Underlying(LHS) ^ Underlying(RHS));
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 E& operator|=(E& LHS, E RHS) {
   LHS = LHS | RHS;
   return LHS;
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 E& operator&=(E& LHS, E RHS) {
   LHS = LHS & RHS;
   return LHS;
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 E& operator^=(E& LHS, E RHS) {
   LHS = LHS ^ RHS;
   return LHS;
 }
 
-template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
+template <typename E>
+  requires is_bitmask_enum_v<E>
 bool has(E LHS, E RHS) {
   return (LHS & RHS) == RHS;
 }

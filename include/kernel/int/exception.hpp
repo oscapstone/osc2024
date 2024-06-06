@@ -15,19 +15,16 @@ struct TrapFrame {
   void show() const;
 };
 
-enum SEGV_TYPE {
-  kNone = 0,
+enum segv_type {
+  kUnknown = 0,
   kIABT,
   kPC,
   kDABT,
   kSP,
-  kUnknown,
 };
 
-inline const char* reason(SEGV_TYPE type) {
+inline const char* reason(segv_type type) {
   switch (type) {
-    case kNone:
-      return "none";
     case kIABT:
       return "undefined instruction";
     case kPC:
@@ -55,4 +52,4 @@ void irq_handler(TrapFrame* frame, int type);
 void set_exception_vector_table();
 }
 
-void segv_handler(int el, unsigned iss, SEGV_TYPE type);
+void segv_handler(int el, unsigned iss, segv_type type);

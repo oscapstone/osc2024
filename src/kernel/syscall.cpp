@@ -28,6 +28,10 @@ long sys_not_implement(const TrapFrame* frame) {
   return -1;
 }
 
+#undef __SYSCALL
+#define __SYSCALL(nr, sym) weak_alias(sys_not_implement, sym)
+#include "unistd.hpp"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
 #pragma GCC diagnostic ignored "-Winitializer-overrides"

@@ -16,7 +16,7 @@ enum class ProtFlags : uint64_t {
 
 enum class MmapFlags : uint64_t {
   NONE = 0,
-  MAP_ANONYMOUS = 0x0800,
-  MAP_POPULATE = 0x10000,
+  MAP_ANONYMOUS = 0x20,
+  MAP_POPULATE = 0x008000,
   MARK_AS_BITMASK_ENUM(MAP_POPULATE),
 };

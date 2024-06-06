@@ -1,6 +1,6 @@
 #include "exec.hpp"
 
-#include "fs/initramfs.hpp"
+#include "fs/fs.hpp"
 #include "io.hpp"
 #include "mm/vmm.hpp"
 #include "syscall.hpp"
@@ -17,32 +17,39 @@ int exec(ExecCtx* ctx) {
 
   klog("%s(%s)\n", __func__, name);
 
-  auto hdr = initramfs.find(name);
-  if (hdr == nullptr) {
+  auto vnode = vfs_lookup(name);
+  if (vnode == nullptr) {
     klog("%s: %s: No such file or directory\n", __func__, name);
     return -1;
   }
-  if (hdr->isdir()) {
+  if (vnode->isDir()) {
     klog("%s: %s: Is a directory\n", __func__, name);
     return -1;
   }
 
-  auto file = hdr->file();
+  FilePtr file;
+  if (vfs_open(name, O_RDONLY, file) < 0) {
+    klog("%s: %s: can't open\n", __func__, name);
+    return -1;
+  }
   auto thread = current_thread();
 
   thread->vmm.reset();
+  thread->files.reset();
+  thread->reset_kernel_stack();
 
-  auto text_addr =
-      mmap(USER_TEXT_START, file.size(), ProtFlags::RX, MmapFlags::NONE, name);
-  if (text_addr == INVALID_ADDRESS) {
+  // TODO: map from fs
+  auto text_addr = mmap(USER_TEXT_START, file->size(), ProtFlags::RX,
+                        MmapFlags::MAP_ANONYMOUS, name);
+  if (text_addr == MAP_FAILED) {
     klog("%s: can't alloc user_text for thread %d / size = %lx\n", __func__,
-         thread->tid, file.size());
+         thread->tid, file->size());
     return -1;
   }
 
   auto stack_addr = mmap(USER_STACK_START, USER_STACK_SIZE, ProtFlags::RW,
-                         MmapFlags::NONE, "[stack]");
-  if (stack_addr == INVALID_ADDRESS) {
+                         MmapFlags::MAP_ANONYMOUS, "[stack]");
+  if (stack_addr == MAP_FAILED) {
     klog("%s: can't alloc user_stack for thread %d / size = %lx\n", __func__,
          thread->tid, USER_STACK_SIZE);
     return -1;
@@ -51,8 +58,12 @@ int exec(ExecCtx* ctx) {
 
   delete ctx;
 
-  memcpy((void*)text_addr, file.data(), file.size());
-  thread->reset_kernel_stack();
+  file->read((void*)text_addr, file->size());
+  file->close();
+
+  open("/dev/uart", O_RDWR);
+  open("/dev/uart", O_RDWR);
+  open("/dev/uart", O_RDWR);
 
   thread->vmm.return_to_user();
   exec_user_prog((void*)text_addr, (void*)stack_end, thread->regs.sp);

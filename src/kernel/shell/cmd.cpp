@@ -36,6 +36,16 @@ const Cmd cmds[] = {
         .fp = cmd_cat,
     },
     {
+        .name = "cd",
+        .help = "change current working directory",
+        .fp = cmd_cd,
+    },
+    {
+        .name = "pwd",
+        .help = "return working directory name",
+        .fp = cmd_pwd,
+    },
+    {
         .name = "mm",
         .help = "memory allocation",
         .fp = cmd_mm,
@@ -84,6 +94,11 @@ const Cmd cmds[] = {
         .name = "ps",
         .help = "ps",
         .fp = cmd_ps,
+    },
+    {
+        .name = "vmmap",
+        .help = "vmmap",
+        .fp = cmd_vmmap,
     },
 };
 const int ncmd = sizeof(cmds) / sizeof(cmds[0]);

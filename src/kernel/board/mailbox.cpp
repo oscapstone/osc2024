@@ -6,9 +6,8 @@
 #include "syscall.hpp"
 
 SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
-  auto phy_mbox = translate_va_to_pa(mbox);
-  // kprintf("%p -> %p\n", mbox, phy_mbox);
-  mailbox_call(ch, phy_mbox);
+  if (not mailbox_call(ch, mbox))
+    return false;
 
   for (uint64_t offset = 0, size; offset < mbox->buf_size; offset += size) {
     auto idx = offset / sizeof(uint32_t);
@@ -24,16 +23,20 @@ SYSCALL_DEFINE2(mbox_call, unsigned char, ch, MboxBuf*, mbox) {
       klog("mbox: buf 0x%x ~ 0x%x\n", base_addr, base_addr + length);
       auto va = map_user_phy_pages(base_addr, base_addr, length, ProtFlags::RW,
                                    "[frame_buffer]");
+      if (va == MAP_FAILED)
+        return false;
       if (va != (uint32_t)va)
         return false;
       msg->value_buf[0] = (uint32_t)va;
     }
   }
-
   return true;
 }
 
-void mailbox_call(uint8_t ch, MboxBuf* phy_mbox) {
+bool mailbox_call(uint8_t ch, MboxBuf* mbox) {
+  auto phy_mbox = translate_va_to_pa(mbox);
+  // kprintf("%p -> %p\n", mbox, phy_mbox);
+
   uint32_t data = (((uint32_t)(unsigned long)phy_mbox) & ~0xf) | ch;
   while ((get32(pa2va(MAILBOX_STATUS)) & MAILBOX_FULL) != 0)
     NOP;
@@ -42,6 +45,7 @@ void mailbox_call(uint8_t ch, MboxBuf* phy_mbox) {
     NOP;
   while (get32(pa2va(MAILBOX_READ)) != data)
     NOP;
+  return true;
 }
 
 uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx) {
@@ -66,7 +70,7 @@ uint32_t mailbox_req_tag(int value_length, uint32_t tag_identifier, int idx) {
     msg->value_buf[i] = 0;
   msg->value_buf[value_length] = MBOX_END_TAG;
 
-  mailbox_call(8, va2pa(mailbox));
+  mailbox_call(MBOX_CH_PROP, mailbox);
 
   return msg->value_buf[idx];
 }

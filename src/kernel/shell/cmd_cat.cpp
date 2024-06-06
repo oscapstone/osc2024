@@ -1,4 +1,4 @@
-#include "fs/initramfs.hpp"
+#include "fs/fs.hpp"
 #include "io.hpp"
 #include "shell/cmd.hpp"
 
@@ -14,16 +14,24 @@ int cmd_cat(int argc, char* argv[]) {
   } else {
     for (int i = 1; i < argc; i++) {
       auto name = argv[i];
-      auto f = initramfs.find(name);
+      auto f = vfs_lookup(name);
       if (f == nullptr) {
         r = -1;
-        kprintf("cat: %s: No such file or directory\n", name);
-      } else if (f->isdir()) {
+        kprintf("%s: %s: No such file or directory\n", argv[0], name);
+      } else if (f->isDir()) {
         r = -1;
-        kprintf("cat: %s: Is a directory\n", name);
+        kprintf("%s: %s: Is a directory\n", argv[0], name);
       } else {
-        for (auto c : f->file()) {
-          kputc(c);
+        FilePtr file;
+        if (vfs_open(name, O_RDONLY, file) < 0) {
+          r = -1;
+          kprintf("%s: %s: can't open\n", argv[0], name);
+        } else {
+          char buf[128];
+          int cur;
+          r = 0;
+          while ((cur = file->read(buf, sizeof(buf))) > 0)
+            kwrite(buf, cur);
         }
       }
     }

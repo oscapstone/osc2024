@@ -9,11 +9,10 @@
 
 SYSCALL_DEFINE6(mmap, void*, addr, size_t, len, int, prot, int, flags, int, fd,
                 int, file_offset) {
-  klog("mmap(%p, 0x%lx, %b, %b, %d, 0x%x)\n", addr, len, prot, flags, fd,
-       file_offset);
-  return current_thread()->vmm.mmap((uint64_t)addr, len,
-                                    cast_enum<ProtFlags>(prot),
-                                    cast_enum<MmapFlags>(flags), nullptr);
+  klog("mmap(%p, 0x%lx, 0b%03b, 0x%05x, %d, 0x%x)\n", addr, len, prot, flags,
+       fd, file_offset);
+  return current_vmm()->mmap((uint64_t)addr, len, cast_enum<ProtFlags>(prot),
+                             cast_enum<MmapFlags>(flags), nullptr);
 }
 
 VMM::VMM(const VMM& o)
@@ -36,8 +35,8 @@ void VMM::ensure_ttbr0() {
 }
 
 bool VMM::vma_overlap(uint64_t va, uint64_t size) {
-  for (auto& vma : vmas)
-    if (vma.overlap(va, size))
+  for (auto vma : vmas)
+    if (vma->overlap(va, size))
       return true;
   return false;
 }
@@ -76,18 +75,19 @@ void VMM::vma_add(string name, uint64_t addr, uint64_t size, ProtFlags prot) {
 }
 
 VMA* VMM::vma_find(uint64_t va) {
-  for (auto& vma : vmas)
-    if (vma.contain(va))
-      return &vma;
+  for (auto vma : vmas)
+    if (vma->contain(va))
+      return vma;
   return nullptr;
 }
 
-void VMM::vma_print() {
-  klog("==== maps ====\n");
-  klog("vma size = %d\n", vmas.size());
-  for (auto& vma : vmas)
-    klog("0x%016lx ~ 0x%016lx %s\n", vma.start(), vma.end(), vma.name.data());
-  klog("--------------\n");
+void VMM::vma_print(int tid) {
+  kprintf("==== t%d maps ====\n", tid);
+  kprintf("vma size = %d\n", vmas.size());
+  for (auto vma : vmas)
+    kprintf("0x%016lx ~ 0x%016lx %s\n", vma->start(), vma->end(),
+            vma->name.data());
+  kprintf("--------------\n");
 }
 
 uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
@@ -99,11 +99,33 @@ uint64_t VMM::mmap(uint64_t va, uint64_t size, ProtFlags prot, MmapFlags flags,
 
   va = vma_addr(va, size);
   if (va == INVALID_ADDRESS)
-    return INVALID_ADDRESS;
+    return MAP_FAILED;
+
+  // TODO: handle not anonymous page map
+  if (not has(flags, MmapFlags::MAP_ANONYMOUS))
+    return MAP_FAILED;
 
   vma_add(name ? name : "[anon_" + to_hex_string(va) + "]", va, size, prot);
 
   return va;
+}
+
+int VMM::munmap(uint64_t va, uint64_t size) {
+  if (not isPageAlign(va) or not isPageAlign(size))
+    return -1;
+
+  auto vma = vma_find(va);
+  if (not vma or vma->start() != va or vma->size() != size)
+    return -1;
+
+  vmas.erase(vma);
+  for (auto it = vma->start(); it < vma->end(); it += PAGE_SIZE) {
+    auto entry = ttbr0->get_entry(it);
+    if (entry)
+      entry->dealloc_page();
+  }
+
+  return 0;
 }
 
 uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
@@ -115,7 +137,7 @@ uint64_t VMM::map_user_phy_pages(uint64_t va, uint64_t pa, uint64_t size,
 
   va = vma_addr(va, size);
   if (va == INVALID_ADDRESS)
-    return INVALID_ADDRESS;
+    return MAP_FAILED;
 
   vma_add(name ? name : "[phy_" + to_hex_string(pa) + "]", va, size, prot);
 
@@ -155,8 +177,8 @@ void VMM::reset() {
 }
 
 void VMM::return_to_user() {
-  for (auto& page : user_ro_pages) {
-    auto entry = ttbr0->get_entry(page.addr);
+  for (auto page : user_ro_pages) {
+    auto entry = ttbr0->get_entry(page);
     if (entry)
       entry->AP = AP::USER_RO;
   }

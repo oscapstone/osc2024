@@ -5,6 +5,8 @@
 #include "sched.hpp"
 #include "thread.hpp"
 
+#define MMU_DEBUG 0
+
 void PT_Entry::print(int level) const {
   kprintf("0x%08lx Attr%d %s %s", (uint64_t)addr(), AttrIdx, PT_levelstr(level),
           kindstr());
@@ -29,6 +31,17 @@ void PT_Entry::alloc_table(int level) {
 
 void PT_Entry::alloc_user_page(ProtFlags prot) {
   set_user_entry(kcalloc(PAGE_SIZE), PTE_LEVEL, prot, true);
+}
+
+void PT_Entry::dealloc_page() {
+  if (not isEntry())
+    return;
+  if (require_free) {
+    auto va = addr_va();
+    auto& ref = mm_page.refcnt(va);
+    if (--ref == 0)
+      kfree(va);
+  }
 }
 
 PT_Entry PT_Entry::copy(int level) {
@@ -101,16 +114,8 @@ PT::PT(PT* o, int level) {
 }
 
 PT::~PT() {
-  this->traverse(
-      [](auto, auto entry, auto, auto) {
-        if (entry.require_free) {
-          auto va = entry.addr_va();
-          auto& ref = mm_page.refcnt(va);
-          if (--ref == 0)
-            kfree(va);
-        }
-      },
-      [](auto, auto entry, auto, auto) { delete entry.table(); });
+  this->traverse([](auto, auto entry, auto, auto) { entry.dealloc_page(); },
+                 [](auto, auto entry, auto, auto) { delete entry.table(); });
 }
 
 PT_Entry& PT::walk(uint64_t start, int level, uint64_t va_start, int va_level) {
@@ -302,7 +307,7 @@ int fault_handler(int el) {
   }
 
   auto fpage = getPage(faddr);
-  auto entry = current_thread()->vmm.ttbr0->get_entry(fpage);
+  auto entry = current_vmm()->ttbr0->get_entry(fpage);
   auto vma = find_vma(faddr);
 
   switch (iss.DFSC) {
@@ -310,20 +315,24 @@ int fault_handler(int el) {
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L1:
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L2:
     case ESR_ELx_IIS_DFSC_TRAN_FAULT_L3:
+#if MMU_DEBUG > 0
       klog("t%d [Translation fault]: %016lx\n", tid, (uint64_t)faddr);
+#endif
       if (!vma)
         return -1;
-      entry = current_thread()->vmm.ttbr0->get_entry(fpage, true);
+      entry = current_vmm()->ttbr0->get_entry(fpage, true);
       entry->alloc_user_page(vma->prot);
       break;
 
     case ESR_ELx_IIS_DFSC_PERM_FAULT_L3:
       if (el == 1) {
         entry->AP = AP::KERNEL_RW;
-        current_thread()->vmm.user_ro_pages.push_back(new PageItem{fpage});
+        current_vmm()->user_ro_pages.push_back(fpage);
       } else if (vma and has(vma->prot, ProtFlags::WRITE)) {
         // copy on write fault
+#if MMU_DEBUG > 0
         klog("t%d [CoW fault]: %016lx\n", tid, (uint64_t)faddr);
+#endif
         entry->copy_on_write();
       } else {
         return -1;
