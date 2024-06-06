@@ -1,14 +1,12 @@
-#ifndef _SCHED_H_
-#define _SCHED_H_
+#ifndef SCHED_H
+#define SCHED_H
 
-#define THREAD_CPU_CONTEXT			0 	
+#include "signal.h"
+#include <bsp/asm/traps.h>
 
 #define STACK_SIZE 4096
 
-#define PF_KTHREAD 0x2
-
-#ifndef __ASSEMBLER__
-struct cpu_context {
+struct thread_struct {
     unsigned long x19;
     unsigned long x20;
     unsigned long x21;
@@ -19,64 +17,50 @@ struct cpu_context {
     unsigned long x26;
     unsigned long x27;
     unsigned long x28;
-	unsigned long long fp; // x29
-	unsigned long long sp;
-	unsigned long long pc; // x30
+    unsigned long fp;
+    unsigned long lr;
+    unsigned long sp;
 };
 
 enum task_state {
     TASK_RUNNING,
-    TASK_ZOMBIE,
     TASK_STOPPED,
+    EXIT_ZOMBIE,
 };
 
-typedef struct task_struct {
-    struct cpu_context context;
+struct task_struct {
+    struct thread_struct context;
+    unsigned long pid;
+    // unsigned long parent_pid;
+    // unsigned long child_count;
     enum task_state state;
-    long counter;
-    long priority;
-    long preempt_count;
-    unsigned long stack;
-    unsigned long flags;
-    int pid;
-    struct task_struct *prev, *next;
-} task_struct_t;
-
-#define INIT_TASK \
-/*cpu_context*/	{ {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-/* state etc */	2, 0, 1, 0, 0, PF_KTHREAD, 0, 0, 0 \
-}
-
-unsigned long get_new_pid();
-void enqueue_run_queue(task_struct_t *);
-void delete_run_queue(task_struct_t *);
-void sched_init();
-void timer_tick();
-void preempt_disable();
-void preempt_enable();
-void exit_process();
-void kill_process(long pid);
-void root_task();
-
-void print_task_list();
-
-// fork
-int copy_process(unsigned long flags, unsigned long fn, unsigned long arg,
-                 unsigned long stack);
-int move_to_user_mode(unsigned long pc);
-
-struct pt_regs {
-    unsigned long regs[31];
-    unsigned long sp;
-    unsigned long pc;
-    unsigned long pstate;
+    void *stack;
+    void *user_stack;
+    void (*sighand[NSIG + 1])();
+    int sigpending;
+    int sighandling;
+    trap_frame sigframe;
+    void *sig_stack;
+    struct task_struct *prev;
+    struct task_struct *next;
 };
 
-struct pt_regs *task_pt_regs(task_struct_t *tsk);
+typedef struct task_queue_t {
+    struct task_struct *front;
+    struct task_struct *rear;
+} task_queue_t;
 
-#define PSR_MODE_EL0t 0x00000000;
+extern struct task_struct *get_current();
+struct task_struct *get_task(int pid);
+void kthread_init();
+struct task_struct *kthread_create(void (*func)());
+void kthread_exit();
+void kthread_stop(int pid);
+void schedule();
+void idle();
+void kill_zombies();
 
-task_struct_t *get_current();
+void display_run_queue();
+void thread_test();
 
-#endif
-#endif
+#endif // SCHED_H

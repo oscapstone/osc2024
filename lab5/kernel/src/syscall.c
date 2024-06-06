@@ -1,93 +1,175 @@
+#include <kernel/bsp_port/irq.h>
 #include <kernel/bsp_port/mailbox.h>
 #include <kernel/bsp_port/ramfs.h>
+#include <kernel/bsp_port/syscall.h>
 #include <kernel/bsp_port/uart.h>
 #include <kernel/io.h>
 #include <kernel/memory.h>
 #include <kernel/sched.h>
-#include <lib/stddef.h>
+#include <kernel/signal.h>
+#include <bsp/asm/traps.h>
 #include <lib/string.h>
+#include <lib/utils.h>
 
-void sys_debug_msg(const char* message) {
-    print_string("[Sys DEBUG] ");
-    print_string(message);
+extern void child_ret_from_fork();
+
+int sys_getpid() { return get_current()->pid; }
+
+size_t sys_uart_read(char *buf, size_t size) {
+    int i = 0;
+    while (i < size) buf[i++] = uart_getc();
+    return i;
+}
+
+size_t sys_uart_write(const char *buf, size_t size) {
+    int i = 0;
+    while (i < size) uart_send(buf[i++]);
+    return i;
+}
+
+int sys_exec(const char *file_name, char *const argv[]) {
+    unsigned long file_size = ramfs_get_file_size(file_name);
+    char *file_contents = kmalloc(file_size);
+    ramfs_get_file_contents(file_name, file_contents);
+
+    if (file_contents == NULL) {
+        print_string("[ERROR] File not found: ");
+        print_string(file_name);
+        print_string("\n");
+        return 0;
+    }
+    print_string("\n[INFO] Executing file: ");
+    print_string(file_name);
     print_string("\n");
-}
 
-int sys_getpid() {
-    char buf[100];
-    sprintf(buf, "Getting PID: %d\n", get_current()->pid);
-    // sys_debug_msg(buf);
-    // print_d(get_current()->pid);
-    return get_current()->pid;
-}
-
-size_t sys_uartread(char buf[], size_t size) {
-    // sys_debug_msg("Reading from UART");
-    for (size_t i = 0; i < size; i++) {
-        buf[i] = uart_recv();
-    }
-    return size;
-}
-
-size_t sys_uartwrite(const char buf[], size_t size) {
-    // sys_debug_msg("Writing to UART");
-    for (size_t i = 0; i < size; i++) {
-        uart_send(buf[i]);
-    }
-    return size;
-}
-
-int sys_exec(const char* name, char* argv[]) {
-    // sys_debug_msg("Executing program: ");
-    unsigned long file_size = ramfs_get_file_size(name);
-
-    if (file_size == 0) {
-        return -1;
-    }
-
-    void* user_program = kmalloc(file_size + STACK_SIZE); // make a stack at the end of the program
-    if (user_program == NULL) {
-        return -1;
-    }
-    ramfs_get_file_contents(name, user_program);
-    memset(user_program + file_size, 0, STACK_SIZE);
-
-    preempt_disable();
-    task_struct_t* current_task = get_current();
-    struct pt_regs* cur_regs = task_pt_regs(current_task);
-    cur_regs->pc = (unsigned long)user_program;
-    cur_regs->sp = current_task->stack + STACK_SIZE;
-    preempt_enable();
-
+    char *user_program = kmalloc(file_size);
+    get_current()->state = TASK_STOPPED;
+    memcpy(user_program, file_contents, file_size);
+    get_current()->sigpending = 0;
+    memset(get_current()->sighand, 0, sizeof(get_current()->sighand));
+    get_current()->context.lr = (unsigned long)user_program;
     return 0;
 }
 
-int sys_fork() {
-    // print_string("Forking new process\n");
-    unsigned long stack = (unsigned long)kmalloc(2*STACK_SIZE);
-    if ((void*)stack == NULL) return -1;
-    // print_string("Forking new process with stack at ");
-    // print_h(stack);
-    // print_string("\n");
-    memset((void*)stack, 0, 2*STACK_SIZE);
+int sys_fork(trap_frame *tf) {
+    disable_irq();
+    struct task_struct *parent = get_current();
+    struct task_struct *child = kthread_create(0);
 
-    return copy_process(0, 0, 0, stack);
+    // child->parent_pid = parent->pid;
+    // parent->child_count++;
+    // Copy the parent's memory
+    memcpy(child->stack, parent->stack, STACK_SIZE);
+    memcpy(child->user_stack, parent->user_stack, STACK_SIZE);
+    memcpy(child->sighand, parent->sighand, sizeof(parent->sighand));
+
+    unsigned long sp_off = (unsigned long)tf - (unsigned long)parent->stack;
+    trap_frame *child_trap_frame = (trap_frame *)(child->stack + sp_off);
+
+    child->context.sp = (unsigned long)child_trap_frame;
+    child->context.lr = (unsigned long)child_ret_from_fork;
+
+    unsigned long sp_el0_off = tf->sp_el0 - (unsigned long)parent->user_stack;
+    child_trap_frame->sp_el0 = (unsigned long)child->user_stack + sp_el0_off;
+    child_trap_frame->x0 = 0;
+
+    enable_irq();
+    return child->pid;
 }
 
-void sys_exit(int status) {
-    sys_debug_msg("Exiting process");
-    exit_process();
+void sys_exit() { kthread_exit(); }
+
+int sys_mbox_call(unsigned char ch, unsigned int *mbox) {
+    return mailbox_call(ch, mbox);
 }
 
-int sys_mbox_call(unsigned char ch, unsigned int* mbox) {
-    sys_debug_msg("Mailbox call");
-    int r = mailbox_call(ch, mbox);
-    print_string("Mailbox call end\n");
-    return r;
+void sys_kill(int pid) { kthread_stop(pid); }
+
+void sys_signal(int signum, void (*handler)()) { signal(signum, handler); }
+
+void sys_sigkill(int pid, int sig) { sigkill(pid, sig); }
+
+void sys_sigreturn(trap_frame *regs) {
+    // Restore the sigframe
+    memcpy(regs, &get_current()->sigframe, sizeof(trap_frame));
+    kfree(get_current()->sig_stack);
+    get_current()->sighandling = 0;
+    return;  // Jump to the previous context (user program) after eret
 }
 
-void sys_kill(int pid) { kill_process(pid); }
+// emit the syscall instruction
+static int getpid() {
+    long pid = -1;
+    asm volatile("mov x8, 0");
+    asm volatile("svc 0");
+    asm volatile("mov %0, x0" : "=r"(pid));
+    return pid;
+}
 
-void* const sys_call_table[] = {sys_getpid,    sys_uartread, sys_uartwrite,
-                                sys_exec,      sys_fork,     sys_exit,
-                                sys_mbox_call, sys_kill};
+static int fork() {
+    long ret = -1;
+    asm volatile("mov x8, 4");
+    asm volatile("svc 0");
+    asm volatile("mov %0, x0" : "=r"(ret));
+    return ret;
+}
+
+static void exit() {
+    asm volatile("mov x8, 5");
+    asm volatile("svc 0");
+}
+
+void fork_test() {
+    print_string("Fork Test (pid = ");
+    print_d(getpid());
+    print_string(")\n");
+    int cnt = 1;
+    int ret = 0;
+    if ((ret = fork()) == 0) {
+        print_string("first child pid: ");
+        print_d(getpid());
+        print_string(", cnt: ");
+        print_d(cnt);
+        print_string(", ptr: ");
+        print_h((unsigned long long)&cnt);
+        print_string("\n");
+        cnt++;
+        if ((ret = fork()) != 0) {
+            print_string("first child pid: ");
+            print_d(getpid());
+            print_string(", cnt: ");
+            print_d(cnt);
+            print_string(", ptr: ");
+            print_h((unsigned long long)&cnt);
+            print_string("\n");
+        } else {
+            while (cnt < 5) {
+                print_string("second child pid: ");
+                print_d(getpid());
+                print_string(", cnt: ");
+                print_d(cnt);
+                print_string(", ptr: ");
+                print_h((unsigned long long)&cnt);
+                print_string("\n");
+                for (int i = 0; i < 1000000; i++);
+                cnt++;
+            }
+        }
+        exit();
+    } else {
+        print_string("parent here, pid ");
+        print_d(getpid());
+        print_string(", child ");
+        print_d(ret);
+        print_string("\n");
+    }
+    exit();
+}
+
+void run_fork_test() {
+    asm volatile("msr spsr_el1, %0" ::"r"(0x0));
+    asm volatile("msr elr_el1, %0" ::"r"(fork_test));
+    asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
+    asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));
+    asm volatile("eret");
+}

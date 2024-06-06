@@ -3,7 +3,7 @@
 
 #include <lib/stddef.h>
 
-#define MAX_ORDER 16
+#define MAX_ORDER 10
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
 

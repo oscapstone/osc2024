@@ -1,32 +1,26 @@
-#include <kernel/sched.h>
+.global switch_to
+switch_to:
+    stp x19, x20, [x0, 16 * 0]
+    stp x21, x22, [x0, 16 * 1]
+    stp x23, x24, [x0, 16 * 2]
+    stp x25, x26, [x0, 16 * 3]
+    stp x27, x28, [x0, 16 * 4]
+    stp fp, lr, [x0, 16 * 5]
+    mov x9, sp
+    str x9, [x0, 16 * 6]
 
-.globl cpu_switch_to
-cpu_switch_to:
-	mov	x10, #THREAD_CPU_CONTEXT
-	add	x8, x0, x10             // x8 = the pointer points to current thread's cpu_context
-	mov	x9, sp
-	stp	x19, x20, [x8], #16		// store callee-saved registers
-	stp	x21, x22, [x8], #16
-	stp	x23, x24, [x8], #16
-	stp	x25, x26, [x8], #16
-	stp	x27, x28, [x8], #16
-	stp	x29, x9, [x8], #16
-	str	x30, [x8]
-	add	x8, x1, x10             // x8 = the pointer points to next thread's cpu_context
-	ldp	x19, x20, [x8], #16		// restore callee-saved registers
-	ldp	x21, x22, [x8], #16
-	ldp	x23, x24, [x8], #16
-	ldp	x25, x26, [x8], #16
-	ldp	x27, x28, [x8], #16
-	ldp	x29, x9, [x8], #16
-	ldr	x30, [x8]				// restore lr
-	mov	sp, x9
-    msr tpidr_el1, x1       // set tpidr_el1 for current task
-	ret
+    ldp x19, x20, [x1, 16 * 0]
+    ldp x21, x22, [x1, 16 * 1]
+    ldp x23, x24, [x1, 16 * 2]
+    ldp x25, x26, [x1, 16 * 3]
+    ldp x27, x28, [x1, 16 * 4]
+    ldp fp, lr, [x1, 16 * 5]
+    ldr x9, [x1, 16 * 6]
+    mov sp, x9
+    msr tpidr_el1, x1
+    ret
 
 .global get_current
-// get current task from tpidr_el1
 get_current:
-	mrs x0, tpidr_el1
-	ret
-
+    mrs x0, tpidr_el1
+    ret

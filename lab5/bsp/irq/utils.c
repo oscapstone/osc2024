@@ -45,11 +45,13 @@ const char *get_exception_message(unsigned long type) {
 void enable_irq() {
     // Clear the D, A, I, F bits in the DAIF register
     // to enable interrupts
+    // uart_puts("\n[enable_irq]\n");
     asm volatile("msr daifclr, 0xf;");
 }
 
 void disable_irq() {
     // Set 1 to the D, A, I, F bits in the DAIF register
     // to disable interrupts
+    // uart_puts("\n[disable_irq]\n");
     asm volatile("msr daifset, 0xf;");
 }

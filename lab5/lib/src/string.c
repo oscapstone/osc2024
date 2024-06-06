@@ -33,16 +33,13 @@ char *strncpy(char *dest, const char *src, int n) {
     return start;
 }
 
-char *memcpy(char *dest, const char *src, int n) {
-    char *start = dest;
-    while (n > 0) {
-        *dest = *src;
-        dest++;
-        src++;
-        n--;
-    }
-    *dest = '\0';
-    return start;
+void *memcpy(void *dest, const void *src, int n)
+{
+    char *d = dest;
+    const char *s = src;
+    while (n--)
+        *d++ = *s++;
+    return dest;
 }
 
 void *memset(void *s, int c, size_t n) {

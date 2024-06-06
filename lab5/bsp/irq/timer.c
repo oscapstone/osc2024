@@ -14,6 +14,11 @@ void core_timer_enable() {
         "mov x0, 2;"
         "ldr x1, =0x40000040;"  // timer interrupt control register for core 0
         "str w0, [x1];");       // Unmask timer interrupt
+    
+    asm volatile(
+        "mrs x0, cntkctl_el1;"
+        "orr x0, x0, 1;"
+        "msr cntkctl_el1, x0;");
 }
 
 void core_timer_disable() {

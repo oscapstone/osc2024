@@ -1,366 +1,140 @@
-#include <kernel/bsp_port/irq.h>
 #include <kernel/io.h>
 #include <kernel/memory.h>
 #include <kernel/sched.h>
-#include <lib/stdlib.h>
+#include <lib/string.h>
 
-#include "kernel/timer.h"
+static int thread_count = 0;
+static struct task_struct *run_queue;
 
-// static unsigned long nr_count = 1;  // init_task has pid 0
-// static task_struct_t init_task = INIT_TASK;
-// static task_struct_t *run_queue = &(init_task);  // circular doubly linked
-// list
+extern void switch_to(struct task_struct *prev, struct task_struct *next);
 
-static unsigned long nr_count = 0;       // init_task has pid 0
-static task_struct_t *run_queue = NULL;  // circular doubly linked list
-
-extern void cpu_switch_to(task_struct_t *prev, task_struct_t *next);
-extern task_struct_t *get_current();
-
-unsigned long get_new_pid() { return nr_count++; }
-
-void preempt_disable() {
-    task_struct_t *current = get_current();
-
-    if (current == NULL) {
-        return;
-    }
-
-    current->preempt_count++;
-
-    // print_string("preempt_disable: ");
-    // print_h((unsigned long)current);
-    // print_string(" ");
-    // print_d(current->pid);
-    // print_string(" ");
-    // print_d(current->preempt_count);
-    // print_string("\n");
-}
-
-void preempt_enable() {
-    task_struct_t *current = get_current();
-
-    if (current == NULL) {
-        return;
-    }
-
-    current->preempt_count--;
-    // print_string("preempt_enable: ");
-    // print_h((unsigned long)current);
-    // print_string(" ");
-    // print_d(current->pid);
-    // print_string(" ");
-    // print_d(current->preempt_count);
-    // print_string("\n");
-}
-
-void enqueue_run_queue(task_struct_t *task) {
-    // print_string("[enqueue_run_queue] begin \n");
-    // print_task_list();
-    if (run_queue == NULL) {
-        run_queue = task;
+static void enqueue(struct task_struct **queue, struct task_struct *task) {
+    if (*queue == 0) {
+        *queue = task;
         task->next = task;
         task->prev = task;
     } else {
-        task_struct_t *prev = run_queue->prev;
-        prev->next = task;
-        task->prev = prev;
-        task->next = run_queue;
-        run_queue->prev = task;
-    }
-    // print_string("[enqueue_run_queue] done\n");
-    // print_task_list();
-}
-
-void delete_run_queue(task_struct_t *task) {
-    if (task->next == task) {
-        run_queue = NULL;
-    } else {
-        task_struct_t *prev = task->prev;
-        task_struct_t *next = task->next;
-        prev->next = next;
-        next->prev = prev;
-        if (run_queue == task) {
-            run_queue = next;
-        }
+        task->next = *queue;
+        task->prev = (*queue)->prev;
+        (*queue)->prev->next = task;
+        (*queue)->prev = task;
     }
 }
 
-static void switch_to(task_struct_t *current, task_struct_t *next) {
-    // print_string("[switch_to] task: ");
-    // print_d(current ->pid);
-    // print_string(", ");
-    // print_d(next->pid);
-    // print_string("\n");
-    // print_task_list();
-    // if (current == next) {
-    //     // return;
-    //     while(1);
-    // }
-    //
-#ifdef SCHED_DEBUG
-    print_string("[switch_to] ");
-    print_string("(");
-    print_d(current->pid);
-    print_string(", ");
-    print_d(current->counter);
-    print_string(", ");
-    print_d(current->priority);
-    print_string(", ");
-    print_d(current->preempt_count);
-    print_string(", ");
-    print_h((unsigned long)current->context.x19);
-    print_string(", ");
-    print_h((unsigned long)current->context.x20);
-    print_string(", ");
-    print_h((unsigned long)current->context.sp);
-    // print_string(", ");
-    // print_h((unsigned long)get_current()->context.pc);
-    print_string(") -> (");
-    // print_string(" -> ");
-    // print_h((unsigned long)next);
-    // print_string(", ");
-    print_d(next->pid);
-    print_string(", ");
-    print_d(next->counter);
-    print_string(", ");
-    print_d(next->priority);
-    print_string(", ");
-    print_d(next->preempt_count);
-    print_string(", ");
-    print_h((unsigned long)next->context.x19);
-    print_string(", ");
-    print_h((unsigned long)next->context.x20);
-    print_string(", ");
-    print_h((unsigned long)next->context.sp);
-    // print_string(", ");
-    // print_h((unsigned long)next->context.pc);
-    print_string(")");
-    print_string("\n");
-
-    // print_string("[switch_to] print_task_list\n");
-    // print_task_list();
-// }
-#endif
-
-    cpu_switch_to(current, next);
+static void remove(struct task_struct **queue, struct task_struct *task) {
+    if (*queue == task) *queue = (task->next == task) ? 0 : task->next;
+    task->next->prev = task->prev;
+    task->prev->next = task->next;
 }
 
-void print_task_list() {
-    task_struct_t *task = get_current();
-    print_string("task list: ");
+void display_run_queue() {
+    struct task_struct *task = run_queue;
     do {
-        print_string("(");
-        print_h((unsigned long)task);
-        print_string(", ");
+        print_string("Task id: ");
         print_d(task->pid);
-        print_string(", ");
-        print_d(task->counter);
-        print_string(", ");
-        print_d(task->priority);
-        print_string(", ");
-        print_d(task->preempt_count);
         print_string(", state: ");
         print_d(task->state);
-        print_string(", ");
-        // print_string("context: x19, x20, pc, sp: ");
-        // print_string(", ");
-        print_h((unsigned long)task->context.x19);
-        print_string(", ");
-        print_h((unsigned long)task->context.x20);
-        print_string(", ");
-        print_h(task->context.fp);
-        print_string(", ");
-        print_h((unsigned long)task->context.pc);
-        print_string(", ");
-        print_h((unsigned long)task->context.sp);
-        print_string(") -> ");
+        print_string(", next: ");
+        print_d(task->next->pid);
+        print_string("\n");
         task = task->next;
-    } while (task != get_current());
-    if (task == get_current()) print_string("Circular\n");
-    print_string("\n");
-}
-
-void _schedule() {
-    // print_task_list();
-
-    preempt_disable();
-    task_struct_t *current_task;
-    task_struct_t *next_task = NULL;
-    task_struct_t *start_point = run_queue;
-
-    int highest_counter = -1;
-    while (1) {
-        current_task = start_point;
-        do {
-            // find next highest counter task
-            if (current_task->state == TASK_RUNNING &&
-                current_task->counter > highest_counter &&
-                current_task->context.pc != 0) {
-                // ) {
-                highest_counter = current_task->counter;
-                next_task = current_task;
-
-#ifdef SCHED_DEBUG
-                print_string("[_schedule] got new task: ");
-                print_h((unsigned long)next_task);
-                print_string(", ");
-                print_h(next_task->context.pc);
-                print_string("\n");
-#endif
-            }
-            // print_string("current_task: ");
-            // print_d(current_task->pid);
-            // print_string(", counter: ");
-            // print_d(current_task->counter);
-            // print_string("\n");
-            current_task = current_task->next;  // 移至下一个节点
-            // print_string("current_task->next: ");
-            // print_d(current_task->pid);
-            // print_string("\n");
-        } while (current_task != start_point);  // 循环直到回到起点
-
-        if (highest_counter > 0) {
-            // print_string("[_schedule] highest_counter: ");
-            // print_d(highest_counter);
-            // print_string("\n");
-            break;
-        }
-
-        current_task = start_point;
-        do {
-            current_task->counter =
-                (current_task->counter >> 1) + current_task->priority;
-            current_task = current_task->next;  // 重新遍历整个链表，更新优先级
-        } while (current_task != start_point);
-    }
-
-#ifdef SCHED_DEBUG
-    print_string("[_schedule] switch_to: ");
-    print_d(get_current()->pid);
-    print_string(" -> ");
-    print_d(next_task->pid);
-    print_string("\n");
-#endif
-
-    switch_to(get_current(), next_task);
-    preempt_enable();
+    } while (task != run_queue);
 }
 
 void schedule() {
-    get_current()->counter = 0;
-    _schedule();
+    struct task_struct *current = get_current();
+    struct task_struct *next = current->next;
 
-#ifdef SCHED_DEBUG
-    print_string("[schedule]\n");
-    print_task_list();
-#endif
-}
-
-void timer_tick() {
-    task_struct_t *current = get_current();
-    // print_string("-------\ntimer tick: ");
-    // print_d(current->pid);
-    // print_string(", priority: ");
-    // print_d(current->priority);
-    // print_string(", counter: ");
-    // print_d(current->counter);
-    // print_string(", preempt_count: ");
-    // print_d(current->preempt_count);
-    // print_string("\n------\n");
-
-    if (--current->counter > 0 || current->preempt_count > 0) {
-        return;
+    while(next->state != TASK_RUNNING) {
+        next = next->next;
     }
-    current->counter = 0;
 
-    enable_irq();
-    _schedule();
-    disable_irq();
+    // display_run_queue();
+    // print_string("Scheduling from: ");
+    // print_d(current->pid);
+    // print_string(" -> ");
+    // print_d(next->pid);
+    // print_string("\n");
+
+    switch_to(current, current->next);
 }
 
-void schedule_tail() {
-    // print_string("[schedule_tail]\n");
-    preempt_enable();
-}
-
-task_struct_t *get_task(int pid) {
-    task_struct_t *task = run_queue;
+void kill_zombies() {
+    // print_string("Killing zombies\n");
+    // display_run_queue();
+    struct task_struct *next, *task = run_queue;
     do {
-        if (task->pid == pid) {
-            return task;
+        next = task->next;
+        if (task->state == EXIT_ZOMBIE) {
+            remove(&run_queue, task);
+            kfree(task->stack);
+            kfree(task->user_stack);
         }
-        task = task->next;
-    } while (task != run_queue);
-    return NULL;
-}
-
-static void _kill_zombies() {
-    task_struct_t *task = run_queue;
-    do {
-        if (task->state == TASK_ZOMBIE) {
-            task_struct_t *next = task->next;
-            delete_run_queue(task);
-            // kfree(task);
-            task = next;
-        } else {
-            task = task->next;
-        }
+        task = next;
     } while (task != run_queue);
 }
 
-void root_task() {
-    print_string("root task\n");
+void idle() {
     while (1) {
-        _kill_zombies();
+        kill_zombies();
         schedule();
     }
 }
 
-void sched_init() {
-    print_string("[sched init]\n");
-
-    static task_struct_t init_task = INIT_TASK;
-
-    enqueue_run_queue(&init_task);
-        nr_count = 1;
-    asm volatile("msr tpidr_el1, %0" ::"r"((unsigned long)&init_task));
-
-    print_string("[sched init] create root task\n");
-    copy_process(PF_KTHREAD, (unsigned long)&root_task, 0, 0);
+struct task_struct *get_task(int pid) {
+    struct task_struct *task = run_queue;
+    do {
+        if (task->pid == pid) return task;
+        task = task->next;
+    } while (task != run_queue);
+    return 0;
 }
 
-void exit_process() {
-    preempt_disable();
+void kthread_init() {
+    kthread_create(idle);
+    asm volatile("msr tpidr_el1, %0" ::"r"(run_queue));
+    // display_run_queue();
+}
 
-    task_struct_t *current = get_current();
-    current->state = TASK_ZOMBIE;
-    if (current->stack) {
-        // kfree((void *)current->stack);
-    }
+struct task_struct *kthread_create(void (*func)()) {
+    struct task_struct *task = kmalloc(sizeof(struct task_struct));
+    task->pid = thread_count++;
+    task->state = TASK_RUNNING;
+    task->stack = kmalloc(STACK_SIZE);
+    task->user_stack = kmalloc(STACK_SIZE);
+    memset(task->sighand, 0, sizeof(task->sighand));
+    task->sigpending = 0;
+    task->sighandling = 0;
+    task->context.lr = (unsigned long)func;
+    task->context.sp = (unsigned long)task->user_stack + STACK_SIZE;
+    task->context.fp = (unsigned long)task->user_stack + STACK_SIZE;
+    enqueue(&run_queue, task);
+    return task;
+}
 
-    task_struct_t *tmp = current->next;
-    while(tmp != current) {
-        print_string("[exit_process] ");
-        if(tmp->state == TASK_STOPPED && tmp->pid+1 == current->pid) {
-            print_string("[exit_process] continue parent task: ");
-            tmp->state = TASK_RUNNING;
-            break;
-        }
-        tmp = tmp->next;
-    }
-    
-
-    preempt_enable();
-    // print_task_list();
+void kthread_exit() {
+    get_current()->state = EXIT_ZOMBIE;
     schedule();
 }
 
-void kill_process(long pid) {
-    task_struct_t *task = get_task(pid);
-            
-    if (task) {
-        task->state = TASK_ZOMBIE;
+void kthread_stop(int pid) {
+    struct task_struct *task = run_queue;
+    do {
+        if (task->pid == pid) task->state = EXIT_ZOMBIE;
+        task = task->next;
+    } while (task != run_queue);
+    schedule();
+}
+
+void thread_test() {
+    for (int i = 0; i < 5; ++i) {
+        // uart_puts("Thread id: ");
+        // uart_hex(get_current()->pid);
+        // uart_puts(" ");
+        // uart_hex(i);
+        // uart_puts("\n");
+        for (int i = 0; i < 1000000; i++);
         schedule();
     }
+    kthread_exit();
 }
