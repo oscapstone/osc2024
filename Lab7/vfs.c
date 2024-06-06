@@ -35,6 +35,7 @@ int vfs_open(const char* pathname, int flags, struct file** target) { //target: 
         char path_dir[MAX_PATH];
         strcpy(pathname, path_dir);
         int idx;
+        //set the last / into 0 to get next node name for lookup
         for(int i=0; i<strlen(pathname);i++){
             if(pathname[i] == '/')
                 idx = i;
@@ -130,7 +131,7 @@ int vfs_mount(const char* target, const char* filesystem){
 
 int vfs_lookup(const char* pathname, struct vnode** target){
     //in create in open will set / to 0
-    if(pathname[0] == 0){
+    if(pathname[0] == 0 || strcmp(pathname, "/") == 0){
         *target = rootfs -> root;
         return 0; 
     }
