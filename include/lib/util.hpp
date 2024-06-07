@@ -32,11 +32,15 @@ inline T align(T p, uint64_t sz) {
 }
 
 inline void set32(addr_t address, uint32_t value) {
-  asm volatile("str %w[v],[%[a]]" ::[a] "r"(address), [v] "r"(value));
+  asm volatile("str %w[v],[%[a]]" ::[a] "r"(address), [v] "r"(value)
+               : "memory");
 }
 inline uint32_t get32(addr_t address) {
   uint32_t value;
-  asm volatile("ldr %w[v],[%[a]]" : [v] "=r"(value) : [a] "r"(address));
+  asm volatile("ldr %w[v],[%[a]]"
+               : [v] "=r"(value)
+               : [a] "r"(address)
+               : "memory");
   return value;
 }
 inline void delay(uint64_t cycle) {
