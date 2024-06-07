@@ -99,3 +99,25 @@ U32 utils_str2uint_dec(const char *str)
     }
     return value;
 }
+
+U32 utils_read_unaligned_u32(const void* address) {
+    const U8* byte_ptr = (const U8*)address;
+    U32 value = 0;
+
+    value |= (U32)byte_ptr[0];
+    value |= (U32)byte_ptr[1] << 8;
+    value |= (U32)byte_ptr[2] << 16;
+    value |= (U32)byte_ptr[3] << 24;
+
+    return value;
+}
+
+U16 utils_read_unaligned_u16(const void* addr) {
+    const U8* byte_ptr = (const U8*)addr;
+    U16 value = 0;
+
+    value |= (U16)byte_ptr[0];
+    value |= (U16)byte_ptr[1] << 8;
+
+    return value;
+}
