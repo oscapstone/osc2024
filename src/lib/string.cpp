@@ -40,6 +40,12 @@ char* strcpy(char* dst, const char* src) {
   return dst;
 }
 
+char* strncpy(char* dst, const char* src, size_t n) {
+  for (size_t i = 0; i < n and (*dst = *src); i++)
+    dst++, src++;
+  return dst;
+}
+
 int strcmp(const char* s1, const char* s2) {
   char c1, c2;
   int d;
@@ -99,4 +105,8 @@ long strtol(const char* s, const char** endptr, size_t base, size_t n) {
   if (endptr)
     *endptr = s;
   return r * x;
+}
+
+bool isprint(char c) {
+  return 0x20 <= c and c <= 0x7e;
 }

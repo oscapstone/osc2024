@@ -38,7 +38,7 @@ class string_view {
   bool printable() const {
     for (size_t i = 0; i < size_; i++) {
       auto c = buf_[i];
-      if (not(0x20 <= c and c <= 0x7e) and not(i + 1 == size_ and c == 0))
+      if (not isprint(c) and not(i + 1 == size_ and c == 0))
         return false;
     }
     return true;
