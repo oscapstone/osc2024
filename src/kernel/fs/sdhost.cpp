@@ -159,7 +159,7 @@ static int sdcard_setup() {
   sd_cmd(SEND_RELATIVE_ADDR, 0);
   get(SDHOST_RESP0, tmp);
   sd_cmd(SELECT_CARD, tmp);
-  sd_cmd(SET_BLOCKLEN, 512);
+  sd_cmd(SET_BLOCKLEN, BLOCK_SIZE);
   return 0;
 }
 
@@ -195,7 +195,7 @@ void readblock(int block_idx, void* buf) {
     block_idx <<= 9;
   }
   do {
-    set_block(512, 1);
+    set_block(BLOCK_SIZE, 1);
     sd_cmd(READ_SINGLE_BLOCK | SDHOST_READ, block_idx);
     for (int i = 0; i < 128; ++i) {
       wait_fifo();
@@ -220,7 +220,7 @@ void writeblock(int block_idx, void* buf) {
     block_idx <<= 9;
   }
   do {
-    set_block(512, 1);
+    set_block(BLOCK_SIZE, 1);
     sd_cmd(WRITE_SINGLE_BLOCK | SDHOST_WRITE, block_idx);
     for (int i = 0; i < 128; ++i) {
       wait_fifo();

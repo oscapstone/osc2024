@@ -1,5 +1,6 @@
 #include "fs/vfs.hpp"
 
+#include "fs/fat32fs.hpp"
 #include "fs/files.hpp"
 #include "fs/framebufferfs.hpp"
 #include "fs/initramfs.hpp"
@@ -19,6 +20,7 @@ void init_vfs() {
   register_filesystem(new initramfs::FileSystem());
   register_filesystem(new uartfs::FileSystem());
   register_filesystem(new framebufferfs::FileSystem());
+  register_filesystem(new fat32fs::FileSystem());
 
   root_node = get_filesystem("tmpfs")->mount();
   root_node->set_parent(root_node);
@@ -31,6 +33,9 @@ void init_vfs() {
   vfs_mount("/dev/uart", "uartfs");
   vfs_mkdir("/dev/framebuffer");
   vfs_mount("/dev/framebuffer", "framebufferfs");
+
+  vfs_mkdir("/boot");
+  vfs_mount("/boot", "fat32fs");
 }
 
 FileSystem* filesystems = nullptr;
