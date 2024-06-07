@@ -7,12 +7,15 @@ CONFIG 		= config.txt
 IMGS 		= $(shell find . -name '*.img')
 INITFSCPIO 	= initramfs.cpio
 DEVICETREE 	= bcm2710-rpi-3-b-plus.dtb
+FAT32_TEST 	= FAT_R.TXT
 
-.PHONY: all upload eject format download dtb
+.PHONY: all files upload eject format download dtb
 
-all: $(FIRMWARE) $(DEVICETREE)
+all: files
 
-upload: $(FIRMWARE) $(DEVICETREE)
+files: $(FIRMWARE) $(DEVICETREE) $(FAT32_TEST)
+
+upload: files
 	cp $(FIRMWARE) $(DEVICETREE) $(DISKPATH)
 ifneq ($(wildcard $(CONFIG)),)
 	cp $(CONFIG) $(DISKPATH)
@@ -55,3 +58,6 @@ start.elf:
 dtb: $(DEVICETREE)
 $(DEVICETREE):
 	$(MAKE) download "TARGET=$@"
+
+FAT_R.TXT:
+	wget https://nycu-caslab.github.io/OSC2024/_downloads/10fbdc3e04b471849e714edcdcf4ce26/FAT_R.TXT

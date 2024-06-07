@@ -4,3 +4,4 @@ start.elf
 *.img
 initramfs.cpio
 *.dtb
+FAT_R.TXT
