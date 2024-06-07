@@ -1,30 +1,25 @@
 #include "fs/fat32fs.hpp"
 
-#include "fs/fat.hpp"
 #include "fs/log.hpp"
-#include "fs/mbr.hpp"
-#include "fs/sdhost.hpp"
 #include "io.hpp"
 
 #define FS_TYPE "fat32fs"
 
 namespace fat32fs {
 
-::Vnode* FileSystem::root = nullptr;
 bool FileSystem::init = false;
 
 FileSystem::FileSystem() {
   if (init)
     return;
   init = true;
+  block_buf = new char[BLOCK_SIZE];
 
   sd_init();
 
-  char buf[BLOCK_SIZE];
-
-  readblock(0, buf);
-  auto mbr = new MBR;
-  memcpy(mbr, buf, sizeof(MBR));
+  mbr = new MBR;
+  sector_0_off = 0;
+  read_data(0, mbr);
 
   if (not mbr->valid()) {
     FS_WARN("disk is invalid MBR (sig = %x%x)\n", mbr->sig[0], mbr->sig[1]);
@@ -43,20 +38,18 @@ FileSystem::FileSystem() {
 
   khexdump(&mbr->entry[0], 16);
 
-  klog("first sector 0x%x\n", mbr->entry[0].first_sector_LBA);
-  klog("first sector %u / %u / %u\n", mbr->entry[0].first_sector_CHS.C,
-       mbr->entry[0].first_sector_CHS.H, mbr->entry[0].first_sector_CHS.S);
-  klog("last sector %u / %u / %u\n", mbr->entry[0].last_sector_CHS.C,
-       mbr->entry[0].last_sector_CHS.H, mbr->entry[0].last_sector_CHS.S);
+  FS_INFO("first sector 0x%x\n", mbr->entry[0].first_sector_LBA);
+  auto print_CHS = [](const char* name, CHS chs) {
+    FS_INFO("%s %u / %u / %u\n", name, chs.C, chs.H, chs.S);
+  };
+  print_CHS("first sector", mbr->entry[0].first_sector_CHS);
+  print_CHS("last sector", mbr->entry[0].last_sector_CHS);
 
-  auto sector_0_off = mbr->entry[0].first_sector_LBA;
-  auto read_block = [&](uint32_t id) { readblock(sector_0_off + id, buf); };
+  sector_0_off = mbr->entry[0].first_sector_LBA;
 
-  read_block(0);
-  auto bpb = new FAT_BPB;
-  memcpy(bpb, buf, sizeof(FAT_BPB));
+  bpb = new FAT_BPB;
+  read_data(0, bpb);
 
-  char label[12]{};
   strncpy(label, bpb->BS_VolLab, sizeof(bpb->BS_VolLab));
   FS_INFO("volumn label: '%s'\n", label);
 
@@ -70,9 +63,8 @@ FileSystem::FileSystem() {
     return;
   }
 
-  auto RootDirSectors =
-      ((bpb->BPB_RootEntCnt * 32) + (bpb->BPB_BytsPerSec - 1)) /
-      bpb->BPB_BytsPerSec;
+  RootDirSectors = ((bpb->BPB_RootEntCnt * 32) + (bpb->BPB_BytsPerSec - 1)) /
+                   bpb->BPB_BytsPerSec;
   FS_INFO("RootDirSectors = %d\n", RootDirSectors);
 
   if (bpb->BPB_FATSz16 != 0) {
@@ -80,31 +72,27 @@ FileSystem::FileSystem() {
     return;
   }
 
-  auto FATSz = bpb->BPB_FATSz32;
+  FATSz = bpb->BPB_FATSz32;
 
   read_block(bpb->BPB_RsvdSecCnt);
   kprintf("first FAT\n");
-  khexdump(buf, BLOCK_SIZE);
+  khexdump(block_buf, BLOCK_SIZE);
 
-  auto FirstDataSector =
+  FirstDataSector =
       bpb->BPB_RsvdSecCnt + (bpb->BPB_NumFATs * FATSz) + RootDirSectors;
   FS_INFO("FirstDataSector = %d\n", FirstDataSector);
-
-  auto get_first_sector = [&](uint32_t cluster_N) {
-    return ((cluster_N - 2) * bpb->BPB_SecPerClus) + FirstDataSector;
-  };
 
   if (bpb->BPB_TotSec16 != 0) {
     FS_WARN("BPB_TotSec16 is not zero (%d)\n", bpb->BPB_TotSec16);
     return;
   }
 
-  auto TotSec = bpb->BPB_TotSec32;
+  TotSec = bpb->BPB_TotSec32;
   FS_INFO("TotSec = %d\n", TotSec);
-  auto DataSec = TotSec - (bpb->BPB_RsvdSecCnt + (bpb->BPB_NumFATs * FATSz) +
-                           RootDirSectors);
+  DataSec = TotSec -
+            (bpb->BPB_RsvdSecCnt + (bpb->BPB_NumFATs * FATSz) + RootDirSectors);
   FS_INFO("DataSec = %d\n", DataSec);
-  auto CountofClusters = DataSec / bpb->BPB_SecPerClus;
+  CountofClusters = DataSec / bpb->BPB_SecPerClus;
   FS_INFO("CountofClusters = %d\n", CountofClusters);
 
   if (CountofClusters < 4085) {
@@ -117,18 +105,17 @@ FileSystem::FileSystem() {
     FS_INFO("Volume is FAT32\n");
   }
 
-  read_block(1);
-  auto fsinfo = new FAT32_FSInfo;
-  memcpy(fsinfo, buf, sizeof(FAT32_FSInfo));
+  fsinfo = new FAT32_FSInfo;
+  read_data(1, fsinfo);
 
   if (not fsinfo->valid()) {
     FS_WARN("fsinfo is invalid (sig = 0x%x)\n", fsinfo->FSI_LeadSig);
     return;
   }
 
-  read_block(FirstDataSector);
-  kprintf("first data\n");
-  khexdump(buf, BLOCK_SIZE);
+  read_block(cluster2sector(bpb->BPB_RootClus));
+  kprintf("root cluster\n");
+  khexdump(block_buf, BLOCK_SIZE);
 }
 
 };  // namespace fat32fs
