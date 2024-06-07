@@ -169,8 +169,11 @@ long File::lseek64(long offset, seek_type whence) {
 int File::ioctl(unsigned long request, void* arg) {
   return -1;
 }
-int File::close() {
-  return vnode->close(this);
+
+int File::close(FilePtr file) {
+  if (file.get() != this)
+    return -1;
+  return vnode->close(file);
 }
 
 Vnode* FileSystem::mount() {

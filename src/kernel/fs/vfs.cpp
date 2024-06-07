@@ -76,7 +76,7 @@ int open(const char* pathname, fcntl flags) {
 
   r = current_files()->alloc_fd(file);
   if (r < 0)
-    file->close();
+    file->close(file);
 
 end:
   FS_INFO("open('%s', 0o%o) -> %d\n", pathname, flags, r);
@@ -136,7 +136,7 @@ end:
 int vfs_close(FilePtr file) {
   // 1. release the file handle
   // 2. Return error code if fails
-  return file->close();
+  return file->close(file);
 }
 
 SYSCALL_DEFINE3(write, int, fd, const void*, buf, unsigned long, count) {

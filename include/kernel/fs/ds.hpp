@@ -95,7 +95,7 @@ class File {
   virtual int read(void* buf, size_t len);
   virtual long lseek64(long offset, seek_type whence);
   virtual int ioctl(unsigned long request, void* arg);
-  int close();
+  int close(FilePtr file);
 };
 
 class FileSystem {

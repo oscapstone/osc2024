@@ -59,7 +59,7 @@ int exec(ExecCtx* ctx) {
   delete ctx;
 
   file->read((void*)text_addr, file->size());
-  file->close();
+  file->close(file);
 
   open("/dev/uart", O_RDWR);
   open("/dev/uart", O_RDWR);
