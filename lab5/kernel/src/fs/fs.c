@@ -8,6 +8,7 @@
 
 #include "uartfs.h"
 #include "framebufferfs.h"
+#include "fat32fs.h"
 
 FS_MANAGER* fs_manager;
 
@@ -290,6 +291,9 @@ void fs_init() {
         return;
     }
 
+    if (fs_register(fat32fs_create())) {
+        printf("[FS][ERROR] Failed to register fat32fs\n");
+    }
 
     NS_DPRINT("[FS][TRACE] fs_init() success.\n");
 }

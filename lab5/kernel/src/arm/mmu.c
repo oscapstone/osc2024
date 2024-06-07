@@ -68,20 +68,20 @@ void setup_kernel_space_mapping() {
     */
     for (int i = 0; i < 504; i++) {
         // i << 21 2M each
-        p0[i] = (i << 21) | PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << 2) | PD_BLOCK;
+        p0[i] = (i << 21) | PD_ACCESS | (MAIR_IDX_NORMAL_NOCACHE << MMU_MAIR_IDX_SHIFT) | MMU_UNX | PD_BLOCK;
     }
     /**
      * 0x3F000000 ~ 0x40000000
     */
     for (int i = 504; i < 512; i++) {
-        p0[i] = (i << 21) | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK;
+        p0[i] = (i << 21) | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << MMU_MAIR_IDX_SHIFT) | MMU_UNX | PD_BLOCK;
     }
     /**
      * 0x40000000 ~ 0x80000000
     */
     pd_t* p1 = MMU_VIRT_TO_PHYS((U64)kzalloc(PD_PAGE_SIZE));
     for (int i = 0; i < 512; i++) {
-        p1[i] = 0x40000000 | (i << 21) | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK;
+        p1[i] = 0x40000000 | (i << 21) | PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | MMU_UNX | PD_BLOCK;
     }
 
     // 由于一些编译器优化或者CPU设计的流水线乱序执行，导致最终内存的访问顺序可能和代码中的逻辑顺序不符，所以需要增加内存屏障指令来保证顺序性。

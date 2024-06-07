@@ -13,7 +13,7 @@
 #include "io/uart.h"
 
 extern void* _dtb_ptr;
-extern char __static_mem_start__, __static_mem_end__;
+//extern char __static_mem_start__, __static_mem_end__;
 extern char __kernel_start__, __kernel_end__;
 
 void buddy_init();
@@ -27,17 +27,19 @@ void mem_memory_reserve(UPTR start, UPTR end);
 
 MEMORY_MANAGER mem_manager;
 
-U64* smalloc_ptr;
-U64* smalloc_end_ptr;
+#define MEM_STATIC_MALLOC_SIZE      0x2000000
+
+UPTR smalloc_ptr;
+UPTR smalloc_end_ptr;
 
 void *smalloc(U64 size) {
 
-    U64 *result = smalloc_ptr;
-    if ((UPTR)(smalloc_ptr + size) > (UPTR)&__static_mem_end__) {
+    void *result = (void*)smalloc_ptr;
+    if (smalloc_ptr + size > smalloc_end_ptr) {
         printf("Static memory can't allocate!\n");
         return 0;
     }
-    
+
     smalloc_ptr += size;
     return result;
 }
@@ -58,8 +60,8 @@ void get_reserve_memory_addr(int token, const char* name, const void* data, U32 
 */
 void mm_init() {
     // initialize the static malloc
-    smalloc_ptr = (U64*)&__static_mem_start__;
-    smalloc_end_ptr = (U64*)&__static_mem_end__;
+    smalloc_ptr = (((UPTR)&__kernel_end__ & ~(0xffffff)) + 0x1000000);
+    smalloc_end_ptr = ((UPTR)smalloc_ptr + MEM_STATIC_MALLOC_SIZE);
 
     // use the example base offset (or use the kernel end ptr)
     //mem_manager.base_ptr = 0x10000000;
@@ -73,6 +75,7 @@ void mm_init() {
     } else {
         printf("Unable to query memory info!\n");
     }
+    NS_DPRINT("[MEMORY][TRACE] Total size: %d bytes\n", mem_manager.size);
 
     mem_manager.number_of_frames = mem_manager.size / MEM_FRAME_SIZE;
     NS_DPRINT("[MEMORY][TRACE] Total frames: %d\n", mem_manager.number_of_frames);
@@ -86,9 +89,9 @@ void mm_init() {
 
     // put the memory reserve code here
     mem_memory_reserve(          0, 0x1000);       // spin table for multiboot
-    mem_memory_reserve(     0x1000, 0x3000);       // identity MMU map
-    mem_memory_reserve(MEM_KERNEL_STACK_BASE - TASK_STACK_SIZE, MEM_KERNEL_STACK_BASE);
-    mem_memory_reserve((UPTR)&__kernel_start__, (UPTR)&__kernel_end__);     // kernel code
+    mem_memory_reserve(     0x1000, 0x3000);       // identity MMU mapMEM_KERNEL_STACK_BASE
+    mem_memory_reserve(MEM_KERNEL_STACK_BASE - TASK_STACK_SIZE, MEM_KERNEL_STACK_BASE);             // 0x7b000 ~ 0x80000
+    mem_memory_reserve((UPTR)&__kernel_start__, (UPTR)&__kernel_end__);                             // kernel code
 
     // device tree
     struct fdt_header* header = (struct fdt_header*)_dtb_ptr;
@@ -99,12 +102,12 @@ void mm_init() {
         printf("[MEMORY][ERROR] Device tree magic not correct. magic: %x\n", magic);
     }
     mem_memory_reserve((UPTR)_dtb_ptr, (UPTR)_dtb_ptr + totalSize);
-    NS_DPRINT("[MEMORY][TRACE] Device tree reserve. offset: %p, size: %d\n", (U64)_dtb_ptr, totalSize);
+    NS_DPRINT("[MEMORY][TRACE] Device tree reserve. offset: %p, end: %d\n", (U64)_dtb_ptr, totalSize);
 
     fdt_traverse(get_reserve_memory_addr);
 
     mem_memory_reserve(initramfs_start, initramfs_end);
-    NS_DPRINT("[MEMORY][TRACE] initramfs reserve. offset: %x, size: %x\n", initramfs_start, initramfs_end);
+    NS_DPRINT("[MEMORY][TRACE] initramfs reserve. offset: %x, end: %x\n", initramfs_start, initramfs_end);
 
     buddy_init();
 
@@ -695,7 +698,7 @@ void* kmalloc(U64 size) {
         if (page_size - (1 << (order)) > 0) {
             order++;
         }
-        ptr = mem_idx2addr(mem_buddy_alloc(order));
+        ptr = (void*) mem_idx2addr(mem_buddy_alloc(order));
     }
 
     if (ptr == NULL) {

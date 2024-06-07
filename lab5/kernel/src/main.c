@@ -14,6 +14,7 @@
 #include "lib/getpid.h"
 #include "fs/fs.h"
 #include "proc/worker.h"
+#include "dev/sdcard.h"
 
 // in exception.S
 void set_exception_vector_table();
@@ -63,6 +64,9 @@ void main() {
     // initialze UART
     uart_init();
 
+	// for testing
+	uart_get_char();
+
 	// init memory management	
 	mm_init();
 
@@ -79,6 +83,9 @@ void main() {
 
 	// initializing file system
 	fs_init();
+
+	// initialize the sd card
+	sdcard_init();
 
 	task_init();
 

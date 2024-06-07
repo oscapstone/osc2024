@@ -76,8 +76,11 @@
 #define PD_ACCESS           (1 << 10)
 // kernel pgd attribute
 #define PD_KERNEL_PGD_ATTR  PD_TABLE
+
+#define MMU_MAIR_IDX_SHIFT  2
+
 // kernel pud attribute
-#define PD_KERNEL_PUD_ATTR  (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << 2) | PD_BLOCK)
+#define PD_KERNEL_PUD_ATTR  (PD_ACCESS | (MAIR_IDX_DEVICE_nGnRnE << MMU_MAIR_IDX_SHIFT) | MMU_UNX | PD_BLOCK)
 
 #define MMU_AP_EL0_NONE         (0)
 #define MMU_AP_EL0_READ_ONLY    (1L << 7)       // 0 for read-write, 1 for read-only.

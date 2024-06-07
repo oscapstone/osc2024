@@ -31,6 +31,7 @@ SECTIONS
         PROVIDE(__bss_end__ = .);
     }
     /* used for static memory allocation */
+    /*
     .data.static_mem :
     {
         PROVIDE(__static_mem_start__ = .);
@@ -38,6 +39,7 @@ SECTIONS
         . += 32m;
         PROVIDE(__static_mem_end__ = .);
     }
+    */
     PROVIDE(__kernel_end__ = .);
 
     
