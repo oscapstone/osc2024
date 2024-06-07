@@ -9,6 +9,7 @@ BUILD_DIR 	= build
 SRC_DIR  	= src
 DISK_DIR 	= disk
 FS_DIR 		= rootfs
+SD_IMAGE 	= $(DISK_DIR)/sfn_nctuos.img
 
 CFLAGS 		= -Wall -Wextra -Wshadow \
 			  -ffreestanding \
@@ -30,6 +31,7 @@ endif
 
 QEMU_FLAGS 	= -smp cpus=4 \
 			  -dtb $(DISK_DIR)/bcm2710-rpi-3-b-plus.dtb \
+			  -drive if=sd,file=$(SD_IMAGE),format=raw \
 			  $(QEMU_EXT_FLAGS)
 
 ifeq ($(TARGET),)
