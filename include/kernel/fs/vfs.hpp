@@ -16,6 +16,8 @@ long write(int fd, const void* buf, unsigned long count);
 long read(int fd, void* buf, unsigned long count);
 int lseek64(int fd, long offset, seek_type whence);
 int ioctl(int fd, unsigned long request, void* arg);
+int mkdir(const char* pathname);
+int mount(const char* target, const char* filesystem);
 
 int vfs_open(const char* pathname, fcntl flags, FilePtr& target);
 int vfs_close(FilePtr file);

@@ -25,17 +25,17 @@ void init_vfs() {
   root_node = get_filesystem("tmpfs")->mount();
   root_node->set_parent(root_node);
 
-  vfs_mkdir("/initramfs");
-  vfs_mount("/initramfs", "initramfs");
+  mkdir("/initramfs");
+  mount("/initramfs", "initramfs");
 
-  vfs_mkdir("/dev");
-  vfs_mkdir("/dev/uart");
-  vfs_mount("/dev/uart", "uartfs");
-  vfs_mkdir("/dev/framebuffer");
-  vfs_mount("/dev/framebuffer", "framebufferfs");
+  mkdir("/dev");
+  mkdir("/dev/uart");
+  mount("/dev/uart", "uartfs");
+  mkdir("/dev/framebuffer");
+  mount("/dev/framebuffer", "framebufferfs");
 
-  vfs_mkdir("/boot");
-  vfs_mount("/boot", "fat32fs");
+  mkdir("/boot");
+  mount("/boot", "fat32fs");
 }
 
 FileSystem* filesystems = nullptr;
@@ -196,6 +196,10 @@ int vfs_read(FilePtr file, void* buf, size_t len) {
 }
 
 SYSCALL_DEFINE2(mkdir, const char*, pathname, unsigned, mode) {
+  return mkdir(pathname);
+}
+
+int mkdir(const char* pathname) {
   int r = vfs_mkdir(pathname);
   FS_INFO("mkdir('%s', 0o%o) = %d\n", pathname, mode, r);
   return r;
@@ -219,6 +223,10 @@ end:
 
 SYSCALL_DEFINE5(mount, const char*, src, const char*, target, const char*,
                 filesystem, unsigned long, flags, const void*, data) {
+  return mount(target, filesystem);
+}
+
+int mount(const char* target, const char* filesystem) {
   int r = vfs_mount(target, filesystem);
   FS_INFO("mount('%s', '%s') = %d\n", target, filesystem, r);
   return r;
