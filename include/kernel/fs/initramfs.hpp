@@ -48,9 +48,9 @@ class File final : public ::FileImplRW<Vnode, File> {
 };
 
 class FileSystem final : public ::FileSystem {
- public:
-  ::Vnode* root;
+  static ::Vnode* root;
 
+ public:
   FileSystem();
   virtual const char* name() const {
     return "initramfs";

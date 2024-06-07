@@ -29,7 +29,12 @@ void preinit() {
   }
 }
 
+::Vnode* FileSystem::root = nullptr;
+
 FileSystem::FileSystem() {
+  if (root)
+    return;
+
   root = new ::Vnode{kDir};
   for (auto hdr : cpio) {
     ::Vnode* dir;
