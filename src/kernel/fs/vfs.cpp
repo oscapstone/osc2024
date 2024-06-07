@@ -61,11 +61,15 @@ int register_filesystem(FileSystem* fs) {
   // you can also initialize memory pool of the file system here.
 
   auto p = find_filesystem(fs->name());
-  if (not p)
-    return -1;
-  FS_INFO("register fs '%s'\n", fs->name());
+  int r = 0;
+  if (not p) {
+    r = -1;
+    goto end;
+  }
   *p = fs;
 
+end:
+  FS_WARN_IF(r < 0, "register fs '%s'\n", fs->name());
   return 0;
 }
 
@@ -84,7 +88,7 @@ int open(const char* pathname, fcntl flags) {
     file->close(file);
 
 end:
-  FS_INFO("open('%s', 0o%o) -> %d\n", pathname, flags, r);
+  FS_WARN_IF(r < 0, "open('%s', 0o%o) -> %d\n", pathname, flags, r);
   return r;
 }
 
@@ -134,7 +138,7 @@ int close(int fd) {
     goto end;
   current_files()->close(fd);
 end:
-  FS_INFO("close(%d) = %d\n", fd, r);
+  FS_WARN_IF(r < 0, "close(%d) = %d\n", fd, r);
   return 0;
 }
 
@@ -157,7 +161,7 @@ long write(int fd, const void* buf, unsigned long count) {
   }
   r = vfs_write(file, buf, count);
 end:
-  FS_INFO("write(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  FS_WARN_IF(r < 0, "write(%d, %p, %ld) = %d\n", fd, buf, count, r);
   return r;
 }
 
@@ -182,7 +186,7 @@ long read(int fd, void* buf, unsigned long count) {
   }
   r = vfs_read(file, buf, count);
 end:
-  FS_INFO("read(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  FS_WARN_IF(r < 0, "read(%d, %p, %ld) = %d\n", fd, buf, count, r);
   return r;
 }
 
@@ -201,7 +205,7 @@ SYSCALL_DEFINE2(mkdir, const char*, pathname, unsigned, mode) {
 
 int mkdir(const char* pathname) {
   int r = vfs_mkdir(pathname);
-  FS_INFO("mkdir('%s', 0o%o) = %d\n", pathname, mode, r);
+  FS_WARN_IF(r < 0, "mkdir('%s') = %d\n", pathname, r);
   return r;
 }
 
@@ -228,7 +232,7 @@ SYSCALL_DEFINE5(mount, const char*, src, const char*, target, const char*,
 
 int mount(const char* target, const char* filesystem) {
   int r = vfs_mount(target, filesystem);
-  FS_INFO("mount('%s', '%s') = %d\n", target, filesystem, r);
+  FS_WARN_IF(r < 0, "mount('%s', '%s') = %d\n", target, filesystem, r);
   return r;
 }
 
@@ -270,7 +274,7 @@ int lseek64(int fd, long offset, seek_type whence) {
   }
   r = vfs_lseek64(file, offset, whence);
 end:
-  FS_INFO("lseek64(%d, 0x%lx, %d) = %d\n", fd, offset, whence, r);
+  FS_WARN_IF(r < 0, "lseek64(%d, 0x%lx, %d) = %d\n", fd, offset, whence, r);
   return r;
 }
 
@@ -291,7 +295,7 @@ int ioctl(int fd, unsigned long request, void* arg) {
   }
   r = vfs_ioctl(file, request, arg);
 end:
-  FS_INFO("ioctl(%d, %lu, %p) = %d\n", fd, request, arg, r);
+  FS_WARN_IF(r < 0, "ioctl(%d, %lu, %p) = %d\n", fd, request, arg, r);
   return r;
 }
 
