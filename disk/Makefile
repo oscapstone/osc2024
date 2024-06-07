@@ -8,8 +8,9 @@ IMGS 		= $(shell find . -name '*.img')
 INITFSCPIO 	= initramfs.cpio
 DEVICETREE 	= bcm2710-rpi-3-b-plus.dtb
 FAT32_TEST 	= FAT_R.TXT
+IMAGES 		= nycuos.img sfn_nctuos.img
 
-.PHONY: all files upload eject format download dtb
+.PHONY: all files upload eject format download dtb images
 
 all: files
 
@@ -61,3 +62,11 @@ $(DEVICETREE):
 
 FAT_R.TXT:
 	wget https://nycu-caslab.github.io/OSC2024/_downloads/10fbdc3e04b471849e714edcdcf4ce26/FAT_R.TXT
+
+images: $(IMAGES)
+
+nycuos.img:
+	wget https://github.com/nycu-caslab/OSC2024/raw/main/supplement/nycuos.img
+
+sfn_nctuos.img:
+	wget https://github.com/GrassLab/osdi/raw/master/supplement/sfn_nctuos.img
