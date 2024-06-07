@@ -46,7 +46,9 @@ void check_signal(trapframe_t *tpf)
 
 void run_signal(trapframe_t *tpf, int signal)
 {
+    lock();
     curr_thread->signal.curr_handler = curr_thread->signal.handler_table[signal];
+    unlock();
 
     // run default handler in kernel
     if (curr_thread->signal.curr_handler == signal_default_handler)
@@ -56,11 +58,16 @@ void run_signal(trapframe_t *tpf, int signal)
     }
 
     // run registered handler in userspace
+    lock();
     curr_thread->signal.stack_base = kmalloc(USTACK_SIZE);
-    asm("msr elr_el1, %0\n\t"
+    asm("msr tpidr_el1, %0\n\t" /* Hold the \"kernel(el1)\" thread structure information */
+        "msr elr_el1, %0\n\t"
         "msr sp_el0, %1\n\t"
         "msr spsr_el1, %2\n\t"
-        "eret\n\t" ::"r"(signal_handler_wrapper),
+        "eret\n\t" 
+        :
+        :"r"(&curr_thread->context),
+        "r"(signal_handler_wrapper),
         "r"(curr_thread->signal.stack_base + USTACK_SIZE),
         "r"(tpf->spsr_el1));
 
@@ -68,6 +75,7 @@ void run_signal(trapframe_t *tpf, int signal)
 
 void signal_handler_wrapper()
 {
+    unlock();
     (curr_thread->signal.curr_handler)();
     // system call sigreturn
     asm("mov x8,10\n\t"

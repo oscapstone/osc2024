@@ -33,6 +33,7 @@ void unlock()
 }
 
 void el1h_irq_router(trapframe_t *tpf){
+    lock();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -43,6 +44,7 @@ void el1h_irq_router(trapframe_t *tpf){
         {
             *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
             //uart_sendline("\t");
             //(async input) Output on terminal will enter this block.
@@ -52,6 +54,7 @@ void el1h_irq_router(trapframe_t *tpf){
         {
             *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive();
             //exercise 3 -> 5
             //uart_sendline(" ");
@@ -62,6 +65,7 @@ void el1h_irq_router(trapframe_t *tpf){
     {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock();
         irqtask_run_preemptive();
         core_timer_enable();
         //at least two threads running -> schedule for any timer irq
@@ -147,6 +151,7 @@ void el0_sync_router(trapframe_t *tpf){
 //     }
 // }
 void el0_irq_64_router(trapframe_t *tpf){
+    lock();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -156,12 +161,14 @@ void el0_irq_64_router(trapframe_t *tpf){
         {
             *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive();
         }
         else if (*AUX_MU_IIR_REG & (0b10 << 1))
         {
             *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
+            unlock();
             irqtask_run_preemptive();
         }
     }
@@ -169,6 +176,7 @@ void el0_irq_64_router(trapframe_t *tpf){
     {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
+        unlock();
         irqtask_run_preemptive();
         core_timer_enable();
 
@@ -219,7 +227,7 @@ void irqtask_add(void *task_function,unsigned long long priority){
     struct list_head *curr;
 
     // mask the device's interrupt line
-    el1_interrupt_disable();
+    lock();
     // enqueue the processing task to the event queue with sorting.
     list_for_each(curr, task_list)
     {
@@ -236,20 +244,20 @@ void irqtask_add(void *task_function,unsigned long long priority){
         list_add_tail(&the_task->listhead, task_list);
     }
     // unmask the interrupt line
-    el1_interrupt_enable();
+    unlock();
 }
 
 void irqtask_run_preemptive(){
-    el1_interrupt_enable();
+    // el1_interrupt_enable();
     while (!list_empty(task_list))
     {
         // critical section protects new coming node
-        el1_interrupt_disable();
+        lock();
         irqtask_t *the_task = (irqtask_t *)task_list->next;
         // Run new task (early return) if its priority is lower than the scheduled task.
         if (curr_task_priority <= the_task->priority)
         {
-            el1_interrupt_enable();
+            unlock();
             break;
         }
         // get the scheduled task and run it.
@@ -257,12 +265,12 @@ void irqtask_run_preemptive(){
         int prev_task_priority = curr_task_priority;
         curr_task_priority = the_task->priority;
 
-        el1_interrupt_enable();
+        unlock();
         irqtask_run(the_task);
-        el1_interrupt_disable();
+        lock();
 
         curr_task_priority = prev_task_priority;
-        el1_interrupt_enable();
+        unlock();
         // free(the_task);
     }
 }

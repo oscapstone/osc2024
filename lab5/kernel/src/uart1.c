@@ -111,10 +111,10 @@ char uart_async_getc() {
     *AUX_MU_IER_REG |=1; // enable read interrupt
     // do while if receive buffer empty
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx) *AUX_MU_IER_REG |=1; // enable read interrupt
-    el1_interrupt_disable();
+    lock();
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
     if (uart_rx_buffer_ridx >= VSPRINT_MAX_BUF_SIZE) uart_rx_buffer_ridx = 0;
-    el1_interrupt_enable();
+    unlock();
     return r;
 }
 
@@ -124,10 +124,10 @@ char uart_async_getc() {
 void uart_async_putc(char c) {
     // if buffer full, wait for uart_w_irq_handler
     while( (uart_tx_buffer_widx + 1) % VSPRINT_MAX_BUF_SIZE == uart_tx_buffer_ridx )  *AUX_MU_IER_REG |=2;  // enable write interrupt
-    el1_interrupt_disable();
+    lock();
     uart_tx_buffer[uart_tx_buffer_widx++] = c;
     if(uart_tx_buffer_widx >= VSPRINT_MAX_BUF_SIZE) uart_tx_buffer_widx=0;  // cycle pointer
-    el1_interrupt_enable();
+    unlock();
     *AUX_MU_IER_REG |=2;  // enable write interrupt
 }
 
