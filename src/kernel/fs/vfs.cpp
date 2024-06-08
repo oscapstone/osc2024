@@ -91,7 +91,7 @@ int open(const char* pathname, fcntl flags) {
     file->close(file);
 
 end:
-  FS_WARN_IF(r < 0, "open('%s', 0o%o) -> %d\n", pathname, flags, r);
+  FS_WARN_IF(r < 0, "open('%s', 0o%o) -> %d\n", pathname, Underlying(flags), r);
   return r;
 }
 
@@ -202,9 +202,12 @@ int vfs_read(FilePtr file, void* buf, size_t len) {
   return file->read(buf, len);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 SYSCALL_DEFINE2(mkdir, const char*, pathname, unsigned, mode) {
   return mkdir(pathname);
 }
+#pragma GCC diagnostic pop
 
 int mkdir(const char* pathname) {
   int r = vfs_mkdir(pathname);
@@ -228,10 +231,13 @@ end:
   return r;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 SYSCALL_DEFINE5(mount, const char*, src, const char*, target, const char*,
                 filesystem, unsigned long, flags, const void*, data) {
   return mount(target, filesystem);
 }
+#pragma GCC diagnostic pop
 
 int mount(const char* target, const char* filesystem) {
   int r = vfs_mount(target, filesystem);
