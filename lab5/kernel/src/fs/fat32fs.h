@@ -57,7 +57,7 @@ typedef struct
 
 typedef struct 
 {
-    U32 block_id;
+    U32 cluster_id;
     U32 num_block;          // in block
     BOOL is_dirty;          // whether this node has been modify(write)
     BOOL is_loaded;         // whether this node has been content loaded.

@@ -259,8 +259,9 @@ void shell() {
 				continue;
 			}
 			printf("file size: %d bytes\n", target->vnode->content_size);
-			for(U32 i = 0; i < target->vnode->content_size; i++) {
-				printf("%c", ((char*)target->vnode->content)[i]);
+			char c_buf;
+			while (vfs_read(target, &c_buf, 1) != -1) {
+				printf("%c", c_buf);
 			}
 			printf("\n");
 			vfs_close(target);

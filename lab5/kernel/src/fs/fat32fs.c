@@ -75,7 +75,7 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
     // read the first partition boot sector
     PARTITION_ENTRY* part0 = &mbr.pe[0];
     printf("Partition 0 info addr: %p\n", part0);
-    U32 boot_sector_index = utils_read_unaligned_u32((void*)&part0->start_sector);  // read this because of arm trash memory load store need to be 4 byte align
+    U32 boot_sector_index = utils_read_unaligned_u32((void*)&part0->start_sector);  // read this because of trash arm memory load store need to be 4 byte align
     NS_DPRINT("[FS][TRACE] Partition 0 boot sector index: %d\n", boot_sector_index);
     // boring, can check the fs_flags it is FAT32 or not
     mount->read(boot_sector_index * MBR_DEFAULT_SECTOR_SIZE, (void*)&internalData->bpb, sizeof(FAT32_BPB));
@@ -85,18 +85,18 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
         return -1;
     }
 
+    internalData->sector_per_fat = utils_read_unaligned_u32(&internalData->bpb.sectors_per_fat32);
+    internalData->bytes_per_sector = utils_read_unaligned_u16(&internalData->bpb.bytes_per_sector);
     // 
     internalData->fat_start_sector = boot_sector_index + internalData->bpb.reserved_sectors;
-    internalData->data_start_sector = internalData->fat_start_sector + internalData->bpb.num_fat * internalData->bpb.sectors_per_fat32 - 2/* I have no idea why it should subtract by 2 */;
+    internalData->data_start_sector = internalData->fat_start_sector + internalData->bpb.num_fat * internalData->sector_per_fat - 2/* I have no idea why it should subtract by 2 */;
 
     NS_DPRINT("[FS][TRACE] FAT table start sector: %d\n", internalData->fat_start_sector);
     NS_DPRINT("[FS][TRACE] Data start sector: %d\n", internalData->data_start_sector);
 
     // copy the FAT table to memory
-    internalData->sector_per_fat = utils_read_unaligned_u32(&internalData->bpb.sectors_per_fat32);
     U32 num_sector_fat_table = internalData->bpb.num_fat * internalData->sector_per_fat;
 
-    internalData->bytes_per_sector = utils_read_unaligned_u16(&internalData->bpb.bytes_per_sector);
     internalData->fat_table = kzalloc(num_sector_fat_table * internalData->bytes_per_sector);
     mount->read(internalData->fat_start_sector * MBR_DEFAULT_SECTOR_SIZE, internalData->fat_table, num_sector_fat_table * internalData->bytes_per_sector);
     NS_DPRINT("[FS] FAT32fs: memory FAT table addr: %p\n",  internalData->fat_table);
@@ -117,15 +117,14 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
 
     mount->root->internal = root_internal;
 
-    root_internal->block_id = internalData->bpb.root_cluster;      // BPB indicate the root first cluster (block)
-    NS_DPRINT("Root start cluster id: %d\n", root_internal->block_id);
+    root_internal->cluster_id = internalData->bpb.root_cluster;      // BPB indicate the root first cluster (block)
+    NS_DPRINT("Root start cluster id: %d\n", root_internal->cluster_id);
 
     // initialize the root node
     if (init_vnode(mount->root) == -1) {
         printf("[FS][ERROR] FAT32fs: Failed to initialize the root node.\n");
         return -1;
     }
-    parse_dir_entries(mount->root);
 
     // make sure that root is not a regular file in vfs
     mount->root->mode &= ~(S_IFREG);
@@ -142,7 +141,7 @@ static U32 get_chain_len(FS_VNODE* vnode) {
     FS_MOUNT* mount = vnode->mount;
     FAT32_FS_INTERNAL* mount_internal = (FAT32_FS_INTERNAL*)mount->internal;
 
-    U32 index = ((FAT32_VNODE_INTERNAL*)vnode->internal)->block_id;
+    U32 index = ((FAT32_VNODE_INTERNAL*)vnode->internal)->cluster_id;
 
     U32 len = 1;
 
@@ -174,9 +173,9 @@ static int init_vnode(FS_VNODE* vnode) {
 
     // get the length of the chain (measure buffer to read)
     U32 num_blocks = get_chain_len(vnode);
-    U32 size = num_blocks * utils_read_unaligned_u16(&mount_internal->bytes_per_sector);
+    U32 size = num_blocks * mount_internal->bytes_per_sector;
     void* buf = kzalloc(size);
-    U32 index = node_internal->block_id;
+    U32 index = node_internal->cluster_id;
     NS_DPRINT("[FS] FAT32fs: init_vnode(): start index: %d\n", index);
     for (U32 i = 0; i < num_blocks; i++) {
         vnode->mount->read((mount_internal->data_start_sector + index) * mount_internal->bytes_per_sector, ((char*)buf + (i * mount_internal->bytes_per_sector)), mount_internal->bytes_per_sector);
@@ -188,9 +187,13 @@ static int init_vnode(FS_VNODE* vnode) {
         kfree(vnode->content);
     }
     vnode->content = buf;
-    vnode->content_size = size;
     node_internal->is_dirty = FALSE;
     node_internal->is_loaded = TRUE;
+
+    if (S_ISDIR(vnode->mode)) {
+        vnode->content_size = size;
+        parse_dir_entries(vnode);
+    }
 
     return 0;
 }
@@ -204,34 +207,68 @@ FS_FILE_SYSTEM* fat32fs_create() {
 }
 
 static int open(FS_VNODE* node, FS_FILE** target) {
-    if (init_vnode(node) == -1) {
-        return -1;
+    // load the node when open
+    FAT32_VNODE_INTERNAL* internal = (FAT32_VNODE_INTERNAL*) node->internal;
+    if (!internal->is_loaded) {
+        if (init_vnode(node) == -1) {
+            return -1;
+        }
     }
     return 0;
 }
 
 static int close(FS_FILE* file) {
+    // lab require only when sync() called. write the change back to external storage.
     return 0;
 }
 
 static int read(FS_FILE* file, void* buf, size_t len) {
     FS_VNODE* node = file->vnode;
+
+    FAT32_VNODE_INTERNAL* internal = (FAT32_VNODE_INTERNAL*)node->internal;
+
+    if (!internal->is_loaded) {
+        NS_DPRINT("[FS][ERROR] FAT32fs: read() wired, reading a file while not load yet.\n");
+        return -1;
+    }
+
     if (!S_ISREG(node->mode)) {
+        NS_DPRINT("[FS][ERROR] FAT32fs: read() file is not regular.\n");
         return -1;
     }
     len = (len > node->content_size - file->pos) ? node->content_size - file->pos : len;
     if (len == 0) {
+        NS_DPRINT("[FS][ERROR] FAT32fs: read(): read length is 0.\n");
         return -1;
     }
     // TODO
     memcpy((void*) ((UPTR)file->vnode->content + file->pos), buf, len);
     file->pos += len;
+    //NS_DPRINT("[FS] FAT32fs: read() read %d bytes\n", len);
     return len;
 }
 
 static int write(FS_FILE *file, const void *buf, size_t len) {
-    // TODO
-    return -1;
+    FS_VNODE* vnode = file->vnode;
+    if (!S_ISREG(vnode->mode)) {
+        NS_DPRINT("[FS] FAT32fs: write(): not a regular file.\n");
+        return -1;
+    }
+    if (vnode->content_size <= file->pos + len) {
+        size_t new_size = file->pos + len + 1;
+        void* new_content = kzalloc(new_size);
+        if (vnode->content) {
+            memcpy(vnode->content, new_content, vnode->content_size);
+            kfree(vnode->content);
+        }
+        vnode->content = new_content;
+        vnode->content_size = new_size;
+    }
+
+    memcpy(buf, (void*)((char*) vnode->content + file->pos), len);
+    file->pos += len;
+
+    return len;
 }
 
 static long lseek64(FS_FILE *file, long offset, int whence) {
@@ -257,11 +294,6 @@ static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_n
     if (!S_ISDIR(dir_node->mode)) {
         printf("[FS][ERROR] FAT32fs: lookup(): directory node is not a directory. name: %s\n", dir_node->name);
         return -1;
-    }
-
-    // no children, try to parse it
-    if (!dir_node->child_num) {
-        parse_dir_entries(dir_node);
     }
 
     FAT32_VNODE_INTERNAL* node_internal = (FAT32_VNODE_INTERNAL*)dir_node->internal;
@@ -336,6 +368,7 @@ static int parse_dir_entries(FS_VNODE* node) {
 
     FAT32_VNODE_INTERNAL* node_internal = (FAT32_VNODE_INTERNAL*)node->internal;
 
+    // entry is 32 bytes it is ok don't using unalign
     FAT32_DIR_ENTRY* entry = (FAT32_DIR_ENTRY*)node->content;
     UPTR end_ptr = (UPTR)node->content + node->content_size;
     while ((UPTR) entry < end_ptr) {
@@ -358,12 +391,13 @@ static int parse_dir_entries(FS_VNODE* node) {
         // internal modification
         new_node->internal = kzalloc(sizeof(FAT32_VNODE_INTERNAL));
         FAT32_VNODE_INTERNAL* new_internal = (FAT32_VNODE_INTERNAL*) new_node->internal;
-        new_internal->block_id = (utils_read_unaligned_u16(&entry->high_block_index) << 16) + utils_read_unaligned_u16(&entry->low_block_index);
-        NS_DPRINT("[FS] FAT32fs: block id: %d\n", new_internal->block_id);
+        new_internal->cluster_id = (utils_read_unaligned_u16(&entry->high_block_index) << 16) + utils_read_unaligned_u16(&entry->low_block_index);
+        NS_DPRINT("[FS] FAT32fs: block id: %d\n", new_internal->cluster_id);
         new_internal->is_dirty = FALSE;
         new_internal->is_loaded = FALSE;    // not loaded to faster the searching when lookup
         
         new_node->content_size = entry->file_size;
+        NS_DPRINT("[FS] FAT32fs: file size: %d\n", new_node->content_size);
 
         // common modification
         new_node->mount = node->mount;

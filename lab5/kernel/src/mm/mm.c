@@ -29,6 +29,7 @@ MEMORY_MANAGER mem_manager;
 
 #define MEM_STATIC_MALLOC_SIZE      0x2000000
 
+UPTR smalloc_start_ptr;
 UPTR smalloc_ptr;
 UPTR smalloc_end_ptr;
 
@@ -60,7 +61,8 @@ void get_reserve_memory_addr(int token, const char* name, const void* data, U32 
 */
 void mm_init() {
     // initialize the static malloc
-    smalloc_ptr = (((UPTR)&__kernel_end__ & ~(0xffffff)) + 0x1000000);
+    smalloc_start_ptr = (((UPTR)&__kernel_end__ & ~(0xffffff)) + 0x1000000);
+    smalloc_ptr = smalloc_start_ptr;
     smalloc_end_ptr = ((UPTR)smalloc_ptr + MEM_STATIC_MALLOC_SIZE);
 
     // use the example base offset (or use the kernel end ptr)
@@ -92,6 +94,8 @@ void mm_init() {
     mem_memory_reserve(     0x1000, 0x3000);       // identity MMU mapMEM_KERNEL_STACK_BASE
     mem_memory_reserve(MEM_KERNEL_STACK_BASE - TASK_STACK_SIZE, MEM_KERNEL_STACK_BASE);             // 0x7b000 ~ 0x80000
     mem_memory_reserve((UPTR)&__kernel_start__, (UPTR)&__kernel_end__);                             // kernel code
+    mem_memory_reserve(smalloc_start_ptr, smalloc_end_ptr);
+
 
     // device tree
     struct fdt_header* header = (struct fdt_header*)_dtb_ptr;
@@ -181,8 +185,8 @@ void* mem_chunk_alloc(U32 size) {
     used_frame->flag |= MEM_FRAME_FLAG_CHUNK;
     used_frame->pool_order = fit_order;
 
-    NS_DPRINT("[MEMORY][TRACE] New chunk allocated\n");
-    NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", new_chunk->frame_index, 0);
+    //NS_DPRINT("[MEMORY][TRACE] New chunk allocated\n");
+    //NS_DPRINT("[MEMORY][TRACE] chunk slot allocated. index: %d, offset: %d\n", new_chunk->frame_index, 0);
 
     return (void*)mem_idx2addr(new_chunk->frame_index);
 }
@@ -379,9 +383,7 @@ U32 mem_get_free(U8 order) {
 
     // remove from the free list
     current_free_info->info[--current_free_info->size] = MEM_FREE_INFO_UNUSED;
-#ifdef NS_DEBUG
-    printf("[MEMORY][DEBUG] Found buddy, order: %d Start frame: %d\n", order, start_frame);
-#endif
+    // NS_DPRINT("[MEMORY][DEBUG] Found buddy, order: %d Start frame: %d\n", order, start_frame);
     return start_frame;
     /** Old method
     for (U32 i = 0; i < current_free_info->space; i++) {
@@ -473,13 +475,13 @@ int mem_put_free(U32 frame_index, U8 order) {
  * 
 */
 U32 mem_buddy_alloc(U8 order) {
-    NS_DPRINT("[MEMORY][TRACE] allocating buddy for order: %d\n", order);
+    //NS_DPRINT("[MEMORY][TRACE] allocating buddy for order: %d\n", order);
     // search for current free list
     U32 frame_index = mem_get_free(order);
 
     // found the frame index for the current order
     if (frame_index != MEM_FREE_INFO_UNUSED) {
-        NS_DPRINT("[MEMORY][TRACE] No need to find larger block. index: %d, order: %d\n", frame_index, order);
+        //NS_DPRINT("[MEMORY][TRACE] No need to find larger block. index: %d, order: %d\n", frame_index, order);
         
         // change the order of the current start frame
         mem_manager.frames[frame_index].flag |= MEM_FRAME_FLAG_USED;
@@ -512,7 +514,7 @@ U32 mem_buddy_alloc(U8 order) {
         printf("[MEMORY][ERROR] Failed to allocate buddy, out of memory\n");
         return MEM_FRAME_NOT_FOUND;
     }
-    NS_DPRINT("[MEMORY][TRACE] Allocating larger block. index: %d, order: %d\n", frame_index, search_order);
+    //NS_DPRINT("[MEMORY][TRACE] Allocating larger block. index: %d, order: %d\n", frame_index, search_order);
 
     // split the founded buddy
     U8 split_order = search_order;
@@ -520,7 +522,7 @@ U32 mem_buddy_alloc(U8 order) {
     while (split_order > order) {
         U32 bottom_index = frame_index + (1 << (split_order - 1));
         mem_put_free(bottom_index, split_order - 1);
-        NS_DPRINT("[MEMORY][TRACE] Put redundant memory block back to free list. index: %d, order: %d\n", bottom_index, split_order - 1);
+        //NS_DPRINT("[MEMORY][TRACE] Put redundant memory block back to free list. index: %d, order: %d\n", bottom_index, split_order - 1);
         split_order--;
     }
 
@@ -548,7 +550,7 @@ BOOL mem_is_first_buddy(U32 frame_index, U8 order) {
 }
 
 void mem_buddy_free(U32 frame_index) {
-    NS_DPRINT("[MEMORY][TRACE] Try to free memory. index: %d, order: %d\n", frame_index, mem_manager.frames[frame_index].order);
+    //NS_DPRINT("[MEMORY][TRACE] Try to free memory. index: %d, order: %d\n", frame_index, mem_manager.frames[frame_index].order);
 
     // check if it is free space
     if (!(mem_manager.frames[frame_index].flag & MEM_FRAME_FLAG_USED)) {
@@ -601,8 +603,8 @@ void mem_buddy_free(U32 frame_index) {
             break;
         }
         // buddy is free, merge
-        NS_DPRINT("[MEMORY][TRACE] buddy partner is free and match start merging\n");
-        NS_DPRINT("[MEMORY][TRACE] buddy partner index: %d, order: %d\n", other_buddy, check_order - 1);
+        //NS_DPRINT("[MEMORY][TRACE] buddy partner is free and match start merging\n");
+        //NS_DPRINT("[MEMORY][TRACE] buddy partner index: %d, order: %d\n", other_buddy, check_order - 1);
 
         // remove the buddy partner from free list
         
@@ -661,7 +663,7 @@ void mem_buddy_free(U32 frame_index) {
         mem_manager.frames[frame_index + i].order = order;
         mem_manager.frames[frame_index + i].ref_count = 0;
     }
-    NS_DPRINT("[MEMORY][TRACE] buddy free. index:%d, order: %d\n", frame_index, order);
+    //NS_DPRINT("[MEMORY][TRACE] buddy free. index:%d, order: %d\n", frame_index, order);
 
 }
 
@@ -757,7 +759,7 @@ void mem_reference(UPTR p_addr) {
     for (U64 i = 1; i < number_of_frames_in_block; i++) {
         mem_manager.frames[frame_index + i].ref_count++;
     }
-    NS_DPRINT("[MEMORY][TRACE] referencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
+    //NS_DPRINT("[MEMORY][TRACE] referencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
 }
 /**
  * Dereference a memory in buddy system
@@ -779,7 +781,7 @@ void mem_dereference(UPTR p_addr) {
         printf("[MEMORY][ERROR] this frame is not the first frame in block. cannot dereference. index: %d\n", frame_index);
         return;
     }
-    NS_DPRINT("[MEMORY][TRACE] dereferencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
+    //NS_DPRINT("[MEMORY][TRACE] dereferencing memory frame. index: %d, ref_count: %d\n", frame_index, mem_manager.frames[frame_index].ref_count);
     U8 ref_count = mem_manager.frames[frame_index].ref_count;
     if (ref_count == 1) {           // there only one reference, free the block
         mem_buddy_free(frame_index);

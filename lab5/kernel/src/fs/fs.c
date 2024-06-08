@@ -404,3 +404,12 @@ FS_VNODE *vnode_create(const char *name, U32 flags)
     return vnode;
 }
 
+BOOL fs_has_child(FS_VNODE* node, const char* child_name) {
+    
+    FS_VNODE* target;
+    if (node->v_ops->lookup(node, &target, child_name) == 0) {
+        return TRUE;
+    }
+
+    return FALSE;
+}

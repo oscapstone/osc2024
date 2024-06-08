@@ -129,3 +129,5 @@ long vfs_lseek64(FS_FILE* file, long offset, int whence);
 
 int vfs_lookup(FS_VNODE* cwd, const char* pathname, FS_VNODE** target);
 int vfs_mkdir(FS_VNODE* cwd, const char* pathname);
+
+BOOL fs_has_child(FS_VNODE* node, const char* child_name);
