@@ -141,15 +141,15 @@ void run_signal(int signal, uint64_t sp_el0)
 	void (*signal_handler)() = get_signal_handler_frome_thread(curr_thread, signal);
 	DEBUG("signal_handler: 0x%x\n", signal_handler);
 	DEBUG("sp_el0: 0x%x\n", sp_el0);
-	JUMP_TO_USER_SPACE(USER_SIGNAL_WRAPPER_VA + (uint64_t)signal_handler_wrapper % PAGE_FRAME_SIZE, signal_handler, sp_el0, NULL);
+	JUMP_TO_USER_SPACE(USER_SIGNAL_WRAPPER_VA, signal_handler, sp_el0, NULL);
 }
 
 // void __attribute__((aligned(PAGE_FRAME_SIZE))) signal_handler_wrapper(char *dest)
 void signal_handler_wrapper(char *dest)
 {
-	CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
-	((void (*)(void))dest)();
-	// ((void (*)(char *))USER_RUN_USER_TASK_WRAPPER_VA)(dest);
+	// CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
+	// ((void (*)(void))dest)();
+	((void (*)(char *))USER_RUN_USER_TASK_WRAPPER_VA)(dest);
 	// system call sigreturn
 	CALL_SYSCALL(SYSCALL_SIGNAL_RETURN);
 }

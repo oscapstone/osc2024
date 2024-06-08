@@ -513,7 +513,8 @@ int page_free(void *ptr)
 {
     kernel_lock_interrupt();
     frame_t *curr = virt_addr_to_frame(ptr);
-    if(!list_empty((list_head_t *)curr)){
+    if (!list_empty((list_head_t *)curr))
+    {
         ERROR("page_free: frame is already free, address: 0x%x\n", ptr);
         kernel_unlock_interrupt();
         return 0;
@@ -544,19 +545,26 @@ int page_free(void *ptr)
     return 0;
 }
 
-void get_page(uint64_t phys_ptr){
-    void *kernel_virt_ptr = (void *)PHYS_TO_KERNEL_VIRT(phys_ptr);
+void get_page(uint64_t kernel_virt_ptr)
+{
     frame_t *curr = virt_addr_to_frame((kernel_virt_ptr));
     curr->refcount++;
+    DEBUG("get_page: 0x%x refcount: %d\n", kernel_virt_ptr, curr->refcount);
 }
 
-void put_page(uint64_t phys_ptr){
-    void *kernel_virt_ptr = (void *)PHYS_TO_KERNEL_VIRT(phys_ptr);
+void put_page(uint64_t kernel_virt_ptr)
+{
     frame_t *curr = virt_addr_to_frame(kernel_virt_ptr);
     curr->refcount--;
-    if(curr->refcount == 0){
+    DEBUG("put_page: 0x%x refcount: %d\n", kernel_virt_ptr, curr->refcount);
+    if (curr->refcount == 0)
+    {
         DEBUG("put_page: free page: 0x%x\n", kernel_virt_ptr);
         page_free(kernel_virt_ptr);
+    }
+    else if (curr->refcount < 0)
+    {
+        ERROR("put_page: refcount < 0, address: 0x%x\n", kernel_virt_ptr);
     }
 }
 

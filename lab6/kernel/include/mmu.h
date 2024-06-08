@@ -49,6 +49,7 @@
 #define VM_EXEC 0x00000004
 #define VM_SHARED 0x00000008
 #define VM_GROWSDOWN 0x00000100
+#define VM_PFNMAP 0x00000400
 
 // 假設頁表的基本條件
 #define PAGE_OFFSET_BITS 12
@@ -84,18 +85,6 @@
 #include "exception.h"
 
 /**
- * @brief memory area
- *
- * @param start: start address (included)
- * @param end: end address (excluded)
- */
-typedef struct area
-{
-    size_t start;
-    size_t end;
-} area_t;
-
-/**
  * @brief Structure representing a virtual memory area (VMA).
  *
  * This structure defines a virtual memory area within a process's address space,
@@ -103,23 +92,21 @@ typedef struct area
  * and other properties.
  *
  * @param listhead List head for linking this VMA into a list of VMAs.
- * @param virt_addr_area The start and end addresses of the VMA in the process's virtual address space.
- * @param phys_addr_area The start and end addresses of the VMA in physical memory.
+ * @param start The start address of the VMA in virtual memory. (included)
+ * @param end The end address of the VMA in virtual memory. (not included)
  * @param vm_page_prot Page protection attributes for the VMA (e.g., read, write, execute permissions).
  * @param vm_flags Flags indicating various properties and permissions of the VMA.
- * @param need_to_free Indicates whether the physical pages associated with this VMA should be freed when the VMA is freed.
  * @param vm_file Pointer to the file associated with this VMA, if any.
  * @param name Name of the VMA for identification purposes.
  */
 typedef struct vm_area_struct
 {
     list_head_t listhead;
-    area_t virt_addr_area;
-    area_t phys_addr_area;
+    size_t start;
+    size_t end;
     uint64_t vm_page_prot;
     uint64_t vm_flags;
-    uint8_t need_to_free;
-    void *vm_file;
+    char *vm_file;
     char *name;
 } vm_area_struct_t;
 
@@ -156,7 +143,7 @@ void *set_2M_kernel_mmu(void *x0);
 int set_thread_default_mmu(thread_t *t);
 vm_area_struct_t *find_vma(thread_t *t, size_t va);
 void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag);
-void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free);
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, char *vm_file);
 void mmu_free_all_vma(thread_t *t);
 void mmu_free_vma(vm_area_struct_t *vma);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);

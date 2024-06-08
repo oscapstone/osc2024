@@ -47,29 +47,25 @@ static inline is_addr_not_align_to_page_size(size_t addr)
 
 int set_thread_default_mmu(thread_t *t)
 {
-    mmu_add_vma(t, "Code", USER_CODE_BASE, t->datasize, (size_t)KERNEL_VIRT_TO_PHYS(t->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
-    mmu_add_vma(t, "User stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(t->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
-    mmu_add_vma(t, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
+    mmu_add_vma(t, "Code", USER_CODE_BASE, t->datasize, (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), t->code);
+    mmu_add_vma(t, "User stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), NULL);
+    mmu_add_vma(t, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_PFNMAP), PERIPHERAL_START);
     mmu_add_vma(t,
-                "Signal wrapper",
-                USER_SIGNAL_WRAPPER_VA,
-                0x2000,
-                ALIGN_DOWN(
-                    KERNEL_VIRT_TO_PHYS(signal_handler_wrapper),
-                    PAGE_FRAME_SIZE),
-                (PROT_READ | PROT_EXEC),
-                (VM_EXEC | VM_READ),
-                0);
+                "Signal wrapper",                  // name
+                USER_SIGNAL_WRAPPER_VA,            // virtual address
+                0x2000,                            // size
+                (PROT_READ | PROT_EXEC),           // page protection
+                (VM_EXEC | VM_READ),               // vma flags
+                (uint64_t)signal_handler_wrapper); // file
+                                                   // ALIGN_DOWN((uint64_t)signal_handler_wrapper, PAGE_FRAME_SIZE)); // file
     mmu_add_vma(t,
-                "Run user task wrapper",
-                USER_RUN_USER_TASK_WRAPPER_VA,
-                0x2000,
-                ALIGN_DOWN(
-                    KERNEL_VIRT_TO_PHYS(run_user_task_wrapper),
-                    PAGE_FRAME_SIZE),
-                (PROT_READ | PROT_EXEC),
-                (VM_EXEC | VM_READ),
-                0);
+                "Run user task wrapper",          // name
+                USER_RUN_USER_TASK_WRAPPER_VA,    // virtual address
+                0x2000,                           // size
+                (PROT_READ | PROT_EXEC),          // page protection
+                (VM_EXEC | VM_READ),              // vma flags
+                (uint64_t)run_user_task_wrapper); // file
+                                                  // ALIGN_DOWN((uint64_t)run_user_task_wrapper, PAGE_FRAME_SIZE)); // file
     return 0;
 }
 
@@ -124,14 +120,14 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
  * @param pa Physical address corresponding to the start of the VMA.
  * @param vm_page_prot Page protection attributes for the VMA.
  * @param vm_flags Flags indicating the properties and permissions of the VMA.
- * @param need_to_free Flag indicating whether the physical page needs to be freed.
+ * @param vm_file Pointer to the file associated with this VMA, if any.
  */
-void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free)
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, char *vm_file)
 {
-    if (is_addr_not_align_to_page_size(va) || is_addr_not_align_to_page_size(pa))
+    if (is_addr_not_align_to_page_size(va))
     {
         ERROR("mmu_add_vma: Address is not aligned to 4KB.\r\n");
-        ERROR("VA: 0x%x, PA: 0x%x, Size: 0x%x, vm_page_prot: 0x%x, vm_flags: 0x%x, need_to_free: 0x%x\r\n", va, pa, size, vm_page_prot, vm_flags, need_to_free);
+        ERROR("VA: 0x%x,Size: 0x%x, vm_page_prot: 0x%x, vm_flags: 0x%x\r\n", va, size, vm_page_prot, vm_flags);
         while (1)
             ;
         return;
@@ -139,15 +135,11 @@ void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uin
     vm_area_struct_t *new_area = kmalloc(sizeof(vm_area_struct_t));
     size = ALIGN_UP(size, PAGE_FRAME_SIZE);
     new_area->name = name;
-    new_area->virt_addr_area.start = va;
-    new_area->virt_addr_area.end = va + size;
-    new_area->phys_addr_area.start = pa;
-    new_area->phys_addr_area.end = pa + size;
-    if (need_to_free)
-        get_page(pa);
+    new_area->start = va;
+    new_area->end = va + size;
     new_area->vm_page_prot = vm_page_prot;
     new_area->vm_flags = vm_flags;
-    new_area->need_to_free = need_to_free;
+    new_area->vm_file = vm_file;
     list_add_tail((list_head_t *)new_area, (list_head_t *)(t->vma_list));
 }
 
@@ -168,11 +160,6 @@ void mmu_free_all_vma(thread_t *t)
 
 void mmu_free_vma(vm_area_struct_t *vma)
 {
-    if (vma->need_to_free)
-    {
-        DEBUG("VMA put_page: 0x%x\r\n", vma->phys_addr_area.start);
-        put_page(vma->phys_addr_area.start);
-    }
     list_del_entry((list_head_t *)vma);
     kfree(vma);
 }
@@ -193,11 +180,19 @@ void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level)
             size_t *next_table = (size_t *)(table_virt[i] & ENTRY_ADDR_MASK);
             if (table_virt[i] & PD_TABLE)
             {
-                if (level < LEVEL_PMD) // not the last level
+                if (level < LEVEL_PTE) // not the last level
                     mmu_clean_page_tables(next_table, level + 1);
                 table_virt[i] = 0L;
                 DEBUG("Clean table: 0x%x, level: %d\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table), level);
-                kfree(PHYS_TO_KERNEL_VIRT((char *)next_table));
+                if (level < LEVEL_PTE)
+                {
+                    DEBUG("kfree: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
+                    kfree(PHYS_TO_KERNEL_VIRT((char *)next_table));
+                }
+                else{
+                    DEBUG("put_page: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
+                    put_page((uint64_t)PHYS_TO_KERNEL_VIRT((char *)next_table));
+                }
             }
         }
     }
@@ -211,8 +206,8 @@ inline vm_area_struct_t *find_vma(thread_t *t, size_t va)
     list_for_each(pos, (list_head_t *)(t->vma_list))
     {
         vma = (vm_area_struct_t *)pos;
-        DEBUG("vma: 0x%x, va: 0x%x - 0x%x\r\n", vma, vma->virt_addr_area.start, vma->virt_addr_area.end);
-        if (vma->virt_addr_area.start <= va && vma->virt_addr_area.end > va)
+        DEBUG("vma: 0x%x, va: 0x%x - 0x%x\r\n", vma, vma->start, vma->end);
+        if (vma->start <= va && vma->end > va)
         {
             DEBUG("----------------------------------------------------- end -----------------------------------------------------\r\n", va);
             return vma;
@@ -244,11 +239,10 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
     }
     DEBUG("the_area_ptr: 0x%x\r\n", the_area_ptr);
 
-    size_t addr_offset = (far_el1 - the_area_ptr->virt_addr_area.start);
+    size_t addr_offset = (far_el1 - the_area_ptr->start);
     addr_offset = ALIGN_DOWN(addr_offset, PAGE_FRAME_SIZE);
-    size_t va_to_map = the_area_ptr->virt_addr_area.start + addr_offset;
-    size_t pa_to_map = the_area_ptr->phys_addr_area.start + addr_offset;
-    DEBUG("va_to_map: 0x%x, pa_to_map: 0x%x, prot: 0x%x\r\n", va_to_map, pa_to_map, the_area_ptr->vm_page_prot);
+    size_t va_to_map = the_area_ptr->start + addr_offset;
+    DEBUG("va_to_map: 0x%x, prot: 0x%x\r\n", va_to_map, the_area_ptr->vm_page_prot);
 
     uint8_t flag = 0;
     if (!(the_area_ptr->vm_page_prot & PROT_EXEC))
@@ -284,8 +278,30 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         uint64_t ttbr0_el1_value;
         asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
         DEBUG("pid: %d, curr_thread->context.pgd: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, ttbr0_el1_value);
-
-        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, pa_to_map, flag);
+        void *new_page;
+        if (the_area_ptr->vm_flags & VM_PFNMAP)
+        {
+            DEBUG("PFNMAP: 0x%x\r\n", the_area_ptr->vm_file);
+            new_page = (void *)(the_area_ptr->vm_file + addr_offset);
+        }
+        else
+        {
+            DEBUG("kmalloc: 0x%x\r\n", PAGE_FRAME_SIZE);
+            new_page = kmalloc(PAGE_FRAME_SIZE);
+            get_page(new_page);
+            if (the_area_ptr->vm_file != NULL)
+            {
+                DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", the_area_ptr->vm_file + addr_offset, new_page, PAGE_FRAME_SIZE);
+                memcpy(new_page, the_area_ptr->vm_file + addr_offset, PAGE_FRAME_SIZE);
+            }
+            else
+            {
+                DEBUG("memset: 0x%x, size: 0x%x\r\n", new_page, PAGE_FRAME_SIZE);
+                memset(new_page, 0, PAGE_FRAME_SIZE);
+            }
+        }
+        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, KERNEL_VIRT_TO_PHYS(new_page), flag);
+        // map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, pa_to_map, flag);
         // dump_pagetable(va_to_map, pa_to_map);
         DEBUG("map one page done\r\n");
         kernel_unlock_interrupt();
@@ -302,16 +318,16 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         INFO("[Permission fault]: 0x%x\r\n", far_el1); // far_el1: Fault address register.
                                                        // if (the_area_ptr->vm_page_prot & PROT_WRITE)
                                                        // {
-                                                       //     size_t size = the_area_ptr->virt_addr_area.end - the_area_ptr->virt_addr_area.start;
+                                                       //     size_t size = the_area_ptr->end - the_area_ptr->start;
                                                        //     DEBUG("size: 0x%x, the_area_ptr->phys_addr_area.start: 0x%x\r\n", size, the_area_ptr->phys_addr_area.start);
                                                        //     void *virt_new_pa = kmalloc(size);
                                                        //     DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", PHYS_TO_KERNEL_VIRT(the_area_ptr->phys_addr_area.start), virt_new_pa, size);
                                                        //     memcpy(virt_new_pa, (void *)PHYS_TO_KERNEL_VIRT(the_area_ptr->phys_addr_area.start), size);
-                                                       //     mmu_add_vma(curr_thread, the_area_ptr->name, the_area_ptr->virt_addr_area.start, size, KERNEL_VIRT_TO_PHYS(virt_new_pa), the_area_ptr->vm_page_prot, the_area_ptr->vm_flags, the_area_ptr->need_to_free);
+                                                       //     mmu_add_vma(curr_thread, the_area_ptr->name, the_area_ptr->start, size, KERNEL_VIRT_TO_PHYS(virt_new_pa), the_area_ptr->vm_page_prot, the_area_ptr->vm_flags, the_area_ptr->need_to_free);
                                                        //     for (int i = 0; i < size ; i += PAGE_FRAME_SIZE)
                                                        //     {
-                                                       //         DEBUG("map_one_page: pgd: 0x%x 0x%x -> 0x%x, flag: 0x%x\r\n", PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->virt_addr_area.start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
-                                                       //         map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->virt_addr_area.start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
+                                                       //         DEBUG("map_one_page: pgd: 0x%x 0x%x -> 0x%x, flag: 0x%x\r\n", PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
+                                                       //         map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
                                                        //     }
                                                        //     mmu_free_vma(the_area_ptr);
                                                        //     dump_vma(curr_thread);
@@ -443,11 +459,9 @@ void dump_vma(thread_t *t)
         uart_puts("%s ", vma->name);
         for (int i = 0; i < 23 - len; i++)
             uart_puts(" ");
-        uart_puts("VMA: 0x%x, VA: 0x%x - 0x%x, PA: 0x%x - 0x%x, Need to free: 0x%x, Page prot: (",
+        uart_puts("VMA: 0x%x, VA: 0x%x - 0x%x, Page prot: (",
                   vma,
-                  vma->virt_addr_area.start, vma->virt_addr_area.end,
-                  vma->phys_addr_area.start, vma->phys_addr_area.end,
-                  vma->need_to_free);
+                  vma->start, vma->end);
         if (vma->vm_page_prot & PROT_READ)
             uart_puts("R");
         if (vma->vm_page_prot & PROT_WRITE)

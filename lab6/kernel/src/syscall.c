@@ -241,7 +241,7 @@ int sys_fork(trapframe_t *tpf)
 	// list_for_each(pos, (list_head_t *)(curr_thread->vma_list))
 	// {
 	// 	vm_area_struct_t *vma = (vm_area_struct_t *)pos;
-	// 	mmu_add_vma(child, vma->name, vma->virt_addr_area.start, vma->virt_addr_area.end - vma->virt_addr_area.start, vma->phys_addr_area.start, vma->vm_page_prot, vma->vm_flags, vma->need_to_free);
+	// 	mmu_add_vma(child, vma->name, vma->start, vma->end - vma->start, vma->phys_addr_area.start, vma->vm_page_prot, vma->vm_flags, vma->need_to_free);
 	// }
 	// mmu_reset_page_tables_read_only(parent->context.pgd, child->context.pgd, LEVEL_PGD);
 	// mmu_copy_page_table(child->context.pgd, parent->context.pgd, LEVEL_PGD);
@@ -366,10 +366,10 @@ void *sys_mmap(trapframe_t *tpf, void *addr, size_t len, int prot, int flags, in
 		{
 			vma = (vm_area_struct_t *)pos;
 			// Detect existing vma overlapped
-			if (!(vma->virt_addr_area.start >= (new_addr + len) || vma->virt_addr_area.end <= new_addr))
+			if (!(vma->start >= (new_addr + len) || vma->end <= new_addr))
 			{
 				// 如果有重疊，則更新 new_addr 並重新檢查
-				new_addr = vma->virt_addr_area.end;
+				new_addr = vma->end;
 				found = 0; // 還沒找到合適的位置
 				break;
 			}
@@ -378,7 +378,7 @@ void *sys_mmap(trapframe_t *tpf, void *addr, size_t len, int prot, int flags, in
 
 	// create new valid region, map and set the page attributes (prot)
 	DEBUG("mmap: new_addr: 0x%x, len: 0x%x, prot: 0x%x, flags: 0x%x\r\n", new_addr, len, prot, flags);
-	mmu_add_vma(curr_thread, "anon", new_addr, len, KERNEL_VIRT_TO_PHYS((size_t)kmalloc(len)), prot, flags, 1);
+	mmu_add_vma(curr_thread, "anon", new_addr, len, prot, flags, NULL);
 	INFO_BLOCK({
 		dump_vma(curr_thread);
 	});
@@ -511,7 +511,8 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	DEBUG("VA of run_user_task_wrapper: 0x%x, USER_RUN_USER_TASK_WRAPPER_VA: 0x%x\r\n", run_user_task_wrapper, USER_RUN_USER_TASK_WRAPPER_VA);
 	DEBUG("VA of signal_handler_wrapper: 0x%x, USER_SIGNAL_WRAPPER_VA: 0x%x\r\n", signal_handler_wrapper, USER_SIGNAL_WRAPPER_VA);
 	DEBUG("VA of user sp: 0x%x", USER_STACK_BASE);
-	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA + (uint64_t)run_user_task_wrapper % PAGE_FRAME_SIZE, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
+	// JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA + (uint64_t)run_user_task_wrapper % PAGE_FRAME_SIZE, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
+	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
 	return 0;
 }
 

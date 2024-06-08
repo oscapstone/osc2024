@@ -20,7 +20,7 @@ typedef struct frame
 	int8_t val;
 	int8_t order;			  // 2^(BASE_ORDER + order) = size
 	uint8_t cache_used_count; // 4KB / 2^(BASE_ORDER) = 128. max count is 128. Max num of type is 256
-	uint8_t refcount;		  // reference count
+	int8_t refcount;		  // reference count
 } frame_t;
 
 void memory_init();
@@ -36,8 +36,8 @@ int page_free(void *frame);
 frame_t *get_free_frame(int val);
 frame_t *split_frame(int8_t val);
 
-void get_page(uint64_t phys_ptr);
-void put_page(uint64_t phys_ptr);
+void get_page(uint64_t kenrle_virt_ptr);
+void put_page(uint64_t kenrle_virt_ptr);
 
 void dump_frame();
 void dump_cache();
