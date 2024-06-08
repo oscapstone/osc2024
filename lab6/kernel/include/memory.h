@@ -36,8 +36,8 @@ int page_free(void *frame);
 frame_t *get_free_frame(int val);
 frame_t *split_frame(int8_t val);
 
-void get_page(void *phys_ptr);
-void put_page(void *phys_ptr);
+void get_page(uint64_t phys_ptr);
+void put_page(uint64_t phys_ptr);
 
 void dump_frame();
 void dump_cache();
