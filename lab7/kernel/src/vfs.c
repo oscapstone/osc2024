@@ -2,6 +2,7 @@
 #include "allocator.h"
 #include "tmpfs.h"
 #include "uart.h"
+#include "schedule.h"
 #include "vfs.h"
 
 struct filesystem *file_systems;
@@ -9,7 +10,7 @@ struct mount *rootfs;
 
 static struct filesystem tmpfs_type = {
 	.name = "tmpfs",
-	.setup_mount = tmpfs_mount,
+	.setup_mount = tmpfs_setup_mount,
 	.next = NULL};
 
 int register_filesystem(struct filesystem *fs)
@@ -38,9 +39,9 @@ struct file *vfs_open(const char *pathname, int flags)
 {
 	struct file *fd = NULL;
 	char file_name[32];
-	struct dentry *dir = vfs_lookup(pathname, file_name); // Lookup pathname from the root vnode.
+	struct dentry *dir = vfs_lookup(pathname, file_name); // Lookup pathname.
 	struct dentry *f_inode = dir->d_inode->i_ops->lookup(dir->d_inode, file_name);
-	
+
 	if (f_inode) // Create a new file descriptor for this vnode if found.
 	{
 		fd = kmalloc(sizeof(struct file));
@@ -94,11 +95,119 @@ int vfs_read(struct file *file, void *buf, size_t len)
 
 int vfs_mkdir(const char *pathname)
 {
+	char subdir_name[32];
+	struct dentry *dir = vfs_lookup(pathname, subdir_name); // Lookup pathname.
+	for (int i = 0; i < 16; i++)
+		if (dir->d_subdirs[i] != NULL && my_strcmp(dir->d_subdirs[i]->d_name, subdir_name) == 0)
+		{
+			uart_puts("folder existes\n");
+			return -1;
+		}
+
+	struct dentry *f_dentry = kmalloc(sizeof(struct dentry));
+
+	my_strcpy(f_dentry->d_name, subdir_name);
+	f_dentry->d_parent = dir;
+	for (int i = 0; i < 16; i++)
+		f_dentry->d_subdirs[i] = NULL;
+
+	dir->d_inode->i_ops->mkdir(dir->d_inode, f_dentry);
+
 	return 1;
 }
 
-int vfs_mount(const char *target, const char *filesystem)
+int vfs_chdir(const char *pathname)
 {
+	struct dentry *cur_dir = NULL;
+
+	if (pathname[0] == '/')
+	{
+		pathname += 1;
+		cur_dir = rootfs->root;
+	}
+	else if (pathname[0] == '.' && pathname[1] == '/')
+	{
+		pathname += 2;
+		cur_dir = get_current_task()->pwd;
+	}
+	else if (pathname[0] == '.' && pathname[1] == '.' && pathname[2] == '/')
+	{
+		pathname += 3;
+		cur_dir = get_current_task()->pwd->d_parent;
+	}
+	else
+	{
+		cur_dir = get_current_task()->pwd;
+	}
+
+	char component_name[32][32];
+	const char *cur_component = pathname;
+	int component_idx = 0;
+
+	int c_idx = 0;
+	while (1)
+	{
+		if (*cur_component == '/')
+		{
+			component_name[component_idx][c_idx] = '\0';
+			component_idx++;
+			c_idx = 0;
+			cur_component += 1;
+			continue;
+		}
+		else if (*cur_component == '\0')
+		{
+			component_name[component_idx][c_idx] = '\0';
+			break;
+		}
+
+		component_name[component_idx][c_idx++] = *cur_component;
+		cur_component += 1;
+	}
+
+	for (int i = 0; i <= component_idx; i++)
+	{
+		if (my_strcmp(component_name[i], ".") == 0)
+			cur_dir = cur_dir;
+		else if (my_strcmp(component_name[i], "..") == 0)
+			cur_dir = cur_dir->d_parent;
+		else
+			cur_dir = cur_dir->d_inode->i_ops->lookup(cur_dir->d_inode, component_name[i]);
+
+		if (cur_dir == NULL)
+			return -1;
+	}
+
+	get_current_task()->pwd = cur_dir;
+
+	return 1;
+}
+
+int vfs_mount(const char *device, const char *mountpoint, const char *filesystem)
+{
+	struct filesystem *fs = file_systems;
+	for (; fs != NULL; fs = fs->next) // find the filesystem that want to mount
+	{
+		if (my_strcmp(fs->name, filesystem) == 0)
+			break;
+	}
+
+	struct mount *new_mount = kmalloc(sizeof(struct mount)); // create a new filesysteam
+	fs->setup_mount(fs, new_mount);
+
+	char subdir_name[32];
+	struct dentry *dir = vfs_lookup(mountpoint, subdir_name); // Lookup pathname.
+	for (int i = 0; i < 16; i++)							  // mount the new filesystem on mountpoint
+	{
+		if (my_strcmp(dir->d_subdirs[i]->d_name, subdir_name) == 0)
+		{
+			dir->d_subdirs[i] = new_mount->root;
+			new_mount->root->d_parent = dir;
+			my_strcpy(new_mount->root->d_name, subdir_name);
+			break;
+		}
+	}
+
 	return 1;
 }
 
@@ -110,6 +219,20 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 	{
 		pathname += 1;
 		cur_dir = rootfs->root;
+	}
+	else if (pathname[0] == '.' && pathname[1] == '/')
+	{
+		pathname += 2;
+		cur_dir = get_current_task()->pwd;
+	}
+	else if (pathname[0] == '.' && pathname[1] == '.' && pathname[2] == '/')
+	{
+		pathname += 3;
+		cur_dir = get_current_task()->pwd->d_parent;
+	}
+	else
+	{
+		cur_dir = get_current_task()->pwd;
 	}
 
 	char component_name[32][32];
@@ -140,7 +263,13 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 
 	for (int i = 0; i < component_idx; i++)
 	{
-		cur_dir = cur_dir->d_inode->i_ops->lookup(cur_dir->d_inode, component_name[i]);
+		if (my_strcmp(component_name[i], ".") == 0)
+			cur_dir = cur_dir;
+		else if (my_strcmp(component_name[i], "..") == 0)
+			cur_dir = cur_dir->d_parent;
+		else
+			cur_dir = cur_dir->d_inode->i_ops->lookup(cur_dir->d_inode, component_name[i]);
+
 		if (cur_dir == NULL)
 			return NULL;
 	}
@@ -159,4 +288,7 @@ void rootfs_init()
 
 	rootfs = kmalloc(sizeof(struct mount));
 	cur->setup_mount(cur, rootfs);
+	rootfs->root->d_parent = rootfs->root;
+
+	get_current_task()->pwd = rootfs->root;
 }

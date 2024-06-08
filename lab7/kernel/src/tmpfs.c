@@ -8,9 +8,10 @@ static struct file_operations tmpfs_f_ops = {
 
 static struct inode_operations tmpfs_i_ops = {
     .lookup = tmpfs_lookup,
-    .create = tmpfs_create};
+    .create = tmpfs_create,
+    .mkdir = tmpfs_mkdir};
 
-int tmpfs_mount(struct filesystem *fs, struct mount *mount)
+int tmpfs_setup_mount(struct filesystem *fs, struct mount *mount)
 {
     mount->root = kmalloc(sizeof(struct dentry));
     my_strcpy(mount->root->d_name, "/");
@@ -42,6 +43,8 @@ int tmpfs_write(struct file *file, const void *buf, size_t len)
         dest[i] = src[i];
     dest[i] = EOF;
 
+    file->f_pos += i;
+
     return i;
 }
 
@@ -50,10 +53,13 @@ int tmpfs_read(struct file *file, void *buf, size_t len)
     struct tmpfs_internal *tmpfs_internal = (struct tmpfs_internal *)file->f_dentry->d_inode->internal;
 
     char *dest = (char *)buf;
-    char *src = &(tmpfs_internal->data[file->f_pos]);
+    char *src = &tmpfs_internal->data[file->f_pos];
     int i = 0;
     for (; i < len && src[i] != (unsigned char)EOF; i++)
         dest[i] = src[i];
+    dest[i] = '\0';
+    
+    file->f_pos += i;
 
     return i;
 }
@@ -88,6 +94,27 @@ int tmpfs_create(struct inode *dir, struct dentry *dentry, int mode)
     dentry->d_inode->i_dentry = dentry;
     dentry->d_inode->internal = kmalloc(sizeof(struct tmpfs_internal));
     ((struct tmpfs_internal *)(dentry->d_inode->internal))->data[0] = EOF;
+
+    return 1;
+}
+
+int tmpfs_mkdir(struct inode *dir, struct dentry *dentry)
+{
+    struct dentry *cur = dir->i_dentry;
+    for (int i = 0; i < 16; i++)
+    {
+        if (cur->d_subdirs[i] == NULL)
+        {
+            cur->d_subdirs[i] = dentry;
+            break;
+        }
+    }
+
+    dentry->d_inode = kmalloc(sizeof(struct inode));
+    dentry->d_inode->f_ops = &tmpfs_f_ops;
+    dentry->d_inode->i_ops = &tmpfs_i_ops;
+    dentry->d_inode->i_dentry = dentry;
+    dentry->d_inode->internal = NULL;
 
     return 1;
 }

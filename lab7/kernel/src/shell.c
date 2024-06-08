@@ -97,19 +97,50 @@ void shell_cmd(char *cmd)
     else if (my_strcmp(cmd, "vfs") == 0)
     {
         uart_puts("\n");
-        char buf[200];
-        struct file *a = vfs_open("/hello", O_CREAT);
-        struct file *b = vfs_open("/world", O_CREAT);
+
+        /*char buf[200];
+        vfs_mkdir("mnt");
+        vfs_mount("device", "mnt", "tmpfs");
+        vfs_chdir("/mnt");
+        struct file *a = vfs_open("/mnt/hello", O_CREAT);
+        struct file *b = vfs_open("/mnt/world", O_CREAT);
         vfs_write(a, "Hello ", 6);
         vfs_write(b, "World!", 6);
         vfs_close(a);
         vfs_close(b);
-        b = vfs_open("/hello", 0);
-        a = vfs_open("/world", 0);
+        b = vfs_open("hello", 0);
+        a = vfs_open("world", 0);
         int sz;
         sz = vfs_read(b, buf, 100);
         sz += vfs_read(a, buf + sz, 100);
         buf[sz] = '\0';
+        uart_puts(buf);
+        uart_puts("\n");*/
+
+        char buf[8];
+        vfs_mkdir("mnt");
+        struct file * fd = vfs_open("/mnt/a.txt", O_CREAT);
+        vfs_write(fd, "Hi", 2);
+        vfs_write(fd, " Jack", 5);
+        vfs_close(fd);
+
+        vfs_chdir("mnt");
+        fd = vfs_open("./a.txt", 0);
+        vfs_read(fd, buf, 7);
+        uart_puts(buf);
+        uart_puts("\n");
+        
+        vfs_chdir("..");
+        vfs_mount("tmpfs", "mnt", "tmpfs");
+        fd = vfs_open("mnt/a.txt", 0);
+        if(fd == NULL)
+            uart_puts("mount succeed\n");
+        fd = vfs_open("/mnt/a.txt", O_CREAT);
+        vfs_write(fd, "Hello", 5);
+        vfs_close(fd);
+
+        fd = vfs_open("mnt/a.txt", 0);
+        vfs_read(fd, buf, 7);
         uart_puts(buf);
         uart_puts("\n");
     }

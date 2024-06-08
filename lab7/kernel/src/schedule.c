@@ -73,6 +73,8 @@ task_struct *task_create(void (*start_routine)(void), int priority)
     new_task->need_sched = 0;
     new_task->received_signal = NOSIG;
 
+    new_task->pwd = NULL;
+
     for (int i = 0; i < SIG_NUM; i++)
     {
         new_task->is_default_signal_handler[i] = 1;

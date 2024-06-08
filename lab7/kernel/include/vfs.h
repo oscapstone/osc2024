@@ -53,6 +53,7 @@ struct inode_operations
 {
 	struct dentry *(*lookup)(struct inode *dir, const char *component_name);
 	int (*create)(struct inode *dir, struct dentry *dentry, int mode);
+	int (*mkdir)(struct inode *dir, struct dentry *dentry);
 };
 
 extern struct filesystem *file_systems;
@@ -65,7 +66,8 @@ int vfs_write(struct file *file, const void *buf, size_t len);
 int vfs_read(struct file *file, void *buf, size_t len);
 
 int vfs_mkdir(const char *pathname);
-int vfs_mount(const char *target, const char *filesystem);
+int vfs_chdir(const char *pathname);
+int vfs_mount(const char* device, const char* mountpoint, const char* filesystem);
 struct dentry *vfs_lookup(const char *pathname, char *file_name);
 
 void rootfs_init();
