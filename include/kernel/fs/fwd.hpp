@@ -11,7 +11,7 @@ enum filetype {
   kFile,
 };
 
-enum fcntl {
+enum class fcntl {
   O_RDONLY = 00000000,
   O_WRONLY = 00000001,
   O_RDWR = 00000002,
@@ -20,6 +20,11 @@ enum fcntl {
 
   MARK_AS_BITMASK_ENUM(O_CREAT)
 };
+using fcntl::O_ACCMODE;
+using fcntl::O_CREAT;
+using fcntl::O_RDONLY;
+using fcntl::O_RDWR;
+using fcntl::O_WRONLY;
 
 enum seek_type {
   SEEK_SET = 0,

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ds/bitmask_enum.hpp"
 #include "util.hpp"
 
 struct FAT_BPB {
@@ -48,6 +49,10 @@ struct FAT32_FSInfo {
   }
 } __attribute__((__packed__));
 
+constexpr uint32_t FAT_EOF = 0x0FFFFFF8;
+constexpr uint32_t FAT_EOC = 0x0FFFFFFF;
+constexpr uint32_t FAT_BAD_CLUSTER = 0x0FFFFFF7;
+
 struct FAT32_DirEnt {
   char DIR_Name[11];
   uint8_t DIR_Attr;
@@ -62,3 +67,14 @@ struct FAT32_DirEnt {
   uint16_t DIR_FstClusLO;
   uint32_t DIR_FileSize;
 } __attribute__((__packed__));
+
+enum class FILE_Attrs : uint8_t {
+  ATTR_READ_ONLY = 0x01,
+  ATTR_HIDDEN = 0x02,
+  ATTR_SYSTEM = 0x04,
+  ATTR_VOLUME_ID = 0x08,
+  ATTR_DIRECTORY = 0x10,
+  ATTR_ARCHIVE = 0x20,
+  ATTR_LONG_NAME = ATTR_READ_ONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID,
+  MARK_AS_BITMASK_ENUM(ATTR_ARCHIVE),
+};
