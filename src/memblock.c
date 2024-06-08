@@ -4,6 +4,7 @@
 #include "mbox.h"
 #include "dtb.h"
 #include "initrd.h"
+#include "mm.h"
 
 #define INIT_MEMLBOCK_REGIONS	(32)
 
@@ -255,11 +256,14 @@ phys_addr_t memblock_phys_alloc_range(unsigned long size, unsigned long align,
     return ret;
 }
 
-/* Align 8 bytes, allocate from all managable memory region */
+/**
+ * Return kernel virtual address.
+ * Align 8 bytes, allocate from all managable memory region 
+ */
 phys_addr_t memblock_phys_alloc(phys_addr_t size)
 {
-	return memblock_phys_alloc_range(size, sizeof(unsigned long), 0,
-					 MEMBLOCK_ALLOC_ACCESSIBLE);
+	return phys_to_virt(memblock_phys_alloc_range(size, sizeof(unsigned long), 0,
+					 MEMBLOCK_ALLOC_ACCESSIBLE));
 }
 
 void memblock_init(void)

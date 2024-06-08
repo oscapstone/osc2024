@@ -186,7 +186,7 @@ void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
 {
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
-        cpio_base = (char *)((unsigned long)bswap_32(load_addr));
+        cpio_base = (char *)(phys_to_virt((unsigned long)bswap_32(load_addr)));
         printf("-- cpio_base: %x\n", cpio_base);
     }
 }
@@ -212,5 +212,5 @@ void initrd_reserve_memory(void)
     }
     /* reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns */
     buf += ALIGN(sizeof(cpio_f) + 10, 4);
-    memblock_reserve((unsigned long) cpio_base, ALIGN(buf - cpio_base, 8));
+    memblock_reserve((unsigned long) virt_to_phys((unsigned long)cpio_base), ALIGN(buf - cpio_base, 8));
 }
