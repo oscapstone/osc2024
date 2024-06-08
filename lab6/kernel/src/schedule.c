@@ -123,20 +123,6 @@ void kill_zombies()
 
                 for (struct vm_area_struct *vma = del->mm_struct->mmap; vma != NULL;) // clean all VMA
                 {
-                    /*unsigned long long start = vma->vm_start;
-                    unsigned long long end = vma->vm_end;
-
-                    while (start < end)
-                    {
-                        unsigned long long page_idx = translate_v_to_p(del->mm_struct->pgd, start) >> 12;
-                        if (page_idx != 0)
-                        {
-                            page_arr[page_idx].refer_count--;
-                            kfree((void *)(page_idx << 12));
-                        }
-                        start += 4096;
-                    }*/
-
                     struct vm_area_struct *temp = vma;
                     vma = vma->vm_next;
                     kfree(temp);
@@ -224,11 +210,36 @@ void do_exec(const char *name, char *const argv[])
             char *target = kmalloc(size);
             char *copy = target;
 
+            if (cur->mm_struct->mmap != NULL) // if mmap is not NULL, clear the space
+            {
+                for (struct vm_area_struct *vma = cur->mm_struct->mmap; vma != NULL;) // clean all VMA
+                {
+                    struct vm_area_struct *temp = vma;
+                    vma = vma->vm_next;
+                    kfree(temp);
+                }
+            }
+            if (cur->mm_struct->pgd != NULL) // if pgd is not NULL, clear the space
+            {
+                page_reclaim(cur->mm_struct->pgd);
+            }
+            
+            for (int i = 0; i < SIG_NUM; i++) // inititalize signal_handler
+            {
+                cur->is_default_signal_handler[i] = 1;
+                cur->signal_handler[i] = NULL;
+            }
+            cur->signal_handler[9] = default_SIGKILL_handler;
+
             init_mm_struct(cur->mm_struct);
             // map code
             mappages(cur->mm_struct, CODE, 0, (unsigned long long)target - VA_START, size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
             // map ustack
-            mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+            mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+            mappages(cur->mm_struct, STACK, 0xffffffffc000, (unsigned long long)(cur->ustack) - 4096 * 3 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+            mappages(cur->mm_struct, STACK, 0xffffffffd000, (unsigned long long)(cur->ustack) - 4096 * 2 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+            mappages(cur->mm_struct, STACK, 0xffffffffe000, (unsigned long long)(cur->ustack) - 4096 * 1 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+            mappages(cur->mm_struct, STACK, 0xfffffffff000, (unsigned long long)(cur->ustack) - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
 
             while (size--) // move the file content to memory
                 *copy++ = *content++;

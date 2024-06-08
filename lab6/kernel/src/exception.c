@@ -313,6 +313,13 @@ void sys_exec(struct ucontext *trapframe)
 {
     const char *name = (const char *)trapframe->x[0];
     char **const argv = (char **const)trapframe->x[1];
+
+    task_struct *cur = get_current_task();
+    
+    unsigned long long page_idx = ((unsigned long long )(cur->ustack) - VA_START) >> 12;
+    if(page_arr[page_idx].refer_count > 1) // its ustack is used by other processes, so allocate a new space to it.
+        cur->ustack = (void *)((char *)kmalloc(4096 * 5) + 4096 * 4);
+
     do_exec(name, argv);
     trapframe->x[0] = -1; // if do_exec is falut
 }
@@ -353,7 +360,9 @@ void sys_fork(struct ucontext *trapframe)
     // map to code
     mappages(child->mm_struct, CODE, 0, code_start, code_size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
     // map to ustack
-    mappages(child->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(parent->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    for (struct vm_area_struct *vma = parent->mm_struct->mmap; vma != NULL; vma = vma->vm_next)
+        if (vma->vm_type == STACK) // find the code section in VMA of the parent process
+            mappages(child->mm_struct, STACK, vma->vm_start, vma->pm_base, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
     // map to MMIO_BASE
     mappages(child->mm_struct, IO, 0x3c000000, 0x3c000000, 0x40000000 - 0x3c000000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
 
