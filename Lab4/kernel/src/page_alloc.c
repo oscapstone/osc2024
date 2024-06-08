@@ -190,7 +190,7 @@ static void delete_page_from_freelist(struct page* page, size_t order)
     free_areas[get_bucket_from_order(order)].nr_free--;
 }
 
-void register_reserve_pages(uintptr_t start, uintptr_t end)
+void register_reserved_pages(uintptr_t start, uintptr_t end)
 {
     if (end <= start || start >= usable_mem_end || end >= usable_mem_end)
         return;
@@ -244,7 +244,8 @@ void coalesce(struct page* page, size_t order)
 
 #ifdef DEBUG
     uart_printf(
-        "  Final Merged address: 0x%x, put it into freelist with order %d\n",
+        "  Final Merged address: 0x%x, put it into freelist with order "
+        "%d\n",
         page_to_phys(page), order);
 #endif
     add_page_to_freelist(page, order);
@@ -405,12 +406,12 @@ void buddy_init(void)
 
     mem_set(mem_map, 0, sizeof(struct page) * nr_pages);
 
-    register_reserve_pages(DTS_MEM_RESERVED_START, DTS_MEM_RESERVED_END);
-    register_reserve_pages(dtb_start, dtb_end);
-    register_reserve_pages(cpio_start, cpio_end);
-    register_reserve_pages((uintptr_t)kernel_start, (uintptr_t)kernel_end);
-    register_reserve_pages(HEAP_START, HEAP_END);
-    register_reserve_pages(STACK_START, STACK_END);
+    register_reserved_pages(DTS_MEM_RESERVED_START, DTS_MEM_RESERVED_END);
+    register_reserved_pages(dtb_start, dtb_end);
+    register_reserved_pages(cpio_start, cpio_end);
+    register_reserved_pages((uintptr_t)kernel_start, (uintptr_t)kernel_end);
+    register_reserved_pages(HEAP_START, HEAP_END);
+    register_reserved_pages(STACK_START, STACK_END);
 
     start_init_pages();
 }
@@ -567,47 +568,56 @@ void test_page_alloc(void)
     uart_printf("\n==========================\n");
     uart_printf("Allocate order 1 pages\n");
     struct page* ptr1 = alloc_pages(1, __GFP_COMP);
-
+    buddyinfo();
     uart_printf("\n==========================\n");
+
 
 
     uart_printf("\n==========================\n");
     uart_printf("Allocate order 5 pages\n");
     struct page* ptr2 = alloc_pages(5, __GFP_COMP);
+    buddyinfo();
     uart_printf("\n==========================\n");
+
 
 
     uart_printf("\n==========================\n");
     uart_printf("Free order 1 pages\n");
     free_pages(ptr1, 1);
+    buddyinfo();
     uart_printf("\n==========================\n");
-
 
 
     uart_printf("\n==========================\n");
     uart_printf("Allocate order 8 pages\n");
     struct page* ptr3 = alloc_pages(8, __GFP_COMP);
+    buddyinfo();
     uart_printf("\n==========================\n");
+
 
     uart_printf("\n==========================\n");
     uart_printf("Free order 8 pages\n");
     free_pages(ptr3, 8);
+    buddyinfo();
     uart_printf("\n==========================\n");
 
 
     uart_printf("\n==========================\n");
     uart_printf("Allocate order 0 pages\n");
     struct page* ptr4 = alloc_pages(0, 0);
+    buddyinfo();
     uart_printf("\n==========================\n");
 
 
     uart_printf("\n==========================\n");
     uart_printf("Free order 5 pages\n");
     free_pages(ptr2, 5);
+    buddyinfo();
     uart_printf("\n==========================\n");
 
     uart_printf("\n==========================\n");
     uart_printf("Free order 0 pages\n");
     free_pages(ptr4, 0);
+    buddyinfo();
     uart_printf("\n==========================\n");
 }

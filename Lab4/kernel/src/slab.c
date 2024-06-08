@@ -372,9 +372,6 @@ void kmem_cache_free(struct kmem_cache* cachep, void* objp)
     if (PageTail(page))
         page = get_compound_head(page);
 
-    if (!PageHead(page))
-        return;
-
     if (page->slab_cache != cachep)
         return;
 
@@ -628,12 +625,9 @@ void kfree(const void* x)
     if (PageTail(page))
         page = get_compound_head(page);
 
-    if (!PageHead(page))
-        return;
-
     // if it's buddy system allocated.
     if (!PageSlab(page)) {
-        size_t order = page->compound_order;
+        size_t order = get_compound_order(page);
         free_pages(page, order);
         return;
     }
@@ -684,24 +678,28 @@ void test_slab_alloc(void)
     uart_printf("\n==========================\n");
     uart_printf("Create new slab cache\n");
     struct kmem_cache* fuck = kmem_cache_create("fuck", 10, -1);
+    slabinfo();
     uart_printf("\n==========================\n");
 
     uart_printf("\n==========================\n");
     uart_printf("Allocate object from new slab cache\n");
     void* ptr = kmem_cache_alloc(fuck, 0);
     uart_printf("allocated object at 0x%x\n", ptr);
+    slabinfo();
     uart_printf("\n==========================\n");
 
 
     uart_printf("\n==========================\n");
     uart_printf("Free object from new slab cache\n");
     kmem_cache_free(fuck, ptr);
+    slabinfo();
     uart_printf("\n==========================\n");
 
 
     uart_printf("\n==========================\n");
     uart_printf("Delete the new slab cache\n");
     kmem_cache_destroy(fuck);
+    slabinfo();
     uart_printf("\n==========================\n");
 
 
@@ -709,32 +707,38 @@ void test_slab_alloc(void)
     uart_printf("kmalloc 40B\n");
     void* ptr1 = kmalloc(10 * sizeof(int), 0);
     uart_printf("allocated object at 0x%x\n", ptr1);
+    slabinfo();
     uart_printf("\n==========================\n");
 
     uart_printf("\n==========================\n");
     uart_printf("kfree 40B\n");
     kfree(ptr1);
+    slabinfo();
     uart_printf("\n==========================\n");
 
     uart_printf("\n==========================\n");
     uart_printf("kmalloc 4KB\n");
     void* ptr2 = kmalloc(4 * 1024, 0);
     uart_printf("allocated object at 0x%x\n", ptr2);
+    slabinfo();
     uart_printf("\n==========================\n");
 
     uart_printf("\n==========================\n");
     uart_printf("kfree 4KB\n");
     kfree(ptr2);
+    slabinfo();
     uart_printf("\n==========================\n");
 
     uart_printf("\n==========================\n");
     uart_printf("kmalloc 10KB\n");
     void* ptr3 = kmalloc(10 * 1024, 0);
     uart_printf("allocated object at 0x%x\n", ptr3);
+    slabinfo();
     uart_printf("\n==========================\n");
 
     uart_printf("\n==========================\n");
     uart_printf("kfree 10KB\n");
     kfree(ptr3);
+    slabinfo();
     uart_printf("\n==========================\n");
 }
