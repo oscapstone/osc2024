@@ -27,8 +27,8 @@ class Vnode final : public ::VnodeImpl<Vnode, File> {
   int _size;
 
  public:
-  Vnode(const cpio_newc_header* hdr)
-      : ::VnodeImpl<Vnode, File>{hdr->isdir() ? kDir : kFile},
+  Vnode(const ::Mount* mount_root, const cpio_newc_header* hdr)
+      : ::VnodeImpl<Vnode, File>{mount_root, hdr->isdir() ? kDir : kFile},
         _content{hdr->file_ptr()},
         _size{hdr->filesize()} {}
   virtual ~Vnode() = default;
@@ -48,17 +48,12 @@ class File final : public ::FileImplRW<Vnode, File> {
 };
 
 class FileSystem final : public ::FileSystem {
-  static ::Vnode* root;
-
  public:
-  FileSystem();
   virtual const char* name() const {
     return "initramfs";
   }
 
-  virtual ::Vnode* mount() {
-    return root;
-  }
+  virtual ::Vnode* mount(const ::Mount* mount_root);
 };
 
 };  // namespace initramfs

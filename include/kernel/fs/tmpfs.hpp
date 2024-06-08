@@ -47,8 +47,8 @@ class FileSystem final : public ::FileSystem {
     return "tmpfs";
   }
 
-  virtual ::Vnode* mount() {
-    return new Vnode{kDir};
+  virtual ::Vnode* mount(const ::Mount* mount_root) {
+    return new Vnode{mount_root, kDir};
   }
 };
 

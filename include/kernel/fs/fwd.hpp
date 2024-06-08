@@ -2,6 +2,7 @@
 
 #include "ds/bitmask_enum.hpp"
 
+class Mount;
 class Vnode;
 class File;
 class FileSystem;
@@ -11,7 +12,7 @@ enum filetype {
   kFile,
 };
 
-enum class fcntl {
+enum class fcntl : int {
   O_RDONLY = 00000000,
   O_WRONLY = 00000001,
   O_RDWR = 00000002,

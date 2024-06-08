@@ -29,13 +29,10 @@ void preinit() {
   }
 }
 
-::Vnode* FileSystem::root = nullptr;
-
-FileSystem::FileSystem() {
-  if (root)
-    return;
-
-  root = new ::Vnode{kDir};
+::Vnode* FileSystem::mount(const ::Mount* mount_root) {
+  auto root = new ::Vnode{mount_root, kDir};
+  if (not root)
+    return nullptr;
   for (auto hdr : cpio) {
     ::Vnode* dir;
     char* basename;
@@ -44,9 +41,10 @@ FileSystem::FileSystem() {
       continue;
     }
     if (not dir->lookup(basename))
-      dir->link(basename, new Vnode{hdr});
+      dir->link(basename, new Vnode{mount_root, hdr});
     kfree(basename);
   }
+  return root;
 }
 
 };  // namespace initramfs

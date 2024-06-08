@@ -78,7 +78,7 @@ class FileSystem final : public ::FileSystem {
     return "fat32fs";
   }
 
-  virtual ::Vnode* mount() {
+  virtual ::Vnode* mount(const Mount* mount_root) {
     return root;
   }
 };

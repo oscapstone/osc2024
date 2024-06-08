@@ -7,6 +7,12 @@
 
 using FilePtr = smart_ptr<File>;
 
+class Mount {
+ public:
+  FileSystem* const fs;
+  Vnode* root = nullptr;
+};
+
 class Vnode {
   struct child {
     char* name;
@@ -24,6 +30,7 @@ class Vnode {
   list<child> _childs{};
 
  protected:
+  const Mount* const mount_root;
   list<child>::iterator find_child(const char* name);
   int set_child(const char* name, Vnode* vnode);
   int del_child(const char* name);
@@ -34,7 +41,7 @@ class Vnode {
   const filetype type;
 
   void set_parent(Vnode* parent);
-  Vnode(filetype type);
+  Vnode(const Mount* mount_root, filetype type);
 
   Vnode* parent() const {
     return _parent;
@@ -104,5 +111,5 @@ class FileSystem {
   virtual const char* name() const {
     return "";
   }
-  virtual Vnode* mount();
+  virtual Vnode* mount(const Mount* mount_root);
 };

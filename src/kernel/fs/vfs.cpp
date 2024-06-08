@@ -22,8 +22,11 @@ void init_vfs() {
   register_filesystem(new framebufferfs::FileSystem());
   register_filesystem(new fat32fs::FileSystem());
 
-  root_node = get_filesystem("tmpfs")->mount();
+  auto tmpfs = get_filesystem("tmpfs");
+  auto mount_root = new Mount{.fs = tmpfs};
+  root_node = tmpfs->mount(mount_root);
   root_node->set_parent(root_node);
+  mount_root->root = root_node;
 
   mkdir("/initramfs");
   mount("/initramfs", "initramfs");
@@ -244,10 +247,13 @@ int vfs_mount(const char* target, const char* filesystem) {
   Vnode *dir, *new_vnode;
   char* basename;
   int r;
+  auto mount_root = new Mount{.fs = fs};
+  if (not mount_root)
+    return -1;
   if ((r = vfs_lookup(target, dir, basename)) < 0)
     goto end;
 
-  new_vnode = fs->mount();
+  new_vnode = fs->mount(mount_root);
   if (not new_vnode) {
     r = -1;
     goto cleanup;
@@ -256,6 +262,11 @@ int vfs_mount(const char* target, const char* filesystem) {
   r = dir->mount(basename, new_vnode);
 
 cleanup:
+  if (r < 0) {
+    // TODO: release new_vnode
+    if (mount_root)
+      delete mount_root;
+  }
   kfree(basename);
 end:
   return r;

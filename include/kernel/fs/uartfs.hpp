@@ -11,7 +11,8 @@ class FileSystem;
 
 class Vnode final : public ::VnodeImpl<Vnode, File> {
  public:
-  Vnode() : ::VnodeImpl<Vnode, File>{kFile} {}
+  Vnode(const ::Mount* mount_root)
+      : ::VnodeImpl<Vnode, File>{mount_root, kFile} {}
   virtual ~Vnode() = default;
   virtual long size() const {
     return -1;
@@ -33,8 +34,8 @@ class FileSystem final : public ::FileSystem {
     return "uartfs";
   }
 
-  virtual ::Vnode* mount() {
-    return new Vnode;
+  virtual ::Vnode* mount(const ::Mount* mount_root) {
+    return new Vnode{mount_root};
   }
 };
 

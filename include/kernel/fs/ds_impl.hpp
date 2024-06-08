@@ -11,7 +11,7 @@ class VnodeImpl : public Vnode {
   using Vnode::Vnode;
   virtual ~VnodeImpl() = default;
 
-  virtual int open(const char* component_name, FilePtr& file, fcntl flags) {
+  virtual int open(const char* /*component_name*/, FilePtr& file, fcntl flags) {
     file = new F{this, flags};
     if (file == nullptr)
       return -1;
@@ -26,7 +26,7 @@ class VnodeImplRW : public VnodeImpl<V, F> {
   virtual ~VnodeImplRW() = default;
 
   virtual int create(const char* component_name, ::Vnode*& vnode) {
-    vnode = new V{kFile};
+    vnode = new V{this->mount_root, kFile};
     if (vnode == nullptr)
       return -1;
     this->set_child(component_name, vnode);
@@ -35,7 +35,7 @@ class VnodeImplRW : public VnodeImpl<V, F> {
   }
 
   virtual int mkdir(const char* component_name, ::Vnode*& vnode) {
-    vnode = new V{kDir};
+    vnode = new V{this->mount_root, kDir};
     if (vnode == nullptr)
       return -1;
     this->set_child(component_name, vnode);

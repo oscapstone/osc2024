@@ -59,7 +59,8 @@ void Vnode::set_parent(Vnode* parent) {
   set_child("..", parent);
 }
 
-Vnode::Vnode(filetype type) : type(type) {
+Vnode::Vnode(const Mount* mount_root, filetype type)
+    : mount_root{mount_root}, type{type} {
   if (isDir())
     set_child(".", this);
 }
@@ -166,7 +167,7 @@ long File::lseek64(long offset, seek_type whence) {
   }
   return f_pos;
 }
-int File::ioctl(unsigned long request, void* arg) {
+int File::ioctl(unsigned long /*request*/, void* /*arg*/) {
   return -1;
 }
 
@@ -176,6 +177,6 @@ int File::close(FilePtr file) {
   return vnode->close(file);
 }
 
-Vnode* FileSystem::mount() {
+Vnode* FileSystem::mount(const Mount* /*mount_root*/) {
   return nullptr;
 }
