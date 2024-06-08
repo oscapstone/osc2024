@@ -106,7 +106,7 @@ void svc_handler(unsigned long esr, unsigned long elr, unsigned long spsr, unsig
     }
     switch (svc_num) {
         case 0: 
-            // uart_puts("svc 0: system call\n");
+            //uart_puts("svc 0: system call\n");
             syscall_handler(trapframe);
             break;
         case 1:
@@ -191,6 +191,14 @@ void irq_router(unsigned long esr, unsigned long elr, unsigned long spsr, unsign
         core_timer_handler();
     } else if (IRQ->IRQ_PENDING1 & (1 << 29)) { // AUX interrupt, from ARM peripherals interrupts table
         uart_interrupt_handler();
+    }
+}
+
+void invalid_exception_handler(void)
+{
+    uart_puts("Invalid exception\n");
+    while (1) {
+        asm volatile("nop");
     }
 }
 

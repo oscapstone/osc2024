@@ -7,7 +7,7 @@
 #define NR_PAGES                        (nr_pages)
 
 /* For kernel virtual memory usage */
-#define KERNEL_VADDR_BASE               (0xffff000000000000)
+#define KERNEL_VADDR_BASE               (0xffff000000000000UL)
 
 /* Paging is configured by TCR. The following basic configuration is used in lab5 */
 #define TCR_T0SZ_48bit                  ((64 - 48) << 0)
@@ -60,11 +60,11 @@
 #define TABLE_ENTRY                     (PD_TABLE)
 
 #ifndef MMIO_BASE
-#define MMIO_BASE               (0x3F000000)
+#define MMIO_BASE                       (KERNEL_VADDR_BASE | (0x3F000000UL))
 #endif // MMIO_BASE
 
 #ifndef PAGE_SIZE
-#define PAGE_SIZE               (1 << 12) // 4KB
+#define PAGE_SIZE                       (1 << 12) // 4KB
 #endif // PAGE_SIZE
 
 /* We use 1 PGD, 1 PUD and 512 PMD*/
@@ -73,6 +73,7 @@
 #define MMU_PMD_ADDR                    (MMU_PGD_ADDR + 0x2000)
 #define MMU_PTE_ADDR                    (MMU_PGD_ADDR + 0x3000)
 
+/* Used while MMU disabled. */
 #define PERIPH_MMIO_BASE                (0x3F000000)
 
 /* For page table index */
@@ -167,9 +168,8 @@ extern struct page *mem_map;
 #define phys_to_page(phys) (pfn_to_page(phys_to_pfn(phys)))
 
 /* Because in kernel space, the virtual address is start from 0xffff.... */
-#define phys_to_virt(phys) ((void *)((phys) | KERNEL_VADDR_BASE))
-#define virt_to_phys(virt) ((unsigned long)((virt) & (~KERNEL_VADDR_BASE)))
-
+#define phys_to_virt(phys) ((phys) | KERNEL_VADDR_BASE)
+#define virt_to_phys(virt) ((virt) & (~KERNEL_VADDR_BASE))
 
 /* Init buddy system and slab allocator. */
 void mm_init(void);
@@ -193,7 +193,11 @@ void kfree(void *obj);
 /* Map physical memory to given virtual memory address */
 void map_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags);
 /* Walk from pgd, then allocate physical memory if needed. */
-void walk(unsigned long *virt_pgd, unsigned long va, unsigned long pa, int flag);
+void walk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigned long flag);
+/* Create empty page table. kmalloc() + memset() to zero. */
+unsigned long *create_empty_page_table(void);
+/* Simulate walk from pgd, return the physical address. */
+unsigned long simulate_walk(unsigned long *virt_pgd, unsigned long va);
 
 #endif // __ASSEMBLER__
 #endif // __MM_H__

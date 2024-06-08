@@ -27,10 +27,12 @@
 #ifndef __GPIO_H__
 #define __GPIO_H__
 
+#include "mm.h"
+
 #define __IO            volatile
 
 #ifndef MMIO_BASE
-#define MMIO_BASE               (0x3F000000)
+#define MMIO_BASE               ((0x3F000000) | KERNEL_VADDR_BASE)
 #endif // MMIO_BASE
 #define GPIO_BASE       (MMIO_BASE + 0x00200000)
 #define AUX_BASE        (MMIO_BASE + 0x00215000)
@@ -41,6 +43,8 @@
 #define AUX             ((aux_t *) (AUX_BASE))
 #define IRQ             ((irq_t *) (IRQ_BASE + 0x200))
 #define EMMC            ((emmc_t *) (EMMC_BASE))
+
+#ifndef __ASSEMBLER__
 
 typedef struct {
     __IO unsigned int GPFSEL[6];
@@ -143,5 +147,5 @@ typedef struct {
     __IO unsigned int SLOTISR_VER;
 } emmc_t;
 
-
+#endif // __ASSEMBLER__
 #endif // __GPIO_H__

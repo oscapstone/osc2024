@@ -11,13 +11,10 @@
 #define USTACK_SIZE 4096
 #define USTACK_TOP (USTACK_SIZE)
 
-#ifndef MMIO_BASE
-#define MMIO_BASE               (0x3F000000)
-#endif // MMIO_BASE
-
 #ifndef PAGE_SIZE
 #define PAGE_SIZE               (1 << 12) // 4KB
 #endif // PAGE_SIZE
+
 #define current get_current()
 
 #define USER_TASK_PRIORITY 10

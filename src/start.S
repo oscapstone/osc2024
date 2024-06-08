@@ -65,10 +65,10 @@ _start:
     /* Enable MMU */
     mrs     x2, sctlr_el1
     orr     x2, x2, 1
-    bic     x2, x2, #(1 << 19) // clear WXN bit
+    //bic     x2, x2, #(1 << 19) // clear WXN bit
     msr     sctlr_el1, x2 // enable MMU, cache remains disabled
 
-    /* Then we have to set a proper stack pointer */
+    /* Then we have to set stack pointer to proper virtual address */
     ldr     x0, =__KERNEL_START_ADDR
     mov     sp, x0
 
