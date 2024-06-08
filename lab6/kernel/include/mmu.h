@@ -150,11 +150,10 @@ void mmu_free_all_vma(thread_t *t);
 void mmu_free_vma(vm_area_struct_t *vma);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1);
-void mmu_reset_page_tables_read_only(uint64_t *parent_table, uint64_t *child_table, int level);
-void mmu_set_page_table_read_only(uint64_t *pgd, PAGE_TABLE_LEVEL level);
+void translation_fault_handler(vm_area_struct_t *the_area_ptr, uint64_t fault_user_page, uint64_t file_offset, uint64_t flag);
+void permission_fault_handler(vm_area_struct_t *the_area_ptr, uint64_t fault_user_page, uint64_t flag);
 void mmu_copy_page_table_and_set_read_only(uint64_t *dest, uint64_t *src, PAGE_TABLE_LEVEL level);
 void dump_vma(thread_t *t);
-void dump_pagetable(unsigned long user_va, unsigned long pa);
 
 #endif //__ASSEMBLER__
 

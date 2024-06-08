@@ -218,6 +218,110 @@ inline vm_area_struct_t *find_vma(thread_t *t, size_t va)
     return 0;
 }
 
+void translation_fault_handler(vm_area_struct_t *the_area_ptr, uint64_t fault_user_page, uint64_t file_offset, uint64_t flag)
+{
+    DEBUG_BLOCK({
+        dump_vma(curr_thread);
+    });
+
+    uint64_t ttbr0_el1_value;
+    asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
+    DEBUG("pid: %d, curr_thread->context.pgd: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, ttbr0_el1_value);
+    void *kernel_new_page;
+    if (the_area_ptr->vm_flags & VM_PFNMAP)
+    {
+        DEBUG("PFNMAP: 0x%x\r\n", the_area_ptr->vm_file);
+        kernel_new_page = (void *)(the_area_ptr->vm_file + file_offset);
+    }
+    else
+    {
+        DEBUG("kmalloc: 0x%x\r\n", PAGE_FRAME_SIZE);
+        kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
+        get_page(kernel_new_page);
+        if (the_area_ptr->vm_file != NULL)
+        {
+            DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", the_area_ptr->vm_file + file_offset, kernel_new_page, PAGE_FRAME_SIZE);
+            memcpy(kernel_new_page, the_area_ptr->vm_file + file_offset, PAGE_FRAME_SIZE);
+        }
+        else
+        {
+            DEBUG("memset: 0x%x, size: 0x%x\r\n", kernel_new_page, PAGE_FRAME_SIZE);
+            memset(kernel_new_page, 0, PAGE_FRAME_SIZE);
+        }
+    }
+    map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_new_page), flag);
+    // map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, pa_to_map, flag);
+    // dump_pagetable(fault_user_page, pa_to_map);
+    DEBUG("map one page done\r\n");
+    flush_tlb();
+    kernel_unlock_interrupt();
+    // schedule();
+    // switch_mm_irqs_off(curr_thread->context.pgd); // flush tlb and pipeline because page table is change
+    return;
+}
+
+void permission_fault_handler(vm_area_struct_t *the_area_ptr, uint64_t fault_user_page, uint64_t flag)
+{
+    void *kernel_fault_page = PHYS_TO_KERNEL_VIRT(USER_VIRT_TO_PHYS(curr_thread->context.pgd, fault_user_page));
+    DEBUG("translaton fault: 0x%x -> 0x%x\r\n", fault_user_page, kernel_fault_page);
+    if (no_other_ref(kernel_fault_page))
+    {
+        DEBUG("no other ref\r\n");
+        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_fault_page), flag);
+        kernel_unlock_interrupt();
+        return;
+    }
+    else if (the_area_ptr->vm_page_prot & PROT_WRITE)
+    {
+        void *kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
+        put_page(kernel_fault_page);
+        get_page(kernel_new_page);
+        DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", kernel_fault_page, kernel_new_page, PAGE_FRAME_SIZE);
+        memcpy(kernel_new_page, kernel_fault_page, PAGE_FRAME_SIZE);
+        DEBUG("flag: 0x%x\r\n", flag);
+        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_new_page), flag);
+        flush_tlb();
+        // dump_vma(curr_thread);
+        kernel_unlock_interrupt();
+        return;
+    }
+    else
+    {
+        ERROR("Don't have write permission. Kill Process!\r\n");
+        kernel_unlock_interrupt();
+        thread_exit();
+        return;
+    }
+}
+
+static inline uint8_t prot_to_flag(uint64_t prot)
+{
+    uint8_t flag = 0;
+    if (!(prot & PROT_EXEC))
+        flag |= PD_UNX; // executable
+    if (prot == PROT_READ)
+        flag |= PD_RDONLY; // read-only
+    if (prot & PROT_READ)
+        flag |= PD_UK_ACCESS; // readable / accessible
+    return flag;
+}
+
+static inline int is_translation_fault(uint64_t iss)
+{
+    return (iss & 0x3F) == TF_LEVEL0 ||
+           (iss & 0x3F) == TF_LEVEL1 ||
+           (iss & 0x3F) == TF_LEVEL2 ||
+           (iss & 0x3F) == TF_LEVEL3;
+}
+
+static inline int is_permission_fault(uint64_t iss)
+{
+    return (iss & 0x3F) == PERMISSON_FAULT_LEVEL0 ||
+           (iss & 0x3F) == PERMISSON_FAULT_LEVEL1 ||
+           (iss & 0x3F) == PERMISSON_FAULT_LEVEL2 ||
+           (iss & 0x3F) == PERMISSON_FAULT_LEVEL3;
+}
+
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
 {
     kernel_lock_interrupt();
@@ -244,110 +348,20 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
     uint64_t file_offset = (fault_user_page - the_area_ptr->start);
     DEBUG("fault_user_page: 0x%x, prot: 0x%x\r\n", fault_user_page, the_area_ptr->vm_page_prot);
 
-    uint8_t flag = 0;
-    if (!(the_area_ptr->vm_page_prot & PROT_EXEC))
-    {
-        DEBUG("add non-executable flag\r\n");
-        flag |= PD_UNX; // executable
-    }
-    if (the_area_ptr->vm_page_prot == PROT_READ)
-    {
-        DEBUG("add read-only flag\r\n");
-        flag |= PD_RDONLY; // read-only
-    }
-    if (the_area_ptr->vm_page_prot & PROT_READ)
-    {
-        DEBUG("add accessible flag\r\n");
-        flag |= PD_UK_ACCESS; // readable / accessible
-    }
+    uint8_t flag = prot_to_flag(the_area_ptr->vm_page_prot);
     DEBUG("flag: 0x%x\r\n", flag);
 
     // For translation fault, only map one page frame for the fault address
-    if ((esr_el1->iss & 0x3F) == TF_LEVEL0 ||
-        (esr_el1->iss & 0x3F) == TF_LEVEL1 ||
-        (esr_el1->iss & 0x3F) == TF_LEVEL2 ||
-        (esr_el1->iss & 0x3F) == TF_LEVEL3)
+    // far_el1: Fault address register.
+    if (is_translation_fault(esr_el1->iss))
     {
-        INFO("[Translation fault]: 0x%x\r\n", far_el1); // far_el1: Fault address register.
-                                                        // Holds the faulting Virtual Address for all synchronous Instruction or Data Abort, PC alignment fault and Watchpoint exceptions that are taken to EL1.
-
-        DEBUG_BLOCK({
-            dump_vma(curr_thread);
-        });
-
-        uint64_t ttbr0_el1_value;
-        asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
-        DEBUG("pid: %d, curr_thread->context.pgd: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, ttbr0_el1_value);
-        void *kernel_new_page;
-        if (the_area_ptr->vm_flags & VM_PFNMAP)
-        {
-            DEBUG("PFNMAP: 0x%x\r\n", the_area_ptr->vm_file);
-            kernel_new_page = (void *)(the_area_ptr->vm_file + file_offset);
-        }
-        else
-        {
-            DEBUG("kmalloc: 0x%x\r\n", PAGE_FRAME_SIZE);
-            kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
-            get_page(kernel_new_page);
-            if (the_area_ptr->vm_file != NULL)
-            {
-                DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", the_area_ptr->vm_file + file_offset, kernel_new_page, PAGE_FRAME_SIZE);
-                memcpy(kernel_new_page, the_area_ptr->vm_file + file_offset, PAGE_FRAME_SIZE);
-            }
-            else
-            {
-                DEBUG("memset: 0x%x, size: 0x%x\r\n", kernel_new_page, PAGE_FRAME_SIZE);
-                memset(kernel_new_page, 0, PAGE_FRAME_SIZE);
-            }
-        }
-        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_new_page), flag);
-        // map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, pa_to_map, flag);
-        // dump_pagetable(fault_user_page, pa_to_map);
-        DEBUG("map one page done\r\n");
-        flush_tlb();
-        kernel_unlock_interrupt();
-        // schedule();
-        // switch_mm_irqs_off(curr_thread->context.pgd); // flush tlb and pipeline because page table is change
-        return;
+        INFO("[Translation fault]: 0x%x\r\n", far_el1);
+        translation_fault_handler(the_area_ptr, fault_user_page, file_offset, flag);
     }
-    else if (
-        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL0 ||
-        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL1 ||
-        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL2 ||
-        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL3)
+    else if (is_permission_fault(esr_el1->iss))
     {
         INFO("[Permission fault]: 0x%x\r\n", far_el1);
-        // far_el1: Fault address register.
-        void *kernel_fault_page = PHYS_TO_KERNEL_VIRT(USER_VIRT_TO_PHYS(curr_thread->context.pgd, fault_user_page));
-        DEBUG("translaton fault: 0x%x -> 0x%x\r\n", fault_user_page, kernel_fault_page);
-        if (no_other_ref(kernel_fault_page))
-        {
-            DEBUG("no other ref\r\n");
-            map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_fault_page), flag);
-            kernel_unlock_interrupt();
-            return;
-        }
-        else if (the_area_ptr->vm_page_prot & PROT_WRITE)
-        {
-            void *kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
-            put_page(kernel_fault_page);
-            get_page(kernel_new_page);
-            DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", kernel_fault_page, kernel_new_page, PAGE_FRAME_SIZE);
-            memcpy(kernel_new_page, kernel_fault_page, PAGE_FRAME_SIZE);
-            DEBUG("flag: 0x%x\r\n", flag);
-            map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_new_page), flag);
-            flush_tlb();
-            // dump_vma(curr_thread);
-            kernel_unlock_interrupt();
-            return;
-        }
-        else
-        {
-            ERROR("Don't have write permission. Kill Process!\r\n");
-            kernel_unlock_interrupt();
-            thread_exit();
-            return;
-        }
+        permission_fault_handler(the_area_ptr, fault_user_page, flag);
     }
     else
     {
@@ -356,8 +370,8 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         ERROR("[Segmentation fault]: %s. Kill Process!\r\n", IFSC_error_message);
         kernel_unlock_interrupt();
         thread_exit();
-        return;
     }
+    return;
 }
 
 void mmu_copy_page_table_and_set_read_only(uint64_t *dest, uint64_t *src, PAGE_TABLE_LEVEL level)
@@ -419,77 +433,4 @@ void dump_vma(thread_t *t)
         uart_puts("), Flags: 0x%x\r\n", vma->vm_flags);
     }
     uart_puts("=================================================================== END ===================================================================\r\n");
-}
-
-#define DUMP_NAME(number, name) \
-    case number:                \
-        uart_puts(name);        \
-        uart_puts("\n");        \
-        break;
-
-typedef enum
-{
-    UNKNOW_AREA = -1,
-    USER_DATA,
-    USER_STACK,
-    PERIPHERAL,
-    USER_SIGNAL_WRAPPER
-} vma_name_type;
-
-typedef enum
-{
-    PGD,
-    PUD,
-    PMD,
-    PTE,
-} pagetable_type;
-
-void dump_pagetable(unsigned long user_va, unsigned long pa)
-{
-    uart_puts("      +---------------------------+\n");
-    uart_puts("      | DUMP PAGE TABLE & ADDRESS |\n");
-    uart_puts("      +---------------------------+\n");
-    unsigned long *pagetable_pa = curr_thread->context.pgd;
-    unsigned long *pagetable_kernel_va = PHYS_TO_KERNEL_VIRT(pagetable_pa);
-
-    uart_puts("===============================================\n");
-    uart_puts("User Physical Address : 0x%x\n", pa);
-    uart_puts("User Vitural  Address : 0x%x\n", user_va);
-    unsigned long offset = user_va & 0xFFF;
-    uart_puts("Vitural Address offset: 0x%x\n", offset);
-    for (int level = 0; level < 4; level++)
-    {
-        uart_puts("-----------------------------------------------\n");
-        uart_puts("PAGE TABLE : ");
-        switch (level)
-        {
-            DUMP_NAME(PGD, "PGD")
-            DUMP_NAME(PUD, "PUD")
-            DUMP_NAME(PMD, "PMD")
-            DUMP_NAME(PTE, "PTE")
-        default:
-            uart_puts("unnamed: %d\n", level);
-            break;
-        }
-        uart_puts("Pagetable Vitural  Address: 0x%x\n", pagetable_kernel_va);
-        uart_puts("Pagetable Physical Address: 0x%x\n", pagetable_pa);
-
-        unsigned int idx = (user_va >> (39 - level * 9)) & 0x1FF;
-        uart_puts("Index of Pagetable: 0x%x\n", idx);
-        uart_puts("Entry %x of Pagetable: 0x%x\n", idx, pagetable_kernel_va[idx]);
-        if (level == PTE)
-        {
-            pagetable_pa = pagetable_kernel_va[idx] & ENTRY_ADDR_MASK;
-            uart_puts("The Page Base Physical Address: 0x%x\n", pagetable_pa);
-            uart_puts("The Physical Address: 0x%x\n", (unsigned long)pagetable_pa | offset);
-        }
-        else
-        {
-            pagetable_pa = pagetable_kernel_va[idx] & ENTRY_ADDR_MASK;
-            uart_puts("next Pagetable Physical Address: 0x%x\n", pagetable_pa);
-            pagetable_kernel_va = PHYS_TO_KERNEL_VIRT(pagetable_pa);
-            uart_puts("next Pagetable Vitural  Address: 0x%x\n", pagetable_kernel_va);
-        }
-        uart_puts("-----------------------------------------------\n");
-    }
 }
