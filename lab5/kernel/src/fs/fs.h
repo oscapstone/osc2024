@@ -21,6 +21,9 @@ typedef struct _FS_VNODE {
     U32 mode;
     void* content;
     size_t content_size;
+
+    // for different file system internal structure
+    void* internal;
 }FS_VNODE;
 
 typedef struct _FS_FILE {
@@ -41,12 +44,22 @@ typedef struct _FS_FILE {
 typedef struct _FS_MOUNT {
     FS_VNODE* root;
     struct _FS_FILE_SYSTEM* fs;
+    
+    // for hard drive read write, implemented by who mount that file system
+    /**
+     * @param offset
+     *      in byte
+    */
+    int (*read)(U64 offset, void* buf, size_t len);
+    int (*write)(U64 offset, const void* buf, size_t len);
+    void* internal;                             // the current file system internal structure
 }FS_MOUNT;
 
 typedef struct _FS_FILE_SYSTEM {
     const char* name;
     int (*setup_mount) (struct _FS_FILE_SYSTEM* fs, FS_MOUNT* mount);   // function pointer of mounting this file system
     LINK_LIST list;                                             // entry to link list
+
 }FS_FILE_SYSTEM;
 
 typedef struct _FS_FILE_OPERATIONS {
@@ -116,3 +129,5 @@ long vfs_lseek64(FS_FILE* file, long offset, int whence);
 
 int vfs_lookup(FS_VNODE* cwd, const char* pathname, FS_VNODE** target);
 int vfs_mkdir(FS_VNODE* cwd, const char* pathname);
+
+BOOL fs_has_child(FS_VNODE* node, const char* child_name);

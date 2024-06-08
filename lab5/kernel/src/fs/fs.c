@@ -8,6 +8,7 @@
 
 #include "uartfs.h"
 #include "framebufferfs.h"
+#include "fat32fs.h"
 
 FS_MANAGER* fs_manager;
 
@@ -290,6 +291,9 @@ void fs_init() {
         return;
     }
 
+    if (fs_register(fat32fs_create())) {
+        printf("[FS][ERROR] Failed to register fat32fs\n");
+    }
 
     NS_DPRINT("[FS][TRACE] fs_init() success.\n");
 }
@@ -400,3 +404,12 @@ FS_VNODE *vnode_create(const char *name, U32 flags)
     return vnode;
 }
 
+BOOL fs_has_child(FS_VNODE* node, const char* child_name) {
+    
+    FS_VNODE* target;
+    if (node->v_ops->lookup(node, &target, child_name) == 0) {
+        return TRUE;
+    }
+
+    return FALSE;
+}

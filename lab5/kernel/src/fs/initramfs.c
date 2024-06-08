@@ -119,7 +119,7 @@ static int read(FS_FILE *file, void *buf, size_t len) {
         return -1;
     }
 
-    int min = (len > vnode->content_size - file->pos - 1) ? vnode->content_size - file->pos - 1 : len;
+    int min = (len > vnode->content_size - file->pos) ? vnode->content_size - file->pos : len;
     if (min == 0) {
         return -1;
     }

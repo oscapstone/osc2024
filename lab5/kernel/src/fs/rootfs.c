@@ -56,7 +56,7 @@ FS_FILE_SYSTEM* rootfs_create() {
 static int write(FS_FILE *file, const void *buf, size_t len) {
     FS_VNODE* vnode = file->vnode;
     if (!S_ISREG(vnode->mode)) {
-        printf("[FS] rootfs: write(): not a regular file\n");
+        NS_DPRINT("[FS] rootfs: write(): not a regular file\n");
         return -1;
     }
     if (vnode->content_size <= file->pos + len) {

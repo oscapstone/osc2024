@@ -57,8 +57,8 @@ FS_FILE_SYSTEM* framebufferfs_create() {
 static int write(FS_FILE *file, const void *buf, size_t len) {
     
     U64 flags = irq_disable();
-    if (file->pos + len >= framebuffer_manager.info.pitch * framebuffer_manager.info.height) {
-        len = framebuffer_manager.info.pitch * framebuffer_manager.info.height - file->pos;
+    if (file->pos + len >= file->vnode->content_size) {
+        len = file->vnode->content_size - file->pos;
     }
 
     if (!framebuffer_manager.lfb_addr) {
@@ -77,6 +77,11 @@ static int write(FS_FILE *file, const void *buf, size_t len) {
 }
 
 static int read(FS_FILE* file, void* buf, size_t len) {
+    FS_VNODE* vnode = file->vnode;
+    len = (len > vnode->content_size - file->pos) ? vnode->content_size - file->pos : len;
+    if (len == 0) {
+        return -1;
+    }
     memcpy((const void*)(framebuffer_manager.lfb_addr + file->pos), buf, len);
     file->pos += len;
 
@@ -84,7 +89,6 @@ static int read(FS_FILE* file, void* buf, size_t len) {
 }
 
 static int open(FS_VNODE *file_node, FS_FILE **target) {
-    (*target)->pos = 0;
     return 0;
 }
 
@@ -186,7 +190,7 @@ static int ioctl(FS_FILE *file, unsigned long request, ...) {
         NS_DPRINT("FB addr: 0x%p\n", framebuffer_manager.lfb_addr);
         NS_DPRINT("settings isrgb: %d\n", info->isrgb);
         NS_DPRINT("FB width: %d, height: %d, pitch: %d, isrgb: %d\n", framebuffer_manager.info.width, framebuffer_manager.info.height, framebuffer_manager.info.pitch, framebuffer_manager.info.isrgb);
-        file->vnode->content_size = framebuffer_manager.info.width * framebuffer_manager.info.height * 4;
+        file->vnode->content_size = framebuffer_manager.info.pitch * framebuffer_manager.info.height;
     } else {
         printf("Unable to set screen resolution to 1024x768x32\n");
         irq_restore(irq_flags);

@@ -19,6 +19,9 @@ void utils_char_fill(char* dst, char* content, U64 size);
 
 unsigned int utils_str2uint_dec(const char *str);
 
+U32 utils_read_unaligned_u32(const void* address);
+U16 utils_read_unaligned_u16(const void* addr);
+
 // in assembly file utilsASM.S
 void utils_delay(U64 cycle);
 U32 utils_get_el();

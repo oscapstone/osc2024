@@ -24,7 +24,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/io/uart.o src/io/dtb.o src/io/reboot.o src/io/exception.o src/io/exception_c.o\
 				src/utils/utils.o src/utils/utilsASM.o src/utils/printf.o src/utils/fifo_buffer.o src/utils/link_list.o \
 				src/shell/shell.o \
-				src/fs/cpio.o src/fs/fs.o src/fs/rootfs.o src/fs/initramfs.o src/fs/uartfs.o src/fs/framebufferfs.o \
+				src/fs/cpio.o src/fs/fs.o src/fs/rootfs.o src/fs/initramfs.o src/fs/uartfs.o src/fs/framebufferfs.o src/fs/fat32fs.o \
 				src/peripherals/gpio.o src/peripherals/irq.o src/peripherals/timer.o src/peripherals/mailbox.o src/peripherals/irq_s.o\
 				src/mm/mmutilASM.o src/mm/mm.o\
 				src/arm/elutilsASM.o src/arm/mmu.o\
@@ -33,7 +33,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/syscall/sys_open.o src/syscall/sys_close.o src/syscall/sys_signal.o src/syscall/sys_mmap.o \
 				src/syscall/sys_read.o src/syscall/sys_write.o src/syscall/sys_mkdir.o src/syscall/sys_mount.o src/syscall/sys_chdir.o src/syscall/sys_lseek64.o src/syscall/sys_ioctl.o \
 				src/lib/fork.o src/lib/getpid.o\
-				src/dev/framebuffer.o\
+				src/dev/framebuffer.o src/dev/sdcard.o src/dev/sdhost.o \
 				)
 
 # the directories of the output files

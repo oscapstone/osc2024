@@ -55,43 +55,126 @@ void get_cpio_addr(int token, const char* name, const void *data, unsigned int s
 	}
 }
 
+struct SHELL_CMD_ARG_INFO {
+	int offset;		// if offset is -1 mean it is null
+	int len;
+};
+
+#define MAX_SHELL_ARGS 16
+
+struct SHELL_INFO {
+	int args;
+	struct SHELL_CMD_ARG_INFO arg_info[MAX_SHELL_ARGS];
+};
+
+#define MAX_SHELL_CMD	256
+
+static struct SHELL_INFO shell_info;
+static char cmd_space[MAX_SHELL_CMD];
+
+static void shell_parse_cmd() {
+	int offset = 0;
+	shell_info.args = 0;
+	int arg_len = 0;
+
+	while (cmd_space[offset] != '\0') {
+
+		switch (cmd_space[offset])
+		{
+		case ' ':
+			offset++;
+			break;
+		default:
+		{
+			int start_offset = offset;
+			arg_len = 0;
+			while(cmd_space[offset] != '\0' && cmd_space[offset] != ' ') {
+				arg_len++;
+				offset++;
+			}
+			cmd_space[offset++] = '\0';	// make the args stringable
+			shell_info.arg_info[shell_info.args].offset = start_offset;
+			shell_info.arg_info[shell_info.args].len = arg_len;
+			shell_info.args++;
+		}
+			break;
+		}
+	}
+	for (int i = shell_info.args; i < MAX_SHELL_ARGS; i++) {
+		shell_info.arg_info[i].offset = -1;
+	}
+}
+
+static BOOL shell_is_cmd(const char* cmd) {
+	return utils_strncmp(&cmd_space[shell_info.arg_info[0].offset], cmd, utils_strlen(cmd) + 1) == 0;
+}
+
+static BOOL shell_get_args(int index, char** arg_val) {
+	if (index < 0 || index > MAX_SHELL_ARGS) {
+		NS_DPRINT("index out of range\n");
+		return FALSE;
+	}
+	if (shell_info.arg_info[index].offset == -1) {
+		NS_DPRINT("offset = -1\n");
+		return FALSE;
+	}
+	*arg_val = &cmd_space[shell_info.arg_info[index].offset];
+	return TRUE;
+}
+
 void shell() {
 
+	char cwd_path[256];
+	cwd_path[0] = '/';
+	cwd_path[1] = '\0';
+	task_get_current_el1()->pwd = fs_get_root_node();
 
 	// init for setTimout command
 	timeout_msg_buf = kzalloc(CMD_TIMEOUT_MSG_BUF_SIZE);
 	timeout_msg_ptr = 0;
 	timeout_packages = NULL;
 
-    char cmd_space[256];
-
-    char* input_ptr = cmd_space;
+    U32 input_ptr = 0;
 
 	// getting CPIO addr
 	fdt_traverse(get_cpio_addr);
 
     while (TRUE) {
 
-        printf("# ");
+        printf("%s# ", cwd_path);
         
+        input_ptr = 0;
+		memzero(cmd_space, MAX_SHELL_CMD);
         while (TRUE) {
 			while (uart_async_empty()) {
             	enable_interrupt();             // make sure it can be interrupt
 				asm volatile("nop");
 			}
             char c = uart_async_get_char();
-            *input_ptr++ = c;
             if (c == '\n' || c == '\r') {
                 uart_send_nstring(2, "\r\n");
-                *input_ptr = '\0';
+            	cmd_space[input_ptr] = '\0';
                 break;
-            } else {
+            } else if (c == 8 || c == 127) {	// backspace
+				if (input_ptr > 0) { // is not null string
+					uart_send_char('\b');
+					uart_send_char(' ');
+					uart_send_char('\b');
+					input_ptr--;
+					cmd_space[input_ptr] = '\0';
+				}
+			} else {
+            	cmd_space[input_ptr++] = c;
                 uart_send_char(c);
             }
         }
+		shell_parse_cmd();
 
-        input_ptr = cmd_space;
-        if (utils_strncmp(cmd_space, "help", 4) == 0) {
+		if (shell_info.arg_info[0].offset == -1) {
+			continue;
+		}
+
+        if (shell_is_cmd("help")) {
             printf("NS shell ver 0.12\n");
             printf("help   : print this help menu\n");
 			printf("hello  : print Hello World!\n");
@@ -102,9 +185,9 @@ void shell() {
 			printf("dtb    : Load DTB data\n");
 			printf("async  : mini uart async test\n");
 			printf("set    : set timeout message for lab3. format: set [msg] [second].\n");
-        } else if (utils_strncmp(cmd_space, "hello", 4) == 0) {
+        } else if (shell_is_cmd("hello")) {
 			printf("Hello World!\n");
-        } else if (utils_strncmp(cmd_space,"info", 4) == 0) {
+        } else if (shell_is_cmd("info")) {
 			get_board_revision();
 			if (mailbox_call()) {
 				printf("Revision:            0x%X\n", mailbox[5]);
@@ -124,75 +207,87 @@ void shell() {
 			} else {
 				printf("Unable to query serial!\n");
 			}
-		}
-		 else if (utils_strncmp(cmd_space, "ls", 2) == 0) {
-			cpio_ls();
-		} else if (utils_strncmp(cmd_space, "cat ", 4) == 0) {
-			char fileName[32];
-			U32 len = 0;
-			char s;
-			U32 iter = 4;
-			while ((s = cmd_space[iter]) == ' ') {
-				iter++;
+		} else if (shell_is_cmd("ls")) {
+			TASK* task = task_get_current_el1();
+			FS_VNODE* cwd = task->pwd;
+
+			if (shell_info.args == 1) {
+				FS_VNODE* vnode = NULL;
+				LLIST_FOR_EACH_ENTRY(vnode, &cwd->childs, self) {
+					printf("%s\n", vnode->name);
+				}
+			} else {
+				char* path;
+				if (!shell_get_args(1, &path)) {
+					printf("Failed to get path addr\n");
+					continue;
+				}
+				FS_VNODE* target = NULL;
+				if (vfs_lookup(cwd, path, &target)) {
+					printf("Failed to get path: %s\n", path);
+					continue;
+				}
+				if (S_ISDIR(target->mode)) {
+					FS_VNODE* vnode = NULL;
+					LLIST_FOR_EACH_ENTRY(vnode, &target->childs, self) {
+						printf("%s\n", vnode->name);
+					}
+				} else if (S_ISREG(target->mode)) {
+					printf("%s\n", target->name);
+				}
 			}
-			while ((s = cmd_space[iter]) != '\0') {
-				fileName[len++] = cmd_space[iter++];
+
+			//cpio_ls();
+		} else if (shell_is_cmd("cd")) {
+			// TODO
+		} else if (shell_is_cmd("cat")) {
+			if (shell_info.args == 1)
+				continue;
+			char *path;
+			if (!shell_get_args(1, &path)) {
+				printf("Failed to get path addr\n");
+				continue;
 			}
-			fileName[len] = '\0';
-			len--;
-			cpio_cat(fileName, len);
-		} else if (utils_strncmp(cmd_space, "dtb", 3) == 0) {
+
+			FS_FILE* target = NULL;
+			if (vfs_open(task_get_current_el1()->pwd, path, FS_FILE_FLAGS_RDWR, &target)) {
+				printf("Failed to open file: %s\n", path);
+				continue;
+			}
+			if (!S_ISREG(target->vnode->mode)) {
+				printf("%s is not a file to read.\n", target->vnode->name);
+				continue;
+			}
+			printf("file size: %d bytes\n", target->vnode->content_size);
+			char c_buf;
+			while (vfs_read(target, &c_buf, 1) != -1) {
+				printf("%c", c_buf);
+			}
+			printf("\n");
+			vfs_close(target);
+		} else if (shell_is_cmd("dtb")) {
 			U64 dtbPtr = (U64) _dtb_ptr;
 			uart_send_string("DTB address: ");
 			uart_hex64(dtbPtr);
 			uart_send_string("\n");
 			//fdt_traverse(print_dtb);
 			fdt_traverse(get_cpio_addr);
-		} else if (utils_strncmp(cmd_space, "reboot", 6) == 0) {
+		} else if (shell_is_cmd("reboot")) {
 			uart_send_string("Rebooting....\n");
 			reset(1000);
-		} else if (utils_strncmp(cmd_space, "exception", 9) == 0) {
+		} else if (shell_is_cmd("exception")) {
 			printf("\nException level: %d\n", utils_get_el());
-		} else if (utils_strncmp(cmd_space, "exe ", 4) == 0) {
-			char fileName[32];
-			U32 len = 0;
-			U32 iter = 4;
-			while (cmd_space[iter] == ' ') {
-				iter++;
+		} else if (shell_is_cmd("exe")) {
+
+			char* filePath;
+			if (!shell_get_args(1, &filePath)) {
+				printf("can not parse arg 1\n");
+				continue;
 			}
-			while (cmd_space[iter] != '\0') {
-				fileName[len++] = cmd_space[iter++];
-			}
-			fileName[--len] = '\0';
 
-			// FS_FILE* file;
-			// int ret = vfs_open(task_get_current_el1()->pwd, fileName, FS_FILE_FLAGS_READ, &file);
-			// if (ret != 0) {
-			// 	printf("Program %s not found. result = %d\n", fileName, ret);
-			// 	continue;
-			// }
-			// if (S_ISDIR(file->vnode->mode)) {
-			// 	printf("%s is directory.\n", file->vnode->name);
-			// 	continue;
-			// }
-			// unsigned long contentSize = file->vnode->content_size;
-			// char programName[20];
-			// utils_char_fill(programName, file->vnode->name, utils_strlen(file->vnode->name));
-			// char* buf = kmalloc(file->vnode->content_size);
-			// vfs_read(file, buf, contentSize);
-			// vfs_close(file);
-			
-			// printf("Executing %s\n", fileName);
-
-			// TASK* user_task = task_create_user(programName, TASK_FLAGS_NONE);
-			// user_task->pwd = file->vnode->parent;				// Just Hard coded now, can change to shell working directory
-
-			// task_copy_program(user_task, buf, contentSize);
-			// kfree(buf);
-			// task_run_to_el0(user_task);
 			TASK* user_task = task_create_user("", TASK_FLAGS_NONE);
-			if (task_run_program(NULL/* change this to shell cwd*/, user_task, fileName) == -1) {
-				printf("Failed to execute program: %s\n", fileName);
+			if (task_run_program(NULL/* change this to shell cwd*/, user_task, filePath) == -1) {
+				printf("Failed to execute program: %s\n", filePath);
 				task_delete(user_task);
 				continue;
 			}
@@ -213,11 +308,11 @@ void shell() {
 			// TODO: wait task
 			task_wait(user_task->pid);
 
-		} else if (utils_strncmp(cmd_space, "async", 5) == 0) {
+		} else if (shell_is_cmd("async")) {
 			printf("This will transmit A character for async uart\n");
 			uart_async_write_char('A');
 			uart_set_transmit_int();
-		} else if (utils_strncmp(cmd_space, "mem ", 4) == 0) {
+		} else if (shell_is_cmd("mem")) {
 			printf("Memory base address: 0x%x\n", mem_manager.base_ptr);
 			printf("Memory size        : 0x%x\n", mem_manager.size);
 			printf("Total Levels       : %d\n", mem_manager.levels);
@@ -234,67 +329,38 @@ void shell() {
 				}
 			}
 			printf("Free space         : %u bytes\n", free_size);
-		} else if (utils_strncmp(cmd_space, "memtest", 7) == 0) {
-			printf("Memory management test\n");
-			char* ptr1 = kmalloc(16);
-			char* ptr2 = kmalloc(15);
-			char* ptr3 = kmalloc(32);
-			char* ptr4 = kmalloc(40);
-			printf("kmalloc(16). ptr: %x\n", ptr1);
-			printf("kmalloc(15). ptr: %x\n", ptr2);
-			printf("kmalloc(32). ptr: %x\n", ptr3);
-			printf("kmalloc(40). ptr: %x\n", ptr4);
-			kfree(ptr4);
-			kfree(ptr3);
-			kfree(ptr2);
-			kfree(ptr1);
-		} else if (utils_strncmp(cmd_space, "ps ", 3) == 0) {
-			printf("Current running task: %d\n", task_manager->running);
+		} else if (shell_is_cmd("ps")) {
+			printf("Current running task count: %d\n", task_manager->running);
 			for (U32 i = 0; i < task_manager->running; i++) {
 				printf("%4d: %s\n", task_manager->running_queue[i]->pid, task_manager->running_queue[i]->name);
 			}
-		} else if (utils_strncmp(cmd_space, "kill ", 5) == 0) {
-			char* number_ptr = &cmd_space[5];
-			int char_size = 0;
-			for(int i = 5; i < 256; i++) {
-				char c = cmd_space[i];
-				if (c == '\0' || c == ' ')
-					break;
-				char_size++;
+		} else if (shell_is_cmd("kill")) {
+			char* number_ptr;
+			if (!shell_get_args(1, &number_ptr)) {
+				printf("Cannot get argv[1]\n");
+				continue;
 			}
-			char_size--;
-			pid_t pid = utils_atou_dec(number_ptr, char_size);
+			pid_t pid = utils_str2uint_dec(number_ptr);
 			task_kill(pid, -2);
-		} else if (utils_strncmp(cmd_space, "set ", 4) == 0) {
-			U32 len = 0;
-			while (cmd_space[4 + len++] != ' ');
-			if (len == 0)
-				continue;
-			len -= 1;
-			U32 timeout = utils_str2uint_dec(&cmd_space[4 + len + 1]);
-			cmd_setTimeout(timeout, &cmd_space[4], len);
-		} else if (utils_strncmp(cmd_space, "uart", 4) == 0) {
-			FS_FILE* uart_file = NULL;
-			if (vfs_open(NULL, "/dev/uart", FS_FILE_FLAGS_WRITE | FS_FILE_FLAGS_READ, &uart_file)) {
-				printf("Failed to open /dev/uart.\n");
+		} else if (shell_is_cmd("set")) {
+			if (shell_info.args != 3) {
+				printf("Usage: set [msg] [timeout:second]\n");
 				continue;
 			}
-			char buf = 'a';
-			vfs_write(uart_file, &buf, 1);
-			vfs_close(uart_file);
-		} else if (utils_strncmp(cmd_space, "taskinfo ", 9) == 0) {
-			pid_t pid = utils_str2uint_dec(&cmd_space[9]);
-			TASK* task = task_get(pid);
-			if (!task) {
-				printf("task not found!\n");
+			
+			char* msg;
+			if (!shell_get_args(1, &msg)) {
 				continue;
 			}
-			printf("   pid:  %d\n", task->pid);
-			printf("    lr:  0x%p\n", task->cpu_regs.lr);
-			printf("    sp:  0x%p\n", task->cpu_regs.sp);
-			printf("   pgd:  0x%p\n", task->cpu_regs.pgd);
-		}
-		 else {
+			char* timout_str;
+			if (!shell_get_args(2, &timout_str)) {
+				continue;
+			}
+
+
+			U32 timeout = utils_str2uint_dec(timout_str);
+			cmd_setTimeout(timeout, msg, utils_strlen(msg));
+		} else {
 			uart_send_string("Unknown command\n");
 			uart_send_string(cmd_space);
 			uart_send_string("\n");
