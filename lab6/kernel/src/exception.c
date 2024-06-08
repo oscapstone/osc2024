@@ -128,6 +128,35 @@ const char *exception_type[] = {
     "Vector Catch exception (AArch32)",
     "BRK instruction execution (AArch64)"};
 
+// https://developer.arm.com/documentation/ddi0601/2024-03/AArch64-Registers/ESR-EL1--Exception-Syndrome-Register--EL1-
+const char *IFSC_table[] = {
+    "Address size fault, level 0 of translation or translation table base register.",                          // 0b000000
+    "Address size fault, level 1",                                                                             // 0b000001
+    "Address size fault, level 2",                                                                             // 0b000010
+    "Address size fault, level 3",                                                                             // 0b000011
+    "Translation fault, level 0",                                                                              // 0b000100
+    "Translation fault, level 1",                                                                              // 0b000101
+    "Translation fault, level 2",                                                                              // 0b000110
+    "Translation fault, level 3",                                                                              // 0b000111
+    "",                                                                                                        // 0b001000
+    "Access flag fault, level 1",                                                                              // 0b001001
+    "Access flag fault, level 2",                                                                              // 0b001010
+    "Access flag fault, level 3",                                                                              // 0b001011
+    "Permission fault, level 0",                                                                               // 0b001100
+    "Permission fault, level 1",                                                                               // 0b001101
+    "Permission fault, level 2",                                                                               // 0b001110
+    "Permission fault, level 3",                                                                               // 0b001111
+    "Synchronous External abort, not on translation table walk or hardware update of translation table.",      // 0b010000
+    "Synchronous External abort on translation table walk or hardware update of translation table, level -2.", // 0b010001
+    ""                                                                                                         // 0b010010
+    "Synchronous External abort on translation table walk or hardware update of translation table, level -1.", // 0b010011
+    "Synchronous External abort on translation table walk or hardware update of translation table, level 0.",  // 0b010100
+    "Synchronous External abort on translation table walk or hardware update of translation table, level 1.",  // 0b010101
+    "Synchronous External abort on translation table walk or hardware update of translation table, level 2.",  // 0b010110
+    "Synchronous External abort on translation table walk or hardware update of translation table, level 3.",  // 0b010111
+    "Synchronous parity or ECC error on memory access, not on translation table walk."                         // 0b011000
+};
+
 // 讀取ESR_EL1暫存器的值
 static inline uint64_t read_esr_el1(void)
 {
@@ -186,6 +215,7 @@ void el0_sync_router(trapframe_t *tpf)
     if (esr->ec == MEMFAIL_DATA_ABORT_LOWER || esr->ec == MEMFAIL_INST_ABORT_LOWER)
     {
         mmu_memfail_abort_handle(esr);
+        DEBUG("mmu_memfail_abort_handle sp_el0: 0x%x\n", tpf->sp_el0);
         return;
     }
     else if (!is_el0_syscall())
@@ -226,6 +256,41 @@ void el0_sync_router(trapframe_t *tpf)
 
 __getpid_label:
     DEBUG("sys_getpid\r\n");
+    // dump tpf
+    DEBUG("tpf->x0: %d\r\n", tpf->x0);
+    DEBUG("tpf->x1: %d\r\n", tpf->x1);
+    DEBUG("tpf->x2: %d\r\n", tpf->x2);
+    DEBUG("tpf->x3: %d\r\n", tpf->x3);
+    DEBUG("tpf->x4: %d\r\n", tpf->x4);
+    DEBUG("tpf->x5: %d\r\n", tpf->x5);
+    DEBUG("tpf->x6: %d\r\n", tpf->x6);
+    DEBUG("tpf->x7: %d\r\n", tpf->x7);
+    DEBUG("tpf->x8: %d\r\n", tpf->x8);
+    DEBUG("tpf->x9: %d\r\n", tpf->x9);
+    DEBUG("tpf->x10: %d\r\n", tpf->x10);
+    DEBUG("tpf->x11: %d\r\n", tpf->x11);
+    DEBUG("tpf->x12: %d\r\n", tpf->x12);
+    DEBUG("tpf->x13: %d\r\n", tpf->x13);
+    DEBUG("tpf->x14: %d\r\n", tpf->x14);
+    DEBUG("tpf->x15: %d\r\n", tpf->x15);
+    DEBUG("tpf->x16: %d\r\n", tpf->x16);
+    DEBUG("tpf->x17: %d\r\n", tpf->x17);
+    DEBUG("tpf->x18: %d\r\n", tpf->x18);
+    DEBUG("tpf->x19: %d\r\n", tpf->x19);
+    DEBUG("tpf->x20: %d\r\n", tpf->x20);
+    DEBUG("tpf->x21: %d\r\n", tpf->x21);
+    DEBUG("tpf->x22: %d\r\n", tpf->x22);
+    DEBUG("tpf->x23: %d\r\n", tpf->x23);
+    DEBUG("tpf->x24: %d\r\n", tpf->x24);
+    DEBUG("tpf->x25: %d\r\n", tpf->x25);
+    DEBUG("tpf->x26: %d\r\n", tpf->x26);
+    DEBUG("tpf->x27: %d\r\n", tpf->x27);
+    DEBUG("tpf->x28: %d\r\n", tpf->x28);
+    DEBUG("tpf->x29: %d\r\n", tpf->x29);
+    DEBUG("tpf->x30: %d\r\n", tpf->x30);
+    DEBUG("tpf->sp_el0: 0x%x\r\n", tpf->sp_el0);
+    DEBUG("tpf->spsr_el1: 0x%x\r\n", tpf->spsr_el1);
+    DEBUG("tpf->elr_el1: 0x%x\r\n", tpf->elr_el1);
     tpf->x0 = sys_getpid(tpf);
     return;
 
@@ -237,6 +302,7 @@ __uart_read_label:
 __uart_write_label:
     // DEBUG("sys_uart_write\r\n");
     tpf->x0 = sys_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
+    // DEBUG("writer size: %d\r\n", tpf->x0);
     return;
 
 __exec_label:
@@ -351,7 +417,7 @@ void invalid_exception_router(uint64_t x0)
     static int count = 0;
     if (count == 0)
     {
-        ERROR("invalid exception router: %d\r\n", x0);
+        ERROR("invalid exception router: %d, pid: %d\r\n", x0, curr_thread->pid);
         count++;
     }
 }

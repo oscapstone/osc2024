@@ -32,6 +32,7 @@
 			DEBUG("Set user stack pointer: 0x%x\n", user_sp);                                          \
 			asm volatile("msr sp_el0, %0\n\t" ::"r"(user_sp)); /* el0 stack pointer for el1 process */ \
 		}                                                                                              \
+		DEBUG("PID: %d\n", curr_thread->pid);                                                          \
 		asm volatile(                                                                                  \
 			"msr tpidr_el1, %0\n\t" /* Hold the \"kernel(el1)\" thread structure information */        \
 			"msr elr_el1, %1\n\t"	/* When el0 -> el1, store return address for el1 -> el0 */         \

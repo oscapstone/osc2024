@@ -153,11 +153,17 @@ typedef struct thread_struct thread_t;
     } while (0)
 
 void *set_2M_kernel_mmu(void *x0);
+int set_thread_default_mmu(thread_t *t);
+vm_area_struct_t *find_vma(thread_t *t, size_t va);
 void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag);
 void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uint64_t vm_page_prot, uint64_t vm_flags, uint8_t need_to_free);
 void mmu_free_all_vma(thread_t *t);
+void mmu_free_vma(vm_area_struct_t *vma);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1);
+void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level);
+void mmu_set_page_table_read_only(size_t *pgd, PAGE_TABLE_LEVEL level);
+void mmu_copy_page_table(size_t *dest, size_t *src, PAGE_TABLE_LEVEL level);
 void dump_vma(thread_t *t);
 void dump_pagetable(unsigned long user_va, unsigned long pa);
 

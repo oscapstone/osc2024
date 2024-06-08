@@ -6,8 +6,10 @@
 #include "stdint.h"
 #include "sched.h"
 #include "debug.h"
+#include "syscall.h"
 
 extern thread_t *curr_thread;
+extern const char *IFSC_table[];
 
 void *set_2M_kernel_mmu(void *x0)
 {
@@ -41,6 +43,34 @@ void *set_2M_kernel_mmu(void *x0)
 static inline is_addr_not_align_to_page_size(size_t addr)
 {
     return ALIGN_UP(addr, PAGE_FRAME_SIZE) != addr;
+}
+
+int set_thread_default_mmu(thread_t *t)
+{
+    mmu_add_vma(t, "Code", USER_CODE_BASE, t->datasize, (size_t)KERNEL_VIRT_TO_PHYS(t->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
+    mmu_add_vma(t, "User stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(t->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
+    mmu_add_vma(t, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
+    mmu_add_vma(t,
+                "Signal wrapper",
+                USER_SIGNAL_WRAPPER_VA,
+                0x2000,
+                ALIGN_DOWN(
+                    KERNEL_VIRT_TO_PHYS(signal_handler_wrapper),
+                    PAGE_FRAME_SIZE),
+                (PROT_READ | PROT_EXEC),
+                (VM_EXEC | VM_READ),
+                0);
+    mmu_add_vma(t,
+                "Run user task wrapper",
+                USER_RUN_USER_TASK_WRAPPER_VA,
+                0x2000,
+                ALIGN_DOWN(
+                    KERNEL_VIRT_TO_PHYS(run_user_task_wrapper),
+                    PAGE_FRAME_SIZE),
+                (PROT_READ | PROT_EXEC),
+                (VM_EXEC | VM_READ),
+                0);
+    return 0;
 }
 
 /**
@@ -102,6 +132,8 @@ void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uin
     {
         ERROR("mmu_add_vma: Address is not aligned to 4KB.\r\n");
         ERROR("VA: 0x%x, PA: 0x%x, Size: 0x%x, vm_page_prot: 0x%x, vm_flags: 0x%x, need_to_free: 0x%x\r\n", va, pa, size, vm_page_prot, vm_flags, need_to_free);
+        while (1)
+            ;
         return;
     }
     vm_area_struct_t *new_area = kmalloc(sizeof(vm_area_struct_t));
@@ -111,6 +143,8 @@ void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, size_t pa, uin
     new_area->virt_addr_area.end = va + size;
     new_area->phys_addr_area.start = pa;
     new_area->phys_addr_area.end = pa + size;
+    if (need_to_free)
+        get_page(pa);
     new_area->vm_page_prot = vm_page_prot;
     new_area->vm_flags = vm_flags;
     new_area->need_to_free = need_to_free;
@@ -128,15 +162,19 @@ void mmu_free_all_vma(thread_t *t)
     list_head_t *n;
     list_for_each_safe(curr, n, (list_head_t *)t->vma_list)
     {
-        vm_area_struct_t *vma = (vm_area_struct_t *)curr;
-        if (vma->need_to_free)
-        {
-            DEBUG("VMA Kfree: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT(vma->phys_addr_area.start));
-            kfree((void *)PHYS_TO_KERNEL_VIRT(vma->phys_addr_area.start));
-        }
-        list_del_entry(curr);
-        kfree(curr);
+        mmu_free_vma((vm_area_struct_t *)curr);
     }
+}
+
+void mmu_free_vma(vm_area_struct_t *vma)
+{
+    if (vma->need_to_free)
+    {
+        DEBUG("VMA put_page: 0x%x\r\n", vma->phys_addr_area.start);
+        put_page(vma->phys_addr_area.start);
+    }
+    list_del_entry((list_head_t *)vma);
+    kfree(vma);
 }
 
 /**
@@ -165,7 +203,7 @@ void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level)
     }
 }
 
-static inline vm_area_struct_t *find_vma(thread_t *t, size_t va)
+inline vm_area_struct_t *find_vma(thread_t *t, size_t va)
 {
     list_head_t *pos;
     vm_area_struct_t *vma;
@@ -184,10 +222,9 @@ static inline vm_area_struct_t *find_vma(thread_t *t, size_t va)
     return 0;
 }
 
-extern void switch_mm_irqs_off(unsigned long long *pgd);
-
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
 {
+    kernel_lock_interrupt();
     uint64_t far_el1;
     __asm__ __volatile__("mrs %0, FAR_EL1\n\t" : "=r"(far_el1));
 
@@ -201,10 +238,35 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         ERROR_BLOCK({
             dump_vma(curr_thread);
         });
+        kernel_unlock_interrupt();
         thread_exit();
         return;
     }
     DEBUG("the_area_ptr: 0x%x\r\n", the_area_ptr);
+
+    size_t addr_offset = (far_el1 - the_area_ptr->virt_addr_area.start);
+    addr_offset = ALIGN_DOWN(addr_offset, PAGE_FRAME_SIZE);
+    size_t va_to_map = the_area_ptr->virt_addr_area.start + addr_offset;
+    size_t pa_to_map = the_area_ptr->phys_addr_area.start + addr_offset;
+    DEBUG("va_to_map: 0x%x, pa_to_map: 0x%x, prot: 0x%x\r\n", va_to_map, pa_to_map, the_area_ptr->vm_page_prot);
+
+    uint8_t flag = 0;
+    if (!(the_area_ptr->vm_page_prot & PROT_EXEC))
+    {
+        DEBUG("add non-executable flag\r\n");
+        flag |= PD_UNX; // executable
+        DEBUG("flag: 0x%x\r\n", flag);
+    }
+    if (the_area_ptr->vm_page_prot == PROT_READ)
+    {
+        DEBUG("add read-only flag\r\n");
+        flag |= PD_RDONLY; // writable
+    }
+    if (the_area_ptr->vm_page_prot & PROT_READ)
+    {
+        DEBUG("add accessible flag\r\n");
+        flag |= PD_UK_ACCESS; // readable / accessible
+    }
 
     // For translation fault, only map one page frame for the fault address
     if ((esr_el1->iss & 0x3F) == TF_LEVEL0 ||
@@ -215,45 +277,157 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         INFO("[Translation fault]: 0x%x\r\n", far_el1); // far_el1: Fault address register.
                                                         // Holds the faulting Virtual Address for all synchronous Instruction or Data Abort, PC alignment fault and Watchpoint exceptions that are taken to EL1.
 
-        size_t addr_offset = (far_el1 - the_area_ptr->virt_addr_area.start);
-        addr_offset = ALIGN_DOWN(addr_offset, PAGE_FRAME_SIZE);
-        size_t va_to_map = the_area_ptr->virt_addr_area.start + addr_offset;
-        size_t pa_to_map = the_area_ptr->phys_addr_area.start + addr_offset;
-        DEBUG("va_to_map: 0x%x, pa_to_map: 0x%x, prot: 0x%x\r\n", va_to_map, pa_to_map, the_area_ptr->vm_page_prot);
-        INFO_BLOCK({
+        DEBUG_BLOCK({
             dump_vma(curr_thread);
         });
 
-        uint8_t flag = 0;
-        if (!(the_area_ptr->vm_page_prot & PROT_EXEC))
-        {
-            DEBUG("add non-executable flag\r\n");
-            flag |= PD_UNX; // executable
-            DEBUG("flag: 0x%x\r\n", flag);
-        }
-        if (the_area_ptr->vm_page_prot == PROT_READ)
-        {
-            DEBUG("add read-only flag\r\n");
-            flag |= PD_RDONLY; // writable
-        }
-        if (the_area_ptr->vm_page_prot & PROT_READ)
-        {
-            DEBUG("add accessible flag\r\n");
-            flag |= PD_UK_ACCESS; // readable / accessible
-        }
         uint64_t ttbr0_el1_value;
         asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
         DEBUG("pid: %d, curr_thread->context.pgd: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, ttbr0_el1_value);
 
         map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, pa_to_map, flag);
-
-        switch_mm_irqs_off(curr_thread->context.pgd); // flush tlb and pipeline because page table is change
+        // dump_pagetable(va_to_map, pa_to_map);
+        DEBUG("map one page done\r\n");
+        kernel_unlock_interrupt();
+        // schedule();
+        // switch_mm_irqs_off(curr_thread->context.pgd); // flush tlb and pipeline because page table is change
+        return;
+    }
+    else if (
+        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL0 ||
+        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL1 ||
+        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL2 ||
+        (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL3)
+    {
+        INFO("[Permission fault]: 0x%x\r\n", far_el1); // far_el1: Fault address register.
+                                                       // if (the_area_ptr->vm_page_prot & PROT_WRITE)
+                                                       // {
+                                                       //     size_t size = the_area_ptr->virt_addr_area.end - the_area_ptr->virt_addr_area.start;
+                                                       //     DEBUG("size: 0x%x, the_area_ptr->phys_addr_area.start: 0x%x\r\n", size, the_area_ptr->phys_addr_area.start);
+                                                       //     void *virt_new_pa = kmalloc(size);
+                                                       //     DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", PHYS_TO_KERNEL_VIRT(the_area_ptr->phys_addr_area.start), virt_new_pa, size);
+                                                       //     memcpy(virt_new_pa, (void *)PHYS_TO_KERNEL_VIRT(the_area_ptr->phys_addr_area.start), size);
+                                                       //     mmu_add_vma(curr_thread, the_area_ptr->name, the_area_ptr->virt_addr_area.start, size, KERNEL_VIRT_TO_PHYS(virt_new_pa), the_area_ptr->vm_page_prot, the_area_ptr->vm_flags, the_area_ptr->need_to_free);
+                                                       //     for (int i = 0; i < size ; i += PAGE_FRAME_SIZE)
+                                                       //     {
+                                                       //         DEBUG("map_one_page: pgd: 0x%x 0x%x -> 0x%x, flag: 0x%x\r\n", PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->virt_addr_area.start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
+                                                       //         map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->virt_addr_area.start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
+                                                       //     }
+                                                       //     mmu_free_vma(the_area_ptr);
+                                                       //     dump_vma(curr_thread);
+                                                       //     kernel_unlock_interrupt();
+                                                       //     return;
+                                                       // }
+                                                       // else
+                                                       // {
+        // ERROR("Don't have write permission. Kill Process!\r\n");
+        kernel_unlock_interrupt();
+        thread_exit();
+        return;
+        // }
     }
     else
     {
         // For other Fault (permisson ...etc)
-        ERROR("[Segmentation fault]: Other Fault. Kill Process!\r\n");
+        char *IFSC_error_message = IFSC_table[(esr_el1->iss & 0x3f)];
+        ERROR("[Segmentation fault]: %s. Kill Process!\r\n", IFSC_error_message);
+        kernel_unlock_interrupt();
         thread_exit();
+        return;
+    }
+}
+
+void mmu_set_page_table_read_only(size_t *pgd, PAGE_TABLE_LEVEL level)
+{
+    // size_t *table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)pgd);
+    // for (int i = 0; i < 512; i++)
+    // {
+    //     if (table_virt[i] != 0)
+    //     {
+    //         size_t *next_table = (size_t *)(table_virt[i] & ENTRY_ADDR_MASK);
+    //         if (table_virt[i] & PD_TABLE)
+    //         {
+    //             if (level <= LEVEL_PMD) // not the last level
+    //             {
+    //                 DEBUG("next_table: 0x%x, level: %d\r\n", next_table, level + 1);
+    //                 mmu_set_page_table_read_only(next_table, level + 1);
+    //             }
+    //             else
+    //             {
+    //                 DEBUG("set read-only: 0x%x, level: %d\r\n", table_virt[i], level);
+    //                 table_virt[i] |= PD_RDONLY;
+    //             }
+    //         }
+    //     }
+    // }
+}
+
+void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level)
+{
+    if (level > 3)
+        return;
+
+    size_t *parent_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)parent_table);
+    size_t *child_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)child_table);
+    // int counter_ = 0;
+    for (int i = 0; i < 512; i++)
+    {
+        if (parent_table_virt[i] == 0)
+            continue;
+
+        if (!(parent_table_virt[i] & PD_TABLE))
+        {
+            DEBUG("mmu_reset_page_tables_read_only error\r\n");
+            return;
+        }
+        if (level == 3)
+        {
+            child_table_virt[i] = parent_table_virt[i];
+            child_table_virt[i] |= PD_RDONLY;
+            // if (counter_ < 3)
+            parent_table_virt[i] |= PD_RDONLY;
+            // counter_++;
+        }
+        else
+        {
+            if (!child_table_virt[i])
+            {
+                size_t *new_table = kmalloc(0x1000);
+                memset(new_table, 0, 0x1000);
+                child_table_virt[i] = KERNEL_VIRT_TO_PHYS((size_t)new_table);
+                child_table_virt[i] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2);
+            }
+            size_t *parent_next_table = (size_t *)(parent_table_virt[i] & ENTRY_ADDR_MASK);
+            size_t *child_next_table = (size_t *)(child_table_virt[i] & ENTRY_ADDR_MASK);
+            mmu_reset_page_tables_read_only(parent_next_table, child_next_table, level + 1);
+        }
+    }
+}
+
+void mmu_copy_page_table(size_t *dest, size_t *src, PAGE_TABLE_LEVEL level)
+{
+    size_t *dest_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)dest);
+    size_t *src_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)src);
+    for (int i = 0; i < 512; i++)
+    {
+        if (src_table_virt[i] != 0)
+        {
+            size_t *next_table = (size_t *)(src_table_virt[i] & ENTRY_ADDR_MASK);
+            if (src_table_virt[i] & PD_TABLE)
+            {
+                if (level <= LEVEL_PMD) // not the last level
+                {
+                    dest_table_virt[i] = KERNEL_VIRT_TO_PHYS((size_t)kmalloc(PAGE_FRAME_SIZE));
+                    mmu_copy_page_table((size_t *)(dest_table_virt[i] & ENTRY_ADDR_MASK), next_table, level + 1);
+                }
+                else
+                {
+                    DEBUG("copy page: 0x%x -> 0x%x, level: %d\r\n", &(src_table_virt[i]), &(dest_table_virt[i]), level);
+                    src_table_virt[i] |= PD_RDONLY;
+                    dest_table_virt[i] = src_table_virt[i];
+                }
+            }
+        }
     }
 }
 

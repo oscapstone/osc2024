@@ -33,7 +33,7 @@ extern thread_t *curr_thread;
 /**
  * @brief Wrapper function to run the user task pointed to by curr_thread->code.
  */
-void __attribute__((aligned(PAGE_FRAME_SIZE))) run_user_task_wrapper(char *dest)
+void run_user_task_wrapper(char *dest)
 {
 	// DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
 	// unlock_interrupt();
@@ -119,6 +119,7 @@ size_t sys_uart_read(trapframe_t *tpf, char buf[], size_t size)
 	for (int i = 0; i < size; i++)
 	{
 		c = uart_async_recv();
+		// c = uart_recv();
 		buf[i] = c == '\r' ? '\n' : c;
 	}
 	return size;
@@ -137,6 +138,7 @@ size_t sys_uart_write(trapframe_t *tpf, const char buf[], size_t size)
 	for (int i = 0; i < size; i++)
 	{
 		uart_async_send(buf[i]);
+		// uart_send(buf[i]);
 	}
 	return size;
 }
@@ -183,11 +185,8 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 		"isb\n\t");			 // clear pipeline
 	mmu_free_all_vma(curr_thread);
 
-	mmu_add_vma(curr_thread, "Code", USER_CODE_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
-	mmu_add_vma(curr_thread, "User Stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
-	mmu_add_vma(curr_thread, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
-	mmu_add_vma(curr_thread, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x1000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
-	// DEBUG("physical address of run_user_task_wrapper: 0x%x\r\n", (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper));
+	set_thread_default_mmu(curr_thread);
+
 	uint64_t ttbr0_el1_value;
 	asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
 	DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
@@ -220,6 +219,7 @@ int sys_fork(trapframe_t *tpf)
 	child->status = THREAD_READY;
 	SIGNAL_COPY(child, parent);
 
+	// child->code = parent->code;
 	child->code = kmalloc(parent->datasize);
 	MEMCPY(child->code, parent->code, parent->datasize);
 	DEBUG("fork child process, pid: %d, datasize: %d, code: 0x%x\r\n", child->pid, child->datasize, child->code);
@@ -227,17 +227,25 @@ int sys_fork(trapframe_t *tpf)
 	MEMCPY(child->user_stack_bottom, parent->user_stack_bottom, USTACK_SIZE);
 	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
 
-	mmu_add_vma(child, "Code", USER_CODE_BASE, child->datasize, (size_t)KERNEL_VIRT_TO_PHYS(child->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
-	mmu_add_vma(child, "User stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(child->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
-	mmu_add_vma(child, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
-	mmu_add_vma(child, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
-	mmu_add_vma(child, "Run user task wrapper", USER_RUN_USER_TASK_WRAPPER_VA, 0x2000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
+	set_thread_default_mmu(child);
+
 	DEBUG_BLOCK({
 		DEBUG("-------------- Child VMA --------------\r\n");
 		dump_vma(child);
 		DEBUG("-------------- Parent VMA --------------\r\n");
 		dump_vma(parent);
 	});
+
+	// MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
+	// list_head_t *pos;
+	// list_for_each(pos, (list_head_t *)(curr_thread->vma_list))
+	// {
+	// 	vm_area_struct_t *vma = (vm_area_struct_t *)pos;
+	// 	mmu_add_vma(child, vma->name, vma->virt_addr_area.start, vma->virt_addr_area.end - vma->virt_addr_area.start, vma->phys_addr_area.start, vma->vm_page_prot, vma->vm_flags, vma->need_to_free);
+	// }
+	// mmu_reset_page_tables_read_only(parent->context.pgd, child->context.pgd, LEVEL_PGD);
+	// mmu_copy_page_table(child->context.pgd, parent->context.pgd, LEVEL_PGD);
+
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
 	store_context(&(child->context));
@@ -493,12 +501,8 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	MEMCPY(curr_thread->code, filedata, filesize);
 	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 
-	mmu_add_vma(curr_thread, "Code", USER_CODE_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->code), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 1);
-	mmu_add_vma(curr_thread, "User Stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->user_stack_bottom), (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), 1);
-	mmu_add_vma(curr_thread, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE), 0);
-	mmu_add_vma(curr_thread, "Signal wrapper", USER_SIGNAL_WRAPPER_VA, 0x1000, (size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
-	mmu_add_vma(curr_thread, "Run user task wrapper", USER_RUN_USER_TASK_WRAPPER_VA, 0x1000, (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper), (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), 0);
-	// DEBUG("physical address of run_user_task_wrapper: 0x%x\r\n", (size_t)KERNEL_VIRT_TO_PHYS(run_user_task_wrapper));
+	set_thread_default_mmu(curr_thread);
+
 	uint64_t ttbr0_el1_value;
 	asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
 	DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
@@ -507,7 +511,7 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	DEBUG("VA of run_user_task_wrapper: 0x%x, USER_RUN_USER_TASK_WRAPPER_VA: 0x%x\r\n", run_user_task_wrapper, USER_RUN_USER_TASK_WRAPPER_VA);
 	DEBUG("VA of signal_handler_wrapper: 0x%x, USER_SIGNAL_WRAPPER_VA: 0x%x\r\n", signal_handler_wrapper, USER_SIGNAL_WRAPPER_VA);
 	DEBUG("VA of user sp: 0x%x", USER_STACK_BASE);
-	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
+	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA + (uint64_t)run_user_task_wrapper % PAGE_FRAME_SIZE, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
 	return 0;
 }
 

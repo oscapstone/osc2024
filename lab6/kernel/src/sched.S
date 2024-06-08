@@ -27,17 +27,6 @@ switch_to:
 
     ret
 
-.global switch_mm_irqs_off
-switch_mm_irqs_off:
-    msr DAIFSet, 0xf
-    dsb ish // ensure write has completed
-    msr ttbr0_el1, x0 // switch translation based address.
-    tlbi vmalle1is // invalidate all TLB entries
-    dsb ish // ensure completion of TLB invalidatation
-    isb // clear pipeline
-    msr DAIFClr, 0xf
-    ret
-
 .global get_current_thread_context
 get_current_thread_context:
     mrs x0, tpidr_el1          // get the current thread context address
