@@ -65,11 +65,11 @@
 #define PTE_INDEX(addr) (((addr) >> PAGE_OFFSET_BITS) & ((1ULL << PTE_INDEX_BITS) - 1))
 
 // 物理地址轉換宏
-#define VIRT_TO_PHYS(phys_pgd_ptr, virt_addr) ({                                                           \
+#define USER_VIRT_TO_PHYS(phys_pgd_ptr, virt_addr) ({                                                      \
     uint64_t *pgd = (uint64_t *)(PHYS_TO_KERNEL_VIRT(phys_pgd_ptr));                                       \
-    uint64_t *pud = (uint64_t *)(pgd[PGD_INDEX(virt_addr)] & ENTRY_ADDR_MASK);                             \
-    uint64_t *pmd = (uint64_t *)(pud[PUD_INDEX(virt_addr)] & ENTRY_ADDR_MASK);                             \
-    uint64_t *pte = (uint64_t *)(pmd[PMD_INDEX(virt_addr)] & ENTRY_ADDR_MASK);                             \
+    uint64_t *pud = (uint64_t *)PHYS_TO_KERNEL_VIRT((pgd[PGD_INDEX(virt_addr)] & ENTRY_ADDR_MASK));        \
+    uint64_t *pmd = (uint64_t *)PHYS_TO_KERNEL_VIRT((pud[PUD_INDEX(virt_addr)] & ENTRY_ADDR_MASK));        \
+    uint64_t *pte = (uint64_t *)PHYS_TO_KERNEL_VIRT((pmd[PMD_INDEX(virt_addr)] & ENTRY_ADDR_MASK));        \
     uint64_t phys_addr = (pte[PTE_INDEX(virt_addr)] & ENTRY_ADDR_MASK) | ((virt_addr) & ~ENTRY_ADDR_MASK); \
     phys_addr;                                                                                             \
 })
@@ -139,6 +139,8 @@ typedef struct thread_struct thread_t;
         }                                                                                      \
     } while (0)
 
+extern void flush_tlb(void);
+
 void *set_2M_kernel_mmu(void *x0);
 int set_thread_default_mmu(thread_t *t);
 vm_area_struct_t *find_vma(thread_t *t, size_t va);
@@ -148,9 +150,9 @@ void mmu_free_all_vma(thread_t *t);
 void mmu_free_vma(vm_area_struct_t *vma);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);
 void mmu_memfail_abort_handle(esr_el1_t *esr_el1);
-void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level);
-void mmu_set_page_table_read_only(size_t *pgd, PAGE_TABLE_LEVEL level);
-void mmu_copy_page_table(size_t *dest, size_t *src, PAGE_TABLE_LEVEL level);
+void mmu_reset_page_tables_read_only(uint64_t *parent_table, uint64_t *child_table, int level);
+void mmu_set_page_table_read_only(uint64_t *pgd, PAGE_TABLE_LEVEL level);
+void mmu_copy_page_table_and_set_read_only(uint64_t *dest, uint64_t *src, PAGE_TABLE_LEVEL level);
 void dump_vma(thread_t *t);
 void dump_pagetable(unsigned long user_va, unsigned long pa);
 

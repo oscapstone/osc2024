@@ -189,7 +189,8 @@ void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level)
                     DEBUG("kfree: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
                     kfree(PHYS_TO_KERNEL_VIRT((char *)next_table));
                 }
-                else{
+                else
+                {
                     DEBUG("put_page: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
                     put_page((uint64_t)PHYS_TO_KERNEL_VIRT((char *)next_table));
                 }
@@ -239,28 +240,27 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
     }
     DEBUG("the_area_ptr: 0x%x\r\n", the_area_ptr);
 
-    size_t addr_offset = (far_el1 - the_area_ptr->start);
-    addr_offset = ALIGN_DOWN(addr_offset, PAGE_FRAME_SIZE);
-    size_t va_to_map = the_area_ptr->start + addr_offset;
-    DEBUG("va_to_map: 0x%x, prot: 0x%x\r\n", va_to_map, the_area_ptr->vm_page_prot);
+    uint64_t fault_user_page = ALIGN_DOWN(far_el1, PAGE_FRAME_SIZE);
+    uint64_t file_offset = (fault_user_page - the_area_ptr->start);
+    DEBUG("fault_user_page: 0x%x, prot: 0x%x\r\n", fault_user_page, the_area_ptr->vm_page_prot);
 
     uint8_t flag = 0;
     if (!(the_area_ptr->vm_page_prot & PROT_EXEC))
     {
         DEBUG("add non-executable flag\r\n");
         flag |= PD_UNX; // executable
-        DEBUG("flag: 0x%x\r\n", flag);
     }
     if (the_area_ptr->vm_page_prot == PROT_READ)
     {
         DEBUG("add read-only flag\r\n");
-        flag |= PD_RDONLY; // writable
+        flag |= PD_RDONLY; // read-only
     }
     if (the_area_ptr->vm_page_prot & PROT_READ)
     {
         DEBUG("add accessible flag\r\n");
         flag |= PD_UK_ACCESS; // readable / accessible
     }
+    DEBUG("flag: 0x%x\r\n", flag);
 
     // For translation fault, only map one page frame for the fault address
     if ((esr_el1->iss & 0x3F) == TF_LEVEL0 ||
@@ -278,32 +278,33 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         uint64_t ttbr0_el1_value;
         asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
         DEBUG("pid: %d, curr_thread->context.pgd: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, ttbr0_el1_value);
-        void *new_page;
+        void *kernel_new_page;
         if (the_area_ptr->vm_flags & VM_PFNMAP)
         {
             DEBUG("PFNMAP: 0x%x\r\n", the_area_ptr->vm_file);
-            new_page = (void *)(the_area_ptr->vm_file + addr_offset);
+            kernel_new_page = (void *)(the_area_ptr->vm_file + file_offset);
         }
         else
         {
             DEBUG("kmalloc: 0x%x\r\n", PAGE_FRAME_SIZE);
-            new_page = kmalloc(PAGE_FRAME_SIZE);
-            get_page(new_page);
+            kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
+            get_page(kernel_new_page);
             if (the_area_ptr->vm_file != NULL)
             {
-                DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", the_area_ptr->vm_file + addr_offset, new_page, PAGE_FRAME_SIZE);
-                memcpy(new_page, the_area_ptr->vm_file + addr_offset, PAGE_FRAME_SIZE);
+                DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", the_area_ptr->vm_file + file_offset, kernel_new_page, PAGE_FRAME_SIZE);
+                memcpy(kernel_new_page, the_area_ptr->vm_file + file_offset, PAGE_FRAME_SIZE);
             }
             else
             {
-                DEBUG("memset: 0x%x, size: 0x%x\r\n", new_page, PAGE_FRAME_SIZE);
-                memset(new_page, 0, PAGE_FRAME_SIZE);
+                DEBUG("memset: 0x%x, size: 0x%x\r\n", kernel_new_page, PAGE_FRAME_SIZE);
+                memset(kernel_new_page, 0, PAGE_FRAME_SIZE);
             }
         }
-        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, KERNEL_VIRT_TO_PHYS(new_page), flag);
-        // map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), va_to_map, pa_to_map, flag);
-        // dump_pagetable(va_to_map, pa_to_map);
+        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_new_page), flag);
+        // map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, pa_to_map, flag);
+        // dump_pagetable(fault_user_page, pa_to_map);
         DEBUG("map one page done\r\n");
+        flush_tlb();
         kernel_unlock_interrupt();
         // schedule();
         // switch_mm_irqs_off(curr_thread->context.pgd); // flush tlb and pipeline because page table is change
@@ -315,32 +316,38 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
         (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL2 ||
         (esr_el1->iss & 0x3f) == PERMISSON_FAULT_LEVEL3)
     {
-        INFO("[Permission fault]: 0x%x\r\n", far_el1); // far_el1: Fault address register.
-                                                       // if (the_area_ptr->vm_page_prot & PROT_WRITE)
-                                                       // {
-                                                       //     size_t size = the_area_ptr->end - the_area_ptr->start;
-                                                       //     DEBUG("size: 0x%x, the_area_ptr->phys_addr_area.start: 0x%x\r\n", size, the_area_ptr->phys_addr_area.start);
-                                                       //     void *virt_new_pa = kmalloc(size);
-                                                       //     DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", PHYS_TO_KERNEL_VIRT(the_area_ptr->phys_addr_area.start), virt_new_pa, size);
-                                                       //     memcpy(virt_new_pa, (void *)PHYS_TO_KERNEL_VIRT(the_area_ptr->phys_addr_area.start), size);
-                                                       //     mmu_add_vma(curr_thread, the_area_ptr->name, the_area_ptr->start, size, KERNEL_VIRT_TO_PHYS(virt_new_pa), the_area_ptr->vm_page_prot, the_area_ptr->vm_flags, the_area_ptr->need_to_free);
-                                                       //     for (int i = 0; i < size ; i += PAGE_FRAME_SIZE)
-                                                       //     {
-                                                       //         DEBUG("map_one_page: pgd: 0x%x 0x%x -> 0x%x, flag: 0x%x\r\n", PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
-                                                       //         map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), the_area_ptr->start + i, KERNEL_VIRT_TO_PHYS(virt_new_pa + i), flag);
-                                                       //     }
-                                                       //     mmu_free_vma(the_area_ptr);
-                                                       //     dump_vma(curr_thread);
-                                                       //     kernel_unlock_interrupt();
-                                                       //     return;
-                                                       // }
-                                                       // else
-                                                       // {
-        // ERROR("Don't have write permission. Kill Process!\r\n");
-        kernel_unlock_interrupt();
-        thread_exit();
-        return;
-        // }
+        INFO("[Permission fault]: 0x%x\r\n", far_el1);
+        // far_el1: Fault address register.
+        void *kernel_fault_page = PHYS_TO_KERNEL_VIRT(USER_VIRT_TO_PHYS(curr_thread->context.pgd, fault_user_page));
+        DEBUG("translaton fault: 0x%x -> 0x%x\r\n", fault_user_page, kernel_fault_page);
+        if (no_other_ref(kernel_fault_page))
+        {
+            DEBUG("no other ref\r\n");
+            map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_fault_page), flag);
+            kernel_unlock_interrupt();
+            return;
+        }
+        else if (the_area_ptr->vm_page_prot & PROT_WRITE)
+        {
+            void *kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
+            put_page(kernel_fault_page);
+            get_page(kernel_new_page);
+            DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", kernel_fault_page, kernel_new_page, PAGE_FRAME_SIZE);
+            memcpy(kernel_new_page, kernel_fault_page, PAGE_FRAME_SIZE);
+            DEBUG("flag: 0x%x\r\n", flag);
+            map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_new_page), flag);
+            flush_tlb();
+            // dump_vma(curr_thread);
+            kernel_unlock_interrupt();
+            return;
+        }
+        else
+        {
+            ERROR("Don't have write permission. Kill Process!\r\n");
+            kernel_unlock_interrupt();
+            thread_exit();
+            return;
+        }
     }
     else
     {
@@ -353,94 +360,35 @@ void mmu_memfail_abort_handle(esr_el1_t *esr_el1)
     }
 }
 
-void mmu_set_page_table_read_only(size_t *pgd, PAGE_TABLE_LEVEL level)
+void mmu_copy_page_table_and_set_read_only(uint64_t *dest, uint64_t *src, PAGE_TABLE_LEVEL level)
 {
-    // size_t *table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)pgd);
-    // for (int i = 0; i < 512; i++)
-    // {
-    //     if (table_virt[i] != 0)
-    //     {
-    //         size_t *next_table = (size_t *)(table_virt[i] & ENTRY_ADDR_MASK);
-    //         if (table_virt[i] & PD_TABLE)
-    //         {
-    //             if (level <= LEVEL_PMD) // not the last level
-    //             {
-    //                 DEBUG("next_table: 0x%x, level: %d\r\n", next_table, level + 1);
-    //                 mmu_set_page_table_read_only(next_table, level + 1);
-    //             }
-    //             else
-    //             {
-    //                 DEBUG("set read-only: 0x%x, level: %d\r\n", table_virt[i], level);
-    //                 table_virt[i] |= PD_RDONLY;
-    //             }
-    //         }
-    //     }
-    // }
-}
-
-void mmu_reset_page_tables_read_only(size_t *parent_table, size_t *child_table, int level)
-{
-    if (level > 3)
-        return;
-
-    size_t *parent_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)parent_table);
-    size_t *child_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)child_table);
-    // int counter_ = 0;
-    for (int i = 0; i < 512; i++)
-    {
-        if (parent_table_virt[i] == 0)
-            continue;
-
-        if (!(parent_table_virt[i] & PD_TABLE))
-        {
-            DEBUG("mmu_reset_page_tables_read_only error\r\n");
-            return;
-        }
-        if (level == 3)
-        {
-            child_table_virt[i] = parent_table_virt[i];
-            child_table_virt[i] |= PD_RDONLY;
-            // if (counter_ < 3)
-            parent_table_virt[i] |= PD_RDONLY;
-            // counter_++;
-        }
-        else
-        {
-            if (!child_table_virt[i])
-            {
-                size_t *new_table = kmalloc(0x1000);
-                memset(new_table, 0, 0x1000);
-                child_table_virt[i] = KERNEL_VIRT_TO_PHYS((size_t)new_table);
-                child_table_virt[i] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2);
-            }
-            size_t *parent_next_table = (size_t *)(parent_table_virt[i] & ENTRY_ADDR_MASK);
-            size_t *child_next_table = (size_t *)(child_table_virt[i] & ENTRY_ADDR_MASK);
-            mmu_reset_page_tables_read_only(parent_next_table, child_next_table, level + 1);
-        }
-    }
-}
-
-void mmu_copy_page_table(size_t *dest, size_t *src, PAGE_TABLE_LEVEL level)
-{
-    size_t *dest_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)dest);
-    size_t *src_table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)src);
+    uint64_t *dest_table_virt = (uint64_t *)PHYS_TO_KERNEL_VIRT(dest);
+    uint64_t *src_table_virt = (uint64_t *)PHYS_TO_KERNEL_VIRT(src);
     for (int i = 0; i < 512; i++)
     {
         if (src_table_virt[i] != 0)
         {
-            size_t *next_table = (size_t *)(src_table_virt[i] & ENTRY_ADDR_MASK);
+            uint64_t *next_table = (uint64_t *)(src_table_virt[i] & ENTRY_ADDR_MASK);
             if (src_table_virt[i] & PD_TABLE)
             {
-                if (level <= LEVEL_PMD) // not the last level
+                if (level < LEVEL_PTE) // not the last level
                 {
-                    dest_table_virt[i] = KERNEL_VIRT_TO_PHYS((size_t)kmalloc(PAGE_FRAME_SIZE));
-                    mmu_copy_page_table((size_t *)(dest_table_virt[i] & ENTRY_ADDR_MASK), next_table, level + 1);
+                    size_t *newtable_p = kmalloc(PAGE_FRAME_SIZE); // create a table
+                    memset(newtable_p, 0, PAGE_FRAME_SIZE);
+                    dest_table_virt[i] = KERNEL_VIRT_TO_PHYS((size_t)newtable_p); // point to that table
+                    dest_table_virt[i] |= PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2);
+                    mmu_copy_page_table_and_set_read_only((uint64_t *)(dest_table_virt[i] & ENTRY_ADDR_MASK), next_table, level + 1);
                 }
-                else
+                if (level == LEVEL_PMD)
                 {
-                    DEBUG("copy page: 0x%x -> 0x%x, level: %d\r\n", &(src_table_virt[i]), &(dest_table_virt[i]), level);
+                }
+                else if (level == LEVEL_PTE)
+                {
                     src_table_virt[i] |= PD_RDONLY;
-                    dest_table_virt[i] = src_table_virt[i];
+                    dest_table_virt[i] = src_table_virt[i] | PD_ACCESS | PD_TABLE | (MAIR_IDX_NORMAL_NOCACHE << 2);
+                    DEBUG("copy page: 0x%x:0x%x -> 0x%x:0x%x, level: %d\r\n", &(src_table_virt[i]), src_table_virt[i], &(dest_table_virt[i]), dest_table_virt[i], level);
+                    DEBUG("get_page: 0x%x\r\n", next_table);
+                    get_page(PHYS_TO_KERNEL_VIRT((uint64_t)next_table));
                 }
             }
         }

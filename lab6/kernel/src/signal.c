@@ -147,9 +147,9 @@ void run_signal(int signal, uint64_t sp_el0)
 // void __attribute__((aligned(PAGE_FRAME_SIZE))) signal_handler_wrapper(char *dest)
 void signal_handler_wrapper(char *dest)
 {
-	// CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
-	// ((void (*)(void))dest)();
-	((void (*)(char *))USER_RUN_USER_TASK_WRAPPER_VA)(dest);
+	CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
+	((void (*)(void))dest)();
+	// ((void (*)(char *))USER_RUN_USER_TASK_WRAPPER_VA)(dest);
 	// system call sigreturn
 	CALL_SYSCALL(SYSCALL_SIGNAL_RETURN);
 }

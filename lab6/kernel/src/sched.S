@@ -37,6 +37,14 @@ set_current_thread_context:
     msr tpidr_el1, x0          // set the current thread context address
     ret
 
+.global flush_tlb
+flush_tlb:
+    dsb ish           // ensure write has completed, lock for context switch
+    tlbi vmalle1is    // invalidate all TLB entries in stage 1, el1 and inner shareable
+    dsb ish           // ensure completion of TLB invalidatation
+    isb               // clear pipeline
+    ret
+
 .global store_context
 store_context:
     stp x19, x20, [x0, 16 * 0]

@@ -414,10 +414,19 @@ void el0_irq_64_router(trapframe_t *tpf)
 
 void invalid_exception_router(uint64_t x0)
 {
+    
+    uint64_t esr_el1_value = read_esr_el1();
+    uint64_t elr_el1_value = read_elr_el1();
+    uint64_t spsr_el1_value = read_spsr_el1();
     static int count = 0;
     if (count == 0)
     {
+        const char *exception_name = get_exception_name(esr_el1_value);
         ERROR("invalid exception router: %d, pid: %d\r\n", x0, curr_thread->pid);
+        ERROR("exception occurred - %s\r\n", exception_name);
+        ERROR("spsr_el1: 0x%016lx\r\n", spsr_el1_value);
+        ERROR("elr_el1: 0x%016lx\r\n", elr_el1_value);
+        ERROR("esr_el1: 0x%016lx\r\n", esr_el1_value);
         count++;
     }
 }

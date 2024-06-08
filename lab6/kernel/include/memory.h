@@ -38,6 +38,7 @@ frame_t *split_frame(int8_t val);
 
 void get_page(uint64_t kenrle_virt_ptr);
 void put_page(uint64_t kenrle_virt_ptr);
+int no_other_ref(uint64_t kernel_virt_ptr);
 
 void dump_frame();
 void dump_cache();

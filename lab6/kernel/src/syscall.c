@@ -180,11 +180,7 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	asm("dsb ish\n\t"); // ensure write has completed
 	mmu_clean_page_tables(curr_thread->context.pgd, LEVEL_PGD);
 	memset(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), 0, 0x1000);
-	asm("tlbi vmalle1is\n\t" // invalidate all TLB entries
-		"dsb ish\n\t"		 // ensure completion of TLB invalidatation
-		"isb\n\t");			 // clear pipeline
 	mmu_free_all_vma(curr_thread);
-
 	set_thread_default_mmu(curr_thread);
 
 	uint64_t ttbr0_el1_value;
@@ -196,6 +192,8 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 	});
 	tpf->elr_el1 = (uint64_t)USER_CODE_BASE;
 	tpf->sp_el0 = (uint64_t)USER_STACK_BASE - SP_OFFSET_FROM_TOP;
+
+	flush_tlb();
 	kernel_unlock_interrupt();
 	return 0;
 }
@@ -219,15 +217,16 @@ int sys_fork(trapframe_t *tpf)
 	child->status = THREAD_READY;
 	SIGNAL_COPY(child, parent);
 
-	// child->code = parent->code;
-	child->code = kmalloc(parent->datasize);
-	MEMCPY(child->code, parent->code, parent->datasize);
-	DEBUG("fork child process, pid: %d, datasize: %d, code: 0x%x\r\n", child->pid, child->datasize, child->code);
+	child->code = parent->code;
 
-	MEMCPY(child->user_stack_bottom, parent->user_stack_bottom, USTACK_SIZE);
 	MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
-
-	set_thread_default_mmu(child);
+	list_head_t *pos;
+	DEBUG("Copy vma_list from %d to %d\r\n", parent->pid, child->pid);
+	list_for_each(pos, (list_head_t *)(curr_thread->vma_list))
+	{
+		vm_area_struct_t *vma = (vm_area_struct_t *)pos;
+		mmu_add_vma(child, vma->name, vma->start, vma->end - vma->start, vma->vm_page_prot, vma->vm_flags, vma->vm_file);
+	}
 
 	DEBUG_BLOCK({
 		DEBUG("-------------- Child VMA --------------\r\n");
@@ -235,16 +234,9 @@ int sys_fork(trapframe_t *tpf)
 		DEBUG("-------------- Parent VMA --------------\r\n");
 		dump_vma(parent);
 	});
-
-	// MEMCPY(child->kernel_stack_bottom, parent->kernel_stack_bottom, KSTACK_SIZE);
-	// list_head_t *pos;
-	// list_for_each(pos, (list_head_t *)(curr_thread->vma_list))
-	// {
-	// 	vm_area_struct_t *vma = (vm_area_struct_t *)pos;
-	// 	mmu_add_vma(child, vma->name, vma->start, vma->end - vma->start, vma->phys_addr_area.start, vma->vm_page_prot, vma->vm_flags, vma->need_to_free);
-	// }
-	// mmu_reset_page_tables_read_only(parent->context.pgd, child->context.pgd, LEVEL_PGD);
-	// mmu_copy_page_table(child->context.pgd, parent->context.pgd, LEVEL_PGD);
+	DEBUG("parent->context.pgd: 0x%x, child->context.pgd: 0x%x\r\n", parent->context.pgd, child->context.pgd);
+	mmu_copy_page_table_and_set_read_only(child->context.pgd, parent->context.pgd, LEVEL_PGD);
+    flush_tlb();
 
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
@@ -264,7 +256,6 @@ int sys_fork(trapframe_t *tpf)
 	{
 		DEBUG("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
 		tpf = (trapframe_t *)((char *)tpf + (uint64_t)child->kernel_stack_bottom - (uint64_t)parent->kernel_stack_bottom); // move tpf
-		// tpf->sp_el0 += (uint64_t)child->user_stack_bottom - (uint64_t)parent->user_stack_bottom;
 		return 0;
 	}
 }

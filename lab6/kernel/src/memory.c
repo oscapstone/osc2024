@@ -568,6 +568,12 @@ void put_page(uint64_t kernel_virt_ptr)
     }
 }
 
+int no_other_ref(uint64_t kernel_virt_ptr)
+{
+    frame_t *curr = virt_addr_to_frame(kernel_virt_ptr);
+    return curr->refcount == 1;
+}
+
 void dump_frame()
 {
     kernel_lock_interrupt();
