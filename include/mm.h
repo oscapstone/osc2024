@@ -71,6 +71,10 @@
 #define PAGE_SIZE                       (1 << 12) // 4KB
 #endif // PAGE_SIZE
 
+#ifndef ENTRIES_PER_TABLE
+#define ENTRIES_PER_TABLE               (512)
+#endif // ENTRIES_PER_TABLE
+
 /* We use 1 PGD, 1 PUD and 512 PMD*/
 #define MMU_PGD_ADDR                    (0x1000)
 #define MMU_PUD_ADDR                    (MMU_PGD_ADDR + 0x1000)
@@ -78,7 +82,7 @@
 #define MMU_PTE_ADDR                    (MMU_PGD_ADDR + 0x3000)
 
 /* Used while MMU disabled. */
-#define PERIPH_MMIO_BASE                (0x3F000000)
+#define PERIPH_MMIO_BASE                (0x3F000000UL)
 
 /* For page table index */
 #define PGD_SHIFT                       (39)
@@ -92,14 +96,15 @@
 #define PTE_INDEX(x)                    (((x) >> PTE_SHIFT) & PT_INDEX_MASK)
 
 /* To get the physical address from page entry*/
-#define ENTRY_ADDR_MASK                 (0xfffffffff000L)
+#define ENTRY_ADDR_MASK                 (0xfffffffff000UL)
 
 #define ENTRY_IS_TABLE(x)               (((x) & 3) == 3)
 #define ENTRY_IS_BLOCK(x)               (((x) & 3) == 1)
 #define ENTRY_IS_PAGE(x)                (((x) & 3) == 3)
 
-#define USER_STACK_ADDR                 (0xffffffffb000)
-#define USER_STACK_TOP                  (0xfffffffff000)
+#define USER_PROG_START                 (0x0)
+#define USER_STACK_ADDR                 (0xffffffffb000UL)
+#define USER_STACK_TOP                  (0xfffffffff000UL)
 #define USER_STACK_SIZE                 (0x4000)
 
 #ifndef __ASSEMBLER__
@@ -198,7 +203,12 @@ void kfree(void *obj);
 void map_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags);
 /* Walk from pgd, then allocate physical memory if needed. */
 void walk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigned long flag);
-/* Create empty page table. kmalloc() + memset() to zero. */
+/* remap_pages will allocate a new table to remap the virtual address to physical address */
+void remap_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags);
+/* Walk from pgd, always allocate physical memory for page table. */
+void rewalk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigned long flag);
+
+/* Create empty page table and return kernel virtual address. kmalloc() + memset() to zero. */
 unsigned long *create_empty_page_table(void);
 /* Simulate walk from pgd, return the physical address. */
 unsigned long simulate_walk(unsigned long *virt_pgd, unsigned long va);

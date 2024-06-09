@@ -356,10 +356,10 @@ void *kmalloc(unsigned long size)
             size >>= 1;
             order++;
         }
-        return (void *)phys_to_virt(page_to_phys(__alloc_pages(order)));
+        return (void *) phys_to_virt(page_to_phys(__alloc_pages(order)));
     } else {
         /* Use slab allocator to allocate memory. */
-        return (void *)phys_to_virt((unsigned long)get_object(size));
+        return (void *) phys_to_virt((unsigned long) get_object(size));
     }
 }
 
@@ -395,7 +395,6 @@ void setup_page_table(void)
     pud[1] = (unsigned long) 0x40000000 | DEVICE_BLOCK_ATTR;
 
     /* Setup PMD, each entry points to 2 MB block*/
-    // pmd[0] = (unsigned long) MMU_PTE_ADDR | TABLE_ENTRY; // point pmd[0] to first pte table
     for (int i = 0; i < 512; i++) {
         /* The rest entries point to 2 Mb block, not PTE table */
         addr = i << 21; // i << 21 equals 2 MB
@@ -405,16 +404,6 @@ void setup_page_table(void)
             pmd[i] = (unsigned long) addr | NORMAL_BLOCK_ATTR;
     }
 
-    /* Setup the first PTE table (Only the first pte table, pointed by pmd[0]) */
-    // for (int i = 0; i < 512; i++) {
-    //     addr = i << 12;
-    //     /* L3 table entry can use `0b11` as page attribute */
-    //     if (addr >= PERIPH_MMIO_BASE)
-    //         pte[i] = (unsigned long) addr | DEVICE_PAGE_ATTR;
-    //     else
-    //         pte[i] = (unsigned long) addr | NORMAL_PAGE_ATTR;
-    // }
-
     asm volatile("msr ttbr0_el1, %0" : : "r" (MMU_PGD_ADDR));
     asm volatile("msr ttbr1_el1, %0" : : "r" (MMU_PGD_ADDR));
     return;
@@ -422,7 +411,9 @@ void setup_page_table(void)
 
 unsigned long *create_empty_page_table(void)
 {
-    unsigned long *pgd = (unsigned long *) kmalloc(PAGE_SIZE);
+    unsigned long *pgd;
+
+    pgd = (unsigned long *) kmalloc(PAGE_SIZE);
     memset(pgd, 0, PAGE_SIZE);
     return pgd;
 }
@@ -435,10 +426,8 @@ unsigned long *create_empty_page_table(void)
  */
 void walk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigned long flag)
 {
-    unsigned long *table_p = virt_pgd_p;
-
-    unsigned int level;
-    unsigned int idx;
+    unsigned long *table_p = virt_pgd_p, *newtable_p;
+    unsigned int level, idx;
 
     for (level = 0; level < 4; level++)
     {
@@ -447,19 +436,46 @@ void walk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigne
         if (level == 3)
         {
             table_p[idx] = pa;
-            /* flag has no effect for now. All page will be setup for user space executable. */
-            flag |= (1 << 6); // without this, the page is not executable for el0.
             table_p[idx] |= NORMAL_PAGE_ATTR | PXN | flag; // el0 only, so PXN is set to prevent el1 access.
             return;
         }
 
         if (!table_p[idx]) /* Use walk to setup page table, all memory start from empty memory */
         {
-            unsigned long *newtable_p = create_empty_page_table();
+            newtable_p = create_empty_page_table();
             table_p[idx] = virt_to_phys((unsigned long)newtable_p); // point to that table
             table_p[idx] |= NORMAL_PAGE_ATTR;
         }
 
+        /* Jump to next page table according index */
+        table_p = (unsigned long *) phys_to_virt((unsigned long) (table_p[idx] & ENTRY_ADDR_MASK)); // PAGE_SIZE
+    }
+}
+
+/**
+ * All the PUD, PMD, PTE tables are always allocated.
+*/
+void rewalk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigned long flag)
+{
+    unsigned long *table_p = virt_pgd_p, *newtable_p;
+    unsigned int level, idx;
+
+    for (level = 0; level < 4; level++)
+    {
+        idx = (unsigned int) ((va >> (39 - level * 9)) & 0x1ff); // p.14, 9-bit only
+
+        if (level == 3)
+        {
+            table_p[idx] = pa;
+            table_p[idx] |= NORMAL_PAGE_ATTR | PXN | flag; // el0 only, so PXN is set to prevent el1 access.
+            return;
+        }
+
+        newtable_p = create_empty_page_table();
+        table_p[idx] = virt_to_phys((unsigned long) newtable_p); // point to that table
+        table_p[idx] |= NORMAL_PAGE_ATTR;
+
+        /* Jump to next page table according index */
         table_p = (unsigned long *)phys_to_virt((unsigned long)(table_p[idx] & ENTRY_ADDR_MASK)); // PAGE_SIZE
     }
 }
@@ -474,6 +490,15 @@ void map_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, un
 
     for (i = 0; i < size; i += PAGE_SIZE)
         walk(virt_pgd, va + i, pa + i, flags);
+    return;
+}
+
+void remap_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags)
+{
+    unsigned long i = 0;
+
+    for (i = 0; i < size; i += PAGE_SIZE)
+        rewalk(virt_pgd, va + i, pa + i, flags);
     return;
 }
 

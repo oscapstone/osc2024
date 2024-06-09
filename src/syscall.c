@@ -85,8 +85,14 @@ int sys_fork(struct trapframe *trapframe)
 #ifdef DEBUG_SYSCALL
     printf("[sys_fork] Task %d fork\n", current->task_id);
 #endif
-    int child_task_id = find_empty_task();
-    struct task_struct *child_task = &task_pool[child_task_id];
+    unsigned int child_task_id, kstack_offset, i;
+    struct task_struct *child_task;
+    struct trapframe *child_trapframe;
+    unsigned long *child_pgd, *parent_pgd;
+    char *child_stack, *parent_stack;
+
+    child_task_id = find_empty_task();
+    child_task = &task_pool[child_task_id];
 
     /* Copy the content of parent's task_struct and update it based on child task */
     *child_task = *current;
@@ -94,29 +100,31 @@ int sys_fork(struct trapframe *trapframe)
     child_task->counter = child_task->priority;
     child_task->tss.lr = (uint64_t) &exit_kernel; /* After context switch, the child_task will exit kernel properly (since stack are setup). */
 
-    /* Copy the content of kstack and ustack */
-    for (int i = 0; i < KSTACK_SIZE; i++) {
+    /* Copy the content of kernel stack */
+    for (int i = 0; i < KSTACK_SIZE; i++)
         kstack_pool[child_task_id][i] = kstack_pool[current->task_id][i];
-        ustack_pool[child_task_id][i] = ustack_pool[current->task_id][i];
-    }
 
     /* compute the relative address between current task kstack and ustack */
-    int kstack_offset = kstack_pool[child_task_id] - kstack_pool[current->task_id];
-    int ustack_offset = ustack_pool[child_task_id] - ustack_pool[current->task_id];
+    kstack_offset = kstack_pool[child_task_id] - kstack_pool[current->task_id];
+    child_task->tss.sp = (uint64_t) ((unsigned long)trapframe + kstack_offset); // the address of trapframe is the address of current sp_el1
 
-    /* sp should be placed according to the relative address (offset) */
-    char *sp_addr = (char *) trapframe; // the address of trapframe is the address of current sp (el1)
-    child_task->tss.sp = (uint64_t) (sp_addr + kstack_offset);
+    /* Allocate a physical address then copy the content from parent stack to user stack. */
+    child_stack = (char *)kmalloc(USER_STACK_SIZE);
+    parent_stack = (char *)phys_to_virt(simulate_walk((unsigned long *)phys_to_virt(current->tss.pgd), USER_STACK_ADDR)); // get the parent stack physical address.
+    memcpy(child_stack, parent_stack, USER_STACK_SIZE);
 
-    char *sp_el0_addr = (char *) trapframe->sp; // get the current address of sp_el0 (current task)
-    struct trapframe *child_trapframe = (struct trapframe *)(child_task->tss.sp);
-    // child_trapframe->sp = (uint64_t) (sp_el0_addr + ustack_offset); // With MMU enabled, we should use the virtual address to setup sp_el0
+    /* Copy the parent pgd table to child pgd table */
+    child_pgd = create_empty_page_table();
+    parent_pgd = (unsigned long *)phys_to_virt(current->tss.pgd);
+    for (i = 0; i < ENTRIES_PER_TABLE; i++)
+        child_pgd[i] = parent_pgd[i];
+    /* Update child pgd to another user stack */
+    remap_pages(child_pgd, USER_STACK_ADDR, USER_STACK_SIZE, virt_to_phys((unsigned long)child_stack), PD_AP_EL0); // user stack is mapped to 0xffffffffb000
+    /* Update child pgd */
+    child_task->tss.pgd = virt_to_phys((unsigned long)child_pgd);
+
+    child_trapframe = (struct trapframe *)(child_task->tss.sp);
     child_trapframe->x[0] = 0; // setup the return value of child task (fork())
-
-    // TODO: Create a new address space, then copy the parent's address space to child's address space.
-    // With MMU enabled, we should use the virtual address to setup sp_el0
-    printf("[sys_fork] child ttbr0 %16x, parent ttbr0 %16x\n", child_task->tss.pgd, current->tss.pgd);
-
     trapframe->x[0] = child_task_id; // return the child task id to parent process
     return SYSCALL_SUCCESS;
 }
