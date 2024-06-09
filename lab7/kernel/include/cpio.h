@@ -1,7 +1,9 @@
 #ifndef __CPIO_H
 #define __CPIO_H
 
-#define MAX_FILE_SIZE 1024
+#define MAX_FILE_SIZE 16
+
+#include "vfs.h"
 
 typedef struct cpio_newc_header
 {
@@ -33,6 +35,14 @@ extern int file_num;
 extern unsigned long long cpio_address;
 
 void build_file_arr();
+
+int initramfs_setup_mount(struct filesystem *fs, struct mount *mount);
+int initramfs_write(struct file *file, const void *buf, size_t len);
+int initramfs_read(struct file *file, void *buf, size_t len);
+struct dentry *initramfs_lookup(struct inode *dir, const char *component_name);
+int initramfs_create(struct inode *dir, struct dentry *dentry, int mode);
+int initramfs_mkdir(struct inode *dir, struct dentry *dentry);
+
 void traverse_file();
 void look_file_content(char *pathname);
 

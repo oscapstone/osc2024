@@ -13,6 +13,14 @@
 #define SYS_SIGNAL_KILL 9
 #define SYS_MMAP 10
 
+#define SYS_OPEN 11
+#define SYS_CLOSE 12
+#define SYS_WRITE 13
+#define SYS_READ 14
+#define SYS_MKDIR 15
+#define SYS_MOUNT 16
+#define SYS_CHDIR 17
+
 #define SYS_SIGRETURN 50
 
 struct ucontext
@@ -34,6 +42,15 @@ void kill(int pid);
 void signal(int SIGNAL, void (*handler)());
 void signal_kill(int pid, int SIGNAL);
 void *mmap(void *addr, unsigned long long len, int prot, int flags, int fd, int file_offset);
+
+int open(const char *pathname, int flags);
+int close(int fd);
+long write(int fd, const void *buf, unsigned long count);
+long read(int fd, void *buf, unsigned long count);
+int mkdir(const char *pathname, unsigned mode);
+int mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+int chdir(const char *path);
+
 void sigreturn();
 
 #endif

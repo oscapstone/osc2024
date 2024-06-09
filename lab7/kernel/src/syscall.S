@@ -12,6 +12,14 @@
 #define SYS_SIGNAL_KILL 9
 #define SYS_MMAP 10
 
+#define SYS_OPEN 11
+#define SYS_CLOSE 12
+#define SYS_WRITE 13
+#define SYS_READ 14
+#define SYS_MKDIR 15
+#define SYS_MOUNT 16
+#define SYS_CHDIR 17
+
 #define SYS_SIGRETURN 50
 
 .global getpid
@@ -77,6 +85,48 @@ signal_kill:
 .global mmap
 mmap:
     mov x8, SYS_MMAP
+    svc #0
+    ret
+
+.global open
+open:
+    mov x8, SYS_OPEN
+    svc #0
+    ret
+
+.global close
+close:
+    mov x8, SYS_CLOSE
+    svc #0
+    ret
+
+.global write
+write:
+    mov x8, SYS_WRITE
+    svc #0
+    ret
+
+.global read
+read:
+    mov x8, SYS_READ
+    svc #0
+    ret
+
+.global mkdir
+mkdir:
+    mov x8, SYS_MKDIR
+    svc #0
+    ret
+
+.global mount
+mount:
+    mov x8, SYS_MOUNT
+    svc #0
+    ret
+
+.global chdir
+chdir:
+    mov x8, SYS_CHDIR
     svc #0
     ret
 

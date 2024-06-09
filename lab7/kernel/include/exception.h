@@ -28,6 +28,15 @@ void sys_kill(struct ucontext *trapframe);
 void sys_signal(struct ucontext *trapframe);
 void sys_signal_kill(struct ucontext *trapframe);
 void sys_mmap(struct ucontext *trapframe);
+
+void sys_open(struct ucontext *trapframe);
+void sys_close(struct ucontext *trapframe);
+void sys_write(struct ucontext *trapframe);
+void sys_read(struct ucontext *trapframe);
+void sys_mkdir(struct ucontext *trapframe);
+void sys_mount(struct ucontext *trapframe);
+void sys_chdir(struct ucontext *trapframe);
+
 void sys_sigreturn(struct ucontext *trapframe);
 
 

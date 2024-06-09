@@ -3,6 +3,7 @@
 #include "tmpfs.h"
 #include "uart.h"
 #include "schedule.h"
+#include "cpio.h"
 #include "vfs.h"
 
 struct filesystem *file_systems;
@@ -11,6 +12,11 @@ struct mount *rootfs;
 static struct filesystem tmpfs_type = {
 	.name = "tmpfs",
 	.setup_mount = tmpfs_setup_mount,
+	.next = NULL};
+
+static struct filesystem initramfs_type = {
+	.name = "initramfs",
+	.setup_mount = initramfs_setup_mount,
 	.next = NULL};
 
 int register_filesystem(struct filesystem *fs)
@@ -73,6 +79,9 @@ struct file *vfs_open(const char *pathname, int flags)
 int vfs_close(struct file *file)
 {
 	// release the file descriptor
+	if(file == NULL)
+		return -1;
+	
 	kfree(file);
 	return 1;
 }
@@ -171,6 +180,8 @@ int vfs_chdir(const char *pathname)
 			cur_dir = cur_dir;
 		else if (my_strcmp(component_name[i], "..") == 0)
 			cur_dir = cur_dir->d_parent;
+		else if (my_strcmp(component_name[i], "\0") == 0)
+			break;
 		else
 			cur_dir = cur_dir->d_inode->i_ops->lookup(cur_dir->d_inode, component_name[i]);
 
@@ -267,6 +278,8 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 			cur_dir = cur_dir;
 		else if (my_strcmp(component_name[i], "..") == 0)
 			cur_dir = cur_dir->d_parent;
+		else if (my_strcmp(component_name[i], "\0") == 0)
+			break;
 		else
 			cur_dir = cur_dir->d_inode->i_ops->lookup(cur_dir->d_inode, component_name[i]);
 
@@ -280,6 +293,7 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 void rootfs_init()
 {
 	register_filesystem(&tmpfs_type);
+	register_filesystem(&initramfs_type);
 
 	struct filesystem *cur = file_systems;
 	for (; cur != NULL; cur = cur->next) // find tmpfs
@@ -289,6 +303,9 @@ void rootfs_init()
 	rootfs = kmalloc(sizeof(struct mount));
 	cur->setup_mount(cur, rootfs);
 	rootfs->root->d_parent = rootfs->root;
+
+	vfs_mkdir("/initramfs");
+	vfs_mount("tmpfs", "/initramfs", "initramfs");
 
 	get_current_task()->pwd = rootfs->root;
 }

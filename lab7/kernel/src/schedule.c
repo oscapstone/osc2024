@@ -74,6 +74,8 @@ task_struct *task_create(void (*start_routine)(void), int priority)
     new_task->received_signal = NOSIG;
 
     new_task->pwd = NULL;
+    for (int i = 0; i < NR_OPEN_DEFAULT; i++)
+        new_task->fd_array[i] = NULL;
 
     for (int i = 0; i < SIG_NUM; i++)
     {

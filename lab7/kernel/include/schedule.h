@@ -7,6 +7,7 @@
 #include "vfs.h"
 
 #define NULL 0
+#define NR_OPEN_DEFAULT 16
 
 struct cpu_context // callee saved
 {
@@ -48,6 +49,8 @@ typedef struct task_struct
     void (*signal_handler[SIG_NUM])(void);  // signal handler
 
     struct dentry *pwd; // pwd of this task
+    struct file *fd_array[NR_OPEN_DEFAULT];
+
     struct task_struct *prev, *next;
 } task_struct;
 

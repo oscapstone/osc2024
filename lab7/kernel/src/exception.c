@@ -6,6 +6,7 @@
 #include "mailbox.h"
 #include "allocator.h"
 #include "mm.h"
+#include "vfs.h"
 #include "exception.h"
 
 #define AUX_MU_IO ((volatile unsigned int *)(MMIO_BASE + 0x00215040))
@@ -119,10 +120,32 @@ void el0_svc_handler_entry(struct ucontext *trapframe)
     case SYS_MMAP:
         sys_mmap(trapframe);
         break;
+
+    case SYS_OPEN:
+        sys_open(trapframe);
+        break;
+    case SYS_CLOSE:
+        sys_close(trapframe);
+        break;
+    case SYS_WRITE:
+        sys_write(trapframe);
+        break;
+    case SYS_READ:
+        sys_read(trapframe);
+        break;
+    case SYS_MKDIR:
+        sys_mkdir(trapframe);
+        break;
+    case SYS_MOUNT:
+        sys_mount(trapframe);
+        break;
+    case SYS_CHDIR:
+        sys_chdir(trapframe);
+        break;
+
     case SYS_SIGRETURN:
         sys_sigreturn(trapframe);
         break;
-
     default:
         break;
     }
@@ -475,6 +498,99 @@ void sys_mmap(struct ucontext *trapframe)
 
     mappages(cur_task->mm_struct, DATA, addr, p_addr - VA_START, len, prot, flags); // map addr
     trapframe->x[0] = addr;
+}
+
+void sys_open(struct ucontext *trapframe)
+{
+    const char *pathname = (const char *)trapframe->x[0];
+    int flags = (int)trapframe->x[1];
+
+    /*uart_puts("open: ");
+    uart_puts(pathname);
+    uart_puts("\n");*/
+
+    struct task_struct* cur_task = get_current_task();
+    struct file *file = vfs_open(pathname, flags);
+
+    if (file == NULL) // open file fail
+    {
+        trapframe->x[0] = -1;
+        return;
+    }
+
+    for (int i = 0; i < NR_OPEN_DEFAULT; i++)
+        if (cur_task->fd_array[i] == NULL)
+        {
+            cur_task->fd_array[i] = file;
+            trapframe->x[0] = i;
+            return;
+        }
+
+    trapframe->x[0] = -1;
+}
+
+void sys_close(struct ucontext *trapframe)
+{
+    int fd = trapframe->x[0];
+
+    struct task_struct* cur_task = get_current_task();
+    trapframe->x[0] = vfs_close(cur_task->fd_array[fd]);
+    cur_task->fd_array[fd] = NULL;
+}
+
+void sys_write(struct ucontext *trapframe)
+{
+    int fd = (int)trapframe->x[0];
+    const void *buf = (const void *)trapframe->x[1];
+    unsigned long count = (unsigned long)trapframe->x[2];
+
+    struct task_struct* cur_task = get_current_task();
+    trapframe->x[0] = vfs_write(cur_task->fd_array[fd], buf, count);
+}
+
+void sys_read(struct ucontext *trapframe)
+{
+    int fd = (int)trapframe->x[0];
+    void *buf = (void *)trapframe->x[1];
+    unsigned long count = (unsigned long)trapframe->x[2];
+
+    struct task_struct* cur_task = get_current_task();
+    trapframe->x[0] = vfs_read(cur_task->fd_array[fd], buf, count);
+}
+
+void sys_mkdir(struct ucontext *trapframe)
+{
+    const char *pathname = (const char *)trapframe->x[0];
+
+    /*uart_puts("mkdir: ");
+    uart_puts(pathname);
+    uart_puts("\n");*/
+    
+    trapframe->x[0] = vfs_mkdir(pathname);
+}
+
+void sys_mount(struct ucontext *trapframe)
+{
+    const char *src = (const char *)trapframe->x[0];
+    const char *target = (const char *)trapframe->x[1];
+    const char *filesystem = (const char *)trapframe->x[2];
+
+    /*uart_puts("mkdir: ");
+    uart_puts(target);
+    uart_puts("\n");*/
+
+    trapframe->x[0] = vfs_mount(src, target, filesystem);
+}
+
+void sys_chdir(struct ucontext *trapframe)
+{
+    const char *pathname = (const char *)trapframe->x[0];
+
+    /*uart_puts("chdir: ");
+    uart_puts(pathname);
+    uart_puts("\n");*/
+
+    trapframe->x[0] = vfs_chdir(pathname);
 }
 
 void sys_sigreturn(struct ucontext *trapframe)

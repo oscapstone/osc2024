@@ -21,7 +21,8 @@
         "mmu.h": "c",
         "reboot.h": "c",
         "mm.h": "c",
-        "vfs.h": "c"
+        "vfs.h": "c",
+        "tmpfs.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

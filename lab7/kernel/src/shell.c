@@ -14,7 +14,7 @@
 
 void exec_syscall_img()
 {
-    do_exec("vm.img", NULL);
+    do_exec("vfs1.img", NULL);
 }
 
 void shell_cmd(char *cmd)
@@ -98,51 +98,51 @@ void shell_cmd(char *cmd)
     {
         uart_puts("\n");
 
-        /*char buf[200];
-        vfs_mkdir("mnt");
-        vfs_mount("device", "mnt", "tmpfs");
-        vfs_chdir("/mnt");
-        struct file *a = vfs_open("/mnt/hello", O_CREAT);
-        struct file *b = vfs_open("/mnt/world", O_CREAT);
-        vfs_write(a, "Hello ", 6);
-        vfs_write(b, "World!", 6);
-        vfs_close(a);
-        vfs_close(b);
-        b = vfs_open("hello", 0);
-        a = vfs_open("world", 0);
-        int sz;
-        sz = vfs_read(b, buf, 100);
-        sz += vfs_read(a, buf + sz, 100);
-        buf[sz] = '\0';
-        uart_puts(buf);
-        uart_puts("\n");*/
-
         char buf[8];
-        vfs_mkdir("mnt");
-        struct file * fd = vfs_open("/mnt/a.txt", O_CREAT);
-        vfs_write(fd, "Hi", 2);
-        vfs_write(fd, " Jack", 5);
+        vfs_mkdir("/tmp");
+
+        vfs_chdir("/tmp");
+        struct file * fd = vfs_open("./lookup1", O_CREAT);
+        vfs_write(fd, "Hi 1", 2);
         vfs_close(fd);
 
-        vfs_chdir("mnt");
-        fd = vfs_open("./a.txt", 0);
+        fd = vfs_open("../lookup2", O_CREAT);
         vfs_read(fd, buf, 7);
-        uart_puts(buf);
-        uart_puts("\n");
+        vfs_write(fd, "Hi 2", 2);
+        vfs_close(fd);
         
-        vfs_chdir("..");
-        vfs_mount("tmpfs", "mnt", "tmpfs");
-        fd = vfs_open("mnt/a.txt", 0);
-        if(fd == NULL)
-            uart_puts("mount succeed\n");
-        fd = vfs_open("/mnt/a.txt", O_CREAT);
-        vfs_write(fd, "Hello", 5);
-        vfs_close(fd);
+        uart_puts(get_current_task()->pwd->d_name);
+        uart_puts("\n");
+        vfs_chdir("/");
+        uart_puts(get_current_task()->pwd->d_name);
+        uart_puts("\n");
 
-        fd = vfs_open("mnt/a.txt", 0);
+        fd = vfs_open("./tmp/lookup1", 0);
         vfs_read(fd, buf, 7);
         uart_puts(buf);
         uart_puts("\n");
+
+        /*char buf[100];
+        struct file * fd = vfs_open("/initramfs/file2.txt", 0);
+        vfs_write(fd, buf, 100);
+        vfs_close(fd);
+        
+        vfs_mkdir("/initramfs/faildir");
+
+        vfs_chdir(".");
+        vfs_chdir("initramfs");
+        fd = vfs_open("file1", 0);
+        vfs_read(fd, buf, 100);
+        uart_puts(buf);
+        uart_puts("\n");
+        vfs_close(fd);
+
+        vfs_chdir("..");
+        fd = vfs_open("./initramfs/file1", 0);
+        vfs_read(fd, buf, 100);
+        uart_puts(buf);
+        uart_puts("\n");
+        vfs_close(fd);*/
     }
     else
         uart_puts("\n");
