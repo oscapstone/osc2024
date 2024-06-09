@@ -33,10 +33,12 @@ typedef struct thread_control_block{
 } TCB;
 
 extern TCB* running_ring;
-
+extern TCB* zombie_list;
 TCB* thread_create(void* proc_start);
+void context_output(thread_context_t* context);
 void thread_exit();
 void idle();
 void foo();
+void fork_test();
 
 #endif  /*_SCHEDULAR_H */

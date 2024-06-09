@@ -27,11 +27,14 @@ void* simple_malloc(unsigned int size){
     check_sentinel();
     heap_ptr+=size;
     heap_ptr=mem_alin(heap_ptr,4);
-    if(heap_ptr > (char*)get_sp()){
-        puts("error:heap overflow\r\n");
-        heap_ptr-=size;
-        return NULL;
-    }
+
+    //science kernel stack isn't fix in Lab5 and latter,flowing code isn't used
+    //we use simple_malloc only in memalloc.c , space should be enough
+    // if(heap_ptr > (char*)get_sp()){
+    //     puts("error:heap overflow\r\n");
+    //     heap_ptr-=size;
+    //     return NULL;
+    // }
     put32(heap_ptr,sentinel);
     return heap_ptr-size;
 }

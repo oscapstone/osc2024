@@ -33,10 +33,16 @@ DEP_FILES = $(OBJ_FILES:%.o=%.d)
 kernel8.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 	$(LD) -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
 	$(OBJCOPY) $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
-	/bin/bash initrd.sh
+	
 	
 run: kernel8.img
 	qemu-system-aarch64 -M raspi3b -display none -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+	
+run_debug: kernel8.img
+	qemu-system-aarch64 -M raspi3b -display none -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb  -d in_asm
+	
+run_display:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 	
 onboard: kernel8.img
 	screen /dev/ttyUSB0 115200

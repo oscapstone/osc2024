@@ -101,6 +101,9 @@ void cpio_cat(char* filename){
 }
 
 int cpio_load(char* filename,char* load_base){
+    puts("want to load filename:");
+    puts(filename);
+    puts("\r\n");
     char* ptr=cpio_addr;
     while(strcmp((char*)ptr+sizeof(struct cpio_newc_header),"TRAILER!!!") && strcmp((char*)ptr+sizeof(struct cpio_newc_header),filename)){
         struct cpio_newc_header* head=(struct cpio_newc_header*)ptr;
@@ -137,6 +140,7 @@ int cpio_load(char* filename,char* load_base){
             ptr++;
         }
         *load_base='\0';
+        puts("load successful\r\n");
         return 0;
     }
     else{

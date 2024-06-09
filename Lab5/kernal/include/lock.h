@@ -8,4 +8,6 @@ void lock(void);
 // enable all interrupt to release critical section
 void unlock(void);
 
+void output_lockstate();
+void output_daif();
 #endif

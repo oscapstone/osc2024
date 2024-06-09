@@ -45,6 +45,7 @@ void irq_vector_init( void );
 void enable_irq( void );
 void disable_irq( void );
 void irq_except_handler_timer_c();
+void output_trapframe(trapframe_t* tf);
 
 
 

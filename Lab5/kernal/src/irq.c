@@ -7,6 +7,8 @@
 #include "peripherals/irq.h"
 #include "peripherals/mini_uart.h"
 #include "sysc.h"
+#include "scheduler.h"
+#include "stddef.h"
 
 int timer_flag=0;
 
@@ -159,7 +161,11 @@ void irq_handler_timer_c() {
 		put_int(sec);
 		puts("\r\n");
 	}
-	
+	unsigned long long tmp;
+	asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+	tmp |= 1;
+	asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+	if(running_ring != NULL && running_ring->next != running_ring)schedule();
 	unsigned long long wait = (cntfrq_el0 >> 5);// wait 2 seconds
 	asm volatile ("msr cntp_tval_el0, %0"::"r"(wait));//set new timer
     // fulfill the requirement set the next timeout to 2 seconds later.
@@ -204,11 +210,14 @@ unsigned long read_esr_el1() {
 
 void sync_general_handler_c(trapframe_t* tf){
 	//puts("in sync_general_handler\r\n");
-	unsigned long elr=0;
-	elr=read_esr_el1();
-	unsigned long ec=(elr >> 26) & (0x3f);
+	unsigned long esr=0;
+	esr=read_esr_el1();
+	unsigned long ec=(esr >> 26) & (0x3f);
 	if(ec != 0b010101){
 		puts("error:this isn't system call\r\n");
+		puts("ec:");
+		put_hex(ec);
+		puts("\r\n");
 		reset(0x400);
 	}
 	int syscall_number=tf->x8;
@@ -229,7 +238,7 @@ void sync_general_handler_c(trapframe_t* tf){
 		return;
 	}
 	else if(syscall_number == 4){
-		tf->x0=sys_fork(tf);
+		sys_fork(tf);
 		return;
 	}
 	else if(syscall_number == 5){
@@ -237,13 +246,34 @@ void sync_general_handler_c(trapframe_t* tf){
 		return;
 	}
 	else if(syscall_number == 6){
-		
+		sys_mbox_call(tf);
+		return;
 	}
 	else if(syscall_number == 7){
-		
+		sys_kill(tf);
+		return;
 	}
 	else{
 		puts("error: wrong syscall number\r\n");
 		reset(0x400);
 	}
+}
+
+void output_trapframe(trapframe_t* tf){
+	unsigned long* arr=tf;
+	for(int i=0;i<31;i++){
+		puts("x");
+		put_int(i);
+		puts(":");
+		put_hex(arr[i]);
+		puts(" ");
+	}
+	puts(" spsr_el1:");
+	put_hex(arr[31]);
+	puts(" elr_el1:");
+	put_hex(arr[32]);
+	puts(" sp_el0:");
+	put_hex(arr[33]);
+	puts("\r\n");
+	return;
 }

@@ -144,4 +144,5 @@ void uart_irq_puts(const char *str){
 
     //mmio_write((long)AUX_MU_IER_REG, *AUX_MU_IER_REG | 0x2);
     put32(AUX_MU_IER_REG,get32(AUX_MU_IER_REG) | 0x2);
+    return i;
 }

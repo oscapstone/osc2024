@@ -21,3 +21,21 @@ void unlock(void){
         while(1);
     }
 }
+
+void output_lockstate(){
+    puts("lock_count:");
+    put_int(lock_count);
+    puts("\r\n");
+    return;
+}
+
+void output_daif(){
+    puts("DAIF:0x");
+	unsigned int DAIF = 0;
+	asm volatile("mrs %0, DAIF":"=r"(DAIF));
+    DAIF = DAIF >> 6;
+	put_hex(DAIF);
+
+	puts("\r\n");
+    return;
+}

@@ -94,8 +94,8 @@ vectors:
 	ventry	fiq_invalid_el1h			// FIQ EL1h
 	ventry	error_invalid_el1h			// Error EL1h
 
-	ventry	sync_invalid_el0_64			// Synchronous 64-bit EL0
-	ventry	irq_invalid_el0_64			// IRQ 64-bit EL0
+	ventry	el0_64_sync		// Synchronous 64-bit EL0
+	ventry	el1_irq		// IRQ 64-bit EL0
 	ventry	fiq_invalid_el0_64			// FIQ 64-bit EL0
 	ventry	error_invalid_el0_64			// Error 64-bit EL0
 
@@ -158,6 +158,12 @@ el1_irq:
 	kernel_exit 
 
 el1_sync:
+	kernel_entry
+	mov x0, sp; //trap_frame
+	bl sync_general_handler_c
+	kernel_exit;
+
+el0_64_sync:
 	kernel_entry
 	mov x0, sp; //trap_frame
 	bl sync_general_handler_c

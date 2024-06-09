@@ -62,5 +62,6 @@ typedef enum
 #define MBOX_TAG_LAST_BYTE 0x00000000
 
 int mbox_call(mbox_channel_type, unsigned int);
+int mbox_call_buf( mbox_channel_type channel,unsigned int buf);
 
 #endif /*_MBOX_H_*/

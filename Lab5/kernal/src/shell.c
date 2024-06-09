@@ -50,12 +50,15 @@ int cmd_info()
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
 
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
+    if (mbox_call_buf(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
     {
         puts("Hardware Revision\t: 0x");
         // put_hex(pt[6]);
         put_hex(pt[5]);
         puts("\r\n");
+    }
+    else{
+        puts("info error: hardware revision\r\n");
     }
     // print arm memory
     pt[0] = 8 * 4;
@@ -67,7 +70,7 @@ int cmd_info()
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
 
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
+    if (mbox_call_buf(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
     {
         puts("ARM Memory Base Address\t: 0x");
         put_hex(pt[5]);
@@ -75,6 +78,9 @@ int cmd_info()
         puts("ARM Memory Size\t\t: 0x");
         put_hex(pt[6]);
         puts("\r\n");
+    }
+    else{
+        puts("info error: memory size\r\n");
     }
     return 0;
 }

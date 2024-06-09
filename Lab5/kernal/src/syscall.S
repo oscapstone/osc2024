@@ -33,3 +33,15 @@ exit:
     mov x8, #5
     svc 0
     ret 
+
+.globl mbox_call_doge
+mbox_call_doge:
+    mov x8, #6
+    svc 0
+    ret 
+
+.globl kill
+kill:
+    mov x8, #7
+    svc 0
+    ret 
