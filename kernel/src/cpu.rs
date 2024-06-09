@@ -4,4 +4,4 @@ pub mod uart;
 pub mod mailbox;
 pub mod reboot;
 mod device_tree;
-mod mmu;
+pub mod mmu;

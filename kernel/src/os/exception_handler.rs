@@ -1,4 +1,7 @@
+use alloc::format;
+
 use crate::cpu::uart;
+use crate::os::stdio::{print_hex_now, println_now};
 use crate::os::{thread, timer};
 
 use core::{
@@ -13,6 +16,7 @@ global_asm!(include_str!("exception_handler/exception_handler.s"));
 
 #[no_mangle]
 unsafe extern "C" fn exception_handler_rust(trap_frame_ptr: *mut u64) {
+    println_now("Unknown exception");
     panic!("Unknown exception");
 }
 
@@ -20,16 +24,16 @@ unsafe extern "C" fn exception_handler_rust(trap_frame_ptr: *mut u64) {
 unsafe extern "C" fn irq_handler_rust(trap_frame_ptr: *mut u64) {
     thread::TRAP_FRAME_PTR = Some(trap_frame_ptr);
 
-    let interrupt_source = read_volatile(0x40000060 as *const u32);
+    let interrupt_source = read_volatile(0xFFFF_0000_4000_0060 as *const u32);
 
     if interrupt_source & 0x2 > 0 {
         timer::irq_handler();
     }
 
-    if read_volatile(0x3F21_5000 as *const u32) & 0x1 == 0x1 {
+    if read_volatile(0xFFFF_0000_3F21_5000 as *const u32) & 0x1 == 0x1 {
         uart::irq_handler();
     }
-    
+
     thread::TRAP_FRAME_PTR = None;
 }
 
@@ -62,10 +66,11 @@ unsafe extern "C" fn svc_handler_rust(trap_frame_ptr: *mut u64) {
         }
         // println!("System call number: {}", system_call_num);
     } else {
-        println!("Unknown exception: {:08x}", esr_el1);
-        println!("ELR_EL1: {:08x}", elr_el1);
-        println!("SP_EL0: {:08x}", sp_el0);
-        loop {}
+        println_now("Unknown exception");
+        println_now(format!("ESR_EL1: {:08x}", esr_el1).as_str());
+        println_now(format!("ELR_EL1: {:08x}", elr_el1).as_str());
+        println_now(format!("SP_EL0: {:08x}", sp_el0).as_str());
+        panic!();
     }
 
     thread::TRAP_FRAME_PTR = None;

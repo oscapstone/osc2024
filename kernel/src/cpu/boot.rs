@@ -21,7 +21,7 @@ pub unsafe fn _start_rust() {
     allocator::reserve(0xFFFF_0000_0800_0000 as *mut u8, 0x0010_0000); // Initramfs
     allocator::reserve(DeviceTree::get_address(), 0x0100_0000); // Device Tree
     allocator::reserve(0xFFFF_0000_0880_0000 as *mut u8, 0x0780_0000); // Simple Allocator
-
+    
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
 
@@ -37,7 +37,7 @@ pub unsafe fn _start_rust() {
             }
             val = val.swap_bytes();
             println!("Initrd start address: {:#X}", val);
-            val
+            val as u64 + 0xFFFF_0000_0000_0000
         }
         None => {
             println!("No initrd");

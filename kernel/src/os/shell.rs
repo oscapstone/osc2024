@@ -142,7 +142,7 @@ fn get_input(commands: &Vec<commands::command>) -> String {
     }
 }
 
-pub fn start(initrd_start: u32) {
+pub fn start(initrd_start: u64) {
     unsafe {
         INITRAMFS = Some(cpio::CpioArchive::load(initrd_start as *const u8));
     }

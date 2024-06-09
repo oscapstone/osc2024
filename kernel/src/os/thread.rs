@@ -1,15 +1,16 @@
-use crate::os::stdio::{print_hex_now, println_now};
-
 use super::{exception_handler::trap_frame, shell::INITRAMFS};
+use crate::cpu::mmu::{self, vm_setup, vm_to_pm};
+use crate::os::stdio::{print_hex_now, println_now};
 use alloc::{alloc::dealloc, string::String, vec::Vec};
+use core::ptr::{read_volatile, write_volatile};
 use core::{alloc::Layout, arch::asm};
 
 static mut THREADS: Option<Vec<Thread>> = None;
 pub static mut TRAP_FRAME_PTR: Option<*mut u64> = None;
 
-pub const THREAD_ALIGNMENT: usize = 32;
+pub const THREAD_ALIGNMENT: usize = 4096;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct ThreadContext {
     x0: usize,
     x1: usize,
@@ -48,48 +49,6 @@ struct ThreadContext {
     spsr: usize,
 }
 
-impl Default for ThreadContext {
-    fn default() -> Self {
-        ThreadContext {
-            x0: 0,
-            x1: 0,
-            x2: 0,
-            x3: 0,
-            x4: 0,
-            x5: 0,
-            x6: 0,
-            x7: 0,
-            x8: 0,
-            x9: 0,
-            x10: 0,
-            x11: 0,
-            x12: 0,
-            x13: 0,
-            x14: 0,
-            x15: 0,
-            x16: 0,
-            x17: 0,
-            x18: 0,
-            x19: 0,
-            x20: 0,
-            x21: 0,
-            x22: 0,
-            x23: 0,
-            x24: 0,
-            x25: 0,
-            x26: 0,
-            x27: 0,
-            x28: 0,
-            x29: 0,
-            x30: 0,
-            x31: 0,
-            pc: 0,
-            sp: 0,
-            spsr: 0,
-        }
-    }
-}
-
 #[derive(Clone)]
 enum ThreadState {
     Running(ThreadContext),
@@ -105,6 +64,7 @@ struct Thread {
     stack: *mut u8,
     stack_size: usize,
     state: ThreadState,
+    page_table: *mut u8,
 }
 
 impl Default for Thread {
@@ -116,6 +76,7 @@ impl Default for Thread {
             stack: core::ptr::null_mut(),
             stack_size: 0,
             state: ThreadState::Dead,
+            page_table: core::ptr::null_mut(),
         }
     }
 }
@@ -134,6 +95,9 @@ pub fn create_thread(
 ) -> usize {
     let threads = unsafe { THREADS.as_mut().unwrap() };
     let id = threads.len();
+
+    let page_table = mmu::vm_setup(program, program_size, stack, stack_size);
+
     threads.push(Thread {
         id,
         program,
@@ -141,11 +105,13 @@ pub fn create_thread(
         stack,
         stack_size,
         state: ThreadState::Waiting(ThreadContext {
-            pc: (program as u64 & 0xFFFFFFFF) as usize,
-            sp: (stack as u64 & 0xFFFFFFFF) as usize + stack_size,
+            pc: 0,
+            sp: 0xFFFF_FFFF_FFF0,
             ..Default::default()
         }),
+        page_table,
     });
+
     println!("Stack SP: {:X?}", stack as usize + stack_size);
     println!("Thread created: {}", id);
     id
@@ -180,6 +146,11 @@ pub fn run_thread(id: Option<usize>) {
 
         if let ThreadState::Running(context) = &target_thread.state {
             asm!(
+                "msr ttbr0_el1, {PGD_addr}",
+                PGD_addr = in(reg) target_thread.page_table
+            );
+
+            asm!(
                 "mrs {tmp}, cntkctl_el1",
                 "orr {tmp}, {tmp}, 1",
                 "msr cntkctl_el1, {tmp}",
@@ -212,8 +183,9 @@ pub fn get_id_by_pc(pc: usize) -> Option<usize> {
         .iter()
         .find(|thread| {
             if let ThreadState::Running(context) = &thread.state {
-                (thread.program as usize) <= pc
-                    && pc < (thread.program as usize + thread.program_size)
+                true
+                // (thread.program as usize) <= pc
+                //     && pc < (thread.program as usize + thread.program_size)
             } else {
                 false
             }
@@ -228,7 +200,7 @@ pub fn save_context(trap_frame_ptr: *mut u64) -> bool {
             .iter_mut()
             .find(|thread| {
                 let state = &thread.state;
-                matches!(ThreadState::Running, state)
+                matches!(state, ThreadState::Running(_))
             })
             .expect("SAVE_CONTEXT: No running thread");
 
@@ -272,7 +244,7 @@ pub fn save_context(trap_frame_ptr: *mut u64) -> bool {
 
                 ThreadState::Running(context)
             } else {
-                ThreadState::Dead
+                panic!();
             };
 
         true
@@ -425,6 +397,7 @@ pub fn restore_context(trap_frame_ptr: *mut u64) {
 
 pub fn context_switching() {
     // println!("Context switching");
+
     let threads = unsafe { THREADS.as_mut().unwrap() };
     let trap_frame_ptr = unsafe { TRAP_FRAME_PTR.unwrap() };
 
@@ -432,6 +405,18 @@ pub fn context_switching() {
         println_now("CONTEXT_SWITCHING: Failed to save context");
         return;
     }
+
+    // for i in threads.iter() {
+    //     println!("PID: {}", i.id);
+    //     println!(
+    //         "state: {}",
+    //         match i.state {
+    //             ThreadState::Running(_) => "Running",
+    //             ThreadState::Waiting(_) => "Waiting",
+    //             ThreadState::Dead => "Dead",
+    //         }
+    //     );
+    // }
 
     let mut current_thread_iter = threads.iter_mut();
     let mut current_thread;
@@ -451,15 +436,15 @@ pub fn context_switching() {
         }
     }
 
-    next_thread = current_thread_iter.find(|thread| match &thread.state {
-        ThreadState::Waiting(_) => true,
-        _ => false,
+    next_thread = current_thread_iter.find(|thread| {
+        let state = &thread.state;
+        matches!(state, ThreadState::Waiting(_))
     });
 
     if next_thread.is_none() {
-        next_thread = threads.iter_mut().find(|thread| match &thread.state {
-            ThreadState::Waiting(_) => true,
-            _ => false,
+        next_thread = threads.iter_mut().find(|thread| {
+            let state = &thread.state;
+            matches!(state, ThreadState::Waiting(_))
         });
         assert!(next_thread.is_some(), "No thread to switch");
     }
@@ -494,6 +479,20 @@ pub fn context_switching() {
 
     let next_thread_id = next_thread.id;
 
+    unsafe {
+        asm!(
+            "dsb ish",
+            "msr ttbr0_el1, {PGD_addr}",
+            "tlbi vmalle1is",
+            "dsb ish",
+            "isb",
+            PGD_addr = in(reg) next_thread.page_table
+        );
+    }
+
+    // println!("PID: {}", next_thread_id);
+    // println!("Page table: {:x}", next_thread.page_table as usize);
+
     restore_context(trap_frame_ptr);
 
     // println!("Context switched: {}", next_thread_id);
@@ -510,9 +509,9 @@ pub fn context_switching() {
 
 pub fn fork() -> Option<usize> {
     let threads = unsafe { THREADS.as_mut().unwrap() };
-    let current_thread = threads.iter().find(|thread| match &thread.state {
-        ThreadState::Running(_) => true,
-        _ => false,
+    let current_thread = threads.iter().find(|thread| {
+        let state = &thread.state;
+        matches!(state, ThreadState::Running(_))
     });
 
     if current_thread.is_some() {
@@ -538,6 +537,14 @@ pub fn fork() -> Option<usize> {
                     .expect("Layout error"),
             )
         };
+
+        let page_table = vm_setup(
+            program_ptr,
+            current_thread.program_size,
+            stack_ptr,
+            current_thread.stack_size,
+        );
+
         unsafe {
             core::ptr::copy_nonoverlapping(
                 current_thread.program,
@@ -551,9 +558,6 @@ pub fn fork() -> Option<usize> {
             );
         }
 
-        let pc = current_thread_context.pc - current_thread.program as usize + program_ptr as usize;
-        let sp = current_thread_context.sp - current_thread.stack as usize + stack_ptr as usize;
-
         println!("Old pc: {:X}", current_thread_context.pc);
         threads.push(Thread {
             id: new_pid,
@@ -562,16 +566,15 @@ pub fn fork() -> Option<usize> {
             stack: stack_ptr,
             stack_size: current_thread.stack_size,
             state: ThreadState::Waiting(ThreadContext {
-                pc,
-                sp,
                 x0: 0,
                 ..*current_thread_context
             }),
+            page_table,
         });
         println!("New program start: {:X}", program_ptr as usize);
-        println!("new pc: {:X}", pc);
+        // println!("new pc: {:X}", pc);
         println!("New stack start: {:X}", stack_ptr as usize);
-        println!("new sp: {:X}", sp);
+        // println!("new sp: {:X}", sp);
 
         Some(new_pid)
     } else {
@@ -582,9 +585,9 @@ pub fn fork() -> Option<usize> {
 
 pub fn exec(program_name: String, program_args: Vec<String>) {
     let threads = unsafe { THREADS.as_mut().unwrap() };
-    let current_thread = threads.iter_mut().find(|thread| match &thread.state {
-        ThreadState::Running(_) => true,
-        _ => false,
+    let current_thread = threads.iter_mut().find(|thread| {
+        let state = &thread.state;
+        matches!(state, ThreadState::Running(_))
     });
 
     if current_thread.is_none() {
@@ -625,6 +628,7 @@ pub fn exec(program_name: String, program_args: Vec<String>) {
             Layout::from_size_align(4096, THREAD_ALIGNMENT).expect("Layout error"),
         );
 
+        // Clear memory
         core::ptr::write_bytes(current_thread.program, 0, current_thread.program_size);
 
         INITRAMFS
@@ -634,11 +638,27 @@ pub fn exec(program_name: String, program_args: Vec<String>) {
 
         current_thread.program_size = filesize;
         current_thread.stack_size = stack_size;
+
+        current_thread.page_table = vm_setup(
+            current_thread.program,
+            current_thread.program_size,
+            current_thread.stack,
+            current_thread.stack_size,
+        );
+
+        asm!(
+            "dsb ish",
+            "msr ttbr0_el1, {PGD_addr}",
+            "tlbi vmalle1is",
+            "dsb ish",
+            "isb",
+            PGD_addr = in(reg) current_thread.page_table
+        );
     }
 
     current_thread.state = ThreadState::Running(ThreadContext {
-        pc: current_thread.program as usize,
-        sp: current_thread.stack as usize + stack_size,
+        pc: 0,
+        sp: 0xFFFF_FFFF_FFF0,
         ..ThreadContext::default()
     });
 }
@@ -664,10 +684,7 @@ pub fn switch_to_thread(id: Option<usize>, trap_frame_ptr: *mut u64) {
             .expect("Thread not found"),
         None => threads
             .iter_mut()
-            .find(|thread| match &thread.state {
-                ThreadState::Waiting(_) => true,
-                _ => false,
-            })
+            .find(|thread| matches!(&thread.state, ThreadState::Waiting(_)))
             .expect("No running thread"),
     };
 
@@ -678,6 +695,17 @@ pub fn switch_to_thread(id: Option<usize>, trap_frame_ptr: *mut u64) {
     };
 
     assert!(matches!(target_thread.state, ThreadState::Running(_)));
-
+    
+    unsafe {
+        asm!(
+            "dsb ish",
+            "msr ttbr0_el1, {PGD_addr}",
+            "tlbi vmalle1is",
+            "dsb ish",
+            "isb",
+            PGD_addr = in(reg) target_thread.page_table
+        );
+    }
+    
     restore_context(trap_frame_ptr);
 }

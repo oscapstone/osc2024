@@ -1,7 +1,7 @@
 use core::arch::asm;
 use core::ptr::{read_volatile, write_volatile};
 
-const CS_COUNTER: *mut u32 = 0x7_5000 as *mut u32;
+const CS_COUNTER: *mut u32 = 0xFFFF_0000_0007_5000 as *mut u32;
 
 #[no_mangle]
 #[inline(never)]

@@ -28,8 +28,8 @@ pub enum Register {
 }
 
 impl Register {
-    pub fn addr(&self) -> u64 {
-        *self as u64
+    pub fn addr(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -42,7 +42,7 @@ impl MMIO {
 
     pub fn write(reg: Register, data: u32) {
         unsafe {
-            write_volatile(reg.addr() as *mut u32, data);
+            write_volatile((reg.addr() + 0xFFFF_0000_0000_0000) as *mut u32, data);
         }
     }
 }

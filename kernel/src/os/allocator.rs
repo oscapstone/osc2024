@@ -45,7 +45,7 @@ unsafe impl GlobalAlloc for SimpleAllocator {
             panic!("Out of memory");
         }
 
-        allocated_start
+        allocated_start.add(0xFFFF_0000_0000_0000)
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {}
