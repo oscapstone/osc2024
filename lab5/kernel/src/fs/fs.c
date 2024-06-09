@@ -45,8 +45,8 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
                 NS_DPRINT("[FS] fs_find_node(): error no parent!\n");
                 return -1;
             }
-            NS_DPRINT("[FS] fs_find_node(): current directory: %s\n", current_dir->name);
-            NS_DPRINT("[FS] fs_find_node(): change to parent directory: %s\n", current_dir->parent->name);
+            //NS_DPRINT("[FS] fs_find_node(): current directory: %s\n", current_dir->name);
+            //NS_DPRINT("[FS] fs_find_node(): change to parent directory: %s\n", current_dir->parent->name);
             current_dir = current_dir->parent;
             offset += 2;
         } else if (utils_strncmp(&pathname[offset], ".", 1) == 0) {
@@ -98,7 +98,7 @@ int fs_find_node(FS_VNODE* cwd, const char* pathname, FS_VNODE** parent, FS_VNOD
         return FS_FIND_NODE_HAS_PARENT_NO_TARGET;
     }
     *target = final_node;
-    NS_DPRINT("[FS] fs_find_node() file %s found. addr: 0x%p\n", final_node->name, final_node);
+    //NS_DPRINT("[FS] fs_find_node() file %s found. addr: 0x%p\n", final_node->name, final_node);
     return FS_FIND_NODE_SUCCESS;
 
     ///////////////////////////////////////////////

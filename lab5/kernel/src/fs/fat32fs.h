@@ -4,6 +4,8 @@
 
 #include "fs.h"
 
+// reference: https://cscie92.dce.harvard.edu/spring2024/slides/FAT32%20File%20Structure.pdf
+
 // only support SFN fat32
 #define FAT32_FS_NAME           "fat32"
 
@@ -68,6 +70,12 @@ typedef struct
 #define FAT32_FAT_EOF_START   0x0ffffff8
 #define FAT32_FAT_EOF_END     0x0FFFFFFF
 
+#define FAT_ENTRY_ALLOCATED_AND_END_OF_FILE FAT32_FAT_EOF_END
+
+// the first byte of the dir entry name
+#define FAT32_DIR_ENTRY_LAST_AND_UNUSED 0x0
+#define FAT32_DIR_ENTRY_UNUSED 0xE5
+
 
 // SFN format, 32 bytes
 typedef struct PACKED {
@@ -89,3 +97,4 @@ typedef struct PACKED {
 
 #define FAT32_DIR_ENTRY_ATTR_SYS        0x04
 #define FAT32_DIR_ENTRY_ATTR_DIR        0x10
+#define FAT32_DIR_ENTRY_ATTR_LONG_NAME  0x0f

@@ -59,7 +59,7 @@ typedef struct _FS_FILE_SYSTEM {
     const char* name;
     int (*setup_mount) (struct _FS_FILE_SYSTEM* fs, FS_MOUNT* mount);   // function pointer of mounting this file system
     LINK_LIST list;                                             // entry to link list
-
+    void (*sync)(void);             // sync the file system with external storage
 }FS_FILE_SYSTEM;
 
 typedef struct _FS_FILE_OPERATIONS {

@@ -149,6 +149,10 @@ static U32 get_chain_len(FS_VNODE* vnode) {
         // get the next index
         index = mount_internal->fat_table[index];
         
+        if (index < 2) {
+            return 0;
+        }
+
         if (index >= FAT32_FAT_EOF_START && index <= FAT32_FAT_EOF_END) {
             return len;
         }
@@ -172,28 +176,36 @@ static int init_vnode(FS_VNODE* vnode) {
     FAT32_VNODE_INTERNAL* node_internal = (FAT32_VNODE_INTERNAL*)vnode->internal;
 
     // get the length of the chain (measure buffer to read)
-    U32 num_blocks = get_chain_len(vnode);
-    U32 size = num_blocks * mount_internal->bytes_per_sector;
-    void* buf = kzalloc(size);
-    U32 index = node_internal->cluster_id;
-    NS_DPRINT("[FS] FAT32fs: init_vnode(): start index: %d\n", index);
-    for (U32 i = 0; i < num_blocks; i++) {
-        vnode->mount->read((mount_internal->data_start_sector + index) * mount_internal->bytes_per_sector, ((char*)buf + (i * mount_internal->bytes_per_sector)), mount_internal->bytes_per_sector);
-        index = mount_internal->fat_table[index];
-        NS_DPRINT("[FS] FAT32fs: init_vnode(): next index: %d\n", index);
-    }
-    node_internal->num_block = num_blocks;
-    if (vnode->content) {
-        kfree(vnode->content);
-    }
-    vnode->content = buf;
-    node_internal->is_dirty = FALSE;
-    node_internal->is_loaded = TRUE;
 
     if (S_ISDIR(vnode->mode)) {
-        vnode->content_size = size;
         parse_dir_entries(vnode);
+        vnode->content = NULL;
+        vnode->content_size = 0;
+    } else if (S_ISREG(vnode->mode)) {
+        U32 num_blocks = get_chain_len(vnode);
+            
+        if (num_blocks == 0) {
+            return -1;
+        }
+
+        U32 size = num_blocks * mount_internal->bytes_per_sector;
+        void* buf = kzalloc(size);
+        U32 index = node_internal->cluster_id;
+        NS_DPRINT("[FS] FAT32fs: init_vnode(): start index: %d\n", index);
+        for (U32 i = 0; i < num_blocks; i++) {
+            vnode->mount->read((mount_internal->data_start_sector + index) * mount_internal->bytes_per_sector, ((char*)buf + (i * mount_internal->bytes_per_sector)), mount_internal->bytes_per_sector);
+            index = mount_internal->fat_table[index];
+            NS_DPRINT("[FS] FAT32fs: init_vnode(): next index: %d\n", index);
+        }
+        node_internal->num_block = num_blocks;
+        if (vnode->content) {
+            kfree(vnode->content);
+        }
+        vnode->content = buf;
     }
+
+    node_internal->is_dirty = FALSE;
+    node_internal->is_loaded = TRUE;
 
     return 0;
 }
@@ -267,6 +279,8 @@ static int write(FS_FILE *file, const void *buf, size_t len) {
 
     memcpy(buf, (void*)((char*) vnode->content + file->pos), len);
     file->pos += len;
+    FAT32_VNODE_INTERNAL* node_internal = (FAT32_VNODE_INTERNAL*) vnode->internal;
+    node_internal->is_dirty = TRUE;
 
     return len;
 }
@@ -315,14 +329,58 @@ static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_n
 }
 
 static int create(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
-    // TODO
-    return -1;
+    if (lookup(dir_node, target, component_name) == 0) {
+        printf("[FS] rootfs: create(): file is already exist. name: %d\n", component_name);
+        return -1;
+    }
+
+    FS_VNODE* new_vnode = vnode_create(component_name, S_IFREG);
+    new_vnode->mount = dir_node->mount;
+    new_vnode->v_ops = dir_node->v_ops;
+    new_vnode->f_ops = dir_node->f_ops;
+    new_vnode->parent = dir_node;
+
+    new_vnode->internal = kzalloc(sizeof(FAT32_VNODE_INTERNAL));
+    FAT32_VNODE_INTERNAL* internal = (FAT32_VNODE_INTERNAL*) new_vnode->internal;
+    internal->is_dirty = TRUE;
+    internal->cluster_id = FAT32_FAT_BAD;           // invalid for now
+
+    link_list_push_back(&dir_node->childs, &new_vnode->self);
+    dir_node->child_num++;
+
+    *target = new_vnode;
+    return 0;
 }
 
 static int mkdir(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
-    // TODO
-    return -1;
+    //NS_DPRINT("[FS][TRACE] rootfs: mkdir(): creating %s dir\n", component_name);
+    if (!lookup(dir_node, target, component_name)) {
+        printf("[FS] rootfs: mkdir(): directory is already exist. name: %d\n", component_name);
+        return -1;
+    }
 
+    FS_VNODE* new_vnode = vnode_create(component_name, S_IFDIR);
+    new_vnode->mount = dir_node->mount;
+    new_vnode->v_ops = dir_node->v_ops;
+    new_vnode->f_ops = dir_node->f_ops;
+    new_vnode->parent = dir_node;
+
+    new_vnode->internal = kzalloc(sizeof(FAT32_VNODE_INTERNAL));
+    FAT32_VNODE_INTERNAL* internal = (FAT32_VNODE_INTERNAL*) new_vnode->internal;
+    internal->is_dirty = TRUE;
+    internal->cluster_id = FAT32_FAT_BAD;
+
+    // parent is dirty too
+    FAT32_VNODE_INTERNAL* parent_internal = (FAT32_VNODE_INTERNAL*) dir_node->internal;
+    parent_internal->is_dirty = TRUE;
+
+
+    link_list_push_back(&dir_node->childs, &new_vnode->self);
+    dir_node->child_num++;
+
+    *target = new_vnode;
+    //NS_DPRINT("[FS][TRACE] rootfs: mkdir(): dir %s created.\n", component_name);
+    return 0;
 }
 
 static int ioctl(FS_FILE *file, unsigned long request, ...) {
@@ -336,79 +394,140 @@ static int ioctl(FS_FILE *file, unsigned long request, ...) {
 static int convert_fat_name(const FAT32_DIR_ENTRY* entry, char* dst) {
     size_t offset = 0;
     const char* fat_name = entry->name;
+    if (fat_name[0] == ' ')
+        return -1;
     for (int i = 0; i < 8; i++) {
-        if (fat_name[i] == ' ' || fat_name[i] == '\0')
+        if (fat_name[i] == ' ')
             break;
+
+        // illegal name
+        if (fat_name[i] < ' ' || fat_name[i] > 0x7E)
+            return -1;
+        if (fat_name[i] >= 'a' && fat_name[i] <= 'z')
+            return -1;
+        if (fat_name[i] == '/')
+            return -1;
+        if (fat_name[i] == '\"')
+            return -1;
+        if (fat_name[i] == '*')
+            return -1;
+        if (fat_name[i] == ',')
+            return -1;
+        if (fat_name[i] == '.')
+            return -1;
+        if (fat_name[i] == '?')
+            return -1;
+        if (fat_name[i] == '[')
+            return -1;
+        if (fat_name[i] == ']')
+            return -1;
+        if (fat_name[i] == '|')
+            return -1;
+
         dst[offset++] = fat_name[i];
     }
     if (offset == 0)
         return -1;
-    dst[offset++] = '.';
     const char* ext = entry->ext;
+    if (ext[0] == ' ' && ext[1] == ' ' && ext[2] == ' ') {  // no ext name
+        dst[offset] = '\0';
+        return;
+    }
+    dst[offset++] = '.';
     for (int i = 0; i < 3; i++) {
         if (ext[i] == ' ')
             break;
         dst[offset++] = ext[i];
     }
     dst[offset] = '\0';
-    NS_DPRINT("ori file name:%s\n", entry->name);
-    NS_DPRINT("ori ext name: %s\n", entry->ext);
-    NS_DPRINT("convert name: %s\n", dst);
     return 0;
 }
 
 /**
- * Assume content is loaded
+ * Parse the directory file from external storage
 */
 static int parse_dir_entries(FS_VNODE* node) {
-    if (!node->content) {
-        NS_DPRINT("[FS][ERROR] FAT32fs: File content is not loaded. can not parse dir entries.\n");
-        return -1;
-    }
 
+    FAT32_FS_INTERNAL* mount_internal = (FAT32_FS_INTERNAL*)node->mount->internal;
     FAT32_VNODE_INTERNAL* node_internal = (FAT32_VNODE_INTERNAL*)node->internal;
 
     // entry is 32 bytes it is ok don't using unalign
-    FAT32_DIR_ENTRY* entry = (FAT32_DIR_ENTRY*)node->content;
-    UPTR end_ptr = (UPTR)node->content + node->content_size;
-    while ((UPTR) entry < end_ptr) {
-        char tmp_name[13];
-        
-        // no more file to parse
-        if (convert_fat_name(entry, tmp_name) == -1) {
+    UPTR* sector_buf = kmalloc(mount_internal->bytes_per_sector);
+    U32 index = node_internal->cluster_id;
+
+    while (TRUE) {
+        if (index < 2 || index >= FAT32_FAT_BAD)
             break;
+        node->mount->read((mount_internal->data_start_sector + index) * mount_internal->bytes_per_sector, sector_buf, mount_internal->bytes_per_sector);
+        index = mount_internal->fat_table[index];
+
+        FAT32_DIR_ENTRY* entry = (FAT32_DIR_ENTRY*) sector_buf;
+        while (entry < (sector_buf + mount_internal->bytes_per_sector)) {
+            
+            // https://averstak.tripod.com/fatdox/dir.htm#atr
+            // If Attribute is equal to 0Fh (Read Only, Hidden, System, Volume Label) then this entry does not contain the alias, but it is used as part of the long filename or long directory name.
+            if (entry->attribute == FAT32_DIR_ENTRY_ATTR_LONG_NAME) {  // ignore LFN
+                entry++;
+                continue;
+            }
+
+            if (entry->name[0] == FAT32_DIR_ENTRY_UNUSED || entry->name[0] == ' ') {
+                entry++;
+                continue;
+            }
+            if (entry->name[0] == FAT32_DIR_ENTRY_LAST_AND_UNUSED) {
+                index = 0;                                                      // let the loop end
+                break;
+            }
+
+            U32 cluster_id = (utils_read_unaligned_u16(&entry->high_block_index) << 16) + utils_read_unaligned_u16(&entry->low_block_index);
+
+            // corrupt file
+            if (cluster_id <= ((FAT32_VNODE_INTERNAL*)node->mount->root->internal)->cluster_id) {
+                NS_DPRINT("[FS][ERROR] FAT32fs: parse_dir_entries(): Corrupt file cluster index.\n");
+                entry++;
+                continue;
+            }
+
+            char tmp_name[13];
+            if (convert_fat_name(entry, tmp_name) == -1) { // corrupt file name
+                entry++;
+                continue;
+            }
+            NS_DPRINT("[FS] FAT32fs: file name: %s\n", tmp_name);
+
+            FS_VNODE* new_node = vnode_create(tmp_name, 0);
+            
+            // is a directory child
+            if (entry->attribute & FAT32_DIR_ENTRY_ATTR_DIR) {
+                new_node->mode = S_IFDIR;
+            } else {
+                new_node->mode = S_IFREG;
+            }
+
+            // internal modification
+            new_node->internal = kzalloc(sizeof(FAT32_VNODE_INTERNAL));
+            FAT32_VNODE_INTERNAL* new_internal = (FAT32_VNODE_INTERNAL*) new_node->internal;
+            new_internal->cluster_id = cluster_id;
+            NS_DPRINT("[FS] FAT32fs: block id: %u\n", new_internal->cluster_id);
+            new_internal->is_dirty = FALSE;
+            new_internal->is_loaded = FALSE;    // not loaded to faster the searching when lookup
+            
+            new_node->content_size = entry->file_size;
+            NS_DPRINT("[FS] FAT32fs: file size: %u\n", new_node->content_size);
+
+            // common modification
+            new_node->mount = node->mount;
+            new_node->v_ops = node->v_ops;
+            new_node->f_ops = node->f_ops;
+            new_node->parent = node;
+
+            link_list_push_back(&node->childs, &new_node->self);
+            node->child_num++;
+
+            entry++;
         }
-
-        FS_VNODE* new_node = vnode_create(tmp_name, 0);
         
-        // is a directory child
-        if (entry->attribute & FAT32_DIR_ENTRY_ATTR_DIR) {
-            new_node->mode = S_IFDIR;
-        } else {
-            new_node->mode = S_IFREG;
-        }
-
-        // internal modification
-        new_node->internal = kzalloc(sizeof(FAT32_VNODE_INTERNAL));
-        FAT32_VNODE_INTERNAL* new_internal = (FAT32_VNODE_INTERNAL*) new_node->internal;
-        new_internal->cluster_id = (utils_read_unaligned_u16(&entry->high_block_index) << 16) + utils_read_unaligned_u16(&entry->low_block_index);
-        NS_DPRINT("[FS] FAT32fs: block id: %d\n", new_internal->cluster_id);
-        new_internal->is_dirty = FALSE;
-        new_internal->is_loaded = FALSE;    // not loaded to faster the searching when lookup
-        
-        new_node->content_size = entry->file_size;
-        NS_DPRINT("[FS] FAT32fs: file size: %d\n", new_node->content_size);
-
-        // common modification
-        new_node->mount = node->mount;
-        new_node->v_ops = node->v_ops;
-        new_node->f_ops = node->f_ops;
-        new_node->parent = node;
-
-        link_list_push_back(&node->childs, &new_node->self);
-        node->child_num++;
-
-        entry++;
     }
 
     return 0;

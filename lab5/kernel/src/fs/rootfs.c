@@ -119,7 +119,7 @@ static long lseek64(FS_FILE *file, long offset, int whence) {
 
 static int lookup(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
     FS_VNODE* vnode = NULL;
-    NS_DPRINT("[FS] rootfs: lookup() finding file: %s\n", component_name);
+    //NS_DPRINT("[FS] rootfs: lookup() finding file: %s\n", component_name);
     LLIST_FOR_EACH_ENTRY(vnode, &dir_node->childs, self) {
         if (utils_strncmp(vnode->name, component_name, utils_strlen(vnode->name)) == 0) {
             *target = vnode;
@@ -149,7 +149,7 @@ static int create(FS_VNODE* dir_node, FS_VNODE** target, const char* component_n
 }
 
 static int mkdir(FS_VNODE* dir_node, FS_VNODE** target, const char* component_name) {
-    NS_DPRINT("[FS][TRACE] rootfs: mkdir(): creating %s dir\n", component_name);
+    //NS_DPRINT("[FS][TRACE] rootfs: mkdir(): creating %s dir\n", component_name);
     if (!lookup(dir_node, target, component_name)) {
         printf("[FS] rootfs: mkdir(): directory is already exist. name: %d\n", component_name);
         return -1;
@@ -165,7 +165,7 @@ static int mkdir(FS_VNODE* dir_node, FS_VNODE** target, const char* component_na
     dir_node->child_num++;
 
     *target = new_vnode;
-    NS_DPRINT("[FS][TRACE] rootfs: mkdir(): dir %s created.\n", component_name);
+    //NS_DPRINT("[FS][TRACE] rootfs: mkdir(): dir %s created.\n", component_name);
     return 0;
 
 }
