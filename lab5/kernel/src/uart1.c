@@ -108,7 +108,9 @@ int  uart_puts(char* fmt, ...) {
 // uart_async_getc read from buffer
 // uart_r_irq_handler write to buffer then output
 char uart_async_getc() {
+    lock();
     *AUX_MU_IER_REG |=1; // enable read interrupt
+    unlock();
     // do while if receive buffer empty
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx) *AUX_MU_IER_REG |=1; // enable read interrupt
     lock();
