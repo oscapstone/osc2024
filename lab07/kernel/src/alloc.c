@@ -659,7 +659,7 @@ void* dynamic_alloc(uint64_t size)
     // printf(" in Frame: "); printf_int(((struct frame_t*)memory_pool->frame_base_addrs[memory_pool->frame_used - 1])->index);
 
     res = memory_pool->frame_base_addrs[memory_pool->frame_used - 1] + memory_pool->chunk_offset * memory_pool->size;
-    printf("\r\n[SYSTEM INFO] Allocate Chunk at address: "); printf_hex((uint64_t)res);
+    printf("\r\n[SYSTEM INFO] Allocate Chunk at address: "); printf_hex((uint64_t)res); printf(", in Frame: "); printf_int(((uint64_t)res - MALLOC_START_ADDR) >> 12);
     memory_pool->chunk_offset++;
     memory_pool->chunk_used++;
 

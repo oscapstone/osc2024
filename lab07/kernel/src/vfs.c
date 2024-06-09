@@ -5,7 +5,9 @@
 #include "errno.h"
 #include "tmpfs.h"
 #include "io.h"
+#include "schedule.h"
 
+extern struct task_struct* current;
 
 struct mount* rootfs;
 struct filesystem global_fs[MAX_FILESYSTEM];
@@ -71,18 +73,18 @@ int vfs_open(const char* pathname, int flags, struct file** target) {
   struct vnode* vnode;
   int ret = vfs_lookup(pathname, &vnode);
   if(ret != 0 && flags != O_CREAT){
-    printf("[ERROR] Cannot find the file\n");
+    printf("\r\n[ERROR] Cannot find the file");
     return -1;
   }
   else if(ret == 0 && flags == O_CREAT){
-    printf("[ERROR] File already exists\n");
+    printf("\r\n[ERROR] File already exists");
     return -1;
   }
   else if(flags == O_CREAT){
     struct vnode* target_dir; 
     vfs_get_node(pathname, &target_dir);
     if(target_dir == NULL){
-      printf("[ERROR] Cannot find the parent directory\n");
+      printf("\r\n[ERROR] Cannot find the parent directory");
       return -1;
     }
 
@@ -93,7 +95,7 @@ int vfs_open(const char* pathname, int flags, struct file** target) {
     *target = create_file(vnode, flags);
 
     if(ret != 0){
-      printf("[ERROR] Cannot create the file\n");
+      printf("\r\n[ERROR] Cannot create the file");
       return -1;
     }
     return ret;
@@ -101,7 +103,7 @@ int vfs_open(const char* pathname, int flags, struct file** target) {
 
   struct file* file = create_file(vnode, flags);
   if(vnode->f_ops->open(vnode, &file) != 0){
-    printf("[ERROR] Cannot open the file\n");
+    printf("\r\n[ERROR] Cannot open the file");
     return -1;
   }
 
@@ -139,25 +141,27 @@ int vfs_mkdir(const char* pathname)
     struct vnode* vnode = vfs_get_node(pathname, &target_dir);
     if(vnode != NULL)
     {
-        printf("[ERROR] Directory already exists\n");
+        printf("\r\n[ERROR] Directory already exists");
         return CERROR;
     }
     
     if(target_dir == NULL)
     {
-      printf("[ERROR] Cannot find the parent directory\n");
+      printf("\r\n[ERROR] Cannot find the parent directory");
       return CERROR;
     }
     struct vnode* new_dir;
     char* file_name = get_file_name(pathname);
     printf("\r\n[MKDIR] pathname: "); printf(pathname); printf(" , filename: "); printf(file_name);
-    printf("\r\ntarget_dir: "); printf_int(target_dir == rootfs->root);
+
     int ret = target_dir->v_ops->mkdir(target_dir, &new_dir, file_name);
     if(ret != 0)
     {
-        printf("[ERROR] Cannot create directory\n");
+        printf("\r\n[ERROR] Cannot create directory");
+        dfree(file_name);
         return CERROR;
     }
+    dfree(file_name);
     return 0;
 }
 
@@ -177,7 +181,7 @@ int vfs_mount(const char* target, const char* filesystem) // mount the filesyste
     vfs_get_node(target, &target_dir);
     if(target_dir == NULL)
     {
-      printf("[ERROR] Cannot find the parent directory\n");
+      printf("\r\n[ERROR] Cannot find the parent directory");
       return CERROR;
     }
 
@@ -198,7 +202,7 @@ int vfs_mount(const char* target, const char* filesystem) // mount the filesyste
     }
     else
     {
-      printf("[ERROR] Filesystem not found\n");
+      printf("\r\n[ERROR] Filesystem not found");
       return CERROR;
     }
 
@@ -228,14 +232,14 @@ int vfs_list(const char* pathname)
     
     if(ret != 0)
     {
-        printf("[ERROR] Cannot find the directory\n");
+        printf("\r\n[ERROR] Cannot find the directory");
         return -1;
     }
     
     ret = vnode->v_ops->list(vnode);
     if(ret != 0)
     {
-        printf("[ERROR] Cannot list the directory\n");
+        printf("\r\n[ERROR] Cannot list the directory");
         return CERROR;
     }
     return 0;
@@ -249,9 +253,10 @@ struct vnode* vfs_get_node(const char* pathname, struct vnode** target_dir)
     start_node = rootfs->root;
     return next_step(start_node, pathname+1, target_dir);
   }
-  // else{ // [TODO] relative path
-  //   return next_step(start_node, pathname, target_dir);
-  // }
+  else{ // [TODO] relative path
+    start_node = vfs_get_node(current->cwd, NULL);
+    return next_step(start_node, pathname, target_dir);
+  }
   return NULL;
 }
 
@@ -265,10 +270,10 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
 
   while(token != NULL){
     *target_dir = current_node;
-    printf("\r\n[Next Step] token: "); printf(token);
     if(!strcmp(token, "..")){
       if(current_node->parent == NULL){
-        return NULL;
+        current_node = NULL;
+        goto next_step_end;
       }
       current_node = current_node->parent;
     }
@@ -278,14 +283,16 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
     else{
       struct vnode* next_node;
       if(current_node->v_ops->lookup(current_node, &next_node, token) != 0){
-        return NULL;
+        current_node = NULL;
+        goto next_step_end;
       }
       current_node = next_node;
     }
-    printf("\r\nsame: "); printf_int(current_node->parent == rootfs->root);
+    // printf("\r\nsame: "); printf_int(current_node->parent == rootfs->root);
     token = strtok(NULL, "/");
   }
-  
+next_step_end:
+  dfree(tmp_path);
   return current_node;
 }
 

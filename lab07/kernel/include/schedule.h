@@ -48,6 +48,7 @@ struct task_struct {
 	unsigned long stack;
 	unsigned long flags;
 	int pid;
+	char* cwd;
 };
 
 extern void sched_init(void);
@@ -64,7 +65,8 @@ extern void exit_process(void);
 
 #define INIT_TASK \
 /*cpu_context*/	{ {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-/* state etc */	0,0,1, 0, 0, PF_KTHREAD, 0\
+/* state etc */	0,0,1, 0, 0, PF_KTHREAD, 0, \
+/* cwd */ "/" \
 }
 
 #endif

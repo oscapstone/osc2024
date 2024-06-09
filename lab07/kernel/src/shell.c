@@ -24,6 +24,7 @@ static void multiple_thread_test(int argc, char *argv[]);
 static void to_user_test(int argc, char *argv[]);
 static void rootfs_ls(int argc, char *argv[]);
 static void rootfs_mkdir(int argc, char *argv[]);
+static void print_cwd(int argc, char *argv[]);
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
@@ -55,7 +56,8 @@ cmd cmds[] =
     {.name = "multi_thread", .func = &multiple_thread_test, .help_msg = "\nmulti_thread\t: test multiple threads"},
     {.name = "to_user", .func = &to_user_test, .help_msg = "\nto_user\t: test user mode"},
     {.name = "start_video", .func = &start_video, .help_msg = "\nstart_video\t: start video"},
-    {.name = "fl", .func= &print_flist, .help_msg = "\nfl\t: print free list"}
+    {.name = "fl", .func= &print_flist, .help_msg = "\nfl\t: print free list"},
+    {.name = "cwd", .func=&print_cwd, .help_msg = "\ncwd\t: print current workding directroy"}
 };
 
 static void shell()
@@ -239,6 +241,13 @@ static void rootfs_mkdir(int argc, char *argv[])
         printf("\nUsage: mkdir [path]");
         return;
     }
+}
+
+
+static void print_cwd(int argc, char *argv[])
+{
+    printf("\nCurrent Working Directory: ");
+    printf(current->cwd);
 }
 
 void readcmd(char x[256])

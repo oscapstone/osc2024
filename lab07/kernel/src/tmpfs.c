@@ -23,7 +23,7 @@ static struct vnode* tmpfs_create_vnode(const char *name, int type, struct vnode
     struct tmpfs_internal *internal = (struct tmpfs_internal*)dynamic_alloc(sizeof(struct tmpfs_internal));
 
     if(sizeof(name) > COMPONENT_SIZE){
-        printf("[ERROR] File name too long\n");
+        printf("\r\n[ERROR] File name too long");
         return NULL;
     }
     internal->name = (char*)dynamic_alloc(COMPONENT_SIZE);
@@ -59,12 +59,12 @@ int tmpfs_register()
     {
         if(global_fs[i].name == NULL)break;
         if(!strcmp(global_fs[i].name, "tmpfs")){
-            printf("[ERROR] tmpfs already registered\n");
+            printf("\r\n[ERROR] tmpfs already registered");
             return -1;
         }
     }
     if(i == MAX_FILESYSTEM){
-        printf("[ERROR] No space for new filesystem\n");
+        printf("\r\n[ERROR] No space for new filesystem");
         return -1;
     }
 
@@ -99,12 +99,12 @@ int tmpfs_write(struct file* file, const void* buf, size_t len)
     struct vnode *vnode = file->vnode;
     struct tmpfs_internal *internal = (struct tmpfs_internal*)vnode->internal;
     if(internal->type == DIR_NODE){
-        printf("[ERROR] Cannot write to a directory\n");
+        printf("\r\n[ERROR] Cannot write to a directory");
         return WERROR;
     }
 
     if(file->f_pos + len > TMPFS_MAX_FILE){
-        printf("[ERROR] File size exceeded\n");
+        printf("\r\n[ERROR] File size exceeded");
         return WERROR;
     }
     
@@ -130,7 +130,7 @@ int tmpfs_read(struct file* file, void* buf, size_t len)
     struct vnode *vnode = file->vnode;
     struct tmpfs_internal *internal = (struct tmpfs_internal*)vnode->internal;
     if(internal->type == DIR_NODE){
-        printf("[ERROR] Cannot read a directory\n");
+        printf("\r\n[ERROR] Cannot read a directory");
         return RERROR;
     }
 
@@ -154,7 +154,7 @@ int tmpfs_close(struct file* file)
     // 1. release the file handle
     // 2. Return error code if fails
     if(file == NULL){
-        printf("[ERROR] File pointer cannot be NULL\n");
+        printf("\r\n[ERROR] File pointer cannot be NULL");
         return CERROR;
     }
     return 0; // vfs_close will free the file pointer 
@@ -169,12 +169,12 @@ int tmpfs_create(struct vnode* dir_node, struct vnode** target, const char* comp
     // 2. Return error code if fails
     struct tmpfs_internal *internal = (struct tmpfs_internal*)dir_node->internal;
     if(internal->type == FILE_NODE){
-        printf("[ERROR] Cannot create file in a file\n");
+        printf("\r\n[ERROR] Cannot create file in a file");
         return CERROR;
     }
 
     if(strlen(component_name) > COMPONENT_SIZE){
-        printf("[ERROR] File name too long\n");
+        printf("\r\n[ERROR] File name too long");
         return CERROR;
     }
 
@@ -186,7 +186,7 @@ int tmpfs_create(struct vnode* dir_node, struct vnode** target, const char* comp
     //     }
     // }
     if(internal->size + 1 > ENTRIES_PER_DIR){
-        printf("[ERROR] No space for new file\n");
+        printf("\r\n[ERROR] No space for new file");
         return CERROR;
     }
     internal->children[internal->size] = tmpfs_create_vnode(component_name, FILE_NODE, dir_node);
@@ -199,15 +199,15 @@ int tmpfs_mkdir(struct vnode* dir_node, struct vnode** target, const char* compo
 {
     // 1. Create a new directory in the directory
     // 2. Return error code if fails
-    printf("\r\ntmpfs mkdir");
+    
     struct tmpfs_internal *internal = (struct tmpfs_internal*)dir_node->internal;
     if(internal->type == FILE_NODE){
-        printf("[ERROR] Cannot create directory in a file\n");
+        printf("\r\n[ERROR] Cannot create directory in a file");
         return CERROR;
     }
 
     if(strlen(component_name) > COMPONENT_SIZE){
-        printf("[ERROR] Directory name too long\n");
+        printf("\r\n[ERROR] Directory name too long");
         return CERROR;
     }
 
@@ -219,7 +219,7 @@ int tmpfs_mkdir(struct vnode* dir_node, struct vnode** target, const char* compo
     //     }
     // }
     if(internal->size + 1 > ENTRIES_PER_DIR){
-        printf("[ERROR] No space for new directory\n");
+        printf("\r\n[ERROR] No space for new directory");
         return CERROR;
     }
     internal->children[internal->size] = tmpfs_create_vnode(component_name, DIR_NODE, dir_node);
@@ -234,7 +234,7 @@ int tmpfs_lookup(struct vnode* dir_node, struct vnode** target, const char* comp
     // 2. Return error code if fails
     struct tmpfs_internal *internal = (struct tmpfs_internal*)dir_node->internal;
     if(internal->type == FILE_NODE){
-        printf("[ERROR] Cannot lookup in a file\n");
+        printf("\r\n[ERROR] Cannot lookup in a file");
         return LERROR;
     }
 
@@ -257,7 +257,7 @@ int tmpfs_list(struct vnode* dir_node)
     struct tmpfs_internal *internal = (struct tmpfs_internal*)dir_node->internal;
     
     if(internal->type == FILE_NODE){
-        printf("[ERROR] Cannot list in a file\n");
+        printf("\r\n[ERROR] Cannot list in a file");
         return LERROR;
     }
 
