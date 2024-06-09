@@ -7,6 +7,7 @@
 #include "mbox.h"
 #include "initrd.h"
 #include "mm.h"
+#include "string.h"
 
 /* The definition of system call handler function */
 syscall_t sys_call_table[SYSCALL_NUM] = {
@@ -109,10 +110,14 @@ int sys_fork(struct trapframe *trapframe)
 
     char *sp_el0_addr = (char *) trapframe->sp; // get the current address of sp_el0 (current task)
     struct trapframe *child_trapframe = (struct trapframe *)(child_task->tss.sp);
-    child_trapframe->sp = (uint64_t) (sp_el0_addr + ustack_offset);
+    // child_trapframe->sp = (uint64_t) (sp_el0_addr + ustack_offset); // With MMU enabled, we should use the virtual address to setup sp_el0
     child_trapframe->x[0] = 0; // setup the return value of child task (fork())
 
-    trapframe->x[0] = child_task_id; // return the child task id
+    // TODO: Create a new address space, then copy the parent's address space to child's address space.
+    // With MMU enabled, we should use the virtual address to setup sp_el0
+    printf("[sys_fork] child ttbr0 %16x, parent ttbr0 %16x\n", child_task->tss.pgd, current->tss.pgd);
+
+    trapframe->x[0] = child_task_id; // return the child task id to parent process
     return SYSCALL_SUCCESS;
 }
 
@@ -124,7 +129,6 @@ int sys_exit(struct trapframe *trapframe) {
     current->state = TASK_STOPPED;
     current->exit_state = trapframe->x[0]; // setup exit state
     num_running_task--;
-    // printf("Task %d exit, exit state %d\n", current->task_id, current->exit_state);
     schedule(); // if we schedule() here, this function never return
     return SYSCALL_SUCCESS;
 }
@@ -133,8 +137,13 @@ int sys_exit(struct trapframe *trapframe) {
 int sys_mbox_call(struct trapframe *trapframe)
 {
     unsigned char ch = (unsigned char) trapframe->x[0];
-    unsigned int *mbox = (unsigned int *) trapframe->x[1];
-    trapframe->x[0] = __mbox_call(ch, (volatile unsigned int *) mbox);
+    unsigned int *umbox = (unsigned int *) trapframe->x[1]; // user mbox
+    unsigned int size = (unsigned int) umbox[0];
+
+    memcpy((void *) mbox, (void *) umbox, size);
+    trapframe->x[0] = mbox_call(ch);
+    memcpy((void *) umbox, (void *) mbox, size);
+
     return SYSCALL_SUCCESS;
 }
 

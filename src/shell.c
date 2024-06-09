@@ -91,5 +91,5 @@ void do_shell(void)
 
 void do_user_image(void)
 {
-    initrd_usr_prog("syscall.img");
+    initrd_usr_prog("vm.img");
 }

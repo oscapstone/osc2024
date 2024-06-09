@@ -4,7 +4,7 @@
 /* If DEBUG_MULTITASKING is defined, some logs in kernel for multi-tasking will be printed out. */
 // #define DEBUG_MULTITASKING
 /* If DEBUG_SYSCALL is defined, some logs in kernel for system call will be printed out. */
-//#define DEBUG_SYSCALL
+// #define DEBUG_SYSCALL
 
 #define	EPERM		 1	/* Operation not permitted */
 #define	ENOENT		 2	/* No such file or directory */

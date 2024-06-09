@@ -91,3 +91,13 @@ void *memset(void *str, int c, unsigned long n) {
         *ptr++ = (char)c;
     return str;
 }
+
+void *memcpy(void *dest, const void *src, unsigned long n)
+{
+    char *d = dest;
+    const char *s = src;
+
+    while (n--)
+        *d++ = *s++;
+    return dest;
+}

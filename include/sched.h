@@ -46,6 +46,7 @@ struct task_state_segment {
     uint64_t fp; // x29, frame pointer
     uint64_t lr; // x30, link register
     uint64_t sp; // sp_el1
+    uint64_t pgd; // ttbr0_el1
     uint64_t sp_backup; // for signal handling
 };
 

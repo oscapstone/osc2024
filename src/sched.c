@@ -25,6 +25,7 @@ void task_init()
         task_pool[i].pending = 0;
         task_pool[i].process_sig = 0;
         task_pool[i].sighand = default_sighandler;
+        task_pool[i].tss.pgd = (uint64_t) 0;
     }
 
     // TODO: Understand how to deal with the task[0] (kernel). At linux 0.11, it is a special task.
@@ -33,13 +34,10 @@ void task_init()
     task_pool[0].counter = 1;
 
     // I don't have to initialize the tss of task[0], because when it switch to other task, the tss of task[0] will be saved to its own stack.
-    // TODO: Because I don't initialize the tss of task[0], I can't fork() from task[0].
+    // TODO: check whether we can fork() from task[0].
     update_current(&task_pool[0]);
     num_running_task = 1;
-    // TODO: the task 0's stack are not in kstack_pool[0] and ustack_pool[0]. It is in the stack that start.S set up.
     task_pool[0].tss.lr = (uint64_t) do_user_image;
-    // task_pool[0].tss.lr = (uint64_t) do_shell_user;
-    // task_pool[0].tss.lr = (uint64_t) do_shell;
     task_pool[0].tss.sp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
     task_pool[0].tss.fp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
 }
@@ -48,10 +46,11 @@ void task_init()
 void context_switch(struct task_struct *next)
 {
     struct task_struct *prev = current; // the current task_struct address
-    update_current(next);
+
 #ifdef DEBUG_MULTITASKING
     printf("[context_switch] Switch from task %d to task %d\n", prev->task_id, next->task_id);
 #endif
+    update_current(next);
     switch_to(&prev->tss, &next->tss);
 
     /* Before the process returns to user mode, check the pending signals. */
@@ -70,9 +69,8 @@ void context_switch(struct task_struct *next)
         asm volatile("eret");
     }
 
-    if (current->state == TASK_STOPPED) {
+    if (current->state == TASK_STOPPED)
         schedule();
-    }
 }
 
 /* Find empty task_struct. Return task id. */

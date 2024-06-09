@@ -10,5 +10,6 @@ int strcpy(char *dst, char *src);
 int atoi(char *s);
 
 void *memset(void *str, int c, unsigned long n);
+void *memcpy(void *dest, const void *src, unsigned long n);
 
 #endif

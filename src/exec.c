@@ -14,11 +14,15 @@ void do_exec(void (*func)(void), unsigned long size)
     unsigned long *stack;
 
     /* Create pgd table first. */
-    pgd = create_empty_page_table();
+    if (!current->tss.pgd)
+        current->tss.pgd = virt_to_phys((unsigned long)create_empty_page_table());
+    pgd = (unsigned long *)phys_to_virt(current->tss.pgd);
+
     stack = (unsigned long *) kmalloc(PAGE_SIZE * 4);
 
     map_pages(pgd, 0x0, size, virt_to_phys((unsigned long)func), 0); // user program is mapped to 0x0
     map_pages(pgd, 0xffffffffb000, PAGE_SIZE * 4, virt_to_phys((unsigned long)stack), 0); // user stack is mapped to 0xffffffffb000
+    map_pages(pgd, PERIPHERAL_BASE, PERIPHERAL_SIZE, PERIPHERAL_BASE, 0); // map peripheral to the same address
 
     asm volatile("msr elr_el1, %0" ::"r"(0x0));
     asm volatile("msr sp_el0, %0" ::"r"(USER_STACK_TOP));

@@ -453,7 +453,7 @@ void walk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigne
             return;
         }
 
-        if (!table_p[idx])
+        if (!table_p[idx]) /* Use walk to setup page table, all memory start from empty memory */
         {
             unsigned long *newtable_p = create_empty_page_table();
             table_p[idx] = virt_to_phys((unsigned long)newtable_p); // point to that table
