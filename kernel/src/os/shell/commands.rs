@@ -1,4 +1,4 @@
-use crate::os::stdio::{get_line, println_now};
+use crate::os::stdio::{get_line, print_hex_now, println_now};
 use crate::os::{allocator, thread, timer};
 use crate::println;
 use alloc::boxed::Box;
@@ -96,9 +96,10 @@ pub fn exec(args: Vec<String>) {
             }
         };
         let stack_size = 4096;
+        let program_size = (filesize + (0x1000 - 1)) & !(0x1000 - 1);
 
         let program_ptr = unsafe {
-            alloc::alloc::alloc(Layout::from_size_align(filesize, THREAD_ALIGNMENT).unwrap())
+            alloc::alloc::alloc(Layout::from_size_align(program_size, THREAD_ALIGNMENT).unwrap())
         };
         let program_stack_ptr = unsafe {
             alloc::alloc::alloc(Layout::from_size_align(stack_size, THREAD_ALIGNMENT).unwrap())
@@ -118,7 +119,7 @@ pub fn exec(args: Vec<String>) {
             }
         }
 
-        let pid = thread::create_thread(program_ptr, filesize, program_stack_ptr, stack_size);
+        let pid = thread::create_thread(program_ptr, program_size, program_stack_ptr, stack_size);
         println!("PID: {}", pid);
         println!("PC: {:X?}", program_ptr);
     }
