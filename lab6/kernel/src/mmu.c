@@ -264,15 +264,15 @@ void permission_fault_handler(vm_area_struct_t *the_area_ptr, uint64_t fault_use
 {
     void *kernel_fault_page = PHYS_TO_KERNEL_VIRT(USER_VIRT_TO_PHYS(curr_thread->context.pgd, fault_user_page));
     DEBUG("translaton fault: 0x%x -> 0x%x\r\n", fault_user_page, kernel_fault_page);
-    if (no_other_ref(kernel_fault_page))
+    if (the_area_ptr->vm_page_prot & PROT_WRITE)
     {
-        DEBUG("no other ref\r\n");
-        map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_fault_page), flag);
-        kernel_unlock_interrupt();
-        return;
-    }
-    else if (the_area_ptr->vm_page_prot & PROT_WRITE)
-    {
+        if (no_other_ref(kernel_fault_page))
+        {
+            DEBUG("no other ref\r\n");
+            map_one_page(PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), fault_user_page, KERNEL_VIRT_TO_PHYS(kernel_fault_page), flag);
+            kernel_unlock_interrupt();
+            return;
+        }
         void *kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
         put_page(kernel_fault_page);
         get_page(kernel_new_page);
