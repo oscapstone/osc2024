@@ -117,7 +117,7 @@ unsafe fn dealloc_iter(ptr: *mut u8, size: usize) -> bool {
 
         let buddy_ptr = match current_ptr as usize % (current_size * 2) {
             0 => current_ptr.add(current_size),
-            rem => current_ptr.sub(current_size),
+            _ => current_ptr.sub(current_size),
         };
 
         let buddy_set = FRAMES.as_mut().unwrap().get_mut(&current_size).unwrap();
@@ -219,11 +219,9 @@ unsafe impl GlobalAlloc for BuddyAllocator {
         }
 
         assert_ne!(FRAMES, None, "BuddyAllocator is not initialized");
-        assert!(layout.align() <= MIN_FRAME_SIZE, "Alignment too large");
+        assert!(layout.align() <= MIN_FRAME_SIZE || layout.size() >= layout.align(), "Alignment too large");
 
-        let allocate_status = alloc_recursive(layout.size());
-
-        match allocate_status {
+        match alloc_recursive(layout.size()) {
             Some(ptr) => {
                 if PRINT_DEBUG {
                     println_now("Memory allocated");
