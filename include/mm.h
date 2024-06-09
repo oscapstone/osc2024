@@ -11,7 +11,7 @@
 
 /* For peripheral address */
 #define PERIPHERAL_BASE                 (0x3c000000UL)
-#define PERIPHERAL_SIZE                 (0x01000000UL)
+#define PERIPHERAL_SIZE                 (0x03000000UL)
 
 /* Paging is configured by TCR. The following basic configuration is used in lab5 */
 #define TCR_T0SZ_48bit                  ((64 - 48) << 0)

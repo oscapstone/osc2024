@@ -3,4 +3,4 @@
 *.elf
 *.cpio
 *.txt
-*.DS_Store
+.DS_Store
