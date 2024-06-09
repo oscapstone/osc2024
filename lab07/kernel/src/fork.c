@@ -3,6 +3,8 @@
 #include "schedule.h"
 #include "io.h"
 #include "mm.h"
+#include "vfs.h"
+#include "string.h"
 
 extern void ret_from_fork(void);
 extern int nr_tasks;
@@ -66,7 +68,7 @@ int copy_process(
 	p->state = TASK_RUNNING;
 	p->counter = p->priority;
 	p->preempt_count = 1; //disable preemtion until schedule_tail
-	p->cwd = current->cwd;
+	strcpy(p->cwd, current->cwd);
 
 	
 	p->cpu_context.pc = (unsigned long)ret_from_fork;   // for the first time, pc is set to ret_from_fork

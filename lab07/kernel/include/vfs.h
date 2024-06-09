@@ -10,6 +10,7 @@
 #define MAX_OPEN_FILE         16
 #define OFFSET_FD              3 // 0, 1, 2 are reserved for stdin, stdout, stderr
 #define O_CREAT         00000100
+#define MAX_PATH_LEN         256
 
 struct vnode {
   struct vnode* parent;
@@ -65,6 +66,7 @@ int vfs_mkdir(const char* pathname);
 int vfs_mount(const char* target, const char* filesystem);
 int vfs_lookup(const char* pathname, struct vnode** target);
 int vfs_list(const char* pathname);
+int vfs_chdir(const char* relative_path);
 
 extern struct mount* rootfs;
 extern struct filesystem global_fs[MAX_FILESYSTEM];

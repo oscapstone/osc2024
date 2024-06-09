@@ -17,6 +17,7 @@ struct filesystem global_fs[MAX_FILESYSTEM];
 static struct vnode* next_step(struct vnode* start_node, const char* pathname, struct vnode** target_dir);
 static struct file* create_file(struct vnode* vnode, int flags);
 static char* get_file_name(const char* pathname);
+static void simplify_path(char* pathname);
 
 // void global_fd_table_init()
 // {
@@ -245,6 +246,44 @@ int vfs_list(const char* pathname)
     return 0;
 }
 
+
+int vfs_chdir(const char* relative_path)
+{
+    char* current_abs_path = current->cwd;
+    char* new_abs_path = (char*)dynamic_alloc(strlen(current_abs_path) + strlen(relative_path) + 4);
+    strcpy(new_abs_path, current_abs_path);
+    if(relative_path[0] == '/'){ // absolute path
+      strcpy(new_abs_path, relative_path);
+    }
+    else{ // relative path
+      strcpy(new_abs_path, current_abs_path);
+      strcpy(new_abs_path + strlen(current_abs_path), relative_path);
+    }
+
+    if(new_abs_path[strlen(new_abs_path)-1] != '/'){ // add '/' at the end
+      new_abs_path[strlen(new_abs_path)] = '/';
+      new_abs_path[strlen(new_abs_path)+1] = '\0';
+    }
+
+    // printf("\r\n[CHDIR] new_abs_path: "); printf(new_abs_path);
+    struct vnode* vnode = vfs_get_node(new_abs_path, NULL);
+
+    if(vnode == NULL)
+    {
+        printf("\r\n[ERROR] Cannot find the directory");
+        return CERROR;
+    }
+
+    simplify_path(new_abs_path);
+    printf("\r\n[CHDIR] new_abs_path(simplified): "); printf(new_abs_path);
+
+    preempt_enable();
+    strcpy(current->cwd, new_abs_path);
+    preempt_disable();
+
+    return 0;
+}
+
 struct vnode* vfs_get_node(const char* pathname, struct vnode** target_dir)
 {
   struct vnode* start_node;
@@ -323,4 +362,77 @@ static char* get_file_name(const char* pathname)
       strcpy(file_name, pathname+i+1); 
     }
     return file_name;
+}
+
+static void simplify_path(char* pathname)
+{
+  
+  printf("\r\n"); printf(__func__);
+  #define MAX_SEGMENTS 256
+  
+  char* tmp_path = (char*)dynamic_alloc(strlen(pathname)+1);
+   char* new_path = (char*)dynamic_alloc(strlen(pathname)+1);
+
+  strcpy(tmp_path, pathname);
+  
+  char* segments[MAX_SEGMENTS];
+  int n_segments = 0;
+
+  char* token = strtok(tmp_path, "/");
+  int isFirst = 1;  // avoid the first NULL token
+  while(token != NULL || isFirst == 1){
+    isFirst = 0;
+    if(token != NULL){ 
+      segments[n_segments] = (char*)dynamic_alloc(strlen(token)+1);
+      // printf("\r\nsegment at: "); printf_hex(segments[n_segments]); printf(" , "); printf_int(n_segments);
+      strcpy(segments[n_segments++], token);
+    }
+    token = strtok(NULL, "/");
+  }
+
+  // printf("\r\n"); printf(segments[0]); printf_hex((void*)segments[0]);
+
+  // for(int i=0; i<n_segments; i++){
+  //   printf("\r\n[DEBUG] segments: "); printf(segments[i]);
+  // }
+
+  int need_segment[MAX_SEGMENTS];
+  int need_idx = 0;
+  for(int i=0; i<n_segments; i++){
+    if(segments[i] == NULL || !strcmp(segments[i], ".")) continue;
+    if(!strcmp(segments[i], "..")){
+      if(need_idx > 0){
+        need_idx--;
+      }
+    }
+    else{
+      need_segment[need_idx++] = i;
+    }
+  }
+
+  // printf("\r\n[DEBUG] need_idx: "); printf_int(need_idx);
+
+  for(int i=0; i<need_idx; i++){ // concatenate the segments
+    if(i == 0){
+      strcpy(new_path, "/\0");
+    }
+    strcpy(new_path + strlen(new_path), segments[need_segment[i]]);
+    strcpy(new_path + strlen(new_path), "/");
+    // printf("\r\n[DEBUG] new_path: "); printf(new_path);
+    dfree(segments[need_segment[i]]);
+  }
+
+  if(need_idx == 0){
+    strcpy(new_path, "/\0");
+  }
+
+  if(new_path[strlen(new_path)-1] != '/')
+    strcpy(new_path + strlen(new_path), "/\0");
+  else
+    new_path[strlen(new_path)] = '\0';
+  // printf("\r\n[DEBUG] new_path: "); printf(new_path);
+  strcpy(pathname, new_path);
+  dfree(tmp_path);
+  dfree(new_path);
+  // return pathname;
 }

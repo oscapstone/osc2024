@@ -25,6 +25,7 @@ static void to_user_test(int argc, char *argv[]);
 static void rootfs_ls(int argc, char *argv[]);
 static void rootfs_mkdir(int argc, char *argv[]);
 static void print_cwd(int argc, char *argv[]);
+static void change_dir(int argc, char *argv[]);
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
@@ -57,7 +58,8 @@ cmd cmds[] =
     {.name = "to_user", .func = &to_user_test, .help_msg = "\nto_user\t: test user mode"},
     {.name = "start_video", .func = &start_video, .help_msg = "\nstart_video\t: start video"},
     {.name = "fl", .func= &print_flist, .help_msg = "\nfl\t: print free list"},
-    {.name = "cwd", .func=&print_cwd, .help_msg = "\ncwd\t: print current workding directroy"}
+    {.name = "cwd", .func=&print_cwd, .help_msg = "\ncwd\t: print current workding directroy"},
+    {.name = "cd", .func=&change_dir, .help_msg = "\ncd\t: change the directory"}
 };
 
 static void shell()
@@ -220,7 +222,7 @@ static void reboot(int argc, char **argv)
 static void rootfs_ls(int argc, char *argv[])
 {
     if(argc == 1){
-        vfs_list("/");
+        vfs_list(current->cwd);
     }
     else if(argc == 2){
         vfs_list(argv[1]);
@@ -248,6 +250,19 @@ static void print_cwd(int argc, char *argv[])
 {
     printf("\nCurrent Working Directory: ");
     printf(current->cwd);
+}
+
+
+
+static void change_dir(int argc, char *argv[])
+{
+    if(argc == 2){
+        vfs_chdir(argv[1]);
+    }
+    else{
+        printf("\nUsage: cd [path]");
+        return;
+    } 
 }
 
 void readcmd(char x[256])

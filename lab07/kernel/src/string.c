@@ -57,6 +57,7 @@ char *strtok(char* str, const char* delim)
         if(*p == *delim){
             *p = '\0';
             p++;
+            if(ret[0] == 0) return NULL;
             return ret;
         }
         p++;

@@ -19,6 +19,8 @@
 
 #define PF_KTHREAD 					2
 
+#define MAX_PATH_LEN				256
+
 extern struct task_struct *current;
 extern struct task_struct * task[NR_TASKS];
 extern int nr_tasks;
@@ -48,7 +50,7 @@ struct task_struct {
 	unsigned long stack;
 	unsigned long flags;
 	int pid;
-	char* cwd;
+	char cwd[MAX_PATH_LEN];
 };
 
 extern void sched_init(void);
