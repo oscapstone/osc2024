@@ -3,6 +3,15 @@
 
 #define MAX_SIZE 256
 
+#include "vfs.h"
+
+int uartfs_setup_mount(struct filesystem *fs, struct mount *mount);
+int uartfs_write(struct file *file, const void *buf, size_t len);
+int uartfs_read(struct file *file, void *buf, size_t len);
+struct dentry *uartfs_lookup(struct inode *dir, const char *component_name);
+int uartfs_create(struct inode *dir, struct dentry *dentry, int mode);
+int uartfs_mkdir(struct inode *dir, struct dentry *dentry);
+
 void uart_init();
 char uart_read();
 void uart_write(unsigned int c);

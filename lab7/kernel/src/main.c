@@ -21,8 +21,8 @@ int main()
     startup_allocate();
     task_heap_init();
     timer_heap_init();
-    sched_init();
     rootfs_init();
+    sched_init();
 
     uart_puts("\n");
     enable_aux_interrupt();

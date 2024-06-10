@@ -10,16 +10,16 @@ struct inode
 {
 	struct inode_operations *i_ops;
 	struct file_operations *f_ops;
-	struct dentry *i_dentry;
-	void *internal;
+	struct dentry *i_dentry; // the dentry that pointer to this inode
+	void *internal;			 // the filesysteam's internal data
 };
 
 struct dentry
 {
-	char d_name[32];
-	struct dentry *d_parent;
-	struct inode *d_inode;
-	struct dentry *d_subdirs[16];
+	char d_name[32];			  // the name of directory or file
+	struct dentry *d_parent;	  // the parent of this dentry
+	struct inode *d_inode;		  // the inode which store the metadata of directory of file
+	struct dentry *d_subdirs[16]; // the sub-directories of this directory
 };
 
 struct file
@@ -67,7 +67,7 @@ int vfs_read(struct file *file, void *buf, size_t len);
 
 int vfs_mkdir(const char *pathname);
 int vfs_chdir(const char *pathname);
-int vfs_mount(const char* device, const char* mountpoint, const char* filesystem);
+int vfs_mount(const char *device, const char *mountpoint, const char *filesystem);
 struct dentry *vfs_lookup(const char *pathname, char *file_name);
 
 void rootfs_init();

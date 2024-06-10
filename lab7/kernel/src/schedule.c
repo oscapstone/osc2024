@@ -73,9 +73,10 @@ task_struct *task_create(void (*start_routine)(void), int priority)
     new_task->need_sched = 0;
     new_task->received_signal = NOSIG;
 
-    new_task->pwd = NULL;
+    new_task->pwd = rootfs->root;
     for (int i = 0; i < NR_OPEN_DEFAULT; i++)
         new_task->fd_array[i] = NULL;
+    new_task->fd_array[0] = new_task->fd_array[1] = new_task->fd_array[2] = vfs_open("/dev/uart", 0);
 
     for (int i = 0; i < SIG_NUM; i++)
     {

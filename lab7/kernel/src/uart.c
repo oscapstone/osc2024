@@ -1,5 +1,7 @@
 #include "gpio.h"
 #include "exception.h"
+#include "allocator.h"
+#include "utils.h"
 #include "uart.h"
 
 /* Auxilary mini UART registers */
@@ -25,6 +27,71 @@ int read_front = 0;
 int read_back = 0;
 int write_front = 0;
 int write_back = 0;
+
+static struct file_operations uartfs_f_ops = {
+    .write = uartfs_write,
+    .read = uartfs_read};
+
+static struct inode_operations uartfs_i_ops = {
+    .lookup = uartfs_lookup,
+    .create = uartfs_create,
+    .mkdir = uartfs_mkdir};
+
+int uartfs_setup_mount(struct filesystem *fs, struct mount *mount)
+{
+    mount->root = kmalloc(sizeof(struct dentry));
+    my_strcpy(mount->root->d_name, "/");
+    mount->root->d_parent = NULL;
+
+    mount->root->d_inode = kmalloc(sizeof(struct inode));
+    mount->root->d_inode->f_ops = &uartfs_f_ops;
+    mount->root->d_inode->i_ops = &uartfs_i_ops;
+    mount->root->d_inode->i_dentry = mount->root;
+    mount->root->d_inode->internal = NULL;
+
+    for (int i = 0; i < 16; i++)
+        mount->root->d_subdirs[i] = NULL;
+
+    mount->fs = fs;
+
+    return 1;
+}
+
+int uartfs_write(struct file *file, const void *buf, size_t len)
+{
+    char *target = (char *)buf;
+    for (int i = 0; i < len; i++)
+        uart_write(target[i]);
+
+    return len;
+}
+
+int uartfs_read(struct file *file, void *buf, size_t len)
+{
+    char *target = (char *)buf;
+    for (int i = 0; i < len; i++)
+        target[i] = uart_read();
+
+    return len;
+}
+
+struct dentry *uartfs_lookup(struct inode *dir, const char *component_name)
+{
+    uart_puts("you can't lookup in uartfs !\n");
+    return NULL;
+}
+
+int uartfs_create(struct inode *dir, struct dentry *dentry, int mode)
+{
+    uart_puts("you can't create in uartfs !\n");
+    return 1;
+}
+
+int uartfs_mkdir(struct inode *dir, struct dentry *dentry)
+{
+    uart_puts("you can't mkdir in uartfs !\n");
+    return 1;
+}
 
 void uart_init()
 {
@@ -113,7 +180,7 @@ void uart_dec(unsigned long long d)
 {
     char reverse[100];
     int count = 0;
-    if(d == 0)
+    if (d == 0)
     {
         uart_write('0');
         return;
@@ -162,7 +229,8 @@ void disable_aux_interrupt()
 char uart_asyn_read()
 {
     enable_uart_rx_interrupt();
-    while (read_front == read_back); // if the read buffer is empty, then the process wait.
+    while (read_front == read_back)
+        ; // if the read buffer is empty, then the process wait.
 
     disable_uart_rx_interrupt();
     char c = read_buf[read_front];

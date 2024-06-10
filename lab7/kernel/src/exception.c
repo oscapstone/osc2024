@@ -505,20 +505,16 @@ void sys_open(struct ucontext *trapframe)
     const char *pathname = (const char *)trapframe->x[0];
     int flags = (int)trapframe->x[1];
 
-    /*uart_puts("open: ");
-    uart_puts(pathname);
-    uart_puts("\n");*/
-
     struct task_struct* cur_task = get_current_task();
     struct file *file = vfs_open(pathname, flags);
 
-    if (file == NULL) // open file fail
+    if (file == NULL) // opening file fail
     {
         trapframe->x[0] = -1;
         return;
     }
 
-    for (int i = 0; i < NR_OPEN_DEFAULT; i++)
+    for (int i = 0; i < NR_OPEN_DEFAULT; i++) // insert thie file to the fd_array of current process
         if (cur_task->fd_array[i] == NULL)
         {
             cur_task->fd_array[i] = file;
@@ -561,11 +557,6 @@ void sys_read(struct ucontext *trapframe)
 void sys_mkdir(struct ucontext *trapframe)
 {
     const char *pathname = (const char *)trapframe->x[0];
-
-    /*uart_puts("mkdir: ");
-    uart_puts(pathname);
-    uart_puts("\n");*/
-    
     trapframe->x[0] = vfs_mkdir(pathname);
 }
 
@@ -574,22 +565,12 @@ void sys_mount(struct ucontext *trapframe)
     const char *src = (const char *)trapframe->x[0];
     const char *target = (const char *)trapframe->x[1];
     const char *filesystem = (const char *)trapframe->x[2];
-
-    /*uart_puts("mkdir: ");
-    uart_puts(target);
-    uart_puts("\n");*/
-
     trapframe->x[0] = vfs_mount(src, target, filesystem);
 }
 
 void sys_chdir(struct ucontext *trapframe)
 {
     const char *pathname = (const char *)trapframe->x[0];
-
-    /*uart_puts("chdir: ");
-    uart_puts(pathname);
-    uart_puts("\n");*/
-
     trapframe->x[0] = vfs_chdir(pathname);
 }
 

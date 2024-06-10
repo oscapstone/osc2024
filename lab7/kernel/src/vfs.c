@@ -19,6 +19,11 @@ static struct filesystem initramfs_type = {
 	.setup_mount = initramfs_setup_mount,
 	.next = NULL};
 
+static struct filesystem uartfs_type = {
+	.name = "uartfs",
+	.setup_mount = uartfs_setup_mount,
+	.next = NULL};
+
 int register_filesystem(struct filesystem *fs)
 {
 	// register the file system to the kernel.
@@ -45,10 +50,10 @@ struct file *vfs_open(const char *pathname, int flags)
 {
 	struct file *fd = NULL;
 	char file_name[32];
-	struct dentry *dir = vfs_lookup(pathname, file_name); // Lookup pathname.
-	struct dentry *f_inode = dir->d_inode->i_ops->lookup(dir->d_inode, file_name);
+	struct dentry *dir = vfs_lookup(pathname, file_name);						   // lookup parent directory of this file.
+	struct dentry *f_inode = dir->d_inode->i_ops->lookup(dir->d_inode, file_name); // find the inode of the file
 
-	if (f_inode) // Create a new file descriptor for this vnode if found.
+	if (f_inode) // create a new file descriptor for this inode if found.
 	{
 		fd = kmalloc(sizeof(struct file));
 		fd->f_dentry = f_inode;
@@ -56,7 +61,7 @@ struct file *vfs_open(const char *pathname, int flags)
 		fd->f_pos = 0;
 		fd->flags = flags;
 	}
-	else if (flags & O_CREAT) // Create a new file if O_CREAT is specified in flags.
+	else if (flags & O_CREAT) // create a new file if file doesn't exist and O_CREAT is specified in flags.
 	{
 		fd = kmalloc(sizeof(struct file));
 		fd->f_dentry = kmalloc(sizeof(struct dentry));
@@ -66,7 +71,7 @@ struct file *vfs_open(const char *pathname, int flags)
 		for (int i = 0; i < 16; i++)
 			fd->f_dentry->d_subdirs[i] = NULL;
 
-		dir->d_inode->i_ops->create(dir->d_inode, fd->f_dentry, flags & ~(O_CREAT));
+		dir->d_inode->i_ops->create(dir->d_inode, fd->f_dentry, flags & ~(O_CREAT)); // call the create function of filesystem
 
 		fd->f_ops = fd->f_dentry->d_inode->f_ops;
 		fd->f_pos = 0;
@@ -79,9 +84,9 @@ struct file *vfs_open(const char *pathname, int flags)
 int vfs_close(struct file *file)
 {
 	// release the file descriptor
-	if(file == NULL)
+	if (file == NULL)
 		return -1;
-	
+
 	kfree(file);
 	return 1;
 }
@@ -105,9 +110,9 @@ int vfs_read(struct file *file, void *buf, size_t len)
 int vfs_mkdir(const char *pathname)
 {
 	char subdir_name[32];
-	struct dentry *dir = vfs_lookup(pathname, subdir_name); // Lookup pathname.
+	struct dentry *dir = vfs_lookup(pathname, subdir_name); // lookup parent directory of this directory.
 	for (int i = 0; i < 16; i++)
-		if (dir->d_subdirs[i] != NULL && my_strcmp(dir->d_subdirs[i]->d_name, subdir_name) == 0)
+		if (dir->d_subdirs[i] != NULL && my_strcmp(dir->d_subdirs[i]->d_name, subdir_name) == 0) // this directory exists, return error code.
 		{
 			uart_puts("folder existes\n");
 			return -1;
@@ -128,7 +133,7 @@ int vfs_mkdir(const char *pathname)
 int vfs_chdir(const char *pathname)
 {
 	struct dentry *cur_dir = NULL;
-
+	// set cur_dir from pathname
 	if (pathname[0] == '/')
 	{
 		pathname += 1;
@@ -154,7 +159,7 @@ int vfs_chdir(const char *pathname)
 	int component_idx = 0;
 
 	int c_idx = 0;
-	while (1)
+	while (1) // get the component names from pathname
 	{
 		if (*cur_component == '/')
 		{
@@ -174,7 +179,7 @@ int vfs_chdir(const char *pathname)
 		cur_component += 1;
 	}
 
-	for (int i = 0; i <= component_idx; i++)
+	for (int i = 0; i <= component_idx; i++) // traverse vfs tree through component name to find the inode that we want
 	{
 		if (my_strcmp(component_name[i], ".") == 0)
 			cur_dir = cur_dir;
@@ -225,7 +230,7 @@ int vfs_mount(const char *device, const char *mountpoint, const char *filesystem
 struct dentry *vfs_lookup(const char *pathname, char *file_name)
 {
 	struct dentry *cur_dir = NULL;
-
+	// set cur_dir from pathname
 	if (pathname[0] == '/')
 	{
 		pathname += 1;
@@ -251,7 +256,7 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 	int component_idx = 0;
 
 	int c_idx = 0;
-	while (1)
+	while (1) // get the component names from pathname
 	{
 		if (*cur_component == '/')
 		{
@@ -264,7 +269,7 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 		else if (*cur_component == '\0')
 		{
 			component_name[component_idx][c_idx] = '\0';
-			my_strcpy(file_name, component_name[component_idx]);
+			my_strcpy(file_name, component_name[component_idx]); // copy the filename for caller use
 			break;
 		}
 
@@ -272,7 +277,7 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 		cur_component += 1;
 	}
 
-	for (int i = 0; i < component_idx; i++)
+	for (int i = 0; i < component_idx; i++) // traverse vfs tree through component name to find the parent directory of the file
 	{
 		if (my_strcmp(component_name[i], ".") == 0)
 			cur_dir = cur_dir;
@@ -292,14 +297,17 @@ struct dentry *vfs_lookup(const char *pathname, char *file_name)
 
 void rootfs_init()
 {
+	// register filesystem
 	register_filesystem(&tmpfs_type);
 	register_filesystem(&initramfs_type);
+	register_filesystem(&uartfs_type);
 
 	struct filesystem *cur = file_systems;
 	for (; cur != NULL; cur = cur->next) // find tmpfs
 		if (my_strcmp(cur->name, "tmpfs") == 0)
 			break;
 
+	// mount tmpfs filesysteam to root directory
 	rootfs = kmalloc(sizeof(struct mount));
 	cur->setup_mount(cur, rootfs);
 	rootfs->root->d_parent = rootfs->root;
@@ -307,5 +315,7 @@ void rootfs_init()
 	vfs_mkdir("/initramfs");
 	vfs_mount("tmpfs", "/initramfs", "initramfs");
 
-	get_current_task()->pwd = rootfs->root;
+	vfs_mkdir("/dev");
+	vfs_mkdir("/dev/uart");
+	vfs_mount("tmpfs", "/dev/uart", "uartfs");
 }
