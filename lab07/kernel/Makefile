@@ -12,8 +12,14 @@ all: clean makedir kernel8.img
 ifdef DEBUG
 COPS += -DDEBUG
 endif
-# DEBUG: COPS += -DDEBUG
-# DEBUG: all
+
+ifdef BUDDY_SYSTEM_DEBUG
+COPS += -BUDDY_SYSTEM_DEBUG
+endif
+
+ifdef DYNAMIC_ALLOC_DEBUG
+COPS += -DYNAMIC_ALLOC_DEBUG
+endif 
 
 .PHONY: clean
 clean:

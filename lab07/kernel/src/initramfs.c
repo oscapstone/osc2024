@@ -69,7 +69,7 @@ static struct vnode* initramfs_create_vnode(const char *name, int type, struct v
     strcpy(internal->name, name);
     internal->size = 0;
     if(type == FILE_NODE){
-        internal->data = (char*)dynamic_alloc(INITRAMFS_MAX_FILE);
+        internal->data = (char*)balloc(INITRAMFS_MAX_FILE);
     }
     else{
         internal->data = NULL;

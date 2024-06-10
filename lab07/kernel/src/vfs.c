@@ -364,7 +364,6 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
       struct vnode* next_node;
       // printf("\r\n[DEBUG] mount: "); printf_int(current_node->mount != NULL);
       if(current_node->v_ops->lookup(current_node, &next_node, token) != 0){
-        printf("\r\n123");
         current_node = NULL;
         goto next_step_end;
       }
@@ -410,11 +409,11 @@ static char* get_file_name(const char* pathname)
 static void simplify_path(char* pathname)
 {
   
-  printf("\r\n"); printf(__func__);
+  // printf("\r\n"); printf(__func__);
   #define MAX_SEGMENTS 256
   
   char* tmp_path = (char*)dynamic_alloc(strlen(pathname)+1);
-   char* new_path = (char*)dynamic_alloc(strlen(pathname)+1);
+  char* new_path = (char*)dynamic_alloc(strlen(pathname)+1);
 
   strcpy(tmp_path, pathname);
   
