@@ -20,8 +20,6 @@ static void clear(int argc, char *argv[]);
 static void mailbox(int argc, char *argv[]);
 static void test_malloc(int argc, char *argv[]);
 static void reboot(int argc, char *argv[]);
-static void multiple_thread_test(int argc, char *argv[]);
-static void to_user_test(int argc, char *argv[]);
 static void rootfs_ls(int argc, char *argv[]);
 static void rootfs_mkdir(int argc, char *argv[]);
 static void print_cwd(int argc, char *argv[]);
@@ -35,11 +33,14 @@ extern void cpio_exec(int argc, char *argv[]);
 extern void print_flist(int argc, char *argv[]);
 extern void start_video(int argc, char *argv[]);
 extern void print_flist(int argc, char *argv[]);
+extern void multiple_thread_test(int argc, char *argv[]);
+extern void user_fork_test(int argc, char *argv[]);
+extern void user_open_test(int argc, char *argv[]);
+extern void user_open_test_initramfs(int argc, char *argv[]);
+extern void user_read_test(int argc, char *argv[]);
+extern void user_write_test(int argc, char *argv[]);
+extern void user_write_test_initramfs(int argc, char *argv[]);
 
-// system call
-extern int getpid();
-extern int fork();
-extern void exit();
 
 int split_command(char* command, char *argv[]);
 
@@ -58,7 +59,12 @@ cmd cmds[] =
     {.name = "reboot",  .func = &reboot,     .help_msg = "\nreboot\t: reboot the device"},
     {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
     {.name = "multi_thread", .func = &multiple_thread_test, .help_msg = "\nmulti_thread\t: test multiple threads"},
-    {.name = "to_user", .func = &to_user_test, .help_msg = "\nto_user\t: test user mode"},
+    {.name = "user_fork", .func = &user_fork_test, .help_msg = "\nto_user\t: test user mode"},
+    {.name = "user_open", .func = &user_open_test, .help_msg = "\nuser_open\t: test user open file"},
+    {.name = "user_open_ramfs", .func = &user_open_test_initramfs, .help_msg = "\nuser_open_ramfs\t: test user open file in initramfs"},
+    {.name = "user_read", .func = &user_read_test, .help_msg = "\nuser_read\t: test user read file"},
+    {.name = "user_write", .func = &user_write_test, .help_msg = "\nuser_write\t: test user write file"},
+    {.name = "user_write_ramfs", .func = &user_write_test_initramfs, .help_msg = "\nuser_write_ramfs\t: test user write file in initramfs"},
     {.name = "start_video", .func = &start_video, .help_msg = "\nstart_video\t: start video"},
     {.name = "fl", .func= &print_flist, .help_msg = "\nfl\t: print free list"},
     {.name = "cwd", .func=&print_cwd, .help_msg = "\ncwd\t: print current workding directroy"},
@@ -99,74 +105,6 @@ void shell_loop()
 }
 
 extern struct task_struct *current;
-
-static void foo()
-{
-    for(int i = 0; i < 10; ++i) {
-        printf("\r\nThread id: "); printf_int(current->pid); printf("\t,loop: "); printf_int(i);
-        delay(1000000);
-        schedule();
-    }
-    current->state = TASK_ZOMBIE;
-    while(1);
-}
-
-static void user_foo()
-{
-    // printf("Fork Test , pid : %d\n",getpid());
-    printf("\r\nFork Test, pid: "); printf_int(getpid());
-    uint32_t cnt = 1,ret=0;
-
-    if((ret=fork()) == 0){ //pid == 0 => child
-        printf("\r\n===== Child Process =====");
-        unsigned long cur_sp;
-        asm volatile("mov %0, sp" : "=r"(cur_sp));
-        // printf("first  child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
-        printf("\r\nfirst child pid: "); printf_int(getpid()); printf(", cnt: "); printf_int(cnt);
-        printf(", ptr: "); printf_hex((unsigned long)&cnt); printf(", sp: "); printf_hex(cur_sp);
-        ++cnt;
-
-        if ((ret = fork() )!= 0){
-            asm volatile("mov %0, sp" : "=r"(cur_sp));
-            // printf("first  child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
-            printf("\r\nfirst child pid: "); printf_int(getpid()); printf(", cnt: "); printf_int(cnt);
-            printf(", ptr: "); printf_hex((unsigned long)&cnt); printf(", sp: "); printf_hex(cur_sp);
-        }
-        else{
-            while (cnt < 5) {
-                asm volatile("mov %0, sp" : "=r"(cur_sp));
-                // printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(), cnt, &cnt, cur_sp);
-                printf("\r\nsecond child pid: "); printf_int(getpid()); printf(", cnt: "); printf_int(cnt);
-                printf(", ptr: "); printf_hex((unsigned long)&cnt); printf(", sp: "); printf_hex(cur_sp);
-                delay(1000000);
-                ++cnt;
-            }
-        }
-        exit();
-    }
-    else{ //pid > 0 => parent
-        printf("\r\n===== Parent Process =====");
-        printf("\r\nParent Process, pid: "); printf_int(getpid());
-        printf(" child pid: "); printf_int(ret);
-        unsigned long cur_sp;
-        asm volatile("mov %0, sp" : "=r"(cur_sp));
-        printf(" cnt: "); printf_int(cnt); printf(" , ptr: "); printf_hex((unsigned long)&cnt);
-        printf(" , sp: "); printf_hex(cur_sp);
-        exit();
-    }
-}
-
-static void multiple_thread_test(int argc, char *argv[])
-{
-    for(int i = 0; i < 5; ++i) {
-        copy_process(PF_KTHREAD, (unsigned long)&foo, 0, 0);
-    }
-}
-
-static void to_user_test(int argc, char *argv[])
-{
-    copy_process(PF_KTHREAD, (unsigned long)&kp_user_mode, (unsigned long)&user_foo, 0);
-}
 
 /* ===================================================================== */
 

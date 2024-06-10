@@ -19,11 +19,13 @@
 
 #define PF_KTHREAD 					2
 
-#define MAX_PATH_LEN				256
+// #define MAX_PATH_LEN				256
 
 extern struct task_struct *current;
 extern struct task_struct * task[NR_TASKS];
 extern int nr_tasks;
+
+#include "vfs.h"
 
 struct cpu_context {
 	unsigned long long x19;
@@ -51,6 +53,7 @@ struct task_struct {
 	unsigned long flags;
 	int pid;
 	char cwd[MAX_PATH_LEN];
+	struct file_descriptor_table fd_table;
 };
 
 extern void sched_init(void);
@@ -68,7 +71,8 @@ extern void exit_process(void);
 #define INIT_TASK \
 /*cpu_context*/	{ {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
 /* state etc */	0,0,1, 0, 0, PF_KTHREAD, 0, \
-/* cwd */ "/" \
+/* cwd */ "/", \
+/*fd table*/ {0, {0}} \
 }
 
 #endif

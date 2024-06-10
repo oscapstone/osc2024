@@ -6,6 +6,8 @@
 #include "lib.h"
 #include "cpio.h"
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 struct vnode_operations *initramfs_v_ops;
 struct file_operations *initramfs_f_ops;
 
@@ -28,6 +30,7 @@ int initramfs_setup_mount(struct filesystem* fs, struct mount **mount) // mount 
     {
         char* pathname;
         char* filedata;
+        int filesize = strtol(head->c_filesize, 16, 8);
         char c_mode[5];
         strncpy(c_mode, head->c_mode, 5);
         int ret = cpio_newc_parser(&head, &pathname, &filedata);
@@ -39,10 +42,13 @@ int initramfs_setup_mount(struct filesystem* fs, struct mount **mount) // mount 
             if(!strcmp(pathname, ".") || !strcmp(pathname, "..") || isFileInSubDir(pathname))continue;
             struct vnode *filevnode = initramfs_create_vnode(pathname, FILE_NODE, (*mount)->root);
             struct initramfs_internal *fileinode = (struct initramfs_internal*)filevnode->internal;
-            fileinode->data = filedata;
+            strncpy(fileinode->data, filedata, filesize);
             fileinode->size = 0;
+            fileinode->filesize = filesize;
             root_internal->children[root_internal->size++] = filevnode;
-            printf("\r\n[INITRAMFS INFO] Mount Archive: "); printf(pathname); printf("\t, cmode: "); printf(c_mode);
+            printf("\r\n[INITRAMFS INFO] Mount Archive: "); printf(pathname); 
+            for(int i=0; i<10-strlen(pathname); i++) printf(" "); 
+            printf("\t, cmode: "); printf(c_mode);
         }
         else if(!strcmp(c_mode, "00004")){ // directory
             // cannot create directory in initramfs
@@ -136,10 +142,12 @@ int initramfs_list(struct vnode* dir_node)
         return LERROR;
     }
 
-    
+    printf("\r\nName           \tType");
+    printf("\r\n-----------------------"); 
     for(int i=0; i<internal->size; i++){
         struct initramfs_internal *child_internal = (struct initramfs_internal*)internal->children[i]->internal;
-        printf("\r\n"); printf(child_internal->name); printf("\t"); printf(child_internal->type == FILE_NODE ? "FILE" : "DIR");
+        printf("\r\n"); printf(child_internal->name); for(int j=0; j<15-strlen(child_internal->name); j++) printf(" ");
+        printf("\t"); printf(child_internal->type == FILE_NODE ? "FILE" : "DIR");
     }
     return 0;
 }
@@ -201,19 +209,21 @@ int initramfs_open(struct vnode* file_node, struct file** target)
 
 int initramfs_read(struct file* file, void* buf, size_t len)
 {
-    struct initramfs_internal *internal = (struct initramfs_internal*)file->vnode->internal;
-    if(internal->type != FILE_NODE)
-    {
-        printf("\r\n[ERROR] Not a file");
-        return -1;
+    struct vnode *vnode = file->vnode;
+    struct initramfs_internal *internal = (struct initramfs_internal*)vnode->internal;
+    if(internal->type == DIR_NODE){
+        printf("\r\n[ERROR] Cannot read a directory");
+        return RERROR;
     }
-    char *dst = (char*)buf;
-    char *src = &((char *)internal->data)[file->f_pos];
-    int i = 0;
-    for (; i<len && i < internal->size; i++) {
-        dst[i] = src[i];
+
+    size_t readable_size = min(len, internal->filesize - file->f_pos);
+
+    // memory copy
+    for(int i=0; i<readable_size; i++){
+        ((char*)buf)[i] = internal->data[file->f_pos + i];
     }
-    return i;
+    file->f_pos += readable_size;
+    return readable_size;
 }
 
 int initramfs_write(struct file* file, const void* buf, size_t len)

@@ -36,6 +36,7 @@ static struct vnode* tmpfs_create_vnode(const char *name, int type, struct vnode
         internal->data = NULL;
     }
     internal->type = type;
+    internal->filesize = 0;
     // internal->parent = parent;
     // internal->next = NULL;
     for(int i=0; i<ENTRIES_PER_DIR; i++)
@@ -109,11 +110,12 @@ int tmpfs_write(struct file* file, const void* buf, size_t len)
     }
     
     // memory copy
-    for(int i=0; i<len; i++){
+    int written_size = min(len, TMPFS_MAX_FILE - file->f_pos);
+    for(int i=0; i<written_size; i++){
         internal->data[file->f_pos + i] = ((char*)buf)[i];
     }
-    file->f_pos += len;
-    internal->size += len;
+    file->f_pos += written_size;
+    internal->filesize += written_size;
     return len;
 }
 
@@ -134,7 +136,7 @@ int tmpfs_read(struct file* file, void* buf, size_t len)
         return RERROR;
     }
 
-    size_t readable_size = min(len, internal->size - file->f_pos);
+    size_t readable_size = min(len, internal->filesize - file->f_pos);
 
     // memory copy
     for(int i=0; i<readable_size; i++){
@@ -253,17 +255,20 @@ int tmpfs_list(struct vnode* dir_node)
 {
     // 1. List all the files in the directory
     // 2. Return error code if fails
-    
+    printf("\r\n[TMPFS LIST]");
     struct tmpfs_internal *internal = (struct tmpfs_internal*)dir_node->internal;
     
     if(internal->type == FILE_NODE){
         printf("\r\n[ERROR] Cannot list in a file");
         return LERROR;
     }
-    printf("\r\n[TMPFS LIST]");
+    
+    printf("\r\nName           \tType");
+    printf("\r\n-----------------------"); 
     for(int i=0; i<internal->size; i++){
         struct tmpfs_internal *child_internal = (struct tmpfs_internal*)internal->children[i]->internal;
-        printf("\r\n"); printf(child_internal->name); printf("\t"); printf(child_internal->type == FILE_NODE ? "FILE" : "DIR");
+        printf("\r\n"); printf(child_internal->name); for(int j=0; j<15-strlen(child_internal->name); j++) printf(" ");
+        printf("\t"); printf(child_internal->type == FILE_NODE ? "FILE" : "DIR");
     }
     return 0;
 }

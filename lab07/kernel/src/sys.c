@@ -16,6 +16,8 @@ extern void memzero_asm(unsigned long src, unsigned long n);
 // extern unsigned long CPIO_START_ADDR_FROM_DT;
 // #endif
 
+void foo(){};
+
 int sys_getpid()
 {
     return current->pid;
@@ -137,4 +139,78 @@ void sys_kill(int pid) // [TODO]
     return;
 }
 
-void * const sys_call_table[] = {sys_getpid, sys_uartread, sys_uartwrite, sys_exec, sys_fork, sys_exit, sys_mbox_call, sys_kill};
+int sys_open(const char *pathname, int flags)
+{
+    printf("\r\n[SYSCALL] open: "); printf(pathname); printf(", flags: "); printf_int(flags);
+    for(int i=0; i<MAX_OPEN_FILE; i++){
+        if(current->fd_table.fds[i] == NULL){
+            int ret = vfs_open(pathname, flags, &current->fd_table.fds[i]);
+            if(ret == 0){
+                printf("\r\n[SYSCALL OPEN] File descriptor: "); printf_int(i + OFFSET_FD); printf(" , File: "); printf(pathname);
+                return i + OFFSET_FD;
+            }
+            break;
+        }
+    }
+    return -1;
+}
+
+int sys_close(int fd)
+{
+    printf("\r\n[SYSCALL] close: "); printf_int(fd);
+    if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
+    int ret = vfs_close(current->fd_table.fds[fd - OFFSET_FD]);
+    current->fd_table.fds[fd - OFFSET_FD] = NULL;
+    return ret;
+}
+
+long sys_write(int fd, const void *buf, unsigned long count)
+{
+    printf("\r\n[SYSCALL] write: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+    return vfs_write(current->fd_table.fds[fd - OFFSET_FD], buf, count);
+}
+long sys_read(int fd, void *buf, unsigned long count)
+{
+    printf("\r\n[SYSCALL] read: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+    return vfs_read(current->fd_table.fds[fd - OFFSET_FD], buf, count);
+}
+
+// you can ignore mode, since there is no access control
+int sys_mkdir(const char *pathname, unsigned mode)
+{
+    return 0;
+}
+
+// you can ignore arguments other than target (where to mount) and filesystem (fs name)
+int sys_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
+{
+    return 0;
+
+}
+int sys_chdir(const char *path)
+{
+    return 0;
+}
+
+void * const sys_call_table[] = {
+        sys_getpid,
+        sys_uartread,
+        sys_uartwrite,
+        sys_exec,
+        sys_fork,
+        sys_exit,
+        sys_mbox_call,
+        sys_kill,
+        // lab5 advanced
+        foo,
+        foo,
+        foo,
+        // lab7
+        sys_open,
+        sys_close,
+        sys_write,
+        sys_read,
+        sys_mkdir,
+        sys_mount,
+        sys_chdir
+    };

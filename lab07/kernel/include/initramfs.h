@@ -12,6 +12,7 @@ struct initramfs_internal {
     char* name; // file name or directory name
     unsigned long size; // child count for directory
     char* data;
+    unsigned long filesize;
     int type;   // DIR_NODE or FILE_NODE
     // struct vnode* parent;
     struct vnode* children[ENTRIES_PER_DIR];

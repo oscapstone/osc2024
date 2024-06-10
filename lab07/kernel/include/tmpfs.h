@@ -11,6 +11,7 @@ struct tmpfs_internal {
     char* name; // file name or directory name
     unsigned long size;
     char* data;
+    unsigned long filesize;
     int type;   // DIR_NODE or FILE_NODE
     // struct vnode* parent;
     struct vnode* children[ENTRIES_PER_DIR];

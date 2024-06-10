@@ -14,6 +14,8 @@ struct mount* rootfs;
 struct filesystem global_fs[MAX_FILESYSTEM];
 // struct file_descriptor_table global_fd_table;
 
+extern struct file_operations *initramfs_f_ops;
+
 
 static struct vnode* next_step(struct vnode* start_node, const char* pathname, struct vnode** target_dir);
 static struct file* create_file(struct vnode* vnode, int flags);
@@ -120,24 +122,25 @@ int vfs_open(const char* pathname, int flags, struct file** target) {
 
     char* file_name = get_file_name(pathname);
 
-    ret = target_dir->v_ops->create(target_dir, &vnode, file_name);
-   
-    *target = create_file(vnode, flags);
+    if(target_dir->mount != NULL)
+      ret = target_dir->mount->root->v_ops->create(target_dir->mount->root, &vnode, file_name); 
+    else
+      ret = target_dir->v_ops->create(target_dir, &vnode, file_name);
 
     if(ret != 0){
       printf("\r\n[ERROR] Cannot create the file");
       return -1;
     }
+    *target = create_file(vnode, flags);
     return ret;
   }
 
   struct file* file = create_file(vnode, flags);
+  *target = file;
   if(vnode->f_ops->open(vnode, &file) != 0){
     printf("\r\n[ERROR] Cannot open the file");
     return -1;
   }
-
-  *target = file;
 
   return 0;
 }
@@ -146,13 +149,18 @@ int vfs_close(struct file* file) {
   // 1. release the file handle
   // 2. Return error code if fails
   int ret = file->f_ops->close(file);
+  dfree(file);
   return ret;
 }
 
 int vfs_write(struct file* file, const void* buf, size_t len) {
   // 1. write len byte from buf to the opened file.
   // 2. return written size or error code if an error occurs.
-  int ret = file->f_ops->write(file, buf, len);
+  int ret;
+  if(file->vnode->mount != NULL)
+    ret = file->vnode->mount->root->f_ops->write(file, buf, len);
+  else
+    ret = file->f_ops->write(file, buf, len);
   return ret;
 }
 
@@ -350,7 +358,7 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
 
   while(token != NULL){
     *target_dir = current_node;
-    if(!strcmp(token, "..")){
+    if(!strcmp(token, "..")){ // [TODO] might have bugs when the path contains mount points
       if(current_node->parent == NULL){
         current_node = NULL;
         goto next_step_end;
@@ -362,14 +370,18 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
     }
     else{
       struct vnode* next_node;
-      // printf("\r\n[DEBUG] mount: "); printf_int(current_node->mount != NULL);
-      if(current_node->v_ops->lookup(current_node, &next_node, token) != 0){
+      if(current_node->mount != NULL && \
+         current_node->mount->root->v_ops->lookup(current_node->mount->root, &next_node, token) == 0){
+        current_node = next_node;
+      }
+      else if(current_node->v_ops->lookup(current_node, &next_node, token) == 0){
+        current_node = next_node;
+      }
+      else{
         current_node = NULL;
         goto next_step_end;
       }
-      current_node = next_node;
     }
-    // printf("\r\nsame: "); printf_int(current_node->parent == rootfs->root);
     token = strtok(NULL, "/");
   }
 next_step_end:

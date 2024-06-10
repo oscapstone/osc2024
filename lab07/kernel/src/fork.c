@@ -38,6 +38,11 @@ int copy_process(
 	memzero_asm((unsigned long)childregs, sizeof(struct pt_regs));
 	memzero_asm((unsigned long)&p->cpu_context, sizeof(struct cpu_context));
 
+	// clear the file descriptor table
+	p->fd_table.count = 0;
+	for(int i=0; i<MAX_OPEN_FILE; i++)
+		p->fd_table.fds[i] = NULL;
+
 	if(flags & PF_KTHREAD) // is a kernel thread
 	{
 		p->cpu_context.x19 = fn;
@@ -62,6 +67,15 @@ int copy_process(
 			((char*)childregs->sp)[i] = ((char*)cur_regs->sp)[i];
 
 		p->stack = stack;
+
+		// copy the file descriptor table
+		p->fd_table.count = current->fd_table.count;
+		for(int i=0; i<MAX_OPEN_FILE; i++){
+			if(current->fd_table.fds[i] != NULL){
+				p->fd_table.fds[i] = (struct file *)dynamic_alloc(sizeof(struct file));
+				p->fd_table.fds[i] = current->fd_table.fds[i];
+			}
+		}
 	}
 	p->flags = flags;
 	p->priority = current->priority;

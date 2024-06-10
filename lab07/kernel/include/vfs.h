@@ -56,6 +56,11 @@ struct vnode_operations {
   int (*list)(struct vnode* dir_node);
 };
 
+struct file_descriptor_table {
+  int count;
+  struct file* fds[MAX_OPEN_FILE];
+};
+
 struct vnode* vfs_get_node(const char* pathname, struct vnode** target_dir);
 int register_filesystem(struct filesystem* fs);
 int vfs_open(const char* pathname, int flags, struct file** target);
@@ -67,9 +72,10 @@ int vfs_mount(const char* target, const char* filesystem);
 int vfs_lookup(const char* pathname, struct vnode** target);
 int vfs_list(const char* pathname);
 int vfs_chdir(const char* relative_path);
+// int vfs_cat(const char* pathname); [TODO]
 
 extern struct mount* rootfs;
 extern struct filesystem global_fs[MAX_FILESYSTEM];
-extern struct file_descriptor_table global_fd_table;
+// extern struct file_descriptor_table global_fd_table;
 
 #endif
