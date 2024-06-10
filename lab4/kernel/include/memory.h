@@ -4,10 +4,9 @@
 #include "list.h"
 #include "stdint.h"
 
-#define MEMORY_BASE         0x0
-#define QEMU_MEMORY_BASE    0x3B400000
-#define ALLOC_BASE          0x10000000
-#define ALLOC_END           0x20000000  
+#define ALLOC_BASE          0x0
+#define ALLOC_END           0x3C000000
+#define QEMU_ALLOC_END      0x3B400000
 #define PAGE_SIZE           0x1000      // 4kB
 #define MAX_PAGE_COUNT      0x10000     // 65536 entries, PAGE_SIZE x MAX_PAGE = 0x10000000 (SPEC)
 
@@ -44,7 +43,30 @@ typedef enum {
     CACHE_MAX_IDX = 7
 } cache_val_t;
 
-void*   malloc(size_t size);
-void    allocator_init();
+void       *malloc(size_t size);
+void       *page_malloc(size_t size);
+void        page_free(void* ptr);
+void       *kmalloc(size_t size);
+void        kfree(void *ptr);
+void       *cache_malloc(unsigned int size);
+void        cache_free(void *ptr);
+
+void        allocator_init();
+frame_t    *get_free_frame(int val);
+void        dump_page_info();
+void        dump_cache_info();
+frame_t    *get_buddy(frame_t *frame);
+frame_t    *release_redundant_block(frame_t *ptr);
+int         coalesce(frame_t *frame_ptr);
+
+void        page_to_caches(int order);
+int         val_to_frame_num(size_t size);
+size_t      frame_to_index(frame_t *frame);
+frame_t    *index_to_frame(size_t index);
+size_t      frame_addr_to_phy_addr(frame_t *frame);
+frame_t    *phy_addr_to_frame(void *ptr);
+
+void        memory_reserve(unsigned long long start, unsigned long long end);
+void        memory_init();
 
 #endif /* _MEMORY_H_ */

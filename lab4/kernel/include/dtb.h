@@ -12,8 +12,10 @@
 
 typedef void (*dtb_callback)(uint32_t node_type, char *name, void *value, uint32_t name_size);
 
-void parse_dtb_tree(void *dtb_ptr, dtb_callback callback);
+void parse_dtb_tree(dtb_callback callback);
 void dtb_callback_show_tree(uint32_t node_type, char *name, void *value, uint32_t name_size);
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size);
+
+void dtb_init(void *dtb_ptr);
 
 #endif

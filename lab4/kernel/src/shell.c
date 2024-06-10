@@ -13,7 +13,6 @@
 #define MAX_ARGS 10
 #define USER_STACK_SIZE 0x10000
 
-extern char* dtb_ptr;
 void* CPIO_DEFAULT_PLACE;
 
 int cli_strcmp(const char* p1, const char* p2) {
@@ -92,6 +91,8 @@ void cli_exec_cmd(char* buf) {
         cmd_ls();
     } else if (cli_strcmp(cmd, "malloc") == 0) {
         cmd_malloc();
+    } else if (cli_strcmp(cmd, "kmalloc") == 0) {
+        cmd_kmalloc();
     } else if(*cmd) {
         uart_puts(cmd);
         uart_puts(": Command not found QQ, type help to get more information.\r\n");
@@ -106,14 +107,14 @@ void cli_clear_cmd(char* buf, int length) {
 
 void cli_print_welcome_msg() {
     uart_puts("\r\n");
-    uart_puts("          __,.__                                 \r\n");
-    uart_puts("         /  ||  \\            _____     _        \r\n");
-    uart_puts("  ::::::| .-'`-. |::::::    |   __|_ _|_|___ ___ \r\n");
-    uart_puts("  :::::/.'  ||  `,\\:::::    |   __| | | | .'|   |\r\n");
-    uart_puts("  ::::/ |`--'`--'| \\::::    |_____|\\_/|_|__,|_|_|\r\n");                    
-    uart_puts("  :::/   \\`/++\' /   \\:::    https://github.com/chuangchen1019\r\n");
-    uart_puts("\r\n");
-    uart_puts("  ---------------- May the Force be with you. ---------------\r\n\r\n");
+    uart_puts("                 __,.__                                 \r\n");
+    uart_puts("                /  ||  \\            _____     _        \r\n");
+    uart_puts("         ::::::| .-'`-. |::::::    |   __|_ _|_|___ ___ \r\n");
+    uart_puts("         :::::/.'  ||  `,\\:::::    |   __| | | | .'|   |\r\n");
+    uart_puts("         ::::/ |`--'`--'| \\::::    |_____|\\_/|_|__,|_|_|\r\n");                    
+    uart_puts("         :::/   \\`/++\' /   \\:::    https://github.com/chuangchen1019\r\n");
+    uart_puts("\r\n\r\n");
+    uart_puts("  ---------------------- May the Force be with you. -----------------------\r\n\r\n");
 }
 
 void cmd_help() {
@@ -130,6 +131,7 @@ void cmd_help() {
     uart_puts("   sleep         [msg][sec]      - sleep with message and secs.\r\n");
     uart_puts("   setalert2s    [msg]           - set 2s alert with message.\r\n");
     uart_puts("   malloc                        - test malloc function.\r\n");
+    uart_puts("   kmalloc                       - test kmalloc function.\r\n");
     uart_puts("   reboot                        - reboot the device.\r\n");
 }
 
@@ -237,7 +239,7 @@ void cmd_malloc() {
 }
 
 void cmd_dtb() {
-    parse_dtb_tree(dtb_ptr, dtb_callback_show_tree);
+    parse_dtb_tree(dtb_callback_show_tree);
 }
 
 void cmd_exec_program(char* filepath){
@@ -303,4 +305,31 @@ void cmd_sleep(char** argvs, int argc) {
         return;
     }
     add_timer(puts, atoi(timeout), message);
+}
+
+void cmd_kmalloc() {
+    // test kmalloc
+    char *test1 = kmalloc(0x1800);
+    strcpy(test1, "  test kmalloc1");
+    puts(test1);
+    puts("\r\n");
+
+    char *test2 = kmalloc(0x20);
+    strcpy(test2, "  test kmalloc2");
+    puts(test2);
+    puts("\r\n");
+
+    char *test3 = kmalloc(0x28);
+    strcpy(test3, "  test kmalloc3");
+    puts(test3);
+    puts("\r\n\r\n");
+
+    kfree(test1);
+    puts("\r\n");
+
+    kfree(test2);
+    puts("\r\n");
+
+    kfree(test3);
+    puts("\r\n");
 }

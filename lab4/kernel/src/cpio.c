@@ -2,6 +2,9 @@
 #include "utils.h"
 #include "mini_uart.h"
 
+char *CPIO_START;
+char *CPIO_END;
+
 static unsigned int ascii_hex_to_int(char *s, unsigned int max_len) {
     unsigned int hex_base = 0;
     for (unsigned int i=0; i<max_len; i++) {

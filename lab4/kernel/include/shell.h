@@ -5,7 +5,7 @@
 #define MAX_CMD_LEN 32
 #define MAX_MSG_LEN 128
 
-int cli_strcmp(const char* p1, const char* p2);
+int  cli_strcmp(const char* p1, const char* p2);
 void cli_read_cmd(char* buf);
 void cli_exec_cmd(char* buf);
 void cli_clear_cmd(char* buf, int length);
@@ -23,5 +23,6 @@ void cmd_currentEL();
 void cmd_enable_timer();
 void cmd_set_alert_2s(char**argvs, int argc);
 void cmd_sleep(char** argvs, int argc);
+void cmd_kmalloc();
 
 #endif  /*_SHELL_H */

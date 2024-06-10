@@ -3,8 +3,10 @@
 #include "utils.h"
 #include "cpio.h"
 
-extern void* CPIO_DEFAULT_PLACE;
-char* dtb_ptr;
+extern char *CPIO_START;
+extern char *CPIO_END;
+char *DTB_START;
+char *DTB_END;
 
 // Can check details from p.51, p.52 in device tree spec v0.4
 struct fdt_header { 
@@ -27,8 +29,8 @@ uint32_t big_to_little_endian(uint32_t data) {
          | ((data << 24) & 0xFF000000);
 }
 
-void parse_dtb_tree(void *dtb_ptr, dtb_callback callback) {
-    struct fdt_header* header = dtb_ptr;
+void parse_dtb_tree(dtb_callback callback) {
+    struct fdt_header* header = (struct fdt_header *)DTB_START;
     // Check magic number
     if(big_to_little_endian(header->magic) != 0xD00DFEED) {
         uart_puts("FDT header: Wrong magic number");
@@ -83,9 +85,13 @@ void parse_dtb_tree(void *dtb_ptr, dtb_callback callback) {
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size) {
     // https://github.com/stweil/raspberrypi-documentation/blob/master/configuration/device-tree.md
     // linux,initrd-start will be assigned by start.elf based on config.txt
-    if(node_type==FDT_PROP && strcmp(name,"linux,initrd-start")==0) {
-        CPIO_DEFAULT_PLACE = (void *)(unsigned long long)big_to_little_endian(*(uint32_t*)value);
-    }
+
+    if (node_type == FDT_PROP && strcmp(name, "linux,initrd-start") == 0) {
+		CPIO_START = (void *)(unsigned long long)big_to_little_endian(*(uint32_t *)value);
+	}
+	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0) {
+		CPIO_END = (void *)(unsigned long long)big_to_little_endian(*(uint32_t *)value);
+	}
 }
 
 void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t name_size) {
@@ -102,4 +108,10 @@ void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t
         for(int i=0;i<level;i++) uart_puts("   ");
         uart_puts("%s\n",name);
     }
+}
+
+void dtb_init(void *dtb_ptr) {
+	DTB_START = dtb_ptr;
+	DTB_END = (char *)dtb_ptr + big_to_little_endian(((struct fdt_header*)dtb_ptr)->totalsize);
+	parse_dtb_tree(dtb_callback_initramfs);
 }

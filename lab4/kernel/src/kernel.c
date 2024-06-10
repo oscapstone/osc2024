@@ -6,26 +6,22 @@
 #include "exception.h"
 #include "memory.h"
 
-extern char* dtb_ptr;
 
 void kernel_main(char* arg) {
 	char input_buf[MAX_CMD_LEN];
 
-	dtb_ptr = arg;
-    parse_dtb_tree(dtb_ptr, dtb_callback_initramfs);
+    dtb_init(arg);
 
 	uart_init();
+	uart_flush_FIFO();
+	uart_interrupt_enable();
+	core_timer_enable();
+
+	memory_init();
 	irqtask_list_init();
     timer_list_init();
 
-	uart_flush_FIFO();
-	uart_interrupt_enable();
-
-	core_timer_enable();
-	el1_interrupt_enable();
-
-	allocator_init();
-	
+	el1_interrupt_enable();	
 	cli_print_welcome_msg();
 
 	while (1) {
