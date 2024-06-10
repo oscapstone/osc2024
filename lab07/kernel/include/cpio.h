@@ -32,6 +32,11 @@ void cpio_exec(int argc, char **argv);
 
 #ifndef QEMU
 void initramfs_callback(char* node_name, char* property_name, fdt_prop* prop);
+
+extern uint64_t CPIO_START_ADDR_FROM_DT;
+extern uint64_t CPIO_END_ADDR_FROM_DT;
 #endif
+
+int cpio_newc_parser(cpio_newc_header** head, char** filename, char** filedata);
 
 #endif

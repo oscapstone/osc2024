@@ -162,6 +162,35 @@ void cpio_exec(int argc, char **argv)
 
 }
 
+int cpio_newc_parser(cpio_newc_header** head, char** pathname, char** filedata)
+{
+    int ret = 1;
+    int namesize = strtol((*head)->c_namesize, 16, 8);
+    int filesize = strtol((*head)->c_filesize, 16, 8);
+    // *c_mode = (*head)->c_mode;
+
+    uint32_t head_size = sizeof(cpio_newc_header);
+
+    char *filename = (void*)(*head) + head_size;
+    *pathname = filename;
+
+    uint32_t offset = head_size + namesize;
+    if(offset % 4 != 0) offset = ((offset/4 +1)*4);
+
+    if(strcmp(filename, "TRAILER!!!") == 0){
+        // do nothing
+    }
+    else{
+        /* The filedata is appended after filename */
+        *filedata = (void*)(*head) + offset;
+        ret = 0;
+    }
+
+    if(filesize % 4 != 0) filesize = (filesize/4 +1)*4;
+    *head = (void*)(*head) + offset + filesize;
+    return ret;
+}
+
 #ifndef QEMU
 void initramfs_callback(char* node_name, char* property_name, fdt_prop* prop)
 {

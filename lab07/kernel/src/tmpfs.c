@@ -11,10 +11,10 @@ struct vnode_operations *tmpfs_v_ops;
 
 static struct vnode* tmpfs_create_vnode(const char *name, int type, struct vnode *parent);
 
-int tmpfs_setup_mount(struct filesystem* fs, struct mount *mount) // mount the filesystem to the mount point
+int tmpfs_setup_mount(struct filesystem* fs, struct mount **mount) // mount the filesystem to the mount point
 {
-    mount->fs = fs;
-    mount->root = tmpfs_create_vnode("/", DIR_NODE, NULL);
+    (*mount)->fs = fs;
+    (*mount)->root = tmpfs_create_vnode("/", DIR_NODE, NULL);
     return 0;
 }
 
@@ -260,7 +260,7 @@ int tmpfs_list(struct vnode* dir_node)
         printf("\r\n[ERROR] Cannot list in a file");
         return LERROR;
     }
-
+    printf("\r\n[TMPFS LIST]");
     for(int i=0; i<internal->size; i++){
         struct tmpfs_internal *child_internal = (struct tmpfs_internal*)internal->children[i]->internal;
         printf("\r\n"); printf(child_internal->name); printf("\t"); printf(child_internal->type == FILE_NODE ? "FILE" : "DIR");

@@ -26,6 +26,8 @@ static void rootfs_ls(int argc, char *argv[]);
 static void rootfs_mkdir(int argc, char *argv[]);
 static void print_cwd(int argc, char *argv[]);
 static void change_dir(int argc, char *argv[]);
+static void rootfs_touch(int argc, char *argv[]);
+
 
 extern void cpio_list(int argc, char *argv[]);
 extern void cpio_cat(int argc, char *argv[]);
@@ -47,6 +49,7 @@ cmd cmds[] =
     {.name = "help",    .func = &help,      .help_msg = "\nhelp\t: print this help menu"},
     {.name = "mailbox", .func = &mailbox,    .help_msg = "\nmailbox\t: print mailbox info"},
     {.name = "ls",     .func = &rootfs_ls, .help_msg = "\nls\t: list files in the rootfs"},
+    {.name = "touch",  .func = &rootfs_touch,  .help_msg = "\ntouch\t: create a file in the rootfs"},
     {.name = "mkdir", .func = &rootfs_mkdir, .help_msg = "\nmkdir\t: create a directory in the rootfs"},
     {.name = "cpio_ls",      .func = &cpio_list,  .help_msg = "\nls\t: list files in the cpio archive"},
     {.name = "cpio_cat",     .func = &cpio_cat,   .help_msg = "\ncat\t: print file content in the cpio archive"},
@@ -241,6 +244,17 @@ static void rootfs_mkdir(int argc, char *argv[])
     }
     else{
         printf("\nUsage: mkdir [path]");
+        return;
+    }
+}
+
+static void rootfs_touch(int argc, char *argv[])
+{
+    if(argc == 2){
+        // vfs_create(argv[1]);
+    }
+    else{
+        printf("\nUsage: touch [path]");
         return;
     }
 }

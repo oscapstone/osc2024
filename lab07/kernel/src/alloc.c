@@ -628,7 +628,7 @@ void* dynamic_alloc(uint64_t size)
     if(memory_pool->free_chunk != NULL) 
     {
         res = memory_pool->free_chunk;
-        memzero_asm(res, memory_pool->size);
+        memzero_asm((uint64_t)res, memory_pool->size);
         memory_pool->free_chunk = memory_pool->free_chunk->next; // point to the next free chunk
         printf("\r\n[SYSTEM INFO] Allocate Chunk at address: "); printf_hex((uint64_t)res); printf(", in Frame: "); printf_int(((uint64_t)res - MALLOC_START_ADDR) >> 12);
         return res;
@@ -665,7 +665,7 @@ void* dynamic_alloc(uint64_t size)
     printf("\r\n[SYSTEM INFO] Allocate Chunk at address: "); printf_hex((uint64_t)res); printf(", in Frame: "); printf_int(((uint64_t)res - MALLOC_START_ADDR) >> 12);
     memory_pool->chunk_offset++;
     memory_pool->chunk_used++;
-    memzero_asm(res, memory_pool->size);
+    memzero_asm((uint64_t)res, memory_pool->size);
     return res;
 }
 

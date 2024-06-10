@@ -8,9 +8,9 @@
 
 extern struct task_struct *current;
 extern void memzero_asm(unsigned long src, unsigned long n);
-#ifndef QEMU
-extern unsigned long CPIO_START_ADDR_FROM_DT;
-#endif
+// #ifndef QEMU
+// extern unsigned long CPIO_START_ADDR_FROM_DT;
+// #endif
 
 void start_video(int argc, char *argv[])
 {

@@ -25,7 +25,7 @@ int tmpfs_close(struct file* file);
 int tmpfs_open(struct vnode* file_node, struct file** target);
 int tmpfs_read(struct file* file, void* buf, size_t len);
 int tmpfs_write(struct file* file, const void* buf, size_t len);
-int tmpfs_setup_mount(struct filesystem* fs, struct mount* mount);
+int tmpfs_setup_mount(struct filesystem* fs, struct mount** mount);
 int tmpfs_register();
 
 #endif

@@ -4,6 +4,7 @@
 #include "tmpfs.h"
 #include "errno.h"
 #include "tmpfs.h"
+#include "initramfs.h"
 #include "io.h"
 #include "schedule.h"
 
@@ -27,6 +28,8 @@ static void simplify_path(char* pathname);
 //     }
 // }
 
+void initramfs_init();
+
 
 void rootfs_init()
 {
@@ -44,7 +47,34 @@ void rootfs_init()
     register_filesystem(tmpfs);
     
     rootfs = (struct mount*)dynamic_alloc(sizeof(struct mount));
-    tmpfs->setup_mount(tmpfs, rootfs);
+    // printf("\r\n[ROOTFS] rootfs: "); printf_hex(rootfs);
+    tmpfs->setup_mount(tmpfs, &rootfs);
+
+    // printf("\r\n[ROOTFS] rootfs: "); printf_hex(rootfs);
+    initramfs_init();
+}
+
+void initramfs_init()
+{
+    struct filesystem* initramfs = (struct filesystem*)dynamic_alloc(sizeof(struct filesystem));
+    initramfs->name = (char*)dynamic_alloc(16);
+    strcpy(initramfs->name, "initramfs");
+
+    initramfs->setup_mount = initramfs_setup_mount;
+    register_filesystem(initramfs);
+
+    vfs_mkdir("/initramfs");
+    
+    struct vnode* target_dir;
+    struct vnode* vnode = vfs_get_node("/initramfs", &target_dir);
+    vnode->mount = (struct mount*)dynamic_alloc(sizeof(struct mount));
+    // printf("\r\n[INITRAMFS] vnode: "); printf_hex(vnode);
+    // printf("\r\n[IDNITRAMFS] vnode->mount: "); printf_hex(vnode->mount);
+    // printf("\r\nsame: "); printf_int(target_dir == rootfs->root);
+    initramfs->setup_mount(initramfs, &(vnode->mount));
+
+    // printf("\r\n[IDNITRAMFS] vnode->mount: "); printf_hex(vnode->mount);
+    // printf("\r\n[INITRAMFS] initramfs initialized");
 }
 
 
@@ -56,11 +86,10 @@ int register_filesystem(struct filesystem* fs) { // ensure there is sufficient m
       //initialize memory pool of the file system
       return tmpfs_register();
   }
-  // [TODO]
-  // else if(!strcmp(fs->name, "initramfs"))
-  // {
-  //   return initramfs_register();
-  // }
+  else if(!strcmp(fs->name, "initramfs"))
+  {
+    return initramfs_register();
+  }
   return -1;
 }
 
@@ -155,7 +184,15 @@ int vfs_mkdir(const char* pathname)
     char* file_name = get_file_name(pathname);
     printf("\r\n[MKDIR] pathname: "); printf(pathname); printf(" , filename: "); printf(file_name);
 
-    int ret = target_dir->v_ops->mkdir(target_dir, &new_dir, file_name);
+    
+    int ret;
+    if(target_dir->mount != NULL){ // check if it is a mount point
+      ret = target_dir->mount->root->v_ops->mkdir(target_dir->mount->root, &new_dir, file_name);
+    }
+    else {
+      ret = target_dir->v_ops->mkdir(target_dir, &new_dir, file_name);
+    }
+
     if(ret != 0)
     {
         printf("\r\n[ERROR] Cannot create directory");
@@ -208,7 +245,7 @@ int vfs_mount(const char* target, const char* filesystem) // mount the filesyste
     }
 
     register_filesystem(fs);
-    fs->setup_mount(fs, mount_point);
+    fs->setup_mount(fs, &mount_point);
 
     target_dir->mount = mount_point;
     mount_point->root->parent = target_dir->parent;
@@ -236,8 +273,12 @@ int vfs_list(const char* pathname)
         printf("\r\n[ERROR] Cannot find the directory");
         return -1;
     }
-    
-    ret = vnode->v_ops->list(vnode);
+    if(vnode->mount != NULL){ // check if it is a mount point
+      ret = vnode->mount->root->v_ops->list(vnode->mount->root);
+    }
+    else {
+      ret = vnode->v_ops->list(vnode);
+    }
     if(ret != 0)
     {
         printf("\r\n[ERROR] Cannot list the directory");
@@ -321,7 +362,9 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
     }
     else{
       struct vnode* next_node;
+      // printf("\r\n[DEBUG] mount: "); printf_int(current_node->mount != NULL);
       if(current_node->v_ops->lookup(current_node, &next_node, token) != 0){
+        printf("\r\n123");
         current_node = NULL;
         goto next_step_end;
       }
