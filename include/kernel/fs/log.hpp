@@ -1,12 +1,18 @@
 #pragma once
 
-#define FS_LOG_LEVEL 1
+#define FS_LOG_LEVEL 2
 #include "io.hpp"
+
+#if FS_LOG_LEVEL >= 2
+#define FS_HEXDUMP(msg, buf, size) khexdump(buf, size, msg FS_TYPE)
+#else
+#define FS_HEXDUMP(msg, buf, size) ((void)0)
+#endif
 
 #if FS_LOG_LEVEL >= 1
 #define FS_INFO_PRINT(fmt, ...) klog(fmt __VA_OPT__(, ) __VA_ARGS__)
 #else
-#define FS_INFO_PRINT(fmt, ...) 0
+#define FS_INFO_PRINT(fmt, ...) ((void)0)
 #endif
 
 #define FS_INFO(fmt, ...) \

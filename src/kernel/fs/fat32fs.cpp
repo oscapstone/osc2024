@@ -20,6 +20,7 @@ FileSystem::FileSystem() {
   mbr = new MBR;
   sector_0_off = 0;
   read_data(0, mbr);
+  FS_HEXDUMP("MBR", mbr, sizeof(MBR));
 
   if (not mbr->valid()) {
     FS_WARN("disk is invalid MBR (sig = %x%x)\n", mbr->sig[0], mbr->sig[1]);
@@ -36,7 +37,7 @@ FileSystem::FileSystem() {
     return;
   }
 
-  khexdump(&mbr->entry[0], 16);
+  FS_HEXDUMP("first partition entry", &mbr->entry[0], 16);
 
   FS_INFO("first sector 0x%x\n", mbr->entry[0].first_sector_LBA);
   auto print_CHS = [](const char* name, CHS chs) {
@@ -49,6 +50,7 @@ FileSystem::FileSystem() {
 
   bpb = new FAT_BPB;
   read_data(0, bpb);
+  FS_HEXDUMP("FAT_BPB", bpb, sizeof(FAT_BPB));
 
   strncpy(label, bpb->BS_VolLab, sizeof(bpb->BS_VolLab));
   FS_INFO("volumn label: '%s'\n", label);
@@ -76,7 +78,7 @@ FileSystem::FileSystem() {
 
   read_block(bpb->BPB_RsvdSecCnt);
   kprintf("first FAT\n");
-  khexdump(block_buf, BLOCK_SIZE);
+  FS_HEXDUMP("FAT", block_buf, BLOCK_SIZE);
 
   FirstDataSector =
       bpb->BPB_RsvdSecCnt + (bpb->BPB_NumFATs * FATSz) + RootDirSectors;
@@ -113,9 +115,10 @@ FileSystem::FileSystem() {
     return;
   }
 
+  kprintf("root cluster %d -> %d\n", bpb->BPB_RootClus,
+          cluster2sector(bpb->BPB_RootClus));
   read_block(cluster2sector(bpb->BPB_RootClus));
-  kprintf("root cluster\n");
-  khexdump(block_buf, BLOCK_SIZE);
+  FS_HEXDUMP("root cluster", block_buf, BLOCK_SIZE);
 }
 
 };  // namespace fat32fs
