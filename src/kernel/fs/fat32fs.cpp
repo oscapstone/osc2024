@@ -10,12 +10,12 @@ namespace fat32fs {
 bool FileSystem::init = false;
 
 FileSystem::FileSystem() {
-  if (init)
-    return;
-  init = true;
-  block_buf = new char[BLOCK_SIZE];
+  if (not init) {
+    init = true;
+    sd_init();
+  }
 
-  sd_init();
+  block_buf = new char[BLOCK_SIZE];
 
   mbr = new MBR;
   sector_0_off = 0;
