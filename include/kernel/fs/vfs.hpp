@@ -3,6 +3,7 @@
 #include "fs/ds.hpp"
 
 extern Vnode* root_node;
+extern list<Mount*> mounts;
 void init_vfs();
 
 extern FileSystem* filesystems;

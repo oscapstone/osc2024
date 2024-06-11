@@ -3,6 +3,7 @@
 #include "ds/list.hpp"
 #include "ds/smart_ptr.hpp"
 #include "fs/fwd.hpp"
+#include "string.hpp"
 #include "util.hpp"
 
 using FilePtr = smart_ptr<File>;
@@ -11,6 +12,7 @@ class Mount {
  public:
   FileSystem* const fs;
   Vnode* root = nullptr;
+  string path;
 };
 
 class Vnode {
@@ -112,4 +114,5 @@ class FileSystem {
     return "";
   }
   virtual Vnode* mount(const Mount* mount_root);
+  virtual void sync(const Mount* mount_root);
 };

@@ -14,8 +14,11 @@
 #define FS_TYPE "vfs"
 
 Vnode* root_node = nullptr;
+list<Mount*> mounts;
 
 void init_vfs() {
+  mounts.init();
+
   register_filesystem(new tmpfs::FileSystem());
   register_filesystem(new initramfs::FileSystem());
   register_filesystem(new uartfs::FileSystem());
@@ -253,7 +256,7 @@ int vfs_mount(const char* target, const char* filesystem) {
   Vnode *dir, *new_vnode;
   char* basename;
   int r;
-  auto mount_root = new Mount{.fs = fs};
+  auto mount_root = new Mount{.fs = fs, .path = target};
   if (not mount_root)
     return -1;
   if ((r = vfs_lookup(target, dir, basename)) < 0)
@@ -266,6 +269,10 @@ int vfs_mount(const char* target, const char* filesystem) {
   }
 
   r = dir->mount(basename, new_vnode);
+
+  if (r >= 0) {
+    mounts.push_back(mount_root);
+  }
 
 cleanup:
   if (r < 0) {
