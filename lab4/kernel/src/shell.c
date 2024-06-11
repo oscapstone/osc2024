@@ -309,19 +309,29 @@ void cmd_sleep(char** argvs, int argc) {
 
 void cmd_kmalloc() {
     // test kmalloc
-    char *test1 = kmalloc(0x1800);
+    char *test1 = kmalloc(0x10000);
     strcpy(test1, "  test kmalloc1");
     puts(test1);
     puts("\r\n");
 
-    char *test2 = kmalloc(0x20);
+    char *test2 = kmalloc(0x10000);
     strcpy(test2, "  test kmalloc2");
     puts(test2);
     puts("\r\n");
 
-    char *test3 = kmalloc(0x28);
-    strcpy(test3, "  test kmalloc3");
+    char *test3 = kmalloc(0x10000);
+    strcpy(test3, "  test kmalloc2");
     puts(test3);
+    puts("\r\n");
+
+    char *test4 = kmalloc(0x10000);
+    strcpy(test4, "  test kmalloc2");
+    puts(test4);
+    puts("\r\n");
+
+    char *test5 = kmalloc(0x28);
+    strcpy(test5, "  test kmalloc3");
+    puts(test5);
     puts("\r\n\r\n");
 
     kfree(test1);
@@ -331,5 +341,11 @@ void cmd_kmalloc() {
     puts("\r\n");
 
     kfree(test3);
+    puts("\r\n");
+
+    kfree(test4);
+    puts("\r\n");
+
+    kfree(test5);
     puts("\r\n");
 }
