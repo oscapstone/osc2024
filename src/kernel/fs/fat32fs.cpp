@@ -348,22 +348,27 @@ uint32_t FileSystem::alloc_cluster() {
   uint32_t N = fsinfo->FSI_Nxt_Free == 0xFFFFFFFF ? 2 : fsinfo->FSI_Nxt_Free;
 
   uint32_t last_read_sec = 0;
-  auto buf = new FAT_Ent[BLOCK_SIZE];
+  auto buf = new FAT_Ent[BLOCK_SIZE / 4];
 
   while (true) {
     auto FATOffset = N * 4;
     auto ThisFATSecNum =
         bpb->BPB_RsvdSecCnt + (FATOffset / bpb->BPB_BytsPerSec);
     auto ThisFATEntOffset = FATOffset % bpb->BPB_BytsPerSec;
+    auto idx = ThisFATEntOffset / 4;
 
     if (last_read_sec != ThisFATSecNum) {
       last_read_sec = ThisFATSecNum;
       read_data(ThisFATSecNum, buf, BLOCK_SIZE);
+      FS_HEXDUMP("read FAT", buf, BLOCK_SIZE);
     }
 
-    if (buf[ThisFATEntOffset].free()) {
-      buf[ThisFATEntOffset].cluster = 1;
+    if (buf[idx].free()) {
+      FS_INFO("N = %u / Sec %u / off 0x%x\n", N, ThisFATSecNum,
+              ThisFATEntOffset);
+      buf[idx].cluster = 1;
       write_data(ThisFATSecNum, buf, 0, BLOCK_SIZE);
+      FS_HEXDUMP("write FAT", buf, BLOCK_SIZE);
       break;
     }
   }
