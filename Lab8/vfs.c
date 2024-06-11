@@ -5,6 +5,7 @@
 #include "tmpfs.h"
 #include "initramfs.h"
 #include "dev_uart.h"
+#include "sd_driver.h"
 
 struct mount* rootfs;
 struct filesystem fs_register[MAX_FS];
@@ -185,6 +186,7 @@ void init_rootfs(){
     int idx = reg_tmpfs();
     fs_register[idx].setup_mount(&fs_register[idx], rootfs);
 
+    sd_init();
     reg_fat32();
     vfs_mkdir("/boot");
     vfs_mount("/boot", "fat32");
