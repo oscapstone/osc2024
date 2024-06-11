@@ -2,10 +2,107 @@
 
 #include "fs/log.hpp"
 #include "io.hpp"
+#include "string.hpp"
 
 #define FS_TYPE "fat32fs"
 
 namespace fat32fs {
+
+FileSystem* Vnode::fs() const {
+  return static_cast<FileSystem*>(this->mount_root->fs);
+}
+
+string Vnode::_get_name(const FAT32_DirEnt* dirent) {
+  string name{};
+  name.reserve(sizeof(dirent->DIR_Name) + 1);
+
+  auto name_end = dirent->file_name + sizeof(dirent->file_name) - 1;
+  while (name_end != dirent->file_name and *name_end == ' ')
+    name_end--;
+
+  auto ext_end = dirent->file_ext + sizeof(dirent->file_ext) - 1;
+  while (ext_end != dirent->file_ext and *ext_end == ' ')
+    ext_end--;
+
+  name += {dirent->file_name, name_end - dirent->file_name + 1};
+  if (ext_end != dirent->file_ext) {
+    name += ".";
+    name += {dirent->file_ext, ext_end - dirent->file_ext + 1};
+  }
+
+  return name;
+}
+
+void Vnode::_load_childs(size_t cluster) {
+  auto buf = new char[BLOCK_SIZE];
+  auto idx = fs()->cluster2sector(cluster);
+
+  auto beg = (FAT32_DirEnt*)(buf);
+  auto end = (FAT32_DirEnt*)(buf + BLOCK_SIZE);
+  for (auto it = end;; ++it) {
+    if (it == end) {
+      fs()->read_data(idx++, buf);
+      it = beg;
+    }
+    if (it->end())
+      break;
+    if (it->invalid())
+      continue;
+    if (it->is_long_name()) {
+      // khexdump(it, sizeof(*it), "long name");
+      continue;
+    }
+    // khexdump(it->DIR_Name, sizeof(it->DIR_Name), "name");
+    auto filename = _get_name(it);
+    // kprintf("name: ");
+    // kprint(filename);
+    // kprintf("\n");
+    if (filename == "." or filename == "..")
+      continue;
+    auto new_vnode = new Vnode{this->mount_root, it};
+    this->set_child(filename.data(), new_vnode);
+  }
+
+  delete[] buf;
+}
+
+void Vnode::_load_metadata() {
+  _filesize = _dirent->DIR_FileSize;
+  _load = false;
+  _cluster = _dirent->FstClus();
+}
+
+const char* Vnode::_load_content() {
+  if (not _load) {
+    _load = true;
+    _content.resize(_filesize);
+    auto idx = fs()->cluster2sector(_cluster);
+    FS_INFO("_load_content: size %u from idx %u\n", _filesize, idx);
+    fs()->read_data(idx, _content.data(), _filesize);
+  }
+  return _content.data();
+}
+
+Vnode::Vnode(const ::Mount* mount)
+    : ::VnodeImpl<Vnode, File>{mount, kDir}, _dirent(nullptr) {
+  _load_childs(fs()->bpb->BPB_RootClus);
+}
+
+Vnode::Vnode(const ::Mount* mount, FAT32_DirEnt* dirent)
+    : ::VnodeImpl<Vnode, File>{mount,
+                               has(dirent->DIR_Attr, FILE_Attrs::ATTR_DIRECTORY)
+                                   ? kDir
+                                   : kFile},
+      _dirent(dirent) {
+  switch (type) {
+    case kFile:
+      _load_metadata();
+      break;
+    case kDir:
+      _load_childs(_dirent->FstClus());
+      break;
+  }
+}
 
 bool FileSystem::init = false;
 
@@ -77,7 +174,7 @@ FileSystem::FileSystem() {
   FATSz = bpb->BPB_FATSz32;
 
   read_block(bpb->BPB_RsvdSecCnt);
-  kprintf("first FAT\n");
+  FS_INFO("first FAT\n");
   FS_HEXDUMP("FAT", block_buf, BLOCK_SIZE);
 
   FirstDataSector =
@@ -115,10 +212,14 @@ FileSystem::FileSystem() {
     return;
   }
 
-  kprintf("root cluster %d -> %d\n", bpb->BPB_RootClus,
+  FS_INFO("root cluster %d -> %d\n", bpb->BPB_RootClus,
           cluster2sector(bpb->BPB_RootClus));
   read_block(cluster2sector(bpb->BPB_RootClus));
   FS_HEXDUMP("root cluster", block_buf, BLOCK_SIZE);
+}
+
+::Vnode* FileSystem::mount(const ::Mount* mount_root) {
+  return new Vnode{mount_root};
 }
 
 };  // namespace fat32fs

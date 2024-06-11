@@ -32,7 +32,7 @@ class File final : public ::FileImplRW<Vnode, File> {
   virtual char* write_ptr() {
     return content().data();
   }
-  virtual char* read_ptr() {
+  virtual const char* read_ptr() {
     return content().data();
   }
 

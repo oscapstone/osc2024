@@ -13,10 +13,23 @@ class File;
 class FileSystem;
 
 class Vnode final : public ::VnodeImpl<Vnode, File> {
-  int _filesize;
+  friend File;
+
+  FileSystem* fs() const;
+
+  FAT32_DirEnt* _dirent;
+  uint32_t _filesize, _cluster;
+  bool _load;
+  string _content;
+
+  static string _get_name(const FAT32_DirEnt* dirent);
+  void _load_childs(size_t cluster);
+  void _load_metadata();
+  const char* _load_content();
 
  public:
-  using ::VnodeImpl<Vnode, File>::VnodeImpl;
+  Vnode(const ::Mount* mount);
+  Vnode(const ::Mount* mount, FAT32_DirEnt* dirent);
   virtual ~Vnode() = default;
   virtual long filesize() const {
     return _filesize;
@@ -30,8 +43,8 @@ class File final : public ::FileImplRW<Vnode, File> {
   virtual char* write_ptr() {
     return nullptr;
   }
-  virtual char* read_ptr() {
-    return nullptr;
+  virtual const char* read_ptr() {
+    return get()->_load_content();
   }
 
  public:
@@ -40,7 +53,8 @@ class File final : public ::FileImplRW<Vnode, File> {
 };
 
 class FileSystem final : public ::FileSystem {
-  ::Vnode* root = nullptr;
+  friend Vnode;
+
   static bool init;
   char* block_buf = nullptr;
   uint32_t sector_0_off;
@@ -55,16 +69,26 @@ class FileSystem final : public ::FileSystem {
     readblock(sector_0_off + idx, block_buf);
   }
 
+  void read_data(uint32_t idx, void* t, size_t size) {
+    auto s = (char*)t;
+    while (size > 0) {
+      read_block(idx);
+      idx++;
+      auto cur_size = size < BLOCK_SIZE ? size : BLOCK_SIZE;
+      memcpy(s, block_buf, cur_size);
+      size -= cur_size;
+      s += cur_size;
+    }
+  }
+
   template <typename T>
   void read_data(uint32_t idx, T* t) {
-    read_block(idx);
-    memcpy(t, block_buf, sizeof(T));
+    read_data(idx, t, sizeof(T));
   }
 
   template <>
   void read_data(uint32_t idx, char* t) {
-    read_block(idx);
-    memcpy(t, block_buf, BLOCK_SIZE);
+    read_data(idx, t, BLOCK_SIZE);
   }
 
   uint32_t cluster2sector(uint32_t N) {
@@ -78,9 +102,7 @@ class FileSystem final : public ::FileSystem {
     return "fat32fs";
   }
 
-  virtual ::Vnode* mount(const Mount* mount_root) {
-    return root;
-  }
+  virtual ::Vnode* mount(const ::Mount* mount_root);
 };
 
 }  // namespace fat32fs

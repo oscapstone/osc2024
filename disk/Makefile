@@ -4,7 +4,7 @@ DISKPATH 	= /Volumes/$(DISKNAME)
 
 FIRMWARE 	= bootcode.bin fixup.dat start.elf
 CONFIG 		= config.txt
-IMGS 		= $(shell find . -name '*.img')
+BOOTLOADER 	= bootloader.img
 INITFSCPIO 	= initramfs.cpio
 DEVICETREE 	= bcm2710-rpi-3-b-plus.dtb
 FAT32_TEST 	= FAT_R.TXT
@@ -17,16 +17,14 @@ all: files
 files: $(FIRMWARE) $(DEVICETREE) $(FAT32_TEST)
 
 upload: files
-	cp $(FIRMWARE) $(DEVICETREE) $(DISKPATH)
+	cp $(FIRMWARE) $(DEVICETREE) $(BOOTLOADER) $(DISKPATH)
 ifneq ($(wildcard $(CONFIG)),)
 	cp $(CONFIG) $(DISKPATH)
-endif
-ifneq ($(IMGS),)
-	cp $(IMGS) $(DISKPATH)
 endif
 ifneq ($(wildcard $(INITFSCPIO)),)
 	cp $(INITFSCPIO) $(DISKPATH)
 endif
+	cp $(FAT32_TEST) $(DISKPATH)
 
 eject:
 	diskutil eject $(DISKPATH)

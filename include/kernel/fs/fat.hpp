@@ -53,9 +53,28 @@ constexpr uint32_t FAT_EOF = 0x0FFFFFF8;
 constexpr uint32_t FAT_EOC = 0x0FFFFFFF;
 constexpr uint32_t FAT_BAD_CLUSTER = 0x0FFFFFF7;
 
+enum class FILE_Attrs : uint8_t {
+  ATTR_READ_ONLY = 0x01,
+  ATTR_HIDDEN = 0x02,
+  ATTR_SYSTEM = 0x04,
+  ATTR_VOLUME_ID = 0x08,
+  ATTR_DIRECTORY = 0x10,
+  ATTR_ARCHIVE = 0x20,
+  ATTR_LONG_NAME = ATTR_READ_ONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID,
+  ATTR_LONG_NAME_MASK = ATTR_READ_ONLY | ATTR_HIDDEN | ATTR_SYSTEM |
+                        ATTR_VOLUME_ID | ATTR_DIRECTORY | ATTR_ARCHIVE,
+  MARK_AS_BITMASK_ENUM(ATTR_ARCHIVE),
+};
+
 struct FAT32_DirEnt {
-  char DIR_Name[11];
-  uint8_t DIR_Attr;
+  union {
+    char DIR_Name[11];
+    struct {
+      char file_name[8];
+      char file_ext[3];
+    };
+  };
+  FILE_Attrs DIR_Attr;
   char DIR_NTRes;
   uint8_t DIR_CrtTimeTenth;
   uint16_t DIR_CrtTime;
@@ -66,15 +85,20 @@ struct FAT32_DirEnt {
   uint16_t DIR_WrtDate;
   uint16_t DIR_FstClusLO;
   uint32_t DIR_FileSize;
+  uint32_t FstClus() const {
+    return (DIR_FstClusHI << 16) | DIR_FstClusLO;
+  }
+  bool invalid() const {
+    return (unsigned char)DIR_Name[0] == 0xE5;
+  }
+  bool end() const {
+    return DIR_Name[0] == 0;
+  }
+  bool valid() const {
+    return not end() and not invalid();
+  }
+  bool is_long_name() const {
+    return (DIR_Attr & FILE_Attrs::ATTR_LONG_NAME_MASK) ==
+           FILE_Attrs::ATTR_LONG_NAME;
+  }
 } __attribute__((__packed__));
-
-enum class FILE_Attrs : uint8_t {
-  ATTR_READ_ONLY = 0x01,
-  ATTR_HIDDEN = 0x02,
-  ATTR_SYSTEM = 0x04,
-  ATTR_VOLUME_ID = 0x08,
-  ATTR_DIRECTORY = 0x10,
-  ATTR_ARCHIVE = 0x20,
-  ATTR_LONG_NAME = ATTR_READ_ONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID,
-  MARK_AS_BITMASK_ENUM(ATTR_ARCHIVE),
-};
