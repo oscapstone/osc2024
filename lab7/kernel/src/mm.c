@@ -255,6 +255,7 @@ void do_permission_fault(unsigned long long address)
                 copy_frame = kmalloc(4096); // allocate one page frame and copy from orignal page frame
                 for (int i = 0; i < 4096; i++)
                     copy_frame[i] = frame[i];
+                cur_vma->pm_base = (unsigned long long)copy_frame - VA_START;
 
                 unsigned long long *cur_table = (unsigned long long *)(VA_START | (unsigned long long)cur_task->mm_struct->pgd); // map pdg to kenel sacpe
                 for (int level = 0; level < 4; level++)

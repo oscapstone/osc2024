@@ -136,8 +136,7 @@ void kill_zombies()
 
                 kfree(del->mm_struct);
                 kfree((char *)del->kstack - 4096 * 4); // free the stack space
-                if (del->ustack != NULL)
-                    kfree((char *)del->ustack - 4096 * 4);
+                
                 kfree(del);
 
                 enable_interrupt();
@@ -202,8 +201,8 @@ void check_signal(struct ucontext *sigframe) // the sigframe is the user context
 
 void do_exec(const char *name, char *const argv[])
 {
-    struct file * file = vfs_open(name, 0);
-    FILE* initramfs_internal = (struct FILE *)file->f_dentry->d_inode->internal;
+    struct file *file = vfs_open(name, 0);
+    FILE *initramfs_internal = (struct FILE *)file->f_dentry->d_inode->internal;
 
     char *content = initramfs_internal->file_content;
     int size = given_size_hex_atoi(initramfs_internal->file_header->c_filesize, 8);
@@ -216,11 +215,22 @@ void do_exec(const char *name, char *const argv[])
     char *target = kmalloc(size);
     char *copy = target;
 
+    for (int i = 0; i < SIG_NUM; i++) // inititalize signal_handler
+    {
+        cur->is_default_signal_handler[i] = 1;
+        cur->signal_handler[i] = NULL;
+    }
+    cur->signal_handler[9] = default_SIGKILL_handler;
+
     init_mm_struct(cur->mm_struct);
     // map code
     mappages(cur->mm_struct, CODE, 0, (unsigned long long)target - VA_START, size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
     // map ustack
-    mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    mappages(cur->mm_struct, STACK, 0xffffffffc000, (unsigned long long)(cur->ustack) - 4096 * 3 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    mappages(cur->mm_struct, STACK, 0xffffffffd000, (unsigned long long)(cur->ustack) - 4096 * 2 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    mappages(cur->mm_struct, STACK, 0xffffffffe000, (unsigned long long)(cur->ustack) - 4096 * 1 - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    mappages(cur->mm_struct, STACK, 0xfffffffff000, (unsigned long long)(cur->ustack) - VA_START, 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
 
     while (size--) // move the file content to memory
         *copy++ = *content++;
