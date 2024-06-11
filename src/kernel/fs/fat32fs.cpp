@@ -33,9 +33,9 @@ string Vnode::_get_name(const FAT32_DirEnt* dirent) {
   return name;
 }
 
-void Vnode::_load_childs(size_t cluster) {
+void Vnode::_load_childs() {
   auto buf = new char[BLOCK_SIZE];
-  auto idx = fs()->cluster2sector(cluster);
+  auto idx = fs()->cluster2sector(_cluster);
 
   auto beg = (FAT32_DirEnt*)(buf);
   auto end = (FAT32_DirEnt*)(buf + BLOCK_SIZE);
@@ -66,7 +66,19 @@ void Vnode::_load_childs(size_t cluster) {
   delete[] buf;
 }
 
-const char* Vnode::_load_content() {
+bool Vnode::_resize(size_t new_size) {
+  modified = true;
+  _content.resize(new_size);
+  _filesize = new_size;
+  return true;
+}
+
+char* Vnode::_write_ptr() {
+  modified = true;
+  return _content.data();
+}
+
+const char* Vnode::_read_ptr() {
   if (not _load) {
     _load = true;
     _content.resize(_filesize);
@@ -77,25 +89,31 @@ const char* Vnode::_load_content() {
   return _content.data();
 }
 
-Vnode::Vnode(const ::Mount* mount) : ::VnodeImpl<Vnode, File>{mount, kDir} {
-  _load_childs(fs()->bpb->BPB_RootClus);
+Vnode::Vnode(const ::Mount* mount)
+    : Base{mount, kDir}, _cluster{fs()->bpb->BPB_RootClus} {
+  _load_childs();
 }
 
 Vnode::Vnode(const ::Mount* mount, FAT32_DirEnt* dirent)
-    : ::VnodeImpl<Vnode, File>{
-          mount,
-          has(dirent->DIR_Attr, FILE_Attrs::ATTR_DIRECTORY) ? kDir : kFile} {
+    : Base{mount,
+           has(dirent->DIR_Attr, FILE_Attrs::ATTR_DIRECTORY) ? kDir : kFile},
+      _cluster{dirent->FstClus()} {
   switch (type) {
     case kFile:
       _filesize = dirent->DIR_FileSize;
-      _load = false;
-      _cluster = dirent->FstClus();
       break;
     case kDir:
-      _load_childs(dirent->FstClus());
+      _load_childs();
       break;
   }
 }
+
+Vnode::Vnode(const ::Mount* mount, filetype type)
+    : Base{mount, type},
+      _filesize(0),
+      _cluster{NO_CLUSTER},
+      _load{true},
+      _content{""} {}
 
 bool FileSystem::init = false;
 
@@ -213,6 +231,27 @@ FileSystem::FileSystem() {
 
 ::Vnode* FileSystem::mount(const ::Mount* mount_root) {
   return new Vnode{mount_root};
+}
+
+void Vnode::_sync() {
+  if (isDir()) {
+    for (auto child : childs()) {
+      auto vnode = static_cast<Vnode*>(child.node);
+      vnode->_sync();
+      if (vnode->_cluster == NO_CLUSTER) {
+        // TODO
+        vnode->modified = false;
+      } else if (vnode->modified) {
+        vnode->modified = false;
+      }
+    }
+  } else {
+    // TODO
+  }
+}
+
+void FileSystem::sync(const Mount* mount_root) {
+  static_cast<Vnode*>(mount_root->root)->_sync();
 }
 
 };  // namespace fat32fs

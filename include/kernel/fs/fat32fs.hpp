@@ -12,22 +12,32 @@ class Vnode;
 class File;
 class FileSystem;
 
-class Vnode final : public ::VnodeImpl<Vnode, File> {
+class Vnode final : public ::VnodeImplRW<Vnode, File> {
+  static constexpr uint32_t NO_CLUSTER = 0;
+  using Base = ::VnodeImplRW<Vnode, File>;
+
   friend File;
+  friend FileSystem;
 
   FileSystem* fs() const;
 
+  bool modified = false;
   uint32_t _filesize, _cluster;
-  bool _load;
+  bool _load = false;
   string _content;
 
   static string _get_name(const FAT32_DirEnt* dirent);
-  void _load_childs(size_t cluster);
-  const char* _load_content();
+  void _load_childs();
+
+  bool _resize(size_t new_size);
+  char* _write_ptr();
+  const char* _read_ptr();
+  void _sync();
 
  public:
   Vnode(const ::Mount* mount);
   Vnode(const ::Mount* mount, FAT32_DirEnt* dirent);
+  Vnode(const ::Mount* mount, filetype type);
   virtual ~Vnode() = default;
   virtual long filesize() const {
     return _filesize;
@@ -36,13 +46,14 @@ class Vnode final : public ::VnodeImpl<Vnode, File> {
 
 class File final : public ::FileImplRW<Vnode, File> {
   virtual bool resize(size_t new_size) {
-    return false;
+    return get()->_resize(new_size);
   }
   virtual char* write_ptr() {
-    return nullptr;
+    get()->modified = true;
+    return get()->_write_ptr();
   }
   virtual const char* read_ptr() {
-    return get()->_load_content();
+    return get()->_read_ptr();
   }
 
  public:
@@ -101,6 +112,7 @@ class FileSystem final : public ::FileSystem {
   }
 
   virtual ::Vnode* mount(const ::Mount* mount_root);
+  virtual void sync(const Mount* mount_root);
 };
 
 }  // namespace fat32fs
