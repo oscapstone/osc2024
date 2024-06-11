@@ -8,12 +8,13 @@
 #include "io.h"
 #include "schedule.h"
 #include "fork.h"
+#include "dev_uart.h"
 
 extern struct task_struct* current;
 
 struct mount* rootfs;
 struct filesystem global_fs[MAX_FILESYSTEM];
-// struct file_descriptor_table global_fd_table;
+struct file_operations global_dev[MAX_DEV_REG];
 
 extern struct file_operations *initramfs_f_ops;
 
@@ -22,9 +23,6 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
 static struct file* create_file(struct vnode* vnode, int flags);
 static char* get_file_name(const char* pathname);
 static void simplify_path(char* pathname);
-
-
-void initramfs_init();
 
 void rootfs_init()
 {
@@ -38,6 +36,12 @@ void rootfs_init()
         global_fs[i].name = NULL;
     }
 
+    for(int i=0; i<MAX_DEV_REG; i++)
+    {
+        global_dev[i].open = NULL;
+    }
+
+    // rootfs (tmpfs)
     struct filesystem* tmpfs = (struct filesystem*)dynamic_alloc(sizeof(struct filesystem));
     tmpfs->name = (char*)dynamic_alloc(16);
     strcpy(tmpfs->name, "tmpfs");
@@ -46,30 +50,18 @@ void rootfs_init()
     register_filesystem(tmpfs);
     
     rootfs = (struct mount*)dynamic_alloc(sizeof(struct mount));
-    // printf("\r\n[ROOTFS] rootfs: "); printf_hex(rootfs);
     tmpfs->setup_mount(tmpfs, &rootfs);
 
-    // printf("\r\n[ROOTFS] rootfs: "); printf_hex(rootfs);
-    initramfs_init();
-}
-
-void initramfs_init()
-{
-    // struct filesystem* initramfs = (struct filesystem*)dynamic_alloc(sizeof(struct filesystem));
-    // initramfs->name = (char*)dynamic_alloc(16);
-    // strcpy(initramfs->name, "initramfs");
-
-    // initramfs->setup_mount = initramfs_setup_mount;
-    // register_filesystem(initramfs);
-
-    // vfs_mkdir("/initramfs");
-    
-    // struct vnode* vnode = vfs_get_node("/initramfs", 0);
-    // vnode->mount = (struct mount*)dynamic_alloc(sizeof(struct mount));
-    // initramfs->setup_mount(initramfs, &(vnode->mount));
-
-    // vnode->mount->root->parent = vnode->parent;
+    // initramfs
     vfs_mount("/initramfs", "initramfs");
+
+    // devfs
+    vfs_mkdir("/dev");
+    int uart_id = dev_uart_register();
+    printf("\r\nUART ID: "); printf_int(uart_id);
+    vfs_mknod("/dev/uart", uart_id);
+    // int framebuffer_id = dev_framebuffer_register();
+    // vfs_mknod("/dev/framebuffer", framebuffer_id);
 }
 
 
@@ -88,13 +80,29 @@ int register_filesystem(struct filesystem* fs) { // ensure there is sufficient m
   return -1;
 }
 
+int register_dev(struct file_operations* f_ops)
+{
+    for(int i=0; i<MAX_DEV_REG; i++)
+    {
+        if(global_dev[i].open == NULL)
+        {
+            // global_dev[i] = f_ops;
+            global_dev[i].write = f_ops->write;
+            global_dev[i].read = f_ops->read;
+            global_dev[i].open = f_ops->open;
+            global_dev[i].close = f_ops->close;
+            return i;
+        }
+    }
+    return -1;
+}
+
 int vfs_open(const char* pathname, int flags, struct file** target) {
   // 1. Lookup pathname
   // 2. Create a new file handle for this vnode if found.
   // 3. Create a new file if O_CREAT is specified in flags and vnode not found
   // lookup error code shows if file exist or not or other error occurs
   // 4. Return error code if fails
-
   struct vnode* vnode;
   int ret = vfs_lookup(pathname, &vnode);
   if(ret != 0 && flags != O_CREAT){
@@ -204,6 +212,17 @@ int vfs_mkdir(const char* pathname)
     return 0;
 }
 
+int vfs_mknod(const char* pathname, int id)
+{
+
+  struct file* file = (struct file*)dynamic_alloc(sizeof(struct file));  
+
+  vfs_open(pathname, O_CREAT, &file);
+  file->vnode->f_ops = &global_dev[id]; // set the file operations
+  vfs_close(file);
+  return 0;
+}
+
 int vfs_mount(const char* target, const char* filesystem) // mount the filesystem to the target
 {
     // struct mount* mount_point = (struct mount*)dynamic_alloc(sizeof(struct mount));
@@ -309,9 +328,15 @@ int vfs_chdir(const char* relative_path)
         return CERROR;
     }
 
-    simplify_path(new_abs_path);
-    printf("\r\n[CHDIR] new_abs_path(simplified): "); printf(new_abs_path);
+    // printf("\r\n[INFO] File descriptor 0: "); printf_hex((unsigned long)current->fd_table.fds[0]);
+    // printf("\r\n[INFO] File descriptor 1: "); printf_hex((unsigned long)current->fd_table.fds[1]);
+    // printf("\r\n[INFO] File descriptor 2: "); printf_hex((unsigned long)current->fd_table.fds[2]);
 
+    // simplify_path(new_abs_path);
+    // printf("\r\n[CHDIR] new_abs_path(simplified): "); printf(new_abs_path);
+    // printf("\r\n[INFO] File descriptor 0: "); printf_hex((unsigned long)current->fd_table.fds[0]);
+    // printf("\r\n[INFO] File descriptor 1: "); printf_hex((unsigned long)current->fd_table.fds[1]);
+    // printf("\r\n[INFO] File descriptor 2: "); printf_hex((unsigned long)current->fd_table.fds[2]);
     preempt_enable();
     strcpy(current->cwd, new_abs_path);
     preempt_disable();
@@ -392,9 +417,14 @@ static struct vnode* next_step(struct vnode* start_node, const char* pathname, s
     }
     else{
       struct vnode* next_node;
-      if(current_node->mount != NULL && \
-         current_node->mount->root->v_ops->lookup(current_node->mount->root, &next_node, token) == 0){
-        current_node = next_node;
+      if(current_node->mount != NULL){
+         if(current_node->mount->root->v_ops->lookup(current_node->mount->root, &next_node, token) == 0){
+            current_node = next_node;
+         }
+         else{
+          current_node = NULL;
+          goto next_step_end;
+         }
       }
       else if(current_node->v_ops->lookup(current_node, &next_node, token) == 0){
         current_node = next_node;

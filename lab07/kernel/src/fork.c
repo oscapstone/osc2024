@@ -43,6 +43,18 @@ int copy_process(
 	for(int i=0; i<MAX_OPEN_FILE; i++)
 		p->fd_table.fds[i] = NULL;
 
+	// create stdin, stdout, stderr
+    // p->fd_table.fds[0] = (struct file*)dynamic_alloc(sizeof(struct file));
+    // p->fd_table.fds[1] = (struct file*)dynamic_alloc(sizeof(struct file));
+    // p->fd_table.fds[2] = (struct file*)dynamic_alloc(sizeof(struct file));
+	vfs_open("/dev/uart", O_RW, &p->fd_table.fds[0]);
+	vfs_open("/dev/uart", O_RW, &p->fd_table.fds[1]);
+	vfs_open("/dev/uart", O_RW, &p->fd_table.fds[2]);	
+	// printf("\r\n[INFO] File descriptor table created");
+	// printf("\r\n[INFO] File descriptor 0: "); printf_hex((unsigned long)p->fd_table.fds[0]);
+	// printf("\r\n[INFO] File descriptor 1: "); printf_hex((unsigned long)p->fd_table.fds[1]);
+	// printf("\r\n[INFO] File descriptor 2: "); printf_hex((unsigned long)p->fd_table.fds[2]);
+
 	if(flags & PF_KTHREAD) // is a kernel thread
 	{
 		p->cpu_context.x19 = fn;

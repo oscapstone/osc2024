@@ -41,6 +41,8 @@ extern void user_open_test_initramfs(int argc, char *argv[]);
 extern void user_read_test(int argc, char *argv[]);
 extern void user_write_test(int argc, char *argv[]);
 extern void user_write_test_initramfs(int argc, char *argv[]);
+extern void user_stdout_test(int argc, char *argv[]);
+extern void user_stdin_test(int argc, char *argv[]);
 
 
 int split_command(char* command, char *argv[]);
@@ -66,6 +68,8 @@ cmd cmds[] =
     {.name = "user_read", .func = &user_read_test, .help_msg = "\nuser_read\t: test user read file"},
     {.name = "user_write", .func = &user_write_test, .help_msg = "\nuser_write\t: test user write file"},
     {.name = "user_write_ramfs", .func = &user_write_test_initramfs, .help_msg = "\nuser_write_ramfs\t: test user write file in initramfs"},
+    {.name = "user_stdout", .func = &user_stdout_test, .help_msg = "\nuser_stdout\t: test user stdout"},
+    {.name = "user_stdin", .func = &user_stdin_test, .help_msg = "\nuser_stdin\t: test user stdin"},
     {.name = "start_video", .func = &start_video, .help_msg = "\nstart_video\t: start video"},
     {.name = "fl", .func= &print_flist, .help_msg = "\nfl\t: print free list"},
     {.name = "cwd", .func=&print_cwd, .help_msg = "\ncwd\t: print current workding directroy"},

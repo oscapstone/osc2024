@@ -20,6 +20,8 @@ static void user_open_test_initramfs_foo();
 static void user_read_test_foo();
 static void user_write_test_foo();
 static void user_write_test_initramfs_foo();
+static void user_stdout_test_foo();
+static void user_stdin_test_foo();
 
 // lab5
 void multiple_thread_test(int argc, char *argv[])
@@ -59,6 +61,16 @@ void user_write_test(int argc, char *argv[])
 void user_write_test_initramfs(int argc, char *argv[])
 {
     copy_process(PF_KTHREAD, (unsigned long)&kp_user_mode, (unsigned long)&user_write_test_initramfs_foo, 0);
+}
+
+void user_stdout_test(int argc, char *argv[])
+{
+    copy_process(PF_KTHREAD, (unsigned long)&kp_user_mode, (unsigned long)&user_stdout_test_foo, 0);
+}
+
+void user_stdin_test(int argc, char *argv[])
+{
+    copy_process(PF_KTHREAD, (unsigned long)&kp_user_mode, (unsigned long)&user_stdin_test_foo, 0);
 }
 
 // ------------------------------------------------------------------
@@ -231,5 +243,19 @@ static void user_write_test_initramfs_foo()
     read(fd2, buff2, sizeof(buff2));
     printf("\r\nRead content f1: "); printf(buff2);
     close(fd2);
+    exit();
+}
+
+static void user_stdout_test_foo()
+{
+    write(1, "\nhello\n", 6);
+    exit();
+}
+
+static void user_stdin_test_foo()
+{
+    char buf[100];
+    read(0, buf, 20);
+    write(1, buf, 20);
     exit();
 }

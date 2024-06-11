@@ -104,20 +104,23 @@ int sys_mbox_call(unsigned char ch, unsigned int *mbox) // [TODO]
 
 void sys_kill(int pid) // [TODO]
 {
-    struct task_struct* p;
-    for(int i=0; i<NR_TASKS; i++){
-        if(task[i] == NULL) continue; // (task[i] == NULL) means no more tasks
-        p = task[i];
-        if(p->pid == pid){
-            preempt_disable();
-            printf("\r\nKilling process: "); printf_int(pid);
-            p->state = TASK_ZOMBIE;
-            preempt_enable();
-            return;
-        }
+    // struct task_struct* p;
+    // for(int i=0; i<NR_TASKS; i++){
+    //     if(task[i] == NULL) continue; // (task[i] == NULL) means no more tasks
+    //     p = task[i];
+    //     if(current->pid == pid){
+    //         preempt_disable();
+    //         printf("\r\nKilling process: "); printf_int(pid);
+    //         current->state = TASK_ZOMBIE;
+    //         preempt_enable();
+    //         return;
+    //     }
+    // }
+    if(task[pid] == NULL){
+        printf("\r\nProcess not found: "); printf_int(pid);
+        return;
     }
-    printf("\r\nProcess not found: "); printf_int(pid);
-    return;
+    task[pid]->state = TASK_ZOMBIE;
 }
 
 int sys_open(const char *pathname, int flags)
@@ -127,7 +130,7 @@ int sys_open(const char *pathname, int flags)
         if(current->fd_table.fds[i] == NULL){
             int ret = vfs_open(pathname, flags, &current->fd_table.fds[i]);
             if(ret == 0){
-                printf("\r\n[SYSCALL OPEN] File descriptor: "); printf_int(i + OFFSET_FD); printf(" , File: "); printf(pathname);
+                printf("\r\n[SYSCALL] open: File descriptor: "); printf_int(i + OFFSET_FD); printf(" , File: "); printf(pathname);
                 return i + OFFSET_FD;
             }
             break;
@@ -155,6 +158,7 @@ long sys_read(int fd, void *buf, unsigned long count)
 {
     printf("\r\n[SYSCALL] read: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
     if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
+    // printf("\r\n[SYSCALL] read: fd: "); printf_hex((unsigned long)current->fd_table.fds[fd - OFFSET_FD]);
     return vfs_read(current->fd_table.fds[fd - OFFSET_FD], buf, count);
 }
 
@@ -172,6 +176,7 @@ int sys_mount(const char *src, const char *target, const char *filesystem, unsig
 }
 int sys_chdir(const char *path)
 {
+    printf("\r\n[SYSCALL] chdir: "); printf(path);
     return vfs_chdir(path);
 }
 
