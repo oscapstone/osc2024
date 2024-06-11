@@ -1,4 +1,4 @@
-#define NR_syscalls 20
+#define NR_syscalls 21
 
 #ifndef __SYSCALL
 #define __SYSCALL(x, y)
@@ -63,3 +63,6 @@ __SYSCALL(__NR_lseek64, sys_lseek64)
 
 #define __NR_ioctl 19
 __SYSCALL(__NR_ioctl, sys_ioctl)
+
+#define __NR_sync 20
+__SYSCALL(__NR_sync, sys_sync)

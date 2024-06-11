@@ -327,6 +327,16 @@ int vfs_ioctl(FilePtr file, unsigned long request, void* arg) {
   return file->ioctl(request, arg);
 }
 
+SYSCALL_DEFINE0(sync) {
+  vfs_sync();
+  return 0;
+}
+
+void vfs_sync() {
+  for (auto mount : mounts)
+    mount->fs->sync(mount);
+}
+
 Vnode* vfs_lookup(const char* pathname) {
   Vnode* target;
   if (vfs_lookup(pathname, target) < 0)

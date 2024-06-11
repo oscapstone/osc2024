@@ -28,6 +28,7 @@ int vfs_mkdir(const char* pathname);
 int vfs_mount(const char* target, const char* filesystem);
 int vfs_lseek64(FilePtr file, long offset, seek_type whence);
 int vfs_ioctl(FilePtr file, unsigned long request, void* arg);
+void vfs_sync();
 
 Vnode* vfs_lookup(const char* pathname);
 int vfs_lookup(const char* pathname, Vnode*& target);

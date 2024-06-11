@@ -180,3 +180,5 @@ int File::close(FilePtr file) {
 Vnode* FileSystem::mount(const Mount* /*mount_root*/) {
   return nullptr;
 }
+
+void FileSystem::sync(const Mount* /*mount_root*/) {}
