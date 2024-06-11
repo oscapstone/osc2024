@@ -4,11 +4,13 @@
 #include "stdint.h"
 #include "utility.h"
 
-extern void  switch_to(void *curr_context, void *next_context);
-extern void* get_current_thread_context();
-extern void* set_current_thread_context(void *curr_context);
-extern void  store_context(void *curr_context);
-extern void  load_context(void *curr_context);
+#define MAX_PID 32768
+
+extern void switch_to(void *curr_context, void *next_context);
+extern void *get_current_thread_context();
+extern void *set_current_thread_context(void *curr_context);
+extern void store_context(void *curr_context);
+extern void load_context(void *curr_context);
 
 typedef struct cpu_context
 {
@@ -32,21 +34,33 @@ typedef enum thread_status
     THREAD_IS_RUNNING = 0,
     THREAD_IS_BLOCKED,
     THREAD_IS_ZOMBIE
-}thread_status_t;
+} thread_status_t;
+
+typedef struct child_node
+{
+    list_head_t list_head;
+    int64_t pid;
+}child_node_t;
+
 
 typedef struct thread_struct
 {
     list_head_t list_head;
     cpu_context_t context;
-    void* code;
+    void *code;
     thread_status_t status;
     size_t datasize;
-    int pid;
+    int64_t pid;
+    int64_t ppid;
+    child_node_t*       child_list;                            // Child Process List
+    char *user_stack_base;
+    char *kernel_stack_base;
     char *name;
 
 } thread_t;
 
 // Lab 5 Basic 1
+void init_thread_sched();
 void foo();
 
 void schedule();

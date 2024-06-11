@@ -75,6 +75,7 @@ void page_to_cache_pool(int cache_order);
 void cache_info_dump();
 
 // lab 4 adv 2
+void *kmalloc(unsigned int size);
 void memory_reserve(unsigned long long start,unsigned long long end);
 
 #endif

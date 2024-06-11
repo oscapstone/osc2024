@@ -9,6 +9,9 @@ typedef unsigned long uint64_t;
 typedef int64_t size_t;
 typedef uint64_t ssize_t;
 
+#define NULL ((void *)0)
+
+
 /* limits of integral types */
 
 #define        INT8_MIN  (-128)

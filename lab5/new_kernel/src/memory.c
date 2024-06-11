@@ -2,6 +2,7 @@
 #include "cpio.h"
 #include "mini_uart.h"
 #include "utility.h"
+#include "stdint.h"
 
 static page_frame_t *frame_array;
 static list_head_t frame_freelist[FRAME_MAX_IDX];
@@ -480,3 +481,14 @@ void memory_reserve(unsigned long long start, unsigned long long end)
         }
     }
 };
+
+void *kmalloc(unsigned int size){
+    void * ptr;
+    if (size >= PAGE_SIZE){
+        ptr = page_alloc(size);
+        return ptr;
+    } else if (size < PAGE_SIZE){
+        ptr = cache_alloc(size);
+        return ptr;
+    }
+}
