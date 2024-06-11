@@ -23,7 +23,7 @@ void start_video(int argc, char *argv[])
 
     uint32_t head_size = sizeof(cpio_newc_header);
 
-    char *target_name = "syscall.img";
+    char *target_name = "vfs1.img";
 
     while(1)
     {

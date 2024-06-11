@@ -41,51 +41,32 @@ size_t sys_uartwrite(const char buf[], size_t size)
 
 int sys_exec(const char *name, char *const argv[]) // [TODO]
 {
-#ifndef QEMU
-    cpio_newc_header* head = (void*)(uint64_t)CPIO_START_ADDR_FROM_DT;
-#else
-    cpio_newc_header* head = (void*)(uint64_t)CPIO_ADDR;
-#endif
-    uint32_t head_size = sizeof(cpio_newc_header);
-
-    while(1)
-    {
-        int namesize = strtol(head->c_namesize, 16, 8);
-        int filesize = strtol(head->c_filesize, 16, 8);
-
-        char *filename = (void*)head + head_size;
-
-        uint32_t offset = head_size + namesize;
-        if(offset % 4 != 0) offset = ((offset/4 +1)*4);
-
-        if(strcmp(filename, "TRAILER!!!") == 0){
-            printf("\r\n[ERROR] File not found");
-            break;
-        }
-        else if(strcmp(filename, name) == 0){
-            /* The filedata is appended after filename */
-            char *filedata = (void*)head + offset;
-            void* user_program_addr = balloc(filesize+THREAD_SIZE); // extra page in case
-            if(user_program_addr == NULL) return -1;
-            memzero_asm((unsigned long)user_program_addr, filesize+THREAD_SIZE);
-            for(int i=0; i<filesize; i++){
-                ((char*)user_program_addr)[i] = filedata[i];
-            }
-
-            preempt_disable(); // leads to get the correct current task
-
-            struct pt_regs *cur_regs = task_pt_regs(current);
-            cur_regs->pc = (unsigned long)user_program_addr;
-            cur_regs->sp = current->stack + THREAD_SIZE;
-
-            preempt_enable();
-            break;  // won't reach here
-        }
-
-        if(filesize % 4 != 0) filesize = (filesize/4 +1)*4;
-        head = (void*)head + offset + filesize;
+    struct file *file;
+    int ret = vfs_open(name, O_RW, &file);
+    if(ret == -1){
+        printf("\r\n[ERROR] Cannot open file: "); printf(name);
+        return -1;
     }
-    return -1; // only failure
+
+    int filesize = file->vnode->f_ops->getsize(file->vnode);
+    void* user_program_addr = balloc(filesize+THREAD_SIZE);
+
+    if(user_program_addr == NULL){
+        printf("\r\n[ERROR] Cannot allocate memory for file: "); printf(name);
+        return -1;
+    }
+
+    vfs_read(file, user_program_addr, filesize);
+    vfs_close(file);
+
+    preempt_disable(); // leads to get the correct current task
+
+    struct pt_regs *cur_regs = task_pt_regs(current);
+    cur_regs->pc = (unsigned long)user_program_addr;
+    cur_regs->sp = current->stack + THREAD_SIZE;
+
+    preempt_enable();
+    return 0;
 }
 
 int sys_fork() // [TODO]
@@ -167,29 +148,31 @@ int sys_close(int fd)
 long sys_write(int fd, const void *buf, unsigned long count)
 {
     printf("\r\n[SYSCALL] write: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+    if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
     return vfs_write(current->fd_table.fds[fd - OFFSET_FD], buf, count);
 }
 long sys_read(int fd, void *buf, unsigned long count)
 {
     printf("\r\n[SYSCALL] read: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+    if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
     return vfs_read(current->fd_table.fds[fd - OFFSET_FD], buf, count);
 }
 
 // you can ignore mode, since there is no access control
 int sys_mkdir(const char *pathname, unsigned mode)
 {
-    return 0;
+    return vfs_mkdir(pathname);
 }
 
 // you can ignore arguments other than target (where to mount) and filesystem (fs name)
 int sys_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
 {
-    return 0;
-
+    printf("\r\n[SYSCALL] mount:"); printf(src); printf(" to "); printf(target); printf(" with filesystem: "); printf(filesystem);
+    return vfs_mount(target, filesystem);
 }
 int sys_chdir(const char *path)
 {
-    return 0;
+    return vfs_chdir(path);
 }
 
 void * const sys_call_table[] = {

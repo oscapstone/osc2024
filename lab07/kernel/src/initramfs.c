@@ -35,6 +35,10 @@ int initramfs_setup_mount(struct filesystem* fs, struct mount **mount) // mount 
         strncpy(c_mode, head->c_mode, 5);
         int ret = cpio_newc_parser(&head, &pathname, &filedata);
         if(ret == 1)break;
+        if(filesize > INITRAMFS_MAX_FILE){
+            printf("\r\n[SYSTEM INFO] File: "); printf(pathname); printf(" is too large to fit in initramfs");
+            continue;
+        }
         // printf("\r\n[INITRAMFS INFO] Mount Archive: "); printf(pathname); printf("\t, cmode: "); printf(c_mode);
         struct initramfs_internal *root_internal = (struct initramfs_internal*)(*mount)->root->internal;
 
@@ -49,6 +53,7 @@ int initramfs_setup_mount(struct filesystem* fs, struct mount **mount) // mount 
             printf("\r\n[INITRAMFS INFO] Mount Archive: "); printf(pathname); 
             for(int i=0; i<10-strlen(pathname); i++) printf(" "); 
             printf("\t, cmode: "); printf(c_mode);
+            printf("\t, size: "); printf_hex(filesize);
         }
         else if(!strcmp(c_mode, "00004")){ // directory
             // cannot create directory in initramfs
@@ -125,6 +130,7 @@ int initramfs_register()
     initramfs_f_ops->read = initramfs_read;
     initramfs_f_ops->write = initramfs_write;
     initramfs_f_ops->close = initramfs_close;
+    initramfs_f_ops->getsize = initramfs_getsize;
 
     return 0;
 }
@@ -233,6 +239,11 @@ int initramfs_write(struct file* file, const void* buf, size_t len)
 }
 
 
+int initramfs_getsize(struct vnode* vnode)
+{
+    struct initramfs_internal *internal = (struct initramfs_internal*)vnode->internal;
+    return internal->filesize;
+}
 
 static int isFileInSubDir(const char* pathname)
 {

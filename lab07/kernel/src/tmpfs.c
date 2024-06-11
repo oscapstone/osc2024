@@ -59,10 +59,10 @@ int tmpfs_register()
     for(; i<MAX_FILESYSTEM; i++)
     {
         if(global_fs[i].name == NULL)break;
-        if(!strcmp(global_fs[i].name, "tmpfs")){
-            printf("\r\n[ERROR] tmpfs already registered");
-            return -1;
-        }
+        // if(!strcmp(global_fs[i].name, "tmpfs")){
+        //     printf("\r\n[ERROR] tmpfs already registered");
+        //     return -1;
+        // }
     }
     if(i == MAX_FILESYSTEM){
         printf("\r\n[ERROR] No space for new filesystem");
@@ -79,6 +79,7 @@ int tmpfs_register()
     tmpfs_f_ops->read = tmpfs_read;
     tmpfs_f_ops->open = tmpfs_open;
     tmpfs_f_ops->close = tmpfs_close;
+    tmpfs_f_ops->getsize = tmpfs_getsize;
 
     tmpfs_v_ops->lookup = tmpfs_lookup;
     tmpfs_v_ops->create = tmpfs_create;
@@ -195,6 +196,12 @@ int tmpfs_create(struct vnode* dir_node, struct vnode** target, const char* comp
     *target = internal->children[internal->size];
     internal->size++;
     return 0;
+}
+
+int tmpfs_getsize(struct vnode* vnode)
+{
+    struct tmpfs_internal *internal = (struct tmpfs_internal*)vnode->internal;
+    return internal->filesize;
 }
 
 int tmpfs_mkdir(struct vnode* dir_node, struct vnode** target, const char* component_name)

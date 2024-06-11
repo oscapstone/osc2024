@@ -3,7 +3,7 @@
 
 #define COMPONENT_SIZE  15
 #define ENTRIES_PER_DIR 16
-#define INITRAMFS_MAX_FILE  4096
+#define INITRAMFS_MAX_FILE  4096*128
 
 #include "vfs.h"
 #include "cpio.h"
@@ -27,6 +27,7 @@ int initramfs_close(struct file* file);
 int initramfs_open(struct vnode* file_node, struct file** target);
 int initramfs_read(struct file* file, void* buf, size_t len);
 int initramfs_write(struct file* file, const void* buf, size_t len);
+int initramfs_getsize(struct vnode* vnode);
 int initramfs_setup_mount(struct filesystem* fs, struct mount** mount);
 int initramfs_register();
 // int parse_initramfs();

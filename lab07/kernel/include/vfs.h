@@ -10,6 +10,7 @@
 #define MAX_OPEN_FILE         16
 #define OFFSET_FD              3 // 0, 1, 2 are reserved for stdin, stdout, stderr
 #define O_CREAT         00000100
+#define O_RW                  00
 #define MAX_PATH_LEN         256
 
 struct vnode {
@@ -42,7 +43,8 @@ struct file_operations {
   int (*write)(struct file* file, const void* buf, size_t len);
   int (*read)(struct file* file, void* buf, size_t len);
   int (*open)(struct vnode* file_node, struct file** target);
-  int (*close)(struct file* file);
+  int (*close)(struct file* file); 
+  int (*getsize)(struct vnode* vnode);
   // long lseek64(struct file* file, long offset, int whence);
 };
 
@@ -72,6 +74,7 @@ int vfs_mount(const char* target, const char* filesystem);
 int vfs_lookup(const char* pathname, struct vnode** target);
 int vfs_list(const char* pathname);
 int vfs_chdir(const char* relative_path);
+int vfs_exec(const char* pathname, char* const argv[]);
 // int vfs_cat(const char* pathname); [TODO]
 
 extern struct mount* rootfs;

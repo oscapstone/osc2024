@@ -25,6 +25,7 @@ static void rootfs_mkdir(int argc, char *argv[]);
 static void print_cwd(int argc, char *argv[]);
 static void change_dir(int argc, char *argv[]);
 static void rootfs_touch(int argc, char *argv[]);
+static void rootfs_exec(int argc, char *argv[]);
 
 
 extern void cpio_list(int argc, char *argv[]);
@@ -57,7 +58,7 @@ cmd cmds[] =
     {.name = "clear",   .func = &clear,      .help_msg = "\nclear\t: clear the screen"},
     {.name = "s_malloc",  .func = &test_malloc,.help_msg = "\nmalloc\t: simple malloc function"},
     {.name = "reboot",  .func = &reboot,     .help_msg = "\nreboot\t: reboot the device"},
-    {.name = "exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
+    {.name = "cpio_exec",    .func = &cpio_exec,  .help_msg = "\nexec\t: execute a file in the cpio archive"},
     {.name = "multi_thread", .func = &multiple_thread_test, .help_msg = "\nmulti_thread\t: test multiple threads"},
     {.name = "user_fork", .func = &user_fork_test, .help_msg = "\nto_user\t: test user mode"},
     {.name = "user_open", .func = &user_open_test, .help_msg = "\nuser_open\t: test user open file"},
@@ -68,7 +69,8 @@ cmd cmds[] =
     {.name = "start_video", .func = &start_video, .help_msg = "\nstart_video\t: start video"},
     {.name = "fl", .func= &print_flist, .help_msg = "\nfl\t: print free list"},
     {.name = "cwd", .func=&print_cwd, .help_msg = "\ncwd\t: print current workding directroy"},
-    {.name = "cd", .func=&change_dir, .help_msg = "\ncd\t: change the directory"}
+    {.name = "cd", .func=&change_dir, .help_msg = "\ncd\t: change the directory"},
+    {.name = "exec", .func=&rootfs_exec, .help_msg = "\nexec\t: execute a file in the rootfs"}
 };
 
 static void shell()
@@ -193,6 +195,17 @@ static void rootfs_touch(int argc, char *argv[])
     }
     else{
         printf("\nUsage: touch [path]");
+        return;
+    }
+}
+
+static void rootfs_exec(int argc, char *argv[])
+{
+    if(argc == 2){
+        vfs_exec(argv[1], 0);
+    }
+    else{
+        printf("\nUsage: exec [path]");
         return;
     }
 }

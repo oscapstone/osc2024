@@ -7,6 +7,7 @@
 #include "initramfs.h"
 #include "io.h"
 #include "schedule.h"
+#include "fork.h"
 
 extern struct task_struct* current;
 
@@ -22,16 +23,8 @@ static struct file* create_file(struct vnode* vnode, int flags);
 static char* get_file_name(const char* pathname);
 static void simplify_path(char* pathname);
 
-// void global_fd_table_init()
-// {
-//     for(int i=0; i<MAX_OPEN_FILE; i++)
-//     {
-//         global_fd_table.files[i] = NULL;
-//     }
-// }
 
 void initramfs_init();
-
 
 void rootfs_init()
 {
@@ -40,6 +33,10 @@ void rootfs_init()
     // 1. create a tmpfs filesystem
     // 2. create a rootfs mount
     // 3. setup rootfs mount
+    for(int i=0; i<MAX_FILESYSTEM; i++)
+    {
+        global_fs[i].name = NULL;
+    }
 
     struct filesystem* tmpfs = (struct filesystem*)dynamic_alloc(sizeof(struct filesystem));
     tmpfs->name = (char*)dynamic_alloc(16);
@@ -58,25 +55,21 @@ void rootfs_init()
 
 void initramfs_init()
 {
-    struct filesystem* initramfs = (struct filesystem*)dynamic_alloc(sizeof(struct filesystem));
-    initramfs->name = (char*)dynamic_alloc(16);
-    strcpy(initramfs->name, "initramfs");
+    // struct filesystem* initramfs = (struct filesystem*)dynamic_alloc(sizeof(struct filesystem));
+    // initramfs->name = (char*)dynamic_alloc(16);
+    // strcpy(initramfs->name, "initramfs");
 
-    initramfs->setup_mount = initramfs_setup_mount;
-    register_filesystem(initramfs);
+    // initramfs->setup_mount = initramfs_setup_mount;
+    // register_filesystem(initramfs);
 
-    vfs_mkdir("/initramfs");
+    // vfs_mkdir("/initramfs");
     
-    struct vnode* target_dir;
-    struct vnode* vnode = vfs_get_node("/initramfs", &target_dir);
-    vnode->mount = (struct mount*)dynamic_alloc(sizeof(struct mount));
-    // printf("\r\n[INITRAMFS] vnode: "); printf_hex(vnode);
-    // printf("\r\n[IDNITRAMFS] vnode->mount: "); printf_hex(vnode->mount);
-    // printf("\r\nsame: "); printf_int(target_dir == rootfs->root);
-    initramfs->setup_mount(initramfs, &(vnode->mount));
+    // struct vnode* vnode = vfs_get_node("/initramfs", 0);
+    // vnode->mount = (struct mount*)dynamic_alloc(sizeof(struct mount));
+    // initramfs->setup_mount(initramfs, &(vnode->mount));
 
-    // printf("\r\n[IDNITRAMFS] vnode->mount: "); printf_hex(vnode->mount);
-    // printf("\r\n[INITRAMFS] initramfs initialized");
+    // vnode->mount->root->parent = vnode->parent;
+    vfs_mount("/initramfs", "initramfs");
 }
 
 
@@ -213,23 +206,17 @@ int vfs_mkdir(const char* pathname)
 
 int vfs_mount(const char* target, const char* filesystem) // mount the filesystem to the target
 {
-    struct mount* mount_point = (struct mount*)dynamic_alloc(sizeof(struct mount));
+    // struct mount* mount_point = (struct mount*)dynamic_alloc(sizeof(struct mount));
     struct filesystem* fs = (struct filesystem*)dynamic_alloc(sizeof(struct filesystem));
 
-    // int ret = vfs_lookup(target, NULL);
-    // if(ret == 0)
-    // {
-    //   printf("[ERROR] Target already exists\n");      
-    //   return CERROR;
-    // }
-
-    struct vnode* target_dir; 
-    vfs_get_node(target, &target_dir);
-    if(target_dir == NULL)
+    struct vnode* vnode = vfs_get_node(target, 0);
+    if(vnode == NULL)
     {
-      printf("\r\n[ERROR] Cannot find the parent directory");
-      return CERROR;
+        vfs_mkdir(target);
+        vnode = vfs_get_node(target, 0);
     }
+
+    vnode->mount = (struct mount*)dynamic_alloc(sizeof(struct mount));
 
     fs->name = (char*)dynamic_alloc(16);
     if(!strcmp(filesystem, "tmpfs"))
@@ -242,9 +229,9 @@ int vfs_mount(const char* target, const char* filesystem) // mount the filesyste
     }
     else if(!strcmp(filesystem, "initramfs"))
     {
-      strcpy(fs->name, "tmpfs");
+      strcpy(fs->name, "initramfs");
 
-      // fs->setup_mount = tmpfs_setup_mount;
+      fs->setup_mount = initramfs_setup_mount;
     }
     else
     {
@@ -253,10 +240,9 @@ int vfs_mount(const char* target, const char* filesystem) // mount the filesyste
     }
 
     register_filesystem(fs);
-    fs->setup_mount(fs, &mount_point);
+    fs->setup_mount(fs, &vnode->mount);
 
-    target_dir->mount = mount_point;
-    mount_point->root->parent = target_dir->parent;
+    vnode->mount->root->parent = vnode->parent;
 
     return 0;
 }
@@ -332,6 +318,42 @@ int vfs_chdir(const char* relative_path)
 
     return 0;
 }
+
+
+int vfs_exec(const char* pathname, char* const argv[])
+{
+    struct file* file;
+    int ret = vfs_open(pathname, O_RW, &file);
+
+    if(ret != 0)
+    {
+        printf("\r\n[ERROR] Cannot open the file");
+        return CERROR;
+    }
+
+    int filesize = file->vnode->f_ops->getsize(file->vnode);
+    void* user_program_addr = balloc(filesize+THREAD_SIZE);
+
+    vfs_read(file, user_program_addr, filesize);
+
+    printf("\r\n[EXEC] File: "); printf(pathname); printf(" , size: "); printf_hex(filesize);
+    
+    preempt_disable(); // leads to get the correct current task
+
+    current->state = TASK_STOPPED;
+
+    unsigned long tmp;
+    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+    tmp |= 1;
+    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+
+    copy_process(PF_KTHREAD, (unsigned long)&kp_user_mode, (unsigned long)user_program_addr, 0);
+
+    preempt_enable();
+
+    return 0;
+}
+
 
 struct vnode* vfs_get_node(const char* pathname, struct vnode** target_dir)
 {
