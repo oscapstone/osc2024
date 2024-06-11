@@ -36,9 +36,24 @@ const Cmd cmds[] = {
         .fp = cmd_cat,
     },
     {
+        .name = "tee",
+        .help = "duplicate standard input",
+        .fp = cmd_tee,
+    },
+    {
         .name = "cd",
         .help = "change current working directory",
         .fp = cmd_cd,
+    },
+    {
+        .name = "mkdir",
+        .help = "make directories",
+        .fp = cmd_mkdir,
+    },
+    {
+        .name = "touch",
+        .help = "change file access and modification times",
+        .fp = cmd_touch,
     },
     {
         .name = "pwd",
