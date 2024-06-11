@@ -202,39 +202,38 @@ void check_signal(struct ucontext *sigframe) // the sigframe is the user context
 
 void do_exec(const char *name, char *const argv[])
 {
-    for (int i = 0; i < file_num; i++)
-    {
-        if (my_strcmp(file_arr[i].path_name, name) == 0) // find the file in the init ramdisk
-        {
-            char *content = file_arr[i].file_content;
-            int size = given_size_hex_atoi(file_arr[i].file_header->c_filesize, 8);
-            task_struct *cur = get_current_task();
-            cur->priority = 1;
+    struct file * file = vfs_open(name, 0);
+    FILE* initramfs_internal = (struct FILE *)file->f_dentry->d_inode->internal;
 
-            disable_interrupt();
-            char *target = kmalloc(size);
-            char *copy = target;
+    char *content = initramfs_internal->file_content;
+    int size = given_size_hex_atoi(initramfs_internal->file_header->c_filesize, 8);
+    vfs_close(file);
 
-            init_mm_struct(cur->mm_struct);
-            // map code
-            mappages(cur->mm_struct, CODE, 0, (unsigned long long)target - VA_START, size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
-            // map ustack
-            mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+    task_struct *cur = get_current_task();
+    cur->priority = 1;
 
-            while (size--) // move the file content to memory
-                *copy++ = *content++;
+    disable_interrupt();
+    char *target = kmalloc(size);
+    char *copy = target;
 
-            switch_mm_irqs_off(cur->mm_struct->pgd);
-            // set sp_el0 to user stack, sp_el1 to kernels stack, elr_el1 to the file content
-            asm volatile(
-                "msr sp_el0, %0\n"
-                "msr elr_el1, %1\n"
-                "mov x10, 0\n"
-                "msr spsr_el1, x10\n"
-                "mov sp, %2\n"
-                "eret\n"
-                :
-                : "r"(0xfffffffff000), "r"(0x0), "r"(cur->kstack));
-        }
-    }
+    init_mm_struct(cur->mm_struct);
+    // map code
+    mappages(cur->mm_struct, CODE, 0, (unsigned long long)target - VA_START, size, PROT_READ | PROT_EXEC, MAP_ANONYMOUS);
+    // map ustack
+    mappages(cur->mm_struct, STACK, 0xffffffffb000, (unsigned long long)(cur->ustack) - 4096 * 4 - VA_START, 4096 * 4, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
+
+    while (size--) // move the file content to memory
+        *copy++ = *content++;
+
+    switch_mm_irqs_off(cur->mm_struct->pgd);
+    // set sp_el0 to user stack, sp_el1 to kernels stack, elr_el1 to the file content
+    asm volatile(
+        "msr sp_el0, %0\n"
+        "msr elr_el1, %1\n"
+        "mov x10, 0\n"
+        "msr spsr_el1, x10\n"
+        "mov sp, %2\n"
+        "eret\n"
+        :
+        : "r"(0xfffffffff000), "r"(0x0), "r"(cur->kstack));
 }

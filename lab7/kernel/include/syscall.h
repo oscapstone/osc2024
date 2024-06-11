@@ -20,8 +20,11 @@
 #define SYS_MKDIR 15
 #define SYS_MOUNT 16
 #define SYS_CHDIR 17
+#define SYS_LSEEK64 18
 
 #define SYS_SIGRETURN 50
+
+#define SEEK_SET 0
 
 struct ucontext
 {
@@ -50,6 +53,7 @@ long read(int fd, void *buf, unsigned long count);
 int mkdir(const char *pathname, unsigned mode);
 int mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
 int chdir(const char *path);
+long lseek64(int fd, long offset, int whence);
 
 void sigreturn();
 

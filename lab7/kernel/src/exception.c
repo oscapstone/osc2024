@@ -142,6 +142,9 @@ void el0_svc_handler_entry(struct ucontext *trapframe)
     case SYS_CHDIR:
         sys_chdir(trapframe);
         break;
+    case SYS_LSEEK64:
+        sys_lseek64(trapframe);
+        break;
 
     case SYS_SIGRETURN:
         sys_sigreturn(trapframe);
@@ -505,7 +508,7 @@ void sys_open(struct ucontext *trapframe)
     const char *pathname = (const char *)trapframe->x[0];
     int flags = (int)trapframe->x[1];
 
-    struct task_struct* cur_task = get_current_task();
+    struct task_struct *cur_task = get_current_task();
     struct file *file = vfs_open(pathname, flags);
 
     if (file == NULL) // opening file fail
@@ -529,7 +532,7 @@ void sys_close(struct ucontext *trapframe)
 {
     int fd = trapframe->x[0];
 
-    struct task_struct* cur_task = get_current_task();
+    struct task_struct *cur_task = get_current_task();
     trapframe->x[0] = vfs_close(cur_task->fd_array[fd]);
     cur_task->fd_array[fd] = NULL;
 }
@@ -540,7 +543,7 @@ void sys_write(struct ucontext *trapframe)
     const void *buf = (const void *)trapframe->x[1];
     unsigned long count = (unsigned long)trapframe->x[2];
 
-    struct task_struct* cur_task = get_current_task();
+    struct task_struct *cur_task = get_current_task();
     trapframe->x[0] = vfs_write(cur_task->fd_array[fd], buf, count);
 }
 
@@ -550,7 +553,7 @@ void sys_read(struct ucontext *trapframe)
     void *buf = (void *)trapframe->x[1];
     unsigned long count = (unsigned long)trapframe->x[2];
 
-    struct task_struct* cur_task = get_current_task();
+    struct task_struct *cur_task = get_current_task();
     trapframe->x[0] = vfs_read(cur_task->fd_array[fd], buf, count);
 }
 
@@ -572,6 +575,22 @@ void sys_chdir(struct ucontext *trapframe)
 {
     const char *pathname = (const char *)trapframe->x[0];
     trapframe->x[0] = vfs_chdir(pathname);
+}
+
+void sys_lseek64(struct ucontext *trapframe)
+{
+    int fd = (int)trapframe->x[0];
+    long offset = (long)trapframe->x[1];
+    int whence = (int)trapframe->x[2];
+
+    struct task_struct *cur_task = get_current_task();
+    if(whence == SEEK_SET)
+    {
+        cur_task->fd_array[fd]->f_pos = offset;
+        trapframe->x[0] = 1;
+    }
+    else
+        trapframe->x[0] = -1;
 }
 
 void sys_sigreturn(struct ucontext *trapframe)

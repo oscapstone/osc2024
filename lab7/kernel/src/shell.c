@@ -14,7 +14,7 @@
 
 void exec_syscall_img()
 {
-    do_exec("vfs1.img", NULL);
+    do_exec("/initramfs/vfs1.img", NULL);
 }
 
 void shell_cmd(char *cmd)

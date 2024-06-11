@@ -4,6 +4,7 @@
 #include "uart.h"
 #include "schedule.h"
 #include "cpio.h"
+#include "mailbox.h"
 #include "vfs.h"
 
 struct filesystem *file_systems;
@@ -22,6 +23,11 @@ static struct filesystem initramfs_type = {
 static struct filesystem uartfs_type = {
 	.name = "uartfs",
 	.setup_mount = uartfs_setup_mount,
+	.next = NULL};
+
+static struct filesystem framebufferfs_type = {
+	.name = "framebufferfs",
+	.setup_mount = framebufferfs_setup_mount,
 	.next = NULL};
 
 int register_filesystem(struct filesystem *fs)
@@ -301,6 +307,7 @@ void rootfs_init()
 	register_filesystem(&tmpfs_type);
 	register_filesystem(&initramfs_type);
 	register_filesystem(&uartfs_type);
+	register_filesystem(&framebufferfs_type);
 
 	struct filesystem *cur = file_systems;
 	for (; cur != NULL; cur = cur->next) // find tmpfs
@@ -318,4 +325,6 @@ void rootfs_init()
 	vfs_mkdir("/dev");
 	vfs_mkdir("/dev/uart");
 	vfs_mount("tmpfs", "/dev/uart", "uartfs");
+	vfs_mkdir("/dev/framebuffer");
+	vfs_mount("tmpfs", "/dev/framebuffer", "framebufferfs");
 }

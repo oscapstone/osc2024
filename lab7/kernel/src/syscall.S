@@ -19,6 +19,7 @@
 #define SYS_MKDIR 15
 #define SYS_MOUNT 16
 #define SYS_CHDIR 17
+#define SYS_LSEEK64 18
 
 #define SYS_SIGRETURN 50
 
@@ -127,6 +128,12 @@ mount:
 .global chdir
 chdir:
     mov x8, SYS_CHDIR
+    svc #0
+    ret
+
+.global lseek64
+lseek64:
+    mov x8, SYS_LSEEK64
     svc #0
     ret
 

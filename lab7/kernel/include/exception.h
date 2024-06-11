@@ -36,6 +36,7 @@ void sys_read(struct ucontext *trapframe);
 void sys_mkdir(struct ucontext *trapframe);
 void sys_mount(struct ucontext *trapframe);
 void sys_chdir(struct ucontext *trapframe);
+void sys_lseek64(struct ucontext *trapframe);
 
 void sys_sigreturn(struct ucontext *trapframe);
 

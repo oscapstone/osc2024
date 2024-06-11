@@ -69,9 +69,11 @@ int uartfs_write(struct file *file, const void *buf, size_t len)
 int uartfs_read(struct file *file, void *buf, size_t len)
 {
     char *target = (char *)buf;
+    enable_interrupt();
     for (int i = 0; i < len; i++)
         target[i] = uart_read();
-
+    disable_interrupt();
+    
     return len;
 }
 
