@@ -169,8 +169,8 @@ frame_t* release_redundant_block(frame_t *frame) {
 
 frame_t* get_buddy(frame_t *frame) {
     // XOR(idx, order)
-    uart_puts("index: %d, order: %d\r\n", frame->idx, (1 << frame->val));
-    uart_puts("buddy index: %d\r\n", frame->idx ^ (1 << frame->val));
+    // uart_puts("index: %d, order: %d\r\n", frame->idx, (1 << frame->val));
+    // uart_puts("buddy index: %d\r\n", frame->idx ^ (1 << frame->val));
     return &frame_array[frame->idx ^ (1 << frame->val)];
 }
 
@@ -190,7 +190,7 @@ int coalesce(frame_t *frame_ptr) {
 
     list_del_entry((struct list_head *)buddy);
     frame_ptr->val += 1;
-    uart_puts("      coalesce detected, merging 0x%x, 0x%x, -> val = %d\r\n", frame_ptr->idx, buddy->idx, frame_ptr->val);
+    uart_puts("    coalesce detected, merging 0x%x, 0x%x, -> val = %d\r\n", frame_ptr->idx, buddy->idx, frame_ptr->val);
     return 0;
 }
 
@@ -280,9 +280,9 @@ void memory_reserve(unsigned long long start, unsigned long long end) {
     start -= start % PAGE_SIZE; // floor (align 0x1000)
     end = end % PAGE_SIZE ? end + PAGE_SIZE - (end % PAGE_SIZE) : end; // ceiling (align 0x1000)
 
-    uart_puts("Reserved Memory: ");
-    uart_puts("start 0x%x ~ ", start);
-    uart_puts("end 0x%x\r\n",end);
+    uart_puts("    Reserved Memory: ");
+    uart_puts("    start 0x%x ~ ", start);
+    uart_puts("    end 0x%x\r\n",end);
 
     // delete page from free list
     for (int order = FRAME_IDX_FINAL; order >= 0; order--) {
@@ -293,12 +293,12 @@ void memory_reserve(unsigned long long start, unsigned long long end) {
 
             if (start <= pagestart && end >= pageend) { // if page all in reserved memory -> delete it from freelist
                 ((frame_t *)pos)->used = FRAME_VAL_USED;
-                uart_puts("    [!] Reserved page in 0x%x - 0x%x\n", pagestart, pageend);
-                uart_puts("        Before\n");
+                uart_puts("[!] Reserved page in 0x%x - 0x%x\n", pagestart, pageend);
+                uart_puts("    Before\n");
                 dump_page_info();
                 list_del_entry(pos);
-                uart_puts("        Remove usable block for reserved memory: order %d\r\n", order);
-                uart_puts("        After\n");
+                uart_puts("    Remove usable block for reserved memory: order %d\r\n", order);
+                uart_puts("    After\n");
                 dump_page_info();
             } else if (start >= pageend || end <= pagestart) { 
                 // no intersection
@@ -317,11 +317,11 @@ void memory_reserve(unsigned long long start, unsigned long long end) {
 void memory_init() {
     allocator_init();
     memory_reserve(0x0000, 0x1000); // Spin tables for multicore boot (0x0000 - 0x1000)
-    uart_puts("_start: 0x%x, _end: 0x%x\n", &_start, &_end);
+    uart_puts("    _start: 0x%x, _end: 0x%x\n", &_start, &_end);
     memory_reserve((size_t)&_start, (size_t)&_end);
-    uart_puts("CPIO_START: 0x%x, CPIO_END: 0x%x\n", CPIO_START, CPIO_END);
+    uart_puts("    CPIO_START: 0x%x, CPIO_END: 0x%x\n", CPIO_START, CPIO_END);
     memory_reserve((size_t)CPIO_START, (size_t)CPIO_END);
-    uart_puts("DTB_START: 0x%x, DTB_END: 0x%x\n", DTB_START, DTB_END);
+    uart_puts("    DTB_START: 0x%x, DTB_END: 0x%x\n", DTB_START, DTB_END);
     memory_reserve((size_t)DTB_START, (size_t)DTB_END);
 }
       

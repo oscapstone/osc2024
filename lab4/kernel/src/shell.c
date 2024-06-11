@@ -320,17 +320,17 @@ void cmd_kmalloc() {
     puts("\r\n");
 
     char *test3 = kmalloc(0x10000);
-    strcpy(test3, "  test kmalloc2");
+    strcpy(test3, "  test kmalloc3");
     puts(test3);
     puts("\r\n");
 
     char *test4 = kmalloc(0x10000);
-    strcpy(test4, "  test kmalloc2");
+    strcpy(test4, "  test kmalloc4");
     puts(test4);
     puts("\r\n");
 
     char *test5 = kmalloc(0x28);
-    strcpy(test5, "  test kmalloc3");
+    strcpy(test5, "  test kmalloc5");
     puts(test5);
     puts("\r\n\r\n");
 
