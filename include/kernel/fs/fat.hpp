@@ -55,10 +55,11 @@ constexpr uint32_t FAT_EOC = 0x0FFFFFFF;
 constexpr uint32_t FAT_BAD_CLUSTER = 0x0FFFFFF7;
 
 struct FAT_Ent {
-  uint32_t reserved : 4;
   uint32_t cluster : 28;
+  uint32_t reserved : 4;
+
   bool eof() const {
-    return cluster == FAT_EOF;
+    return cluster >= FAT_EOF;
   }
   bool eoc() const {
     return cluster == FAT_EOC;

@@ -345,12 +345,13 @@ void Vnode::_sync() {
 }
 
 uint32_t FileSystem::alloc_cluster() {
-  uint32_t N = fsinfo->FSI_Nxt_Free == 0xFFFFFFFF ? 2 : fsinfo->FSI_Nxt_Free;
+  uint32_t N = fsinfo->FSI_Nxt_Free == (uint32_t)-1 ? 2 : fsinfo->FSI_Nxt_Free;
 
   uint32_t last_read_sec = 0;
-  auto buf = new FAT_Ent[BLOCK_SIZE / 4];
+  constexpr size_t FAT_SIZE = BLOCK_SIZE / 4;
+  auto buf = new FAT_Ent[FAT_SIZE];
 
-  while (true) {
+  for (;; N++) {
     auto FATOffset = N * 4;
     auto ThisFATSecNum =
         bpb->BPB_RsvdSecCnt + (FATOffset / bpb->BPB_BytsPerSec);
@@ -363,12 +364,23 @@ uint32_t FileSystem::alloc_cluster() {
       FS_HEXDUMP("read FAT", buf, BLOCK_SIZE);
     }
 
-    if (buf[idx].free()) {
-      FS_INFO("N = %u / Sec %u / off 0x%x\n", N, ThisFATSecNum,
-              ThisFATEntOffset);
-      buf[idx].cluster = 1;
+    FS_INFO("N = 0x%x / %x\n", N, buf[idx].cluster);
+
+    if (buf[idx].free() or buf[idx].eof()) {
+      buf[idx].cluster = N + 1;
+      FS_INFO("N = 0x%x / Sec 0x%x / off 0x%x / idx %x / %x\n", N,
+              ThisFATSecNum, ThisFATEntOffset, idx, buf[idx].cluster);
+      if (idx + 1 < FAT_SIZE and buf[idx + 1].free())
+        buf[idx].cluster = FAT_EOC;
       write_data(ThisFATSecNum, buf, 0, BLOCK_SIZE);
       FS_HEXDUMP("write FAT", buf, BLOCK_SIZE);
+      if (idx + 1 == FAT_SIZE) {
+        read_data(ThisFATSecNum + 1, buf, BLOCK_SIZE);
+        if (buf[0].free()) {
+          buf[0].cluster = FAT_EOC;
+          write_data(ThisFATSecNum + 1, buf, 0, BLOCK_SIZE);
+        }
+      }
       break;
     }
   }
