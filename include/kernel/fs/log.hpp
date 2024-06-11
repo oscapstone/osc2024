@@ -1,6 +1,6 @@
 #pragma once
 
-#define FS_LOG_LEVEL 2
+#define FS_LOG_LEVEL 0
 #include "io.hpp"
 
 #if FS_LOG_LEVEL >= 2

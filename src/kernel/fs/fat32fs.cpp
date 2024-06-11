@@ -100,7 +100,6 @@ Vnode::Vnode(const ::Mount* mount)
     : Base{mount, kDir},
       _offset{ROOT_OFFSET},
       _cluster{fs()->bpb->BPB_RootClus} {
-  FS_INFO("vnode sync %d / %u / %p\n", isDir(), _cluster, this);
   _load_childs();
 }
 
@@ -310,7 +309,6 @@ FAT32_DirEnt Vnode::_get_dirent(const char* name) const {
 }
 
 void Vnode::_sync() {
-  FS_INFO("vnode sync %d / %u / %p\n", isDir(), _cluster, this);
   if (isDir()) {
     if (_cluster == NO_CLUSTER) {
       // TODO
@@ -321,7 +319,6 @@ void Vnode::_sync() {
       if (child.node == this or child.node == parent())
         continue;
       auto vnode = static_cast<Vnode*>(child.node);
-      FS_INFO("sync %s\n", child.name);
       vnode->_sync();
       if (vnode->_offset == NO_OFFSET) {
         vnode->_offset = _find_dir_off();
@@ -330,13 +327,11 @@ void Vnode::_sync() {
       }
       if (vnode->_modified) {
         auto ent = vnode->_get_dirent(child.name);
-        khexdump(&ent, sizeof(ent));
         fs()->write_data(fs()->cluster2sector(_cluster), &ent,
                          vnode->_offset * sizeof(FAT32_DirEnt));
         vnode->_modified = false;
 
         fs()->read_block(fs()->cluster2sector(_cluster));
-        khexdump(fs()->block_buf, BLOCK_SIZE);
       }
     }
   } else {
