@@ -75,19 +75,24 @@ bool Vnode::_resize(size_t new_size) {
   return true;
 }
 
+void Vnode::_load_content() {
+  if (not _load) {
+    _load = true;
+    _content.resize(_filesize);
+    auto idx = fs()->cluster2sector(_cluster);
+    FS_INFO("%s: size %u from idx %u\n", __func__, _filesize, idx);
+    fs()->read_data(idx, _content.data(), _filesize);
+  }
+}
+
 char* Vnode::_write_ptr() {
+  _load_content();
   _modified = true;
   return _content.data();
 }
 
 const char* Vnode::_read_ptr() {
-  if (not _load) {
-    _load = true;
-    _content.resize(_filesize);
-    auto idx = fs()->cluster2sector(_cluster);
-    FS_INFO("_load_content: size %u from idx %u\n", _filesize, idx);
-    fs()->read_data(idx, _content.data(), _filesize);
-  }
+  _load_content();
   return _content.data();
 }
 
@@ -335,11 +340,42 @@ void Vnode::_sync() {
       }
     }
   } else {
-    if (_cluster == NO_CLUSTER) {
-      // TODO
+    if (_modified) {
+      if (_cluster == NO_CLUSTER)
+        _cluster = fs()->alloc_cluster();
+      fs()->write_data(fs()->cluster2sector(_cluster), _content.data(), 0,
+                       _content.size());
     }
-    // fs()->write_data(_cluster, _content.data(), _content.size());
   }
+}
+
+uint32_t FileSystem::alloc_cluster() {
+  uint32_t N = fsinfo->FSI_Nxt_Free == 0xFFFFFFFF ? 2 : fsinfo->FSI_Nxt_Free;
+
+  uint32_t last_read_sec = 0;
+  auto buf = new FAT_Ent[BLOCK_SIZE];
+
+  while (true) {
+    auto FATOffset = N * 4;
+    auto ThisFATSecNum =
+        bpb->BPB_RsvdSecCnt + (FATOffset / bpb->BPB_BytsPerSec);
+    auto ThisFATEntOffset = FATOffset % bpb->BPB_BytsPerSec;
+
+    if (last_read_sec != ThisFATSecNum) {
+      last_read_sec = ThisFATSecNum;
+      read_data(ThisFATSecNum, buf, BLOCK_SIZE);
+    }
+
+    if (buf[ThisFATEntOffset].free()) {
+      buf[ThisFATEntOffset].cluster = 1;
+      write_data(ThisFATSecNum, buf, 0, BLOCK_SIZE);
+      break;
+    }
+  }
+
+  delete[] buf;
+
+  return N;
 }
 
 void FileSystem::sync(const Mount* mount_root) {

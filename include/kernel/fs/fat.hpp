@@ -49,6 +49,7 @@ struct FAT32_FSInfo {
   }
 } __attribute__((__packed__));
 
+constexpr uint32_t FAT_FREE = 0;
 constexpr uint32_t FAT_EOF = 0x0FFFFFF8;
 constexpr uint32_t FAT_EOC = 0x0FFFFFFF;
 constexpr uint32_t FAT_BAD_CLUSTER = 0x0FFFFFF7;
@@ -64,6 +65,9 @@ struct FAT_Ent {
   }
   bool bad() const {
     return cluster == FAT_BAD_CLUSTER;
+  }
+  bool free() const {
+    return cluster == FAT_FREE;
   }
 };
 static_assert(sizeof(FAT_Ent) == 4);

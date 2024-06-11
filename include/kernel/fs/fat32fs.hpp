@@ -31,6 +31,7 @@ class Vnode final : public ::VnodeImplRW<Vnode, File> {
   void _load_childs();
 
   bool _resize(size_t new_size);
+  void _load_content();
   char* _write_ptr();
   const char* _read_ptr();
   uint32_t _find_dir_off();
@@ -127,7 +128,8 @@ class FileSystem final : public ::FileSystem {
     // TODO: handle case when size > BLOCK_SIZE
     auto off = offset % BLOCK_SIZE, adj = offset / BLOCK_SIZE;
     auto s = (char*)t;
-    read_block(idx + adj);
+    if (size < BLOCK_SIZE)
+      read_block(idx + adj);
     memcpy(block_buf + off, s, size);
     write_block(idx + adj);
   }
@@ -140,6 +142,8 @@ class FileSystem final : public ::FileSystem {
   uint32_t cluster2sector(uint32_t N) {
     return ((N - 2) * bpb->BPB_SecPerClus) + FirstDataSector;
   };
+
+  uint32_t alloc_cluster();
 
  public:
   FileSystem();
