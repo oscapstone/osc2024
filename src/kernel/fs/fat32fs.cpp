@@ -269,9 +269,17 @@ uint32_t Vnode::_find_dir_off() {
 
 FAT32_DirEnt Vnode::_get_dirent(const char* name) const {
   FAT32_DirEnt ent{
+      .DIR_Name{},
       .DIR_Attr =
           isDir() ? FILE_Attrs::ATTR_DIRECTORY : FILE_Attrs::ATTR_ARCHIVE,
+      .DIR_NTRes{},
+      .DIR_CrtTimeTenth = 0,
+      .DIR_CrtTime = 0,
+      .DIR_CrtDate = 0x0011,
+      .DIR_LstAccDate = 0x0011,
       .DIR_FstClusHI = (uint16_t)(_cluster >> 16),
+      .DIR_WrtTime = 0,
+      .DIR_WrtDate = 0x0011,
       .DIR_FstClusLO = (uint16_t)(_cluster & MASK(16)),
       .DIR_FileSize = _filesize,
   };
