@@ -129,14 +129,12 @@ void run_signal(int signal)
 	void (*signal_handler)() = get_signal_handler_frome_thread(curr_thread, signal);
 	// run registered handler in userspace
 	curr_thread->signal.signal_stack_base = kmalloc(USTACK_SIZE);
-	kernel_lock_interrupt();
 	JUMP_TO_USER_SPACE(signal_handler_wrapper, signal_handler, curr_thread->signal.signal_stack_base + USTACK_SIZE, NULL);
 }
 
 void signal_handler_wrapper(char *dest)
 {
-	DEBUG("Signal handler wrapper\n");
-	run_user_task_wrapper(dest);
+	((void (*)(void))dest)();
 	// system call sigreturn
 	CALL_SYSCALL(SYSCALL_SIGNAL_RETURN);
 }

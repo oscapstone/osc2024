@@ -146,8 +146,10 @@ el1h_error_invalid:
 
 el0_sync_64:
     save_all
+    bl el1_interrupt_enable
     mov x0, sp
     bl el0_sync_router
+    bl el1_interrupt_disable
     load_all
     eret
 el0_irq_64:

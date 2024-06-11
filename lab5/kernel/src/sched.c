@@ -100,22 +100,25 @@ void init_thread_sched()
 	// idle process
 	char *thread_name = kmalloc(5);
 	strcpy(thread_name, "idle");
-	curr_thread = _init_create_thread(thread_name, 0, 0, idle);
-	set_current_thread_context(&(threads[0]->context));
-	
+	thread_t *idle_thread = _init_create_thread(thread_name, 0, 0, idle);
+	set_current_thread_context(&(idle_thread->context));
+	curr_thread = idle_thread;
+
 	// init process
 	thread_name = kmalloc(5);
 	strcpy(thread_name, "init");
 	thread_t *init_thread = thread_create(init, thread_name);
 	init_thread->datasize = 0x4000;
+	curr_thread = init_thread;
 
 	// kshell process
 	thread_name = kmalloc(7);
 	sprintf(thread_name, "kshell");
 	thread_t *kshell = thread_create(start_shell, thread_name);
 	kshell->datasize = 0x100000;
-
-    schedule_timer();
+	schedule_timer();
+	curr_thread = idle_thread;
+	DEBUG("init_thread: 0x%x, kshell: 0x%x\n", init_thread, kshell);
 	kernel_unlock_interrupt();
 }
 

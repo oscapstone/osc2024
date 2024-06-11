@@ -53,5 +53,4 @@ load_context:
     ldp fp, lr, [x0, 16 * 5]
     ldr x9, [x0, 16 * 6]
     mov sp,  x9
-    msr tpidr_el1, x0          // update current thread context address
     ret

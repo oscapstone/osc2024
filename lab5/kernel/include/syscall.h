@@ -17,23 +17,24 @@
  * @param user_sp Pointer to the user stack.
  * @param kernel_sp Pointer to the kernel stack.
  */
-#define JUMP_TO_USER_SPACE(wrapper, dest, user_sp, kernel_sp)                                                     \
-	do                                                                                                            \
-	{                                                                                                             \
-		DEBUG("Jump to user space\n");                                                                            \
-		curr_thread->context.lr = (uint64_t)wrapper;                                                              \
-		if (kernel_sp != NULL)                                                                                    \
-			asm volatile("mov sp, %0\n\t" ::"r"(kernel_sp)); /* set kernel stack pointer */                       \
-		if (user_sp != NULL)                                                                                      \
-			asm volatile("msr sp_el0, %0\n\t" ::"r"(user_sp)); /* el0 stack pointer for el1 process */            \
-		asm volatile(                                                                                             \
-			"msr tpidr_el1, %0\n\t" /* Hold the \"kernel(el1)\" thread structure information */                   \
-			"msr elr_el1, %1\n\t"	/* When el0 -> el1, store return address for el1 -> el0 */                    \
-			"msr spsr_el1, xzr\n\t" /* Enable interrupt in EL0 -> Used for thread scheduler */                    \
-			"mov x0, %2\n\t"		/* Move destination address to x0 */                                          \
-			"eret\n\t"                                                                                            \
-			:                                                                                                     \
-			: "r"(&curr_thread->context), "r"(curr_thread->context.lr), "r"(dest)); \
+#define JUMP_TO_USER_SPACE(wrapper, dest, user_sp, kernel_sp)                                          \
+	do                                                                                                 \
+	{                                                                                                  \
+		DEBUG("Jump to user space\n");                                                                 \
+		curr_thread->context.lr = (uint64_t)wrapper;                                                   \
+		if (kernel_sp != NULL)                                                                         \
+			asm volatile("mov sp, %0\n\t" ::"r"(kernel_sp)); /* set kernel stack pointer */            \
+		if (user_sp != NULL)                                                                           \
+			asm volatile("msr sp_el0, %0\n\t" ::"r"(user_sp)); /* el0 stack pointer for el1 process */ \
+		el1_interrupt_disable();                                                                       \
+		asm volatile(                                                                                  \
+			"msr tpidr_el1, %0\n\t" /* Hold the \"kernel(el1)\" thread structure information */        \
+			"msr elr_el1, %1\n\t"	/* When el0 -> el1, store return address for el1 -> el0 */         \
+			"msr spsr_el1, xzr\n\t" /* Enable interrupt in EL0 -> Used for thread scheduler */         \
+			"mov x0, %2\n\t"		/* Move destination address to x0 */                               \
+			"eret\n\t"                                                                                 \
+			:                                                                                          \
+			: "r"(&curr_thread->context), "r"(curr_thread->context.lr), "r"(dest));                    \
 	} while (0)
 
 #define CALL_SYSCALL(syscall_num) \

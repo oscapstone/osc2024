@@ -1,4 +1,5 @@
 #include "bcm2837/rpi_mmu.h"
+#include "bcm2837/rpi_base.h"
 #include "mmu.h"
 #include "memory.h"
 #include "string.h"

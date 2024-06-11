@@ -34,9 +34,8 @@ extern thread_t *curr_thread;
  */
 void run_user_task_wrapper(char *dest)
 {
-	DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
-	unlock_interrupt();
 	((void (*)(void))dest)();
+	CALL_SYSCALL(SYSCALL_EXIT);
 }
 
 /**
@@ -405,7 +404,7 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d\r\n", program_name, curr_thread->code, filesize);
 	MEMCPY(curr_thread->code, filedata, filesize);
 	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
-
+	kernel_unlock_interrupt();
 	JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
 	return 0;
 }

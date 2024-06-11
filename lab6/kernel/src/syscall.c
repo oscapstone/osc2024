@@ -35,11 +35,8 @@ extern thread_t *curr_thread;
  */
 void run_user_task_wrapper(char *dest)
 {
-	// DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
-	// unlock_interrupt();
-	CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
-
 	((void (*)(void))dest)();
+	CALL_SYSCALL(SYSCALL_EXIT);
 }
 
 /**
@@ -502,7 +499,7 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	DEBUG("VA of run_user_task_wrapper: 0x%x, USER_RUN_USER_TASK_WRAPPER_VA: 0x%x\r\n", run_user_task_wrapper, USER_RUN_USER_TASK_WRAPPER_VA);
 	DEBUG("VA of signal_handler_wrapper: 0x%x, USER_SIGNAL_WRAPPER_VA: 0x%x\r\n", signal_handler_wrapper, USER_SIGNAL_WRAPPER_VA);
 	DEBUG("VA of user sp: 0x%x", USER_STACK_BASE);
-	// JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA + (uint64_t)run_user_task_wrapper % PAGE_FRAME_SIZE, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
+	kernel_unlock_interrupt();
 	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
 	return 0;
 }

@@ -32,5 +32,6 @@ void main(char *arg)
     DEBUG("sched_init\r\n");
     init_thread_sched();
 
+    set_current_thread_context(&curr_thread->context);
     load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
 }

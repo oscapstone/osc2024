@@ -222,11 +222,7 @@ void schedule_timer()
 	uint64_t cntfrq_el0;
 	__asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0));
 	// 32 * default timer -> trigger next schedule timer
-#if _DEBUG >= LEVEL_INFO
-	add_timer_by_tick(cntfrq_el0 >> 2, adapter_schedule_timer, NULL);
-#else
 	add_timer_by_tick(cntfrq_el0 >> 5, adapter_schedule_timer, NULL);
-#endif
 	need_to_schedule = 1;
 }
 
