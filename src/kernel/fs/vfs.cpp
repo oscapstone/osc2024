@@ -26,10 +26,11 @@ void init_vfs() {
   register_filesystem(new fat32fs::FileSystem());
 
   auto tmpfs = get_filesystem("tmpfs");
-  auto mount_root = new Mount{.fs = tmpfs};
+  auto mount_root = new Mount{.fs = tmpfs, .path = "/"};
   root_node = tmpfs->mount(mount_root);
   root_node->set_parent(root_node);
   mount_root->root = root_node;
+  mounts.push_back(mount_root);
 
   mkdir("/initramfs");
   mount("/initramfs", "initramfs");
@@ -333,8 +334,10 @@ SYSCALL_DEFINE0(sync) {
 }
 
 void vfs_sync() {
-  for (auto mount : mounts)
+  for (auto mount : mounts) {
+    klog("sync '%s' %s\n", mount->path.data(), mount->fs->name());
     mount->fs->sync(mount);
+  }
 }
 
 Vnode* vfs_lookup(const char* pathname) {
