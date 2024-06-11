@@ -66,12 +66,6 @@ void Vnode::_load_childs(size_t cluster) {
   delete[] buf;
 }
 
-void Vnode::_load_metadata() {
-  _filesize = _dirent->DIR_FileSize;
-  _load = false;
-  _cluster = _dirent->FstClus();
-}
-
 const char* Vnode::_load_content() {
   if (not _load) {
     _load = true;
@@ -83,23 +77,22 @@ const char* Vnode::_load_content() {
   return _content.data();
 }
 
-Vnode::Vnode(const ::Mount* mount)
-    : ::VnodeImpl<Vnode, File>{mount, kDir}, _dirent(nullptr) {
+Vnode::Vnode(const ::Mount* mount) : ::VnodeImpl<Vnode, File>{mount, kDir} {
   _load_childs(fs()->bpb->BPB_RootClus);
 }
 
 Vnode::Vnode(const ::Mount* mount, FAT32_DirEnt* dirent)
-    : ::VnodeImpl<Vnode, File>{mount,
-                               has(dirent->DIR_Attr, FILE_Attrs::ATTR_DIRECTORY)
-                                   ? kDir
-                                   : kFile},
-      _dirent(dirent) {
+    : ::VnodeImpl<Vnode, File>{
+          mount,
+          has(dirent->DIR_Attr, FILE_Attrs::ATTR_DIRECTORY) ? kDir : kFile} {
   switch (type) {
     case kFile:
-      _load_metadata();
+      _filesize = dirent->DIR_FileSize;
+      _load = false;
+      _cluster = dirent->FstClus();
       break;
     case kDir:
-      _load_childs(_dirent->FstClus());
+      _load_childs(dirent->FstClus());
       break;
   }
 }

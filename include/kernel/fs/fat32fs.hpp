@@ -17,14 +17,12 @@ class Vnode final : public ::VnodeImpl<Vnode, File> {
 
   FileSystem* fs() const;
 
-  FAT32_DirEnt* _dirent;
   uint32_t _filesize, _cluster;
   bool _load;
   string _content;
 
   static string _get_name(const FAT32_DirEnt* dirent);
   void _load_childs(size_t cluster);
-  void _load_metadata();
   const char* _load_content();
 
  public:
