@@ -269,6 +269,7 @@ int vfs_mount(const char* target, const char* filesystem) {
     goto cleanup;
   }
 
+  mount_root->root = new_vnode;
   r = dir->mount(basename, new_vnode);
 
   if (r >= 0) {

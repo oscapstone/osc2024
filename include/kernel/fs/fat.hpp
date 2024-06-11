@@ -53,6 +53,21 @@ constexpr uint32_t FAT_EOF = 0x0FFFFFF8;
 constexpr uint32_t FAT_EOC = 0x0FFFFFFF;
 constexpr uint32_t FAT_BAD_CLUSTER = 0x0FFFFFF7;
 
+struct FAT_Ent {
+  uint32_t reserved : 4;
+  uint32_t cluster : 28;
+  bool eof() const {
+    return cluster == FAT_EOF;
+  }
+  bool eoc() const {
+    return cluster == FAT_EOC;
+  }
+  bool bad() const {
+    return cluster == FAT_BAD_CLUSTER;
+  }
+};
+static_assert(sizeof(FAT_Ent) == 4);
+
 enum class FILE_Attrs : uint8_t {
   ATTR_READ_ONLY = 0x01,
   ATTR_HIDDEN = 0x02,
@@ -65,6 +80,9 @@ enum class FILE_Attrs : uint8_t {
                         ATTR_VOLUME_ID | ATTR_DIRECTORY | ATTR_ARCHIVE,
   MARK_AS_BITMASK_ENUM(ATTR_ARCHIVE),
 };
+
+constexpr uint8_t DIR_ENTRY_UNUSED = 0xE5;
+constexpr uint8_t DIR_ENTRY_FREE = 0x00;
 
 struct FAT32_DirEnt {
   union {
@@ -88,14 +106,17 @@ struct FAT32_DirEnt {
   uint32_t FstClus() const {
     return (DIR_FstClusHI << 16) | DIR_FstClusLO;
   }
-  bool invalid() const {
-    return (unsigned char)DIR_Name[0] == 0xE5;
+  bool unused() const {
+    return (unsigned char)DIR_Name[0] == DIR_ENTRY_UNUSED;
+  }
+  void set_unused() {
+    DIR_Name[0] = DIR_ENTRY_UNUSED;
   }
   bool end() const {
-    return DIR_Name[0] == 0;
+    return DIR_Name[0] == DIR_ENTRY_FREE;
   }
   bool valid() const {
-    return not end() and not invalid();
+    return not end() and not unused();
   }
   bool is_long_name() const {
     return (DIR_Attr & FILE_Attrs::ATTR_LONG_NAME_MASK) ==
