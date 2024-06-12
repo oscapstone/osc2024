@@ -4,7 +4,7 @@ import os.path
 import sys
 import time
 
-port = '/dev/pts/4'
+port = '/dev/pts/2'
 s = serial.Serial(port, baudrate=115200)
 
 def read_line(s):

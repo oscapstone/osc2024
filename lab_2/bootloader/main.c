@@ -26,6 +26,8 @@
 #include "include/uart.h"
 #include "include/utils.h"
 #include "include/mbox.h"
+#include "include/stdint.h"
+#include "include/device_tree.h"
 
 void load_img(){
     unsigned int size = 0;
@@ -47,14 +49,11 @@ void load_img(){
 
 }
 
-void relocator(int argc, char* argv[]){
-    asm volatile(
-       "mov x10, x0"
-    );
+void relocator(uintptr_t dtb_address){
     uart_init();
+    // header_parser(dtb_address);
     load_img();
     asm volatile(
-       "mov x0, x10;"
        "mov x30, 0x80000;"
        "ret;"
     );

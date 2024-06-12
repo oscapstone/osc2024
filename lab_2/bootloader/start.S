@@ -22,8 +22,10 @@ _relocate:
     sub     w2, w2, #1
     cbnz    w2, 2b
 
-    // jump to relocated C code, should not return
-3:  bl      relocator-0x20000
+
+3:  // Device tree address has been moved from x0 to x10 within the bootloader.
+    mov x0, x10
+    bl      relocator-0x20000
     b _start
 
 
