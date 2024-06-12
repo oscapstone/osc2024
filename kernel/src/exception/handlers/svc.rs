@@ -1,3 +1,4 @@
+use super::page::page_fault;
 use crate::exception::trap_frame;
 use core::{arch::asm, fmt::Debug};
 use stdio::{debug, println};
@@ -53,40 +54,31 @@ impl Debug for Syscall {
 }
 
 #[no_mangle]
-unsafe fn svc_handler(eidx: u64, sp: u64) {
-    trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
-    // let syscall = Syscall::new(sp);
-    // println!("Exception {}", eidx);
-    // debug!("Syscall idx: {}", syscall.idx);
-    // debug!("Syscall {:?}", syscall);
-    match eidx {
-        4 => el1_interrupt(sp),
-        8 => {
-            let esr_el1: u64;
-            let elr_el1: u64;
-            let current_el: u64;
-            let far_el1: u64;
-            asm!(
-                "mrs {0}, esr_el1",
-                "mrs {1}, elr_el1",
-                "mrs {2}, CurrentEL",
-                "mrs {3}, far_el1",
-                out(reg) esr_el1,
-                out(reg) elr_el1,
-                out(reg) current_el,
-                out(reg) far_el1,
-            );
-            debug!("ESR_EL1: 0x{:x}", esr_el1);
-            debug!("ELR_EL1: 0x{:x}", elr_el1);
-            debug!("CurrentEL: 0x{:x}", current_el);
-            debug!("FAR_EL1: 0x{:x}", far_el1);
-            syscall_handler(sp)
+unsafe fn lower_exception_handler(eidx: u64, sp: u64) {
+    let esr_el1: u64;
+    asm!(
+        "mrs {0}, esr_el1",
+        out(reg) esr_el1,
+    );
+    let ec = esr_el1 >> 26;
+    match ec {
+        0b010101 => svc_handler(sp),
+        0b001110 => {
+            panic!("Illegal Execution state.");
         }
+        0b100000 => page_fault(),
         _ => {
             println!("Exception {}", eidx);
             println!("Unknown exception");
+            println!("ec: 0b{:06b}", ec);
+            el1_interrupt(sp);
         }
     }
+}
+
+unsafe fn svc_handler(sp: u64) {
+    trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
+    syscall_handler(sp);
     trap_frame::TRAP_FRAME.unwrap().restore();
     trap_frame::TRAP_FRAME = None;
 }

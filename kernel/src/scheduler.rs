@@ -1,5 +1,7 @@
 use crate::exception::trap_frame::TRAP_FRAME;
 use crate::thread::Thread;
+use alloc::alloc::alloc;
+use alloc::alloc::Layout;
 use alloc::boxed::Box;
 use alloc::collections::VecDeque;
 use alloc::string::String;
@@ -7,6 +9,7 @@ use alloc::vec::Vec;
 use core::arch::asm;
 use core::time::Duration;
 use stdio::println;
+
 pub struct Scheduler {
     pub current: Option<usize>,
     pub threads: Vec<Option<Box<Thread>>>,
@@ -74,8 +77,9 @@ impl Scheduler {
         // println!("Switching from {} to {}", current, next);
     }
 
-    pub fn create_thread(&mut self, entry: extern "C" fn()) {
-        let thread = Box::new(Thread::new(0x2000, entry));
+    pub fn create_thread(&mut self, entry: *mut u8, len: usize) {
+        let thread = Box::new(Thread::new(0x1000, entry, len));
+        println!("Creating thread");
         let tid = self.add_thread(thread);
         println!("Created thread {}", tid);
         self.ready_queue.push_back(tid);
@@ -105,11 +109,8 @@ impl Scheduler {
         assert!(thread.id == next);
         let entry = thread.entry;
         let sp = thread.stack as usize + thread.stack_size;
+        thread.vm.dump();
         unsafe {
-            // uint64_t tmp;
-            // asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
-            // tmp |= 1;
-            // asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
             asm!(
                 "mrs {0}, cntkctl_el1",
                 "orr {0}, {0}, #1",
@@ -120,9 +121,15 @@ impl Scheduler {
                 "msr spsr_el1, xzr",
                 "msr elr_el1, {0}",
                 "msr sp_el0, {1}",
+                "dsb ish",
+                "msr ttbr0_el1, {2}",
+                "tlbi vmalle1is",
+                "dsb ish",
+                "isb",
                 "eret",
                 in(reg) entry,
                 in(reg) sp,
+                in(reg) thread.vm.get_l0_addr(),
                 options(noreturn),
             );
         }
@@ -134,7 +141,7 @@ impl Scheduler {
             filesystem::cpio::CpioArchive::load(unsafe { crate::INITRAMFS_ADDR } as *const u8);
         if let Some(data) = program.get_file(name.as_str()) {
             let program = alloc_prog(data);
-            let new_thread = Box::new(Thread::new(0x2000, program));
+            let new_thread = Box::new(Thread::new(0x2000, program.0, program.1));
             self.threads[current] = Some(new_thread);
             self.ready_queue.push_back(current);
             let next = self.restore_next();
@@ -194,10 +201,7 @@ pub fn init() {
     }
 }
 
-use alloc::alloc::alloc;
-use alloc::alloc::Layout;
-
-pub fn alloc_prog(data: &[u8]) -> extern "C" fn() {
+pub fn alloc_prog(data: &[u8]) -> (*mut u8, usize) {
     let program_entry = unsafe { alloc(Layout::from_size_align(data.len(), 0x1000).unwrap()) };
     unsafe {
         core::ptr::write_bytes(program_entry, 0, data.len());
@@ -209,9 +213,9 @@ pub fn alloc_prog(data: &[u8]) -> extern "C" fn() {
     );
     println!("Program size: 0x{:x} bytes", data.len());
     println!("Program entry: {:p}", program_entry);
-    let program_entry: extern "C" fn() = unsafe { core::mem::transmute(program_entry) };
+    // let program_entry: extern "C" fn() = unsafe { core::mem::transmute(program_entry) };
     unsafe {
         core::ptr::copy(data.as_ptr(), program_entry as *mut u8, data.len());
     }
-    program_entry
+    (program_entry, data.len())
 }

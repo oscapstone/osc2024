@@ -20,17 +20,29 @@
     mrs x0, elr_el1
     mrs x1, sp_el0
     mrs x2, spsr_el1
+    mrs x3, ttbr0_el1
     stp x0, x1, [sp, 16 * 16]
-    str x2, [sp, 16 * 17]
+    stp x2, x3, [sp, 16 * 17]
+    dsb ish
+    mov x0, 0x1000
+    msr ttbr0_el1, x0
+    tlbi vmalle1is
+    dsb ish
+    isb
 .endm
 
 // load general registers from stack
 .macro load_all
     ldp x0, x1, [sp, 16 * 16]
-    ldr x2, [sp, 16 * 17]
+    ldp x2, x3, [sp, 16 * 17]
     msr elr_el1, x0
     msr sp_el0, x1
     msr spsr_el1, x2
+    dsb ish
+    msr ttbr0_el1, x3
+    tlbi vmalle1is
+    dsb ish
+    isb
     ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
     ldp x4, x5, [sp ,16 * 2]

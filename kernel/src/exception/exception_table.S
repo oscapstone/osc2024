@@ -21,13 +21,13 @@ exception_vector_table:
     EXCEPTION_WITH_TYPE 1, unknown_exception_handler
 
     .align 7
-    EXCEPTION_WITH_TYPE 2, unknown_exception_handler
+    EXCEPTION_WITH_TYPE 2, lower_exception_handler
 
     .align 7
     EXCEPTION_WITH_TYPE 3, unknown_exception_handler
     
     .align 7
-    EXCEPTION_WITH_TYPE 4, svc_handler
+    EXCEPTION_WITH_TYPE 4, lower_exception_handler
 
     .align 7
     EXCEPTION_WITH_TYPE 5, irq_handler
@@ -39,7 +39,7 @@ exception_vector_table:
     EXCEPTION_WITH_TYPE 7, unknown_exception_handler
 
     .align 7
-    EXCEPTION_WITH_TYPE 8, svc_handler
+    EXCEPTION_WITH_TYPE 8, lower_exception_handler
 
     .align 7
     EXCEPTION_WITH_TYPE 9, irq_handler

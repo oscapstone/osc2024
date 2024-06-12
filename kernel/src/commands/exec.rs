@@ -12,7 +12,7 @@ pub fn exec(args: Vec<String>) -> ! {
         let filename = filename.as_bytes();
         if let Some(data) = rootfs.get_file(core::str::from_utf8(filename).unwrap()) {
             let program = scheduler::alloc_prog(data);
-            scheduler::get().create_thread(program);
+            scheduler::get().create_thread(program.0, program.1);
         } else {
             println!(
                 "File not found: {}",

@@ -11,6 +11,9 @@ _start:
     bl from_el2_to_el1
     bl set_mmu
 
+    ldr x0, =_boot_rest
+    br x0
+_boot_rest:
     // set stack before our code
     ldr     x1, =_start
     mov     sp, x1
@@ -22,6 +25,7 @@ _start:
     str     xzr, [x1], #8
     sub     w2, w2, #1
     cbnz    w2, 3b
+
 _start_kernel:
     adr x0, exception_vector_table
     msr vbar_el1, x0
