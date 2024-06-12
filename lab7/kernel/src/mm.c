@@ -63,7 +63,6 @@ void page_reclaim(unsigned long long *pgd) // reclaim all the pages
     kfree(pgd);
 
     switch_mm_irqs_off(get_current_task()->mm_struct->pgd); // flush tlb and pipeline because page table is change
-    disable_interrupt();
 }
 
 void page_reclaim_pud(unsigned long long *pud)
@@ -99,7 +98,6 @@ void change_all_pgd_prot(unsigned long long *pgd, int prot)
     }
 
     switch_mm_irqs_off(get_current_task()->mm_struct->pgd); // flush tlb and pipeline because page table is change
-    disable_interrupt();
 }
 
 void change_all_pud_prot(unsigned long long *pud, int prot)
@@ -234,9 +232,9 @@ void do_translation_fault(unsigned long long address)
 
 void do_permission_fault(unsigned long long address)
 {
-    uart_puts("[Permission fault]: 0x");
+    /*uart_puts("[Permission fault]: 0x");
     uart_hex_lower_case(address);
-    uart_puts("\n");
+    uart_puts("\n");*/
 
     struct task_struct *cur_task = get_current_task();
 
@@ -280,14 +278,13 @@ void do_permission_fault(unsigned long long address)
     }
 
     switch_mm_irqs_off(cur_task->mm_struct->pgd); // flush tlb and pipeline because page table is change
-    disable_interrupt();
 }
 
 void do_page_fault(unsigned long long p_add, unsigned long long v_add, int prot)
 {
-    uart_puts("[Translation fault]: 0x");
+    /*uart_puts("[Translation fault]: 0x");
     uart_hex_lower_case(v_add);
-    uart_puts("\n");
+    uart_puts("\n");*/
 
     unsigned long long *cur_table = (unsigned long long *)(VA_START | (unsigned long long)(get_current_task()->mm_struct->pgd)); // map pdg to kenel sacpe
 
@@ -334,7 +331,6 @@ void do_page_fault(unsigned long long p_add, unsigned long long v_add, int prot)
     }
 
     switch_mm_irqs_off(get_current_task()->mm_struct->pgd); // flush tlb and pipeline because page table is change
-    disable_interrupt();
 }
 
 void do_bad_area(unsigned long long address)

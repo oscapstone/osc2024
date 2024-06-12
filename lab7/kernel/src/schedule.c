@@ -212,6 +212,7 @@ void do_exec(const char *name, char *const argv[])
     cur->priority = 1;
 
     disable_interrupt();
+    
     char *target = kmalloc(size);
     char *copy = target;
 
@@ -236,6 +237,9 @@ void do_exec(const char *name, char *const argv[])
         *copy++ = *content++;
 
     switch_mm_irqs_off(cur->mm_struct->pgd);
+
+    enable_interrupt();
+    
     // set sp_el0 to user stack, sp_el1 to kernels stack, elr_el1 to the file content
     asm volatile(
         "msr sp_el0, %0\n"
