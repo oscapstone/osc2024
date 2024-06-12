@@ -131,6 +131,7 @@ int initramfs_register()
     initramfs_f_ops->write = initramfs_write;
     initramfs_f_ops->close = initramfs_close;
     initramfs_f_ops->getsize = initramfs_getsize;
+    initramfs_f_ops->lseek64 = NULL;
 
     return 0;
 }

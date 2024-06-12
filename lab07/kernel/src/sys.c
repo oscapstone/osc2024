@@ -9,6 +9,7 @@
 #include "type.h"
 #include "string.h"
 #include "peripherals/mailbox.h"
+#include "dev_framebuffer.h"
 
 extern struct task_struct *current;
 extern void memzero_asm(unsigned long src, unsigned long n);
@@ -84,6 +85,7 @@ void sys_exit(int status) // [TODO]
 
 int sys_mbox_call(unsigned char ch, unsigned int *mbox) // [TODO]
 {
+    printf("\r\n[SYSCALL] mbox_call: "); printf_int(ch);
     unsigned int mesg = (((unsigned int)(unsigned long)mbox) & ~0xf) | (ch & 0xf);
     while(*MAILBOX_STATUS & MAILBOX_FULL){   // // Check if Mailbox 0 status register’s full flag is set. if MAILBOX_STATUS == 0x80000001, then error parsing request buffer 
         asm volatile("nop");
@@ -150,7 +152,7 @@ int sys_close(int fd)
 
 long sys_write(int fd, const void *buf, unsigned long count)
 {
-    printf("\r\n[SYSCALL] write: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+    // printf("\r\n[SYSCALL] write: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
     if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
     return vfs_write(current->fd_table.fds[fd - OFFSET_FD], buf, count);
 }
@@ -174,11 +176,39 @@ int sys_mount(const char *src, const char *target, const char *filesystem, unsig
     printf("\r\n[SYSCALL] mount:"); printf(src); printf(" to "); printf(target); printf(" with filesystem: "); printf(filesystem);
     return vfs_mount(target, filesystem);
 }
+
 int sys_chdir(const char *path)
 {
     printf("\r\n[SYSCALL] chdir: "); printf(path);
     return vfs_chdir(path);
 }
+
+
+long sys_lseek64(int fd, long offset, int whence)
+{
+    long ret;
+    if(whence == SEEK_SET) // used for dev_framebuffer
+    {
+        current->fd_table.fds[fd - OFFSET_FD]->f_pos = offset;
+        ret = offset;
+    }
+    else // other is not supported
+    {
+        ret = -1;
+    }
+
+    return ret;
+}
+
+// ioctl 0 will be use to get info
+// there will be default value in info
+// if it works with default value, you can ignore this syscall
+long sys_ioctl(int fd, unsigned long request, unsigned long arg)
+{
+    printf("\r\n[SYSCALL] ioctl: fd: "); printf_int(fd); printf(", request: "); printf_hex(request);
+    return 0;
+}
+
 
 void * const sys_call_table[] = {
         sys_getpid,
@@ -200,5 +230,7 @@ void * const sys_call_table[] = {
         sys_read,
         sys_mkdir,
         sys_mount,
-        sys_chdir
+        sys_chdir,
+        sys_lseek64,
+        sys_ioctl
     };

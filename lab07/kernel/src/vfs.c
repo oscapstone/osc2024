@@ -9,6 +9,7 @@
 #include "schedule.h"
 #include "fork.h"
 #include "dev_uart.h"
+#include "dev_framebuffer.h"
 
 extern struct task_struct* current;
 
@@ -59,9 +60,9 @@ void rootfs_init()
     vfs_mkdir("/dev");
     int uart_id = dev_uart_register();
     printf("\r\nUART ID: "); printf_int(uart_id);
-    vfs_mknod("/dev/uart", uart_id);
-    // int framebuffer_id = dev_framebuffer_register();
-    // vfs_mknod("/dev/framebuffer", framebuffer_id);
+    vfs_mknod("/dev/uart", uart_id); 
+    int framebuffer_id = dev_framebuffer_register();
+    vfs_mknod("/dev/framebuffer", framebuffer_id);
 }
 
 

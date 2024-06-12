@@ -80,6 +80,7 @@ int tmpfs_register()
     tmpfs_f_ops->open = tmpfs_open;
     tmpfs_f_ops->close = tmpfs_close;
     tmpfs_f_ops->getsize = tmpfs_getsize;
+    tmpfs_f_ops->lseek64 = NULL;
 
     tmpfs_v_ops->lookup = tmpfs_lookup;
     tmpfs_v_ops->create = tmpfs_create;

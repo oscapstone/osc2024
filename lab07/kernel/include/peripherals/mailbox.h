@@ -20,4 +20,7 @@
 #define TAG_REQUEST_CODE    0x00000000
 #define END_TAG             0x00000000
 
+#define MBOX_CH_PROP 8
+#define MBOX_TAG_LAST 0
+
 #endif

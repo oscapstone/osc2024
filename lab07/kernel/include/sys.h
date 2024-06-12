@@ -1,7 +1,7 @@
 #ifndef __SYS_H__
 #define __SYS_H__
 
-#define __NR_syscalls 18
+#define __NR_syscalls 20
 
 #define SYS_GETPID_NUM      0   // syscall number
 #define SYS_UARTREAD_NUM    1
@@ -20,6 +20,8 @@
 #define SYS_MKDIR_NUM       15
 #define SYS_MOUNT_NUM       16
 #define SYS_CHDIR_NUM       17
+#define SYS_LSEEK64_NUM     18
+#define SYS_IOCTL_NUM       19
 
 #ifndef __ASSEMBLER__
 
@@ -46,6 +48,9 @@ int sys_mkdir(const char *pathname, unsigned mode);
 // you can ignore arguments other than target (where to mount) and filesystem (fs name)
 int sys_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
 int sys_chdir(const char *path);
+
+long sys_lseek64(int fd, long offset, int whence);
+long sys_ioctl(int fd, unsigned long request, unsigned long arg);
 
 #endif
 

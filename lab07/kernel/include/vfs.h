@@ -46,7 +46,7 @@ struct file_operations {
   int (*open)(struct vnode* file_node, struct file** target);
   int (*close)(struct file* file); 
   int (*getsize)(struct vnode* vnode);
-  // long lseek64(struct file* file, long offset, int whence);
+  long (*lseek64)(struct file* file, long offset, int whence);
 };
 
 struct vnode_operations {

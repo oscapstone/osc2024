@@ -65,3 +65,24 @@ void mailbox_call(unsigned int* mailbox)
         }
     }
 }
+
+int mailbox_call_s(unsigned char ch, unsigned int *mbox)
+{
+
+    unsigned int mesg = (((unsigned int)(unsigned long)mbox) & ~0xf) | (ch & 0xf);
+    while(*MAILBOX_STATUS & MAILBOX_FULL){   // // Check if Mailbox 0 status register’s full flag is set. if MAILBOX_STATUS == 0x80000001, then error parsing request buffer 
+        asm volatile("nop");
+    }
+
+    *MAILBOX_WRITE = mesg;
+
+    while(1){
+        while(*MAILBOX_STATUS & MAILBOX_EMPTY){
+            asm volatile("nop");
+        }
+        if(mesg == *MAILBOX_READ){
+            return mbox[1] == REQUEST_SUCCEED;
+        }
+    }
+    return 0;
+}
