@@ -4,6 +4,8 @@
 
 #include "fs.h"
 
+// reference: https://cscie92.dce.harvard.edu/spring2024/slides/FAT32%20File%20Structure.pdf
+
 // only support SFN fat32
 #define FAT32_FS_NAME           "fat32"
 
@@ -42,6 +44,21 @@ typedef struct PACKED {
     char fs_type[8];                  // the label "FAT32   "
 } FAT32_BPB;
 
+typedef struct {
+    char signature[4];
+    char reserved[480];
+    char structure_signature[4];
+    U32 free_count;
+    U32 next_free;
+    char reserved2[12];
+}FAT32_FS_INFO_RAW;
+
+typedef struct 
+{
+    
+}FAT32_FS_INFO;
+
+
 typedef struct
 {
     FAT32_BPB bpb;
@@ -53,20 +70,30 @@ typedef struct
      * The FAT table is 32 bit entry but only use 28 bit
     */
     U32* fat_table;                // read the fat table and store in memory
+    U32 fat_table_size;             // the size of the FAT table
+    U32 next_free_cluster;          // the next free cluster
 } FAT32_FS_INTERNAL;
 
 typedef struct 
 {
     U32 cluster_id;
     U32 num_block;          // in block
+    U32 parent_dir_entry_index;     // the index of the parent dir entry
     BOOL is_dirty;          // whether this node has been modify(write)
     BOOL is_loaded;         // whether this node has been content loaded.
 }FAT32_VNODE_INTERNAL;
 
 // fat table symbol
+#define FAT32_FAT_FREE        0
 #define FAT32_FAT_BAD         0x0ffffff7
 #define FAT32_FAT_EOF_START   0x0ffffff8
 #define FAT32_FAT_EOF_END     0x0FFFFFFF
+
+#define FAT_ENTRY_ALLOCATED_AND_END_OF_FILE FAT32_FAT_EOF_END
+
+// the first byte of the dir entry name
+#define FAT32_DIR_ENTRY_LAST_AND_UNUSED 0x0
+#define FAT32_DIR_ENTRY_UNUSED 0xE5
 
 
 // SFN format, 32 bytes
@@ -89,3 +116,4 @@ typedef struct PACKED {
 
 #define FAT32_DIR_ENTRY_ATTR_SYS        0x04
 #define FAT32_DIR_ENTRY_ATTR_DIR        0x10
+#define FAT32_DIR_ENTRY_ATTR_LONG_NAME  0x0f

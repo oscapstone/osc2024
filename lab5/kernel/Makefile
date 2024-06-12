@@ -32,6 +32,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 				src/syscall/syscall.o src/syscall/sys_getpid.o src/syscall/sys_uartread.o src/syscall/sys_uartwrite.o src/syscall/sys_exec.o src/syscall/sys_fork.o src/syscall/sys_exit.o src/syscall/sys_mbox_call.o src/syscall/sys_kill.o\
 				src/syscall/sys_open.o src/syscall/sys_close.o src/syscall/sys_signal.o src/syscall/sys_mmap.o \
 				src/syscall/sys_read.o src/syscall/sys_write.o src/syscall/sys_mkdir.o src/syscall/sys_mount.o src/syscall/sys_chdir.o src/syscall/sys_lseek64.o src/syscall/sys_ioctl.o \
+				src/syscall/sys_sync.o \
 				src/lib/fork.o src/lib/getpid.o\
 				src/dev/framebuffer.o src/dev/sdcard.o src/dev/sdhost.o \
 				)
@@ -39,7 +40,7 @@ OBJ_FILES = $(addprefix $(OBJ_DIR)/, src/start.o src/main.o \
 # the directories of the output files
 OUT_DIRS = $(sort $(dir $(OBJ_FILES)))
 
-QEMU_DEVICE = /dev/pts/4
+QEMU_DEVICE = /dev/pts/3
 
 all : kernel.img
 

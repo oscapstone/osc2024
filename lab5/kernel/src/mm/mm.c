@@ -236,7 +236,7 @@ void mem_chunk_free(void* ptr) {
 
     // chunk has no reference, free chunk
     if (chunk_info->ref_count == 0) {
-        NS_DPRINT("[MEMORY][TRACE] No more reference, free the chunk. index: %d\n", chunk_info->frame_index);
+        //NS_DPRINT("[MEMORY][TRACE] No more reference, free the chunk. index: %d\n", chunk_info->frame_index);
         mem_buddy_free(chunk_info->frame_index);
 
         frame_info->flag &= ~MEM_FRAME_FLAG_CHUNK;
@@ -583,23 +583,23 @@ void mem_buddy_free(U32 frame_index) {
         }
 
         if (other_buddy >= mem_manager.number_of_frames) {
-            NS_DPRINT("[MEMORY][TRACE] the other buddy is not in memory, index: %d\n", other_buddy);
+            //NS_DPRINT("[MEMORY][TRACE] the other buddy is not in memory, index: %d\n", other_buddy);
             break;
         }
 
         if (mem_manager.frames[other_buddy].flag & MEM_FRAME_FLAG_CANT_USE) {
-            NS_DPRINT("[MEMORY][TRACE] buddy partner can not be use (reserved memory). buddy: %d\n", other_buddy);
+            //NS_DPRINT("[MEMORY][TRACE] buddy partner can not be use (reserved memory). buddy: %d\n", other_buddy);
             break;
         }
 
         // buddy is not free, can't merge
         if (MEM_FRAME_IS_INUSE(mem_manager.frames[other_buddy])) {
-            NS_DPRINT("[MEMORY][TRACE] buddy partner is not free. buddy: %d, order: %d\n", other_buddy, mem_manager.frames[other_buddy].order);
+            //NS_DPRINT("[MEMORY][TRACE] buddy partner is not free. buddy: %d, order: %d\n", other_buddy, mem_manager.frames[other_buddy].order);
             break;
         }
         
         if (mem_manager.frames[other_buddy].order != check_order - 1) {
-            NS_DPRINT("[MEMORY][TRACE] buddy partner is free but not the same order\n");
+            //NS_DPRINT("[MEMORY][TRACE] buddy partner is free but not the same order\n");
             break;
         }
         // buddy is free, merge
@@ -612,7 +612,7 @@ void mem_buddy_free(U32 frame_index) {
         U32 i = 0;
         for (; i < buddy_order_free_list->space; i++) {
             if (buddy_order_free_list->info[i] == other_buddy) {
-                NS_DPRINT("[MEMORY][TRACE] removing buddy partner from free list. buddy: %d, order: %d\n", other_buddy, mem_manager.frames[other_buddy].order);;
+                //NS_DPRINT("[MEMORY][TRACE] removing buddy partner from free list. buddy: %d, order: %d\n", other_buddy, mem_manager.frames[other_buddy].order);;
                 for (U32 j = i + 1; j < buddy_order_free_list->space; j++) {
                     if (buddy_order_free_list->info[j] == MEM_FREE_INFO_UNUSED) {
                         buddy_order_free_list->info[j - 1] = MEM_FREE_INFO_UNUSED;

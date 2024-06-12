@@ -3,6 +3,7 @@
 #include "io/uart.h"
 #include "utils/printf.h"
 #include "peripherals/irq.h"
+#include "mm/mm.h"
 
 static int write(FS_FILE *file, const void *buf, size_t len);
 static int read(FS_FILE *file, void *buf, size_t len);
@@ -43,10 +44,15 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
     return 0;
 }
 
+static void sync() {
+    return;
+}
+
 FS_FILE_SYSTEM* uartfs_create() {
     FS_FILE_SYSTEM* fs = kmalloc(sizeof(FS_FILE_SYSTEM));
     fs->name = UART_FS_NAME;
     fs->setup_mount = &setup_mount;
+    fs->sync = &sync;
     link_list_init(&fs->list);
     return fs;
 }

@@ -56,3 +56,4 @@ void sys_mount(TRAP_FRAME* regs);
 void sys_chdir(TRAP_FRAME* regs);
 void sys_lseek64(TRAP_FRAME* regs);
 void sys_ioctl(TRAP_FRAME* regs);
+void sys_sync(TRAP_FRAME* regs);

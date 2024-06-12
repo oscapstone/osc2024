@@ -35,17 +35,13 @@ int sdcard_init() {
     }
 
     FS_MOUNT* mount = kzalloc(sizeof(FS_MOUNT));
-    mount->fs = fs;
-    mount->root = sdcardroot;
     // initiralize the read write for hardware
     mount->read = &sdcard_read;
     mount->write = &sdcard_write;
     printf("[SDCARD] mounting SD card on /boot ...\n");
-    if (fs->setup_mount(fs, mount)) {
-        printf("[SDCARD][ERROR] Failed to mount FAT32 FS on /boot\n");
+    if (vfs_mount(mount, fs, sdcardroot) == -1) {
         return -1;
     }
-
     return 0;
 }
 
@@ -54,10 +50,14 @@ static int sdcard_read(U64 offset, void* buf, size_t len) {
     char tmp_buf[MBR_DEFAULT_SECTOR_SIZE];
     while (current_offset < len) {
         U64 block_offset = (offset + current_offset) / MBR_DEFAULT_SECTOR_SIZE;
-        size_t size = len - current_offset > MBR_DEFAULT_SECTOR_SIZE ? MBR_DEFAULT_SECTOR_SIZE : len - current_offset;
+        U64 buf_offset = (offset + current_offset) - (block_offset * MBR_DEFAULT_SECTOR_SIZE);
+        
+        U64 end_of_sector = MBR_DEFAULT_SECTOR_SIZE - buf_offset;
+        size_t size = len - current_offset > end_of_sector ? end_of_sector : len - current_offset;
+
         sd_readblock(block_offset, tmp_buf);
         // prevent memory over copying to out of buffer size user gave.
-        memcpy(tmp_buf, buf, size);
+        memcpy(tmp_buf, (void*)((U64)buf + buf_offset), size);
         buf = (char*)buf + size;
         current_offset += size;
     }
@@ -67,9 +67,13 @@ static int sdcard_read(U64 offset, void* buf, size_t len) {
 static int sdcard_write(U64 offset, const void* buf, size_t len) {
     U64 current_offset = 0;
     while (current_offset < len) {
-        U64 block_offset = (offset + current_offset) / 512;
-        size_t size = len - current_offset > 512 ? 512 : len - current_offset;
-        sd_writeblock(block_offset, buf);
+        U64 block_offset = (offset + current_offset) / MBR_DEFAULT_SECTOR_SIZE;
+        U64 buf_offset = (offset + current_offset) - (block_offset * MBR_DEFAULT_SECTOR_SIZE);
+
+        U64 end_of_sector = MBR_DEFAULT_SECTOR_SIZE - buf_offset;
+
+        size_t size = len - current_offset > end_of_sector ? end_of_sector : len - current_offset;
+        sd_writeblock(block_offset, (const void*)((UPTR)buf + buf_offset));
         buf = (char*)buf + size;
         current_offset += size;
     }
