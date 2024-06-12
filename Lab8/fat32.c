@@ -206,6 +206,9 @@ int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
         }
         idx++;
     }
+    
+    readblock(root_dir_start_block, buf);
+    rootdir = (struct DirectoryEntry *)buf;
 
     struct DirectoryEntry *dir = rootdir;
     char formatted_name[13]; // 8 字元名稱 + 1 點 + 3 擴展名 + 1 結尾
@@ -215,7 +218,7 @@ int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
         if (dir[i].name[0] == 0x00) break; // 結束目錄讀取
         if (dir[i].name[0] == 0xE5) continue; // 跳過已刪除文件
         if (dir[i].attr & 0x08) continue; // 跳過卷標
-
+    
         format_filename(formatted_name, dir[i].name);
         if(strcmp(formatted_name, component_name) == 0){
             uart_puts("[FAT32] Found ");
