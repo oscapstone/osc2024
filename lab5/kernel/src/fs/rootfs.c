@@ -44,11 +44,16 @@ static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
     return 0;
 }
 
+static void sync() {
+    return;
+}
+
 
 FS_FILE_SYSTEM* rootfs_create() {
     FS_FILE_SYSTEM* fs = kmalloc(sizeof(FS_FILE_SYSTEM));
     fs->name = ROOT_FS_NAME;
     fs->setup_mount = &setup_mount;
+    fs->sync = &sync;
     link_list_init(&fs->list);
     return fs;
 }

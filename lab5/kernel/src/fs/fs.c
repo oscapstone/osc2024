@@ -180,6 +180,18 @@ int vfs_mkdir(FS_VNODE* cwd, const char* pathname) {
     return parent->v_ops->mkdir(parent, &vnode, node_name);
 }
 
+void fs_sync() {
+    for(U32 i = 0; i < fs_manager->mount_size; i++) {
+        FS_MOUNT* mount = fs_manager->mount_dev[i];
+        NS_DPRINT("[fs] mount addr: 0x%p\n", mount);
+        NS_DPRINT("[fs] fs addr: 0x%p\n", mount->fs);
+        NS_DPRINT("[FS] syncing %s\n", mount->fs->name);
+        NS_DPRINT("[FS] sync addr: 0x%p\n", mount->fs->sync);
+        mount->fs->sync(mount);
+        NS_DPRINT("[FS] sync end\n");
+    }
+}
+
 void fs_init() {
     NS_DPRINT("[FS][TRACE] fs_init() started.\n");
     fs_manager = kzalloc(sizeof(FS_MANAGER));
@@ -225,12 +237,7 @@ void fs_init() {
         return;
     }
     FS_MOUNT* mount = kzalloc(sizeof(FS_MOUNT));
-    mount->fs = fs;
-    mount->root = initramfsroot;
-
-    ret = fs->setup_mount(fs, mount);
-    if (ret != 0) {
-        printf("[FS][ERROR] Failed to mount initramfs.\n");
+    if (vfs_mount(mount, fs, initramfsroot) == -1) {
         return;
     }
 
@@ -259,10 +266,7 @@ void fs_init() {
         printf("[FS][ERROR] Failed to get /dev/uart directory\n");
     }
     mount = kzalloc(sizeof(FS_MOUNT));
-    mount->fs = fs;
-    mount->root = uartfsroot;
-    if (fs->setup_mount(fs, mount)) {
-        printf("[FS][ERROR] Failed to mount uartfs.\n");
+    if (vfs_mount(mount, fs, uartfsroot) == -1) {
         return;
     }
 
@@ -284,10 +288,7 @@ void fs_init() {
         printf("[FS][ERROR] Failed to get /dev/framebuffer directory\n");
     }
     mount = kzalloc(sizeof(FS_MOUNT));
-    mount->fs = fs;
-    mount->root = framebufferfsroot;
-    if (fs->setup_mount(fs, mount)) {
-        printf("[FS][ERROR] Failed to mount framebufferfs.\n");
+    if (vfs_mount(mount, fs, framebufferfsroot) == -1) {
         return;
     }
 
@@ -298,11 +299,24 @@ void fs_init() {
     NS_DPRINT("[FS][TRACE] fs_init() success.\n");
 }
 
+int vfs_mount(FS_MOUNT* mount, FS_FILE_SYSTEM* fs, FS_VNODE* root) {
+    mount->fs = fs;
+    mount->root = root;
+    if (fs->setup_mount(fs, mount)) {
+        printf("[FS][ERROR] Failed to mount %s.\n", fs->name);
+        return -1;
+    }
+    fs_manager->mount_dev[fs_manager->mount_size++] = mount;
+
+    return 0;
+}
+
 FS_VNODE* fs_get_root_node() {
     return fs_manager->rootfs.root;
 }
 
 int fs_register(FS_FILE_SYSTEM* fs) {
+    NS_DPRINT("[FS] fs addr: %p\n", fs);
     if (!fs_get(fs->name)) {
         link_list_push_back(&fs_manager->filesystems, &fs->list);
         return 0;

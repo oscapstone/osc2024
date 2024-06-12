@@ -59,7 +59,7 @@ typedef struct _FS_FILE_SYSTEM {
     const char* name;
     int (*setup_mount) (struct _FS_FILE_SYSTEM* fs, FS_MOUNT* mount);   // function pointer of mounting this file system
     LINK_LIST list;                                             // entry to link list
-    void (*sync)(void);             // sync the file system with external storage
+    void (*sync)(FS_MOUNT* mount);             // sync the file system with external storage
 }FS_FILE_SYSTEM;
 
 typedef struct _FS_FILE_OPERATIONS {
@@ -80,6 +80,8 @@ typedef struct _FS_VNODE_OPERATIONS {
 typedef struct _FS_MANAGER {
     FS_MOUNT rootfs;                       // where root is mount
     LINK_LIST filesystems;                  // list of file systems
+    FS_MOUNT* mount_dev[20];         // just lazy
+    U32 mount_size;
 }FS_MANAGER;
 
 
@@ -88,6 +90,7 @@ typedef struct _FS_MANAGER {
 */
 // called by main (kernel)
 void fs_init();
+void fs_sync();
 int fs_register(FS_FILE_SYSTEM* fs);
 FS_FILE_SYSTEM* fs_get(const char *name);
 

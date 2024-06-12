@@ -82,6 +82,10 @@ static void init_cpio_files(FS_MOUNT* mount) {
 
 }
 
+static int sync() {
+    return 0;
+}
+
 static int setup_mount(FS_FILE_SYSTEM* fs, FS_MOUNT* mount) {
     NS_DPRINT("[FS] initramfs mounting...\n");
     NS_DPRINT("[FS] initramfs: mounting on %s\n", mount->root->name);
@@ -102,6 +106,7 @@ FS_FILE_SYSTEM* initramfs_create() {
     FS_FILE_SYSTEM* fs = kmalloc(sizeof(FS_FILE_SYSTEM));
     fs->name = "initramfs";
     fs->setup_mount = &setup_mount;
+    fs->sync = &sync;
     link_list_init(&fs->list);
     return fs;
 }

@@ -29,7 +29,7 @@ SYS_CALL syscall_table[NR_SYSCALLS] = {
     [SYS_CHDIR] = &sys_chdir,
     [SYS_LSEEK64] = &sys_lseek64,
     [SYS_IOCTL] = &sys_ioctl,
-    [SYS_SYNC] = &sys_none,
+    [SYS_SYNC] = &sys_sync,
     [SYS_SIGRETURN] = &sys_sigreturn
 };
 
