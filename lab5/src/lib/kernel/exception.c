@@ -1,5 +1,6 @@
 #include "exception.h"
 #include "sched.h"
+#include "signal.h"
 #include "syscall.h"
 #include "task.h"
 #include "uart.h"
@@ -13,9 +14,22 @@
 
 extern int thread_sched_init_finished;
 
-void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
+void el1_interrupt_enable() { asm volatile("msr DAIFClr, 0xf"); }
 
-void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
+void el1_interrupt_disable() { asm volatile("msr DAIFSet, 0xf"); }
+
+static unsigned long long lock_counter = 0;
+void lock()
+{
+    asm volatile("msr DAIFSet, 0xf");
+    lock_counter++;
+}
+
+void unlock()
+{
+    if (--lock_counter == 0)
+        asm volatile("msr DAIFClr, 0xf");
+}
 
 void exception_handler_c()
 {
@@ -44,7 +58,7 @@ void exception_handler_c()
     asm volatile("msr DAIFClr, 0xf");
 }
 
-void irq_handler_c()
+void irq_handler_c(trapframe_t *tf)
 {
     if (*IRQ_PENDING_1 & (1 << 29) && *CORE0_INTERRUPT_SOURCE & (1 << 8)) {
         if (*AUX_MU_IIR & 0x4) {
@@ -66,6 +80,10 @@ void irq_handler_c()
 
         if (thread_sched_init_finished)
             schedule();
+    }
+
+    if ((tf->spsr_el1 & 0b1100) == 0) {
+        check_signal(tf);
     }
 }
 
@@ -96,31 +114,13 @@ void test_preemption()
     uart_async_putc('\r');
 }
 
-static unsigned long long lock_count = 0;
-void lock()
-{
-    asm volatile("msr DAIFSet, 0xf");
-    ++lock_count;
-}
-
-void unlock()
-{
-    if (--lock_count == 0)
-        asm volatile("msr DAIFClr, 0xf");
-    else if (lock_count < 0) {
-        uart_puts("lock_count < 0\n");
-        while (1)
-            ;
-    }
-}
-
 void el0_sync_router(trapframe_t *tf)
 {
     // interrupt enable
     asm volatile("msr DAIFClr, 0xf");
 
     unsigned long long syscall_no = tf->regs[8];
-    // uart_printf("\tsyscall_no: %d\n", syscall_no);
+    // uart_printf("syscall_no: %d\n", syscall_no);
     switch (syscall_no) {
     case 0:
         getpid(tf);
@@ -146,6 +146,18 @@ void el0_sync_router(trapframe_t *tf)
     case 7:
         kill(tf, (int)tf->regs[0]);
         break;
+    case 8:
+        // uart_printf("syscall_no: %d\n", syscall_no);
+        signal_register(tf->regs[0], (void (*)())tf->regs[1]);
+        break;
+    case 9:
+        // uart_printf("syscall_no: %d\n", syscall_no);
+        signal_kill(tf->regs[0], tf->regs[1]);
+        break;
+    case 50:
+        // uart_printf("syscall_no: %d\n", syscall_no);
+        signal_return(tf);
+        break;
     default:
         break;
     }
@@ -153,6 +165,7 @@ void el0_sync_router(trapframe_t *tf)
 
 void el0_irq_router(trapframe_t *tf)
 {
+    lock();
     if (*IRQ_PENDING_1 & (1 << 29) && *CORE0_INTERRUPT_SOURCE & (1 << 8)) {
         if (*AUX_MU_IIR & 0x4) {
             uart_rx_interrupt_disable();
@@ -173,6 +186,10 @@ void el0_irq_router(trapframe_t *tf)
 
         if (thread_sched_init_finished)
             schedule();
+    }
+
+    if ((tf->spsr_el1 & 0b1100) == 0) {
+        check_signal(tf);
     }
 }
 

@@ -12,6 +12,10 @@ void exit(trapframe_t *tf);
 int mbox_call(trapframe_t *tf, unsigned char ch, unsigned int *mbox);
 void kill(trapframe_t *tf, int pid);
 
+void signal_register(int signal, void (*handler)());
+void signal_kill(int pid, int signal);
+void signal_return(trapframe_t *tf);
+
 char *cpio_file_start(char *file);
 unsigned int cpio_file_size(char *file);
 

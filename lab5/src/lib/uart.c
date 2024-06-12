@@ -1,5 +1,4 @@
 #include "uart.h"
-#include "exception.h"
 #include "gpio.h"
 #include "string.h"
 
@@ -243,10 +242,10 @@ void uart_async_putc(char c)
         uart_tx_interrupt_enable();
     }
 
-    lock();
+    asm volatile("msr DAIFSet, 0xf");
     uart_tx_buffer[uart_tx_buffer_head++] = c;
     uart_tx_buffer_head %= BUFFER_SIZE;
-    unlock();
+    asm volatile("msr DAIFClr, 0xf");
 
     uart_tx_interrupt_enable();
 }
@@ -257,10 +256,10 @@ char uart_async_getc()
     while ((uart_rx_buffer_tail == uart_rx_buffer_head))
         uart_rx_interrupt_enable();
 
-    lock();
+    asm volatile("msr DAIFSet, 0xf");
     char c = uart_rx_buffer[uart_rx_buffer_tail]; // get a byte from rx buffer
     uart_rx_buffer_tail = (uart_rx_buffer_tail + 1) % BUFFER_SIZE;
-    unlock();
+    asm volatile("msr DAIFClr, 0xf");
 
     return c;
 }

@@ -2,6 +2,7 @@
 #include "cpio.h"
 #include "mbox.h"
 #include "sched.h"
+#include "signal.h"
 #include "uart.h"
 
 extern char *cpio_start;
@@ -45,7 +46,7 @@ int exec(trapframe_t *tf, const char *name, char *const argv[])
 
     tf->regs[0] = 0;
     tf->elr_el1 = (unsigned long)current->data;
-    tf->sp_el0 = (unsigned long)current->stack_ptr + USTACK_SIZE;
+    tf->sp_el0 = (unsigned long)current->ustack_ptr + USTACK_SIZE;
     return 0;
 }
 
@@ -57,9 +58,14 @@ int fork(trapframe_t *tf)
 
     child->datasize = current->datasize;
 
+    // copy signal handler
+    for (int i = 0; i < SIGNAL_NUM; i++) {
+        child->signal_handler[i] = parent->signal_handler[i];
+    }
+
     // copy user stack to child
     for (int i = 0; i < USTACK_SIZE; i++) {
-        child->stack_ptr[i] = parent->stack_ptr[i];
+        child->ustack_ptr[i] = parent->ustack_ptr[i];
     }
 
     // copy kernel stack to child
@@ -87,7 +93,7 @@ fork_child: // child process
     // uart_printf("This is child process (fork: parent pid = %d, child pid = %d)\n", parent->pid, child->pid);
 
     tf = (trapframe_t *)((char *)tf + (unsigned long)child->kstack_ptr - (unsigned long)parent->kstack_ptr);
-    tf->sp_el0 += (unsigned long)child->stack_ptr - (unsigned long)parent->stack_ptr;
+    tf->sp_el0 += (unsigned long)child->ustack_ptr - (unsigned long)parent->ustack_ptr;
     tf->regs[0] = 0;
     return 0;
 }
@@ -108,15 +114,11 @@ int mbox_call(trapframe_t *tf, unsigned char ch, unsigned int *mbox)
     while (1) {
         while (*MAILBOX_STATUS & MAILBOX_EMPTY) {
             asm volatile("nop");
-            uart_printf("mailbox : %x ", *MAILBOX_STATUS);
-            uart_printf("mailbox empty : %x\n", MAILBOX_EMPTY);
-            *MAILBOX_STATUS = 0;
-            break;
         }
 
         if (r == *MAILBOX_READ) {
             tf->regs[0] = (mbox[1] == REQUEST_SUCCEED);
-            unlock();
+            el1_interrupt_enable();
             return mbox[1] == REQUEST_SUCCEED;
         }
     }
@@ -135,6 +137,38 @@ void kill(trapframe_t *tf, int pid)
     threads[pid].zombie = 1;
     unlock();
     schedule();
+}
+
+void signal_register(int signal, void (*handler)())
+{
+    if (signal > SIGNAL_NUM || signal < 0)
+        return;
+    current->signal_handler[signal] = handler;
+}
+
+void signal_kill(int pid, int signal)
+{
+    if (pid < 0 || pid > PIDMAX || !threads[pid].used) {
+        return;
+    }
+
+    lock();
+    threads[pid].signal_waiting[signal]++;
+    unlock();
+}
+
+void signal_return(trapframe_t *tf)
+{
+    unsigned long signal_ustack; // to get the start address of the user stack
+    if (tf->sp_el0 % USTACK_SIZE != 0) {
+        signal_ustack = tf->sp_el0 - (tf->sp_el0 % USTACK_SIZE);
+    }
+    else {
+        signal_ustack = tf->sp_el0 - USTACK_SIZE;
+    }
+
+    kfree((void *)signal_ustack);
+    load_context(&current->signal_context);
 }
 
 char *cpio_file_start(char *file)

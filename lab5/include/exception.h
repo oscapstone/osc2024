@@ -8,14 +8,10 @@
 #define IRQ_PENDING_1 ((volatile unsigned int *)(MMIO_BASE + 0xB204))
 #define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)(0x40000060))
 
-void disable_interrupt();
-void enable_interrupt();
-void exception_handler_c();
-void irq_handler_c();
-
-void highp();
-void lowp();
-void test_preemption();
+void el1_interrupt_enable();
+void el1_interrupt_disable();
+void lock();
+void unlock();
 
 typedef struct trapframe {
     unsigned long regs[31];
@@ -24,8 +20,12 @@ typedef struct trapframe {
     unsigned long sp_el0;
 } trapframe_t;
 
-void lock();
-void unlock();
+void exception_handler_c();
+void irq_handler_c(trapframe_t *tf);
+
+void highp();
+void lowp();
+void test_preemption();
 
 void el0_sync_router(trapframe_t *tf);
 void el0_irq_router(trapframe_t *tf);

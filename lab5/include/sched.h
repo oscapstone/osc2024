@@ -6,6 +6,7 @@
 #define PIDMAX 32768
 #define USTACK_SIZE 0x10000 // user stack size
 #define KSTACK_SIZE 0x10000 // kernel stack size
+#define SIGNAL_NUM 32       // number of signals
 
 extern void switch_to(void *cur, void *next);
 extern void *get_current();
@@ -36,15 +37,23 @@ typedef struct cpu_context {
 
 typedef struct thread {
     struct list_head listhead;
-    cpu_context_t cpu_context;
-    int priority;
+    cpu_context_t cpu_context; // record the cpu context
     char *data;
     unsigned int datasize;
+    int priority;
     int zombie;
     int pid;
     int used;
-    char *stack_ptr;
-    char *kstack_ptr;
+
+    char *ustack_ptr; // user stack pointer
+    char *kstack_ptr; // kernel stack pointer
+
+    // signal
+    void (*signal_handler[SIGNAL_NUM])();
+    void (*curr_signal_handler)();
+    int signal_waiting[SIGNAL_NUM];
+    int signal_processing;
+    cpu_context_t signal_context;
 } thread_t;
 
 void schedule();

@@ -2,6 +2,7 @@
 #include "exception.h"
 #include "memory.h"
 #include "shell.h"
+#include "signal.h"
 #include "timer.h"
 #include "uart.h"
 
@@ -46,7 +47,6 @@ void idle()
     while (1) {
         kill_zombies();
         asm volatile("msr DAIFClr, 0xf");
-        // uart_printf("Idle thread is running\n");
         schedule();
     }
 }
@@ -67,11 +67,17 @@ thread_t *thread_create(void *start, int priority)
     r->zombie = 0;
     r->priority = priority;
     r->used = 1;
-    r->stack_ptr = (char *)kmalloc(USTACK_SIZE);
+    r->ustack_ptr = (char *)kmalloc(USTACK_SIZE);
     r->kstack_ptr = (char *)kmalloc(KSTACK_SIZE);
     r->cpu_context.lr = (unsigned long)start;
-    r->cpu_context.sp = (unsigned long)(r->stack_ptr + USTACK_SIZE);
-    r->cpu_context.fp = (unsigned long)(r->stack_ptr + USTACK_SIZE);
+    r->cpu_context.sp = (unsigned long)(r->ustack_ptr + USTACK_SIZE);
+    r->cpu_context.fp = (unsigned long)(r->ustack_ptr + USTACK_SIZE);
+
+    r->signal_processing = 0;
+    for (int i = 0; i < SIGNAL_NUM; i++) {
+        r->signal_handler[i] = default_signal_handler;
+        r->signal_waiting[i] = 0;
+    }
 
     add_task_thread(r);
     unlock();
@@ -96,7 +102,6 @@ void add_task_thread(thread_t *t)
     if (flag) {
         list_add_tail(&t->listhead, runqueue);
     }
-
     unlock();
 }
 
@@ -120,7 +125,7 @@ void kill_zombies()
         // uart_printf("Pid %d\n", ((thread_t *)cur)->pid);
         if (((thread_t *)cur)->zombie) {
             list_del(cur);
-            kfree(((thread_t *)cur)->stack_ptr);
+            kfree(((thread_t *)cur)->ustack_ptr);
             kfree(((thread_t *)cur)->kstack_ptr);
             ((thread_t *)cur)->used = 0;
             ((thread_t *)cur)->zombie = 0;
