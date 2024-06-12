@@ -85,7 +85,9 @@ void sys_exit(int status) // [TODO]
 
 int sys_mbox_call(unsigned char ch, unsigned int *mbox) // [TODO]
 {
+#ifdef SYSCALL_DEBUG
     printf("\r\n[SYSCALL] mbox_call: "); printf_int(ch);
+#endif
     unsigned int mesg = (((unsigned int)(unsigned long)mbox) & ~0xf) | (ch & 0xf);
     while(*MAILBOX_STATUS & MAILBOX_FULL){   // // Check if Mailbox 0 status register’s full flag is set. if MAILBOX_STATUS == 0x80000001, then error parsing request buffer 
         asm volatile("nop");
@@ -106,18 +108,9 @@ int sys_mbox_call(unsigned char ch, unsigned int *mbox) // [TODO]
 
 void sys_kill(int pid) // [TODO]
 {
-    // struct task_struct* p;
-    // for(int i=0; i<NR_TASKS; i++){
-    //     if(task[i] == NULL) continue; // (task[i] == NULL) means no more tasks
-    //     p = task[i];
-    //     if(current->pid == pid){
-    //         preempt_disable();
-    //         printf("\r\nKilling process: "); printf_int(pid);
-    //         current->state = TASK_ZOMBIE;
-    //         preempt_enable();
-    //         return;
-    //     }
-    // }
+#ifdef SYSCALL_DEBUG
+    printf("\r\n[SYSCALL] kill: "); printf_int(pid);
+#endif
     if(task[pid] == NULL){
         printf("\r\nProcess not found: "); printf_int(pid);
         return;
@@ -127,7 +120,9 @@ void sys_kill(int pid) // [TODO]
 
 int sys_open(const char *pathname, int flags)
 {
+#ifdef SYSCALL_DEBUG
     printf("\r\n[SYSCALL] open: "); printf(pathname); printf(", flags: "); printf_int(flags);
+#endif
     for(int i=0; i<MAX_OPEN_FILE; i++){
         if(current->fd_table.fds[i] == NULL){
             int ret = vfs_open(pathname, flags, &current->fd_table.fds[i]);
@@ -143,7 +138,9 @@ int sys_open(const char *pathname, int flags)
 
 int sys_close(int fd)
 {
+#ifdef SYSCALL_DEBUG
     printf("\r\n[SYSCALL] close: "); printf_int(fd);
+#endif
     if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
     int ret = vfs_close(current->fd_table.fds[fd - OFFSET_FD]);
     current->fd_table.fds[fd - OFFSET_FD] = NULL;
@@ -152,15 +149,18 @@ int sys_close(int fd)
 
 long sys_write(int fd, const void *buf, unsigned long count)
 {
-    // printf("\r\n[SYSCALL] write: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+#ifdef SYSCALL_DEBUG
+    printf("\r\n[SYSCALL] write: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+#endif
     if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
     return vfs_write(current->fd_table.fds[fd - OFFSET_FD], buf, count);
 }
 long sys_read(int fd, void *buf, unsigned long count)
 {
+#ifdef SYSCALL_DEBUG
     printf("\r\n[SYSCALL] read: fd: "); printf_int(fd); printf(", count: "); printf_int(count);
+#endif
     if(fd < OFFSET_FD || fd >= MAX_OPEN_FILE + OFFSET_FD) return -1;
-    // printf("\r\n[SYSCALL] read: fd: "); printf_hex((unsigned long)current->fd_table.fds[fd - OFFSET_FD]);
     return vfs_read(current->fd_table.fds[fd - OFFSET_FD], buf, count);
 }
 
@@ -173,13 +173,17 @@ int sys_mkdir(const char *pathname, unsigned mode)
 // you can ignore arguments other than target (where to mount) and filesystem (fs name)
 int sys_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
 {
+#ifdef SYSCALL_DEBUG
     printf("\r\n[SYSCALL] mount:"); printf(src); printf(" to "); printf(target); printf(" with filesystem: "); printf(filesystem);
+#endif
     return vfs_mount(target, filesystem);
 }
 
 int sys_chdir(const char *path)
 {
+#ifdef SYSCALL_DEBUG
     printf("\r\n[SYSCALL] chdir: "); printf(path);
+#endif
     return vfs_chdir(path);
 }
 
@@ -205,7 +209,9 @@ long sys_lseek64(int fd, long offset, int whence)
 // if it works with default value, you can ignore this syscall
 long sys_ioctl(int fd, unsigned long request, unsigned long arg)
 {
-    printf("\r\n[SYSCALL] ioctl: fd: "); printf_int(fd); printf(", request: "); printf_hex(request);
+#ifdef SYSCALL_DEBUG
+    printf("\r\n[SYSCALL] ioctl: fd: "); printf_int(fd); printf(" , request: "); printf_hex(request);
+#endif
     return 0;
 }
 

@@ -389,7 +389,7 @@ struct vnode* vfs_get_node(const char* pathname, struct vnode** target_dir)
     start_node = rootfs->root;
     return next_step(start_node, pathname+1, target_dir);
   }
-  else{ // [TODO] relative path
+  else{ 
     start_node = vfs_get_node(current->cwd, NULL);
     return next_step(start_node, pathname, target_dir);
   }
@@ -491,17 +491,10 @@ static void simplify_path(char* pathname)
     isFirst = 0;
     if(token != NULL){ 
       segments[n_segments] = (char*)dynamic_alloc(strlen(token)+1);
-      // printf("\r\nsegment at: "); printf_hex(segments[n_segments]); printf(" , "); printf_int(n_segments);
       strcpy(segments[n_segments++], token);
     }
     token = strtok(NULL, "/");
   }
-
-  // printf("\r\n"); printf(segments[0]); printf_hex((void*)segments[0]);
-
-  // for(int i=0; i<n_segments; i++){
-  //   printf("\r\n[DEBUG] segments: "); printf(segments[i]);
-  // }
 
   int need_segment[MAX_SEGMENTS];
   int need_idx = 0;
