@@ -88,19 +88,6 @@ struct DirectoryEntry {
 //     return node;
 // }
 
-void format_filename(char *dest, const char *src) {
-    int i, j;
-    for (i = 0, j = 0; i < 11; i++) {
-        if (i == 8) {
-            dest[j++] = '.';  // 插入檔案名與擴展名之間的點
-        }
-        if (src[i] != ' ') {
-            dest[j++] = src[i];
-        }
-    }
-    dest[j] = '\0';  // 結尾字符
-}
-
 int fat32_mount(struct filesystem *_fs, struct mount *mt){
     //initialize all entries
     mt -> fs = _fs;
@@ -117,35 +104,11 @@ int fat32_mount(struct filesystem *_fs, struct mount *mt){
         uart_int(mbr -> partitions[i].status);
         newline();
     }
-    
-    int fat_start_block = mbr -> partitions[0].start_lba;
-    readblock(fat_start_block, buf); // Read the first block of the partition
-    struct FAT32BootSector *boot_sector = (struct FAT32BootSector *)buf;
 
-    int root_dir_start_block = fat_start_block + ((boot_sector->reserved_sector_count + (boot_sector->num_fats * boot_sector->fat_size_32)) * boot_sector->sectors_per_cluster);
-    uart_int(root_dir_start_block);
-    newline();
-    readblock(root_dir_start_block, buf);
+    readblock(mbr -> partitions[0].start_lba, buf);
+    struct FAT32BootSector * boot_sector = buf;
 
-    struct DirectoryEntry *dir = (struct DirectoryEntry *)buf;
-    char formatted_name[13]; // 8 字元名稱 + 1 點 + 3 擴展名 + 1 結尾
-
-    for (int i = 0; i < 16; i++) {  // 假定每個塊有 16 個條目
-        if (dir[i].name[0] == 0x00) break; // 結束目錄讀取
-        if (dir[i].name[0] == 0xE5) continue; // 跳過已刪除文件
-        if (dir[i].attr & 0x08) continue; // 跳過卷標
-
-        format_filename(formatted_name, dir[i].name);
-        if (dir[i].attr & 0x10) {  // 目錄條目
-            uart_puts("[DIR] ");
-            uart_puts(formatted_name);
-            newline();
-        } else {  // 文件條目
-            uart_puts("[FILE] ");
-            uart_puts(formatted_name);
-            newline();
-        }
-    }
+    //
     return 0;
 }
 
