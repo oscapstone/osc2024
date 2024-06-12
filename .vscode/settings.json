@@ -1,5 +1,12 @@
 {
     "files.associations": {
-        "reboot.h": "c"
+        "reboot.h": "c",
+        "utils.h": "c",
+        "uart.h": "c",
+        "trash_malloc.h": "c",
+        "dtb.h": "c",
+        "mailbox.h": "c",
+        "base.h": "c",
+        "shell.h": "c"
     }
 }

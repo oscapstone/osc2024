@@ -1,0 +1,6 @@
+aarch64-linux-gnu-gcc -Wall -Wextra -Wpedantic -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c io/uart.c -o bin-int/io/uart.o
+aarch64-linux-gnu-ld bin-int/start.o bin-int/io/uart.o bin-int/main.o -T linker.ld -o bin/bootloader.elf
+aarch64-linux-gnu-objcopy -O binary bin/bootloader.elf bootloader.img
+# qemu-system-aarch64 -M raspi3b -serial null -serial pty -display none -device loader,file=bootloader.img,addr=0x80000,cpu-num=0
+qemu-system-aarch64 -M raspi3b -serial null -serial pty -display none -kernel bootloader.img -initrd ../initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+char device redirected to /dev/pts/2 (label serial1)

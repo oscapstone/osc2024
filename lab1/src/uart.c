@@ -5,16 +5,6 @@ void uart_init() {
 	
 	register unsigned int r;
 	
-	// according to BCM2835 ARM peripherals pg. 101 to setup the GPIO pull-up/down clock registers
-	// disable pull-up and pull-down
-	*GPPUD = 0;
-	r = 150; while (r--) { asm volatile("nop"); }
-	*GPPUDCLK0 = (1 << 14)|(1 << 15);
-	r = 150; while (r--) { asm volatile("nop"); }
-	*GPPUDCLK0 = 0;
-	
-	// 
-	r = 500; while (r--) { asm volatile("nop"); }	
 	
 	// 1. set AUXENB register to enable mini UART.
 	*AUX_ENABLE |= 1;
@@ -41,6 +31,17 @@ void uart_init() {
 	r &= ~((7<<12)|(7<<15)); // gpio14, gpio15 clear to 0
 	r |= (2<<12)|(2<<15);    // set gpio14 and 15 to 010/010 which is alt5
 	*GPFSEL1 = r;          // from here activate Trasmitter&Receiver
+    
+	// according to BCM2835 ARM peripherals pg. 101 to setup the GPIO pull-up/down clock registers
+	// disable pull-up and pull-down
+	*GPPUD = 0;
+	r = 150; while (r--) { asm volatile("nop"); }
+	*GPPUDCLK0 = (1 << 14)|(1 << 15);
+	r = 150; while (r--) { asm volatile("nop"); }
+	*GPPUDCLK0 = 0;
+	
+	// 
+	r = 500; while (r--) { asm volatile("nop"); }	
 }
 
 /**

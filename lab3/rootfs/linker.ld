@@ -1,0 +1,28 @@
+SECTIONS
+{
+    . = 0x90000;
+    /* code section */
+    .text :
+    {
+        KEEP(*(.text))
+    }
+    /* read only data section */
+    .rodata :
+    {
+        *(.rodata .rodata.* .gnu.linkonce.r*)
+    }
+    /* data section */
+    .data :
+    {
+        . = ALIGN(8);
+        *(.data .data.* .gnu.linkonce.d*)
+    }
+    /* bss section is to store the global variable */
+    .bss :
+    {
+        . = ALIGN(8);
+        *(.bss)
+    }
+    
+   /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
+}

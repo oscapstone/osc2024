@@ -1,0 +1,29 @@
+{
+    "files.associations": {
+        "gpio.h": "c",
+        "utils.h": "c",
+        "aux.h": "c",
+        "uart.h": "c",
+        "exception.h": "c",
+        "timer.h": "c",
+        "auxregs.h": "c",
+        "base.h": "c",
+        "fifo_buffer.h": "c",
+        "mailbox.h": "c",
+        "bcm2837base.h": "c",
+        "mmu.h": "c",
+        "sysregs.h": "c",
+        "elutils.h": "c",
+        "printf.h": "c",
+        "array": "c",
+        "format": "c",
+        "initializer_list": "c",
+        "list": "c",
+        "utility": "c",
+        "vector": "c",
+        "xhash": "c",
+        "xstring": "c",
+        "xtree": "c",
+        "xutility": "c"
+    }
+}

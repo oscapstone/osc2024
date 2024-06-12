@@ -26,10 +26,10 @@ init:
 	ldr		w2, =__bss_size
 clear_bss:
 	cbz		w2, kernel_main
-	str		xzr, [x1], #0
-	sub		w2, w2, #1
-	cbnz	w2, clear_bss
+	str		xzr, [x1], #8			// write zero to [x1] and write x1 = [x1 + 8], xzr is 64 bit (8 bytes) zero register
+	sub		w2, w2, #1				// w2 = w2 - 1
+	cbnz	w2, clear_bss			// if (w2 != 0) jmp clear_bss
 
 kernel_main:
-	bl		main
+	bl		main					// branch label: will link in linking state
 	b		halt

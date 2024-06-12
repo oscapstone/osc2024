@@ -69,7 +69,7 @@ void shell() {
 			}
 		} else if (string_compare(input_str,"reboot")) {
 			uart_send_string("Rebooting....\n");
-			reboot(1000);
+			reset(1000);
 		} else {
 			uart_send_string("Unknown command\n");
 		}
