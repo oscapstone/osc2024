@@ -12,6 +12,7 @@
 #include "ANSI.h"
 #include "sched.h"
 #include "syscall.h"
+#include "vfs.h"
 #include "callback_adapter.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
@@ -35,6 +36,8 @@ extern thread_t *curr_thread;
 int start_shell()
 {
     char input_buffer[CMD_MAX_LEN] = {0};
+    init_rootfs();
+
 #if _DEBUG < 3
     cli_print_banner();
     print_log_level();
@@ -400,7 +403,7 @@ int do_cmd_exec(int argc, char **argv)
     }
     else
     {
-       wait();
+        wait();
     }
     return 0;
 }

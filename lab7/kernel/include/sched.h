@@ -5,6 +5,7 @@
 #include "stdint.h"
 #include "signal.h"
 #include "mmu.h"
+#include "vfs.h"
 
 #define MAX_PID 32768
 #define MAX_SIGNAL 31
@@ -84,6 +85,7 @@ typedef struct thread_struct
     char*               kernel_stack_bottom;                   // Kernel space Stack (Kernel syscall)
     char*               name;                                  // Process name
     vm_area_struct_t*   vma_list;                              // Virtual Memory Area
+    struct file*        file_descriptors_table[MAX_FD+1];      // File Descriptor Table
 } thread_t;
 
 int8_t thread_code_can_free(thread_t *thread);

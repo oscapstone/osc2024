@@ -280,6 +280,11 @@ thread_t *thread_create(void *start, char *name)
 	memset(PHYS_TO_KERNEL_VIRT(r->context.pgd), 0, PAGE_FRAME_SIZE);
 	DEBUG("new_pid: %d, context.pgd: 0x%x\n", new_pid, r->context.pgd);
 
+	for(int i = 0; i < MAX_FD + 1; i++)
+	{
+		r->file_descriptors_table[i] = NULL;
+	}
+
 	child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
 	child->pid = new_pid;
 	list_add_tail((list_head_t *)child, (list_head_t *)curr_thread->child_list);
