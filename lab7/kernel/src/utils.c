@@ -192,6 +192,17 @@ char* strcpy (char *dest, const char *src)
     return memcpy (dest, src, strlen (src) + 1);
 }
 
+void *memset(void *s, int c, size_t n)
+{
+  char *start = s;
+  for (size_t i = 0; i < n; i++)
+  {
+    start[i] = c;
+  }
+
+  return s;
+}
+
 char* str_SepbySpace(char* head)
 {
     char* end;

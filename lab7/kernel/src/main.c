@@ -6,6 +6,7 @@
 #include "exception.h"
 #include "timer.h"
 #include "sched.h"
+#include "vfs.h"
 
 char* dtb_ptr;
 extern void load_context(void *curr_context);
@@ -27,6 +28,7 @@ void main(char* arg){
 
     init_allocator();
     init_thread_sched();
+    init_rootfs();
     
     el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
     load_context(&curr_thread->context);

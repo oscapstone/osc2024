@@ -158,7 +158,7 @@ void cli_print_banner()
     uart_puts("    //     //    ------    //          \r\n");
     uart_puts("   //     //          //  //           \r\n");
     uart_puts("    ------     ------      ------      \r\n");
-    uart_puts("   2024 Lab5: Thread and User Process  \r\n");
+    uart_puts("     2024 Lab7: Virtual File System    \r\n");
     uart_puts("=======================================\r\n");
 }
 
