@@ -4,12 +4,13 @@
 #include "memory.h"
 #include "shell.h"
 #include "utils.h"
+#include "fat32.h"
 #include <stdint.h>
 
 extern char* cpio_base;
 
-// struct file_operations fat32_file_operations = {fat32_write,fat32_read,fat32_open,fat32_close};
-// struct vnode_operations fat32_vnode_operations = {fat32_lookup,fat32_create,fat32_mkdir};
+struct file_operations fat32_file_operations = {fat32_write,fat32_read,fat32_open,fat32_close};
+struct vnode_operations fat32_vnode_operations = {fat32_lookup,fat32_create,fat32_mkdir};
 
 //reference: https://tw.easeus.com/data-recovery/fat32-disk-structure.html
 struct PartitionEntry {
@@ -76,17 +77,29 @@ struct DirectoryEntry {
     uint32_t file_size;
 } __attribute__((packed));
 
-// struct vnode * fat32_create_vnode(const char * name, char * data){
-//     struct vnode * node = allocate_page(4096);
-//     memset(node, 4096);
-//     node -> f_ops = &fat32_file_operations;
-//     node -> v_ops = &fat32_vnode_operations;
-//     struct fat32_node * inode = allocate_page(4096);
-//     memset(inode, 4096);
-//     strcpy(name, inode -> name);
-//     node -> internal = inode;
-//     return node;
-// }
+struct fat32_node{
+    char name[MAX_PATH];
+    int type;
+    struct vnode * entry[MAX_ENTRY];    
+    char * data;
+    uint32_t start_cluster;        // 文件或目錄的起始簇號
+    uint32_t size; // get by the code
+};
+
+struct vnode * fat32_create_vnode(const char * name, int type, uint32_t start_cluster, uint32_t size){
+    struct vnode * node = allocate_page(4096);
+    memset(node, 4096);
+    node -> f_ops = &fat32_file_operations;
+    node -> v_ops = &fat32_vnode_operations;
+    
+    struct fat32_node * inode = allocate_page(4096);
+    memset(inode, 4096);
+    inode -> type = type;
+    strcpy(name, inode -> name);
+    node -> internal = inode;
+    
+    return node;
+}
 
 void format_filename(char *dest, const char *src) {
     int i, j;
@@ -101,51 +114,32 @@ void format_filename(char *dest, const char *src) {
     dest[j] = '\0';  // 結尾字符
 }
 
+struct fat32_mbr * mbr;
+int fat_start_block;
+struct FAT32BootSector * boot_sector;
+int root_dir_start_block;
+uint32_t cluster_size;
+uint32_t entries_per_cluster; 
+struct DirectoryEntry * rootdir;
+
 int fat32_mount(struct filesystem *_fs, struct mount *mt){
     //initialize all entries
     mt -> fs = _fs;
     char buf[512];
     readblock(0, buf);
-    struct fat32_mbr * mbr = buf;
-
-    uart_puts("[Boot] Partition Status:\n\r");
+    mbr = buf;
     
-    for(int i=0; i<4; i++){
-        uart_puts("Partition ");
-        uart_int(i+1);
-        uart_puts(": ");
-        uart_int(mbr -> partitions[i].status);
-        newline();
-    }
-    
-    int fat_start_block = mbr -> partitions[0].start_lba;
+    fat_start_block = mbr -> partitions[0].start_lba;
     readblock(fat_start_block, buf); // Read the first block of the partition
-    struct FAT32BootSector *boot_sector = (struct FAT32BootSector *)buf;
+    boot_sector = (struct FAT32BootSector *)buf;
 
-    int root_dir_start_block = fat_start_block + ((boot_sector->reserved_sector_count + (boot_sector->num_fats * boot_sector->fat_size_32)) * boot_sector->sectors_per_cluster);
-    uart_int(root_dir_start_block);
-    newline();
+    cluster_size = boot_sector -> bytes_per_sector * boot_sector -> sectors_per_cluster;
+    entries_per_cluster = cluster_size / 32;
+    
+    root_dir_start_block = fat_start_block + ((boot_sector->reserved_sector_count + (boot_sector->num_fats * boot_sector->fat_size_32)) * boot_sector->sectors_per_cluster);
     readblock(root_dir_start_block, buf);
-
-    struct DirectoryEntry *dir = (struct DirectoryEntry *)buf;
-    char formatted_name[13]; // 8 字元名稱 + 1 點 + 3 擴展名 + 1 結尾
-
-    for (int i = 0; i < 16; i++) {  // 假定每個塊有 16 個條目
-        if (dir[i].name[0] == 0x00) break; // 結束目錄讀取
-        if (dir[i].name[0] == 0xE5) continue; // 跳過已刪除文件
-        if (dir[i].attr & 0x08) continue; // 跳過卷標
-
-        format_filename(formatted_name, dir[i].name);
-        if (dir[i].attr & 0x10) {  // 目錄條目
-            uart_puts("[DIR] ");
-            uart_puts(formatted_name);
-            newline();
-        } else {  // 文件條目
-            uart_puts("[FILE] ");
-            uart_puts(formatted_name);
-            newline();
-        }
-    }
+    rootdir = (struct DirectoryEntry *)buf;
+    mt -> root = fat32_create_vnode("fat32", 2, 0, 0);
     return 0;
 }
 
@@ -156,51 +150,100 @@ int reg_fat32(){
     return register_filesystem(&fs);
 }
 
-// int fat32_write(struct file *file, const void *buf, size_t len){
-//     return -1;
-// }
+int fat32_write(struct file *file, const void *buf, size_t len){
+    return -1;
+}
 
-// int fat32_read(struct file *file, void *buf, size_t len){
-//     struct fat32_node * internal = file -> vnode -> internal;
-//     if(file -> f_pos + len > internal -> size)
-//         len = internal -> size - file -> f_pos;
-//     for(int i=0; i<len;i++){
-//         ((char *)buf)[i] = internal -> data[i + file -> f_pos];
-//     }
-//     file -> f_pos += len;
-//     return len;
-// }
+uint32_t get_cluster_blk_idx(uint32_t cluster_idx) {
+    return fat32_metadata.data_region_blk_idx +
+           (cluster_idx - fat32_metadata.first_cluster) * fat32_metadata.sector_per_cluster;
+}
 
-// int fat32_open(struct vnode *file_node, struct file **target){
-//     (*target) -> vnode = file_node;
-//     (*target) -> f_ops = file_node -> f_ops;
-//     (*target) -> f_pos = 0;
-//     return 0;
-// }
+int fat32_read(struct file* file, void* ret, uint64_t len) {
+    struct fat32_node* file_node = (struct fat32_node*)file->vnode->internal;
+    uint64_t f_pos_ori = file->f_pos;
+    uint32_t current_cluster = file_node->start_cluster;
+    int remain_len = len;
+    int fat[16];
+    char buf[512];
+    while (remain_len > 0 && current_cluster >= fat32_metadata.first_cluster && current_cluster != 0xFFFFFFF) {
+        readblock(get_cluster_blk_idx(current_cluster), ((char *)buf)+file->f_pos);
+        for (int i = 0; i < 512; i++) {
+            if (buf[i] == '\0' || remain_len-- < 0) break;
+            ((char *)ret)[file->f_pos++] = buf[i];
+        }
+    }
+    //return 10;
+    return (file->f_pos - f_pos_ori);
+}
 
-// int fat32_close(struct file *file){
-//     free_page(file);
-//     return 0;
-// }
+int fat32_open(struct vnode *file_node, struct file **target){
+    (*target) -> vnode = file_node;
+    (*target) -> f_ops = file_node -> f_ops;
+    (*target) -> f_pos = 0;
+    return 0;
+}
 
-// int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name){
-//     int idx = 0;
-//     struct fat32_node * internal = dir_node -> internal;
-//     while(internal -> entry[idx]){
-//         struct fat32_node * entry_node = internal -> entry[idx] -> internal;
-//         if(strcmp(entry_node -> name, component_name) == 0){
-//             *target = internal -> entry[idx];
-//             return 0;
-//         }
-//         idx++;
-//     }
-//     return -1;
-// }
+int fat32_close(struct file *file){
+    free_page(file);
+    return 0;
+}
 
-// int fat32_create(struct vnode *dir_node, struct vnode **target, const char *component_name){
-//     return -1;
-// }
+int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name){
+    // check entry, if not in entry, check sd card, and if still no, return -1
+    char buf[512];
+    int idx = 0;
+    struct fat32_node * internal = dir_node -> internal;
+    while(internal -> entry[idx]){
+        struct fat32_node * entry_node = internal -> entry[idx] -> internal;
+        if(strcmp(entry_node -> name, component_name) == 0){
+            *target = internal -> entry[idx];
+            return 0;
+        }
+        idx++;
+    }
 
-// int fat32_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name){
-//     return -1;
-// }
+    struct DirectoryEntry *dir = rootdir;
+    char formatted_name[13]; // 8 字元名稱 + 1 點 + 3 擴展名 + 1 結尾
+    int type = -1;
+
+    for (int i = 0; i < entries_per_cluster; i++) {  // 假定每個塊有 16 個條目
+        if (dir[i].name[0] == 0x00) break; // 結束目錄讀取
+        if (dir[i].name[0] == 0xE5) continue; // 跳過已刪除文件
+        if (dir[i].attr & 0x08) continue; // 跳過卷標
+
+        format_filename(formatted_name, dir[i].name);
+        if(strcmp(formatted_name, component_name) == 0){
+            uart_puts("[FAT32] Found ");
+            uart_puts(formatted_name);
+            
+            if (dir[i].attr & 0x10) {  // 目錄條目
+                type = 1;
+            } else {  // 文件條目
+                type = 3;
+            }
+            
+            uint32_t start_cluster = ((uint32_t)dir[i].fst_clus_hi << 16) | (uint32_t)dir[i].fst_clus_lo;
+            uint32_t file_size = dir[i].file_size;
+            uart_puts(" with size ");
+            uart_int(file_size);
+            uart_puts(" in start cluster ");
+            uart_int(start_cluster);
+            newline();
+            //set new vnode and assign to internal -> idx
+            internal -> entry[idx] = fat32_create_vnode(formatted_name, type, start_cluster, file_size);
+            *target = internal -> entry[idx];
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+int fat32_create(struct vnode *dir_node, struct vnode **target, const char *component_name){
+    return -1;
+}
+
+int fat32_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name){
+    return -1;
+}
