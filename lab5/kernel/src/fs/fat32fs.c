@@ -539,7 +539,7 @@ static int create(FS_VNODE* dir_node, FS_VNODE** target, const char* component_n
 
     U32 entry_index;
     NS_DPRINT("[FS] FAT32fs: Registering directory entry...\n");
-    if (register_dir_entry(dir_node, component_name, 0, &entry_index) == -1) {
+    if (register_dir_entry(dir_node, component_name, FAT32_DIR_ENTRY_ATTR_ARCHIVE, &entry_index) == -1) {
         return -1;
     }
     NS_DPRINT("[FS] FAT32fs: parent dir entry: %u\n", entry_index);

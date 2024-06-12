@@ -32,9 +32,10 @@ void worker_init() {
 	task_run(worker_manager.task_handler);
 }
 
-void worker_add(void (*callback)(void)) {
+void worker_add(void (*callback)(void), int priority) {
     WORKER_TASK* work = kzalloc(sizeof(WORKER_TASK));
     work->callback = callback;
+    work->priority = priority;
     work->next = NULL;
 
     if (!worker_manager.task_ptr) {
@@ -46,8 +47,23 @@ void worker_add(void (*callback)(void)) {
         return;
     }
 
-    worker_manager.end_ptr->next = work;
-    worker_manager.end_ptr = work;
+    BOOL is_inserted = FALSE;
+    WORKER_TASK* cur_work = worker_manager.task_ptr;
+    WORKER_TASK* next_work = cur_work->next;
+    while (next_work != worker_manager.end_ptr && next_work != NULL) {
+        if (next_work->priority > work->priority) {
+            cur_work->next = work;
+            work->next = next_work;
+            is_inserted = TRUE;
+            break;
+        }
+    }
+
+
+    if (!is_inserted) {
+        worker_manager.end_ptr->next = work;
+        worker_manager.end_ptr = work;
+    }
 
     if (!task_is_running(worker_manager.task_handler)) {
         //NS_DPRINT("[WORKER] awake.");

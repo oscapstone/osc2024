@@ -158,7 +158,7 @@ void uart_work() {
 // the mini uart interrupt handler
 void uart_handle_int() {
     uart_disable_int();
-    worker_add(uart_work);
+    worker_add(uart_work, 1);
 }
 
 void uart_set_transmit_int() {

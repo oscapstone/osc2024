@@ -117,3 +117,4 @@ typedef struct PACKED {
 #define FAT32_DIR_ENTRY_ATTR_SYS        0x04
 #define FAT32_DIR_ENTRY_ATTR_DIR        0x10
 #define FAT32_DIR_ENTRY_ATTR_LONG_NAME  0x0f
+#define FAT32_DIR_ENTRY_ATTR_ARCHIVE    0x20

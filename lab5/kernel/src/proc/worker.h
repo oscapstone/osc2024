@@ -5,6 +5,7 @@
 typedef struct _WORKER_TASK
 {
     void (*callback)(void);
+    int priority;
     struct _WORKER_TASK* next;
 }WORKER_TASK;
 
@@ -23,5 +24,5 @@ void worker_init();
 /**
  * Add a work to the worker
 */
-void worker_add(void (*callback)(void));
+void worker_add(void (*callback)(void), int priority);
 
