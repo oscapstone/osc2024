@@ -49,3 +49,9 @@ void strcpy(char* from, char* to, int size) {
 void delay (unsigned long long t) {
 	while (t --);
 }
+
+void memset(char* arr, char t, int size) {
+	for (int i = 0; i < size; i ++) {
+		arr[i] = t;
+	}
+}

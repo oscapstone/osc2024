@@ -3,6 +3,7 @@
 #include "fdt.h"
 #include "set.h"
 #include "cpio.h"
+#include "mmu.h"
 
 /*
 total: [0x0, 0x3c000000]
@@ -66,7 +67,7 @@ void* simple_malloc(int num, int size) {
 		uart_printf ("you're allocator is going to fuck you\r\n");
 	}
 	now += num * size;
-	return (char*)(now - num * size);
+	return pa2va((char*)(now - num * size));
 }
 
 void print_node_list() {
@@ -117,6 +118,10 @@ void manage_init() {
 	}
 	
 	reserve (0, 0x1000);
+	reserve (0x1000, 0x1fff); // ttbr1
+	reserve (0x2000, 0x2fff);
+	reserve (0x3000, 0x3fff); 
+	reserve (0x4000, 0x4fff);
 	reserve (0x80000, 0x100000);
 	reserve (manage_start, now + sizeof(struct nodeList) * 10000);
 	limit = now + sizeof(struct nodeList) * 10000;
@@ -215,7 +220,7 @@ const int chunk_size = 512;
 
 void* my_malloc(size_t size) {
 	if (size > chunk_size) {
-		return frame_malloc((size + 4096 - 1) / 4096);
+		return pa2va(frame_malloc((size + 4096 - 1) / 4096));
 	}
 	if (node_arr[20] == NULL) {
 		char* t = frame_malloc(1);
@@ -229,7 +234,10 @@ void* my_malloc(size_t size) {
 		return 0;
 	}
 	frame_pool[pos >> 12] ++;
-	return pos;
+	if (pos == 0) {
+		uart_printf ("something wrong\r\n");
+	}
+	return pa2va(pos);
 }
 
 void my_free(char* addr) {

@@ -18,6 +18,7 @@ void do_signal(int, handler);
 void do_sigkill(int, int);
 
 void from_el1_to_fork_test();
+void simple_fork_test();
 
 // for debug purpose
 void get_sp();

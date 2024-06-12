@@ -133,10 +133,28 @@ void c_undefined_exception() {
 	while (1);
 }
 
+#define ESR_ELx_EC(esr) ((esr & 0xFC000000) >> 26)
+
 void c_system_call_handler(trapframe_t* tf) {
 	irq(0);
+
+	unsigned long esr = read_sysreg(esr_el1); // cause of that exception
+    unsigned int ec = ESR_ELx_EC(esr);
+
+	if (ec == 0b100100) {
+		uart_printf ("data aboart el0\r\n");
+		while (1);
+	}
+	if (ec == 0b100000) {
+		uart_printf ("ins \r\n");
+		while (1);
+	}
+	if (ec == 0b100101) {
+		uart_printf ("data aboard el1\r\n");
+		while (1);	
+	}
+
 	int id = tf -> x[8];
-	// uart_printf ("having exception of id %d\r\n", id);
 	if (id == 0) {
 		tf -> x[0] = do_getpid();
 	}

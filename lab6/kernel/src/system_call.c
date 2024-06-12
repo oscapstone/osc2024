@@ -6,6 +6,8 @@
 #include "mini_uart.h"
 #include "helper.h"
 #include "exception.h"
+#include "utils.h"
+#include "mmu.h"
 
 extern thread* get_current();
 extern thread** threads;
@@ -50,17 +52,50 @@ uint64_t get_sp_el1() {
 
 // tf is the sp
 int do_fork(trapframe_t* tf) {
+	switch_page();
+
 	uart_printf ("Started do fork\r\n");
 	int id = thread_create(NULL); // later set by thread_fn
 
 	thread* cur = get_current();
 	thread* child = threads[id];
+
 		
 	for (int i = 0; i < 10; i ++) {
 		child -> reg[i] = cur -> reg[i];
 	}
-	strcpy(cur -> stack_start, child -> stack_start, stack_size);
-	strcpy(cur -> kstack_start, child -> kstack_start, stack_size);
+		
+	for (int i = 0; i < stack_size; i ++) {
+		((char*) child -> kstack_start)[i] = ((char*)(cur -> kstack_start))[i];
+	}
+	// uart_printf ("finish copying kernel stack\r\n");
+	for (int i = 0; i < stack_size * 4; i ++) {
+		((char*) child -> stack_start)[i] = ((char*)(cur -> stack_start))[i];
+	}
+	// uart_printf ("finish copying user stack\r\n");
+
+	int t = (cur -> code_size + 4096 - 1) / 4096 * 4096;
+	child -> code = my_malloc(t);
+	child -> code_size = cur -> code_size;
+	
+	for (int i = 0; i < t; i ++) {
+		((char*)child -> code)[i] = ((char*)(cur -> code))[i];
+	}
+	// uart_printf ("finish copying code\r\n");
+
+	setup_peripheral_identity(pa2va(child -> PGD));
+	// uart_printf ("finish mapping peripheral\r\n");
+	for (int i = 0; i < t / 4096; i ++) {
+		map_page(pa2va(child -> PGD), i * 4096, va2pa(child -> code) + i * 4096, 0);
+	}
+	// uart_printf ("finish mapping code\r\n");
+	for (int i = 0; i < 4; i ++) {
+		map_page(pa2va(child -> PGD), 0xffffffffb000L + i * 4096, va2pa(child -> stack_start) + i * 4096, 0);
+	}
+	// uart_printf ("finish mapping stack\r\n");
+
+	child -> stack_start = 0xffffffffb000;
+	child -> code = 0;
 	
 	child -> sp = (void*)((char*)tf - (char*)cur -> kstack_start + (char*)child -> kstack_start); 
 	child -> fp = child -> sp; 
@@ -77,16 +112,18 @@ int do_fork(trapframe_t* tf) {
 
 	void* sp_el0 = get_sp_el0();
 	void* sp_el1 = get_sp_el1();
-	uart_printf ("CUR SPEL0: %x, CUR SPEL1: %x\r\n", sp_el0, sp_el1);
+	uart_printf ("CUR SPEL0: %llx, CUR SPEL1: %llx\r\n", sp_el0, sp_el1);
 
 	trapframe_t* child_tf = (trapframe_t*)child -> sp;
 	child_tf -> x[0] = 0;
 	child_tf -> sp_el0 += child -> stack_start - cur -> stack_start;
-	
-	uart_printf ("Child tf should be at %x should jump to %x\r\n", child -> sp, thread_fn[id], child_tf -> elr_el1);
-	uart_printf ("And then to %x, ori is %x :(:(:(:(:\r\n", child_tf -> elr_el1, tf -> elr_el1);
 
-	uart_printf ("diff1 %x, diff2 %x\r\n", (void*)tf - (cur -> kstack_start), (void*)child_tf - (child -> kstack_start));
+	//elr_el1 should be the same 
+	
+	// uart_printf ("Child tf should be at %x should jump to %x\r\n", child -> sp, thread_fn[id], child_tf -> elr_el1);
+	// uart_printf ("And then to %x, ori is %x :(:(:(:(:\r\n", child_tf -> elr_el1, tf -> elr_el1);
+
+	// uart_printf ("diff1 %x, diff2 %x\r\n", (void*)tf - (cur -> kstack_start), (void*)child_tf - (child -> kstack_start));
 	
 	return id;	
 }
@@ -96,7 +133,17 @@ void do_exit() {
 }
 
 int do_mbox_call(unsigned char ch, unsigned int *mbox) {
-	return mailbox_call(mbox, ch);
+	int* t = my_malloc(4096);
+	for (int i = 0; i < 4096; i ++) {
+		((char*)t)[i] = ((char*)mbox)[i];
+	}
+	int res = mailbox_call(t, ch);
+	for (int i = 0; i < 4096; i ++) {
+		((char*)mbox)[i] = ((char*)t)[i];
+	}
+	return res;
+	
+	// return mailbox_call(mbox, ch);
 }
 
 void do_kill(int pid) {
@@ -178,7 +225,14 @@ void fork_test_func() {
 	}
 	*/
 }
+
+extern void uart_write(char);
 void simple_fork_test() {
+	uart_write('f');
+	while (1);
+	// uart_printf ("In simple fork test\r\n");
+
+	/*
 	for (int i = 0; i < 1; i ++) {
 		// uart_printf ("%d: %d\r\n", getpid(), i);
 		int t = fork();
@@ -190,7 +244,7 @@ void simple_fork_test() {
 		}
 	}
 	exit();
-	while (1);
+	*/
 }
 void fork_test_idle() {
 	while(1) {
@@ -217,12 +271,49 @@ void fork_test_idle() {
 	}
 }
 
+extern char _code_start[];
+
+void im_fineee() {
+	uart_printf ("im fine\r\n");
+}
+
 void from_el1_to_fork_test() {
 	irq(0);
-	uart_printf ("From el1 to el0 fork test\r\n");	
-	get_current() -> stack_start = my_malloc(4096);
-	void* stack = get_current() -> stack_start + 4096 - 16;
+	// switch_page();
+	uart_printf ("%llx\r\n", get_current() -> PGD);
+	long ttbr0 = read_sysreg(ttbr0_el1);
+	long ttbr1 = read_sysreg(ttbr1_el1);
+	uart_printf ("ttbr0: %llx, ttbr1: %llx\r\n", ttbr0, ttbr1);
+	void* sp = 0xfffffffff000 - 16;
+	void* code = (char*)simple_fork_test - _code_start;
 
+	long test = code;
+	uart_printf ("%llx translated to %llx\r\n", test, trans(test));
+	uart_printf ("%llx translated to %llx\r\n", test, trans_el0(test));
+
+	uart_printf ("stack: %llx code: %llx\r\n", sp, code);
+
+	/*
+	for (int i = 0; i < 100; i ++) {
+		uart_printf ("%d ", ((char*)code)[i]);
+	}
+	uart_printf ("\r\n");
+	*/
+	
+	/*
+	for (int i = 0; i < 100; i ++) {
+		uart_printf ("%d ", ((char*)simple_fork_test)[i]);
+	}
+	uart_printf ("\r\n");
+	*/
+
+	// simple_fork_test();
+
+	/*
+	void (*func)() = code;
+	func();
+	*/
+	
 	asm volatile(
 		"mov x1, 0;"
 		"msr spsr_el1, x1;"
@@ -230,10 +321,13 @@ void from_el1_to_fork_test() {
 		"mov x2, %[stack];"
 		"msr elr_el1, x1;"
 		"msr sp_el0, x2;"
-		"msr DAIFclr, 0xf;" // irq(1);
+		// "msr DAIFclr, 0xf;" // irq(1);
 		"eret;"
 		:
-		: [code] "r" (simple_fork_test), [stack] "r" (stack)
-		: "x1", "x30"
+		: [code] "r" (code), [stack] "r" (sp)
+		: "x1", "x2"
 	);
+
+	uart_printf ("fuck you\r\n");
+	asm volatile ( "eret;" );
 }

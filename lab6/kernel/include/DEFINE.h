@@ -1,4 +1,4 @@
-#define MMIO_BASE   0x3F000000
+#define MMIO_BASE   0xffff00003F000000
 #define PBASE MMIO_BASE
 
 #define AUX_IRQ             ((volatile unsigned int*)(MMIO_BASE + 0x00215000))

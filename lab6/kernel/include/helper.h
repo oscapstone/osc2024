@@ -11,4 +11,6 @@ void strcpy(char*, char*, int);
 unsigned long stoi(char*);
 void delay (unsigned long long);
 
+void memset(char*, char, int);
+
 #endif

@@ -1,4 +1,4 @@
-#define MMIO_BASE       0x3F000000
+#define MMIO_BASE       0x3F000000 + 0xffff000000000000
 #define VIDEOCORE_MBOX  (MMIO_BASE+0x0000B880)
 #define MAILBOX_READ       ((volatile unsigned int*)(VIDEOCORE_MBOX+0x0))
 #define MAILBOX_POLL       ((volatile unsigned int*)(VIDEOCORE_MBOX+0x10))

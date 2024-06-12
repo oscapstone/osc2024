@@ -4,6 +4,8 @@
 #include "helper.h"
 #include "exception.h"
 #include "signal.h"
+#include "mmu.h"
+#include "utils.h"
 
 #define stack_size 4096
 #define max_thread_num 500 
@@ -24,7 +26,7 @@ void thread_init() {
 	thread_fn = (void**)my_malloc(sizeof(void*) * max_thread_num);
 
 	irq(0);
-	for (int i = 1; i < max_thread_num; i ++) {
+	for (int i = 0; i < max_thread_num; i ++) {
 		threads[i] = NULL;
 	}
 
@@ -36,19 +38,25 @@ void thread_init() {
 	x -> sp = x -> kstack_start + stack_size - 16;
 	x -> fp = x -> sp;
 	
+	x -> stack_start = my_malloc(stack_size * 4);
+
+	long* PGD = my_malloc(4096);
+	for (int i = 0; i < 4096; i ++) {
+		((char*)PGD)[i] = 0;
+	}
+	x -> PGD = va2pa(PGD);
+
 	for (int i = 0; i < 10; i ++) {
 		x -> signal[i] = 0;
 		x -> signal_handler[i] = NULL;
 	}
 
-	x -> stack_start = my_malloc(stack_size);
-	asm volatile ("msr tpidr_el1, %0" : "=r" (x));
+	write_sysreg(tpidr_el1, x);
 
 	thread_start = x;
 	thread_tail = thread_start;
 	thread_start -> next = NULL;
 	thread_start -> prev = NULL;
-
 
 	irq(1);
 }
@@ -95,6 +103,7 @@ void schedule() {
 	thread_start -> prev = NULL;
 	// uart_printf ("[DEBUG] Scheduled From %d to %d\r\n", get_current() -> id, thread_start -> id);
 	switch_to(get_current(), thread_start);
+	switch_page();
 	// after successfully switched, ending of irq handler do irq(1)
 	return;
 }
@@ -138,7 +147,7 @@ void thread_func_handler() {
 	int id = get_current() -> id;
 	void* func = thread_fn[id];
 	*/
-	uart_printf ("Jumping to %x with sp %x\r\n", thread_fn[get_current() -> id], (char*)sp + 16 * 2);
+	uart_printf ("Jumping to %llx with sp %llx\r\n", thread_fn[get_current() -> id], (char*)sp + 16 * 2);
 	asm volatile (
 		"add sp, sp, 16 * 2;"
 		// "mov x0, sp;"
@@ -159,13 +168,19 @@ void thread_func_handler() {
 
 int thread_create(void* func) {
 	uart_printf ("creating thread\r\n");
+	long ttbr1 = read_sysreg(ttbr1_el1);
+	uart_printf ("TTBR1: %llx\r\n", ttbr1);
+	uart_printf ("my_malloc: %llx, is at %llx\r\n", my_malloc, trans(my_malloc));
 	thread* x = my_malloc(sizeof(thread));
-	x -> stack_start = my_malloc(stack_size);
+	x -> stack_start = my_malloc(stack_size * 4);
 	x -> kstack_start = my_malloc(stack_size);
 	x -> sp = x -> kstack_start + stack_size - 16; 
 	x -> fp = x -> sp;
 	x -> lr = thread_func_handler;
 	x -> state = 1;
+	
+	x -> PGD = va2pa(my_malloc(4096));
+	memset(pa2va(x -> PGD), 0, 4096);
 	
 	for (int i = 0; i < 10; i ++) {
 		x -> signal_handler[i] = NULL;
@@ -184,7 +199,7 @@ int thread_create(void* func) {
 			return -1;
 		}
 	}
-	
+
 	x -> next = NULL; 
 	x -> prev = thread_tail;
 	thread_tail -> next = x;
@@ -205,10 +220,12 @@ void foo(){
 }
 
 void thread_test() {
+	irq(0);
 	uart_printf ("started thread testing\r\n");
 	thread_create(idle);
 	for (int i = 0; i < 3; i ++) {
 		thread_create(foo);
 	}
-	schedule();	
+	irq(1);
+	// schedule();	
 }

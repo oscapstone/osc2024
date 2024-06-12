@@ -6,6 +6,7 @@ typedef struct thread {
 	void* fp;
 	void* lr;
 	void* sp;
+	long* PGD;
 	void* stack_start;
 	void* kstack_start;
 	void* sstack_start;
@@ -14,6 +15,8 @@ typedef struct thread {
 	struct thread* prev;
 	void* signal_handler[10]; // sigid at most 9
 	int signal[10];
+	void* code;
+	int code_size;
 } thread;
 
 void thread_init();

@@ -12,8 +12,15 @@
 #include "thread.h"
 #include "system_call.h"
 #include "signal.h"
+#include "thread.h"
+#include "mmu.h"
 
 char buf[1024];
+extern thread* get_current();
+extern thread** threads;
+extern void** thread_fn;
+
+extern char _code_start[];
 
 extern void core_timer_enable();
 
@@ -112,8 +119,56 @@ void malloc_test() {
 	print_pool();
 }
 
+void do_simple_fork_test() {
+	irq(0);
+	int id = thread_create(from_el1_to_fork_test);
+	thread* child = threads[id];
+	thread* cur = get_current();
+	int t = (cur -> code_size + 4096 - 1) / 4096 * 4096;
+	child -> code = my_malloc(t);
+	child -> code_size = cur -> code_size;
+
+	uart_printf ("Child code physical: %llx\r\n", child -> code);
+
+	uart_printf ("simple fork test: ");
+	for (int j = 0; j < t / 4096; j ++) {
+		for (int i = 0; i < 10; i ++) {
+			uart_printf ("%d ", (_code_start + 4096 * j)[i]);
+		}
+		uart_printf ("\r\n");
+	}
+
+	uart_printf ("copying code of size %d\r\n", t);
+	strcpy(cur -> code, child -> code, t);
+	uart_printf ("fuck: ");	
+	for (int i = 0; i < 10; i ++) {
+		uart_printf ("%d ", ((char*)(child -> code + 4096))[i]);
+	}
+	uart_printf ("\r\n");
+	uart_printf ("t / 4096 : %d\r\n", t / 4096);
+	for (int i = 0; i < t / 4096; i ++) {
+		map_page(pa2va(child -> PGD), i * 4096, va2pa(child -> code) + i * 4096, (1 << 6));
+	}
+
+	for (int i = 0; i < 4; i ++) {
+		map_page(pa2va(child -> PGD), 0xffffffffb000L + i * 4096, va2pa(child -> stack_start) + i * 4096, (1 << 6));
+	}
+
+	setup_peripheral_identity(pa2va(child -> PGD));
+
+	child -> code = 0;
+	child -> stack_start = 0xffffffffb000;
+
+	uart_printf ("%llx\r\n", child -> PGD);
+
+	uart_printf ("thread_fn[%d]: %llx\r\n", id, thread_fn[id]);
+
+	irq(1);
+}
+
 void shell_begin(char* fdt)
 {
+	fdt += 0xffff000000000000;
 	while (1) {
 		uart_recv_string(buf);
 		uart_printf("\r\n");
@@ -198,7 +253,8 @@ void shell_begin(char* fdt)
 			thread_test();
 		}
 		else if (same(buf, "fork")) {
-			thread_create(from_el1_to_fork_test);
+			do_simple_fork_test();
+			while (1);
 		}
 		else if (same(buf, "timer")) {
 			core_timer_enable();

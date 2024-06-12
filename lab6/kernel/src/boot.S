@@ -1,6 +1,6 @@
-// #include "mm.h"
+#include "mmu_regs.h"
 
-#define CORE0_TIMER_IRQ_CTRL 0x40000040
+#define CORE0_TIMER_IRQ_CTRL 0xffff000040000040
 
 .section ".text.boot"
 
@@ -10,18 +10,57 @@ _start:
 
 	mrs	x0, mpidr_el1		
 	and	x0, x0,#0xFF	// Check processor id
-	cbz	x0, master		// Hang for all non-primary CPU
+	cbz	x0, setup_tcr_el1		// Hang for all non-primary CPU
 	b	proc_hang
 
 proc_hang: 
 	b 	proc_hang
 
-master:
+setup_tcr_el1:
 	bl from_el2_to_el1
-	
-	ldr x1, =0x100000
-	mov sp, x1
 
+    ldr x0, = TCR_CONFIG_DEFAULT
+    msr tcr_el1, x0
+
+    ldr x0, =( \
+        (MAIR_DEVICE_nGnRnE << (MAIR_IDX_DEVICE_nGnRnE * 8)) | \
+        (MAIR_NORMAL_NOCACHE << (MAIR_IDX_NORMAL_NOCACHE * 8)) \
+    )
+    msr mair_el1, x0
+
+    mov x0, 0x1000 // PGD's page frame at 0x1000
+    mov x1, 0x2000 // PUD's page frame at 0x2000
+
+    ldr x2, = BOOT_PGD_ATTR
+    orr x2, x1, x2 // combine the physical address of next level page with attribute.
+    str x2, [x0]
+
+    ldr x2, = BOOT_PUD_ATTR
+    mov x3, 0x00000000
+    orr x3, x2, x3
+    str x3, [x1] // 1st 1GB mapped by the 1st entry of PUD
+    mov x3, 0x40000000
+    orr x3, x2, x3
+    str x3, [x1, 8] // 2nd 1GB mapped by the 2nd entry of PUD
+
+    msr ttbr0_el1, x0 // load PGD to the bottom translation-based register.
+    msr ttbr1_el1, x0 // also load PGD to the upper translation based register.
+
+    mov sp, 0x100000
+    bl three_level_translation_init
+
+    mrs x2, sctlr_el1
+    orr x2 , x2, 1
+    msr sctlr_el1, x2 // enable MMU, cache remains disabled
+
+    ldr x2,= boot_rest
+    br x2
+
+boot_rest:
+
+	
+	ldr x1, =0xffff000000100000
+	mov sp, x1
 	
 	adr	x0, bss_begin
 	adr	x1, bss_end
@@ -227,8 +266,8 @@ switch_to:
     mov x9, sp
     str x9, [x0, 16 * 6]
 
-    ldp x19, x20, [x1, 16 * 0]
-    ldp x21, x22, [x1, 16 * 1]
+	ldp x19, x20, [x1, 16 * 0]
+    ldp x21, x22, [x1, 16 * 1] // x0, x1 are 0xffff shits
     ldp x23, x24, [x1, 16 * 2]
     ldp x25, x26, [x1, 16 * 3]
     ldp x27, x28, [x1, 16 * 4]
