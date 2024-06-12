@@ -191,9 +191,6 @@ void init_rootfs(){
     vfs_mkdir("/boot");
     vfs_mount("/boot", "fat32");
     struct file * temp;
-    //vfs_lookup("/boot/KERNEL8.IMG", &temp);
-    char buf[100];
-    memset(buf, 100);
     // vfs_open("/boot/FAT_R.TXT",0, &temp);
     // vfs_read(temp, buf, 10);
     // uart_puts(buf);
