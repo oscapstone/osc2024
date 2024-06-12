@@ -24,4 +24,6 @@ void simple_fork_test();
 void get_sp();
 void output_sp(void*);
 
+void im_fineee();
+
 #endif

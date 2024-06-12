@@ -86,11 +86,11 @@ int do_fork(trapframe_t* tf) {
 	setup_peripheral_identity(pa2va(child -> PGD));
 	// uart_printf ("finish mapping peripheral\r\n");
 	for (int i = 0; i < t / 4096; i ++) {
-		map_page(pa2va(child -> PGD), i * 4096, va2pa(child -> code) + i * 4096, 0);
+		map_page(pa2va(child -> PGD), i * 4096, va2pa(child -> code) + i * 4096, (1 << 6));
 	}
 	// uart_printf ("finish mapping code\r\n");
 	for (int i = 0; i < 4; i ++) {
-		map_page(pa2va(child -> PGD), 0xffffffffb000L + i * 4096, va2pa(child -> stack_start) + i * 4096, 0);
+		map_page(pa2va(child -> PGD), 0xffffffffb000L + i * 4096, va2pa(child -> stack_start) + i * 4096, (1 << 6));
 	}
 	// uart_printf ("finish mapping stack\r\n");
 
@@ -120,8 +120,8 @@ int do_fork(trapframe_t* tf) {
 
 	//elr_el1 should be the same 
 	
-	// uart_printf ("Child tf should be at %x should jump to %x\r\n", child -> sp, thread_fn[id], child_tf -> elr_el1);
-	// uart_printf ("And then to %x, ori is %x :(:(:(:(:\r\n", child_tf -> elr_el1, tf -> elr_el1);
+	uart_printf ("Child tf should be at %llx should jump to %llx\r\n", child -> sp, thread_fn[id], child_tf -> elr_el1);
+	uart_printf ("And then to %llx, ori is %llx :(:(:(:(:\r\n", child_tf -> elr_el1, tf -> elr_el1);
 
 	// uart_printf ("diff1 %x, diff2 %x\r\n", (void*)tf - (cur -> kstack_start), (void*)child_tf - (child -> kstack_start));
 	
@@ -134,11 +134,11 @@ void do_exit() {
 
 int do_mbox_call(unsigned char ch, unsigned int *mbox) {
 	int* t = my_malloc(4096);
-	for (int i = 0; i < 4096; i ++) {
+	for (int i = 0; i < 144; i ++) {
 		((char*)t)[i] = ((char*)mbox)[i];
 	}
 	int res = mailbox_call(t, ch);
-	for (int i = 0; i < 4096; i ++) {
+	for (int i = 0; i < 144; i ++) {
 		((char*)mbox)[i] = ((char*)t)[i];
 	}
 	return res;
@@ -274,7 +274,10 @@ void fork_test_idle() {
 extern char _code_start[];
 
 void im_fineee() {
-	uart_printf ("im fine\r\n");
+	long elr_el1 = read_sysreg(elr_el1);
+	long sp_el0 = read_sysreg(sp_el0);
+
+	uart_printf ("im fine, elr_el1 %llx, sp_el0 %llx\r\n", elr_el1, sp_el0);
 }
 
 void from_el1_to_fork_test() {

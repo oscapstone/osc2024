@@ -107,7 +107,7 @@ uint32_t print_dtb(int type, char *name, char *data, uint32_t size) ;
 uint32_t get_initramfs_addr(int type, char *name, char *data, uint32_t size);
 uint32_t fdt_traverse(fdt_callback cb);
 
-int get_fdt_end();
+long get_fdt_end();
 
 
 #endif /* _FDT_H */

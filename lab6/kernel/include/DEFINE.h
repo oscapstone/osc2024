@@ -37,8 +37,8 @@
 #define Disable_IRQs_1          ((volatile unsigned int*)(MMIO_BASE + 0x0000B21C))
 #define Disable_IRQs_2          ((volatile unsigned int*)(MMIO_BASE + 0x0000B220))
 #define Disable_Basic_IRQs      ((volatile unsigned int*)(MMIO_BASE + 0x0000B224))
-#define CORE0_INT_SRC           (volatile unsigned int*)(0x40000060)
-#define CORE0_TIMER_IRQ_CTRL    (volatile unsigned int*)(0x40000040)
+#define CORE0_INT_SRC           (volatile unsigned int*)(0xffff000040000060)
+#define CORE0_TIMER_IRQ_CTRL    (volatile unsigned int*)(0xffff000040000040)
 
 #define GPFSEL1         (PBASE+0x00200004)
 #define GPSET0          (PBASE+0x0020001C)

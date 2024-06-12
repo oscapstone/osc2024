@@ -7,14 +7,15 @@
 #include "mmu.h"
 
 extern void core_timer_enable();
-extern char* fdt_addr;
 extern char _code_start[];
 extern char _code_end[];
 
 extern thread* get_current();
 
+char* fdt_addr;
+
 void kernel_begin(char* fdt) {
-	fdt_addr = fdt;
+	fdt_addr = pa2va(fdt);
 	uart_init();
 	long t = 0xffff000000000000;
 	uart_printf ("%llx translated to %llx\r\n", t, trans(t));

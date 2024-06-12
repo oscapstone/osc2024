@@ -178,8 +178,8 @@ core_timer_handler:
 general_irq_handler:
   save_all
   bl c_general_irq_handler
-  mov x0, sp
-  bl handle_signal
+  // mov x0, sp
+  // bl handle_signal
   load_all
   eret
 
@@ -286,5 +286,6 @@ get_current:
 .global ret_from_fork_child
 ret_from_fork_child:
 	load_all
-	msr DAIFclr, 0xf
+	// bl im_fineee
+	// msr DAIFclr, 0xf
 	eret

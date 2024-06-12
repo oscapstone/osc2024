@@ -5,7 +5,7 @@
 
 char* _cpio_file;
 char* _fdt_end;
-char* fdt_addr;
+extern char* fdt_addr;
 
 void _print_tab(int level)
 {
@@ -62,6 +62,7 @@ uint32_t get_initramfs_addr(int type, char* name, char* data, uint32_t size)
 {
 	if (type == FDT_PROP && same(name, "linux,initrd-start")) {
 		_cpio_file=(char *)(uintptr_t)fdt32_ld((void*)data);
+		_cpio_file += 0xffff000000000000;
     }
 	return 0;
 }
@@ -108,6 +109,8 @@ uint32_t fdt_traverse(fdt_callback cb)
 {
     struct fdt_header *hdr = (struct fdt_header *)fdt_addr;
 
+	uart_printf ("%llx\r\n", fdt_addr);
+
     if (fdt_magic(hdr) != FDT_MAGIC) {
         uart_printf("[x] Not valid fdt_header\r\n");
     }
@@ -120,7 +123,7 @@ uint32_t fdt_traverse(fdt_callback cb)
 	return r;
 }
 
-int get_fdt_end() {
+long get_fdt_end() {
 	if (_fdt_end == 0) {
 		uart_printf ("You haven't get fdt_end\r\n");
 	}

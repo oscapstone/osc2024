@@ -6,7 +6,7 @@
 #include "mmu_regs.h"
 
 #define PERIPHERAL_START 0x3c000000L
-#define PERIPHERAL_END   0x3f000000L
+#define PERIPHERAL_END   0x40000000L
 
 #define DEVICE_BASE 0x3F000000L
 

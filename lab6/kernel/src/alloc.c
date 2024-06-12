@@ -126,8 +126,9 @@ void manage_init() {
 	reserve (manage_start, now + sizeof(struct nodeList) * 10000);
 	limit = now + sizeof(struct nodeList) * 10000;
 	// TODO This is SHIT, might potentially cause problem
-	reserve (fdt_addr, get_fdt_end());
-	reserve (_cpio_file, get_cpio_end());
+	uart_printf ("%llx %llx %llx %llx\r\n", fdt_addr, get_fdt_end(), _cpio_file, get_cpio_end);
+	reserve (va2pa(fdt_addr), va2pa(get_fdt_end()));
+	reserve (va2pa(_cpio_file), va2pa(get_cpio_end()));
 
 	for (int i = 1; (1 << i) <= arr_size ; i ++) {
 		for (int j = 0; j + (1 << i) <= arr_size; j += (1 << i)) {

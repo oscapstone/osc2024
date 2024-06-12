@@ -25,7 +25,6 @@ void thread_init() {
 	threads = (thread**)my_malloc(sizeof(thread) * max_thread_num);
 	thread_fn = (void**)my_malloc(sizeof(void*) * max_thread_num);
 
-	irq(0);
 	for (int i = 0; i < max_thread_num; i ++) {
 		threads[i] = NULL;
 	}
@@ -57,8 +56,6 @@ void thread_init() {
 	thread_tail = thread_start;
 	thread_start -> next = NULL;
 	thread_start -> prev = NULL;
-
-	irq(1);
 }
 
 void kill_zombies() {
@@ -87,6 +84,7 @@ void im_fine() {
 }
 
 void schedule() {
+	// uart_printf ("thread_start: %llx\r\n", &thread_start);
 	if (thread_start -> next == NULL) {
 		// uart_printf ("No next thread job\r\n");
 		return;
@@ -101,7 +99,7 @@ void schedule() {
 		thread_tail = thread_tail -> next;
 	}
 	thread_start -> prev = NULL;
-	// uart_printf ("[DEBUG] Scheduled From %d to %d\r\n", get_current() -> id, thread_start -> id);
+	uart_printf ("[DEBUG] Scheduled From %d to %d\r\n", get_current() -> id, thread_start -> id);
 	switch_to(get_current(), thread_start);
 	switch_page();
 	// after successfully switched, ending of irq handler do irq(1)

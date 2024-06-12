@@ -156,8 +156,6 @@ void cpio_load(char* str) {
 	
 	cur -> code = 0;
 	cur -> stack_start = 0xffffffffb000L;
-	void* sp = 0xfffffffff000L - 16;
-	void* el1_sp = cur -> sp;
 	
 	long ttbr1 = read_sysreg(ttbr1_el1);
 	long ttbr0 = read_sysreg(ttbr0_el1);
@@ -175,20 +173,20 @@ void cpio_load(char* str) {
 	ttbr0 = read_sysreg(ttbr0_el1);
 	uart_printf ("TTBR0: %llx, TTBR1: %llx, &TTBR0: %llx\r\n", ttbr0, ttbr1, &ttbr0);
 
-	asm volatile(
-		"mov x1, 0;"
-		"msr spsr_el1, x1;"
-		"mov x1, %[code];"
-		"mov x2, %[sp];"
-		"msr elr_el1, x1;"
-		"msr sp_el0, x2;"
-		"msr DAIFclr, 0xf;"
-		"mov sp, %[sp_el1];"
+	write_sysreg(spsr_el1, 0);	
+	write_sysreg(elr_el1, cur -> code);
+	write_sysreg(sp_el0, 0xfffffffff000L);
+	uart_printf ("sp %llx\r\n",cur -> sp);
+	asm volatile (
+		"mov sp, %0;"
+		// "msr DAIFclr, 0xf;"
 		"eret;"
 		:
-		: [code] "r" (cur -> code), [sp] "r" (sp), [sp_el1] "r" (el1_sp)
-		: "x1", "x2", "sp"
+		: "r" (cur -> sp) 
 	);
+	long tt = read_sysreg(elr_el1);
+	uart_printf ("should go to %llx, but instead %llx\r\n", 0, tt);
+	while (1);
 }
 
 char* get_cpio_end() {

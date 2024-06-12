@@ -78,15 +78,12 @@ void core_timer_entry() {
 
 void simple_core_timer_entry() {
 	// irq closed before getting in
-    unsigned long long cur_cnt, cnt_freq;
+    long cur_cnt = read_sysreg(cntpct_el0);
+	long cnt_freq = read_sysreg(cntfrq_el0);
 
-    asm volatile(
-        "mrs %[var1], cntpct_el0;"
-        "mrs %[var2], cntfrq_el0;"
-        :[var1] "=r" (cur_cnt), [var2] "=r" (cnt_freq)
-    );
-	// uart_printf ("now is %d\r\n", cur_cnt / cnt_freq);
-	asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq >> 5));
+	write_sysreg(cntp_tval_el0, cnt_freq >> 5);
+	
+	// asm volatile("msr cntp_tval_el0, %0"::"r"(cnt_freq >> 5));
 	// unsigned int* address = (unsigned int*) CORE0_TIMER_IRQ_CTRL;
 	// *address = 2;
 
