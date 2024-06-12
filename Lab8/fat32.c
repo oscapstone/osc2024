@@ -95,6 +95,8 @@ struct vnode * fat32_create_vnode(const char * name, int type, uint32_t start_cl
     struct fat32_node * inode = allocate_page(4096);
     memset(inode, 4096);
     inode -> type = type;
+    inode -> start_cluster = start_cluster;
+    inode -> size = size;
     strcpy(name, inode -> name);
     node -> internal = inode;
     
@@ -115,12 +117,12 @@ void format_filename(char *dest, const char *src) {
 }
 
 struct fat32_mbr * mbr;
-int fat_start_block;
+int fat_start_block; //mbr -> partitions[0].start_lba;
 struct FAT32BootSector * boot_sector;
-int root_dir_start_block;
-uint32_t cluster_size;
-uint32_t entries_per_cluster; 
-struct DirectoryEntry * rootdir;
+int root_dir_start_block; // 3588
+uint32_t cluster_size; // 512
+uint32_t entries_per_cluster; // 16
+struct DirectoryEntry * rootdir; // read from start_block
 
 int fat32_mount(struct filesystem *_fs, struct mount *mt){
     //initialize all entries
@@ -132,6 +134,8 @@ int fat32_mount(struct filesystem *_fs, struct mount *mt){
     fat_start_block = mbr -> partitions[0].start_lba;
     readblock(fat_start_block, buf); // Read the first block of the partition
     boot_sector = (struct FAT32BootSector *)buf;
+    uart_hex_long(boot_sector);
+    newline();
 
     cluster_size = boot_sector -> bytes_per_sector * boot_sector -> sectors_per_cluster;
     entries_per_cluster = cluster_size / 32;
@@ -154,27 +158,34 @@ int fat32_write(struct file *file, const void *buf, size_t len){
     return -1;
 }
 
-uint32_t get_cluster_blk_idx(uint32_t cluster_idx) {
-    return fat32_metadata.data_region_blk_idx +
-           (cluster_idx - fat32_metadata.first_cluster) * fat32_metadata.sector_per_cluster;
-}
+char ined;
 
 int fat32_read(struct file* file, void* ret, uint64_t len) {
-    struct fat32_node* file_node = (struct fat32_node*)file->vnode->internal;
-    uint64_t f_pos_ori = file->f_pos;
-    uint32_t current_cluster = file_node->start_cluster;
-    int remain_len = len;
-    int fat[16];
+    if(ined)
+        return 0;
+    ined = 1;
     char buf[512];
-    while (remain_len > 0 && current_cluster >= fat32_metadata.first_cluster && current_cluster != 0xFFFFFFF) {
-        readblock(get_cluster_blk_idx(current_cluster), ((char *)buf)+file->f_pos);
-        for (int i = 0; i < 512; i++) {
-            if (buf[i] == '\0' || remain_len-- < 0) break;
-            ((char *)ret)[file->f_pos++] = buf[i];
-        }
-    }
-    //return 10;
-    return (file->f_pos - f_pos_ori);
+    readblock(fat_start_block, buf); // Read the first block of the partition
+    boot_sector = (struct FAT32BootSector *)buf;
+    struct fat32_node* file_node = (struct fat32_node*)file->vnode->internal;
+    int cluster_number = file_node -> start_cluster;
+    uint32_t first_data_sector = boot_sector->reserved_sector_count + (boot_sector->num_fats * boot_sector->fat_size_32);
+    uint32_t first_sector_of_cluster = fat_start_block + first_data_sector + (cluster_number - 2) * boot_sector->sectors_per_cluster;
+    uart_hex_long(boot_sector);
+    newline();
+
+    uart_int(cluster_number);
+    newline();
+    uart_int(boot_sector->sectors_per_cluster);
+    newline();
+    char buffer[512];
+    memset(buffer, 512);
+    readblock(first_sector_of_cluster, (char*) ret);
+    buffer[10] = 0;
+    split_line();
+    uart_puts(ret);
+    newline();
+    return len;
 }
 
 int fat32_open(struct vnode *file_node, struct file **target){
@@ -233,6 +244,8 @@ int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
             //set new vnode and assign to internal -> idx
             internal -> entry[idx] = fat32_create_vnode(formatted_name, type, start_cluster, file_size);
             *target = internal -> entry[idx];
+            uart_int(((struct fat32_node * )internal -> entry[idx] -> internal) -> start_cluster);
+            newline();
             return 0;
         }
     }

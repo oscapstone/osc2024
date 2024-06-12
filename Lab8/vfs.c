@@ -195,7 +195,7 @@ void init_rootfs(){
     char buf[100];
     memset(buf, 100);
     vfs_open("/boot/FAT_R.TXT",0, &temp);
-    vfs_read(temp, buf, 100);
+    vfs_read(temp, buf, 10);
     uart_puts(buf);
     
     reg_initramfs();
