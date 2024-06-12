@@ -85,10 +85,10 @@ int sys_fork(struct trapframe *trapframe)
 #ifdef DEBUG_SYSCALL
     printf("[sys_fork] Task %d fork\n", current->task_id);
 #endif
-    unsigned int child_task_id, kstack_offset, i;
+    unsigned int child_task_id, kstack_offset;
     struct task_struct *child_task;
     struct trapframe *child_trapframe;
-    unsigned long *child_pgd, *parent_pgd;
+    unsigned long *child_pgd;
     char *child_stack, *parent_stack;
 
     child_task_id = find_empty_task();
@@ -101,25 +101,30 @@ int sys_fork(struct trapframe *trapframe)
     child_task->tss.lr = (uint64_t) &exit_kernel; /* After context switch, the child_task will exit kernel properly (since stack are setup). */
 
     /* Copy the content of kernel stack */
-    for (int i = 0; i < KSTACK_SIZE; i++)
-        kstack_pool[child_task_id][i] = kstack_pool[current->task_id][i];
+    memcpy(kstack_pool[child_task_id], kstack_pool[current->task_id], KSTACK_SIZE);
 
     /* compute the relative address between current task kstack and ustack */
     kstack_offset = kstack_pool[child_task_id] - kstack_pool[current->task_id];
     child_task->tss.sp = (uint64_t) ((unsigned long)trapframe + kstack_offset); // the address of trapframe is the address of current sp_el1
+
+    /* Copy the parent pgd table to child pgd table */
+    child_pgd = create_empty_page_table();
 
     /* Allocate a physical address then copy the content from parent stack to user stack. */
     child_stack = (char *)kmalloc(USER_STACK_SIZE);
     parent_stack = (char *)phys_to_virt(simulate_walk((unsigned long *)phys_to_virt(current->tss.pgd), USER_STACK_ADDR)); // get the parent stack physical address.
     memcpy(child_stack, parent_stack, USER_STACK_SIZE);
 
-    /* Copy the parent pgd table to child pgd table */
-    child_pgd = create_empty_page_table();
-    parent_pgd = (unsigned long *)phys_to_virt(current->tss.pgd);
-    for (i = 0; i < ENTRIES_PER_TABLE; i++)
-        child_pgd[i] = parent_pgd[i];
-    /* Update child pgd to another user stack */
-    remap_pages(child_pgd, USER_STACK_ADDR, USER_STACK_SIZE, virt_to_phys((unsigned long)child_stack), PD_AP_EL0); // user stack is mapped to 0xffffffffb000
+    /* Copy the content of parent process's user program */
+    child_task->mm.prog_addr = (unsigned long) kmalloc(current->mm.prog_sz);
+    child_task->mm.prog_sz = current->mm.prog_sz;
+    memcpy((void *) child_task->mm.prog_addr, (void *) current->mm.prog_addr, current->mm.prog_sz);
+
+    /* Update child pgd */
+    map_pages(child_pgd, USER_STACK_ADDR, USER_STACK_SIZE, virt_to_phys((unsigned long)child_stack), PD_AP_EL0); // user stack is mapped to 0xffffffffb000
+    map_pages(child_pgd, USER_PROG_START, current->mm.prog_sz, virt_to_phys(child_task->mm.prog_addr), PD_AP_EL0); // user program is mapped to 0x0
+    map_pages(child_pgd, PERIPHERAL_BASE, PERIPHERAL_SIZE, PERIPHERAL_BASE, PD_AP_EL0); // map peripheral to the same address
+
     /* Update child pgd */
     child_task->tss.pgd = virt_to_phys((unsigned long)child_pgd);
 

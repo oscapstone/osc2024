@@ -21,6 +21,9 @@ void do_exec(void (*func)(void), unsigned long size)
     /* Allocate physical memory for user stack */
     stack = (unsigned long *)kmalloc(USER_STACK_SIZE);
 
+    current->mm.prog_addr = (unsigned long) func;
+    current->mm.prog_sz = size;
+
     map_pages(pgd, USER_PROG_START , size, virt_to_phys((unsigned long)func), PD_AP_EL0); // user program is mapped to 0x0
     map_pages(pgd, USER_STACK_ADDR, USER_STACK_SIZE, virt_to_phys((unsigned long)stack), PD_AP_EL0); // user stack is mapped to 0xffffffffb000
     map_pages(pgd, PERIPHERAL_BASE, PERIPHERAL_SIZE, PERIPHERAL_BASE, PD_AP_EL0); // map peripheral to the same address

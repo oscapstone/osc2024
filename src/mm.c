@@ -381,27 +381,27 @@ void kfree(void *obj)
 /* Setup initial kernel PGD, PUD, PMD, PTE. (0x1000 ~ 0x4fff)*/
 void setup_page_table(void)
 {
-    unsigned long addr = 0;
+    unsigned long addr;
     unsigned long *pgd = (unsigned long *) MMU_PGD_ADDR;
     unsigned long *pud = (unsigned long *) MMU_PUD_ADDR;
     unsigned long *pmd = (unsigned long *) MMU_PMD_ADDR;
-    // unsigned long *pte = (unsigned long *) MMU_PTE_ADDR;
+    unsigned long *pmd1 = (unsigned long *) (MMU_PMD_ADDR + 0x1000);
 
     /* Setup PGD */
     pgd[0] = (unsigned long) MMU_PUD_ADDR | TABLE_ENTRY;
 
     /* Setup PUD */
     pud[0] = (unsigned long) MMU_PMD_ADDR | TABLE_ENTRY;
-    pud[1] = (unsigned long) 0x40000000 | DEVICE_BLOCK_ATTR;
+    pud[1] = (unsigned long) pmd1 | TABLE_ENTRY;
 
     /* Setup PMD, each entry points to 2 MB block*/
     for (int i = 0; i < 512; i++) {
-        /* The rest entries point to 2 Mb block, not PTE table */
         addr = i << 21; // i << 21 equals 2 MB
         if (addr >= PERIPH_MMIO_BASE)
             pmd[i] = (unsigned long) addr | DEVICE_BLOCK_ATTR;
         else
             pmd[i] = (unsigned long) addr | NORMAL_BLOCK_ATTR;
+        pmd1[i] = (unsigned long) (addr + 0x40000000) | NORMAL_BLOCK_ATTR;
     }
 
     asm volatile("msr ttbr0_el1, %0" : : "r" (MMU_PGD_ADDR));
@@ -424,59 +424,28 @@ unsigned long *create_empty_page_table(void)
  * va is the virtual address that we want to map.
  * flag attibute is not defined yet.
  */
-void walk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigned long flag)
+void walk(unsigned long *virt_pgd, unsigned long va, unsigned long pa, unsigned long flag)
 {
-    unsigned long *table_p = virt_pgd_p, *newtable_p;
+    unsigned long *table_p = virt_pgd, *newtable_p;
     unsigned int level, idx;
 
-    for (level = 0; level < 4; level++)
-    {
+    for (level = 0; level < 4; level++) {
         idx = (unsigned int)((va >> (39 - level * 9)) & 0x1ff); // p.14, 9-bit only
 
-        if (level == 3)
-        {
+        if (level == 3) {
             table_p[idx] = pa;
             table_p[idx] |= NORMAL_PAGE_ATTR | PXN | flag; // el0 only, so PXN is set to prevent el1 access.
             return;
         }
 
-        if (!table_p[idx]) /* Use walk to setup page table, all memory start from empty memory */
-        {
+        if (!table_p[idx]) { /* Use walk to setup page table, all memory start from empty memory */
             newtable_p = create_empty_page_table();
             table_p[idx] = virt_to_phys((unsigned long)newtable_p); // point to that table
-            table_p[idx] |= NORMAL_PAGE_ATTR;
+            table_p[idx] |= TABLE_ENTRY;
         }
 
         /* Jump to next page table according index */
         table_p = (unsigned long *) phys_to_virt((unsigned long) (table_p[idx] & ENTRY_ADDR_MASK)); // PAGE_SIZE
-    }
-}
-
-/**
- * All the PUD, PMD, PTE tables are always allocated.
-*/
-void rewalk(unsigned long *virt_pgd_p, unsigned long va, unsigned long pa, unsigned long flag)
-{
-    unsigned long *table_p = virt_pgd_p, *newtable_p;
-    unsigned int level, idx;
-
-    for (level = 0; level < 4; level++)
-    {
-        idx = (unsigned int) ((va >> (39 - level * 9)) & 0x1ff); // p.14, 9-bit only
-
-        if (level == 3)
-        {
-            table_p[idx] = pa;
-            table_p[idx] |= NORMAL_PAGE_ATTR | PXN | flag; // el0 only, so PXN is set to prevent el1 access.
-            return;
-        }
-
-        newtable_p = create_empty_page_table();
-        table_p[idx] = virt_to_phys((unsigned long) newtable_p); // point to that table
-        table_p[idx] |= NORMAL_PAGE_ATTR;
-
-        /* Jump to next page table according index */
-        table_p = (unsigned long *)phys_to_virt((unsigned long)(table_p[idx] & ENTRY_ADDR_MASK)); // PAGE_SIZE
     }
 }
 
@@ -493,34 +462,20 @@ void map_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, un
     return;
 }
 
-void remap_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags)
-{
-    unsigned long i = 0;
-
-    for (i = 0; i < size; i += PAGE_SIZE)
-        rewalk(virt_pgd, va + i, pa + i, flags);
-    return;
-}
-
 unsigned long simulate_walk(unsigned long *virt_pgd, unsigned long va)
 {
     unsigned long *table_p = virt_pgd;
-
     unsigned int level;
     unsigned int idx;
 
-    for (level = 0; level < 4; level++)
-    {
+    for (level = 0; level < 4; level++) {
         idx = (unsigned int)((va >> (39 - level * 9)) & 0x1ff); // p.14, 9-bit only
 
         if (level == 3)
-        {
             return (table_p[idx] & ENTRY_ADDR_MASK) | (va & 0xfff);
-        }
 
-        if (!table_p[idx])
-        {
-            printf("Empty table at level %d, idx %d\n", level, idx);
+        if (!table_p[idx]) {
+            printf("[simulate_walk] Empty table at pgd %16x, level %d, idx %d\n", virt_pgd, level, idx);
             return 0;
         }
 

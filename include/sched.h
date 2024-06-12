@@ -31,6 +31,12 @@
 #define EXIT_DEAD               0x010
 #define EXIT_ZOMBIE             0x020
 
+/* To store the MMU related data structure */
+struct mm_struct {
+    uint64_t prog_addr; // the kernel virtual address of user program
+    uint64_t prog_sz; // the size of user program
+};
+
 /* cpu context, in linux :thread_struct.cpu_context */
 struct task_state_segment {
     uint64_t x19;
@@ -62,6 +68,8 @@ struct task_struct {
 
     int exit_state;
     struct task_state_segment tss; // because context switch occurs in kernel mode,sp are in el1 (sp_el1);
+    
+    struct mm_struct mm;
 };
 
 extern struct task_struct task_pool[NR_TASKS];

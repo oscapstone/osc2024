@@ -11,7 +11,7 @@
 #include "syscall.h"
 #include "mm.h"
 
-struct task_struct task_pool[NR_TASKS];
+struct task_struct task_pool[NR_TASKS] = {0};
 char kstack_pool[NR_TASKS][KSTACK_SIZE] __attribute__((aligned(16)));
 char ustack_pool[NR_TASKS][USTACK_SIZE] __attribute__((aligned(16)));
 int num_running_task = 0;
@@ -19,13 +19,10 @@ int num_running_task = 0;
 /* Initialize the task_struct and make kernel be task 0. */
 void task_init()
 {
-    for (int i = 0; i < NR_TASKS; i++) {
+    for (int i = 0; i < NR_TASKS; i++) { // all the elements in task_pool are initialized to 0.
         task_pool[i].state = TASK_STOPPED;
         task_pool[i].task_id = i;
-        task_pool[i].pending = 0;
-        task_pool[i].process_sig = 0;
         task_pool[i].sighand = default_sighandler;
-        task_pool[i].tss.pgd = (uint64_t) 0;
     }
 
     // TODO: Understand how to deal with the task[0] (kernel). At linux 0.11, it is a special task.
