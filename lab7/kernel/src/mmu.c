@@ -1,4 +1,5 @@
 #include "bcm2837/rpi_mmu.h"
+#include "bcm2837/rpi_base.h"
 #include "mmu.h"
 #include "memory.h"
 #include "string.h"
@@ -175,26 +176,32 @@ void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level)
     size_t *table_virt = (size_t *)PHYS_TO_KERNEL_VIRT((char *)page_table);
     for (int i = 0; i < 512; i++)
     {
-        if (table_virt[i] != 0)
+        if (table_virt[i] == 0)
         {
-            size_t *next_table = (size_t *)(table_virt[i] & ENTRY_ADDR_MASK);
-            if (table_virt[i] & PD_TABLE)
-            {
-                if (level < LEVEL_PTE) // not the last level
-                    mmu_clean_page_tables(next_table, level + 1);
-                table_virt[i] = 0L;
-                DEBUG("Clean table: 0x%x, level: %d\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table), level);
-                if (level < LEVEL_PTE)
-                {
-                    DEBUG("kfree: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
-                    kfree(PHYS_TO_KERNEL_VIRT((char *)next_table));
-                }
-                else
-                {
-                    DEBUG("put_page: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
-                    put_page((uint64_t)PHYS_TO_KERNEL_VIRT((char *)next_table));
-                }
-            }
+            continue;
+        }
+        size_t *next_table = (size_t *)(table_virt[i] & ENTRY_ADDR_MASK);
+        if (!(table_virt[i] & PD_TABLE))
+        {
+            continue;
+        }
+
+        if (level < LEVEL_PTE)
+        { // not the last level
+            mmu_clean_page_tables(next_table, level + 1);
+        }
+
+        table_virt[i] = 0L;
+        DEBUG("Clean table: 0x%x, level: %d\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table), level);
+        if (level < LEVEL_PTE)
+        {
+            DEBUG("kfree: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
+            kfree(PHYS_TO_KERNEL_VIRT((char *)next_table));
+        }
+        else if ((uint64_t)PHYS_TO_KERNEL_VIRT((char *)next_table) < PHYS_TO_KERNEL_VIRT(PERIPHERAL_START))
+        {
+            DEBUG("put_page: 0x%x\r\n", (void *)PHYS_TO_KERNEL_VIRT((char *)next_table));
+            put_page((uint64_t)PHYS_TO_KERNEL_VIRT((char *)next_table));
         }
     }
 }
