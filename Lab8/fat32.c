@@ -116,13 +116,13 @@ void format_filename(char *dest, const char *src) {
     dest[j] = '\0';  // 結尾字符
 }
 
-struct fat32_mbr * mbr;
+struct fat32_mbr * mbr; //need to use malloc
 int fat_start_block; //mbr -> partitions[0].start_lba;
-struct FAT32BootSector * boot_sector;
+struct FAT32BootSector * boot_sector; //need to use malloc
 int root_dir_start_block; // 3588
 uint32_t cluster_size; // 512
 uint32_t entries_per_cluster; // 16
-struct DirectoryEntry * rootdir; // read from start_block
+struct DirectoryEntry * rootdir; // read from start_block (need to use malloc)
 
 int fat32_mount(struct filesystem *_fs, struct mount *mt){
     //initialize all entries
