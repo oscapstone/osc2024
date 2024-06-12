@@ -130,8 +130,8 @@ void cpio_load(char* str) {
 	uart_printf ("xxx: %llx\r\n", xxx);
 
 	void* pos = cpio_find(str); 
-	cur -> code = my_malloc(4096 * 64);
-	cur -> code_size = 4096 * 64;
+	cur -> code = my_malloc(4096 * 128);
+	cur -> code_size = 4096 * 128;
 	for (int i = 0; i < cur -> code_size; i ++) {
 		((char*)cur -> code)[i] = ((char*)pos)[i];
 	}

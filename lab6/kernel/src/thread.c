@@ -99,9 +99,11 @@ void schedule() {
 		thread_tail = thread_tail -> next;
 	}
 	thread_start -> prev = NULL;
-	uart_printf ("[DEBUG] Scheduled From %d to %d\r\n", get_current() -> id, thread_start -> id);
+	// uart_printf ("[DEBUG] Scheduled From %d to %d\r\n", get_current() -> id, thread_start -> id);
 	switch_to(get_current(), thread_start);
-	switch_page();
+	// switch_page();
+	long PGD = read_sysreg(ttbr0_el1);
+	// uart_printf ("id is now %d, PGD is now %llx, cur -> PGD is %llx\r\n", get_current() -> id, PGD, get_current() -> PGD); 
 	// after successfully switched, ending of irq handler do irq(1)
 	return;
 }

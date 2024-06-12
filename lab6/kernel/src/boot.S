@@ -125,7 +125,7 @@ from_el2_to_el1:
 	msr ELR_EL1,  x1
 	ldr x0, [sp, 16 * 17]
 	msr sp_el0, x0
-    
+
 	ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
     ldp x4, x5, [sp ,16 * 2]
@@ -177,8 +177,11 @@ core_timer_handler:
 
 general_irq_handler:
   save_all
+  // mov x0, sp
+  // bl debug
   bl c_general_irq_handler
   // mov x0, sp
+  // bl debug
   // bl handle_signal
   load_all
   eret
@@ -275,6 +278,13 @@ switch_to:
     ldr x9, [x1, 16 * 6]
     mov sp,  x9
     msr tpidr_el1, x1
+
+	ldr x2, [x1, 16 * 6 + 8]
+	dsb ish // ensure write has completed
+    msr ttbr0_el1, x2 // switch translation based address.
+    tlbi vmalle1is // invalidate all TLB entries
+    dsb ish // ensure completion of TLB invalidatation
+    isb // clear pipeline
 
     ret
 

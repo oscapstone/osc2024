@@ -60,6 +60,8 @@ int do_fork(trapframe_t* tf) {
 	thread* cur = get_current();
 	thread* child = threads[id];
 
+	uart_printf ("PGD for child %d is %llx\r\n", child -> id, child -> PGD);
+
 		
 	for (int i = 0; i < 10; i ++) {
 		child -> reg[i] = cur -> reg[i];
@@ -282,13 +284,13 @@ void im_fineee() {
 
 void from_el1_to_fork_test() {
 	irq(0);
-	// switch_page();
+	switch_page();
 	uart_printf ("%llx\r\n", get_current() -> PGD);
 	long ttbr0 = read_sysreg(ttbr0_el1);
 	long ttbr1 = read_sysreg(ttbr1_el1);
 	uart_printf ("ttbr0: %llx, ttbr1: %llx\r\n", ttbr0, ttbr1);
 	void* sp = 0xfffffffff000 - 16;
-	void* code = (char*)simple_fork_test - _code_start;
+	void* code = (char*)fork_test_idle - _code_start;
 
 	long test = code;
 	uart_printf ("%llx translated to %llx\r\n", test, trans(test));
@@ -333,4 +335,13 @@ void from_el1_to_fork_test() {
 
 	uart_printf ("fuck you\r\n");
 	asm volatile ( "eret;" );
+}
+
+void debug(trapframe_t* tf) {
+	uart_printf ("%d: ", get_current() -> id);
+	uart_printf ("sp: %llx, code: %llx\r\n", tf -> sp_el0, tf -> elr_el1);
+	long ttbr0 = read_sysreg(ttbr0_el1);
+	long ttbr1 = read_sysreg(ttbr1_el1);
+	uart_printf ("ttbr0: %llx, ttbr1: %llx\r\n", ttbr0, ttbr1);
+
 }

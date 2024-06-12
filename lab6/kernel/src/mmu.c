@@ -4,6 +4,7 @@
 #include "alloc.h"
 #include "thread.h"
 #include "mmu_regs.h"
+#include "mini_uart.h"
 
 #define PERIPHERAL_START 0x3c000000L
 #define PERIPHERAL_END   0x40000000L
@@ -147,11 +148,8 @@ void map_page(long* pt, long va, long pa, long flag) {
 
 void setup_peripheral_identity(long* table)
 {
-    unsigned long pages = (PERIPHERAL_END - PERIPHERAL_START + 4096 - 1) / 4096;
-    for (int i = 0; i < pages; i++)
-    {
-		// uart_printf ("%d\r\n", i);
-        map_page(table, PERIPHERAL_START + i * 4096, PERIPHERAL_START + i * 4096, (1 << 6));
+    for (long i = PERIPHERAL_START; i < PERIPHERAL_END; i += 4096) {
+        map_page(table, i, i, (1 << 6));
     }
 }
 
@@ -199,10 +197,10 @@ long trans_el0(long x) {
 extern thread* get_current();
 
 void switch_page() {
+	uart_printf ("switching\r\n");
 	asm volatile(
-		"mov x0, %0;"
         "dsb ish;"
-        "msr ttbr0_el1, x0;"
+        "msr ttbr0_el1, %0;"
 		"dsb ish;"
         "tlbi vmalle1is;"
         "dsb ish;"
@@ -211,5 +209,6 @@ void switch_page() {
 		: "r" (get_current() -> PGD)
 		: "x0"
 	);
+	uart_printf ("switching done\r\n");
 }
 
