@@ -183,9 +183,9 @@ void permission_fault_handler(uint64_t vm_addr) {
   uint32_t pte_idx = (vm_addr & (PD_MASK << PTE_SHIFT)) >> PTE_SHIFT;
 
   uint64_t *pgd = get_pgd(current_thread);
-  uint64_t *pud = create_pt(pgd, pgd_idx);
-  uint64_t *pmd = create_pt(pud, pud_idx);
-  uint64_t *pte = create_pt(pmd, pmd_idx);
+  uint64_t *pud = get_pt(pgd, pgd_idx);
+  uint64_t *pmd = get_pt(pud, pud_idx);
+  uint64_t *pte = get_pt(pmd, pmd_idx);
 
   for (vm_area_struct *ptr = current_thread->mm.mmap_list_head;
        ptr != (vm_area_struct *)0; ptr = ptr->vm_next) {

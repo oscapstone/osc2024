@@ -21,11 +21,11 @@ switch_to:
     mov sp,  x9
     msr tpidr_el1, x1           // TPIDR_EL1: thread pointer/ID register for EL1, which provides a location where software executing at
                                 // EL1 can store thread identifying information for OS management purposes.
-    dsb ish                     
+    dsb ish                     // ensure write has completed
     msr ttbr0_el1, x10          // set pgd
-    tlbi vmalle1is     
-    dsb ish             
-    isb                 
+    tlbi vmalle1is              // invalidate all TLB entries
+    dsb ish                     // ensure completion of TLB invalidatation
+    isb                         // clear pipeline (synchronize context and ensure that no instructions are fetched using the old translation)
   
     ldr x1, =KERNEL_VIRT_BASE
     orr lr, lr, x1
