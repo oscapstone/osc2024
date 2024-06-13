@@ -86,6 +86,7 @@ typedef struct thread_struct
     char*               name;                                  // Process name
     vm_area_struct_t*   vma_list;                              // Virtual Memory Area
     struct file*        file_descriptors_table[MAX_FD+1];      // File Descriptor Table
+    struct vnode*       pwd;                                   // Present Working Directory
 } thread_t;
 
 int8_t thread_code_can_free(thread_t *thread);

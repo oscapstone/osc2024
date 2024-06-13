@@ -37,6 +37,8 @@ void init_rootfs()
 	root_mount = kmalloc(sizeof(mount_t));
 	fs->setup_mount(fs, root_mount, NULL, "");
 	root_vnode = root_mount->root;
+	DEBUG("root_vnode: %x\r\n", root_vnode);
+	root_vnode->parent = root_vnode;
 
 	curr_vnode = root_vnode;
 	vnode_t *node;
@@ -55,23 +57,53 @@ void init_rootfs()
 	vfs_mkdir(curr_vnode, "/initramfs");
 	register_initramfs();
 	vfs_mount("/initramfs", "initramfs");
-
 }
 
-vnode_t *is_relative_path(const char *path)
+vnode_t *get_root_vnode()
 {
-	if (strcmp(path, ".") == 0)
+	return root_vnode;
+}
+
+int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **target, size_t *start_idx)
+{
+	size_t len = strlen(path);
+	DEBUG("handling_relative_path: %s, len: %d, strncmp(path, ., 1): %d\r\n", path, len, strncmp(path, ".", 1));
+	if (len != 0)
 	{
-		return curr_vnode;
-	}
-	else if (strcmp(path, "..") == 0)
-	{
-		return curr_vnode->parent;
+		if (len >= 3 && strncmp(path, "../", 3) == 0)
+		{
+			*target = curr_vnode->parent;
+			*start_idx = 3;
+			return 1;
+		}
+		else if (len == 2 && strncmp(path, "..", 3) == 0)
+		{
+			*target = curr_vnode->parent;
+			*start_idx = 2;
+			return 0;
+		}
+		else if (len >= 2 && strncmp(path, "./", 2) == 0)
+		{
+			*target = curr_vnode;
+			*start_idx = 2;
+			return 1;
+		}
+		else if (len == 1 && (strncmp(path, ".", 1) == 0 || strncmp(path, "/", 1) == 0))
+		{
+			*target = curr_vnode;
+			*start_idx = 1;
+			DEBUG("handling_relative_path: path is ., *target: 0x%x\r\n", *target);
+			return 0;
+		}
 	}
 	else
 	{
-		return NULL;
+		*target = curr_vnode;
+		DEBUG("handling_relative_path: path is empty, *target: 0x%x\r\n", *target);
+		return 0;
 	}
+	*target = curr_vnode;
+	return 0;
 }
 
 vnode_t *create_vnode()
@@ -104,7 +136,7 @@ int vfs_open(const char *pathname, int flags, struct file **target)
 		}
 		// grep all of the directory path
 		int last_slash_idx = 0;
-		for (int i = 0; i < strlen(pathname); i++)
+		for (int i = last_slash_idx; i < strlen(pathname); i++)
 		{
 			if (pathname[i] == '/')
 			{
@@ -122,7 +154,7 @@ int vfs_open(const char *pathname, int flags, struct file **target)
 			return -1;
 		}
 		// create a new file node on node, &node is new file, 3rd arg is filename
-		DEBUG("create file %s\r\n", pathname + last_slash_idx + 1);
+		DEBUG("create file: %s, node: 0x%x\r\n", pathname + last_slash_idx + 1, node);
 		node->superblock->v_ops->create(node, &node, pathname + last_slash_idx + 1);
 	}
 	*target = kmalloc(sizeof(file_t));
@@ -240,31 +272,31 @@ int vfs_mount(const char *target, const char *filesystem)
 	return 0;
 }
 
+static inline int __vfs_lookup_depth_1(char *component_name, vnode_t *node, vnode_t **target)
+{
+	// if fs's v_ops error, return -1
+	if (strlen(component_name) != 0) // if component_name is empty, skip
+	{
+		if (node->superblock->v_ops->lookup(node, &node, component_name) != 0)
+		{
+			DEBUG("vfs_lookup: lookup error\r\n");
+			return -1;
+		}
+	}
+	// redirect to mounted filesystem
+	while (node->mount)
+	{
+		node = node->mount->root;
+	}
+	*target = node;
+	return 0;
+}
+
 int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **target)
 {
-	if (strlen(pathname) == 0)
-	{
-		*target = dir_node;
-		return 0;
-	}
-	if (pathname[0] == '.')
-	{
-		if (pathname[1] == 0)
-		{
-			*target = dir_node;
-			return 0;
-		}
-		else if (pathname[1] == '.')
-		{
-			if (pathname[2] == 0)
-			{
-				*target = dir_node->parent;
-				return 0;
-			}
-		}
-	}
 	vnode_t *node;
-	int i_start = 0;
+	size_t i_start = 0;
+	// translate absolute path to relative path
 	if (pathname[0] == '/')
 	{
 		DEBUG("vfs_lookup: pathname start with /\r\n");
@@ -275,55 +307,43 @@ int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **targ
 	{
 		node = dir_node;
 	}
+
 	DEBUG("vfs_lookup: pathname %s, str_len: %d\r\n", pathname, strlen(pathname));
 
 	char component_name[MAX_FILE_NAME + 1] = {0};
-	int c_idx = 0;
+	size_t offset = 0;
+	int comp_len = 0;
+	int i = i_start;
 	// deal with directory
-	for (int i = i_start; i < strlen(pathname) + 1; i++)
+	do
 	{
-		DEBUG("vfs_lookup: i: %d, c_idx: %d, pathname[i]: %c\r\n", i, c_idx, pathname[i]);
+		DEBUG("vfs_lookup: i: %d, c_idx: %d, pathname[i]: %c\r\n", i, comp_len, pathname[i]);
+		while (handling_relative_path(pathname + i, node, &node, &offset)) // if path is relative
+		{
+			i += offset;
+			DEBUG("i: %d, offset: %d\r\n", i, offset);
+		}
+		i += offset;
+		DEBUG("i: %d, offset: %d\r\n", i, offset);
+		if (pathname[i - 1] == '/' && pathname[i] == '\0')
+			break;
 		if (pathname[i] == '/' || pathname[i] == '\0')
 		{
 			DEBUG("in if pathname[i] == / or \0\r\n");
-
-			if (pathname[i - 1] == '/' && pathname[i] == '\0')
-			{
-				break;
-			}
-			component_name[c_idx++] = 0;
-			// if fs's v_ops error, return -1
-			if (node->superblock->v_ops->lookup(node, &node, component_name) != 0)
+			component_name[comp_len++] = 0;
+			if (__vfs_lookup_depth_1(component_name, node, &node) == -1)
 			{
 				DEBUG("vfs_lookup: lookup error\r\n");
 				return -1;
 			}
-			// redirect to mounted filesystem
-			while (node->mount)
-			{
-				node = node->mount->root;
-			}
-			c_idx = 0;
-		}
-		else if (pathname[i] == '.')
-		{
-			if (pathname[i + 1] == '.' && pathname[i + 2] == '/')
-			{
-				node = node->parent;
-				i += 2;
-				c_idx = 0;
-			}
-			else if (pathname[i + 1] == '/')
-			{
-				i += 1;
-				c_idx = 0;
-			}
+			comp_len = 0;
 		}
 		else
 		{
-			component_name[c_idx++] = pathname[i];
+			component_name[comp_len++] = pathname[i];
 		}
-	}
+		i++;
+	} while (i < strlen(pathname) + 1);
 	DEBUG("vfs_lookup: target %s\r\n", node->name);
 	*target = node;
 	return 0;

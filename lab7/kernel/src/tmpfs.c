@@ -171,6 +171,7 @@ int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
 
 int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name)
 {
+	DEBUG("tmpfs_create: %s\r\n", dir_node->name);
 	struct tmpfs_inode *inode = dir_node->internal;
 
 	if (dir_node->type != FS_DIR)

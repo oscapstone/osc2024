@@ -94,7 +94,7 @@ typedef struct vnode_operations
 } vnode_operations_t;
 
 int register_filesystem(struct filesystem *fs);
-vnode_t *is_relative_path(const char *path);
+int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **target, size_t *start_idx);
 vnode_t *create_vnode();
 int register_dev(struct file_operations *fo);
 int vfs_open(const char *pathname, int flags, struct file **target);
@@ -107,6 +107,7 @@ int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **targ
 int vfs_mknod(char *pathname, int id);
 
 void init_rootfs();
+vnode_t *get_root_vnode();
 void vfs_test();
 char *get_absolute_path(char *path, char *curr_working_dir);
 

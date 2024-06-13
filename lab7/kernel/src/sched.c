@@ -9,6 +9,7 @@
 #include "callback_adapter.h"
 #include "uart1.h"
 #include "shell.h"
+#include "vfs.h"
 
 struct list_head *run_queue;
 
@@ -284,6 +285,7 @@ thread_t *thread_create(void *start, char *name)
 	{
 		r->file_descriptors_table[i] = NULL;
 	}
+	r->pwd = get_root_vnode();
 
 	child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
 	child->pid = new_pid;
