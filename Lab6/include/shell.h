@@ -20,11 +20,14 @@ void cmd_help();
 void cmd_dtb();
 void cmd_ls();
 void cmd_cat(char *file);
-void cmd_2stimeout();
+//void cmd_2stimeout();
 void cmd_timeout(char *sec, char *message);
 void cmd_reboot();
-void cmd_memory();
+//void cmd_memory();
+//void cmd_sallocate();
 void cmd_error(char *cmd);
 void cmd_el();
+//void cmd_thread();
+void cmd_user_program(char *file);
 
 #endif /* _SHELL_H_ */
