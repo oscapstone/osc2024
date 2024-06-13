@@ -17,6 +17,7 @@ mod kernel_thread;
 mod process;
 mod interrupt;
 
+use alloc::borrow::ToOwned;
 use interrupt::timer;
 
 extern crate alloc;
@@ -30,6 +31,9 @@ use alloc::collections::BinaryHeap;
 use core::alloc::Layout;
 
 use fs::cpio::CpioHandler;
+use fs::vfs;
+use fs::vfs::FileSystem;
+
 use driver::mailbox;
 use driver::uart;
 use driver::addr_loader;
@@ -88,6 +92,84 @@ fn boink() {
 fn timer_callback(message: String, _: *mut u64) {
     let current_time = timer::get_current_time() / timer::get_timer_freq();
     println!("You have a timer after boot {}s, message: {}", current_time, message);
+}
+
+fn fs_shell() {
+    let mut fs = vfs::Vfs::new("rootfs");
+    let mut working_dir = "/".to_string().clone();
+    loop {
+        print!("{}>> ", &working_dir);
+        let mut in_buf: [u8; 128] = [0; 128];
+        let inp = alloc::string::String::from(uart::async_getline(&mut in_buf, true));
+        let cmd = inp.trim().split(' ').collect::<Vec<&str>>();
+        match cmd[0] {
+            "ls" => {
+                let ls = fs.ls(&working_dir);
+                match ls {
+                    Ok(files) => {
+                        for file in files {
+                            println!("{}", file);
+                        }
+                    }
+                    Err(e) => {
+                        println!("{}", e);
+                    }
+                }
+            }
+            "mkdir" => {
+                if cmd.len() < 2 {
+                    println!("Usage: mkdir <dir>");
+                    continue;
+                }
+                let path = working_dir.to_owned() + "/" + cmd[1];
+                let res = fs.mkdir(&path);
+                match res {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("{}", e);
+                    }
+                }
+            }
+            "cd" => {
+                if cmd.len() != 2 {
+                    println!("Usage: cd <dir>");
+                    continue;
+                }
+                let path = working_dir.to_owned() + "/" + cmd[1];
+                let res = fs.ls(path.as_str());
+                match res {
+                    Ok(_) => {
+                        working_dir = "/".to_owned() + &fs::util::clean_path(&path);
+                    }
+                    Err(e) => {
+                        println!("{}", e);
+                    }
+                }
+            }
+            "rmdir" => {
+                if cmd.len() < 2 {
+                    println!("Usage: rmdir <dir>");
+                    continue;
+                }
+                let path = working_dir.to_owned() + "/" + cmd[1];
+                let path = fs::util::clean_path(&path);
+                let res = fs.rmdir(&path);
+                match res {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("{}", e);
+                    }
+                }
+            }
+            "exit" => {
+                break;
+            }
+            _ => {
+                println!("Command not found");
+            }
+        }
+        
+    }
 }
 
 #[no_mangle]
@@ -302,8 +384,10 @@ fn kernel_init() -> ! {
                 let end: usize = cmd[2].parse().unwrap();
                 unsafe {page_alloc.reserve_addr(start, end)};
             }
+            "fs" => {
+                fs_shell();
+            }
             "" => {}
-        
             _ => {
                 println!("Shell: Command not found");
             }
