@@ -1,9 +1,7 @@
 use core::fmt::Debug;
 
 use super::page_table::PageTable;
-use alloc::alloc::alloc;
 use alloc::boxed::Box;
-use core::alloc::Layout;
 
 #[derive(Clone)]
 pub enum Entry {

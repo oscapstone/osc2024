@@ -68,6 +68,7 @@ impl VirtualMemory {
         (page.get_addr() as u64 | addr & 0xfff) as *mut u8
     }
 
+    #[allow(dead_code)]
     pub fn dump(&self) {
         println!("VirtualMemory:");
         println!("  root: 0x{:x}", self.root.addr);
@@ -75,6 +76,7 @@ impl VirtualMemory {
     }
 }
 
+#[allow(dead_code)]
 unsafe fn dump(addr: *mut u64, level: u8) {
     println!("  addr: 0x{:x}", addr as u64);
     for i in 0..512 {
