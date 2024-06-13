@@ -1,6 +1,7 @@
 #include "timer.h"
 #include "mini_uart.h"
 #include "utility.h"
+#include "memory.h"
 
 // extern void core_timer_enable1(void);
 // extern void core_timer_handler1(void);
@@ -63,9 +64,9 @@ void core_timer_hadler()
 void add_timer(void *callback, unsigned long long timeout, char *msgs)
 {
     // 配置一個timer event 的空間
-    timer_event_t *the_timer_event = heap_malloc(sizeof(timer_event_t)); //
+    timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); //
     // 用來儲存timer_event所有相關資訊
-    the_timer_event->args = heap_malloc(strlen(msgs) + 1);
+    the_timer_event->args = kmalloc(strlen(msgs) + 1);
     strcpy(the_timer_event->args, msgs);
     the_timer_event->interrupt_time = get_tick_plus_s(timeout);
     the_timer_event->callback = callback;

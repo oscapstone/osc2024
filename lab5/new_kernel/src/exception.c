@@ -6,6 +6,7 @@
 #include "mini_uart.h"
 #include "utility.h"
 #include "exception.h"
+#include "memory.h"
 
 struct list_head *task_list;
 unsigned long long int lock_counter = 0;

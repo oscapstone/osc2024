@@ -24,18 +24,18 @@ void main(char *arg)
     // timer_init(); //這會跳去EL0
     
     uart_init();
+    uart_interrupt_enable();
     uart_flush_FIFO();
     irqtask_list_init();
     timer_list_init();
 
-    uart_interrupt_enable();
-    //core_timer_enable();
     el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
+    //core_timer_enable();
 
     char input_buffer[10];
     shell_cmd_read(input_buffer);
-    init_memory_space();
 
+    init_memory_space();
     shell_banner();
 
 

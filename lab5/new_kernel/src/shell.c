@@ -1,4 +1,5 @@
 #include "mini_uart.h"
+#include "memory.h"
 #include "shell.h"
 #include "reboot.h"
 #include "timer.h"
