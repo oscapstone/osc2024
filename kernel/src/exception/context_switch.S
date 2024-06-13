@@ -23,7 +23,6 @@
     mrs x3, ttbr0_el1
     stp x0, x1, [sp, 16 * 16]
     stp x2, x3, [sp, 16 * 17]
-    dsb ish
     mov x0, 0x1000
     msr ttbr0_el1, x0
     tlbi vmalle1is
@@ -38,7 +37,6 @@
     msr elr_el1, x0
     msr sp_el0, x1
     msr spsr_el1, x2
-    dsb ish
     msr ttbr0_el1, x3
     tlbi vmalle1is
     dsb ish

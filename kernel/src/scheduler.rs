@@ -18,6 +18,8 @@ pub struct Scheduler {
     pub wait_queue: VecDeque<usize>,
 }
 
+const STACK_SIZE: usize = 0x4000;
+
 impl Scheduler {
     fn new() -> Self {
         Scheduler {
@@ -78,7 +80,7 @@ impl Scheduler {
     }
 
     pub fn create_thread(&mut self, entry: *mut u8, len: usize) {
-        let thread = Box::new(Thread::new(0x1000, entry, len));
+        let thread = Box::new(Thread::new(STACK_SIZE, entry, len));
         println!("Creating thread");
         let tid = self.add_thread(thread);
         println!("Created thread {}", tid);
@@ -107,7 +109,7 @@ impl Scheduler {
         println!("Switching to {}", next);
         let thread = self.threads[next].as_ref().unwrap();
         assert!(thread.id == next);
-        let entry = thread.entry;
+        let pc = thread.cpu_state.pc;
         let sp = thread.stack as usize + thread.stack_size;
         thread.vm.dump();
         unsafe {
@@ -127,7 +129,7 @@ impl Scheduler {
                 "dsb ish",
                 "isb",
                 "eret",
-                in(reg) entry,
+                in(reg) pc,
                 in(reg) sp,
                 in(reg) thread.vm.get_l0_addr(),
                 options(noreturn),
@@ -141,7 +143,7 @@ impl Scheduler {
             filesystem::cpio::CpioArchive::load(unsafe { crate::INITRAMFS_ADDR } as *const u8);
         if let Some(data) = program.get_file(name.as_str()) {
             let program = alloc_prog(data);
-            let new_thread = Box::new(Thread::new(0x2000, program.0, program.1));
+            let new_thread = Box::new(Thread::new(STACK_SIZE, program.0, program.1));
             self.threads[current] = Some(new_thread);
             self.ready_queue.push_back(current);
             let next = self.restore_next();

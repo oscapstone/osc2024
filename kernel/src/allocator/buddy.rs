@@ -114,7 +114,7 @@ impl BuddyAllocator {
         if align < FRAME_SIZE {
             layer = 0;
         } else {
-            while (1 << layer) < align {
+            while (1 << layer) * FRAME_SIZE < align {
                 layer += 1;
             }
         }

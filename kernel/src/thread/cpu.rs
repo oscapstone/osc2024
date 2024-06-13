@@ -37,9 +37,6 @@ impl State {
         let spsr = unsafe { read_volatile((addr + 34 * 8) as *const u64) };
         let l0 = unsafe { read_volatile((addr + 35 * 8) as *const u64) };
         // println!("spsr: 0x{:x}", spsr);
-        if spsr & 0xfff != 0x200 {
-            stdio::println!("SPSR is not 0x200 0x{:x}", spsr);
-        }
         // assert!((spsr & 0xfff) == 0x0, "SPSR is not zero 0x{:x}", spsr);
         // spsr = 0x0;
         State {

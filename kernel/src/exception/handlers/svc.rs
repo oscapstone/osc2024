@@ -1,5 +1,5 @@
 use super::page::page_fault;
-use crate::exception::trap_frame;
+use crate::{exception::trap_frame, mmu::vm::VirtualMemory};
 use core::{arch::asm, fmt::Debug};
 use stdio::{debug, println};
 
@@ -61,12 +61,14 @@ unsafe fn lower_exception_handler(eidx: u64, sp: u64) {
         out(reg) esr_el1,
     );
     let ec = esr_el1 >> 26;
+    // println!("Exception {}", eidx);
+    // println!("Exception Class: 0b{:06b}", ec);
     match ec {
         0b010101 => svc_handler(sp),
         0b001110 => {
             panic!("Illegal Execution state.");
         }
-        0b100000 => page_fault(),
+        0b100000 | 0b100001 | 0b100100 => page_fault(),
         _ => {
             println!("Exception {}", eidx);
             println!("Unknown exception");
@@ -109,17 +111,20 @@ unsafe fn el1_interrupt(sp: u64) {
 
 unsafe fn syscall_handler(sp: u64) {
     let syscall = Syscall::new(sp);
-    println!("Syscall {:?}", syscall);
+    // println!("{:?}", syscall);
     assert!(trap_frame::TRAP_FRAME.is_some());
+    let mut vm = VirtualMemory::load(trap_frame::TRAP_FRAME.as_ref().unwrap().state.l0);
+    // vm.dump();
     match syscall.idx {
         0 => {
-            // println!("Syscall get_pid");
+            println!("Syscall get_pid");
             let pid = crate::syscall::get_pid();
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
         }
         1 => {
             // println!("Syscall read");
             let buf = syscall.arg0 as *mut u8;
+            let buf = vm.get_phys(buf as u64);
             let size = syscall.arg1 as usize;
             let read = crate::syscall::read(buf, size);
             assert!(size == 1);
@@ -132,34 +137,37 @@ unsafe fn syscall_handler(sp: u64) {
         2 => {
             // println!("Syscall write");
             let buf = syscall.arg0 as *const u8;
+            let buf = vm.get_phys(buf as u64);
             let size = syscall.arg1 as usize;
             let written = crate::syscall::write(buf, size);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = written as u64;
         }
         3 => {
-            // println!("Syscall exec");
+            println!("Syscall exec");
             let name = syscall.arg0 as *const u8;
+            let name = vm.get_phys(name as u64);
             let ret = crate::syscall::exec(name);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret;
         }
         4 => {
-            // println!("Syscall fork");
+            println!("Syscall fork");
             let pid = crate::syscall::fork();
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
         }
         5 => {
-            // println!("Syscall exit");
+            println!("Syscall exit");
             crate::syscall::exit(syscall.arg0);
         }
         6 => {
-            // println!("Syscall mbox_call");
+            println!("Syscall mbox_call");
             let channel = syscall.arg0 as u8;
             let mbox = syscall.arg1 as *mut u32;
+            let mbox = vm.get_phys(mbox as u64) as *mut u32;
             let ret = crate::syscall::mbox_call(channel, mbox);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret as u64;
         }
         7 => {
-            // println!("Syscall kill");
+            println!("Syscall kill");
             let pid = syscall.arg0;
             crate::syscall::kill(pid);
         }

@@ -26,7 +26,7 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
-    commands::execute(b"exec rprog.img");
+    commands::execute(b"exec vm.img");
     kernel_shell();
 }
 
@@ -71,7 +71,7 @@ fn buddy_init() {
         BUDDY_SYSTEM.init();
     }
     buddy_reserve_memory();
-    allocator::utils::toggle_bump_verbose();
+    // allocator::utils::toggle_bump_verbose();
     unsafe {
         BUDDY_SYSTEM.print_info();
     }

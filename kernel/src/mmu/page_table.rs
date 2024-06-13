@@ -11,7 +11,7 @@ use crate::mmu::PD_ACCESS;
 use crate::mmu::PD_PAGE;
 use crate::mmu::PD_TABLE;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PageTable {
     entries: Vec<Entry>,
     pub addr: u64,
@@ -31,6 +31,24 @@ impl PageTable {
             entries: vec![Entry::new(); ENTRY_COUNT],
             addr,
         }
+    }
+
+    pub fn load(addr: u64, level: u64) -> Self {
+        // println!("PageTable::load: 0x{:x}", addr);
+        let mut entries = vec![Entry::new(); ENTRY_COUNT];
+        for i in 0..ENTRY_COUNT {
+            let entry_addr = addr + (i * 8) as u64;
+            let entry = unsafe { *(entry_addr as *const u64) };
+            if entry & 0b1 == 1 {
+                if level < 3 {
+                    let pt = Box::new(PageTable::load(entry & 0xffff_ffff_ffff_f000, level + 1));
+                    entries[i] = Entry::PdTable(pt);
+                } else {
+                    entries[i] = Entry::PdBlock((entry_addr as *mut u64, entry));
+                }
+            }
+        }
+        PageTable { entries, addr }
     }
 
     pub fn get_page(&mut self, addr: u64, level: u64) -> &mut Entry {
@@ -66,8 +84,8 @@ impl PageTable {
     pub fn set_entry(&mut self, idx: usize, entry: Entry) {
         assert!(idx < ENTRY_COUNT);
         assert!(self.entries[idx].is_valid() == false);
-        self.entries[idx] = entry.clone();
-        match entry {
+        self.entries[idx] = entry;
+        match &self.entries[idx] {
             Entry::PdTable(pt) => {
                 let entry_addr = self.addr + (idx * 8) as u64;
                 unsafe {
@@ -77,9 +95,9 @@ impl PageTable {
                 }
             }
             Entry::PdBlock((saddr, addr)) => {
-                assert!(addr == 0);
+                assert!(*addr == 0);
                 unsafe {
-                    let entry = saddr as *mut u64;
+                    let entry = *saddr as *mut u64;
                     *entry = addr | (PD_PAGE | PD_ACCESS | (MAIR_NORMAL_NC_IDX << 2) as u32) as u64;
                 }
             }
@@ -89,5 +107,45 @@ impl PageTable {
 
     pub fn exists(&self, idx: usize) -> bool {
         self.entries[idx].is_valid()
+    }
+}
+
+impl Clone for PageTable {
+    fn clone(&self) -> Self {
+        let addr = unsafe { alloc(Layout::from_size_align(0x1000, 0x1000).unwrap()) as u64 };
+        unsafe {
+            let mut p = addr as *mut u8;
+            for _ in 0..0x1000 {
+                *p = 0;
+                p = p.add(1);
+            }
+        };
+        let entries = self.entries.clone();
+        for i in 0..ENTRY_COUNT {
+            if self.entries[i].is_valid() {
+                let entry = self.entries[i].clone();
+                match entry {
+                    Entry::PdBlock((saddr, pg)) => {
+                        assert!(saddr as u64 == 0);
+                        let entry_addr = addr + (i * 8) as u64;
+                        unsafe {
+                            let entry = entry_addr as *mut u64;
+                            *entry = pg;
+                        }
+                    }
+                    Entry::PdTable(pt) => {
+                        let pt = pt.clone();
+                        let entry_addr = addr + (i * 8) as u64;
+                        unsafe {
+                            let entry = entry_addr as *mut u64;
+                            *entry = pt.addr
+                                | (PD_TABLE | PD_ACCESS | (MAIR_NORMAL_NC_IDX << 2) as u32) as u64;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        PageTable { entries, addr }
     }
 }

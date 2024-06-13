@@ -21,7 +21,7 @@ exception_vector_table:
     EXCEPTION_WITH_TYPE 1, unknown_exception_handler
 
     .align 7
-    EXCEPTION_WITH_TYPE 2, lower_exception_handler
+    EXCEPTION_WITH_TYPE 2, unknown_exception_handler
 
     .align 7
     EXCEPTION_WITH_TYPE 3, unknown_exception_handler
