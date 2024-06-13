@@ -63,6 +63,7 @@ void set(long addr, unsigned int value) {
 void utils_align(void *size, unsigned int s) {
 	unsigned long* x = (unsigned long*) size;
 	unsigned long mask = s-1;
+    // ceil(a/k) = (a+(k-1))/k
 	*x = ((*x) + mask) & (~mask);
 }
 
@@ -90,9 +91,8 @@ void cancel_reset() {
 static unsigned char simple_malloc_buffer[SIMPLE_MALLOC_BUFFER_SIZE];
 static unsigned long simple_malloc_offset = 0;
 
+// the size is calculated in byte format
 void* simple_malloc(unsigned long size){
-	//align to 8 bytes
-	utils_align(&size,8);
 
 	if(simple_malloc_offset + size > SIMPLE_MALLOC_BUFFER_SIZE) {
 		//Not enough space left

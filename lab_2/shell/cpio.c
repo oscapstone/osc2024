@@ -6,7 +6,6 @@ char* cpio_addr = (char *)0x8000000;;
 
 void cpio_ls(){
 	char* addr = (char*) cpio_addr;
-    uart_puts((char *)(addr+sizeof(struct cpio_header)));
 	while(strcmp((char *)(addr+sizeof(struct cpio_header)),"TRAILER!!!") != 0){
 		struct cpio_header* header = (struct cpio_header*) addr;
 		unsigned long filename_size = utils_atoi(header->c_namesize,(int)sizeof(header->c_namesize));
@@ -26,6 +25,7 @@ void cpio_cat(char *filename){
         struct cpio_header *header = (struct cpio_header *)target;
         unsigned long pathname_size = utils_atoi(header->c_namesize,(int)sizeof(header->c_namesize));
         unsigned long file_size = utils_atoi(header->c_filesize,(int)sizeof(header->c_filesize));
+        //The header is followed by the pathname of the entry, then is content of file
         unsigned long headerPathname_size = sizeof(struct cpio_header) + pathname_size;
 
         utils_align(&headerPathname_size,4); 
@@ -46,6 +46,7 @@ void cpio_cat(char *filename){
 char *findFile(char *name){
     char *addr = (char *)cpio_addr;
     while (strcmp((char *)(addr + sizeof(struct cpio_header)), "TRAILER!!!") != 0){
+        //The header is followed by the pathname of the entry
         if ((strcmp((char *)(addr + sizeof(struct cpio_header)), name) == 0)){
             return addr;
         }

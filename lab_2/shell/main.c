@@ -30,6 +30,15 @@
 
 
 void main(int argc, char* argv[]){
+   unsigned int* a = (unsigned int*) simple_malloc(4);
+   *a = 32;
+   unsigned int* b = (unsigned int*) simple_malloc(4);
+   *b = 70;
+   uart_puts("a = 0x");
+   uart_hex(*a);
+   uart_puts("\nb = 0x");
+   uart_hex(*b);
+   uart_send('\n');
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';
