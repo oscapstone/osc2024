@@ -88,4 +88,3 @@ Create directory and mount uart, only read write open close. Write and read uses
 ## NOTE
 * Use const char to avoid string disappeared in stack
 * Use ** target so that can get both target and return value. 
-* VFS 使得應用程式可以在不同的檔案系統上進行操作，而無需關心底層檔案系統的具體實現細節。這種設計有助於操作系統支持多種檔案系統，並且提高了程式的可移植性。

@@ -4,6 +4,8 @@
 |----------------|------------|---------------|
 | jerryyyyy708 | 312551086    | Chi-Jui Chang |
 
+Finalized Head Repo in: https://github.com/jerryyyyy708/osc2024
+
 ## Requirements
 
 * a cross-compiler for aarch64
