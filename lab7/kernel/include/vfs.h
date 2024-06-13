@@ -4,10 +4,10 @@
 #include "stddef.h"
 #include "stdint.h"
 #include "list.h"
+#include "sched.h"
 
 #define MAX_PATH_NAME 255
 #define MAX_FILE_NAME 20
-#define MAX_FD 16
 #define O_CREAT 00000100
 #define SEEK_SET 0
 #define MAX_FS_REG 0x50
@@ -37,12 +37,12 @@ typedef enum fsnode_type
 
 typedef struct vnode
 {
-    struct mount *superblock;       // Superblock        : represents mounted fs
-    struct mount *mount;            // Mount point       : represents mounted fs
-    struct vnode *parent;           // Parent directory  : represents parent directory
-    enum fsnode_type type;          // Type              : represents file type
-    char *name;                     // Name              : represents file name
-    void *internal;                 // vnode itself      : directly point to fs's vnode
+    struct mount *superblock; // Superblock        : represents mounted fs
+    struct mount *mount;      // Mount point       : represents mounted fs
+    struct vnode *parent;     // Parent directory  : represents parent directory
+    enum fsnode_type type;    // Type              : represents file type
+    char *name;               // Name              : represents file name
+    void *internal;           // vnode itself      : directly point to fs's vnode
 } vnode_t;
 
 typedef struct vnode_list
@@ -97,16 +97,17 @@ int register_filesystem(struct filesystem *fs);
 int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **target, size_t *start_idx);
 vnode_t *create_vnode();
 int register_dev(struct file_operations *fo);
-int vfs_open(const char *pathname, int flags, struct file **target);
+int vfs_open(struct vnode *dir_node, const char *pathname, int flags, struct file **target);
 int vfs_close(struct file *file);
 int vfs_write(struct file *file, const void *buf, size_t len);
 int vfs_read(struct file *file, void *buf, size_t len);
 int vfs_mkdir(struct vnode *dir_node, const char *pathname);
-int vfs_mount(const char *target, const char *filesystem);
+int vfs_mount(struct vnode *dir_node, const char *target, const char *filesystem);
 int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **target);
 int vfs_mknod(char *pathname, int id);
 
 void init_rootfs();
+void init_thread_vfs(struct thread_struct *t);
 vnode_t *get_root_vnode();
 void vfs_test();
 char *get_absolute_path(char *path, char *curr_working_dir);

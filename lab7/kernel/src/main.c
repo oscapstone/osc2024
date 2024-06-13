@@ -30,6 +30,7 @@ void main(char *arg)
     DEBUG("timer_list_init\r\n");
     timer_list_init();
     DEBUG("sched_init\r\n");
+    init_rootfs();
     init_thread_sched();
     
     set_current_thread_context(&curr_thread->context);

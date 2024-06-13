@@ -281,11 +281,7 @@ thread_t *thread_create(void *start, char *name)
 	memset(PHYS_TO_KERNEL_VIRT(r->context.pgd), 0, PAGE_FRAME_SIZE);
 	DEBUG("new_pid: %d, context.pgd: 0x%x\n", new_pid, r->context.pgd);
 
-	for(int i = 0; i < MAX_FD + 1; i++)
-	{
-		r->file_descriptors_table[i] = NULL;
-	}
-	r->pwd = get_root_vnode();
+	init_thread_vfs(r);
 
 	child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
 	child->pid = new_pid;

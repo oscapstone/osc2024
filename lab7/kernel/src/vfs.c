@@ -7,10 +7,10 @@
 #include "debug.h"
 #include "tmpfs.h"
 #include "uart1.h"
+#include "initramfs.h"
+#include "sched.h"
 
 vnode_t *root_vnode;
-vnode_t *curr_vnode;
-
 mount_t *root_mount;
 
 list_head_t *filesystems_list;
@@ -39,24 +39,34 @@ void init_rootfs()
 	root_vnode = root_mount->root;
 	DEBUG("root_vnode: %x\r\n", root_vnode);
 	root_vnode->parent = root_vnode;
-
+	vnode_t *curr_vnode;
 	curr_vnode = root_vnode;
-	vnode_t *node;
-	vfs_open("/test", O_CREAT, &node);
-	vfs_open("/test1", O_CREAT, &node);
-	vfs_open("/test133", O_CREAT, &node);
-	vfs_open("/test122", O_CREAT, &node);
-	vfs_open("/test11111", O_CREAT, &node);
-	vfs_open("/t3t1", O_CREAT, &node);
+	file_t *file;
+	vfs_open(curr_vnode, "/test", O_CREAT, &file);
+	vfs_write(file, "hello world", 11);
+	vfs_open(curr_vnode, "/test1", O_CREAT, &file);
+	vfs_open(curr_vnode, "/test133", O_CREAT, &file);
+	vfs_open(curr_vnode, "/test122", O_CREAT, &file);
+	vfs_open(curr_vnode, "/test11111", O_CREAT, &file);
+	vfs_open(curr_vnode, "/t3t1", O_CREAT, &file);
 
 	vfs_mkdir(curr_vnode, "/dir1");
 	vfs_mkdir(curr_vnode, "/dir2");
 	vfs_mkdir(curr_vnode, "/dir2/dir3");
-	vfs_open("/dir2/test", O_CREAT, &node);
+	vfs_open(curr_vnode, "/dir2/test", O_CREAT, &file);
 
 	vfs_mkdir(curr_vnode, "/initramfs");
 	register_initramfs();
-	vfs_mount("/initramfs", "initramfs");
+	vfs_mount(curr_vnode, "/initramfs", "initramfs");
+}
+
+void init_thread_vfs(struct thread_struct *t)
+{
+	for (int i = 0; i < MAX_FD + 1; i++)
+	{
+		t->file_descriptors_table[i] = NULL;
+	}
+	t->pwd = get_root_vnode();
 }
 
 vnode_t *get_root_vnode()
@@ -67,7 +77,6 @@ vnode_t *get_root_vnode()
 int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **target, size_t *start_idx)
 {
 	size_t len = strlen(path);
-	DEBUG("handling_relative_path: %s, len: %d, strncmp(path, ., 1): %d\r\n", path, len, strncmp(path, ".", 1));
 	if (len != 0)
 	{
 		if (len >= 3 && strncmp(path, "../", 3) == 0)
@@ -92,7 +101,6 @@ int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **targ
 		{
 			*target = curr_vnode;
 			*start_idx = 1;
-			DEBUG("handling_relative_path: path is ., *target: 0x%x\r\n", *target);
 			return 0;
 		}
 	}
@@ -123,11 +131,11 @@ int register_filesystem(struct filesystem *fs)
 	return 0;
 }
 
-int vfs_open(const char *pathname, int flags, struct file **target)
+int vfs_open(struct vnode *dir_node, const char *pathname, int flags, struct file **target)
 {
 	vnode_t *node;
 	DEBUG("vfs_open: %s\r\n", pathname);
-	if (vfs_lookup(curr_vnode, pathname, &node) == -1)
+	if (vfs_lookup(dir_node, pathname, &node) == -1)
 	{
 		if (!(flags & O_CREAT))
 		{
@@ -148,7 +156,7 @@ int vfs_open(const char *pathname, int flags, struct file **target)
 		strcpy(dirname, pathname);
 		dirname[last_slash_idx] = 0;
 		// update dirname to node
-		if (vfs_lookup(curr_vnode, dirname, &node) != 0)
+		if (vfs_lookup(dir_node, dirname, &node) != 0)
 		{
 			ERROR("cannot ocreate no dir name\r\n");
 			return -1;
@@ -188,12 +196,12 @@ int vfs_read(struct file *file, void *buf, size_t len)
 	return file->f_ops->read(file, buf, len);
 }
 
-int vfs_readdir(const char *pathname, const char buf[])
+int vfs_readdir(struct vnode *dir_node, const char *pathname, const char buf[])
 {
 	DEBUG("vfs_readdir: %s, pathname[0]: %d, pathname[1]: %d\r\n", pathname, pathname[0], pathname[1]);
 	struct vnode *node;
 
-	if (vfs_lookup(curr_vnode, pathname, &node) == -1)
+	if (vfs_lookup(dir_node, pathname, &node) == -1)
 	{
 		ERROR("vfs_readdir cannot find pathname");
 		return -1;
@@ -245,7 +253,7 @@ int vfs_mkdir(struct vnode *dir_node, const char *pathname)
 	return 0;
 }
 
-int vfs_mount(const char *target, const char *filesystem)
+int vfs_mount(struct vnode *dir_node, const char *target, const char *filesystem)
 {
 	get_fs(filesystem);
 
@@ -258,7 +266,7 @@ int vfs_mount(const char *target, const char *filesystem)
 		return -1;
 	}
 
-	if (vfs_lookup(curr_vnode, target, &node) == -1)
+	if (vfs_lookup(dir_node, target, &node) == -1)
 	{
 		ERROR("vfs_mount cannot find dir\r\n");
 		return -1;
@@ -308,7 +316,7 @@ int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **targ
 		node = dir_node;
 	}
 
-	DEBUG("vfs_lookup: pathname %s, str_len: %d\r\n", pathname, strlen(pathname));
+	DEBUG("vfs_lookup: pathname \"%s\", str_len: %d, dir_node: 0x%x, node: 0x%x\r\n", pathname, strlen(pathname), dir_node, node);
 
 	char component_name[MAX_FILE_NAME + 1] = {0};
 	size_t offset = 0;

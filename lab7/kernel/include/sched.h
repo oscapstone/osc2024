@@ -1,13 +1,14 @@
 #ifndef _SCHED_H_
 #define _SCHED_H_
 
+#include "vfs.h"
 #include "list.h"
 #include "stdint.h"
 #include "signal.h"
 #include "mmu.h"
-#include "vfs.h"
 
 #define MAX_PID 32768
+#define MAX_FD 16
 #define MAX_SIGNAL 31
 #define USTACK_SIZE 0x10000
 #define KSTACK_SIZE 0x10000

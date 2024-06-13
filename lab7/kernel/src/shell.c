@@ -37,7 +37,6 @@ extern thread_t *curr_thread;
 int start_shell()
 {
     char input_buffer[CMD_MAX_LEN] = {0};
-    init_rootfs();
 
 #if _DEBUG < 3
     cli_print_banner();
@@ -292,7 +291,9 @@ int do_cmd_ls(int argc, char **argv)
     }
 
     char buf[MAX_NAME_BUF] = {0};
-    vfs_readdir(workdir, buf);
+    DEBUG("root_vnode: 0x%x, curr_thread->pwd: 0x%x\r\n", get_root_vnode(), curr_thread->pwd);
+
+    vfs_readdir(curr_thread->pwd, workdir, buf);
     DEBUG("readdir:\r\n");
     int start_index = 0;
     int end_index = 0;
@@ -324,7 +325,7 @@ int do_cmd_cat(int argc, char **argv)
     }
     char buf[0x10000] = {0};
     file_t *file;
-    if (vfs_open(filepath, 0, &file) == -1)
+    if (vfs_open(curr_thread->pwd, filepath, 0, &file) == -1)
         return -1;
     size_t size = vfs_read(file, buf, 0x10000);
     for (int i = 0; i < size; i++)

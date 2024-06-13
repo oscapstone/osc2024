@@ -91,6 +91,11 @@ tmpfs_inode_t *tmpfs_create_inode(enum fsnode_type type, const char *name)
 int tmpfs_write(struct file *file, const void *buf, size_t len)
 {
 	struct tmpfs_inode *inode = file->vnode->internal;
+	DEBUG("tmpfs_write: %s, len: %d, 0x%x->0x%x\r\n", file->vnode->name, len, inode->data + file->f_pos, inode->data + file->f_pos + len);
+	if(inode->data == NULL)
+	{
+		inode->data = kmalloc(MAX_FILE_SIZE);
+	}
 	// write from f_pos
 	memcpy(inode->data + file->f_pos, buf, len);
 	// update f_pos and size
