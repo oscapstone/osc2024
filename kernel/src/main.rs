@@ -82,7 +82,6 @@ fn buddy_init() {
 fn buddy_reserve_memory() {
     unsafe {
         BUDDY_SYSTEM.reserve_by_addr_range(0x1000, 0x1_0000);
-        // BUDDY_SYSTEM.reserve_by_addr_range(0x2000, 0x3000);
     }
 
     let rsv_mem = dtb::get_reserved_memory();

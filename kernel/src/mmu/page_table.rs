@@ -6,10 +6,10 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::alloc::Layout;
 
-use crate::mmu::MAIR_NORMAL_NC_IDX;
-use crate::mmu::PD_ACCESS;
-use crate::mmu::PD_PAGE;
-use crate::mmu::PD_TABLE;
+use crate::mmu::config::MAIR_NORMAL_NC_IDX;
+use crate::mmu::config::PD_ACCESS;
+use crate::mmu::config::PD_PAGE;
+use crate::mmu::config::PD_TABLE;
 
 #[derive(Debug)]
 pub struct PageTable {

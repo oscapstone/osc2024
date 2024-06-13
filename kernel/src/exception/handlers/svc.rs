@@ -61,8 +61,6 @@ unsafe fn lower_exception_handler(eidx: u64, sp: u64) {
         out(reg) esr_el1,
     );
     let ec = esr_el1 >> 26;
-    // println!("Exception {}", eidx);
-    // println!("Exception Class: 0b{:06b}", ec);
     match ec {
         0b010101 => svc_handler(sp),
         0b001110 => {
@@ -113,8 +111,7 @@ unsafe fn syscall_handler(sp: u64) {
     let syscall = Syscall::new(sp);
     // println!("{:?}", syscall);
     assert!(trap_frame::TRAP_FRAME.is_some());
-    let mut vm = VirtualMemory::load(trap_frame::TRAP_FRAME.as_ref().unwrap().state.l0);
-    // vm.dump();
+    let vm = VirtualMemory::load(trap_frame::TRAP_FRAME.as_ref().unwrap().state.l0);
     match syscall.idx {
         0 => {
             println!("Syscall get_pid");
