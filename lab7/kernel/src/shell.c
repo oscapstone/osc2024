@@ -310,8 +310,8 @@ int do_cmd_ls(int argc, char **argv)
 int do_cmd_cat(int argc, char **argv)
 {
     char *filepath;
-    char *c_filedata;
-    unsigned int c_filesize;
+    // char *c_filedata;
+    // unsigned int c_filesize;
 
     if (argc == 1)
     {
@@ -322,25 +322,14 @@ int do_cmd_cat(int argc, char **argv)
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-
-    int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
-
-    if (result == CPIO_ERROR)
-    {
-        puts("cpio parse error\r\n");
+    char buf[0x10000] = {0};
+    file_t *file;
+    if (vfs_open(filepath, 0, &file) == -1)
         return -1;
-    }
-    else if (result == CPIO_TRAILER)
-    {
-        puts("cat: ");
-        puts(filepath);
-        puts(": No such file or directory\r\n");
-        return -1;
-    }
-    else if (result == CPIO_SUCCESS)
-    {
-        puts(c_filedata);
-    }
+    size_t size = vfs_read(file, buf, 0x10000);
+    for (int i = 0; i < size; i++)
+        printf("%c", buf[i]);
+    vfs_close(file);
     return 0;
 }
 
