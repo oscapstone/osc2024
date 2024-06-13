@@ -318,6 +318,29 @@ void schedule()
 	switch_to(get_current_thread_context(), &(curr_thread->context));
 }
 
+int thread_insert_fd_to_table(file_t *file)
+{
+	for(int i = 0; i < MAX_FD + 1; i++)
+	{
+		if(curr_thread->file_descriptors_table[i] == NULL)
+		{
+			curr_thread->file_descriptors_table[i] = file;
+			return i;
+		}
+	}
+	return -1;
+}
+
+int thread_get_file_struct_by_fd(int fd, file_t **file)
+{
+	if(fd < 0 || fd > MAX_FD || curr_thread->file_descriptors_table[fd] == NULL)
+	{
+		return -1;
+	}
+	*file = curr_thread->file_descriptors_table[fd];
+	return 0;
+}
+
 void foo()
 {
 	// Lab5 Basic 1 Test function

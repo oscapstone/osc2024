@@ -232,7 +232,7 @@ void el0_sync_router(trapframe_t *tpf)
         return;
     }
 
-    uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
+    uint64_t syscall_no = tpf->x8 >= SYSCALL_MAX ? SYSCALL_MAX : tpf->x8;
     // DEBUG("syscall_no: %d\r\n", syscall_no);
 
     // only work with GCC
@@ -247,10 +247,17 @@ void el0_sync_router(trapframe_t *tpf)
                               &&__signal_register_label,  // 8
                               &&__signal_kill_label,      // 9
                               &&__mmap_label,             // 10
-                              &&__signal_return_label,    // 11
-                              &&__lock_interrupt_label,   // 12
-                              &&__unlock_interrupt_label, // 13
-                              &&__invalid_syscall_label}; // 14
+                              &&__open_label,             // 11
+                              &&__close_label,            // 12
+                              &&__write_label,            // 13
+                              &&__read_label,             // 14
+                              &&__mkdir_label,            // 15
+                              &&__mount_label,            // 16
+                              &&__chdir_label,            // 17
+                              &&__signal_return_label,    // 18
+                              &&__lock_interrupt_label,   // 19
+                              &&__unlock_interrupt_label, // 20
+                              &&__invalid_syscall_label}; // 21
 
     goto *syscall_router[syscall_no];
 
@@ -346,6 +353,45 @@ __mmap_label:
     tpf->x0 = sys_mmap(tpf, (void *)tpf->x0, (size_t)tpf->x1, (int)tpf->x2, (int)tpf->x3, (int)tpf->x4, (int)tpf->x5);
     return;
 
+__open_label:
+    DEBUG("sys_open\r\n");
+    tpf->x0 = sys_open(tpf,(const char *)tpf->x0, (int)tpf->x1);
+    return;
+
+__close_label:
+    DEBUG("sys_close\r\n");
+    tpf->x0 = sys_close(tpf,(int)tpf->x0);
+    return;
+
+__write_label:
+    // remember to return read size or error code
+    DEBUG("sys_write\r\n");
+    tpf->x0 = sys_write(tpf,(int)tpf->x0, (const void *)tpf->x1, (uint64_t)tpf->x2);
+    return;
+
+__read_label:
+    // remember to return read size or error code
+    DEBUG("sys_read\r\n");
+    tpf->x0 = sys_read(tpf, (int)tpf->x0, (void *)tpf->x1, (uint64_t)tpf->x2);
+    return;
+
+__mkdir_label:
+    // you can ignore mode, since there is no access control
+    DEBUG("sys_mkdir\r\n");
+    tpf->x0 = sys_mkdir(tpf, (const char *)tpf->x0, (unsigned)tpf->x1);
+    return;
+
+__mount_label:
+    // you can ignore arguments other than target (where to mount) and filesystem (fs name)
+    DEBUG("sys_mount\r\n");
+    tpf->x0 = sys_mount(tpf, (const char *)tpf->x0, (const char *)tpf->x1, (const char *)tpf->x2, (uint64_t)tpf->x3, (const void *)tpf->x4);
+    return;
+
+__chdir_label:
+    DEBUG("sys_chdir\r\n");
+    tpf->x0 = sys_chdir(tpf, (const char *)tpf->x0);
+    return;
+
 __signal_return_label:
     DEBUG("sys_signal_return\r\n");
     sys_signal_return(tpf);
@@ -414,7 +460,7 @@ void el0_irq_64_router(trapframe_t *tpf)
 
 void invalid_exception_router(uint64_t x0)
 {
-    
+
     uint64_t esr_el1_value = read_esr_el1();
     uint64_t elr_el1_value = read_elr_el1();
     uint64_t spsr_el1_value = read_spsr_el1();

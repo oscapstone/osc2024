@@ -1,8 +1,6 @@
 #ifndef _SYSCALL_H_
 #define _SYSCALL_H_
 
-#define MAX_SYSCALL 14
-
 #include "stdint.h"
 #include "stddef.h"
 #include "exception.h"
@@ -67,6 +65,13 @@ enum syscall_num
 	SYSCALL_SIGNAL_REGISTER,
 	SYSCALL_SIGNAL_KILL,
 	SYSCALL_MMAP,
+	SYSCALL_OPEN,
+	SYSCALL_CLOSE,
+	SYSCALL_WRITE,
+	SYSCALL_READ,
+	SYSCALL_MKDIR,
+	SYSCALL_MOUNT,
+	SYSCALL_CHDIR,
 	SYSCALL_SIGNAL_RETURN,
 	SYSCALL_LOCK_INTERRUPT,
 	SYSCALL_UNLOCK_INTERRUPT,
@@ -90,12 +95,27 @@ int sys_kill(trapframe_t *tpf, int pid);
 int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void));
 int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL);
 void *sys_mmap(trapframe_t *tpf, void *addr, size_t len, int prot, int flags, int fd, int file_offset);
+int sys_open(trapframe_t *tpf, const char *pathname, int flags);
+int sys_close(trapframe_t *tpf, int fd);
+long sys_write(trapframe_t *tpf, int fd, const void *buf, unsigned long count);
+long sys_read(trapframe_t *tpf, int fd, void *buf, unsigned long count);
+int sys_mkdir(trapframe_t *tpf, const char *pathname, unsigned mode);
+int sys_mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+int sys_chdir(trapframe_t *tpf, const char *path);
 int sys_signal_return(trapframe_t *tpf);
 void sys_lock_interrupt(trapframe_t *tpf);
 void sys_unlock_interrupt(trapframe_t *tpf);
 
 int kernel_fork();
 int kernel_exec_user_program(const char *name, char *const argv[]);
+int kernel_open(const char *pathname, int flags);
+int kernel_close(int fd);
+long kernel_write(int fd, const void *buf, unsigned long count);
+long kernel_read(int fd, void *buf, unsigned long count);
+int kernel_mkdir(const char *pathname, unsigned mode);
+int kernel_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+int kernel_chdir(const char *path);
+
 void kernel_lock_interrupt();
 void kernel_unlock_interrupt();
 

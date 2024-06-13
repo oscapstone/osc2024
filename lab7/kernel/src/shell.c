@@ -18,6 +18,7 @@
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "cat", .help = "concatenate files and print on the standard output", .func = do_cmd_cat},
+    {.command = "cd", .help = "change the shell working directory", .func = do_cmd_cd},
     {.command = "dtb", .help = "show device tree", .func = do_cmd_dtb},
     {.command = "exec", .help = "execute a command, replacing current image with a new image", .func = do_cmd_exec},
     {.command = "hello", .help = "print Hello World!", .func = do_cmd_hello},
@@ -37,6 +38,7 @@ extern thread_t *curr_thread;
 int start_shell()
 {
     char input_buffer[CMD_MAX_LEN] = {0};
+    char path_buf[MAX_PATH_NAME];
 
 #if _DEBUG < 3
     cli_print_banner();
@@ -45,11 +47,12 @@ int start_shell()
     while (1)
     {
         cli_flush_buffer(input_buffer, CMD_MAX_LEN);
+        get_pwd(path_buf);
 #if _DEBUG < 3
 #ifdef QEMU
-        puts("[ " BLU "─=≡Σ((( つ•̀ω•́)つ " GRN "@ QEMU" CRESET " ] $ ");
+        printf("[ " BLU "─=≡Σ((( つ•̀ω•́)つ " GRN "@ QEMU " MAG "%s" CRESET " ] $ ", path_buf);
 #elif RPI
-        puts("[ " HBLU "d[^_^]b " HGRN "@ RPI" CRESET " ] $ ");
+        printf("[ " HBLU "d[^_^]b " HGRN "@ RPI " MAG "%s" CRESET " ] $ ", path_buf);
 #endif
 #endif
         cli_cmd_read(input_buffer);
@@ -332,6 +335,23 @@ int do_cmd_cat(int argc, char **argv)
         printf("%c", buf[i]);
     vfs_close(file);
     return 0;
+}
+
+int do_cmd_cd(int argc, char **argv){
+    char *filepath;
+    // char *c_filedata;
+    // unsigned int c_filesize;
+
+    if (argc == 1)
+    {
+        filepath = argv[0];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    kernel_chdir(filepath);
 }
 
 int do_cmd_kmalloc(int argc, char **argv)

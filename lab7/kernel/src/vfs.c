@@ -10,6 +10,8 @@
 #include "initramfs.h"
 #include "sched.h"
 
+extern thread_t *curr_thread;
+
 vnode_t *root_vnode;
 mount_t *root_mount;
 
@@ -165,7 +167,7 @@ int vfs_open(struct vnode *dir_node, const char *pathname, int flags, struct fil
 		DEBUG("create file: %s, node: 0x%x\r\n", pathname + last_slash_idx + 1, node);
 		node->superblock->v_ops->create(node, &node, pathname + last_slash_idx + 1);
 	}
-	*target = kmalloc(sizeof(file_t));
+	*target = kmalloc(sizeof(struct file));
 	// attach opened file on the new node
 	DEBUG("open file %s\r\n", pathname);
 	node->superblock->f_ops->open(node, target);
@@ -354,5 +356,40 @@ int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **targ
 	} while (i < strlen(pathname) + 1);
 	DEBUG("vfs_lookup: target %s\r\n", node->name);
 	*target = node;
+	return 0;
+}
+
+int get_pwd(char *buf)
+{
+	struct vnode *pwd_node = curr_thread->pwd;
+	int index = 0;
+	int path_length = 0;
+	char temp_buf[MAX_PATH_NAME];
+
+	while (pwd_node->parent != pwd_node)
+	{
+		// Store the name in a temporary buffer
+		strcpy(temp_buf, pwd_node->name);
+		int name_length = strlen(pwd_node->name);
+
+		// Copy the name from the temporary buffer to buf
+		memcpy(buf + name_length + 1, buf, path_length);
+		buf[name_length + 1 + path_length] = '\0';
+		memcpy(buf + 1, temp_buf, name_length);
+
+		// Update the path length and index
+		path_length += name_length + 1;
+		index += name_length + 1;
+		buf[0] = '/';
+
+		pwd_node = pwd_node->parent;
+	}
+
+	if (path_length == 0)
+	{
+		buf[index++] = '/';
+	}
+
+	buf[index] = '\0'; // Add null terminator to the end of the string
 	return 0;
 }

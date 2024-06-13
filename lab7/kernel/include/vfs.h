@@ -109,6 +109,7 @@ int vfs_mknod(char *pathname, int id);
 void init_rootfs();
 void init_thread_vfs(struct thread_struct *t);
 vnode_t *get_root_vnode();
+int get_pwd(char *buf);
 void vfs_test();
 char *get_absolute_path(char *path, char *curr_working_dir);
 

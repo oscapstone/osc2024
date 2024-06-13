@@ -1,7 +1,7 @@
 #ifndef _SHELL_H_
 #define _SHELL_H_
 
-#define CLI_MAX_CMD 12
+#define CLI_MAX_CMD 13
 #define CMD_MAX_LEN 32
 #define CMD_MAX_PARAM 10
 #define MSG_MAX_LEN 128
@@ -29,6 +29,7 @@ int do_cmd_info(int argc, char **argv);
 int do_cmd_reboot(int argc, char **argv);
 int do_cmd_ls(int argc, char **argv);
 int do_cmd_cat(int argc, char **argv);
+int do_cmd_cd(int argc, char **argv);
 int do_cmd_kmalloc(int argc, char **argv);
 int do_cmd_dtb(int argc, char **argv);
 int do_cmd_exec(int argc, char **argv);

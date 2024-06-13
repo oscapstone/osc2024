@@ -236,7 +236,7 @@ int sys_fork(trapframe_t *tpf)
 	});
 	DEBUG("parent->context.pgd: 0x%x, child->context.pgd: 0x%x\r\n", parent->context.pgd, child->context.pgd);
 	mmu_copy_page_table_and_set_read_only(child->context.pgd, parent->context.pgd, LEVEL_PGD);
-    flush_tlb();
+	flush_tlb();
 
 	// Because make a function call, so lr is the next instruction address
 	// When context switch, child process will start from the next instruction
@@ -376,6 +376,38 @@ void *sys_mmap(trapframe_t *tpf, void *addr, size_t len, int prot, int flags, in
 	return (void *)new_addr;
 }
 
+int sys_open(trapframe_t *tpf, const char *pathname, int flags)
+{
+	return kernel_open(pathname, flags);
+}
+
+int sys_close(trapframe_t *tpf, int fd)
+{
+	return kernel_close(fd);
+}
+
+long sys_write(trapframe_t *tpf, int fd, const void *buf, unsigned long count)
+{
+	return kernel_write(fd, buf, count);
+}
+
+long sys_read(trapframe_t *tpf, int fd, void *buf, unsigned long count)
+{
+	return kernel_read(fd, buf, count);
+}
+
+int sys_mkdir(trapframe_t *tpf, const char *pathname, unsigned mode){
+	return kernel_mkdir(pathname, mode);
+}
+
+int sys_mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data){
+	return kernel_mount(src, target, filesystem, flags, data);
+}
+
+int sys_chdir(trapframe_t *tpf, const char *path){
+	return kernel_chdir(path);
+}
+
 /**
  * @brief Before returning to the execution of the signal handler.
  *
@@ -504,6 +536,66 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	DEBUG("VA of user sp: 0x%x", USER_STACK_BASE);
 	// JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA + (uint64_t)run_user_task_wrapper % PAGE_FRAME_SIZE, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
 	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
+	return 0;
+}
+
+int kernel_open(const char *pathname, int flags)
+{
+	file_t *file;
+	if (vfs_open(curr_thread->pwd, pathname, flags, &file) != 0)
+	{
+		return -1;
+	}
+	int fd = thread_insert_fd_to_table(file);
+	if (fd == -1)
+	{
+		ERROR("sys_open: fd is full\r\n");
+		vfs_close(file);
+		return -1;
+	}
+	return fd;
+}
+
+int kernel_close(int fd)
+{
+	file_t *file;
+	if (thread_get_file_struct_by_fd(fd, &file) == -1)
+		return -1;
+	vfs_close(file);
+	curr_thread->file_descriptors_table[fd] = NULL;
+	return 0;
+}
+
+long kernel_write(int fd, const void *buf, unsigned long count)
+{
+	file_t *file;
+	if (thread_get_file_struct_by_fd(fd, &file) == -1)
+		return -1;
+	return vfs_write(file, buf, count);
+}
+
+long kernel_read(int fd, void *buf, unsigned long count)
+{
+	file_t *file;
+	if (thread_get_file_struct_by_fd(fd, &file) == -1)
+		return -1;
+	return vfs_read(file, buf, count);
+}
+
+int kernel_mkdir(const char *pathname, unsigned mode){
+	return vfs_mkdir(curr_thread->pwd, pathname);
+}
+
+int kernel_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data){
+	return vfs_mount(curr_thread->pwd, target, filesystem);
+}
+
+int kernel_chdir(const char *path){
+	vnode_t *target;
+	if(vfs_lookup(curr_thread->pwd, path, &target) != 0){
+		return -1;
+	}
+	curr_thread->pwd = target;
 	return 0;
 }
 
