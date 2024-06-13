@@ -65,5 +65,6 @@ void foo();
 
 void schedule();
 void idle();
+void thread_exit();
 
 #endif

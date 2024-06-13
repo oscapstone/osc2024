@@ -57,6 +57,7 @@ void foo(){
 };
 
 void schedule() {
+    //執行下一個 thread
     // current thread 換成 run queue->next
     lock();
     thread_t *prev_thread = curr_thread;
@@ -70,7 +71,19 @@ void schedule() {
     //
 };
 void idle(){
+    // 當schedule 沒東西時候 執行此process
     //  while True:
     //     kill_zombies() # reclaim threads marked as DEAD
     //     schedule() # switch to any other runnable thread
+};
+
+void thread_exit(){
+    lock();
+    // 將current thread設成zombie
+    curr_thread->status = THREAD_IS_ZOMBIE;
+    // 從 run queue移除
+    list_del_entry((list_head_t *)curr_thread);
+    // 呼叫schedule執行瞎下一個thread
+    unlock();
+    schedule();
 };
