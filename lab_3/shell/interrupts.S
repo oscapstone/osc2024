@@ -1,49 +1,4 @@
-.align 11 // vector table should be aligned to 0x800
-.global exception_vector_table
-
-exception_vector_table:
-  b exception_handler // branch to a handler function.
-.align 7 // entry size is 0x80, .align will pad 0
-  b exception_handler
-.align 7
-  b exception_handler // reserved for FIQ(Fast Interrupt)
-.align 7
-  b exception_handler // reserved for SError
-.align 7
-
-  b exception_handler // synchronous: caused by current excution instr.
-.align 7
-  b exception_handler
-.align 7
-  b exception_handler
-.align 7
-  b exception_handler
-.align 7
-
-  b exception_handler
-.align 7
-  b core_timer_handler
-.align 7
-  b exception_handler
-.align 7
-  b exception_handler
-
-  b exception_handler
-.align 7
-  b exception_handler
-.align 7
-  b exception_handler
-.align 7
-  b exception_handler
-.align 7
-
-
-
-.global set_exception_vector_table
-set_exception_vector_table:
-  adr x4, exception_vector_table
-  msr vbar_el1, x4
-  ret
+#define CORE0_TIMER_IRQ_CTRL 0x40000040
 
 // save general registers to stack
 .macro save_all
@@ -95,8 +50,20 @@ set_exception_vector_table:
   add sp, sp, 32*9
 .endm
 
-exception_handler:
+
+.global core_timer_enable
+core_timer_enable:
+    mov x0, 1
+    msr cntp_ctl_el0, x0 // enable
+    mrs x0, cntfrq_el0
+    msr cntp_tval_el0, x0 // set expired time
+    mov x0, 2
+    ldr x1, =CORE0_TIMER_IRQ_CTRL
+    str w0, [x1] // unmask timer interrupt
+
+.global core_timer_handler
+core_timer_handler:
   save_all
-  bl exception_entry
+  bl print_boot_timer
   load_all
   eret

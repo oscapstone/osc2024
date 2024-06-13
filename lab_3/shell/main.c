@@ -30,11 +30,15 @@
 
 
 extern void set_exception_vector_table();
+extern void core_timer_enable();
+
+
 
 void main(int argc, char* argv[]){
    uart_init();
    set_exception_vector_table();
-   cpio_exec("user_program.img");
+   //cpio_exec("user_program.img");   
+   core_timer_enable();
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';
@@ -68,7 +72,7 @@ void main(int argc, char* argv[]){
       else if(strcmp(command, "exec") == 0){
          uart_puts("executing...\n");
          // execute a dedicated user program
-         cpio_exec("user_program");
+         cpio_exec("user_program.img");
       }
       // command with arguments
       else{

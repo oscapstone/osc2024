@@ -23,3 +23,24 @@ int exception_entry(){
 
   return 0;
 }
+
+// cntfrq_el0 = 62500000
+int print_boot_timer(){
+    uart_puts("Interrupt occurs!\n");
+    unsigned long long freq, ticks;
+    asm volatile(
+    "mrs %0, cntfrq_el0;"
+    "mrs %1, cntpct_el0;"
+        : "=r" (freq), "=r" (ticks)
+    );
+    // set up the next timer
+    asm volatile (
+      "msr cntp_tval_el0, %0" 
+        : 
+        : "r" (freq * 2)
+    );
+    unsigned int time = (unsigned int)(ticks/freq);
+    uart_hex(time);
+    uart_puts(" seconds elapsed\n");
+  return 0;
+}
