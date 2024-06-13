@@ -71,3 +71,15 @@ Goals of this lab:
 * Understand how to implement scheduler and context switch.
 * Understand what’s preemption.
 * Understand how to implement POSIX signals.
+
+### Lab 6: Virtual Memory
+Virtual memory provides isolated address spaces, so each user process can run in its address space without interfering with others.
+
+In this lab, you need to initialize the memory management unit(MMU) and set up the address spaces for the kernel and user processes to achieve process isolation
+
+Goals of this lab:
+
+* Understand ARMv8-A virtual memory system architecture.
+* Understand how the kernel manages memory for user processes.
+* Understand how demand paging works.
+* Understand how copy-on-write works.
