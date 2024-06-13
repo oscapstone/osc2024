@@ -33,14 +33,14 @@ void unlock()
 }
 void irqtask_list_init()
 {   
-    task_list = heap_malloc(sizeof(irqtask_t));
+    task_list = kmalloc(sizeof(irqtask_t));
 
     INIT_LIST_HEAD(task_list);
 }
 
 void irqtask_add(void *task_function, unsigned long long priority)
 {
-    irqtask_t *the_task = heap_malloc(sizeof(irqtask_t)); 
+    irqtask_t *the_task = kmalloc(sizeof(irqtask_t)); 
 
     // store all the related information into irqtask node
     // manually copy the device's buffer
@@ -107,7 +107,7 @@ void irqtask_run_preemptive()
 
         //搶佔的執行完畢 即可還原原本的執行模式
         curr_task_priority = prev_task_priority;
-
+        kfree(the_task);
         unlock();
     }
 }

@@ -95,7 +95,7 @@ void init_memory_space()
 
 void *page_alloc(unsigned int size)
 {
-    pg_info_dump();
+    // pg_info_dump();
     /*給一個size，開始去便利所有order找到位於哪兩個order之間 設 x < size < y，
     檢查order y的freelist有無空間
 
@@ -104,22 +104,22 @@ void *page_alloc(unsigned int size)
     沒有：
 
         */
-    uart_puts("[+] Page Allocate \r\n");
+    // uart_puts("[+] Page Allocate \r\n");
     int order;
     for (int i = FRAME_IDX_0; i <= FRAME_IDX_FINAL; i++)
     {
         if (size <= (PAGE_SIZE << i))
         {
             order = i;
-            uart_puts("[+] This malloc acquires ");
-            put_int(order);
-            uart_puts(" page frame. \r\n");
+            // uart_puts("[+] This malloc acquires ");
+            // put_int(order);
+            // uart_puts(" page frame. \r\n");
             break;
         }
 
         if (i == FRAME_MAX_IDX)
         {
-            uart_puts(" [!] Request size out of memory in page malloc \r\n");
+            // uart_puts(" [!] Request size out of memory in page malloc \r\n");
             return (void *)0;
         }
     }
@@ -147,12 +147,12 @@ void *page_alloc(unsigned int size)
     // uart_puts("\r\n");
 
     list_del_entry(target_frame_ptr);
-    pg_info_dump();
+    // pg_info_dump();
     return frame_to_phy_addr(target_frame_ptr);
 };
 page_frame_t *split_to_target_freelist(int order)
 {
-    uart_puts("[+] Split !!\r\n");
+    // uart_puts("[+] Split !!\r\n");
     int available_order = -1;
     // 給好一塊page frame之後，將page frame包到的page frame從對應order的free list刪除
     for (int i = order; i <= FRAME_MAX_IDX; i++)
@@ -186,9 +186,9 @@ page_frame_t *split_to_target_freelist(int order)
 void page_free(void *ptr)
 {
     // pg_info_dump();
-    uart_puts("[+] Free a frame which order is ");
-    put_int(phy_addr_to_frame(ptr)->order);
-    uart_puts("\r\n");
+    // uart_puts("[+] Free a frame which order is ");
+    // put_int(phy_addr_to_frame(ptr)->order);
+    // uart_puts("\r\n");
     page_frame_t *pg_ptr = phy_addr_to_frame(ptr);
     while (buddy_can_merge(pg_ptr))
     {
@@ -198,7 +198,7 @@ void page_free(void *ptr)
     // 指到指定區塊 將指向的page frame status設定為 FREE
     // 將此區塊加回去對應大小的free list
     list_add(&pg_ptr->listhead, &frame_freelist[pg_ptr->order]);
-    pg_info_dump();
+    // pg_info_dump();
 };
 
 page_frame_t *find_buddy(page_frame_t *pg_ptr)
@@ -207,18 +207,13 @@ page_frame_t *find_buddy(page_frame_t *pg_ptr)
 };
 enum results buddy_can_merge(page_frame_t *pg_ptr)
 {
-    // uart_puts("PG PTR status :");
-    // put_int(pg_ptr->status);
 
     if (pg_ptr->order == FRAME_IDX_FINAL)
     {
-        // uart_puts("buddy can't merge [index BOMB] \r\n");
         return Fault;
     }
     page_frame_t *buddy_ptr = find_buddy(pg_ptr);
-    // uart_puts("\r\nBD PTR status :");
-    // put_int(buddy_ptr->status);
-    // uart_puts("\r\n");
+
     // 如果 buddy 和 page不同 order 不可以合併
     // 如果buddy 被allocated 不可以合併
 
@@ -236,7 +231,7 @@ page_frame_t *merge(page_frame_t *pg_ptr)
     page_frame_t *buddy_ptr = find_buddy(pg_ptr);
 
     list_del_entry(buddy_ptr);
-    uart_puts("[+] Merge ~~\r\n");
+    // uart_puts("[+] Merge ~~\r\n");
 
     page_frame_t *target_ptr;
     // 如果可以合併 pg 和 buddy 取最小的address作為放進freelist
@@ -300,16 +295,16 @@ void *cache_alloc(unsigned int size)
 {
     //  看要給多大的cache，
     // cache_info_dump();
-    uart_puts("[+] Cache Allocate \r\n");
+    // uart_puts("[+] Cache Allocate \r\n");
     int order;
     for (int i = CACHE_IDX_0; i <= CACHE_IDX_FINAL; i++)
     {
         if (size <= (CACHE_SIZE << i))
         {
             order = i;
-            uart_puts("[+] This malloc acquires ");
-            put_int(order);
-            uart_puts(" cache size. \r\n");
+            // uart_puts("[+] This malloc acquires ");
+            // put_int(order);
+            // uart_puts(" cache size. \r\n");
             break;
         }
     }
@@ -317,16 +312,16 @@ void *cache_alloc(unsigned int size)
     int target_order = order;
     if (list_empty(&cache_list[target_order]))
     {
-        uart_puts("[+] Need a Page ~\r\n");
+        // uart_puts("[+] Need a Page ~\r\n");
         page_to_cache_pool(target_order);
     }
     list_head_t *target_cache_ptr = cache_list[target_order].next;
     page_frame_t *target_cache_pg = phy_addr_to_frame(target_cache_ptr);
     target_cache_pg->cache_used_count--;
-    uart_puts("[=] The cache start : ");
-    uart_hex(cache_list[target_order].next);
+    // uart_puts("[=] The cache start : ");
+    // uart_hex(cache_list[target_order].next);
     list_del_entry(target_cache_ptr);
-    cache_info_dump();
+    // cache_info_dump();
 
     return target_cache_ptr;
 }
@@ -335,9 +330,9 @@ void page_to_cache_pool(int cache_order)
 {
     // assign a page frame for seperating into cache pool
     char *page = page_alloc(PAGE_SIZE);
-    uart_puts("page start for cache : ");
-    uart_hex(page);
-    uart_puts("\r\n");
+    // uart_puts("page start for cache : ");
+    // uart_hex(page);
+    // uart_puts("\r\n");
     page_frame_t *page_for_cache = phy_addr_to_frame(page);
     page_for_cache->cache_order = cache_order;
     // uart_puts("page_for_cache : ");
@@ -350,9 +345,9 @@ void page_to_cache_pool(int cache_order)
     // uart_puts("\r\n");
 
     int cache_size = (CACHE_SIZE << cache_order);
-    uart_puts("cache_size : ");
-    uart_hex(cache_size);
-    uart_puts("\r\n");
+    // uart_puts("cache_size : ");
+    // uart_hex(cache_size);
+    // uart_puts("\r\n");
 
     for (int i = 0; i < PAGE_SIZE; i += cache_size)
     {
@@ -377,20 +372,20 @@ void cache_free(void *cache_ptr)
     list_add(free_cache_ptr, &cache_list[cache_size_order]);
     cache_pg_frame->cache_used_count++;
 
-    uart_puts("[-] Free a cache ~ which cacher order is ");
-    put_int(cache_size_order);
-    uart_puts("\r\n");
+    // uart_puts("[-] Free a cache ~ which cacher order is ");
+    // put_int(cache_size_order);
+    // uart_puts("\r\n");
 
     int cache_used_count = cache_pg_frame->cache_used_count;
     int cache_size = (1 << (cache_pg_frame->cache_order + 4));
     if (cache_used_count * cache_size == PAGE_SIZE)
     {
         // uart_hex(frame_to_phy_addr(cache_pg_frame));
-        uart_puts("\r\nThe Cache list of order ");
-        put_int(cache_pg_frame->cache_order);
-        uart_puts(" has ");
-        put_int(cache_used_count);
-        uart_puts(" elements.\r\n");
+        // uart_puts("\r\nThe Cache list of order ");
+        // put_int(cache_pg_frame->cache_order);
+        // uart_puts(" has ");
+        // put_int(cache_used_count);
+        // uart_puts(" elements.\r\n");
 
         for (int i = 0; i < cache_used_count; i++)
         {
@@ -403,15 +398,15 @@ void cache_free(void *cache_ptr)
 
         cache_pg_frame->cache_order = CACHE_NONE;
         cache_pg_frame->cache_used_count = 0;
-        // list_del_entry(cache_list[cache_size_order].next);
+        
         // pg_info_dump();
-        uart_puts("[+] Cache merge into Page ~ \r\n");
+        // uart_puts("[+] Cache merge into Page ~ \r\n");
         // uart_hex(frame_to_phy_addr(cache_pg_frame));
         page_free(frame_to_phy_addr(cache_pg_frame));
         // pg_info_dump();
     }
 
-    cache_info_dump();
+    // cache_info_dump();
 }
 
 void cache_info_dump()
@@ -491,4 +486,23 @@ void *kmalloc(unsigned int size){
         ptr = cache_alloc(size);
         return ptr;
     }
+}
+
+void kfree(void *ptr){
+    // while(1){};
+    lock();
+    page_frame_t *frame = phy_addr_to_frame(ptr);
+
+    if (frame->cache_order == CACHE_NONE){
+        page_free(ptr);
+        unlock();
+        return;
+    } else {
+        cache_free(ptr);
+        unlock();
+        return;
+    }
+
+    unlock();
+    return;
 }
