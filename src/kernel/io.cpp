@@ -171,3 +171,19 @@ unsigned kwrite(const void* buf_p, unsigned size) {
     kputc(buf[i]);
   return size;
 }
+
+void khexdump(const void* buf, unsigned size, const char* msg) {
+  auto s = (const char*)buf;
+  kprintf("%s: %d bytes dumped\n", msg ? msg : __func__, size);
+  for (unsigned i = 0; i < size; i += 16) {
+    kprintf("0x%04x:  ", i);
+    for (unsigned j = 0; j < 16; j++)
+      kprintf(i + j < size ? " %02x" : "   ", s[i + j]);
+    kprintf("    ");
+    for (unsigned j = 0; j < 16; j++) {
+      kprintf(i + j < size ? "%c" : " ", isprint(s[i + j]) ? s[i + j] : '.');
+    }
+    kprintf("\n");
+  }
+  return;
+}

@@ -59,7 +59,8 @@ void Vnode::set_parent(Vnode* parent) {
   set_child("..", parent);
 }
 
-Vnode::Vnode(filetype type) : type(type) {
+Vnode::Vnode(const Mount* mount_root, filetype type)
+    : mount_root{mount_root}, type{type} {
   if (isDir())
     set_child(".", this);
 }
@@ -104,6 +105,18 @@ const char* Vnode::lookup(Vnode* vnode) {
 }
 
 long Vnode::size() const {
+  if (isDir())
+    return dirsize();
+  if (isFile())
+    return filesize();
+  return -1;
+}
+
+long Vnode::dirsize() const {
+  return _childs.size();
+}
+
+long Vnode::filesize() const {
   return -1;
 }
 
@@ -154,13 +167,18 @@ long File::lseek64(long offset, seek_type whence) {
   }
   return f_pos;
 }
-int File::ioctl(unsigned long request, void* arg) {
+int File::ioctl(unsigned long /*request*/, void* /*arg*/) {
   return -1;
 }
-int File::close() {
-  return vnode->close(this);
+
+int File::close(FilePtr file) {
+  if (file.get() != this)
+    return -1;
+  return vnode->close(file);
 }
 
-Vnode* FileSystem::mount() {
+Vnode* FileSystem::mount(const Mount* /*mount_root*/) {
   return nullptr;
 }
+
+void FileSystem::sync(const Mount* /*mount_root*/) {}

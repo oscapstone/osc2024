@@ -33,10 +33,9 @@ class smart_ptr {
   }
   void release() {
     if (p and --p->cnt == 0) {
-      // FIXME
-      // delete p->ptr;
-      // p->ptr = nullptr;
-      // delete p;
+      delete p->ptr;
+      p->ptr = nullptr;
+      delete p;
     }
     p = nullptr;
   }
@@ -53,7 +52,7 @@ class smart_ptr {
     return p and p->ptr;
   }
   template <typename U>
-  bool operator==(smart_ptr<U> o) const {
+  bool operator==(const smart_ptr<U>& o) const {
     return get() == o.get();
   }
   template <typename U>

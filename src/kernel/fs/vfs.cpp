@@ -1,5 +1,6 @@
 #include "fs/vfs.hpp"
 
+#include "fs/fat32fs.hpp"
 #include "fs/files.hpp"
 #include "fs/framebufferfs.hpp"
 #include "fs/initramfs.hpp"
@@ -13,24 +14,35 @@
 #define FS_TYPE "vfs"
 
 Vnode* root_node = nullptr;
+list<Mount*> mounts;
 
 void init_vfs() {
+  mounts.init();
+
   register_filesystem(new tmpfs::FileSystem());
   register_filesystem(new initramfs::FileSystem());
   register_filesystem(new uartfs::FileSystem());
   register_filesystem(new framebufferfs::FileSystem());
+  register_filesystem(new fat32fs::FileSystem());
 
-  root_node = get_filesystem("tmpfs")->mount();
+  auto tmpfs = get_filesystem("tmpfs");
+  auto mount_root = new Mount{.fs = tmpfs, .path = "/"};
+  root_node = tmpfs->mount(mount_root);
   root_node->set_parent(root_node);
+  mount_root->root = root_node;
+  mounts.push_back(mount_root);
 
-  vfs_mkdir("/initramfs");
-  vfs_mount("/initramfs", "initramfs");
+  mkdir("/initramfs");
+  mount("/initramfs", "initramfs");
 
-  vfs_mkdir("/dev");
-  vfs_mkdir("/dev/uart");
-  vfs_mount("/dev/uart", "uartfs");
-  vfs_mkdir("/dev/framebuffer");
-  vfs_mount("/dev/framebuffer", "framebufferfs");
+  mkdir("/dev");
+  mkdir("/dev/uart");
+  mount("/dev/uart", "uartfs");
+  mkdir("/dev/framebuffer");
+  mount("/dev/framebuffer", "framebufferfs");
+
+  mkdir("/boot");
+  mount("/boot", "fat32fs");
 }
 
 FileSystem* filesystems = nullptr;
@@ -56,11 +68,15 @@ int register_filesystem(FileSystem* fs) {
   // you can also initialize memory pool of the file system here.
 
   auto p = find_filesystem(fs->name());
-  if (not p)
-    return -1;
-  FS_INFO("register fs '%s'\n", fs->name());
+  int r = 0;
+  if (not p) {
+    r = -1;
+    goto end;
+  }
   *p = fs;
 
+end:
+  FS_WARN_IF(r < 0, "register fs '%s'\n", fs->name());
   return 0;
 }
 
@@ -76,10 +92,10 @@ int open(const char* pathname, fcntl flags) {
 
   r = current_files()->alloc_fd(file);
   if (r < 0)
-    file->close();
+    file->close(file);
 
 end:
-  FS_INFO("open('%s', 0o%o) -> %d\n", pathname, flags, r);
+  FS_WARN_IF(r < 0, "open('%s', 0o%o) -> %d\n", pathname, Underlying(flags), r);
   return r;
 }
 
@@ -95,12 +111,10 @@ int vfs_open(const char* pathname, fcntl flags, FilePtr& target) {
   if ((r = vfs_lookup(pathname, dir, basename)) < 0) {
     goto cleanup;
   } else {
-    if (not has(flags, O_CREAT)) {
-      r = dir->lookup(basename, vnode);
-    } else {
+    r = dir->lookup(basename, vnode);
+    if (r < 0 and has(flags, O_CREAT))
       r = dir->create(basename, vnode);
-    }
-    if (vnode->isDir())
+    if (vnode and vnode->isDir())
       r = -1;
     if (r < 0)
       goto cleanup;
@@ -129,14 +143,14 @@ int close(int fd) {
     goto end;
   current_files()->close(fd);
 end:
-  FS_INFO("close(%d) = %d\n", fd, r);
+  FS_WARN_IF(r < 0, "close(%d) = %d\n", fd, r);
   return 0;
 }
 
 int vfs_close(FilePtr file) {
   // 1. release the file handle
   // 2. Return error code if fails
-  return file->close();
+  return file->close(file);
 }
 
 SYSCALL_DEFINE3(write, int, fd, const void*, buf, unsigned long, count) {
@@ -152,7 +166,7 @@ long write(int fd, const void* buf, unsigned long count) {
   }
   r = vfs_write(file, buf, count);
 end:
-  FS_INFO("write(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  FS_WARN_IF(r < 0, "write(%d, %p, %ld) = %d\n", fd, buf, count, r);
   return r;
 }
 
@@ -177,7 +191,7 @@ long read(int fd, void* buf, unsigned long count) {
   }
   r = vfs_read(file, buf, count);
 end:
-  FS_INFO("read(%d, %p, %ld) = %d\n", fd, buf, count, r);
+  FS_WARN_IF(r < 0, "read(%d, %p, %ld) = %d\n", fd, buf, count, r);
   return r;
 }
 
@@ -190,9 +204,16 @@ int vfs_read(FilePtr file, void* buf, size_t len) {
   return file->read(buf, len);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 SYSCALL_DEFINE2(mkdir, const char*, pathname, unsigned, mode) {
+  return mkdir(pathname);
+}
+#pragma GCC diagnostic pop
+
+int mkdir(const char* pathname) {
   int r = vfs_mkdir(pathname);
-  FS_INFO("mkdir('%s', 0o%o) = %d\n", pathname, mode, r);
+  FS_WARN_IF(r < 0, "mkdir('%s') = %d\n", pathname, r);
   return r;
 }
 
@@ -212,10 +233,17 @@ end:
   return r;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 SYSCALL_DEFINE5(mount, const char*, src, const char*, target, const char*,
                 filesystem, unsigned long, flags, const void*, data) {
+  return mount(target, filesystem);
+}
+#pragma GCC diagnostic pop
+
+int mount(const char* target, const char* filesystem) {
   int r = vfs_mount(target, filesystem);
-  FS_INFO("mount('%s', '%s') = %d\n", target, filesystem, r);
+  FS_WARN_IF(r < 0, "mount('%s', '%s') = %d\n", target, filesystem, r);
   return r;
 }
 
@@ -227,18 +255,31 @@ int vfs_mount(const char* target, const char* filesystem) {
   Vnode *dir, *new_vnode;
   char* basename;
   int r;
+  auto mount_root = new Mount{.fs = fs, .path = target};
+  if (not mount_root)
+    return -1;
   if ((r = vfs_lookup(target, dir, basename)) < 0)
     goto end;
 
-  new_vnode = fs->mount();
+  new_vnode = fs->mount(mount_root);
   if (not new_vnode) {
     r = -1;
     goto cleanup;
   }
 
+  mount_root->root = new_vnode;
   r = dir->mount(basename, new_vnode);
 
+  if (r >= 0) {
+    mounts.push_back(mount_root);
+  }
+
 cleanup:
+  if (r < 0) {
+    // TODO: release new_vnode
+    if (mount_root)
+      delete mount_root;
+  }
   kfree(basename);
 end:
   return r;
@@ -257,7 +298,7 @@ int lseek64(int fd, long offset, seek_type whence) {
   }
   r = vfs_lseek64(file, offset, whence);
 end:
-  FS_INFO("lseek64(%d, 0x%lx, %d) = %d\n", fd, offset, whence, r);
+  FS_WARN_IF(r < 0, "lseek64(%d, 0x%lx, %d) = %d\n", fd, offset, whence, r);
   return r;
 }
 
@@ -278,12 +319,24 @@ int ioctl(int fd, unsigned long request, void* arg) {
   }
   r = vfs_ioctl(file, request, arg);
 end:
-  FS_INFO("ioctl(%d, %lu, %p) = %d\n", fd, request, arg, r);
+  FS_WARN_IF(r < 0, "ioctl(%d, %lu, %p) = %d\n", fd, request, arg, r);
   return r;
 }
 
 int vfs_ioctl(FilePtr file, unsigned long request, void* arg) {
   return file->ioctl(request, arg);
+}
+
+SYSCALL_DEFINE0(sync) {
+  vfs_sync();
+  return 0;
+}
+
+void vfs_sync() {
+  for (auto mount : mounts) {
+    klog("sync '%s' %s\n", mount->path.data(), mount->fs->name());
+    mount->fs->sync(mount);
+  }
 }
 
 Vnode* vfs_lookup(const char* pathname) {

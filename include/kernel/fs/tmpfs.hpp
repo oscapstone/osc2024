@@ -16,7 +16,7 @@ class Vnode final : public ::VnodeImplRW<Vnode, File> {
 
   using ::VnodeImplRW<Vnode, File>::VnodeImplRW;
   virtual ~Vnode() = default;
-  virtual long size() const {
+  virtual long filesize() const {
     return content.size();
   }
 };
@@ -32,7 +32,7 @@ class File final : public ::FileImplRW<Vnode, File> {
   virtual char* write_ptr() {
     return content().data();
   }
-  virtual char* read_ptr() {
+  virtual const char* read_ptr() {
     return content().data();
   }
 
@@ -43,12 +43,12 @@ class File final : public ::FileImplRW<Vnode, File> {
 
 class FileSystem final : public ::FileSystem {
  public:
-  virtual const char* name() {
+  virtual const char* name() const {
     return "tmpfs";
   }
 
-  virtual ::Vnode* mount() {
-    return new Vnode{kDir};
+  virtual ::Vnode* mount(const ::Mount* mount_root) {
+    return new Vnode{mount_root, kDir};
   }
 };
 

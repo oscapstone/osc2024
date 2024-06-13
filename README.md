@@ -73,3 +73,5 @@ make disk
 - [ARM Architecture Reference Manual ARMv8, for ARMv8-A architecture profile](https://developer.arm.com/documentation/ddi0487/aa/?lang=en)
 - [ARM Exception model](https://developer.arm.com/-/media/Arm%20Developer%20Community/PDF/Learn%20the%20Architecture/Exception%20model.pdf)
 - [ARMv8-A Address Translation](https://developer.arm.com/documentation/100940/0101)
+- [FAT32 File Structure](https://cscie92.dce.harvard.edu/spring2024/slides/FAT32%20File%20Structure.pdf) for [CSCI E-92](https://cscie92.dce.harvard.edu/spring2024/)
+- Microsoft Extensible Firmware Initiative FAT32 File System Specification v1.03 [fatgen103.doc](https://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/fatgen103.doc) [pdf](https://cscie92.dce.harvard.edu/spring2024/Microsoft%20Extensible%20Firmware%20Initiative%20FAT32%20File%20System%20Specification,%20Version%201.03,%2020001206.pdf)

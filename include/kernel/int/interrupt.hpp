@@ -11,3 +11,13 @@
 #define save_DAIF_disable_interrupt() \
   save_DAIF();                        \
   disable_interrupt()
+
+class SaveDAIF {
+  uint64_t DAIF;
+
+ public:
+  SaveDAIF() : DAIF{read_sysreg(DAIF)} {}
+  ~SaveDAIF() {
+    write_sysreg(DAIF, DAIF);
+  }
+};

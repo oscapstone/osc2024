@@ -4,25 +4,27 @@ DISKPATH 	= /Volumes/$(DISKNAME)
 
 FIRMWARE 	= bootcode.bin fixup.dat start.elf
 CONFIG 		= config.txt
-IMGS 		= $(shell find . -name '*.img')
+BOOTLOADER 	= bootloader.img
 INITFSCPIO 	= initramfs.cpio
 DEVICETREE 	= bcm2710-rpi-3-b-plus.dtb
+FAT32_TEST 	= FAT_R.TXT
+IMAGES 		= nycuos.img sfn_nctuos.img
 
-.PHONY: all upload eject format download dtb
+.PHONY: all files upload eject format download dtb images
 
-all: $(FIRMWARE) $(DEVICETREE)
+all: files
 
-upload: $(FIRMWARE) $(DEVICETREE)
-	cp $(FIRMWARE) $(DEVICETREE) $(DISKPATH)
+files: $(FIRMWARE) $(DEVICETREE) $(FAT32_TEST)
+
+upload: files
+	cp $(FIRMWARE) $(DEVICETREE) $(BOOTLOADER) $(DISKPATH)
 ifneq ($(wildcard $(CONFIG)),)
 	cp $(CONFIG) $(DISKPATH)
-endif
-ifneq ($(IMGS),)
-	cp $(IMGS) $(DISKPATH)
 endif
 ifneq ($(wildcard $(INITFSCPIO)),)
 	cp $(INITFSCPIO) $(DISKPATH)
 endif
+	cp $(FAT32_TEST) $(DISKPATH)
 
 eject:
 	diskutil eject $(DISKPATH)
@@ -55,3 +57,14 @@ start.elf:
 dtb: $(DEVICETREE)
 $(DEVICETREE):
 	$(MAKE) download "TARGET=$@"
+
+FAT_R.TXT:
+	wget https://nycu-caslab.github.io/OSC2024/_downloads/10fbdc3e04b471849e714edcdcf4ce26/FAT_R.TXT
+
+images: $(IMAGES)
+
+nycuos.img:
+	wget https://github.com/nycu-caslab/OSC2024/raw/main/supplement/nycuos.img
+
+sfn_nctuos.img:
+	wget https://github.com/GrassLab/osdi/raw/master/supplement/sfn_nctuos.img

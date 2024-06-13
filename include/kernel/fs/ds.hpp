@@ -3,9 +3,17 @@
 #include "ds/list.hpp"
 #include "ds/smart_ptr.hpp"
 #include "fs/fwd.hpp"
+#include "string.hpp"
 #include "util.hpp"
 
 using FilePtr = smart_ptr<File>;
+
+class Mount {
+ public:
+  FileSystem* const fs;
+  Vnode* root = nullptr;
+  string path;
+};
 
 class Vnode {
   struct child {
@@ -24,6 +32,7 @@ class Vnode {
   list<child> _childs{};
 
  protected:
+  const Mount* const mount_root;
   list<child>::iterator find_child(const char* name);
   int set_child(const char* name, Vnode* vnode);
   int del_child(const char* name);
@@ -34,7 +43,7 @@ class Vnode {
   const filetype type;
 
   void set_parent(Vnode* parent);
-  Vnode(filetype type);
+  Vnode(const Mount* mount_root, filetype type);
 
   Vnode* parent() const {
     return _parent;
@@ -56,17 +65,12 @@ class Vnode {
   const char* lookup(Vnode* node);
   int mount(const char* component_name, Vnode* new_vnode);
   virtual long size() const;
+  virtual long dirsize() const;
+  virtual long filesize() const;
   virtual int create(const char* component_name, Vnode*& vnode);
   virtual int mkdir(const char* component_name, Vnode*& vnode);
   virtual int open(const char* component_name, FilePtr& file, fcntl flags);
   virtual int close(FilePtr file);
-  template <typename F>
-  int _open(const char* component_name, FilePtr& file, fcntl flags) {
-    file = new F{component_name, this, flags};
-    if (file == nullptr)
-      return -1;
-    return 0;
-  }
 };
 
 // file handle
@@ -80,9 +84,6 @@ class File {
  public:
   const bool can_seek = true;
 
-  const char* name() const {
-    return _name;
-  }
   size_t size() const {
     return vnode->size();
   }
@@ -96,22 +97,22 @@ class File {
     return accessmode() == O_WRONLY or accessmode() == O_RDWR;
   }
 
-  File(const char* name, Vnode* vnode, fcntl flags)
-      : _name(name), vnode{vnode}, flags{flags} {}
+  File(Vnode* vnode, fcntl flags) : vnode{vnode}, flags{flags} {}
   virtual ~File() = default;
 
   virtual int write(const void* buf, size_t len);
   virtual int read(void* buf, size_t len);
   virtual long lseek64(long offset, seek_type whence);
   virtual int ioctl(unsigned long request, void* arg);
-  int close();
+  int close(FilePtr file);
 };
 
 class FileSystem {
  public:
   FileSystem* next = nullptr;
-  virtual const char* name() {
+  virtual const char* name() const {
     return "";
   }
-  virtual Vnode* mount();
+  virtual Vnode* mount(const Mount* mount_root);
+  virtual void sync(const Mount* mount_root);
 };

@@ -27,7 +27,8 @@ class Vnode final : public ::VnodeImpl<Vnode, File> {
   framebuffer_data* data;
 
  public:
-  Vnode(framebuffer_data* data) : ::VnodeImpl<Vnode, File>{kFile}, data(data) {}
+  Vnode(const ::Mount* mount_root, framebuffer_data* data)
+      : ::VnodeImpl<Vnode, File>{mount_root, kFile}, data(data) {}
   virtual ~Vnode() = default;
   virtual long size() const {
     return data->buf_size;
@@ -54,14 +55,14 @@ class FileSystem final : public ::FileSystem {
  public:
   FileSystem();
 
-  virtual const char* name() {
+  virtual const char* name() const {
     return "framebufferfs";
   }
 
-  virtual ::Vnode* mount() {
+  virtual ::Vnode* mount(const ::Mount* mount_root) {
     if (not data)
       return nullptr;
-    return new Vnode{data};
+    return new Vnode{mount_root, data};
   }
 };
 

@@ -11,8 +11,8 @@ class VnodeImpl : public Vnode {
   using Vnode::Vnode;
   virtual ~VnodeImpl() = default;
 
-  virtual int open(const char* component_name, FilePtr& file, fcntl flags) {
-    file = new F{component_name, this, flags};
+  virtual int open(const char* /*component_name*/, FilePtr& file, fcntl flags) {
+    file = new F{this, flags};
     if (file == nullptr)
       return -1;
     return 0;
@@ -26,7 +26,7 @@ class VnodeImplRW : public VnodeImpl<V, F> {
   virtual ~VnodeImplRW() = default;
 
   virtual int create(const char* component_name, ::Vnode*& vnode) {
-    vnode = new V{kFile};
+    vnode = new V{this->mount_root, kFile};
     if (vnode == nullptr)
       return -1;
     this->set_child(component_name, vnode);
@@ -35,7 +35,7 @@ class VnodeImplRW : public VnodeImpl<V, F> {
   }
 
   virtual int mkdir(const char* component_name, ::Vnode*& vnode) {
-    vnode = new V{kDir};
+    vnode = new V{this->mount_root, kDir};
     if (vnode == nullptr)
       return -1;
     this->set_child(component_name, vnode);
@@ -73,8 +73,9 @@ class FileImplRW : public FileImpl<V, F> {
   virtual ~FileImplRW() = default;
 
   virtual int write(const void* buf, size_t len) {
-    if (this->size() < this->f_pos + len)
-      if (not resize(this->f_pos + len))
+    auto end = this->f_pos + len;
+    if (this->size() < end)
+      if (not resize(end))
         return -1;
     auto p = write_ptr();
     if (not p)

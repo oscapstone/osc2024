@@ -34,8 +34,21 @@ size_t strlen(const char* s) {
   return e - s;
 }
 
+size_t strnlen(const char* s, size_t n) {
+  const char *e = s, *mx = s + n;
+  while (e != mx and *e)
+    e++;
+  return e - s;
+}
+
 char* strcpy(char* dst, const char* src) {
   while ((*dst = *src))
+    dst++, src++;
+  return dst;
+}
+
+char* strncpy(char* dst, const char* src, size_t n) {
+  for (size_t i = 0; i < n and (*dst = *src); i++)
     dst++, src++;
   return dst;
 }
@@ -99,4 +112,8 @@ long strtol(const char* s, const char** endptr, size_t base, size_t n) {
   if (endptr)
     *endptr = s;
   return r * x;
+}
+
+bool isprint(char c) {
+  return 0x20 <= c and c <= 0x7e;
 }

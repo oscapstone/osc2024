@@ -38,7 +38,7 @@ class string_view {
   bool printable() const {
     for (size_t i = 0; i < size_; i++) {
       auto c = buf_[i];
-      if (not(0x20 <= c and c <= 0x7e) and not(i + 1 == size_ and c == 0))
+      if (not isprint(c) and not(i + 1 == size_ and c == 0))
         return false;
     }
     return true;
@@ -120,9 +120,9 @@ class string {
 
 bool operator==(string_view, string_view);
 string operator+(const string& a, const string& b);
-string to_hex_string(uint64_t value);
 template <typename T>
-  requires(!std::is_integral_v<T>)
 string to_hex_string(T value) {
   return to_hex_string((uint64_t)value);
 }
+template <>
+string to_hex_string(uint64_t value);

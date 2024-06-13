@@ -16,6 +16,8 @@ struct Files {
   int alloc_fd(FilePtr file);
   void close(int fd);
   FilePtr get(int fd) const {
+    if (fd < 0 or MAX_OPEN_FILE <= fd)
+      return nullptr;
     return files[fd];
   }
   int chdir(const char* path);
