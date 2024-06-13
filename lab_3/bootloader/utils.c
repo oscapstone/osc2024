@@ -1,26 +1,6 @@
 #define PM_PASSWORD 0x5a000000
 #define PM_RSTC 0x3F10001c
 #define PM_WDOG 0x3F100024
-#define SIMPLE_MALLOC_BUFFER_SIZE 8192
-
-unsigned long utils_atoi(const char *s, int char_size) {
-    unsigned long num = 0;
-    for (int i = 0; i < char_size; i++) {
-        num = num * 16;
-        if (*s >= '0' && *s <= '9') {
-            num += (*s - '0');
-        } else if (*s >= 'A' && *s <= 'F') {
-            num += (*s - 'A' + 10);
-        } else if (*s >= 'a' && *s <= 'f') {
-            num += (*s - 'a' + 10);
-        }
-        s++;
-    }
-    return num;
-}
-
-
-
 
 /**
  * compare two string, given s1 and s2
@@ -60,13 +40,6 @@ void set(long addr, unsigned int value) {
 }
 
 
-void utils_align(void *size, unsigned int s) {
-	unsigned long* x = (unsigned long*) size;
-	unsigned long mask = s-1;
-    // ceil(a/k) = (a+(k-1))/k
-	*x = ((*x) + mask) & (~mask);
-}
-
 /**
  * reboot respberry pi
  * if tick=0, reboot instantly;
@@ -85,21 +58,4 @@ void reset(int tick) {                 // reboot after watchdog timer expire
 void cancel_reset() {
     set(PM_RSTC, PM_PASSWORD | 0);  // full reset
     set(PM_WDOG, PM_PASSWORD | 0);  // number of watchdog tick
-}
-
-
-static unsigned char simple_malloc_buffer[SIMPLE_MALLOC_BUFFER_SIZE];
-static unsigned long simple_malloc_offset = 0;
-
-// the size is calculated in byte format
-void* simple_malloc(unsigned long size){
-
-	if(simple_malloc_offset + size > SIMPLE_MALLOC_BUFFER_SIZE) {
-		//Not enough space left
-		return (void*) 0;
-	}
-	void* allocated = (void *)&simple_malloc_buffer[simple_malloc_offset];
-	simple_malloc_offset += size;
-	
-	return allocated;
 }

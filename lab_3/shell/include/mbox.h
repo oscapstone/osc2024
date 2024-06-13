@@ -22,34 +22,27 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-SECTIONS
-{
-    . = 0x60000;
-    PROVIDE(_head = .);
-    .relocate : {
-        KEEP(*(.text.relocate))
-    }
-    . = ALIGN(4096);
 
-    .imgLoader : {
-        KEEP(*(.text.load_img))
-    }
-    . = ALIGN(4096);
-    .text : {
-        KEEP(*(.text.boot))
-        *(.text)
-    }
-    . = ALIGN(4096);
-    PROVIDE(_data = .);
-    .data : { *(.data .data.*) }
-    .bss : {
-        . = ALIGN(16);
-        __bss_start = .;
-        *(.bss .bss.*)
-        *(COMMON)
-        __bss_end = .;
-    }
-    _end = .;
-}
-__bss_size = (__bss_end - __bss_start)>>3;
-__loader_size = (_end - _head)>>3;
+/* a properly aligned buffer */
+extern volatile unsigned int mbox[36];
+
+#define MBOX_REQUEST    0
+
+/* channels */
+#define MBOX_CH_POWER   0
+#define MBOX_CH_FB      1
+#define MBOX_CH_VUART   2
+#define MBOX_CH_VCHIQ   3
+#define MBOX_CH_LEDS    4
+#define MBOX_CH_BTNS    5
+#define MBOX_CH_TOUCH   6
+#define MBOX_CH_COUNT   7
+#define MBOX_CH_PROP    8
+
+/* tags */
+#define MBOX_TAG_GETSERIAL      0x10004
+#define MBOX_TAG_REVISION       0x00010002
+#define MBOX_TAG_MEMORY         0x00010005
+#define MBOX_TAG_LAST           0
+
+int mbox_call(unsigned char ch);

@@ -29,16 +29,16 @@
 #include "include/cpio.h"
 
 
+extern void set_exception_vector_table();
+extern void core_timer_enable();
+
+
+
 void main(int argc, char* argv[]){
-   unsigned int* a = (unsigned int*) simple_malloc(4);
-   *a = 32;
-   unsigned int* b = (unsigned int*) simple_malloc(4);
-   *b = 70;
-   uart_puts("a = 0x");
-   uart_hex(*a);
-   uart_puts("\nb = 0x");
-   uart_hex(*b);
-   uart_send('\n');
+   uart_init();
+   set_exception_vector_table();
+   //cpio_exec("user_program.img");   
+   core_timer_enable();
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';
@@ -68,6 +68,11 @@ void main(int argc, char* argv[]){
       }
       else if(strcmp(command, "reboot") == 0){
          reset();
+      }
+      else if(strcmp(command, "exec") == 0){
+         uart_puts("executing...\n");
+         // execute a dedicated user program
+         cpio_exec("user_program.img");
       }
       // command with arguments
       else{

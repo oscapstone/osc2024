@@ -30,6 +30,9 @@ RUN apt-get install -y \
 # make gcc alia to aarch64-linux-gnu-gcc
 RUN echo "alias gcc='aarch64-linux-gnu-gcc'" >> ~/.bashrc
 
+# install python dependicies
+RUN apt install -y python3-pip
+
 # clean up package caches
 RUN rm -rf /var/lib/apt/lists/*
 

@@ -22,34 +22,9 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
-SECTIONS
-{
-    . = 0x60000;
-    PROVIDE(_head = .);
-    .relocate : {
-        KEEP(*(.text.relocate))
-    }
-    . = ALIGN(4096);
 
-    .imgLoader : {
-        KEEP(*(.text.load_img))
-    }
-    . = ALIGN(4096);
-    .text : {
-        KEEP(*(.text.boot))
-        *(.text)
-    }
-    . = ALIGN(4096);
-    PROVIDE(_data = .);
-    .data : { *(.data .data.*) }
-    .bss : {
-        . = ALIGN(16);
-        __bss_start = .;
-        *(.bss .bss.*)
-        *(COMMON)
-        __bss_end = .;
-    }
-    _end = .;
-}
-__bss_size = (__bss_end - __bss_start)>>3;
-__loader_size = (_end - _head)>>3;
+void uart_init();
+void uart_send(unsigned int c);
+char uart_getc();
+void uart_puts(char *s);
+void uart_hex(unsigned int d);

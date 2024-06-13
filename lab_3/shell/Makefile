@@ -28,32 +28,34 @@ LD = "aarch64-linux-gnu-ld"
 OBJCPY = "aarch64-linux-gnu-objcopy"
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
+CFLAGS = -Wall -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles
 BOOTLOADER_BIN = kernel8.img
 all: clean kernel8.img
 
-start.o: start.S
-	$(GCC) $(CFLAGS) -c start.S -o start.o
+# start.o: start.S
+# 	$(GCC) $(CFLAGS) -c start.S -o start.o
+
+%.o: %.S
+	$(GCC) $(CFLAGS) -c $< -o $@ -g
+	"aarch64-linux-gnu-gcc" -Wall -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles -c exception_vector.S -o exception_vector.o -g
+	"aarch64-linux-gnu-gcc" -Wall -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles -c interrupts.S -o interrupts.o -g
 
 %.o: %.c
 	$(GCC) $(CFLAGS) -c $< -o $@ -g
 
+
 kernel8.img: start.o $(OBJS)
-	$(LD) -nostdlib -nostartfiles start.o $(OBJS) -T link.ld -o kernel8.elf
-	$(OBJCPY) -O binary kernel8.elf kernel8.img
+	$(LD) -nostdlib -nostartfiles start.o $(OBJS) exception_vector.o interrupts.o -T link.ld -o kernel8.elf
+	$(OBJCPY) -O binary kernel8.elf shell_kernel.img
 
 clean:
 	rm kernel8.elf *.o >/dev/null 2>/dev/null || true
 
-run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -initrd initramfs.cpio -serial pty -display none -dtb bcm2710-rpi-3-b-plus.dtb
-
 run_asm:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -initrd initramfs.cpio -serial pty -display none -dtb bcm2710-rpi-3-b-plus.dtb -d in_asm
+	qemu-system-aarch64 -M raspi3b -kernel shell_kernel.img -initrd initramfs.cpio -serial null -serial stdio -display none -d in_asm
 
-
-run_stdio:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -initrd initramfs.cpio -serial stdio -display none -dtb bcm2710-rpi-3-b-plus.dtb
+run:
+	qemu-system-aarch64 -M raspi3b -kernel shell_kernel.img -initrd initramfs.cpio -serial null -serial stdio -display none
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -s -S
+	qemu-system-aarch64 -M raspi3b -kernel shell_kernel.img -initrd initramfs.cpio -serial null -serial stdio -display none -s -S
