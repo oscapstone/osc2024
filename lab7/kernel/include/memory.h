@@ -25,8 +25,9 @@ typedef enum {
     FRAME_IDX_3,          //  0x8000
     FRAME_IDX_4,          // 0x10000
     FRAME_IDX_5,          // 0x20000
-    FRAME_IDX_FINAL = 6,  // 0x40000
-    FRAME_MAX_IDX = 7
+    FRAME_IDX_6,          // 0x40000
+    FRAME_IDX_FINAL = 7,  // 0x80000
+    FRAME_MAX_IDX = 8
 } frame_order_type;
 
 typedef enum {

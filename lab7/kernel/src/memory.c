@@ -112,7 +112,7 @@ void* page_malloc(unsigned int size){
 
         if ( i == FRAME_IDX_FINAL)
         {
-            // uart_sendline("[!] The case of out-of-memory!\r\n");
+            uart_sendline("[!] The case of out-of-memory!\r\n");
             return (void*)0; // Return null pointer to indicate failure
         }
 
@@ -128,7 +128,7 @@ void* page_malloc(unsigned int size){
     }
     if (target_order > FRAME_IDX_FINAL)
     {
-        // uart_sendline("[!] No available frame in freelist. Request failed!\r\n");
+        uart_sendline("[!] No available frame in freelist. Request failed!\r\n");
         return (void*)0;
     }
 
