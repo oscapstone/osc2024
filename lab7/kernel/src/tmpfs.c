@@ -96,6 +96,10 @@ int tmpfs_write(struct file *file, const void *buf, size_t len)
 	{
 		inode->data = kmalloc(MAX_FILE_SIZE);
 	}
+	if(file->f_pos + len > MAX_FILE_SIZE)
+	{
+		len = MAX_FILE_SIZE - file->f_pos;
+	}
 	// write from f_pos
 	memcpy(inode->data + file->f_pos, buf, len);
 	// update f_pos and size
