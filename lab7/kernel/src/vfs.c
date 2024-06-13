@@ -22,11 +22,11 @@ int register_filesystem(struct filesystem *fs)
     return -1;
 }
 
-struct filesystem* find_filesystem(const char* fs_name)
+struct filesystem *find_filesystem(const char *fs_name)
 {
     for (int i = 0; i < MAX_FS_REG; i++)
     {
-        if (strcmp(reg_fs[i].name,fs_name)==0)
+        if (strcmp(reg_fs[i].name, fs_name) == 0)
         {
             return &reg_fs[i];
         }
@@ -40,8 +40,9 @@ int vfs_open(const char *pathname, int flags, struct file **target)
     // 1. Lookup pathname
     // 3. Create a new file if O_CREAT is specified in flags and vnode not found
     struct vnode *node;
-    if (vfs_lookup(pathname, &node) != 0 && (flags & O_CREAT)) //如果路徑不在，就創建
+    if (vfs_lookup(pathname, &node) != 0 && (flags & O_CREAT)) // 如果路徑不在，就創建
     {
+        // uart_sendline("O_CREAT\r\n");
         // grep all of the directory path
         int last_slash_idx = 0;
         for (int i = 0; i < strlen(pathname); i++)
@@ -185,7 +186,10 @@ int vfs_lookup(const char *pathname, struct vnode **target)
             component_name[c_idx] = 0;
             // if fs's v_ops error, return -1
             if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0)
+            {
+                // uart_sendline("vfs_lookup cannot find directory %s\r\n", component_name);
                 return -1;
+            }
             // redirect to mounted filesystem
             while (dirnode->mount)
             {
@@ -203,7 +207,10 @@ int vfs_lookup(const char *pathname, struct vnode **target)
     component_name[c_idx++] = 0;
     // if fs's v_ops error, return -1
     if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0)
+    {
+        // uart_sendline("vfs_lookup cannot find file %s\r\n", component_name);
         return -1;
+    }
     // redirect to mounted filesystem
     while (dirnode->mount)
     {
@@ -221,4 +228,38 @@ void init_rootfs()
     int idx = register_tmpfs();
     rootfs = kmalloc(sizeof(struct mount));
     reg_fs[idx].setup_mount(&reg_fs[idx], rootfs);
+
+    vfs_test();
+}
+
+void vfs_test()
+{
+    uart_sendline("rootfs name: %s\n", rootfs->fs->name);
+    // test read/write
+    if (vfs_mkdir("/dir1") == -1)
+        uart_sendline("mkdir1 failed\n");
+    if (vfs_mkdir("/dir1/dir2") == -1)
+        uart_sendline("mkdir2 failed\n");
+    // test mount
+    if (vfs_mount("/dir1/dir2", "tmpfs") < 0)
+        uart_sendline("mount failed\n");
+
+    struct file *testfilew;
+    struct file *testfiler;
+    char testbufw[0x30] = "0123456789abcdef";
+    char testbufr[0x30] = {};
+    if (vfs_open("/dir1/dir2/file1\n", O_CREAT, &testfilew) == -1)
+        uart_sendline("open failed\n");
+    if (vfs_open("/dir1/dir2/file1\n", O_CREAT, &testfiler) == -1)
+        uart_sendline("open failed\n");
+    if (vfs_write(testfilew, testbufw, 10) != 10)
+        uart_sendline("write failed\n");
+    if (vfs_read(testfiler, testbufr, 10) != 10)
+        uart_sendline("read failed\n");
+    uart_sendline("testbufr: %s\n", testbufr);
+    if (vfs_close(testfilew) != 0)
+        uart_sendline("close testfilew failed\n");
+    if (vfs_close(testfiler) != 0)
+        uart_sendline("close testfiler failed\n");
+
 }

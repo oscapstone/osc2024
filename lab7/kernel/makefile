@@ -32,7 +32,9 @@ kernel8.img: $(SRC_DIR)/link.ld $(OBJ_FILES)
 	$(ARMGNU)-ld -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
 	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
 
-all: kernel8.img
+.PHONY: all clean run debug
+
+all: clean kernel8.img
 
 clean:
 	rm -rf $(BUILD_DIR) *.img

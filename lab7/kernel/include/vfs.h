@@ -87,5 +87,6 @@ int vfs_mount(const char *target, const char *filesystem);
 int vfs_lookup(const char *pathname, struct vnode **target);
 
 void init_rootfs();
+void vfs_test();
 
 #endif /* _VFS_H_ */
