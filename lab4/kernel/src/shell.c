@@ -329,9 +329,14 @@ void cmd_kmalloc() {
     puts(test4);
     puts("\r\n");
 
-    char *test5 = kmalloc(0x28);
+    char *test5 = kmalloc(0x10000);
     strcpy(test5, "  test kmalloc5");
     puts(test5);
+    puts("\r\n");
+
+    char *test6 = kmalloc(0x28);
+    strcpy(test6, "  test kmalloc6");
+    puts(test6);
     puts("\r\n\r\n");
 
     kfree(test1);
@@ -347,5 +352,8 @@ void cmd_kmalloc() {
     puts("\r\n");
 
     kfree(test5);
+    puts("\r\n");
+
+    kfree(test6);
     puts("\r\n");
 }
