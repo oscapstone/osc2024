@@ -111,7 +111,7 @@ impl Scheduler {
         assert!(thread.id == next);
         let pc = thread.cpu_state.pc;
         let sp = thread.stack as usize + thread.stack_size;
-        thread.vm.dump();
+        println!("{:?}", thread.cpu_state);
         unsafe {
             asm!(
                 "mrs {0}, cntkctl_el1",

@@ -51,7 +51,25 @@ impl PageTable {
         PageTable { entries, addr }
     }
 
-    pub fn get_page(&mut self, addr: u64, level: u64) -> &mut Entry {
+    pub fn get_entry(&self, idx: usize) -> &Entry {
+        &self.entries[idx]
+    }
+
+    pub fn get_page(&self, addr: u64, level: u64) -> &Entry {
+        let idx = ((addr >> (12 + 9 * (3 - level))) & 0x1ff) as usize;
+        if level == 3 {
+            return self.get_entry(idx);
+        }
+        if !self.exists(idx) {
+            return &Entry::None;
+        }
+        if let Entry::PdTable(pt) = self.get_entry(idx) {
+            return pt.get_page(addr, level + 1);
+        }
+        &Entry::None
+    }
+
+    pub fn create_page(&mut self, addr: u64, level: u64) -> &mut Entry {
         let idx = ((addr >> (12 + 9 * (3 - level))) & 0x1ff) as usize;
         if level == 3 {
             if !self.exists(idx as usize) {
@@ -60,24 +78,24 @@ impl PageTable {
                     Entry::PdBlock(((self.addr + (idx * 8) as u64) as *mut u64, 0)),
                 );
             }
-            return self.get_entry(idx as usize);
+            return self.get_entry_mut(idx as usize);
         }
         if !self.exists(idx as usize) {
             let pg = PageTable::new();
             self.set_entry(idx as usize, Entry::PdTable(Box::new(pg)));
-            if let Entry::PdTable(pt) = self.get_entry(idx as usize) {
-                return pt.get_page(addr, level + 1);
+            if let Entry::PdTable(pt) = self.get_entry_mut(idx as usize) {
+                return pt.create_page(addr, level + 1);
             }
             panic!("get_page: not a PdTable");
         }
-        let entry = self.get_entry(idx as usize);
+        let entry = self.get_entry_mut(idx as usize);
         if let Entry::PdTable(pt) = entry {
-            return pt.get_page(addr, level + 1);
+            return pt.create_page(addr, level + 1);
         }
         panic!("get_page: not a PdTable");
     }
 
-    pub fn get_entry(&mut self, idx: usize) -> &mut Entry {
+    pub fn get_entry_mut(&mut self, idx: usize) -> &mut Entry {
         &mut self.entries[idx]
     }
 

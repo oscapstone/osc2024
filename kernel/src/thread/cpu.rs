@@ -65,6 +65,10 @@ impl Debug for State {
         for i in 0..31 {
             write!(f, "0x{:x}, ", self.x[i])?;
         }
-        write!(f, "], pc: 0x{:x}, sp: 0x{:x} }}", self.pc, self.sp)
+        write!(
+            f,
+            "], pc: 0x{:x}, sp: 0x{:x}, spsr: 0x{:x}, l0: 0x{:x} }}",
+            self.pc, self.sp, self.spsr, self.l0
+        )
     }
 }

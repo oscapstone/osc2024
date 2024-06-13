@@ -27,8 +27,12 @@ impl VirtualMemory {
         self.root.addr as *mut u8
     }
 
-    fn get_page(&mut self, addr: u64) -> &mut Entry {
+    fn get_page(&self, addr: u64) -> &Entry {
         self.root.get_page(addr, 0)
+    }
+
+    fn create_page(&mut self, addr: u64) -> &mut Entry {
+        self.root.create_page(addr, 0)
     }
 
     pub fn map_pa(&mut self, addr: u64, pa: u64, size: usize, flag: u32) -> *mut u8 {
@@ -38,8 +42,7 @@ impl VirtualMemory {
         );
         let flag = flag & 0xfff;
         for i in (0..size).step_by(0x1000) {
-            println!("map page: 0x{:x} -> 0x{:x}", addr + i as u64, pa + i as u64);
-            let page = self.get_page(addr + i as u64);
+            let page = self.create_page(addr + i as u64);
             page.set_addr((pa + i as u64) as u32);
             page.set_flag(flag);
         }
@@ -52,12 +55,7 @@ impl VirtualMemory {
         let flag = flag & 0xfff;
         let mem = unsafe { alloc(Layout::from_size_align(size, 0x1000).unwrap()) as *mut u8 };
         for i in (0..size).step_by(0x1000) {
-            println!(
-                "map page: 0x{:x} -> 0x{:x}",
-                addr + i as u64,
-                mem as u64 + i as u64
-            );
-            let page = self.get_page(addr + i as u64);
+            let page = self.create_page(addr + i as u64);
             page.set_addr((mem as u64 + i as u64) as u32);
             page.set_flag(flag);
         }
@@ -65,10 +63,11 @@ impl VirtualMemory {
         return addr as *mut u8;
     }
 
-    pub fn get_phys(&mut self, addr: u64) -> *mut u8 {
+    pub fn get_phys(&self, addr: u64) -> *mut u8 {
         let page = self.get_page(addr);
         (page.get_addr() as u64 | addr & 0xfff) as *mut u8
     }
+
     pub fn dump(&self) {
         println!("VirtualMemory:");
         println!("  root: 0x{:x}", self.root.addr);

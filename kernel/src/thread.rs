@@ -2,8 +2,6 @@ pub mod cpu;
 pub mod state;
 
 use crate::mmu::vm::VirtualMemory;
-use alloc::alloc::alloc;
-use core::alloc::Layout;
 use stdio::println;
 
 #[repr(C)]
@@ -29,6 +27,7 @@ impl Thread {
             stack as usize + stack_size
         );
         let pc = vm.map_pa(0x0000_0000_0000, entry as u64, len, 0b0100_1100_0111);
+        // vm.map_pa(0x3C00_0000, 0x3C00_0000, 0x400_0000, 0b0100_0100_0111);
         assert!(stack == 0xffff_ffff_b000 as *mut u8);
         let cpu_state = cpu::State::new(stack, stack_size, pc, vm.get_l0_addr());
         println!(
@@ -52,19 +51,32 @@ impl Thread {
 
 impl Clone for Thread {
     fn clone(&self) -> Self {
+        // self.vm.dump();
         let mut vm = VirtualMemory::new();
-        let stack = vm.mmap(0x7fff_ffff_b000, self.stack_size, 0b0100_0100_0111) as *mut u8;
+        let stack = vm.mmap(0xffff_ffff_b000, self.stack_size, 0b0100_0100_0111) as *mut u8;
 
-        // unsafe {
-        //     core::ptr::copy(self.stack, stack, self.stack_size);
-        // }
-        let cpu_state = self.cpu_state.clone();
+        let src = self.vm.get_phys(self.stack as u64);
+        let dst = vm.get_phys(stack as u64);
+        println!(
+            "Cloning stack 0x{:x} to 0x{:x}, size: 0x{:x}",
+            src as usize, dst as usize, self.stack_size
+        );
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                self.vm.get_phys(self.stack as u64),
+                vm.get_phys(stack as u64),
+                self.stack_size,
+            );
+        }
+        let mut cpu_state = self.cpu_state.clone();
+        cpu_state.l0 = vm.get_l0_addr() as u64;
         vm.map_pa(
             0x0000_0000_0000,
             self.entry as u64,
             self.len,
             0b0100_1100_0111,
         );
+        vm.map_pa(0x3C00_0000, 0x3C00_0000, 0x400_0000, 0b0100_0100_0111);
         println!(
             "Cloning thread 0x{:x} to 0x{:x}",
             self.id, 0xdeadbeaf as u32
@@ -74,6 +86,7 @@ impl Clone for Thread {
             stack as usize,
             stack as usize + self.stack_size
         );
+        // vm.dump();
         Thread {
             id: 0xdeadbeaf,
             stack,

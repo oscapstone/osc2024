@@ -5,6 +5,7 @@ use alloc::alloc::alloc;
 use alloc::boxed::Box;
 use core::alloc::Layout;
 
+#[derive(Clone)]
 pub enum Entry {
     None,
     PdBlock((*mut u64, u64)),
@@ -57,22 +58,6 @@ impl Debug for Entry {
             Entry::None => write!(f, "None"),
             Entry::PdBlock((_, pg)) => write!(f, "PdBlock(0x{:x})", pg),
             Entry::PdTable(tbl) => write!(f, "PdTable 0x{:x}", tbl.addr),
-        }
-    }
-}
-
-impl Clone for Entry {
-    fn clone(&self) -> Self {
-        match self {
-            Entry::None => Entry::None,
-            Entry::PdBlock((_, pg)) => {
-                let blk = unsafe { alloc(Layout::from_size_align(0x1000, 0x1000).unwrap()) };
-                unsafe {
-                    core::ptr::copy((*pg & !0xfff) as *mut u8, blk, 0x1000);
-                }
-                Entry::PdBlock((0 as *mut u64, blk as u64 | *pg as u64 & 0xfff))
-            }
-            Entry::PdTable(tbl) => Entry::PdTable(Box::new(*tbl.clone())),
         }
     }
 }
