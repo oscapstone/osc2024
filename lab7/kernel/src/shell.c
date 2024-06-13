@@ -14,6 +14,7 @@
 #include "syscall.h"
 #include "vfs.h"
 #include "callback_adapter.h"
+#include "vfs.h"
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "cat", .help = "concatenate files and print on the standard output", .func = do_cmd_cat},
@@ -280,9 +281,6 @@ int do_cmd_reboot(int argc, char **argv)
 int do_cmd_ls(int argc, char **argv)
 {
     char *workdir;
-    char *c_filepath;
-    char *c_filedata;
-    unsigned int c_filesize;
 
     if (argc == 0)
     {
@@ -292,16 +290,20 @@ int do_cmd_ls(int argc, char **argv)
     {
         workdir = argv[0];
     }
-    int error;
-    CPIO_FOR_EACH(&c_filepath, &c_filesize, &c_filedata, error, {
-        puts(c_filepath);
-        puts("\r\n");
-    });
-    if (error == CPIO_ERROR)
+
+    char buf[MAX_NAME_BUF] = {0};
+    vfs_readdir(workdir, buf);
+    DEBUG("readdir:\r\n");
+    int start_index = 0;
+    int end_index = 0;
+    while (!(buf[end_index] == 0 && buf[end_index + 1] == 0))
     {
-        puts("cpio parse error");
-        return -1;
+        end_index += strlen(buf + start_index) + 1;
+        printf("%s ", buf + start_index);
+        start_index = end_index;
     }
+    puts("\r\n");
+
     return 0;
 }
 

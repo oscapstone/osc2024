@@ -17,8 +17,7 @@ typedef struct tmpfs_inode
 }tmpfs_inode_t;
 
 int register_tmpfs();
-filesystem_t *get_tmpfs();
-int tmpfs_setup_mount(filesystem_t *fs, mount_t *_mount, vnode_t *parent, const char *name);
+int tmpfs_setup_mount(filesystem_t *fs, mount_t *superblock, vnode_t *parent, const char *name);
 vnode_t *tmpfs_create_vnode(mount_t *superblock, enum fsnode_type type, vnode_t *parent, const char *name);
 tmpfs_inode_t *tmpfs_create_inode(enum fsnode_type type, const char *name);
 
@@ -34,7 +33,4 @@ int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
 int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name);
 int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name);
 int tmpfs_readdir(struct vnode *dir_node, const char name_array[]);
-
-vnode_t *tmpfs_create_vnode(mount_t *_mount, enum fsnode_type type, vnode_t *parent, const char *name);
-
 #endif /* _TMPFS_H_ */

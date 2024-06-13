@@ -21,11 +21,6 @@ int register_tmpfs()
 	return 0;
 }
 
-filesystem_t *get_tmpfs()
-{
-	return tmpfs_fs;
-}
-
 /**
  * @brief Setup the superblock point for tmpfs
  *
@@ -42,10 +37,10 @@ int tmpfs_setup_mount(filesystem_t *fs, mount_t *_mount, vnode_t *parent, const 
 	return 0;
 }
 
-vnode_t *tmpfs_create_vnode(mount_t *_mount, enum fsnode_type type, vnode_t *parent, const char *name)
+vnode_t *tmpfs_create_vnode(mount_t *superblock, enum fsnode_type type, vnode_t *parent, const char *name)
 {
 	vnode_t *node = create_vnode();
-	node->superblock = _mount;
+	node->superblock = superblock;
 	node->superblock->v_ops = &tmpfs_vnode_operations;
 	node->superblock->f_ops = &tmpfs_file_operations;
 	node->parent = parent;
@@ -237,7 +232,7 @@ int tmpfs_readdir(struct vnode *dir_node, const char name_array[])
 	list_for_each(curr, (list_head_t *)(inode->child_list))
 	{
 		child_vnode = ((vnode_list_t *)curr)->vnode;
-		DEBUG("tmpfs_readdir: child_vnode->name %s\r\n", child_vnode->name);
+		DEBUG("tmpfs_readdir: child_vnode->name %s, child: 0x%x\r\n", child_vnode->name, child_vnode);
 		strcpy(name_array_start, child_vnode->name);
 		name_array_start += strlen(child_vnode->name) + 1;
 	}
