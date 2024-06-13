@@ -92,7 +92,6 @@ run: all
 debug: all size $(CPROG) $(RPROG)
 	$(OBJDUMP) -D $(KERNEL_ELF) > $(BUILD_DIR)/kernel.S
 	$(OBJDUMP) -D $(BOOTLOADER_ELF) > $(BUILD_DIR)/bootloader.S
-	$(OBJDUMP) -D $(RPROG_ELF) > $(BUILD_DIR)/rprog.S
 
 debug-qemu:
 	$(QEMU) -M raspi3b \

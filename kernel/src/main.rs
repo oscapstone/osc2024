@@ -71,12 +71,9 @@ fn buddy_init() {
         BUDDY_SYSTEM.init();
     }
     buddy_reserve_memory();
-    // allocator::utils::toggle_bump_verbose();
     unsafe {
         BUDDY_SYSTEM.print_info();
     }
-    unsafe { BUDDY_SYSTEM.initialized = true }
-    // allocator::utils::toggle_dynamic_verbose();
 }
 
 fn buddy_reserve_memory() {

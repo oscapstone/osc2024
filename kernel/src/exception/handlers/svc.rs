@@ -109,12 +109,11 @@ unsafe fn el1_interrupt(sp: u64) {
 
 unsafe fn syscall_handler(sp: u64) {
     let syscall = Syscall::new(sp);
-    // println!("{:?}", syscall);
     assert!(trap_frame::TRAP_FRAME.is_some());
     let vm = VirtualMemory::load(trap_frame::TRAP_FRAME.as_ref().unwrap().state.l0);
     match syscall.idx {
         0 => {
-            println!("Syscall get_pid");
+            // println!("Syscall get_pid");
             let pid = crate::syscall::get_pid();
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
         }
@@ -140,23 +139,23 @@ unsafe fn syscall_handler(sp: u64) {
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = written as u64;
         }
         3 => {
-            println!("Syscall exec");
+            // println!("Syscall exec");
             let name = syscall.arg0 as *const u8;
             let name = vm.get_phys(name as u64);
             let ret = crate::syscall::exec(name);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret;
         }
         4 => {
-            println!("Syscall fork");
+            // println!("Syscall fork");
             let pid = crate::syscall::fork();
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
         }
         5 => {
-            println!("Syscall exit");
+            // println!("Syscall exit");
             crate::syscall::exit(syscall.arg0);
         }
         6 => {
-            println!("Syscall mbox_call");
+            // println!("Syscall mbox_call");
             let channel = syscall.arg0 as u8;
             let mbox = syscall.arg1 as *mut u32;
             let mbox = vm.get_phys(mbox as u64) as *mut u32;
@@ -164,7 +163,7 @@ unsafe fn syscall_handler(sp: u64) {
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret as u64;
         }
         7 => {
-            println!("Syscall kill");
+            // println!("Syscall kill");
             let pid = syscall.arg0;
             crate::syscall::kill(pid);
         }
