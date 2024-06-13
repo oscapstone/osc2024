@@ -5,7 +5,7 @@
 #include "stdint.h"
 
 #define ALLOC_BASE          0x0
-#define ALLOC_END           0x3C000000
+#define ALLOC_END           0x3B400000
 #define QEMU_ALLOC_END      0x3B400000
 #define PAGE_SIZE           0x1000      // 4kB
 #define MAX_PAGE_COUNT      0x10000     // 65536 entries, PAGE_SIZE x MAX_PAGE = 0x10000000 (SPEC)

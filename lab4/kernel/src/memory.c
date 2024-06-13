@@ -13,6 +13,7 @@ extern char *DTB_END;
 extern char _heap_top;
 static char* heaptop_ptr = &_heap_top;
 static size_t memory_size = ALLOC_END - ALLOC_BASE;
+static size_t max_frame;
 
 /* ---- Lab2 ---- */
 void* malloc(size_t size) {
@@ -40,10 +41,12 @@ static list_head_t      cache_list[CACHE_MAX_IDX];      // store available block
 
 void allocator_init() {   
 
-    uart_puts("\r\n  ----------------- | Buddy System | Startup Allocation | -----------------\r\n");
-    uart_puts("\r\n  memory size: 0x%x, max pages: %d, frame size: %d\r\n", memory_size, MAX_PAGE_COUNT, sizeof(frame_t));
+    max_frame = memory_size / PAGE_SIZE;                                                                                                                    // each frame is 4KB
+    frame_array = malloc(max_frame * sizeof(frame_t));
 
-    frame_array = malloc(MAX_PAGE_COUNT * sizeof(frame_t));
+    uart_puts("\r\n  ----------------- | Buddy System | Startup Allocation | -----------------\r\n");
+    uart_puts("\r\n  memory size: 0x%x, max pages: %d, frame size: %d\r\n", memory_size, max_frame, sizeof(frame_t));
+
 
     /* init frame freelist */
     for (int i = 0; i <= FRAME_IDX_FINAL; i++) {
@@ -56,7 +59,7 @@ void allocator_init() {
     }
 
     /* init frame array */ 
-    for (int i=0; i < MAX_PAGE_COUNT; i++) {
+    for (int i=0; i < max_frame; i++) {
 
         INIT_LIST_HEAD(&(frame_array[i].listhead));
         frame_array[i].idx = i;
@@ -74,8 +77,10 @@ void allocator_init() {
 }
 
 void* page_malloc(size_t size) {
-
-    uart_puts("\r\n[+] Allocate page - size : %d(0x%x)\r\n", size, size);
+    uart_puts("\r\n");
+    uart_puts("  [+] Allocate page - size : %d(0x%x)\r\n", size, size);
+    uart_puts("      Before\n");
+    dump_page_info();
     
     // Find the nearest val
     int val = val_to_frame_num(size);
@@ -301,9 +306,13 @@ void memory_reserve(unsigned long long start, unsigned long long end) {
                 uart_puts("    After\n");
                 dump_page_info();
             } else if (start >= pageend || end <= pagestart) { 
+                // uart_puts("    no intersection\n");
+                // uart_puts("[!] start 0x%x, end 0x%x, pagestart 0x%x, pageend 0x%x\n", start, end, pagestart, pageend);
+
                 // no intersection
                 continue;
             } else { 
+                // uart_puts("    partial intersection\n");
                 // partial intersection, separate the page into smaller size.
                 list_del_entry(pos);
                 list_head_t *temppos = pos -> prev;
