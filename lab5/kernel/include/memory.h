@@ -17,19 +17,22 @@ typedef struct frame
 {
 	struct list_head listhead;
 	int8_t val;
-	int8_t order; // 2^(BASE_ORDER + order) = size
+	int8_t order;			  // 2^(BASE_ORDER + order) = size
 	uint8_t cache_used_count; // 4KB / 2^(BASE_ORDER) = 128. max count is 128. Max num of type is 256
 } frame_t;
 
+void memory_init();
 void *kmalloc(size_t size);
 void kfree(void *ptr);
 size_t get_memory_size();
-void memory_init();
 void init_cache();
 int memory_reserve(size_t start, size_t end);
 
 void *page_malloc(size_t size);
 int page_free(void *frame);
+
+frame_t *get_free_frame(int val);
+frame_t *split_frame(int8_t val);
 
 void dump_frame();
 void dump_cache();

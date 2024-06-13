@@ -23,20 +23,20 @@ void el1_interrupt_disable()
 
 static uint64_t lock_counter = 0;
 
-void lock_interrupt()
+void __lock_interrupt()
 {
     el1_interrupt_disable();
     lock_counter++;
-    // DEBUG("lock_interrupt counter: %d\r\n", lock_counter);
+    // DEBUG("kernel_lock_interrupt counter: %d\r\n", lock_counter);
 }
 
-void unlock_interrupt()
+void __unlock_interrupt()
 {
     lock_counter--;
-    // DEBUG("unlock_interrupt counter: %d\r\n", lock_counter);
+    // DEBUG("kernel_unlock_interrupt counter: %d\r\n", lock_counter);
     if (lock_counter < 0)
     {
-        ERROR("lock_interrupt counter error");
+        ERROR("kernel_lock_interrupt counter error");
         while (1)
             ;
     }
@@ -48,7 +48,7 @@ void unlock_interrupt()
 
 void el1h_irq_router(trapframe_t *tpf)
 {
-    lock_interrupt();
+    kernel_lock_interrupt();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -58,14 +58,14 @@ void el1h_irq_router(trapframe_t *tpf)
         {
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            unlock_interrupt();
+            kernel_unlock_interrupt();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IER_REG & 1)
         {
             *AUX_MU_IER_REG &= ~(1); // Re-enable core timer interrupt when entering core_timer_handler or add_timer
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-            unlock_interrupt();
+            kernel_unlock_interrupt();
             irqtask_run_preemptive();
         }
     }
@@ -73,7 +73,7 @@ void el1h_irq_router(trapframe_t *tpf)
     {
         core_timer_disable(); // enable core timer interrupt when entering the handler
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
-        unlock_interrupt();
+        kernel_unlock_interrupt();
         irqtask_run_preemptive();
     }
     else
@@ -84,6 +84,11 @@ void el1h_irq_router(trapframe_t *tpf)
     {
         need_to_schedule = 0;
         schedule();
+    }
+    // only do signal handler when return to user mode
+    if ((tpf->spsr_el1 & 0b1100) == 0)
+    {
+        run_pending_signal();
     }
 }
 
@@ -183,8 +188,20 @@ void el0_sync_router(trapframe_t *tpf)
     uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
     // DEBUG("syscall_no: %d\r\n", syscall_no);
     // only work with GCC
-    void *syscall_router[] = {&&__getpid_label, &&__uart_read_label, &&__uart_write_label, &&__exec_label,
-                              &&__fork_label, &&__exit_label, &&__mbox_call_label, &&__lock_interrupt, &&__unlock_interrupt, &&__invalid_syscall_label};
+    void *syscall_router[] = {&&__getpid_label,           // 0
+                              &&__uart_read_label,        // 1
+                              &&__uart_write_label,       // 2
+                              &&__exec_label,             // 3
+                              &&__fork_label,             // 4
+                              &&__exit_label,             // 5
+                              &&__mbox_call_label,        // 6
+                              &&__kill_label,             // 7
+                              &&__signal_register_label,  // 8
+                              &&__signal_kill_label,      // 9
+                              &&__signal_return_label,    // 10
+                              &&__lock_interrupt_label,   // 11
+                              &&__unlock_interrupt_label, // 12
+                              &&__invalid_syscall_label}; // 13
 
     goto *syscall_router[syscall_no];
 
@@ -221,14 +238,37 @@ __exit_label:
 __mbox_call_label:
     DEBUG("sys_mbox_call\r\n");
     tpf->x0 = sys_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
+    DEBUG("mbox_call return: %d\r\n", tpf->x0);
     return;
 
-__lock_interrupt:
-    lock_interrupt();
+__kill_label:
+    DEBUG("sys_kill\r\n");
+    tpf->x0 = sys_kill(tpf, (int)tpf->x0);
     return;
 
-__unlock_interrupt:
-    unlock_interrupt();
+__signal_register_label:
+    DEBUG("sys_signal_register\r\n");
+    tpf->x0 = sys_signal_register(tpf, (int)tpf->x0, (void (*)(void))(tpf->x1));
+    return;
+
+__signal_kill_label:
+    DEBUG("sys_signal_kill\r\n");
+    tpf->x0 = sys_signal_kill(tpf, (int)tpf->x0, (int)tpf->x1);
+    return;
+
+__signal_return_label:
+    DEBUG("sys_signal_return\r\n");
+    sys_signal_return(tpf);
+    return;
+
+__lock_interrupt_label:
+    DEBUG("sys_lock_interrupt\r\n");
+    sys_lock_interrupt(tpf);
+    return;
+
+__unlock_interrupt_label:
+    DEBUG("sys_unlock_interrupt\r\n");
+    sys_unlock_interrupt(tpf);
     return;
 
 __invalid_syscall_label:
@@ -238,7 +278,7 @@ __invalid_syscall_label:
 
 void el0_irq_64_router(trapframe_t *tpf)
 {
-    lock_interrupt();
+    kernel_lock_interrupt();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
@@ -248,14 +288,14 @@ void el0_irq_64_router(trapframe_t *tpf)
         {
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
-            unlock_interrupt();
+            kernel_unlock_interrupt();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
         }
         else if (*AUX_MU_IER_REG & 1)
         {
             *AUX_MU_IER_REG &= ~(1); // Re-enable core timer interrupt when entering core_timer_handler or add_timer
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
-            unlock_interrupt();
+            kernel_unlock_interrupt();
             irqtask_run_preemptive();
         }
     }
@@ -263,7 +303,7 @@ void el0_irq_64_router(trapframe_t *tpf)
     {
         core_timer_disable(); // enable core timer interrupt when entering the handler
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
-        unlock_interrupt();
+        kernel_unlock_interrupt();
         irqtask_run_preemptive();
     }
     else
@@ -274,6 +314,11 @@ void el0_irq_64_router(trapframe_t *tpf)
     {
         need_to_schedule = 0;
         schedule();
+    }
+    // only do signal handler when return to user mode
+    if ((tpf->spsr_el1 & 0b1100) == 0)
+    {
+        run_pending_signal();
     }
 }
 
@@ -345,7 +390,7 @@ void irqtask_run_preemptive()
 {
     while (!list_empty(task_list))
     {
-        lock_interrupt();
+        kernel_lock_interrupt();
         irqtask_t *the_task = (irqtask_t *)task_list->next;
         // struct list_head *curr;
         // uart_puts("---------------------- list for each ----------------------\r\n");
@@ -363,7 +408,7 @@ void irqtask_run_preemptive()
         if (curr_task_priority <= the_task->priority)
         {
             // DEBUG("irqtask_run_preemptive early return\r\n");
-            unlock_interrupt();
+            kernel_unlock_interrupt();
             break;
         }
         list_del_entry((struct list_head *)the_task);
@@ -371,15 +416,15 @@ void irqtask_run_preemptive()
         curr_task_priority = the_task->priority;
 
         // DEBUG("irqtask_run\r\n");
-        unlock_interrupt();
+        kernel_unlock_interrupt();
         irqtask_run(the_task);
 
-        lock_interrupt();
+        kernel_lock_interrupt();
 
         curr_task_priority = prev_task_priority;
         // DEBUG("irqtask_run_preemptive kfree\r\n");
         kfree(the_task);
-        unlock_interrupt();
+        kernel_unlock_interrupt();
     }
 }
 
