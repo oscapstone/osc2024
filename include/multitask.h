@@ -3,6 +3,7 @@
 #include "multitask.h"
 #include "syscall_.h"
 #include "types.h"
+#include "vfs.h"
 #include "vm.h"
 #include "vm_macro.h"
 
@@ -72,7 +73,8 @@ typedef struct task_struct {
   sig_handler_func cur_exec_sig_func;
   sig_handler_t sig_handlers[SIG_NUM];
   uint8_t sig_is_check;
-
+  vnode* cwd;
+  file* fdtable[MAX_FD];
 } task_struct;
 
 typedef struct ts_que {

@@ -9,6 +9,7 @@
 #include "string.h"
 #include "uart1.h"
 #include "utli.h"
+#include "vfs.h"
 #include "vm.h"
 
 extern task_struct* threads;
@@ -22,7 +23,9 @@ uint64_t sys_getpid(trapframe_t* tpf) {
 uint32_t sys_uartread(trapframe_t* tpf, char* buf, uint32_t size) {
   uint32_t i;
   for (i = 0; i < size; i++) {
+    OS_exit_critical();
     buf[i] = uart_read();
+    OS_enter_critical();
   }
   tpf->x[0] = i;
   return i;
@@ -38,37 +41,38 @@ uint32_t sys_uartwrite(trapframe_t* tpf, const char* buf, uint32_t size) {
 }
 
 uint32_t exec(trapframe_t* tpf, const char* name, char* const argv[]) {
-  uint32_t file_sz;
-  char* prog = cpio_load(name, &file_sz);
-  if (!prog) {
+  file* fp = vfs_open(name, 0);
+  if (!fp) {
     tpf->x[0] = -1;
     return -1;
   }
 
-  OS_enter_critical();
   vm_free(current_thread);
-
-  current_thread->data_size = file_sz;
-  current_thread->data = malloc(file_sz);
-  map_pages(current_thread, CODE, (uint64_t)current_thread->data, USR_CODE_ADDR,
-            file_sz, VM_PROT_READ | VM_PROT_EXEC, MAP_ANONYMOUS);
-  memcpy(current_thread->data, prog, file_sz);
 
   current_thread->usr_stk = malloc(USR_STK_SZ);
   map_pages(current_thread, STACK, (uint64_t)current_thread->usr_stk,
             USR_STK_ADDR, USR_STK_SZ, VM_PROT_READ | VM_PROT_WRITE,
             MAP_ANONYMOUS);
+
   map_pages(current_thread, IO, phy2vir(IO_PM_START_ADDR), IO_PM_START_ADDR,
             IO_PM_END_ADDR - IO_PM_START_ADDR, VM_PROT_READ | VM_PROT_WRITE,
             MAP_ANONYMOUS);
 
+  initramfs_internal* internal = (initramfs_internal*)fp->vnode->internal;
+  uint32_t file_sz = internal->file_sz;
+  current_thread->data_size = file_sz;
+  current_thread->data = malloc(file_sz);
+  memcpy(current_thread->data, internal->data, file_sz);
+  map_pages(current_thread, CODE, (uint64_t)current_thread->data, USR_CODE_ADDR,
+            file_sz, VM_PROT_READ | VM_PROT_EXEC, MAP_ANONYMOUS);
+
   memset(current_thread->sig_handlers, 0, sizeof(current_thread->sig_handlers));
   current_thread->sig_handlers[SYSCALL_SIGKILL].func = sig_kill_default_handler;
 
+  vfs_close(fp);
+
   tpf->elr_el1 = USR_CODE_ADDR;
   tpf->sp_el0 = USR_STK_ADDR + USR_STK_SZ;
-  OS_exit_critical();
-
   tpf->x[0] = 0;
   return 0;
 }
@@ -83,7 +87,6 @@ uint32_t fork(trapframe_t* tpf) {
 
   task_struct* parent = current_thread;
 
-  OS_enter_critical();
   // kernel space
   child->ker_stk = malloc(KER_STK_SZ);
   memcpy(child->ker_stk, parent->ker_stk, KER_STK_SZ);
@@ -105,11 +108,6 @@ uint32_t fork(trapframe_t* tpf) {
     }
   }
 
-  // change_all_page_prot((uint64_t*)phy2vir(parent->mm.pgd), 0, VM_PROT_READ);
-  // copy_all_pt((uint64_t*)phy2vir(child->mm.pgd),
-  //             (uint64_t*)phy2vir(parent->mm.pgd), 0);
-
-  OS_exit_critical();
 #ifdef DEBUG
   uart_send_string("parent->ker_stk: ");
   uart_hex_64((uint64_t)parent->ker_stk);
@@ -159,6 +157,7 @@ uint32_t fork(trapframe_t* tpf) {
     ready_que_push_back(child);
     return child->pid;
   }
+  OS_enter_critical();
   trapframe_t* child_tpf =
       (trapframe_t*)(child->ker_stk +
                      ((uint64_t)tpf - (uint64_t)parent->ker_stk));
@@ -189,11 +188,9 @@ void exit() { task_exit(); }
 
 uint32_t sys_mbox_call(trapframe_t* tpf, uint8_t ch, uint32_t* usr_mbox) {
   uint32_t mbox_sz = usr_mbox[0];
-  OS_enter_critical();
   memcpy((void*)mbox, (void*)usr_mbox, mbox_sz);
   tpf->x[0] = mbox_call(ch);
   memcpy((void*)usr_mbox, (void*)mbox, mbox_sz);
-  OS_exit_critical();
   return 0;
 }
 
@@ -205,10 +202,8 @@ void kill(uint32_t pid) {
     return;
   }
 
-  OS_enter_critical();
   threads[pid - 1].status = THREAD_DEAD;
   ready_que_del_node(&threads[pid - 1]);
-  OS_exit_critical();
 }
 
 void signal(uint32_t SIGNAL, sig_handler_func handler) {
@@ -216,10 +211,8 @@ void signal(uint32_t SIGNAL, sig_handler_func handler) {
     uart_puts("unvaild signal number");
     return;
   }
-  OS_enter_critical();
   current_thread->sig_handlers[SIGNAL].registered = 1;
   current_thread->sig_handlers[SIGNAL].func = handler;
-  OS_exit_critical();
 }
 
 void sig_kill(uint32_t pid, uint32_t SIGNAL) {
@@ -234,9 +227,8 @@ void sig_kill(uint32_t pid, uint32_t SIGNAL) {
     uart_int(SIGNAL);
     uart_puts(" not exists");
   }
-  OS_enter_critical();
+
   threads[pid - 1].sig_handlers[SIGNAL].sig_cnt++;
-  OS_exit_critical();
 }
 
 void sys_mmap(trapframe_t* tpf) {
@@ -296,20 +288,15 @@ static void exec_signal_handler() {
 }
 
 void check_signal() {
-  OS_enter_critical();
   if (current_thread->sig_is_check == 1) {
-    OS_exit_critical();
     return;
   }
   current_thread->sig_is_check = 1;
-  OS_exit_critical();
 
   for (int i = 1; i < SIG_NUM; i++) {
     if (current_thread->sig_handlers[i].registered == 0) {
       while (current_thread->sig_handlers[i].sig_cnt > 0) {
-        OS_enter_critical();
         current_thread->sig_handlers[i].sig_cnt--;
-        OS_exit_critical();
         current_thread->sig_handlers[i].func();
       }
     } else {
@@ -320,7 +307,6 @@ void check_signal() {
       // }
       if (current_thread->sig_handlers[i].sig_cnt > 0) {
         // check = 1;
-        OS_enter_critical();
         current_thread->sig_handlers[i].sig_cnt--;
         current_thread->cur_exec_sig_func =
             current_thread->sig_handlers[i].func;
@@ -328,7 +314,6 @@ void check_signal() {
         map_pages(current_thread, STACK, (uint64_t)current_thread->sig_stk,
                   USR_SIG_STK_ADDR, USR_SIG_STK_SZ,
                   VM_PROT_READ | VM_PROT_WRITE, MAP_ANONYMOUS);
-        OS_exit_critical();
         exec_in_el0(exec_signal_handler,
                     (void*)(USR_SIG_STK_ADDR + USR_SIG_STK_SZ));
       }
@@ -344,4 +329,89 @@ void sig_return() {
   free_pages(current_thread, (uint64_t)current_thread->sig_stk);
   current_thread->sig_stk = (void*)0;
   load_cpu_context(&current_thread->sig_cpu_context);
+}
+
+void sys_open(trapframe_t* tpf) {
+  const char* pathname = (const char*)tpf->x[0];
+  uint8_t flags = (uint8_t)tpf->x[1];
+
+  file* fp = vfs_open(pathname, flags);
+  if (!fp) {
+    tpf->x[0] = -1;
+    return;
+  }
+
+  int32_t fd = -1;
+  file** fdtable = current_thread->fdtable;
+  for (uint32_t i = 0; i < MAX_FD; i++) {
+    if (!current_thread->fdtable[i]) {
+      fdtable[i] = fp;
+      fd = i;
+      break;
+    }
+  }
+
+  tpf->x[0] = fd;
+}
+
+void sys_close(trapframe_t* tpf) {
+  int32_t fd = tpf->x[0];
+  file* fp = current_thread->fdtable[fd];
+  tpf->x[0] = vfs_close(fp);
+  current_thread->fdtable[fd] = (file*)0;
+}
+
+void sys_write(trapframe_t* tpf) {
+  int32_t fd = tpf->x[0];
+  const void* buf = (const void*)tpf->x[1];
+  uint32_t len = tpf->x[2];
+  file* fp = current_thread->fdtable[fd];
+  if (!fp) {
+    tpf->x[0] = -1;
+  } else {
+    tpf->x[0] = vfs_write(fp, buf, len);
+  }
+}
+
+void sys_read(trapframe_t* tpf) {
+  int32_t fd = tpf->x[0];
+  void* buf = (void*)tpf->x[1];
+  uint32_t len = tpf->x[2];
+  file* fp = current_thread->fdtable[fd];
+  if (!fp) {
+    tpf->x[0] = -1;
+  } else {
+    tpf->x[0] = vfs_read(fp, buf, len);
+  }
+}
+
+//  ignore mode, since there is no access control
+void sys_mkdir(trapframe_t* tpf) {
+  const char* pathname = (const char*)tpf->x[0];
+  tpf->x[0] = vfs_mkdir(pathname);
+}
+
+// ignore arguments other than target (where to mount) and filesystem (fs name)
+void sys_mount(trapframe_t* tpf) {
+  const char* mountpoint = (const char*)tpf->x[1];
+  const char* fs = (const char*)tpf->x[2];
+  tpf->x[0] = vfs_mount(mountpoint, fs);
+}
+
+void sys_chdir(trapframe_t* tpf) {
+  const char* pathname = (const char*)tpf->x[0];
+  tpf->x[0] = vfs_chdir(pathname);
+}
+
+// only need to implement seek set
+void sys_lseek64(trapframe_t* tpf) {
+  int32_t fd = tpf->x[0];
+  int64_t offset = tpf->x[1];
+  int32_t whence = tpf->x[2];
+  file* fp = current_thread->fdtable[fd];
+  if (!fp) {
+    tpf->x[0] = -1;
+  } else {
+    tpf->x[0] = vfs_lseek64(fp, offset, whence);
+  }
 }

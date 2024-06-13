@@ -5,7 +5,8 @@
 #include "shell.h"
 #include "uart1.h"
 #include "utli.h"
-#include "vm_macro.h"
+#include "vfs.h"
+
 extern void *_dtb_ptr_start;
 
 void kernel_init(void *arg) {
@@ -13,6 +14,7 @@ void kernel_init(void *arg) {
   shell_init();
   fdt_traverse(get_cpio_addr);
   init_mem();
+  rootfs_init();
   print_cur_sp();
   init_sched_thread();
   print_cur_sp();
@@ -26,6 +28,6 @@ void kernel_init(void *arg) {
 void main(void *arg) {
   kernel_init(arg);
   thread_create(user_thread_exec);
+  // thread_create(shell_start);
   idle_task();
-  // shell_start();
 }

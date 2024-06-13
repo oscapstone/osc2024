@@ -1,16 +1,22 @@
 #include "uart1.h"
 
 #include "interrupt.h"
+#include "mem.h"
 #include "peripherals/aux.h"
 #include "peripherals/gpio.h"
 #include "string.h"
 #include "task.h"
 #include "utli.h"
+#include "vm.h"
 
 static volatile uint32_t w_f = 0, w_b = 0;
 static volatile uint32_t r_f = 0, r_b = 0;
 volatile char async_uart_read_buf[MAX_BUF_SIZE];
 volatile char async_uart_write_buf[MAX_BUF_SIZE];
+
+static filesystem *uartfs;
+static vnode_operations *uartfs_v_ops = (vnode_operations *)0;
+static file_operations *uartfs_f_ops = (file_operations *)0;
 
 void uart_init() {
   /* Initialize UART */
@@ -234,4 +240,140 @@ void uart_interrupt_handler() {
     disable_uart_rx_interrupt();
     add_task(uart_rx_interrupt_handler, UART_INT_PRIORITY);
   }
+}
+
+static file *uartfs_create_fd(vnode *file_node) {
+  file *fp = (file *)malloc(sizeof(file));
+  if (!fp) {
+    return (file *)0;
+  }
+  fp->vnode = file_node;
+  fp->f_ops = file_node->f_ops;
+  fp->f_pos = 0;
+  return fp;
+}
+
+static vnode *uartfs_create_vnode(vnode *parent, const char *name,
+                                  uint8_t type) {
+  vnode *uartfs_vnode = (vnode *)malloc(sizeof(vnode));
+  if (!uartfs_vnode) {
+    return (vnode *)0;
+  }
+  strcpy(uartfs_vnode->name, name);
+  uartfs_vnode->parent = parent;
+  if (parent) {
+    for (uint32_t i = 0; i < MAX_SUBDIR_N; i++) {
+      if (parent->subdirs[i] == (vnode *)0) {
+        parent->subdirs[i] = uartfs_vnode;
+        break;
+      }
+    }
+  }
+  for (uint32_t i = 0; i < MAX_SUBDIR_N; i++) {
+    uartfs_vnode->subdirs[i] = (vnode *)0;
+  }
+  uartfs_vnode->mountpoint = (mount *)0;
+  uartfs_vnode->v_ops = uartfs_v_ops;
+  uartfs_vnode->f_ops = uartfs_f_ops;
+  uartfs_vnode->type = type;
+  uartfs_vnode->internal = (void *)0;
+
+  return uartfs_vnode;
+}
+
+static int32_t uartfs_vnode_create(vnode *dir_node, vnode **target,
+                                   const char *component_name) {
+  uart_puts("create operation fails on uartfs");
+  return -1;
+}
+
+static int32_t uartfs_vnode_lookup(vnode *dir_node, vnode **target,
+                                   const char *component_name) {
+  uart_puts("lookup operation fails on uartfs");
+  return -1;
+}
+
+static int32_t uartfs_vnode_mkdir(vnode *dir_node, vnode **target,
+                                  const char *component_name) {
+  uart_puts("mkdir operation fails on uartfs");
+  return -1;
+}
+
+static int32_t uartfs_file_open(vnode *file_node, file **fp) {
+  *fp = uartfs_create_fd(file_node);
+  if (!(*fp)) {
+    return -1;
+  }
+  return 0;
+}
+
+static int32_t uartfs_file_close(file *fp) {
+  free((void *)fp);
+  return 0;
+}
+
+static int32_t uartfs_file_read(file *fp, void *buf, uint32_t len) {
+  char *dst = (char *)buf;
+  uint32_t i;
+  for (i = 0; i < len; i++) {
+    dst[i] = uart_read();
+  }
+  return i;
+}
+
+static int32_t uartfs_file_write(file *fp, const void *buf, uint32_t len) {
+  const char *src = (const char *)buf;
+  uint32_t i;
+  for (i = 0; i < len; i++) {
+    uart_write(src[i]);
+  }
+  return i;
+}
+
+static int32_t uartfs_setup_mount(filesystem *fs, mount *mount,
+                                  const char *name) {
+  mount->fs = fs;
+  mount->root = uartfs_create_vnode((vnode *)0, name, DEVICE);
+  if (!mount->root) {
+    return -1;
+  }
+  mount->root->mountpoint = mount;
+  return 0;
+}
+
+static int32_t uartfs_register_fs() {
+  if (!uartfs_v_ops) {
+    uartfs_v_ops = (vnode_operations *)malloc(sizeof(vnode_operations));
+    if (!uartfs_v_ops) {
+      return -1;
+    }
+    uartfs_v_ops->create =
+        (vfs_create_fp_t)phy2vir((uint64_t)uartfs_vnode_create);
+    uartfs_v_ops->lookup =
+        (vfs_lookup_fp_t)phy2vir((uint64_t)uartfs_vnode_lookup);
+    uartfs_v_ops->mkdir = (vfs_mkdir_fp_t)phy2vir((uint64_t)uartfs_vnode_mkdir);
+  }
+
+  if (!uartfs_f_ops) {
+    uartfs_f_ops = (file_operations *)malloc(sizeof(file_operations));
+    if (!uartfs_f_ops) {
+      return -1;
+    }
+    uartfs_f_ops->open = (vfs_open_fp_t)phy2vir((uint64_t)uartfs_file_open);
+    uartfs_f_ops->close = (vfs_close_fp_t)phy2vir((uint64_t)uartfs_file_close);
+    uartfs_f_ops->read = (vfs_read_fp_t)phy2vir((uint64_t)uartfs_file_read);
+    uartfs_f_ops->write = (vfs_write_fp_t)phy2vir((uint64_t)uartfs_file_write);
+  }
+  return 0;
+}
+
+filesystem *uartfs_init() {
+  if (!uartfs) {  // if the uartfs has not been initialized
+    uartfs = (filesystem *)malloc(sizeof(filesystem));
+    strcpy(uartfs->name, "uartfs");
+    uartfs->setup_mnt = (vfs_setup_mount)phy2vir((uint64_t)uartfs_setup_mount);
+    uartfs->register_fs =
+        (vfs_register_fs)phy2vir((uint64_t)uartfs_register_fs);
+  }
+  return uartfs;
 }

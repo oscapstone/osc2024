@@ -12,6 +12,7 @@
 #include "timer.h"
 #include "uart1.h"
 #include "utli.h"
+#include "vfs.h"
 
 enum shell_status { Read, Parse };
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
@@ -132,6 +133,7 @@ void shell_controller(char *cmd) {
     uart_puts("demo_preempt: for the demo of the preemption mechanism");
     uart_puts(
         "demo_multi_threads: for the demo of the multiple threads execution");
+    uart_puts("lab7: lab7 demo");
   } else if (!strcmp(cmd, "hello")) {
     uart_puts("Hello World!");
   } else if (!strcmp(cmd, "ls")) {
@@ -206,6 +208,31 @@ void shell_controller(char *cmd) {
     for (int i = 0; i < 3; ++i) {  // N should > 2
       thread_create(foo);
     }
+  } else if (!strcmp(cmd, "lab7")) {
+    vfs_mkdir("/hello");
+    vfs_mkdir("hi");
+    file *fp = vfs_open("hello", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+    fp = vfs_open("/hi", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+
+    vfs_mkdir("/hello/hello1");
+    fp = vfs_open("hello/hello1", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+    vfs_mkdir("/hello/hello2");
+    fp = vfs_open("/hello/hello2", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+
+    fp = vfs_open("dev/uart", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_hex_64((uint64_t)fp->vnode->f_ops->read);
+    uart_send_string("\r\n");
+    uart_hex_64((uint64_t)fp->f_ops->read);
+    uart_puts("\r\n--------------");
   } else {
     uart_puts("shell: unvaild command");
   }

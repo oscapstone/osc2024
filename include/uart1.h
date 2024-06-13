@@ -2,8 +2,10 @@
 #define _UART1_H
 
 #include "types.h"
+#include "vfs.h"
 
 #define MAX_BUF_SIZE 1024
+#define MAX_UART_INTERNAL_SZ 4096
 
 void uart_init();
 void uart_send_string(const char *str);
@@ -21,4 +23,5 @@ char uart_read_async();
 uint32_t uart_send_string_async(const char *str);
 uint32_t uart_read_string_async(char *str);
 void uart_interrupt_handler();
+filesystem *uartfs_init();
 #endif

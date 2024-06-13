@@ -14,6 +14,7 @@ task_struct* threads;
 static ts_deque ready_que;
 extern int32_t lock_cnt;
 extern char __kernel_start;
+extern mount rootfs_mount_point;
 
 void ready_que_del_node(task_struct* thread) {
   task_struct_node* n = &thread->ts_node;
@@ -54,6 +55,8 @@ static void init_thread_struct(task_struct* ts, uint32_t pid) {
   ts->ts_node.ts = ts;
   ts->sig_handlers[SYSCALL_SIGKILL].func = sig_kill_default_handler;
   ts->mm.pgd = KER_PGD_ADDR;
+  ts->cwd = rootfs_mount_point.root;
+  ts->fdtable[0] = ts->fdtable[1] = ts->fdtable[2] = vfs_open("/dev/uart", 0);
 }
 
 static void reclaim() {
@@ -99,7 +102,7 @@ void foo() {
 void schedule() {
   if (lock_cnt != 0) {
     uart_puts("schedule warning: lock_cnt != 0");
-    return;
+    OS_exit_critical();
   }
 
   if (current_thread->status == THREAD_RUNNING) {
@@ -180,7 +183,7 @@ task_struct* get_free_thread() {
 
 void user_thread_exec() {
   uint32_t file_sz;
-  char* usr_prog = cpio_load("vm.img", &file_sz);
+  char* usr_prog = cpio_load("vfs1.img", &file_sz);
   if (!usr_prog) {
     return;
   }

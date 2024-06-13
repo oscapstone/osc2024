@@ -19,16 +19,17 @@ void invaild_exception_handler() {
 }
 
 void el1h_sync_handler() {
+  enable_interrupt();
+  OS_enter_critical();
+
   uint32_t esr_el1_val, EC_val;
   asm volatile("mrs %0, esr_el1" : "=r"(esr_el1_val));
   EC_val = (esr_el1_val & EC_MASK) >> EC_shift;
-
   if (EC_val == EXCEPTION_DATA_ABORT_FR_SAME ||
       EC_val == EXCEPTION_INSTR_ABORT_FR_SAME) {
     uint32_t DFSC = (esr_el1_val & DFSC_MASK);
     uint64_t fault_addr;
     asm volatile("mrs %0, far_el1" : "=r"(fault_addr));
-    enable_interrupt();
 
     if (DFSC == TASNSLATION_FAULT_L0 || DFSC == TASNSLATION_FAULT_L1 ||
         DFSC == TASNSLATION_FAULT_L2 || DFSC == TASNSLATION_FAULT_L3) {
@@ -39,23 +40,19 @@ void el1h_sync_handler() {
   } else {
     invaild_exception_handler();
   }
+  OS_exit_critical();
 }
-
+extern int32_t lock_cnt;
 void el0_64_sync_handler(trapframe_t *tpf) {
+  enable_interrupt();
+  OS_enter_critical();
+
   uint32_t esr_el1_val, EC_val;
 
   asm volatile("mrs %0, esr_el1" : "=r"(esr_el1_val));
   EC_val = (esr_el1_val & EC_MASK) >> EC_shift;
 
-  // if (EC_val != EXCEPTION_SVC) {
-  //   uart_send_string("esr_el1: ");
-  //   uart_hex(esr_el1_val);
-  //   uart_send_string(", EC_val: ");
-  //   uart_hex(EC_val);
-  // }
-
   if (EC_val == EXCEPTION_SVC) {
-    enable_interrupt();
     uint64_t syscall_num = tpf->x[8];
     switch (syscall_num) {
       case SYSCALL_GET_PID:
@@ -91,6 +88,30 @@ void el0_64_sync_handler(trapframe_t *tpf) {
       case SYSCALL_MMAP:
         sys_mmap(tpf);
         break;
+      case SYSCALL_OPEN:
+        sys_open(tpf);
+        break;
+      case SYSCALL_CLOSE:
+        sys_close(tpf);
+        break;
+      case SYSCALL_WRITE:
+        sys_write(tpf);
+        break;
+      case SYSCALL_READ:
+        sys_read(tpf);
+        break;
+      case SYSCALL_MKDIR:
+        sys_mkdir(tpf);
+        break;
+      case SYSCALL_MOUNT:
+        sys_mount(tpf);
+        break;
+      case SYSCALL_CHDIR:
+        sys_chdir(tpf);
+        break;
+      case SYSCALL_LSEEK64:
+        sys_lseek64(tpf);
+        break;
       case SIG_RETURN:
         sig_return();
         break;
@@ -105,12 +126,6 @@ void el0_64_sync_handler(trapframe_t *tpf) {
     uint32_t DFSC = (esr_el1_val & DFSC_MASK);
     uint64_t fault_addr;
     asm volatile("mrs %0, far_el1" : "=r"(fault_addr));
-    enable_interrupt();
-    // uart_send_string(", DFSC: ");
-    // uart_hex(DFSC);
-    // uart_send_string(", fault_addr: ");
-    // uart_hex_64(fault_addr);
-    // uart_send_string("\r\n");
 
     if (DFSC == TASNSLATION_FAULT_L0 || DFSC == TASNSLATION_FAULT_L1 ||
         DFSC == TASNSLATION_FAULT_L2 || DFSC == TASNSLATION_FAULT_L3) {
@@ -123,8 +138,12 @@ void el0_64_sync_handler(trapframe_t *tpf) {
     }
 
   } else {
+    uart_send_string("EC_val: ");
+    uart_hex(EC_val);
+    uart_send_string("\r\n");
     invaild_exception_handler();
   }
+  OS_exit_critical();
 }
 
 static void timer_interrupt_handler() { timer_event_pop(); };

@@ -104,11 +104,6 @@ void map_pages(task_struct *thread, enum vm_type vmtype, uint64_t ker_vm_addr,
                   vm_addr, size, vm_prot, vm_flag);
 
   if (vmtype != IO) {
-    // uint32_t start_idx = address2idx((void *)ker_vm_addr);
-    // uint32_t end_idx = address2idx((void *)(ker_vm_addr + size - 1));
-    // for (uint32_t i = start_idx; i <= end_idx; i++) {
-    //   frame_entry_arr[i].ref_cnt++;
-    // }
     frame_entry_arr[address2idx((void *)ker_vm_addr)].ref_cnt++;
   }
 }
@@ -130,14 +125,11 @@ static void segmentation_fault_handler(uint64_t vm_addr) {
 }
 
 void translation_fault_handler(uint64_t vm_addr) {
-  OS_enter_critical();
-
+#ifdef DEBUG
   uart_send_string("\r\n[Translation fault]: ");
   uart_hex_64(vm_addr);
-  // uart_send_string(", cur pid: ");
-  // uart_int(current_thread->pid);
   uart_send_string("\r\n");
-
+#endif
   uint32_t pgd_idx = (vm_addr & (PD_MASK << PGD_SHIFT)) >> PGD_SHIFT;
   uint32_t pud_idx = (vm_addr & (PD_MASK << PUD_SHIFT)) >> PUD_SHIFT;
   uint32_t pmd_idx = (vm_addr & (PD_MASK << PMD_SHIFT)) >> PMD_SHIFT;
@@ -152,31 +144,19 @@ void translation_fault_handler(uint64_t vm_addr) {
        ptr != (vm_area_struct *)0; ptr = ptr->vm_next) {
     if (vm_addr >= ptr->vm_start && vm_addr <= ptr->vm_start + ptr->area_sz) {
       uint64_t pm_addr = ptr->pm_start + (vm_addr - ptr->vm_start);
-      // uart_send_string("ptr->pm_start: ");
-      // uart_hex_64(ptr->pm_start);
-      // uart_send_string(", pm_addr: ");
-      // uart_hex_64(pm_addr);
-      // uart_send_string(", ptr->vm_prot: ");
-      // uart_hex(ptr->vm_prot);
-      // uart_send_string("\r\n");
       fill_pte_entry(pte, pte_idx, pm_addr, ptr->vm_prot);
-      OS_exit_critical();
       return;
     }
   }
-  OS_exit_critical();
   segmentation_fault_handler(vm_addr);
 }
 
 void permission_fault_handler(uint64_t vm_addr) {
-  OS_enter_critical();
-
+#ifdef DEBUG
   uart_send_string("\r\n[Permission fault]: ");
   uart_hex_64(vm_addr);
-  // uart_send_string(", cur pid: ");
-  // uart_int(current_thread->pid);
   uart_send_string("\r\n");
-
+#endif
   uint32_t pgd_idx = (vm_addr & (PD_MASK << PGD_SHIFT)) >> PGD_SHIFT;
   uint32_t pud_idx = (vm_addr & (PD_MASK << PUD_SHIFT)) >> PUD_SHIFT;
   uint32_t pmd_idx = (vm_addr & (PD_MASK << PMD_SHIFT)) >> PMD_SHIFT;
@@ -198,7 +178,6 @@ void permission_fault_handler(uint64_t vm_addr) {
       } else if (ptr->vm_type == STACK) {
         ptr->vm_prot |= VM_PROT_WRITE;
       } else {
-        OS_exit_critical();
         segmentation_fault_handler(vm_addr);
       }
 
@@ -206,17 +185,22 @@ void permission_fault_handler(uint64_t vm_addr) {
           1) {  // At least two threads use this area in the same time
         frame_entry_arr[frame_idx].ref_cnt--;
         void *addr = malloc(ptr->area_sz);
+        frame_entry_arr[address2idx(addr)].ref_cnt = 1;
         memcpy(addr, (void *)phy2vir(ptr->pm_start), ptr->area_sz);
         ptr->pm_start = vir2phy((uint64_t)addr);
         pm_addr = ptr->pm_start + (vm_addr - ptr->vm_start);
       }
 
       fill_pte_entry(pte, pte_idx, pm_addr, ptr->vm_prot);
-      OS_exit_critical();
+      // invalidate all TLB entries after modifying the pte
+      asm volatile(
+          "dsb ish\n\t"
+          "tlbi vmalle1is\n\t"
+          "dsb ish\n\t"
+          "isb");
       return;
     }
   }
-  OS_exit_critical();
   segmentation_fault_handler(vm_addr);
 }
 
@@ -244,6 +228,7 @@ void vm_free(task_struct *thread) {
       frame_entry_arr[frame_idx].ref_cnt--;
       if (frame_entry_arr[frame_idx].ref_cnt ==
           0) {  // if there are no other threads using this area
+        memset((void *)phy2vir(ptr->pm_start), 0, ptr->area_sz);
         free((void *)phy2vir(ptr->pm_start));
       }
     }
