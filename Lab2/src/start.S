@@ -6,25 +6,27 @@ _start:
     // read cpu id, stop slave cores
     mrs     x1, mpidr_el1
     and     x1, x1, #3
-    cbz     x1, 2f
+    cbz     x1, bss_init
     // cpu id > 0, stop
-1:  wfe
-    b       1b
-2:  // cpu id == 0
 
-    // set stack before our code
-    ldr     x1, =_start
-    mov     sp, x1
+halt:  
+    wfe
+    b       halt 
 
+// cpu id == 0
+bss_init:  
     // clear bss
     ldr     x1, =__bss_start
     ldr     w2, =__bss_size
-3:  cbz     w2, 4f
+
+clear_bss_memory:  
+    cbz     w2, jump_to_main
     str     xzr, [x1], #8
     sub     w2, w2, #1
-    cbnz    w2, 3b
+    cbnz    w2, clear_bss_memory
 
-    // jump to C code, should not return
-4:  bl      main
+// jump to C code, should not return
+jump_to_main:  
+    bl      main
     // for failsafe, halt this core too
-    b       1b
+    b       halt
