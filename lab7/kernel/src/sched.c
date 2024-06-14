@@ -10,6 +10,7 @@
 #include "uart1.h"
 #include "shell.h"
 #include "vfs.h"
+#include "initramfs.h"
 
 struct list_head *run_queue;
 
@@ -123,6 +124,8 @@ thread_t *_init_create_thread(char *name, int64_t pid, int64_t ppid, void *start
 	thread->context.sp = (uint64_t)thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP;
 	thread->context.fp = thread->context.sp; // frame pointer for local variable, which is also in stack.
 	thread->context.pgd = KERNEL_VIRT_TO_PHYS(kmalloc(PAGE_FRAME_SIZE));
+	init_thread_vfs(thread);
+	thread->file = NULL;
 	memset(PHYS_TO_KERNEL_VIRT(thread->context.pgd), 0, PAGE_FRAME_SIZE);
 	list_add((list_head_t *)thread, run_queue);
 	return thread;
@@ -282,6 +285,7 @@ thread_t *thread_create(void *start, char *name)
 	DEBUG("new_pid: %d, context.pgd: 0x%x\n", new_pid, r->context.pgd);
 
 	init_thread_vfs(r);
+	r->file = NULL;
 
 	child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
 	child->pid = new_pid;
@@ -291,6 +295,7 @@ thread_t *thread_create(void *start, char *name)
 	list_add((list_head_t *)r, run_queue);
 
 	DEBUG("add new thread: %d\n", r->pid);
+
 	kernel_unlock_interrupt();
 	return r;
 }
@@ -300,6 +305,9 @@ int8_t has_child(thread_t *thread)
 	return !list_empty((list_head_t *)thread->child_list);
 }
 
+extern uint64_t lock_counter;
+// int show_log = 0;
+
 void schedule()
 {
 	kernel_lock_interrupt();
@@ -307,9 +315,10 @@ void schedule()
 	do
 	{
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 	curr_thread->status = THREAD_RUNNING;
+	DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
+	DEBUG("lock_counter: %d\n", lock_counter);
 	// uint64_t ttbr0_el1_value;
 	// asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
 	// DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
@@ -320,9 +329,9 @@ void schedule()
 
 int thread_insert_file_to_fdtable(thread_t *t, file_t *file)
 {
-	for(int i = 0; i < MAX_FD + 1; i++)
+	for (int i = 0; i < MAX_FD + 1; i++)
 	{
-		if(t->file_descriptors_table[i] == NULL)
+		if (t->file_descriptors_table[i] == NULL)
 		{
 			t->file_descriptors_table[i] = file;
 			return i;
@@ -333,7 +342,7 @@ int thread_insert_file_to_fdtable(thread_t *t, file_t *file)
 
 int thread_get_file_struct_by_fd(int fd, file_t **file)
 {
-	if(fd < 0 || fd > MAX_FD || curr_thread->file_descriptors_table[fd] == NULL)
+	if (fd < 0 || fd > MAX_FD || curr_thread->file_descriptors_table[fd] == NULL)
 	{
 		return -1;
 	}

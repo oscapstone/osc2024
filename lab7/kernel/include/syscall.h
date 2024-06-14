@@ -31,6 +31,7 @@
 			asm volatile("msr sp_el0, %0\n\t" ::"r"(user_sp)); /* el0 stack pointer for el1 process */ \
 		}                                                                                              \
 		DEBUG("PID: %d\n", curr_thread->pid);                                                          \
+		el1_interrupt_disable();                                                                       \
 		asm volatile(                                                                                  \
 			"msr tpidr_el1, %0\n\t" /* Hold the \"kernel(el1)\" thread structure information */        \
 			"msr elr_el1, %1\n\t"	/* When el0 -> el1, store return address for el1 -> el0 */         \
@@ -72,6 +73,8 @@ enum syscall_num
 	SYSCALL_MKDIR,
 	SYSCALL_MOUNT,
 	SYSCALL_CHDIR,
+	SYSCALL_LSEEK64,
+	SYSCALL_IOCTL,
 	SYSCALL_SIGNAL_RETURN,
 	SYSCALL_LOCK_INTERRUPT,
 	SYSCALL_UNLOCK_INTERRUPT,
@@ -102,6 +105,8 @@ long sys_read(trapframe_t *tpf, int fd, void *buf, unsigned long count);
 int sys_mkdir(trapframe_t *tpf, const char *pathname, unsigned mode);
 int sys_mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
 int sys_chdir(trapframe_t *tpf, const char *path);
+long sys_lseek64(trapframe_t *tpf, int fd, long offset, int whence);
+int sys_ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info);
 int sys_signal_return(trapframe_t *tpf);
 void sys_lock_interrupt(trapframe_t *tpf);
 void sys_unlock_interrupt(trapframe_t *tpf);
@@ -115,7 +120,8 @@ long kernel_read(int fd, void *buf, unsigned long count);
 int kernel_mkdir(const char *pathname, unsigned mode);
 int kernel_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
 int kernel_chdir(const char *path);
-
+long kernel_lseek64(int fd, long offset, int whence);
+int kernel_ioctl(int fb, unsigned long request, void *info);
 void kernel_lock_interrupt();
 void kernel_unlock_interrupt();
 

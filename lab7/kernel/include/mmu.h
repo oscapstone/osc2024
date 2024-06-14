@@ -2,6 +2,7 @@
 #define _MMU_H_
 
 #include "stddef.h"
+#include "mmu.h"
 // tcr_el1: The control register for stage 1 of the EL1&0 translation regime.
 #define TCR_CONFIG_REGION_48bit (((64 - 48) << 0) | ((64 - 48) << 16)) // T0SZ[5:0]   The size offset for ttbr0_el1 is 2**(64-T0SZ): 0x0000_0000_0000_0000 <- 0x0000_FFFF_FFFF_FFFF
 #define TCR_CONFIG_4KB ((0b00 << 14) | (0b10 << 30))                   // T1SZ[21:16] The size offset for ttbr1_el1 is 2**(64-T1SZ): 0xFFFF_0000_0000_0000 -> 0xFFFF_FFFF_FFFF_FFFF
@@ -50,6 +51,7 @@
 #define VM_SHARED 0x00000008
 #define VM_GROWSDOWN 0x00000100
 #define VM_PFNMAP 0x00000400
+#define VM_KERNELMAP 0x00100000
 
 // 假設頁表的基本條件
 #define PAGE_OFFSET_BITS 12
@@ -106,7 +108,8 @@ typedef struct vm_area_struct
     size_t end;
     uint64_t vm_page_prot;
     uint64_t vm_flags;
-    char *vm_file;
+    uint64_t offset;
+    struct file *vm_file;
     char *name;
 } vm_area_struct_t;
 
@@ -145,7 +148,8 @@ void *set_2M_kernel_mmu(void *x0);
 int set_thread_default_mmu(thread_t *t);
 vm_area_struct_t *find_vma(thread_t *t, size_t va);
 void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag);
-void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, char *vm_file);
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, struct file *vm_file, uint64_t offset);
+// void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, char *vm_file);
 void mmu_free_all_vma(thread_t *t);
 void mmu_free_vma(vm_area_struct_t *vma);
 void mmu_clean_page_tables(size_t *page_table, PAGE_TABLE_LEVEL level);

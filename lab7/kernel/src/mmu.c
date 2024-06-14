@@ -48,25 +48,25 @@ static inline is_addr_not_align_to_page_size(size_t addr)
 
 int set_thread_default_mmu(thread_t *t)
 {
-    mmu_add_vma(t, "Code", USER_CODE_BASE, t->datasize, (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), t->code);
-    mmu_add_vma(t, "User stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), NULL);
-    mmu_add_vma(t, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_PFNMAP), PERIPHERAL_START);
+    mmu_add_vma(t, "Code", USER_CODE_BASE, t->datasize, (PROT_READ | PROT_EXEC), (VM_EXEC | VM_READ), t->file, 0);
+    mmu_add_vma(t, "User stack", USER_STACK_BASE - USTACK_SIZE + SP_OFFSET_FROM_TOP, USTACK_SIZE, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_GROWSDOWN), NULL, 0);
+    mmu_add_vma(t, "Peripheral", PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, (PROT_READ | PROT_WRITE), (VM_READ | VM_WRITE | VM_PFNMAP), NULL, PERIPHERAL_START);
     mmu_add_vma(t,
-                "Signal wrapper",                  // name
-                USER_SIGNAL_WRAPPER_VA,            // virtual address
-                0x2000,                            // size
-                (PROT_READ | PROT_EXEC),           // page protection
-                (VM_EXEC | VM_READ),               // vma flags
-                (uint64_t)signal_handler_wrapper); // file
-                                                   // ALIGN_DOWN((uint64_t)signal_handler_wrapper, PAGE_FRAME_SIZE)); // file
+                "Signal wrapper",                   // name
+                USER_SIGNAL_WRAPPER_VA,             // virtual address
+                0x2000,                             // size
+                (PROT_READ | PROT_EXEC),            // page protection
+                (VM_EXEC | VM_READ | VM_KERNELMAP), // vma flags
+                NULL,                               // vm_file
+                (uint64_t)signal_handler_wrapper);  // offset
     mmu_add_vma(t,
-                "Run user task wrapper",          // name
-                USER_RUN_USER_TASK_WRAPPER_VA,    // virtual address
-                0x2000,                           // size
-                (PROT_READ | PROT_EXEC),          // page protection
-                (VM_EXEC | VM_READ),              // vma flags
-                (uint64_t)run_user_task_wrapper); // file
-                                                  // ALIGN_DOWN((uint64_t)run_user_task_wrapper, PAGE_FRAME_SIZE)); // file
+                "Run user task wrapper",            // name
+                USER_RUN_USER_TASK_WRAPPER_VA,      // virtual address
+                0x2000,                             // size
+                (PROT_READ | PROT_EXEC),            // page protection
+                (VM_EXEC | VM_READ | VM_KERNELMAP), // vma flags
+                NULL,                               // vm_file
+                (uint64_t)run_user_task_wrapper);   // offset
     return 0;
 }
 
@@ -123,7 +123,8 @@ void map_one_page(size_t *virt_pgd_p, size_t va, size_t pa, size_t flag)
  * @param vm_flags Flags indicating the properties and permissions of the VMA.
  * @param vm_file Pointer to the file associated with this VMA, if any.
  */
-void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, char *vm_file)
+// void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, char *vm_file)
+void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_page_prot, uint64_t vm_flags, struct file *vm_file, uint64_t offset)
 {
     if (is_addr_not_align_to_page_size(va))
     {
@@ -140,6 +141,7 @@ void mmu_add_vma(thread_t *t, char *name, size_t va, size_t size, uint64_t vm_pa
     new_area->end = va + size;
     new_area->vm_page_prot = vm_page_prot;
     new_area->vm_flags = vm_flags;
+    new_area->offset = offset;
     new_area->vm_file = vm_file;
     list_add_tail((list_head_t *)new_area, (list_head_t *)(t->vma_list));
 }
@@ -234,11 +236,21 @@ void translation_fault_handler(vm_area_struct_t *the_area_ptr, uint64_t fault_us
     uint64_t ttbr0_el1_value;
     asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
     DEBUG("pid: %d, curr_thread->context.pgd: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->pid, curr_thread->context.pgd, ttbr0_el1_value);
+    DEBUG("vma->file: 0x%x, file_offset: 0x%x\r\n", the_area_ptr->vm_file, file_offset);
     void *kernel_new_page;
     if (the_area_ptr->vm_flags & VM_PFNMAP)
     {
-        DEBUG("PFNMAP: 0x%x\r\n", the_area_ptr->vm_file);
-        kernel_new_page = (void *)(the_area_ptr->vm_file + file_offset);
+        DEBUG("PFNMAP: 0x%x\r\n", the_area_ptr->offset);
+        kernel_new_page = (void *)(the_area_ptr->offset + file_offset);
+    }
+    else if (the_area_ptr->vm_flags & VM_KERNELMAP)
+    {
+
+        DEBUG("kmalloc: 0x%x\r\n", PAGE_FRAME_SIZE);
+        DEBUG("kernel map: 0x%x\r\n", the_area_ptr->offset);
+        kernel_new_page = kmalloc(PAGE_FRAME_SIZE);
+        get_page(kernel_new_page);
+        memcpy(kernel_new_page, the_area_ptr->offset + file_offset, PAGE_FRAME_SIZE);
     }
     else
     {
@@ -248,7 +260,9 @@ void translation_fault_handler(vm_area_struct_t *the_area_ptr, uint64_t fault_us
         if (the_area_ptr->vm_file != NULL)
         {
             DEBUG("memcpy: 0x%x -> 0x%x, size: 0x%x\r\n", the_area_ptr->vm_file + file_offset, kernel_new_page, PAGE_FRAME_SIZE);
-            memcpy(kernel_new_page, the_area_ptr->vm_file + file_offset, PAGE_FRAME_SIZE);
+            the_area_ptr->vm_file->f_pos = file_offset;
+            DEBUG("file_offset: 0x%x\r\n", file_offset);
+            vfs_read(the_area_ptr->vm_file, kernel_new_page, PAGE_FRAME_SIZE);
         }
         else
         {

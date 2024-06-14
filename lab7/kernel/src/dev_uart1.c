@@ -23,7 +23,7 @@ int init_dev_uart1()
 
 int dev_uart1_write(struct file *file, const void *buf, size_t len)
 {
-	DEBUG("dev_uart1_async_write: %s, len: %d\r\n", buf, len);
+	// DEBUG("dev_uart1_async_write: %s, len: %d\r\n", buf, len);
 	const char *cbuf = buf;
 	for (int i = 0; i < len; i++)
 	{
@@ -34,7 +34,7 @@ int dev_uart1_write(struct file *file, const void *buf, size_t len)
 
 int dev_uart1_async_write(struct file *file, const void *buf, size_t len)
 {
-	DEBUG("dev_uart1_async_write: %s, len: %d\r\n", buf, len);
+	// DEBUG("dev_uart1_async_write: %s, len: %d\r\n", buf, len);
 	const char *cbuf = buf;
 	for (int i = 0; i < len; i++)
 	{

@@ -241,6 +241,8 @@ long initramfs_lseek64(struct file *file, long offset, int whence)
 
 long initramfs_getsize(struct vnode *vd)
 {
+	struct initramfs_inode *inode = vd->internal;
+	return inode->datasize;
 }
 
 // vnode operations
@@ -319,7 +321,8 @@ int initramfs_readdir(struct vnode *dir_node, const char name_array[])
 	{
 		child_vnode = ((vnode_list_t *)curr)->vnode;
 		DEBUG("initramfs_readdir: child_vnode->name %s\r\n", child_vnode->name);
-		strcpy(name_array_start, child_vnode->name);
+		*name_array_start = child_vnode->type;
+		strcpy(++name_array_start, child_vnode->name);
 		name_array_start += strlen(child_vnode->name) + 1;
 	}
 

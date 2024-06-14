@@ -16,6 +16,8 @@
 #include "syscall.h"
 #include "signal.h"
 #include "memory.h"
+#include "vfs.h"
+#include "dev_framebuffer.h"
 
 // External references to the current thread and the thread array
 extern thread_t *curr_thread;
@@ -35,11 +37,8 @@ extern thread_t *curr_thread;
  */
 void run_user_task_wrapper(char *dest)
 {
-	// DEBUG("run_user_task_wrapper: 0x%x\r\n", dest);
-	// unlock_interrupt();
-	CALL_SYSCALL(SYSCALL_UNLOCK_INTERRUPT);
-
 	((void (*)(void))dest)();
+	CALL_SYSCALL(SYSCALL_EXIT);
 }
 
 /**
@@ -153,28 +152,31 @@ size_t sys_uart_write(trapframe_t *tpf, const char buf[], size_t size)
  */
 int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
 {
-	unsigned int filesize;
-	char *filedata;
-	int result = cpio_get_file(name, &filesize, &filedata);
-	if (result == CPIO_TRAILER)
-	{
-		WARNING("exec: %s: No such file or directory\r\n", name);
-		return -1;
-	}
-	else if (result == CPIO_ERROR)
-	{
-		ERROR("cpio parse error\r\n");
-		return -1;
-	}
+	// unsigned int filesize;
+	// char *filedata;
+	// int result = cpio_get_file(name, &filesize, &filedata);
+	// if (result == CPIO_TRAILER)
+	// {
+	// 	WARNING("exec: %s: No such file or directory\r\n", name);
+	// 	return -1;
+	// }
+	// else if (result == CPIO_ERROR)
+	// {
+	// 	ERROR("cpio parse error\r\n");
+	// 	return -1;
+	// }
+	file_t *file;
+	vfs_open(curr_thread->pwd, name, O_RDONLY, &file);
 
 	DEBUG("sys_exec: %s\r\n", name);
 	kernel_lock_interrupt();
 	char *filepath = kmalloc(strlen(name) + 1);
 	strcpy(filepath, name);
-	curr_thread->datasize = filesize;
+	curr_thread->file = file;
+	curr_thread->datasize = file->f_ops->getsize(file->vnode);
 	curr_thread->name = filepath;
-	curr_thread->code = kmalloc(filesize);
-	MEMCPY(curr_thread->code, filedata, filesize);
+	curr_thread->code = NULL;
+	// MEMCPY(curr_thread->code, filedata, filesize);
 	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 
 	asm("dsb ish\n\t"); // ensure write has completed
@@ -211,11 +213,14 @@ int sys_fork(trapframe_t *tpf)
 	char *new_name = kmalloc(strlen(parent->name) + 1);
 	strcpy(new_name, parent->name);
 	thread_t *child = thread_create(parent->code, new_name);
+	child->file = duplicate_file_struct(parent);
 	int64_t pid = child->pid;
 	DEBUG("child pid: %d\r\n", pid);
 	child->datasize = parent->datasize;
+	child->pwd = parent->pwd;
 	child->status = THREAD_READY;
 	SIGNAL_COPY(child, parent);
+	FD_TABLE_COPY(child, parent);
 
 	child->code = parent->code;
 
@@ -225,7 +230,7 @@ int sys_fork(trapframe_t *tpf)
 	list_for_each(pos, (list_head_t *)(curr_thread->vma_list))
 	{
 		vm_area_struct_t *vma = (vm_area_struct_t *)pos;
-		mmu_add_vma(child, vma->name, vma->start, vma->end - vma->start, vma->vm_page_prot, vma->vm_flags, vma->vm_file);
+		mmu_add_vma(child, vma->name, vma->start, vma->end - vma->start, vma->vm_page_prot, vma->vm_flags, duplicate_file_struct(vma->vm_file), vma->offset);
 	}
 
 	DEBUG_BLOCK({
@@ -369,7 +374,7 @@ void *sys_mmap(trapframe_t *tpf, void *addr, size_t len, int prot, int flags, in
 
 	// create new valid region, map and set the page attributes (prot)
 	DEBUG("mmap: new_addr: 0x%x, len: 0x%x, prot: 0x%x, flags: 0x%x\r\n", new_addr, len, prot, flags);
-	mmu_add_vma(curr_thread, "anon", new_addr, len, prot, flags, NULL);
+	mmu_add_vma(curr_thread, "anon", new_addr, len, prot, flags, NULL, 0);
 	INFO_BLOCK({
 		dump_vma(curr_thread);
 	});
@@ -396,16 +401,33 @@ long sys_read(trapframe_t *tpf, int fd, void *buf, unsigned long count)
 	return kernel_read(fd, buf, count);
 }
 
-int sys_mkdir(trapframe_t *tpf, const char *pathname, unsigned mode){
+int sys_mkdir(trapframe_t *tpf, const char *pathname, unsigned mode)
+{
 	return kernel_mkdir(pathname, mode);
 }
 
-int sys_mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data){
+int sys_mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
+{
 	return kernel_mount(src, target, filesystem, flags, data);
 }
 
-int sys_chdir(trapframe_t *tpf, const char *path){
+int sys_chdir(trapframe_t *tpf, const char *path)
+{
 	return kernel_chdir(path);
+}
+
+long sys_lseek64(trapframe_t *tpf, int fd, long offset, int whence)
+{
+	return kernel_lseek64(fd, offset, whence);
+}
+
+extern unsigned int height;
+extern unsigned int isrgb;
+extern unsigned int pitch;
+extern unsigned int width;
+int sys_ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info)
+{
+	return kernel_ioctl(fb, request, info);
 }
 
 /**
@@ -493,35 +515,38 @@ int kernel_fork()
  */
 int kernel_exec_user_program(const char *program_name, char *const argv[])
 {
-	unsigned int filesize;
-	char *filedata;
-	int result = cpio_get_file(program_name, &filesize, &filedata);
-	if (result == CPIO_TRAILER)
-	{
-		WARNING("exec: %s: No such file or directory\r\n", program_name);
-		return -1;
-	}
-	else if (result == CPIO_ERROR)
-	{
-		ERROR("cpio parse error\r\n");
-		return -1;
-	}
+	// unsigned int filesize;
+	// char *filedata;
+	// int result = cpio_get_file(program_name, &filesize, &filedata);
+	// if (result == CPIO_TRAILER)
+	// {
+	// 	WARNING("exec: %s: No such file or directory\r\n", program_name);
+	// 	return -1;
+	// }
+	// else if (result == CPIO_ERROR)
+	// {
+	// 	ERROR("cpio parse error\r\n");
+	// 	return -1;
+	// }
 
-	DEBUG("kernel exec: %s\r\n", program_name);
-	if (thread_code_can_free(curr_thread))
-	{
-		DEBUG("free code: 0x%x\r\n", curr_thread->code);
-		kfree(curr_thread->code);
-	}
+	// DEBUG("kernel exec: %s\r\n", program_name);
+	// if (thread_code_can_free(curr_thread))
+	// {
+	// 	DEBUG("free code: 0x%x\r\n", curr_thread->code);
+	// 	kfree(curr_thread->code);
+	// }
 	kernel_lock_interrupt();
+	file_t *file;
+	vfs_open(curr_thread->pwd, program_name, O_RDONLY, &file);
 
 	char *filepath = kmalloc(strlen(program_name) + 1);
 	strcpy(filepath, program_name);
-	curr_thread->datasize = filesize;
+	curr_thread->file = file;
+	curr_thread->datasize = file->f_ops->getsize(file->vnode);
 	curr_thread->name = filepath;
-	curr_thread->code = kmalloc(filesize);
-	DEBUG("kernel exec: %s, code: 0x%x, filesize: %d, pid: %d\r\n", program_name, curr_thread->code, filesize, curr_thread->pid);
-	MEMCPY(curr_thread->code, filedata, filesize);
+	curr_thread->code = NULL;
+	DEBUG("kernel exec: %s, file: 0x%x, filesize: %d, pid: %d\r\n", program_name, curr_thread->file, curr_thread->datasize, curr_thread->pid);
+	// MEMCPY(curr_thread->code, filedata, filesize);
 	curr_thread->user_stack_bottom = kmalloc(USTACK_SIZE);
 
 	set_thread_default_mmu(curr_thread);
@@ -534,7 +559,7 @@ int kernel_exec_user_program(const char *program_name, char *const argv[])
 	DEBUG("VA of run_user_task_wrapper: 0x%x, USER_RUN_USER_TASK_WRAPPER_VA: 0x%x\r\n", run_user_task_wrapper, USER_RUN_USER_TASK_WRAPPER_VA);
 	DEBUG("VA of signal_handler_wrapper: 0x%x, USER_SIGNAL_WRAPPER_VA: 0x%x\r\n", signal_handler_wrapper, USER_SIGNAL_WRAPPER_VA);
 	DEBUG("VA of user sp: 0x%x", USER_STACK_BASE);
-	// JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA + (uint64_t)run_user_task_wrapper % PAGE_FRAME_SIZE, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
+	kernel_unlock_interrupt();
 	JUMP_TO_USER_SPACE(USER_RUN_USER_TASK_WRAPPER_VA, USER_CODE_BASE, USER_STACK_BASE, curr_thread->kernel_stack_bottom + KSTACK_SIZE - SP_OFFSET_FROM_TOP);
 	return 0;
 }
@@ -582,20 +607,54 @@ long kernel_read(int fd, void *buf, unsigned long count)
 	return vfs_read(file, buf, count);
 }
 
-int kernel_mkdir(const char *pathname, unsigned mode){
+int kernel_mkdir(const char *pathname, unsigned mode)
+{
 	return vfs_mkdir(curr_thread->pwd, pathname);
 }
 
-int kernel_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data){
+int kernel_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
+{
 	return vfs_mount(curr_thread->pwd, target, filesystem);
 }
 
-int kernel_chdir(const char *path){
+int kernel_chdir(const char *path)
+{
 	vnode_t *target;
-	if(vfs_lookup(curr_thread->pwd, path, &target) != 0){
+	if (vfs_lookup(curr_thread->pwd, path, &target) != 0)
+	{
 		return -1;
 	}
 	curr_thread->pwd = target;
+	return 0;
+}
+
+long kernel_lseek64(int fd, long offset, int whence)
+{
+	if (whence == SEEK_SET) // used for dev_framebuffer
+	{
+		curr_thread->file_descriptors_table[fd]->f_pos = offset;
+		return offset;
+	}
+	else // other is not supported
+	{
+		return -1;
+	}
+}
+
+extern unsigned int height;
+extern unsigned int isrgb;
+extern unsigned int pitch;
+extern unsigned int width;
+int kernel_ioctl(int fb, unsigned long request, void *info)
+{
+	if (request == 0) // used for get info (SPEC)
+	{
+		struct framebuffer_info *fb_info = info;
+		fb_info->height = height;
+		fb_info->isrgb = isrgb;
+		fb_info->pitch = pitch;
+		fb_info->width = width;
+	}
 	return 0;
 }
 

@@ -92,6 +92,7 @@ int init_dev_framebuffer()
 int dev_framebuffer_write(struct file *file, const void *buf, size_t len)
 {
     kernel_lock_interrupt();
+    // DEBUG("dev_framebuffer_write: len: %d, f_pos: %d\r\n", len, file->f_pos);
     if (len + file->f_pos > pitch * height)
     {
         WARNING("How come? dev_framebuffer_write to no where!\r\n");
@@ -105,6 +106,7 @@ int dev_framebuffer_write(struct file *file, const void *buf, size_t len)
 
 int dev_framebuffer_open(struct vnode *file_node, struct file **target)
 {
+    DEBUG("dev_framebuffer_open\r\n");
     (*target)->f_pos = 0;
     (*target)->vnode = file_node;
     (*target)->f_ops = &dev_framebuffer_operations;
@@ -119,6 +121,7 @@ int dev_framebuffer_close(struct file *file)
 
 int64_t dev_framebuffer_lseek64(struct file *file, int64_t offset, int whence)
 {
+    DEBUG("dev_framebuffer_lseek64: offset: %d, whence: %d\r\n", offset, whence);
     if (whence == SEEK_SET)
     {
         file->f_pos = offset;

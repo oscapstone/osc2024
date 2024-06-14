@@ -69,9 +69,9 @@ void init_rootfs()
 	vfs_mkdir(curr_vnode, "/dir2/dir3");
 	vfs_open(curr_vnode, "/dir2/test", O_CREAT, &file);
 
-	vfs_mkdir(curr_vnode, "/initramfs");
+	vfs_mkdir(curr_vnode, INITRAMFS_PATH);
 	register_initramfs();
-	vfs_mount(curr_vnode, "/initramfs", "initramfs");
+	vfs_mount(curr_vnode, INITRAMFS_PATH, "initramfs");
 
 	vfs_mkdir(curr_vnode, "/dev");
 	init_dev_framebuffer();
@@ -247,7 +247,7 @@ int vfs_write(struct file *file, const void *buf, size_t len)
 {
 	// 1. write len byte from buf to the opened file.
 	// 2. return written size or error code if an error occurs.
-	DEBUG("vfs_write: %s, len: %d, file: 0x%x, f_ops: 0x%x\r\n", buf, len, file, file->f_ops);
+	// DEBUG("vfs_write: %s, len: %d, file: 0x%x, f_ops: 0x%x\r\n", buf, len, file, file->f_ops);
 	return file->f_ops->write(file, buf, len);
 }
 
@@ -470,4 +470,18 @@ int get_pwd(char *buf)
 
 	buf[index] = '\0'; // Add null terminator to the end of the string
 	return 0;
+}
+
+struct file *duplicate_file_struct(struct file *file)
+{
+	if(file == NULL)
+	{
+		return NULL;
+	}
+	struct file *new_file = kmalloc(sizeof(struct file));
+	new_file->f_pos = file->f_pos;
+	new_file->flags = file->flags;
+	new_file->vnode = file->vnode;
+	new_file->f_ops = file->f_ops;
+	return new_file;
 }

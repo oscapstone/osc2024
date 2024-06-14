@@ -408,20 +408,12 @@ int do_cmd_exec(int argc, char **argv)
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    char *c_filedata;
-    unsigned int c_filesize;
-
-    int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
-    if (result == CPIO_TRAILER)
+    vnode_t *vnode;
+    if (vfs_lookup(curr_thread->pwd, filepath, &vnode) == -1)
     {
         puts("exec: ");
         puts(filepath);
         puts(": No such file or directory\r\n");
-        return -1;
-    }
-    else if (result == CPIO_ERROR)
-    {
-        puts("cpio parse error\r\n");
         return -1;
     }
 

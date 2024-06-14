@@ -8,11 +8,32 @@
 
 #define MAX_PATH_NAME 255
 #define MAX_FILE_NAME 20
-#define O_CREAT 00000100
+
+#define O_RDONLY 00
+#define O_WRONLY 01
+#define O_RDWR 02
+#define O_CREAT 0100
+#define O_APPEND 02000
+#define O_NONBLOCK 04000
+#define O_TRUNC 01000
+#define O_EXCL 0200
+
 #define SEEK_SET 0
 #define MAX_FS_REG 0x50
 #define MAX_DEV_REG 0x50
 #define MAX_NAME_BUF 1024
+
+#define FD_TABLE_COPY(dst, src)                                                                         \
+    do                                                                                                  \
+    {                                                                                                   \
+        for (int i = 0; i < 16; i++)                                                                    \
+        {                                                                                               \
+            if (src->file_descriptors_table[i] != NULL)                                                 \
+            {                                                                                           \
+                dst->file_descriptors_table[i] = duplicate_file_struct(src->file_descriptors_table[i]); \
+            }                                                                                           \
+        }                                                                                               \
+    } while (0)
 
 typedef int (*SetupMountFunc)(struct filesystem *fs, struct mount *superblock, struct vnode *parent, const char *name);
 
@@ -108,6 +129,7 @@ void init_rootfs();
 void init_thread_vfs(struct thread_struct *t);
 vnode_t *get_root_vnode();
 int get_pwd(char *buf);
+struct file *duplicate_file_struct(struct file *file);
 void vfs_test();
 char *get_absolute_path(char *path, char *curr_working_dir);
 

@@ -159,6 +159,8 @@ long tmpfs_lseek64(struct file *file, long offset, int whence)
 
 long tmpfs_getsize(struct vnode *vd)
 {
+	struct tmpfs_inode *inode = vd->internal;
+	return inode->datasize;
 }
 
 // vnode operations
