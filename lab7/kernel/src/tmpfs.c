@@ -246,7 +246,8 @@ int tmpfs_readdir(struct vnode *dir_node, const char name_array[])
 	{
 		child_vnode = ((vnode_list_t *)curr)->vnode;
 		DEBUG("tmpfs_readdir: child_vnode->name %s, child: 0x%x\r\n", child_vnode->name, child_vnode);
-		strcpy(name_array_start, child_vnode->name);
+		*name_array_start = child_vnode->type;
+		strcpy(++name_array_start, child_vnode->name);
 		name_array_start += strlen(child_vnode->name) + 1;
 	}
 

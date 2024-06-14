@@ -305,7 +305,20 @@ int do_cmd_ls(int argc, char **argv)
     while (!(buf[end_index] == 0 && buf[end_index + 1] == 0))
     {
         end_index += strlen(buf + start_index) + 1;
-        printf("%s ", buf + start_index);
+        switch (buf[start_index])
+        {
+        case FS_DIR:
+            printf(BBLU "%s " CRESET, buf + start_index + 1);
+            break;
+        case FS_FILE:
+            printf("%s ", buf + start_index + 1);
+            break;
+        case FS_DEV:
+            printf(BCYN "%s " CRESET, buf + start_index + 1);
+            break;
+        }
+
+        // printf("%s ", buf + start_index);
         start_index = end_index;
     }
     puts("\r\n");
