@@ -1,7 +1,7 @@
 #ifndef _DTB_H_
 #define _DTB_H_
 
-#define uint32_t unsigned int
+#include "stdint.h"
 
 // Structure block node token
 #define FDT_BEGIN_NODE  0x00000001

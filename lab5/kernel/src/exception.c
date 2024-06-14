@@ -5,9 +5,13 @@
 #include "utils.h"
 #include "timer.h"
 #include "memory.h"
+#include "sched.h"
 
-int curr_task_priority = 9999; // Small number has higher priority
-struct list_head *irqtask_list;
+int                 curr_task_priority = 9999; // Small number has higher priority
+struct              list_head *irqtask_list;
+extern list_head_t  *run_queue;
+extern int          done_sched_init;
+
 
 static unsigned long long lock_count = 0;
 
@@ -65,6 +69,7 @@ void el1h_irq_router() {
         unlock();
         irqtask_run_preemptive();
         core_timer_enable();
+        // if (done_sched_init) schedule();
     }   
     else {
         uart_puts("UNKNOWN el1h_irq_router\r\n");

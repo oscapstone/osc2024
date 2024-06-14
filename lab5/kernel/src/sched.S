@@ -25,6 +25,11 @@ get_current:
     mrs x0, tpidr_el1          // get the current thread id
     ret
 
+.global set_current
+set_current:
+    msr tpidr_el1, x0          // set the current thread context address
+    ret
+
 .global store_context
 store_context:
     stp x19, x20, [x0, 16 * 0]

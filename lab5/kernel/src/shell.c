@@ -13,7 +13,20 @@
 #define MAX_ARGS 10
 #define USER_STACK_SIZE 0x10000
 
-void* CPIO_DEFAULT_PLACE;
+void*   CPIO_DEFAULT_PLACE;
+char    input_buf[MAX_CMD_LEN];
+
+
+void cli_start_shell() {
+    cli_print_welcome_msg();
+
+    while (1) {
+		cli_clear_cmd(input_buf, MAX_CMD_LEN);
+		uart_puts("▬▬ι═══════- $ ");
+		cli_read_cmd(input_buf);
+		cli_exec_cmd(input_buf);
+	}
+}
 
 int cli_strcmp(const char* p1, const char* p2) {
     const unsigned char *s1 = (const unsigned char*) p1;

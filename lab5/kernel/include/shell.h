@@ -5,6 +5,7 @@
 #define MAX_CMD_LEN 32
 #define MAX_MSG_LEN 128
 
+void cli_start_shell();
 int  cli_strcmp(const char* p1, const char* p2);
 void cli_read_cmd(char* buf);
 void cli_exec_cmd(char* buf);

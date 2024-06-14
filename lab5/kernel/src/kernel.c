@@ -5,11 +5,12 @@
 #include "timer.h"
 #include "exception.h"
 #include "memory.h"
+#include "sched.h"
 
+extern thread_t *curr_thread;
+extern thread_t *threads[];
 
 void kernel_main(char* arg) {
-	char input_buf[MAX_CMD_LEN];
-
     dtb_init(arg);
 
 	uart_init();
@@ -21,13 +22,8 @@ void kernel_main(char* arg) {
 	irqtask_list_init();
     timer_list_init();
 
+	init_thread_sched();
 	el1_interrupt_enable();	
-	cli_print_welcome_msg();
 
-	while (1) {
-		cli_clear_cmd(input_buf, MAX_CMD_LEN);
-		uart_puts("▬▬ι═══════- $ ");
-		cli_read_cmd(input_buf);
-		cli_exec_cmd(input_buf);
-	}
+	load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
 }
