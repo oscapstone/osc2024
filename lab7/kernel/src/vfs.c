@@ -9,31 +9,43 @@
 #include "uart1.h"
 #include "initramfs.h"
 #include "sched.h"
+#include "syscall.h"
 
 extern thread_t *curr_thread;
 
 vnode_t *root_vnode;
 mount_t *root_mount;
 
-list_head_t *filesystems_list;
+filesystem_t *filesystems[MAX_FS_REG];
+dev_t *devs[MAX_DEV_REG];
+
+extern int framebuffer_dev_id;
 
 static inline filesystem_t *get_fs(const char *name)
 {
 	filesystem_t *fs;
-	list_head_t *pos;
-	list_for_each(pos, (list_head_t *)filesystems_list)
+	for (int i = 0; i < MAX_FS_REG; i++)
 	{
-		fs = (filesystem_t *)pos;
-		if (strcmp(fs->name, name) == 0)
+		fs = filesystems[i];
+		if (fs && strcmp(fs->name, name) == 0)
+		{
 			return fs;
+		}
 	}
 	return NULL;
 }
 
 void init_rootfs()
 {
-	filesystems_list = kmalloc(sizeof(filesystem_t));
-	INIT_LIST_HEAD((list_head_t *)filesystems_list);
+	for (int i = 0; i < MAX_FS_REG; i++)
+	{
+		filesystems[i] = NULL;
+	}
+	for (int i = 0; i < MAX_DEV_REG; i++)
+	{
+		devs[i] = NULL;
+	}
+
 	register_tmpfs();
 	filesystem_t *fs = get_fs("tmpfs");
 	root_mount = kmalloc(sizeof(mount_t));
@@ -47,10 +59,7 @@ void init_rootfs()
 	vfs_open(curr_vnode, "/test", O_CREAT, &file);
 	vfs_write(file, "hello world", 11);
 	vfs_open(curr_vnode, "/test1", O_CREAT, &file);
-	vfs_open(curr_vnode, "/test133", O_CREAT, &file);
-	vfs_open(curr_vnode, "/test122", O_CREAT, &file);
-	vfs_open(curr_vnode, "/test11111", O_CREAT, &file);
-	vfs_open(curr_vnode, "/t3t1", O_CREAT, &file);
+	vfs_open(curr_vnode, "test133", O_CREAT, &file);
 
 	vfs_mkdir(curr_vnode, "/dir1");
 	vfs_mkdir(curr_vnode, "/dir2");
@@ -60,6 +69,10 @@ void init_rootfs()
 	vfs_mkdir(curr_vnode, "/initramfs");
 	register_initramfs();
 	vfs_mount(curr_vnode, "/initramfs", "initramfs");
+
+	vfs_mkdir(curr_vnode, "/dev");
+	init_dev_framebuffer();
+	vfs_mknod(curr_vnode, "/dev/framebuffer", framebuffer_dev_id);
 }
 
 void init_thread_vfs(struct thread_struct *t)
@@ -136,8 +149,28 @@ vnode_t *create_vnode()
 
 int register_filesystem(struct filesystem *fs)
 {
-	list_add((list_head_t *)fs, (list_head_t *)filesystems_list);
-	return 0;
+	for (int i = 0; i < MAX_FS_REG; i++)
+	{
+		if (filesystems[i] == NULL)
+		{
+			filesystems[i] = fs;
+			return i;
+		}
+	}
+	return -1;
+}
+
+int register_dev(dev_t *dev)
+{
+	for (int i = 0; i < MAX_DEV_REG; i++)
+	{
+		if (devs[i] == NULL)
+		{
+			devs[i] = dev;
+			return 0;
+		}
+	}
+	return -1;
 }
 
 int vfs_open(struct vnode *dir_node, const char *pathname, int flags, struct file **target)
@@ -286,6 +319,18 @@ int vfs_mount(struct vnode *dir_node, const char *target, const char *filesystem
 		node->mount = kmalloc(sizeof(struct mount));
 		fs->setup_mount(fs, node->mount, node->parent, node->name);
 	}
+	return 0;
+}
+
+// for device operations only
+int vfs_mknod(struct vnode *dir_node, char *pathname, int id)
+{
+	dev_t *dev = devs[id];
+	file_t *f = kmalloc(sizeof(file_t));
+	// create leaf and its file operations
+	vfs_open(dir_node, pathname, O_CREAT, f);
+	f->f_ops = dev->f_ops;
+	vfs_close(f);
 	return 0;
 }
 

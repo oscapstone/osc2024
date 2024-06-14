@@ -22,4 +22,4 @@ int  dev_framebuffer_close(struct file *file);
 int64_t dev_framebuffer_lseek64(struct file *file, int64_t offset, int whence);
 int  dev_framebuffer_op_deny();
 
-#endif
+#endif /* _DEV_FRAMEBUFFER_H_ */

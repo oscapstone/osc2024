@@ -11,17 +11,8 @@
 #define O_CREAT 00000100
 #define SEEK_SET 0
 #define MAX_FS_REG 0x50
-#define MAX_DEV_REG 0x10
+#define MAX_DEV_REG 0x50
 #define MAX_NAME_BUF 1024
-
-typedef enum filesystem_id
-{
-    FS_ID_NONE = 0,
-    FS_ID_TMPFS,
-    FS_ID_INITRAMFS,
-    FS_ID_DEVFS,
-    FS_ID_MAX
-} filesystem_type_t;
 
 typedef int (*SetupMountFunc)(struct filesystem *fs, struct mount *superblock, struct vnode *parent, const char *name);
 
@@ -70,7 +61,6 @@ typedef struct mount
 
 typedef struct filesystem
 {
-    struct list_head list_head;
     const char *name;
     SetupMountFunc setup_mount;
 } filesystem_t;
@@ -85,6 +75,12 @@ typedef struct file_operations
     long (*getsize)(struct vnode *vd);
 } file_operations_t;
 
+typedef struct dev
+{
+    const char *name;
+    struct file_operations *f_ops;
+} dev_t;
+
 typedef struct vnode_operations
 {
     int (*lookup)(struct vnode *dir_node, struct vnode **target, const char *component_name);
@@ -96,7 +92,7 @@ typedef struct vnode_operations
 int register_filesystem(struct filesystem *fs);
 int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **target, size_t *start_idx);
 vnode_t *create_vnode();
-int register_dev(struct file_operations *fo);
+int register_dev(dev_t *dev);
 int vfs_open(struct vnode *dir_node, const char *pathname, int flags, struct file **target);
 int vfs_close(struct file *file);
 int vfs_write(struct file *file, const void *buf, size_t len);
@@ -104,7 +100,7 @@ int vfs_read(struct file *file, void *buf, size_t len);
 int vfs_mkdir(struct vnode *dir_node, const char *pathname);
 int vfs_mount(struct vnode *dir_node, const char *target, const char *filesystem);
 int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **target);
-int vfs_mknod(char *pathname, int id);
+int vfs_mknod(struct vnode *dir_node, char *pathname, int id);
 
 void init_rootfs();
 void init_thread_vfs(struct thread_struct *t);

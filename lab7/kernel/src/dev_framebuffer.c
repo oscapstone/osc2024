@@ -14,6 +14,7 @@
 //The following code is for mailbox initialize used in lab7.
 unsigned int width, height, pitch, isrgb; /* dimensions and channel order */
 unsigned char *lfb;                       /* raw frame buffer address */
+int framebuffer_dev_id = -1;
 
 struct file_operations dev_framebuffer_operations = {dev_framebuffer_write, (void *)dev_framebuffer_op_deny, dev_framebuffer_open, dev_framebuffer_close, dev_framebuffer_lseek64, (void *)dev_framebuffer_op_deny};
 
@@ -80,8 +81,12 @@ int init_dev_framebuffer()
     {
         ERROR("Unable to set screen resolution to 1024x768x32\n");
     }
+    dev_t *fb_dev = (dev_t *)kmalloc(sizeof(dev_t));
+    fb_dev->name = "framebuffer";
+    fb_dev->f_ops = &dev_framebuffer_operations;
+    framebuffer_dev_id = register_dev(fb_dev);
 
-    // return register_dev(&dev_framebuffer_operations);
+    return 0;
 }
 
 int dev_framebuffer_write(struct file *file, const void *buf, size_t len)
