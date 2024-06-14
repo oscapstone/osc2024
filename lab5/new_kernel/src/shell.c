@@ -199,11 +199,13 @@ void shell_clear(char *buffer, int len)
 }
 
 void shell()
-{
+{   
+    while(1){
     shell_clear(input_buffer, CMD_MAX_LEN);
     uart_puts("ヽ(▽ﾟ▽ﾟ)ノ >> \t");
     shell_cmd_read(input_buffer);
     shell_cmd_exe(input_buffer);
+    }
 }
 
 void shell_hello_world()

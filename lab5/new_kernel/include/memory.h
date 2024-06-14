@@ -76,7 +76,7 @@ void cache_info_dump();
 
 // lab 4 adv 2
 void *kmalloc(unsigned int size);
-void kfree(void *ptr);
+void kfree(void *ptr); // Adding at 6/13 for lab 5
 void memory_reserve(unsigned long long start,unsigned long long end);
 
 #endif

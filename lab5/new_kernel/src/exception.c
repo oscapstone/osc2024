@@ -107,7 +107,7 @@ void irqtask_run_preemptive()
 
         //搶佔的執行完畢 即可還原原本的執行模式
         curr_task_priority = prev_task_priority;
-        kfree(the_task);
+        kfree(the_task); // Adding at 6/13 for lab5 
         unlock();
     }
 }

@@ -7,6 +7,7 @@
 #define CMD_MAX_PARAM 10
 #define MSG_MAX_LEN 128
 #define USTACK_SIZE 0x10000
+#define KSTACK_SIZE 0x10000
 
 typedef struct CLI_CMDS
 {

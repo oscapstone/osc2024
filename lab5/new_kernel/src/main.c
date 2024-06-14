@@ -3,6 +3,7 @@
 #include "shell.h"
 #include "timer.h"
 #include "memory.h"
+#include "sched.h"
 
 extern char *__boot_loader_addr;
 extern unsigned long long __code_size;
@@ -12,7 +13,8 @@ char *_dtb;
 char *exceptionLevel;
 static int EL2_to_EL1_flag = 1;
 
-
+extern thread_t *curr_thread;
+extern thread_t *threads[];
 // x0 is for the parameter
 void main(char *arg)
 {
@@ -34,12 +36,12 @@ void main(char *arg)
     char input_buffer[10];
     shell_cmd_read(input_buffer);
     shell_banner();
+//  core_timer_enable();
 
+    init_thread_sched();
+    set_current_thread_context(&curr_thread->context);
+    load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
 
-    while (1)
-    {
-        shell();
-    }
 }
 void code_relocate(char *addr)
 {

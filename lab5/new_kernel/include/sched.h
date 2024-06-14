@@ -32,6 +32,7 @@ typedef struct cpu_context
 typedef enum thread_status
 {
     THREAD_IS_RUNNING = 0,
+    THREAD_IS_READY,
     THREAD_IS_BLOCKED,
     THREAD_IS_ZOMBIE
 } thread_status_t;
@@ -62,6 +63,7 @@ typedef struct thread_struct
 // Lab 5 Basic 1
 void init_thread_sched();
 void foo();
+thread_t *thread_create(char *name, void *code);
 
 void schedule();
 void idle();
