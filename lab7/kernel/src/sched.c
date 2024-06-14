@@ -318,13 +318,13 @@ void schedule()
 	switch_to(get_current_thread_context(), &(curr_thread->context));
 }
 
-int thread_insert_fd_to_table(file_t *file)
+int thread_insert_file_to_fdtable(thread_t *t, file_t *file)
 {
 	for(int i = 0; i < MAX_FD + 1; i++)
 	{
-		if(curr_thread->file_descriptors_table[i] == NULL)
+		if(t->file_descriptors_table[i] == NULL)
 		{
-			curr_thread->file_descriptors_table[i] = file;
+			t->file_descriptors_table[i] = file;
 			return i;
 		}
 	}

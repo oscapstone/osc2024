@@ -11,17 +11,17 @@
 
 #define MBOX_CH_PROP 8
 
-//The following code is for mailbox initialize used in lab7.
+// The following code is for mailbox initialize used in lab7.
 unsigned int width, height, pitch, isrgb; /* dimensions and channel order */
 unsigned char *lfb;                       /* raw frame buffer address */
-int framebuffer_dev_id = -1;
 
-struct file_operations dev_framebuffer_operations = {dev_framebuffer_write, (void *)dev_framebuffer_op_deny, dev_framebuffer_open, dev_framebuffer_close, dev_framebuffer_lseek64, (void *)dev_framebuffer_op_deny};
+const struct file_operations dev_framebuffer_operations = {dev_framebuffer_write, (void *)dev_framebuffer_op_deny, dev_framebuffer_open, dev_framebuffer_close, dev_framebuffer_lseek64, (void *)dev_framebuffer_op_deny};
+int framebuffer_dev_id = -1;
 
 // https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
 int init_dev_framebuffer()
 {
-    //The following code is for mailbox initialize used in lab7.
+    // The following code is for mailbox initialize used in lab7.
     pt[0] = 35 * 4;
     pt[1] = MBOX_TAG_REQUEST_CODE;
 
@@ -70,11 +70,11 @@ int init_dev_framebuffer()
     // the closest supported resolution instead
     if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((uint64_t)&pt)) && pt[20] == 32 && pt[28] != 0)
     {
-        pt[28] &= 0x3FFFFFFF; // convert GPU address to ARM address
-        width = pt[5];        // get actual physical width
-        height = pt[6];       // get actual physical height
-        pitch = pt[33];       // get number of bytes per line
-        isrgb = pt[24];       // get the actual channel order
+        pt[28] &= 0x3FFFFFFF;                                  // convert GPU address to ARM address
+        width = pt[5];                                         // get actual physical width
+        height = pt[6];                                        // get actual physical height
+        pitch = pt[33];                                        // get number of bytes per line
+        isrgb = pt[24];                                        // get the actual channel order
         lfb = PHYS_TO_KERNEL_VIRT((void *)((uint64_t)pt[28])); // raw frame buffer address
     }
     else

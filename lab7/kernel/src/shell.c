@@ -29,6 +29,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "ps", .help = "print all threads", .func = do_cmd_ps},
     {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS]", .func = do_cmd_setTimeout},
     {.command = "set2sAlert", .help = "set core timer interrupt every 2 second", .func = do_cmd_set2sAlert},
+    {.command = "write", .help = "write to a file", .func = do_cmd_write},
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
 };
 
@@ -458,5 +459,31 @@ int do_cmd_ps(int argc, char **argv)
         return -1;
     }
     dump_run_queue();
+    return 0;
+}
+
+int do_cmd_write(int argc, char **argv)
+{
+    char *filepath;
+    char *content;
+    if (argc == 2)
+    {
+        filepath = argv[0];
+        content = argv[1];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    file_t *file;
+    if (vfs_open(curr_thread->pwd, filepath, 0, &file) == -1)
+    {
+        puts("File not found\r\n");
+        return -1;
+    }
+    size_t size = strlen(content);
+    vfs_write(file, content, size);
+    vfs_close(file);
     return 0;
 }

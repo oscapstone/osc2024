@@ -546,7 +546,7 @@ int kernel_open(const char *pathname, int flags)
 	{
 		return -1;
 	}
-	int fd = thread_insert_fd_to_table(file);
+	int fd = thread_insert_file_to_fdtable(curr_thread, file);
 	if (fd == -1)
 	{
 		ERROR("sys_open: fd is full\r\n");

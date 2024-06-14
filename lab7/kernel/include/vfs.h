@@ -28,12 +28,14 @@ typedef enum fsnode_type
 
 typedef struct vnode
 {
-    struct mount *superblock; // Superblock        : represents mounted fs
-    struct mount *mount;      // Mount point       : represents mounted fs
-    struct vnode *parent;     // Parent directory  : represents parent directory
-    enum fsnode_type type;    // Type              : represents file type
-    char *name;               // Name              : represents file name
-    void *internal;           // vnode itself      : directly point to fs's vnode
+    struct mount *superblock;             // Superblock        : represents mounted fs
+    struct mount *mount;                  // Mount point       : represents mounted fs
+    struct vnode *parent;                 // Parent directory  : represents parent directory
+    const struct vnode_operations *v_ops; // inode & dentry Ops: represents kernel methods for vnode
+    const struct file_operations *f_ops;  // file Ops          : represents process methods for opened file
+    enum fsnode_type type;                // Type              : represents file type
+    char *name;                           // Name              : represents file name
+    void *internal;                       // vnode itself      : directly point to fs's vnode
 } vnode_t;
 
 typedef struct vnode_list
@@ -47,7 +49,7 @@ typedef struct file
 {
     struct vnode *vnode;
     size_t f_pos; // RW position of this file handle
-    struct file_operations *f_ops;
+    const struct file_operations *f_ops;
     int flags;
 } file_t;
 
@@ -55,8 +57,8 @@ typedef struct mount
 {
     struct vnode *root;
     struct filesystem *fs;
-    struct vnode_operations *v_ops; // inode & dentry Ops: represents kernel methods for vnode
-    struct file_operations *f_ops;  // file Ops          : represents process methods for opened file
+    const struct vnode_operations *v_ops; // inode & dentry Ops: represents kernel methods for vnode
+    const struct file_operations *f_ops;  // file Ops          : represents process methods for opened file
 } mount_t;
 
 typedef struct filesystem
@@ -78,7 +80,7 @@ typedef struct file_operations
 typedef struct dev
 {
     const char *name;
-    struct file_operations *f_ops;
+    const struct file_operations *f_ops;
 } dev_t;
 
 typedef struct vnode_operations

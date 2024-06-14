@@ -10,6 +10,8 @@
 #include "initramfs.h"
 #include "sched.h"
 #include "syscall.h"
+#include "dev_framebuffer.h"
+#include "dev_uart1.h"
 
 extern thread_t *curr_thread;
 
@@ -85,6 +87,17 @@ void init_thread_vfs(struct thread_struct *t)
 		t->file_descriptors_table[i] = NULL;
 	}
 	t->pwd = get_root_vnode();
+	file_t *file;
+
+	vfs_open(t->pwd, "/dev/uart1", 0, &file);
+	file->f_ops = get_stdin_ops();
+	thread_insert_file_to_fdtable(t, file);
+	vfs_open(t->pwd, "/dev/uart1", 0, &file);
+	file->f_ops = get_stdout_ops();
+	thread_insert_file_to_fdtable(t, file);
+	vfs_open(t->pwd, "/dev/uart1", 0, &file);
+	file->f_ops = get_stdout_ops();
+	thread_insert_file_to_fdtable(t, file);
 }
 
 vnode_t *get_root_vnode()
@@ -99,28 +112,28 @@ int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **targ
 	{
 		if (len >= 3 && strncmp(path, "../", 3) == 0)
 		{
-			DEBUG("handling_relative_path: path is ../, *target: 0x%x\r\n", curr_vnode->parent);
+			// DEBUG("handling_relative_path: path is ../, *target: 0x%x\r\n", curr_vnode->parent);
 			*target = curr_vnode->parent;
 			*start_idx = 3;
 			return 1;
 		}
 		else if (len == 2 && strncmp(path, "..", 3) == 0)
 		{
-			DEBUG("handling_relative_path: path is .., *target: 0x%x\r\n", curr_vnode->parent);
+			// DEBUG("handling_relative_path: path is .., *target: 0x%x\r\n", curr_vnode->parent);
 			*target = curr_vnode->parent;
 			*start_idx = 2;
 			return 0;
 		}
 		else if (len >= 2 && strncmp(path, "./", 2) == 0)
 		{
-			DEBUG("handling_relative_path: path is ./, *target: 0x%x\r\n", curr_vnode);
+			// DEBUG("handling_relative_path: path is ./, *target: 0x%x\r\n", curr_vnode);
 			*target = curr_vnode;
 			*start_idx = 2;
 			return 1;
 		}
 		else if (len == 1 && (strncmp(path, ".", 1) == 0 || strncmp(path, "/", 1) == 0))
 		{
-			DEBUG("handling_relative_path: path is . or /, *target: 0x%x\r\n", curr_vnode);
+			// DEBUG("handling_relative_path: path is . or /, *target: 0x%x\r\n", curr_vnode);
 			*target = curr_vnode;
 			*start_idx = 1;
 			return 0;
@@ -130,10 +143,10 @@ int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **targ
 	{
 		*target = curr_vnode;
 		*start_idx = 0;
-		DEBUG("handling_relative_path: path is empty, *target: 0x%x\r\n", *target);
+		// DEBUG("handling_relative_path: path is empty, *target: 0x%x\r\n", *target);
 		return 0;
 	}
-	DEBUG("handling_relative_path: path is %s, *target: 0x%x\r\n", path, curr_vnode);
+	// DEBUG("handling_relative_path: path is %s, *target: 0x%x\r\n", path, curr_vnode);
 	*start_idx = 0;
 	*target = curr_vnode;
 	return 0;
@@ -169,8 +182,9 @@ int register_dev(dev_t *dev)
 	{
 		if (devs[i] == NULL)
 		{
+			DEBUG("register_dev: %s, id: %d, dev: 0x%x\r\n", dev->name, i, dev);
 			devs[i] = dev;
-			return 0;
+			return i;
 		}
 	}
 	return -1;
@@ -208,13 +222,15 @@ int vfs_open(struct vnode *dir_node, const char *pathname, int flags, struct fil
 		}
 		// create a new file node on node, &node is new file, 3rd arg is filename
 		DEBUG("create file: %s, node: 0x%x\r\n", pathname + last_slash_idx + 1, node);
-		node->superblock->v_ops->create(node, &node, pathname + last_slash_idx + 1);
+		node->v_ops->create(node, &node, pathname + last_slash_idx + 1);
 	}
 	*target = kmalloc(sizeof(struct file));
 	// attach opened file on the new node
 	DEBUG("open file %s\r\n", pathname);
-	node->superblock->f_ops->open(node, target);
+	node->f_ops->open(node, target);
 	(*target)->flags = flags;
+	(*target)->f_pos = 0;
+	DEBUG("vfs_open: %s, file: 0x%x, f_ops: 0x%x\r\n", pathname, *target, (*target)->f_ops);
 	return 0;
 }
 
@@ -222,6 +238,7 @@ int vfs_close(struct file *file)
 {
 	// 1. release the file handle
 	// 2. Return error code if fails
+	DEBUG("vfs_close: file: 0x%x, f_ops: 0x%x\r\n", file, file->f_ops);
 	file->f_ops->close(file);
 	return 0;
 }
@@ -230,6 +247,7 @@ int vfs_write(struct file *file, const void *buf, size_t len)
 {
 	// 1. write len byte from buf to the opened file.
 	// 2. return written size or error code if an error occurs.
+	DEBUG("vfs_write: %s, len: %d, file: 0x%x, f_ops: 0x%x\r\n", buf, len, file, file->f_ops);
 	return file->f_ops->write(file, buf, len);
 }
 
@@ -253,7 +271,7 @@ int vfs_readdir(struct vnode *dir_node, const char *pathname, const char buf[])
 	}
 	else
 	{
-		node->superblock->v_ops->readdir(node, buf);
+		node->v_ops->readdir(node, buf);
 		return 0;
 	}
 }
@@ -293,7 +311,7 @@ int vfs_mkdir(struct vnode *dir_node, const char *pathname)
 	}
 	struct vnode *new_node;
 	DEBUG("vfs_mkdir: new_dir_name: %s\r\n", new_dir_name);
-	node->superblock->v_ops->mkdir(node, &new_node, new_dir_name);
+	node->v_ops->mkdir(node, &new_node, new_dir_name);
 	new_node->type = FS_DIR;
 	return 0;
 }
@@ -331,8 +349,13 @@ int vfs_mknod(struct vnode *dir_node, char *pathname, int id)
 	dev_t *dev = devs[id];
 	file_t *f = kmalloc(sizeof(file_t));
 	// create leaf and its file operations
-	vfs_open(dir_node, pathname, O_CREAT, f);
-	f->f_ops = dev->f_ops;
+	vfs_open(dir_node, pathname, O_CREAT, &f);
+	DEBUG("vfs_mknod: %s, id: %d, dev: 0x%x, f_ops: 0x%x\r\n", pathname, id, dev, f->f_ops);
+	f->vnode->f_ops = dev->f_ops;
+	f->vnode->type = FS_DEV;
+	f->vnode->internal = dev;
+	f->vnode->v_ops = NULL;
+	DEBUG("vfs_mknod: %s, id: %d, dev: 0x%x, file: 0x%x, f_ops: 0x%x, dev->f_ops: 0x%x\r\n", pathname, id, dev, f, f->vnode->f_ops, dev->f_ops);
 	vfs_close(f);
 	return 0;
 }
@@ -342,7 +365,7 @@ static inline int __vfs_lookup_depth_1(char *component_name, vnode_t *node, vnod
 	// if fs's v_ops error, return -1
 	if (strlen(component_name) != 0) // if component_name is empty, skip
 	{
-		if (node->superblock->v_ops->lookup(node, &node, component_name) != 0)
+		if (node->v_ops->lookup(node, &node, component_name) != 0)
 		{
 			DEBUG("vfs_lookup: lookup error\r\n");
 			return -1;
@@ -382,19 +405,19 @@ int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **targ
 	// deal with directory
 	do
 	{
-		DEBUG("vfs_lookup: i: %d, c_idx: %d, pathname[i]: %c\r\n", i, comp_len, pathname[i]);
+		// DEBUG("vfs_lookup: i: %d, c_idx: %d, pathname[i]: %c\r\n", i, comp_len, pathname[i]);
 		while (handling_relative_path(pathname + i, node, &node, &offset)) // if path is relative
 		{
 			i += offset;
-			DEBUG("i: %d, offset: %d\r\n", i, offset);
+			// DEBUG("i: %d, offset: %d\r\n", i, offset);
 		}
 		i += offset;
-		DEBUG("i: %d, offset: %d\r\n", i, offset);
+		// DEBUG("i: %d, offset: %d\r\n", i, offset);
 		if (pathname[i - 1] == '/' && pathname[i] == '\0')
 			break;
 		if (pathname[i] == '/' || pathname[i] == '\0')
 		{
-			DEBUG("in if pathname[i] == / or \0\r\n");
+			// DEBUG("in if pathname[i] == / or \0\r\n");
 			component_name[comp_len++] = 0;
 			if (__vfs_lookup_depth_1(component_name, node, &node) == -1)
 			{

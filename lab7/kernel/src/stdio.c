@@ -1,16 +1,23 @@
 #include "uart1.h"
 #include "stdio.h"
 #include "stdint.h"
+#include "vfs.h"
+#include "syscall.h"
 
 char getchar()
 {
-	char c = uart_async_recv();
+	char buf[2] = {0};
+	kernel_read(0, buf, 1);
+	// char c = uart_async_recv();
+	char c = buf[0];
 	return c == '\r' ? '\n' : c;
 }
 
 void putchar(char c)
 {
-	uart_async_send(c);
+	char buf[2] = {c, '\0'};
+	kernel_write(1, buf, 1);
+	// uart_async_send(c);
 }
 
 void puts(const char *s)

@@ -103,7 +103,7 @@ void thread_exit();
 void thread_exit_by_pid(int64_t pid);
 int8_t has_child(thread_t *thread);
 thread_t *thread_create(void *start, char *name);
-int thread_insert_fd_to_table(struct file *file);
+int thread_insert_file_to_fdtable(thread_t *t,struct file *file);
 int thread_get_file_struct_by_fd(int fd, struct file **file);
 void dump_run_queue();
 void recursion_run_queue(thread_t *root, int64_t level);
