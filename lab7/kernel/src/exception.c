@@ -308,12 +308,12 @@ __getpid_label:
     return;
 
 __uart_read_label:
-    DEBUG("sys_uart_read\r\n");
+    // DEBUG("sys_uart_read\r\n");
     tpf->x0 = sys_uart_read(tpf, (char *)tpf->x0, tpf->x1);
     return;
 
 __uart_write_label:
-    DEBUG("sys_uart_write\r\n");
+    // DEBUG("sys_uart_write\r\n");
     tpf->x0 = sys_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
     // DEBUG("writer size: %d\r\n", tpf->x0);
     return;

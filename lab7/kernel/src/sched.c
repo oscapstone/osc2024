@@ -226,11 +226,7 @@ void schedule_timer()
 	uint64_t cntfrq_el0;
 	__asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0));
 	// 32 * default timer -> trigger next schedule timer
-#if _DEBUG >= LEVEL_INFO
-	add_timer_by_tick(cntfrq_el0 >> 2, adapter_schedule_timer, NULL);
-#else
 	add_timer_by_tick(cntfrq_el0 >> 5, adapter_schedule_timer, NULL);
-#endif
 	need_to_schedule = 1;
 }
 
@@ -315,10 +311,10 @@ void schedule()
 	do
 	{
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
+		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 	curr_thread->status = THREAD_RUNNING;
-	DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
-	DEBUG("lock_counter: %d\n", lock_counter);
+	// DEBUG("lock_counter: %d\n", lock_counter);
 	// uint64_t ttbr0_el1_value;
 	// asm volatile("mrs %0, ttbr0_el1" : "=r"(ttbr0_el1_value));
 	// DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
