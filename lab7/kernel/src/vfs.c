@@ -83,24 +83,28 @@ int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **targ
 	{
 		if (len >= 3 && strncmp(path, "../", 3) == 0)
 		{
+			DEBUG("handling_relative_path: path is ../, *target: 0x%x\r\n", curr_vnode->parent);
 			*target = curr_vnode->parent;
 			*start_idx = 3;
 			return 1;
 		}
 		else if (len == 2 && strncmp(path, "..", 3) == 0)
 		{
+			DEBUG("handling_relative_path: path is .., *target: 0x%x\r\n", curr_vnode->parent);
 			*target = curr_vnode->parent;
 			*start_idx = 2;
 			return 0;
 		}
 		else if (len >= 2 && strncmp(path, "./", 2) == 0)
 		{
+			DEBUG("handling_relative_path: path is ./, *target: 0x%x\r\n", curr_vnode);
 			*target = curr_vnode;
 			*start_idx = 2;
 			return 1;
 		}
 		else if (len == 1 && (strncmp(path, ".", 1) == 0 || strncmp(path, "/", 1) == 0))
 		{
+			DEBUG("handling_relative_path: path is . or /, *target: 0x%x\r\n", curr_vnode);
 			*target = curr_vnode;
 			*start_idx = 1;
 			return 0;
@@ -109,9 +113,12 @@ int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **targ
 	else
 	{
 		*target = curr_vnode;
+		*start_idx = 0;
 		DEBUG("handling_relative_path: path is empty, *target: 0x%x\r\n", *target);
 		return 0;
 	}
+	DEBUG("handling_relative_path: path is %s, *target: 0x%x\r\n", path, curr_vnode);
+	*start_idx = 0;
 	*target = curr_vnode;
 	return 0;
 }
