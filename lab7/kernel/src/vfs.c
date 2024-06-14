@@ -20,6 +20,7 @@ filesystem_t *filesystems[MAX_FS_REG];
 dev_t *devs[MAX_DEV_REG];
 
 extern int framebuffer_dev_id;
+extern int uart1_dev_id;
 
 static inline filesystem_t *get_fs(const char *name)
 {
@@ -73,6 +74,8 @@ void init_rootfs()
 	vfs_mkdir(curr_vnode, "/dev");
 	init_dev_framebuffer();
 	vfs_mknod(curr_vnode, "/dev/framebuffer", framebuffer_dev_id);
+	init_dev_uart1();
+	vfs_mknod(curr_vnode, "/dev/uart1", uart1_dev_id);
 }
 
 void init_thread_vfs(struct thread_struct *t)
