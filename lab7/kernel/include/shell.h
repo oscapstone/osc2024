@@ -1,7 +1,7 @@
 #ifndef _SHELL_H_
 #define _SHELL_H_
 
-#define CLI_MAX_CMD 14
+#define CLI_MAX_CMD 15
 #define CMD_MAX_LEN 32
 #define CMD_MAX_PARAM 10
 #define MSG_MAX_LEN 128
@@ -37,5 +37,6 @@ int do_cmd_setTimeout(int argc, char **argv);
 int do_cmd_set2sAlert(int argc, char **argv);
 int do_cmd_ps(int argc, char **argv);
 int do_cmd_write(int argc, char **argv);
+int do_cmd_mkdir(int argc, char **argv);
 
 #endif /* _SHELL_H_ */
