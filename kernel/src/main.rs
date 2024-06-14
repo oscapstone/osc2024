@@ -17,6 +17,7 @@ mod scheduler;
 mod syscall;
 mod thread;
 mod timer;
+mod vfs;
 
 use allocator::buddy::BUDDY_SYSTEM;
 use stdio::{debug, gets, print, println};
@@ -26,7 +27,7 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
-    commands::execute(b"exec vm.img");
+    // commands::execute(b"exec vm.img");
     kernel_shell();
 }
 
@@ -72,6 +73,7 @@ fn buddy_init() {
     }
     buddy_reserve_memory();
     unsafe {
+        BUDDY_SYSTEM.initialized = true;
         BUDDY_SYSTEM.print_info();
     }
 }

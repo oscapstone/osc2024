@@ -1,6 +1,5 @@
 mod buddy;
 mod cat;
-mod echo;
 mod exec;
 mod hello;
 mod help;
@@ -38,8 +37,6 @@ pub fn execute(command: &[u8]) {
         cat::exec(&command);
     } else if args[0] == "exec" {
         exec::exec(args);
-    } else if args[0] == "echo" {
-        echo::exec(&command);
     } else if args[0] == "setTimeOut" {
         set_time_out::exec(&command);
     } else if args[0] == "buddy" {
