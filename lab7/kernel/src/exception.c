@@ -101,7 +101,7 @@ void el0_sync_router(trapframe_t *tpf){
     */
 
     // Lab5 Basic #3
-    // el1_interrupt_enable(); // Allow UART input during exception
+    el1_interrupt_enable(); // Allow UART input during exception
     unsigned long long syscall_no = tpf->x8;
     switch( syscall_no ){
         case 0:
