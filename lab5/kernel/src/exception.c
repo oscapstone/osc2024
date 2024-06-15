@@ -39,6 +39,10 @@ void print_currentEL(){
     }
 }
 
+void print_lock() {
+    uart_puts("[*] Locks: %d", lock_count);
+}
+
 // DAIF, Interrupt Mask Bits
 void el1_interrupt_enable() {
     __asm__ __volatile__("msr daifclr, 0xf"); // umask all DAIF
