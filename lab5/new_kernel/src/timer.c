@@ -132,12 +132,65 @@ void core_timer_intr_handler()
     uart_puts("Core timer interrupt ");
     put_int(2);
 
-    //for (int i = 0; i < 100000000; i++)
+    // for (int i = 0; i < 100000000; i++)
     //{
-       // i++;
-     //   i--;
-   // } // pi
+    //  i++;
+    //   i--;
+    // } // pi
     uart_puts(" seconeds\n");
 
     add_timer(core_timer_intr_handler, 2, "null");
+}
+
+void delay()
+{
+    for (int i = 0; i < 100000000; i++)
+    {
+    }
+}
+void add_timer_by_tick(uint64_t tick, void *callback, void *args_struct)
+{
+    // DEBUG("add_timer_by_tick: %d\r\n", tick);
+    timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
+    // store all the related information in timer_event
+    the_timer_event->args = args_struct;
+    the_timer_event->interrupt_time = get_tick_plus_s(tick);
+    // DEBUG("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
+    the_timer_event->callback = callback;
+    INIT_LIST_HEAD(&the_timer_event->listhead);
+
+    // add the timer_event into timer_event_list (sorted)
+    struct list_head *curr;
+    list_for_each(curr, timer_event_list)
+    {
+        if (((timer_event_t *)curr)->interrupt_time > the_timer_event->interrupt_time)
+        {
+            list_add(&the_timer_event->listhead, curr->prev); // add this timer at the place just before the bigger one (sorted)
+            break;
+        }
+    }
+    // if the timer_event is the biggest, run this code block
+    if (list_is_head(curr, timer_event_list))
+    {
+        list_add_tail(&the_timer_event->listhead, timer_event_list);
+    }
+
+    // DEBUG_BLOCK({
+    //     struct list_head *tmp;
+    //     uart_puts("---------------------- list for each ----------------------\r\n");
+    //     list_for_each(tmp, timer_event_list)
+    //     {
+    //         if (((timer_event_t *)tmp)->callback == adapter_timer_set2sAlert)
+    //             uart_puts("adapter_timer_set2sAlert: ");
+    //         else if (((timer_event_t *)tmp)->callback == adapter_schedule_timer)
+    //             uart_puts("adapter_schedule_timer: ");
+    //         else
+    //             uart_puts("default: ");
+    //         uart_puts("timer_event: 0x%x, timer_event->next: 0x%x, timer_event->prev: 0x%x, timer_event->interrupt_time: %d\r\n", tmp, tmp->next, tmp->prev, ((timer_event_t *)tmp)->interrupt_time);
+    //     }
+    //     uart_puts("--------------------------- end ---------------------------\r\n");
+    // });
+    // set interrupt to first event
+    set_core_timer_interrupt_by_tick(((timer_event_t *)timer_event_list->next)->interrupt_time);
+    core_timer_enable();
 }

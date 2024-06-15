@@ -64,6 +64,8 @@ typedef struct thread_struct
 void init_thread_sched();
 void foo();
 thread_t *thread_create(char *name, void *code);
+void schedule_timer();
+
 
 void schedule();
 void idle();

@@ -243,15 +243,15 @@ int timerup = 0;
 
 void uart_w_irq_handler()
 {
-
-	unlock();
-    if (*CORE0_TIMER_IRQ_CTRL &= 1)
-    {
-        for (int i = 0; i < 1000000000; i++)
-        {
-        };
-    };
-    lock();
+    // for Lab 3 Premmptive
+	// unlock();
+    // if (*CORE0_TIMER_IRQ_CTRL &= 1)
+    // {
+    //     for (int i = 0; i < 1000000000; i++)
+    //     {
+    //     };
+    // };
+    // lock();
     lock();
     if (uart_tx_buffer_ridx == uart_tx_buffer_widx)
     {

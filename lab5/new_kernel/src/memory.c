@@ -1,508 +1,463 @@
 #include "memory.h"
-#include "cpio.h"
+#include "mbox.h"
 #include "mini_uart.h"
 #include "utility.h"
-#include "stdint.h"
+#include "exception.h"
 
-static page_frame_t *frame_array;
-static list_head_t frame_freelist[FRAME_MAX_IDX];
-static list_head_t cache_list[CACHE_IDX_FINAL + 1];
+// Address           0k    4k    8k    12k   16k   20k   24k   28k   32k   36k   40k   44k   48k   52k   56k   60k
+//                   ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+// Frame Array(val)  │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <0> │  0  │  1  │ <F> │  2  │ <F> │ <F> │ <F> │
+//                   └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+// index                0     1     2     3     4     5     6     7     8     9    10    11    12    13    14    15
+//
+// val >=0: frame is free, size = 2^val * 4k
 
-extern unsigned long long __begin;
-extern unsigned long long __end;
-extern unsigned long long __bss_start;
-extern unsigned long long __bss_end;
-extern unsigned long long __heap_top;
-extern unsigned long long __heap_bottom;
-extern unsigned long long __stack_top;
+#define F_FRAME_VAL -1 // This frame is free, but it belongs to a larger contiguous memory block.
+// #define X_FRAME_VAL -2 // This frame is already allocated.
 
-static inline page_frame_t *phy_addr_to_frame(void *ptr)
+extern unsigned char __heap_top;
+extern char __begin;
+extern char __end;
+ char *CPIO_START = 0x80000000;
+ char *CPIO_END =   0x81000000;
+
+static unsigned char *khtop_ptr = &__heap_top;
+static long memory_size;
+static long max_frame;
+static frame_t *frame_array;
+static list_head_t *frame_freelist[MAX_VAL + 1];
+static list_head_t *cache_freelist[MAX_ORDER + 1];
+
+/*
+ * val to number of frame
+ */
+static inline long val_to_num_of_frame(int8_t val)
 {
-    return (page_frame_t *)&frame_array[(unsigned long)(ptr - BUDDY_SYSTEM_BASE) / PAGE_SIZE];
+    return 1 << val;
 }
-static inline void *frame_to_phy_addr(page_frame_t *pg_t)
+
+static inline long frame_to_index(frame_t *frame)
 {
-    return BUDDY_SYSTEM_BASE + PAGE_SIZE * pg_t->idx;
+    return (long)((frame_t *)frame - frame_array);
 }
+
+static inline frame_t *phy_addr_to_frame(void *ptr)
+{
+    return (frame_t *)&frame_array[(unsigned long)ptr / PAGE_FRAME_SIZE];
+}
+
+static inline void *frame_addr_to_phy_addr(frame_t *frame)
+{
+    return (void *)(frame_to_index(frame) * PAGE_FRAME_SIZE);
+}
+
+static inline frame_t *find_end_frame_of_block(frame_t *start_frame, int8_t val)
+{
+    return start_frame + val_to_num_of_frame(val) - 1;
+}
+
+static inline frame_t *index_to_frame(long index)
+{
+    return &frame_array[index];
+}
+
+static inline frame_t *cache_to_frame(void *ptr)
+{
+    return phy_addr_to_frame(ptr);
+}
+
+static inline long cache_to_index(void *ptr)
+{
+    frame_t *frame = cache_to_frame(ptr);
+    return ((unsigned long)ptr - (unsigned long)frame) / (1 << (BASE_ORDER + frame->order));
+}
+
+static inline long order_to_size(int8_t order)
+{
+    return 1 << (BASE_ORDER + order);
+}
+
+static inline long get_buddy_index(char val, long index)
+{
+    // XOR(val, index)
+    return index ^ val_to_num_of_frame(val);
+}
+
+static inline frame_t *get_buddy_frame(char val, frame_t *frame)
+{
+    // XOR(val, index)
+    return &(frame_array[get_buddy_index(val, frame_to_index(frame))]);
+}
+
+static void *startup_malloc(long size)
+{
+    // -> khtop_ptr
+    //               header 0x10 bytes                   block
+    // ┌──────────────────────┬────────────────┬──────────────────────┐
+    // │  fill zero 0x8 bytes │ size 0x8 bytes │ size padding to 0x16 │
+    // └──────────────────────┴────────────────┴──────────────────────┘
+    //
+    // DEBUG("begin khtop_ptr: 0x%x\n", khtop_ptr);
+    void *sp;
+    asm("mov %0, sp" : "=r"(sp));
+    // 0x10 for heap_block header
+    unsigned char *r = khtop_ptr + 0x10;
+    // size paddling to multiple of 0x10
+    size = 0x10 + size - size % 0x10;
+    *(unsigned long *)(r - 0x8) = size;
+    khtop_ptr += size;
+    return r;
+}
+
+static void startup_free(void *ptr)
+{
+    // TBD
+}
+
+static int page_insert(char val, frame_t *frame)
+{
+
+    list_add((list_head_t *)frame, frame_freelist[(long)val]);
+    return 0;
+}
+
+static int allocate_frame_buddy(int begin_frame, int count, char val)
+{
+    int size = val_to_num_of_frame(val);
+    for (long i = 0; i < count; i++)
+    {
+        int curr_buddy = begin_frame + size * i;
+        frame_array[curr_buddy].val = val;
+        for (long j = 1; j < size; j++)
+            frame_array[curr_buddy + j].val = F_FRAME_VAL;
+        list_add_tail((list_head_t *)index_to_frame(curr_buddy), frame_freelist[(long)val]);
+    }
+    return 0;
+}
+
+static int allocate_frame()
+{
+
+    memory_size = 0x3B400000;
+
+    max_frame = memory_size / PAGE_FRAME_SIZE;                                                                                                                    // each frame is 4KB
+    //("memory_size: 0x%x, max_frame: 0x%x, frame_size: %d, list_head size: %d, int8_t size: %d, unsigned char size: %d\n", memory_size, max_frame, sizeof(frame_t)); // 24 Bytes
+    frame_array = (frame_t *)startup_malloc(max_frame * sizeof(frame_t));                                                                                         // in 0x3C000000 Bytes Ram, array size is 0x5A0030 Bytes
+    int begin_frame = 0;
+    for (long i = MAX_VAL; i >= 0; i--)
+    {
+        frame_freelist[i] = (list_head_t *)startup_malloc(sizeof(list_head_t));
+        INIT_LIST_HEAD(frame_freelist[i]);
+        int count = (max_frame - begin_frame) / (1 << i);
+        allocate_frame_buddy(begin_frame, count, i);
+        begin_frame += count * (1 << i);
+    }
+    return 0;
+}
+
 void init_memory_space()
 {
-    // it seems that I have to allocate a space for this frame_array
+    allocate_frame();
+    init_cache();
 
-    frame_array = heap_malloc(BUDDY_SYSTEM_PAGE_COUNT * sizeof(page_frame_t));
-    uart_hex(frame_array);
-    uart_puts("\r\n");
+    memory_reserve((long)&__begin, (long)&__end);
 
-    // First, initial the linked-list for each order size
-    for (int i = FRAME_IDX_0; i <= FRAME_IDX_FINAL; i++)
-    {
-        INIT_LIST_HEAD(&frame_freelist[i]);
-    }
-    uart_puts("\n[1] Frame Freelist Init !\n");
-    pg_info_dump();
-
-    for (int i = CACHE_IDX_0; i <= CACHE_IDX_FINAL; i++)
-    {
-        INIT_LIST_HEAD(&cache_list[i]);
-    }
-    uart_puts("[2] Cache List Init !!\n");
-    cache_info_dump();
-
-    // Subquentently, initial frame array
-
-    for (int i = 0; i < BUDDY_SYSTEM_PAGE_COUNT; i++)
-    {
-        if (i % (1 << FRAME_IDX_FINAL) == 0)
-        {
-            frame_array[i].order = FRAME_IDX_FINAL;
-            frame_array[i].status = FREE;
-        }
-        else
-        {
-            frame_array[i].order = FRAME_IDX_FINAL;
-            frame_array[i].status = isBelonging;
-        }
-        INIT_LIST_HEAD(&frame_array[i].listhead);
-        //  Finally, set each page frame a index number
-        frame_array[i].idx = i;
-        frame_array[i].cache_order = CACHE_NONE;
-
-        // add init frame (FRAME_IDX_FINAL) into freelist
-        if (i % (1 << FRAME_IDX_FINAL) == 0)
-        {
-            list_add(&frame_array[i].listhead, &frame_freelist[FRAME_IDX_FINAL]);
-        }
-    }
-    uart_puts("[3] Page Frame Array Init !!!\n");
-    pg_info_dump();
-
-    uart_puts("[4] Memory Reserve Spin tables for multicore boot\n");
-    memory_reserve(0x0000, 0x1000);
-    pg_info_dump();
-
-    uart_puts("[5] Memory Reserve Kernel image in the physical memory\n");
-    memory_reserve(&__begin, &__end);
-    pg_info_dump();
-
-    uart_puts("[6] Memory Reserve Your simple allocator\n");
-    memory_reserve(&__heap_top, &__stack_top);
-    pg_info_dump();
-
-    uart_puts("[7] Memory Reserve Initramfs\n");
-    memory_reserve(CPIO_PLACE, CPIO_PLACE + 0x1000);
-
-    pg_info_dump();
+    memory_reserve((long)CPIO_START, (long)CPIO_END);
 }
 
-void *page_alloc(unsigned int size)
+void init_cache()
 {
-    // pg_info_dump();
-    /*給一個size，開始去便利所有order找到位於哪兩個order之間 設 x < size < y，
-    檢查order y的freelist有無空間
-
-    有：
-
-    沒有：
-
-        */
-    // uart_puts("[+] Page Allocate \r\n");
-    int order;
-    for (int i = FRAME_IDX_0; i <= FRAME_IDX_FINAL; i++)
+    for (long i = MAX_ORDER; i >= 0; i--)
     {
-        if (size <= (PAGE_SIZE << i))
-        {
-            order = i;
-            // uart_puts("[+] This malloc acquires ");
-            // put_int(order);
-            // uart_puts(" page frame. \r\n");
-            break;
-        }
-
-        if (i == FRAME_MAX_IDX)
-        {
-            // uart_puts(" [!] Request size out of memory in page malloc \r\n");
-            return (void *)0;
-        }
-    }
-
-    int target_order = order;
-    page_frame_t *target_frame_ptr;
-    if (list_empty(&frame_freelist[target_order]))
-    {
-        target_frame_ptr = split_to_target_freelist(target_order);
-    }
-    else
-    {
-        target_frame_ptr = frame_freelist[target_order].next;
-    }
-
-    // 將此快page frame設為allocated
-    if (target_frame_ptr != 1)
-    {
-        // 不能切的情況再說
-    }
-    target_frame_ptr->status = Allocated;
-
-    // uart_puts("Here the page start :");
-    // uart_hex(target_frame_ptr);
-    // uart_puts("\r\n");
-
-    list_del_entry(target_frame_ptr);
-    // pg_info_dump();
-    return frame_to_phy_addr(target_frame_ptr);
-};
-page_frame_t *split_to_target_freelist(int order)
-{
-    // uart_puts("[+] Split !!\r\n");
-    int available_order = -1;
-    // 給好一塊page frame之後，將page frame包到的page frame從對應order的free list刪除
-    for (int i = order; i <= FRAME_MAX_IDX; i++)
-    {
-        if (!list_empty(&frame_freelist[i]))
-        {
-            available_order = i;
-            break;
-        }
-    }
-    if (available_order == -1)
-    {
-        return (void *)1; // define magic number
-    }
-
-    page_frame_t *target_frame_ptr;
-    target_frame_ptr = (page_frame_t *)frame_freelist[available_order].next;
-    list_del_entry((struct list_head *)target_frame_ptr);
-    for (int j = available_order; j > order; j--)
-    {
-        target_frame_ptr->order--;
-        page_frame_t *buddy_frame_ptr = find_buddy(target_frame_ptr);
-        list_add(buddy_frame_ptr, &frame_freelist[j - 1]);
-        buddy_frame_ptr->status = FREE;
-        buddy_frame_ptr->order = j - 1;
-    }
-    // put_int(target_frame_ptr->order);
-    return target_frame_ptr;
-}
-
-void page_free(void *ptr)
-{
-    // pg_info_dump();
-    // uart_puts("[+] Free a frame which order is ");
-    // put_int(phy_addr_to_frame(ptr)->order);
-    // uart_puts("\r\n");
-    page_frame_t *pg_ptr = phy_addr_to_frame(ptr);
-    while (buddy_can_merge(pg_ptr))
-    {
-        pg_ptr = merge(pg_ptr);
-    }
-    pg_ptr->status = FREE;
-    // 指到指定區塊 將指向的page frame status設定為 FREE
-    // 將此區塊加回去對應大小的free list
-    list_add(&pg_ptr->listhead, &frame_freelist[pg_ptr->order]);
-    // pg_info_dump();
-};
-
-page_frame_t *find_buddy(page_frame_t *pg_ptr)
-{
-    return &frame_array[pg_ptr->idx ^ (1 << pg_ptr->order)];
-};
-enum results buddy_can_merge(page_frame_t *pg_ptr)
-{
-
-    if (pg_ptr->order == FRAME_IDX_FINAL)
-    {
-        return Fault;
-    }
-    page_frame_t *buddy_ptr = find_buddy(pg_ptr);
-
-    // 如果 buddy 和 page不同 order 不可以合併
-    // 如果buddy 被allocated 不可以合併
-
-    if (buddy_ptr->order != pg_ptr->order || buddy_ptr->status == Allocated)
-    {
-        // uart_puts("buddy can't merge\r\n");
-        return Fault;
-    }
-    // uart_puts("buddy can merge \r\n");
-    return Success;
-}
-page_frame_t *merge(page_frame_t *pg_ptr)
-{
-    // 從pg ptr 找出他的buddy
-    page_frame_t *buddy_ptr = find_buddy(pg_ptr);
-
-    list_del_entry(buddy_ptr);
-    // uart_puts("[+] Merge ~~\r\n");
-
-    page_frame_t *target_ptr;
-    // 如果可以合併 pg 和 buddy 取最小的address作為放進freelist
-    if (pg_ptr > buddy_ptr)
-    {
-        target_ptr = buddy_ptr;
-        // 右側的page frame->status = isBelonging
-        pg_ptr->status = isBelonging;
-    }
-    else
-    {
-        target_ptr = pg_ptr;
-        buddy_ptr->status = isBelonging;
-    }
-
-    // 左側的page frame->status = FREE
-    // 左側的page frame->order = 原本order + 1
-    // 左側的page frame 加入到freelist
-    target_ptr->status = FREE;
-    // put_int(target_ptr->order);
-    target_ptr->order++;
-
-    return target_ptr;
-};
-
-void pg_info_dump()
-{
-    uart_puts("\n|-------------------------------Page Info--------------------------------|\r\n");
-    uart_puts("|    order|     amout|    freelist|       loca1|       loca2|       loca3|\r\n");
-    for (int i = FRAME_IDX_0; i <= FRAME_IDX_FINAL; i++)
-    {
-        uart_puts("|        ");
-        put_int(i);
-
-        uart_puts("|");
-        int listSize = list_size(&frame_freelist[i]);
-        // put_int(listSize);
-        for (int i = 10000000000; i > listSize + 1; i = i / 10)
-        {
-            uart_puts(" ");
-            // put_int(i);
-        }
-        put_int(list_size(&frame_freelist[i]));
-
-        uart_puts("|    ");
-        uart_hex(&frame_freelist[i]);
-        uart_puts("|    ");
-        uart_hex((frame_freelist[i].next));
-        uart_puts("|    ");
-        uart_hex((frame_freelist[i].next)->next);
-        uart_puts("|    ");
-        uart_hex(((frame_freelist[i].next)->next)->next);
-
-        uart_puts("|\r\n");
-    }
-    uart_puts("|------------------------------End Page Info-----------------------------|\r\n");
-    uart_puts("\r\n");
-}
-
-void *cache_alloc(unsigned int size)
-{
-    //  看要給多大的cache，
-    // cache_info_dump();
-    // uart_puts("[+] Cache Allocate \r\n");
-    int order;
-    for (int i = CACHE_IDX_0; i <= CACHE_IDX_FINAL; i++)
-    {
-        if (size <= (CACHE_SIZE << i))
-        {
-            order = i;
-            // uart_puts("[+] This malloc acquires ");
-            // put_int(order);
-            // uart_puts(" cache size. \r\n");
-            break;
-        }
-    }
-
-    int target_order = order;
-    if (list_empty(&cache_list[target_order]))
-    {
-        // uart_puts("[+] Need a Page ~\r\n");
-        page_to_cache_pool(target_order);
-    }
-    list_head_t *target_cache_ptr = cache_list[target_order].next;
-    page_frame_t *target_cache_pg = phy_addr_to_frame(target_cache_ptr);
-    target_cache_pg->cache_used_count--;
-    // uart_puts("[=] The cache start : ");
-    // uart_hex(cache_list[target_order].next);
-    list_del_entry(target_cache_ptr);
-    // cache_info_dump();
-
-    return target_cache_ptr;
-}
-
-void page_to_cache_pool(int cache_order)
-{
-    // assign a page frame for seperating into cache pool
-    char *page = page_alloc(PAGE_SIZE);
-    // uart_puts("page start for cache : ");
-    // uart_hex(page);
-    // uart_puts("\r\n");
-    page_frame_t *page_for_cache = phy_addr_to_frame(page);
-    page_for_cache->cache_order = cache_order;
-    // uart_puts("page_for_cache : ");
-    // uart_hex(page_for_cache);
-    // uart_puts("\r\n");
-
-    int cache_start = frame_to_phy_addr(page_for_cache);
-    // uart_puts("cache_size : ");
-    // uart_hex(cache_start);
-    // uart_puts("\r\n");
-
-    int cache_size = (CACHE_SIZE << cache_order);
-    // uart_puts("cache_size : ");
-    // uart_hex(cache_size);
-    // uart_puts("\r\n");
-
-    for (int i = 0; i < PAGE_SIZE; i += cache_size)
-    {
-        // uart_puts("[!] Current Cache ptr : ");
-        // uart_hex(i);
-        // uart_puts("\r\n");
-        list_head_t *chunk = (list_head_t *)(cache_start + i);
-        // uart_puts("[*] Here the chunk start :");
-        // uart_hex(chunk);
-        // uart_puts("\r\n");
-        list_add(chunk, &cache_list[cache_order]);
-    }
-    page_for_cache->cache_used_count = PAGE_SIZE / cache_size;
-}
-void cache_free(void *cache_ptr)
-{
-    // cache_info_dump();
-
-    list_head_t *free_cache_ptr = (list_head_t *)cache_ptr;
-    page_frame_t *cache_pg_frame = &frame_array[((unsigned long long)cache_ptr - BUDDY_SYSTEM_BASE) >> 12];
-    int cache_size_order = cache_pg_frame->cache_order;
-    list_add(free_cache_ptr, &cache_list[cache_size_order]);
-    cache_pg_frame->cache_used_count++;
-
-    // uart_puts("[-] Free a cache ~ which cacher order is ");
-    // put_int(cache_size_order);
-    // uart_puts("\r\n");
-
-    int cache_used_count = cache_pg_frame->cache_used_count;
-    int cache_size = (1 << (cache_pg_frame->cache_order + 4));
-    if (cache_used_count * cache_size == PAGE_SIZE)
-    {
-        // uart_hex(frame_to_phy_addr(cache_pg_frame));
-        // uart_puts("\r\nThe Cache list of order ");
-        // put_int(cache_pg_frame->cache_order);
-        // uart_puts(" has ");
-        // put_int(cache_used_count);
-        // uart_puts(" elements.\r\n");
-
-        for (int i = 0; i < cache_used_count; i++)
-        {
-            // if (!list_is_head(&cache_list[cache_size_order], cache_list[cache_size_order].next))
-            // {
-            //     list_del_entry(cache_list[cache_size_order].next);
-            // }
-            list_del_entry((list_head_t *)((void *)frame_to_phy_addr(cache_pg_frame) + i * cache_size));
-        }
-
-        cache_pg_frame->cache_order = CACHE_NONE;
-        cache_pg_frame->cache_used_count = 0;
-        
-        // pg_info_dump();
-        // uart_puts("[+] Cache merge into Page ~ \r\n");
-        // uart_hex(frame_to_phy_addr(cache_pg_frame));
-        page_free(frame_to_phy_addr(cache_pg_frame));
-        // pg_info_dump();
-    }
-
-    // cache_info_dump();
-}
-
-void cache_info_dump()
-{
-    uart_puts("\n|=============================Cache Info================================|\r\n");
-    uart_puts("|                             order|amout                               |\r\n");
-    uart_puts("|=======================================================================|\r\n");
-    for (int i = CACHE_IDX_0; i <= CACHE_IDX_FINAL; i++)
-    {
-        uart_puts("|                                 ");
-        put_int(i);
-        uart_puts("|");
-        put_int(list_size(&cache_list[i]));
-
-        int listSize = list_size(&cache_list[i]);
-        if (listSize <10){
-            uart_puts("                                   |\r\n");
-        } else if (listSize >= 10 && listSize < 100){
-            uart_puts("                                  |\r\n");
-        } else if (listSize >=100 ){
-            uart_puts("                                 |\r\n");
-        }
-    }
-    uart_puts("|============================End Cache Info=============================|\r\n");
-    uart_puts("\r\n");
-}
-
-void memory_reserve(unsigned long long start, unsigned long long end)
-{
-    // 把 start 和 end地址 去對齊 PAGESIZE的倍數
-    unsigned long long padding_start = start - start % PAGE_SIZE;
-    unsigned long long padding_end = end % PAGE_SIZE ? end + PAGE_SIZE - (end % PAGE_SIZE) : end; // ceiling (align 0x1000)
-
-    uart_puts("[$] Memory Reserve: Start from 0x");
-    uart_hex(padding_start);
-    uart_puts(" to the End 0x");
-    uart_hex(padding_end);
-    uart_puts("\r\n");
-
-    // delete page from free list  not by myself yet
-    for (int order = FRAME_IDX_FINAL; order >= 0; order--)
-    {
-        list_head_t *pos;
-
-        list_for_each(pos, &frame_freelist[order])
-        {
-            unsigned long long pagestart = frame_to_phy_addr(pos); //((page_frame_t *)pos)->idx * PAGE_SIZE + BUDDY_SYSTEM_BASE;
-            unsigned long long pageend = pagestart + (PAGE_SIZE << order);
-
-            if (padding_start <= pagestart && padding_end >= pageend) // if page all in reserved memory -> delete it from freelist
-            {
-                ((page_frame_t *)pos)->status = Allocated;
-                list_del_entry(pos);
-            }
-            else if (padding_start >= pageend || padding_end <= pagestart) // no intersection
-            {
-                continue;
-            }
-            else // partial intersection, separate the page into smaller size.
-            {
-                list_del_entry(pos);
-                list_head_t *temppos = pos->prev;
-                // 剩下的去切 然後Allocated 重複到完全被貼完畢
-                split_to_target_freelist(order - 1); //???
-                pos = temppos;
-            }
-        }
-    }
-};
-
-void *kmalloc(unsigned int size){
-    void * ptr;
-    if (size >= PAGE_SIZE){
-        ptr = page_alloc(size);
-        return ptr;
-    } else if (size < PAGE_SIZE){
-        ptr = cache_alloc(size);
-        return ptr;
+        cache_freelist[i] = (list_head_t *)startup_malloc(sizeof(list_head_t));
+        INIT_LIST_HEAD(cache_freelist[i]);
     }
 }
 
-void kfree(void *ptr){
-    // while(1){};
+void *kmalloc(long size)
+{
     lock();
-    page_frame_t *frame = phy_addr_to_frame(ptr);
+    if (size >= PAGE_FRAME_SIZE / 2)
+    {
+        void *ptr = page_malloc(size);
+        // DEBUG("use page_malloc: ptr: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, phy_addr_to_frame(ptr)->order, phy_addr_to_frame(ptr)->cache_used_count, phy_addr_to_frame(ptr)->val);
+        unlock();
+        return ptr;
+    }
+    int8_t order = 0;
+    while (order_to_size(order) < size)
+    {
+        order++;
+    }
+    // DEBUG("kmalloc: size: 0x%x, order: %d, cache_size: 0x%x\n", size, order, order_to_size(order));
+    struct list_head *curr;
+    if (!list_empty(cache_freelist[(long)order])) // find the exact size
+    {
+        curr = cache_freelist[(long)order]->next;
+        list_del_entry(curr);
+        curr->next = curr->prev = curr;
+        phy_addr_to_frame(curr)->cache_used_count++;
+        // DEBUG("kmalloc: find the exact size, cache address: 0x%x, frame->cache_used_count: %d, frame->val: %d, frame address: 0x%x\n", curr, phy_addr_to_frame(curr)->cache_used_count, phy_addr_to_frame(curr)->val, phy_addr_to_frame(curr));
+        unlock();
+        return (void *)curr;
+    }
 
-    if (frame->cache_order == CACHE_NONE){
+    void *ptr = page_malloc(PAGE_FRAME_SIZE);
+    frame_t *frame = phy_addr_to_frame(ptr);
+    // DEBUG("kmalloc: split a new frame, ptr address: 0x%x\n", ptr);
+    frame->order = order;
+    frame->cache_used_count = 1;
+    long order_size = order_to_size(order);
+    for (long i = 1; i < PAGE_FRAME_SIZE / order_size; i++)
+    {
+        list_add((list_head_t *)(ptr + i * order_size), cache_freelist[(long)order]);
+    }
+    unlock();
+    return ptr;
+}
+
+void kfree(void *ptr)
+{
+    lock();
+    frame_t *frame = cache_to_frame(ptr);
+    // DEBUG("kfree: address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
+    if (frame->order == NOT_CACHE)
+    {
+        // DEBUG("kfree: page_free: 0x%x\n", ptr);
         page_free(ptr);
         unlock();
         return;
-    } else {
-        cache_free(ptr);
+    }
+    frame->cache_used_count--;
+    // DEBUG("kfree: cache address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
+    long order_size = order_to_size(frame->order);
+    list_add((list_head_t *)ptr, cache_freelist[(long)frame->order]);
+    if (frame->cache_used_count == 0)
+    {
+        // DEBUG("kfree: cache_used_count == 0, free frame: 0x%x\n", frame);
+        // DEBUG("remove the cache with the same frame from freelist\r\n");
+        for (long i = 0; i < PAGE_FRAME_SIZE / order_size; i++)
+        {
+            list_del_entry((list_head_t *)((void *)frame_addr_to_phy_addr(frame) + i * order_size));
+        }
+        frame->order = NOT_CACHE;
+        page_free(ptr);
         unlock();
         return;
     }
-
+    // DEBUG("kfree: cache_used_count != 0, add to cache_freelist: 0x%x\n", ptr);
+    // DEBUG("add finish\r\n");
     unlock();
     return;
+}
+
+void block(){
+
+}
+
+int memory_reserve(long start, long end)
+{
+    long start_index = start / PAGE_FRAME_SIZE;                                    // align
+    long end_index = end / PAGE_FRAME_SIZE + (end % PAGE_FRAME_SIZE == 0 ? 0 : 1); // padding
+    // split the start frame to fit the start address
+    frame_t *start_frame = index_to_frame(start_index);
+    frame_t *end_frame = index_to_frame(end_index);
+    long curr_index = start_index;
+    //("start reserve: start_index: (0x%x, 0x%x), end_index: (0x%x, 0x%x)\n", start_index, frame_addr_to_phy_addr(start_frame), end_index, frame_addr_to_phy_addr(end_frame));
+
+    while (index_to_frame(curr_index)->val == F_FRAME_VAL)
+    {
+        curr_index--;
+    }
+    while (curr_index <= end_index)
+    {
+        frame_t *curr_frame = index_to_frame(curr_index);
+        if (list_empty((list_head_t *)curr_frame))
+        {
+            while (1)
+                ;
+        }
+        if (curr_index < start_index) // split when curr_index is before start_index
+        {
+            //("curr_index is before start_index, curr_index: (0x%x, 0x%x), start_index: (0x%x, 0x%x)\n", curr_index, frame_addr_to_phy_addr(curr_frame), start_index, frame_addr_to_phy_addr(start_frame));
+            long split_val = curr_frame->val - 1;
+            long buddy_index = get_buddy_index(split_val, curr_index);
+            frame_t *buddy_frame = index_to_frame(buddy_index);
+            curr_frame->val = split_val;
+            buddy_frame->val = split_val;
+            list_del_entry((list_head_t *)curr_frame);
+            page_insert(split_val, curr_frame);
+            page_insert(split_val, buddy_frame);
+            if (buddy_index <= start_index)
+            {
+                //("curr_index = buddy_index, buddy_index: (0x%x, 0x%x), buddy_index->val: %d\n", buddy_index, frame_addr_to_phy_addr(buddy_frame), buddy_frame->val);
+                curr_index = buddy_index;
+            }
+        }
+        else if (start_index <= curr_index && curr_index + val_to_num_of_frame(curr_frame->val) - 1 <= end_index) // all frame is in the range
+        {
+            //("reserve frame: (0x%x -> 0x%x), curr_frame->val: %d\n", frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), curr_frame->val);
+            list_del_entry((list_head_t *)curr_frame);
+            curr_index += val_to_num_of_frame(curr_frame->val);
+        }
+        else if (start_index <= curr_index && end_index < curr_index + val_to_num_of_frame(curr_frame->val) - 1) // split when frame is over end_index
+        {
+            //("curr_index is over end_index, curr_index: %d, end_index: %d, curr->val: %d, curr: (0x%x -> 0x%x), end: (0x%x)\n", curr_index, end_index, curr_frame->val, frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), frame_addr_to_phy_addr(end_frame));
+            long split_val = curr_frame->val - 1;
+            long buddy_index = get_buddy_index(split_val, curr_index);
+            frame_t *buddy_frame = index_to_frame(buddy_index);
+            curr_frame->val = split_val;
+            buddy_frame->val = split_val;
+            //("split: (0x%x -> 0x%x), buddy: (0x%x -> 0x%x)\n", frame_addr_to_phy_addr(curr_frame), frame_addr_to_phy_addr(curr_frame + val_to_num_of_frame(curr_frame->val)), frame_addr_to_phy_addr(buddy_frame), frame_addr_to_phy_addr(buddy_frame + val_to_num_of_frame(buddy_frame->val)));
+            list_del_entry((list_head_t *)curr_frame);
+            page_insert(split_val, curr_frame);
+            page_insert(split_val, buddy_frame);
+        }
+        else
+        {
+            while (1)
+                ;
+        }
+    }
+
+    //("end reserve: (0x%x -> 0x%x)\n", frame_addr_to_phy_addr(start_frame), frame_addr_to_phy_addr(end_frame + 1));
+    block();
+    uart_puts("fdsafd");
+    return 0;
+}
+
+long get_memory_size()
+{
+    return 0x3c000000;
+}
+
+
+/**
+ * page_malloc - allocate a page frame by size
+ * @size: the size of the declaration in bytes.
+ * return: the address of the page frame
+ */
+void *page_malloc(long size)
+{
+    lock();
+    int8_t val = 0;
+    while (val_to_num_of_frame(val) * PAGE_FRAME_SIZE < size)
+    {
+        val++;
+    }
+    frame_t *frame = get_free_frame(val);
+    if (frame == 1) // can't find the frame to allocate
+    {
+        unlock();
+        return 0;
+    }
+    frame->val = val;
+    frame->order = NOT_CACHE;
+    frame->cache_used_count = 0;
+    unlock();
+    return frame_addr_to_phy_addr(frame);
+}
+
+frame_t *get_free_frame(int val)
+{
+    list_head_t *curr;
+    long index = -1;
+    if (!list_empty(frame_freelist[(long)val])) // find the exact size
+    {
+        curr = frame_freelist[(long)val]->next;
+    }
+    else
+    {
+        curr = split_frame(val);
+        if(curr == 1){
+            return 1;
+        }
+    }
+    index = frame_to_index((frame_t *)curr);
+    list_del_entry(curr);
+    curr->next = curr->prev = curr;
+    return curr;
+}
+
+/**
+ * Split the frame
+ * we want val=2, upper_val=4
+ * j=4
+ * 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  4  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * 　
+ * j=3         　                                  ↓
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  4  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * ↑↑↑↑↑  change this frame to val=3
+ *
+ * j=2                                             ↓
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  4  │ <F> │ <F> │ <F> │  2  │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * ↑↑↑↑↑  change this frame to val=2
+ *
+ * finish split, get first frame and set val=2     ↓
+ * ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+ * │  2  │ <F> │ <F> │ <F> │  2  │ <F> │ <F> │ <F> │  3  │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │ <F> │
+ * └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+ * ↑↑↑↑↑  return this frame
+ */
+frame_t *split_frame(int8_t val)
+{
+    struct list_head *curr;
+    long index = -1;
+    int8_t upper_val = val + 1;
+    while (upper_val <= MAX_VAL) // find upper size of frame
+    {
+        if (!list_empty(frame_freelist[(long)upper_val]))
+            break;
+        upper_val++;
+    }
+    if(upper_val > MAX_VAL){
+        return 1;
+    }
+
+    curr = frame_freelist[(long)upper_val]->next;
+
+    for (long j = upper_val; j > val; j--) // second half frame
+    {
+        frame_t *buddy = get_buddy_frame(j - 1, (frame_t *)curr);
+        buddy->val = j - 1;
+        page_insert(j - 1, buddy);
+    }
+    return curr;
+}
+
+int page_free(void *ptr)
+{
+    lock();
+    frame_t *curr = phy_addr_to_frame(ptr);
+    int8_t val = curr->val;
+    curr->val = F_FRAME_VAL;
+    // int new_val = val;
+    while (val < MAX_VAL)
+    {
+        frame_t *buddy = get_buddy_frame(val, curr);
+        if (frame_to_index(buddy) >= max_frame - 1 || buddy->val != val || list_empty((list_head_t *)buddy))
+        {
+            break;
+        }
+        list_del_entry((list_head_t *)buddy); // buddy is free and be able to merge
+        // uart_puts("val: %2d, merge: address(0x%x, 0x%x), frame(0x%x, 0x%x)\n", val, frame_addr_to_phy_addr((frame_t *)curr), frame_addr_to_phy_addr((frame_t *)buddy), curr, buddy);
+
+        buddy->val = F_FRAME_VAL;
+        curr->val = F_FRAME_VAL;
+        curr = curr < buddy ? curr : buddy;
+        curr->val = ++val;
+        // val++;
+    }
+    curr->val = val;
+    // uart_puts("curr address: 0x%x, curr->prev address: 0x%x, curr->next address: 0x%x\n", frame_addr_to_phy_addr(curr), frame_addr_to_phy_addr(curr->listhead.prev), frame_addr_to_phy_addr(curr->listhead.next));
+    page_insert(val, curr);
+    unlock();
+    return 0;
 }

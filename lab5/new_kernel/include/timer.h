@@ -1,5 +1,6 @@
 #include "rpi_base.h"
 #include "utility.h"
+#include "stdint.h"
 
 
 #ifndef _TIMER_H
@@ -44,6 +45,7 @@ void core_timer_intr_handler();
 //我們需要有一個queue去存計時器的個數
 //定時器事件結構
 
+void add_timer_by_tick(uint64_t tick, void *callback, void *args_struct);
 void add_timer(void *callback, unsigned long long timeout, char* args);
 void timer_event_callback(timer_event_t * timer_event);
 unsigned long long get_tick_plus_s(unsigned long long second);
@@ -52,6 +54,7 @@ void set_core_timer_interrupt_by_tick(unsigned long long tick);
 void timer_set2sAlert(char* str);
 void timer_list_init();
 int  timer_list_get_size();
+void delay();
 
 
 

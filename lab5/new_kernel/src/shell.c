@@ -21,15 +21,15 @@ struct CLI_CMDS cmd_list[11] = {
     {.command = "hello", .help = "print Hello World!", .func = shell_hello_world},
     {.command = "help", .help = "print all available commands", .func = shell_help},
     {.command = "info", .help = "get device information via mailbox", .func = shell_info},
-    {.command = "malloc", .help = "test kmalloc", .func = shell_malloc},
-    {.command = "pageDump", .help = "page Dump", .func = shell_page_dump},
-    {.command = "pageAlloc", .help = "page Allocate", .func = shell_page_alloc},
-    {.command = "cacheAlloc", .help = "cache Allocate", .func = shell_cache_alloc},
-    {.command = "ls", .help = "list directory contents", .func = shell_ls},
     {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS]", .func = shell_setTimeout},
     {.command = "2sTimer", .help = "set core timer interrupt every 2 second", .func = shell_2sTimer},
     {.command = "timer", .help = "turn on timer", .func = shell_timer},
     {.command = "reboot", .help = "reboot the device", .func = shell_reboot},
+    {.command = "ls", .help = "list directory contents", .func = shell_ls},
+    {.command = "malloc", .help = "test kmalloc", .func = shell_malloc},
+    {.command = "pageDump", .help = "page Dump", .func = shell_page_dump},
+    {.command = "pageAlloc", .help = "page Allocate", .func = shell_page_alloc},
+    {.command = "cacheAlloc", .help = "cache Allocate", .func = shell_cache_alloc},
 };
 
 int shell_cmd_strcmp(const char *p1, const char *p2)
@@ -422,102 +422,102 @@ void shell_malloc()
 }
 void shell_page_dump()
 {
-    pg_info_dump();
+    // pg_info_dump();
 }
 
 void shell_page_alloc()
 {   
 
-    char *c_test1 = cache_alloc(0x800);
-    // uart_puts("\n[~] C_test 1 address: ");
-    // uart_hex(c_test1);
-    // uart_puts("\r\n");
+    // char *c_test1 = cache_alloc(0x800);
+    // // uart_puts("\n[~] C_test 1 address: ");
+    // // uart_hex(c_test1);
+    // // uart_puts("\r\n");
 
-    char *p_test1 = page_alloc(0x1000);
-    // uart_puts("[~] P_test 1 address: ");
-    // uart_hex(p_test1);
-    // uart_puts("\r\n");
+    // char *p_test1 = page_alloc(0x1000);
+    // // uart_puts("[~] P_test 1 address: ");
+    // // uart_hex(p_test1);
+    // // uart_puts("\r\n");
 
-    // while(1){
+    // // while(1){
 
-    // }
-    char *test1 = page_alloc(0x4000);
-    // uart_puts("[~] test 1 address: ");
-    // uart_hex(test1);
-    // uart_puts("\r\n");
+    // // }
+    // char *test1 = page_alloc(0x4000);
+    // // uart_puts("[~] test 1 address: ");
+    // // uart_hex(test1);
+    // // uart_puts("\r\n");
 
-    char *test2 = page_alloc(0x2000);
-    // uart_puts("[~] test 2 address: ");
-    // uart_hex(test2);
-    // uart_puts("\r\n");
+    // char *test2 = page_alloc(0x2000);
+    // // uart_puts("[~] test 2 address: ");
+    // // uart_hex(test2);
+    // // uart_puts("\r\n");
 
-    char *c_test2 = cache_alloc(0x100);
-    // uart_puts("\n[~] C_test 2 address: ");
-    // uart_hex(c_test2);
-    // uart_puts("\r\n");
+    // char *c_test2 = cache_alloc(0x100);
+    // // uart_puts("\n[~] C_test 2 address: ");
+    // // uart_hex(c_test2);
+    // // uart_puts("\r\n");
 
-    char *c_test3 = cache_alloc(0x100);
-    // uart_puts("\n[~] C_test 2 address: ");
-    // uart_hex(c_test3);
-    // uart_puts("\r\n");
+    // char *c_test3 = cache_alloc(0x100);
+    // // uart_puts("\n[~] C_test 2 address: ");
+    // // uart_hex(c_test3);
+    // // uart_puts("\r\n");
 
-    char *test3 = page_alloc(0x10000);
-    // uart_puts("[~] test 3 address: ");
-    // uart_hex(test3);
-    // uart_puts("\r\n");
-    char *test4 = page_alloc(0x8000);
+    // char *test3 = page_alloc(0x10000);
+    // // uart_puts("[~] test 3 address: ");
+    // // uart_hex(test3);
+    // // uart_puts("\r\n");
+    // char *test4 = page_alloc(0x8000);
 
-    char *test5 = page_alloc(0x10000);
+    // char *test5 = page_alloc(0x10000);
 
-    page_free(p_test1);
+    // page_free(p_test1);
 
-    page_free(test1);
+    // page_free(test1);
 
-    page_free(test3);
+    // page_free(test3);
 
-    page_free(test4);
-    page_free(test5);
+    // page_free(test4);
+    // page_free(test5);
 
-    char *test6 = page_alloc(0x1000);
+    // char *test6 = page_alloc(0x1000);
 
-    cache_free(c_test1);
-    cache_free(c_test3);
-    cache_free(c_test2);
+    // cache_free(c_test1);
+    // cache_free(c_test3);
+    // cache_free(c_test2);
 }
 void shell_cache_alloc(){
 
 
-    char *c_test1 = cache_alloc(0x800);
-    // uart_puts("\n[~] C_test 1 address: ");
-    // uart_hex(c_test1);
-    // uart_puts("\r\n");
+    // char *c_test1 = cache_alloc(0x800);
+    // // uart_puts("\n[~] C_test 1 address: ");
+    // // uart_hex(c_test1);
+    // // uart_puts("\r\n");
 
 
 
-    char *c_test2 = cache_alloc(0x100);
-    // uart_puts("\n[~] C_test 2 address: ");
-    // uart_hex(c_test2);
-    // uart_puts("\r\n");
+    // char *c_test2 = cache_alloc(0x100);
+    // // uart_puts("\n[~] C_test 2 address: ");
+    // // uart_hex(c_test2);
+    // // uart_puts("\r\n");
 
-    char *c_test3 = cache_alloc(0x100);
-    // uart_puts("\n[~] C_test 2 address: ");
-    // uart_hex(c_test3);
-    // uart_puts("\r\n");
-    char *c_test4 = cache_alloc(552);
-    char *c_test5 = cache_alloc(1254);
-    char *c_test6 = cache_alloc(55);
-    char *c_test7 = cache_alloc(16);
-    char *c_test8 = cache_alloc(16);
-
-
-    cache_free(c_test8);
-    cache_free(c_test7);
+    // char *c_test3 = cache_alloc(0x100);
+    // // uart_puts("\n[~] C_test 2 address: ");
+    // // uart_hex(c_test3);
+    // // uart_puts("\r\n");
+    // char *c_test4 = cache_alloc(552);
+    // char *c_test5 = cache_alloc(1254);
+    // char *c_test6 = cache_alloc(55);
+    // char *c_test7 = cache_alloc(16);
+    // char *c_test8 = cache_alloc(16);
 
 
+    // cache_free(c_test8);
+    // cache_free(c_test7);
 
 
 
-    cache_free(c_test1);
-    cache_free(c_test3);
-    cache_free(c_test2);
+
+
+    // cache_free(c_test1);
+    // cache_free(c_test3);
+    // cache_free(c_test2);
 }

@@ -25,10 +25,7 @@ void *heap_malloc(unsigned int size)
 
     return r;
 }
-void free(void *ptr)
-{
-    // TBD
-}
+
 
 unsigned long long strlen(const char *str)
 {

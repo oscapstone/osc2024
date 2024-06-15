@@ -10,7 +10,6 @@ char uart_get();
 void put_int(int num);
 void put_currentEL(void);
 int  uart_sendline(char* fmt, ...);
-int  uart_putss(char* fmt, ...);
 
 void uart_flush_FIFO();
 int is_uart_rx_buffer_full();

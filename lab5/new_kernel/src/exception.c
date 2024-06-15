@@ -5,9 +5,11 @@
 #include "rpi_gpio.h"
 #include "mini_uart.h"
 #include "utility.h"
+#include "stdint.h"
 #include "exception.h"
 #include "memory.h"
 
+extern int8_t need_to_schedule;
 struct list_head *task_list;
 unsigned long long int lock_counter = 0;
 
@@ -32,7 +34,7 @@ void unlock()
     }
 }
 void irqtask_list_init()
-{   
+{
     task_list = kmalloc(sizeof(irqtask_t));
 
     INIT_LIST_HEAD(task_list);
@@ -40,7 +42,7 @@ void irqtask_list_init()
 
 void irqtask_add(void *task_function, unsigned long long priority)
 {
-    irqtask_t *the_task = kmalloc(sizeof(irqtask_t)); 
+    irqtask_t *the_task = kmalloc(sizeof(irqtask_t));
 
     // store all the related information into irqtask node
     // manually copy the device's buffer
@@ -74,40 +76,40 @@ void irqtask_add(void *task_function, unsigned long long priority)
 int curr_task_priority = 9999; // Small number has higher priority
 
 void irqtask_run_preemptive()
-{   
-    //倘若還有irq要處理
+{
+    // 倘若還有irq要處理
     while (!list_empty(task_list))
     {
         lock();
-        //給一塊 the_task空間，存放接下來要執行的task
+        // 給一塊 the_task空間，存放接下來要執行的task
         irqtask_t *the_task = (irqtask_t *)task_list->next;
-        //一塊current list head
+        // 一塊current list head
         struct list_head *curr;
 
-        //倘若現階段的task 優先高於 下一個要執行的，break離開，不執行下一段
+        // 倘若現階段的task 優先高於 下一個要執行的，break離開，不執行下一段
         if (curr_task_priority <= the_task->priority)
-        {   
+        {
             unlock();
             break;
         }
-        //到此為有task 要搶佔了，將the_task 移除佇列，因為要執行了
+        // 到此為有task 要搶佔了，將the_task 移除佇列，因為要執行了
         list_del_entry((struct list_head *)the_task);
 
-        //將被插隊的task 優先留下
+        // 將被插隊的task 優先留下
         int prev_task_priority = curr_task_priority;
         // 把目前要執行的task priority設為現在要執行的task
         curr_task_priority = the_task->priority;
-        
+
         unlock();
-        
-        //the task搶佔
+
+        // the task搶佔
         irqtask_run(the_task);
-        
+
         lock();
 
-        //搶佔的執行完畢 即可還原原本的執行模式
+        // 搶佔的執行完畢 即可還原原本的執行模式
         curr_task_priority = prev_task_priority;
-        kfree(the_task); // Adding at 6/13 for lab5 
+        kfree(the_task); // Adding at 6/13 for lab5
         unlock();
     }
 }
@@ -138,22 +140,18 @@ void sync_exc_router(unsigned long spsr, unsigned long elr, unsigned long esr)
     else
     {
         uart_puts("Not svc syscall but el0 syn router \n");
-        while (1)
-        {
-            /* code */
-        }
-        
+        return;
     }
 }
-void breakpt(){
-
+void breakpt()
+{
 }
 
-void breakpt2(){
-
+void breakpt2()
+{
 }
 void irq_exc_router()
-{   
+{
     lock();
 
     // GPU IRQ 57: UART Interrupt
@@ -164,10 +162,10 @@ void irq_exc_router()
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTR_SRC & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
-    {   
+    {
         breakpt();
         if (*AUX_MU_IER_REG & 2)
-        {   // & (0b10) : enable write
+        { // & (0b10) : enable write
 
             *AUX_MU_IER_REG &= ~(2); // disable write interrupt
             irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
@@ -176,7 +174,7 @@ void irq_exc_router()
         }
         else if (*AUX_MU_IER_REG & 1)
         {
-            // & (0b01) : enable read 
+            // & (0b01) : enable read
             *AUX_MU_IER_REG &= ~(1); // disable read interrupt
             irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             unlock();
@@ -184,7 +182,7 @@ void irq_exc_router()
         }
     }
     else if (*CORE0_INTR_SRC & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
-    {   
+    {
         // uart_puts("timer interr\n");
         core_timer_disable();
         irqtask_add(core_timer_hadler, TIMER_IRQ_PRIORITY);
@@ -194,20 +192,24 @@ void irq_exc_router()
     }
     else
     {
-        uart_puts("Hello World el1 64 router other interrupt!\r\n");
+        uart_puts("Hello World el 64 router other interrupt!\r\n");
     }
-
-
+    if (need_to_schedule == 1)
+    {   
+        need_to_schedule = 0;
+        schedule(); 
+        // uart_puts("Interrupt Switch \r\n");
+    }
 }
 
 void not_implemented()
 {
     uart_puts("kenel panic because of not implemented function...\n");
-    while (1);
+    while (1)
+        ;
 }
 
 void show_exception_status(int type, unsigned long esr, unsigned long address)
 {
     uart_puts("not now for Exception status.. \n");
-
 }

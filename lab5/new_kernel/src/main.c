@@ -18,39 +18,28 @@ extern thread_t *threads[];
 // x0 is for the parameter
 void main(char *arg)
 {
-
     exceptionLevel = arg;
-    // put_int(exceptionLevel);
-    // uart_puts("\n");
-    // el1_interrupt_enable();
-    // timer_init(); //這會跳去EL0
-    
+
     uart_init();
     uart_interrupt_enable();
     uart_flush_FIFO();
+    el1_interrupt_disable(); // enable interrupt in EL1 -> EL1
     init_memory_space();
     irqtask_list_init();
     timer_list_init();
 
-    el1_interrupt_enable();  // enable interrupt in EL1 -> EL1
-    char input_buffer[10];
-    shell_cmd_read(input_buffer);
+    el1_interrupt_enable(); // enable interrupt in EL1 -> EL1
     shell_banner();
-//  core_timer_enable();
 
+    uart_hex(curr_thread);
+    uart_puts("\r\n");
     init_thread_sched();
+    schedule_timer();
+    timer_init();
+    lock();
+    uart_puts("=====curr thread======= : ");
+    uart_puts(curr_thread->name);
+    uart_puts("\r\n");
     set_current_thread_context(&curr_thread->context);
     load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
-
-}
-void code_relocate(char *addr)
-{
-    unsigned long long size = (unsigned long long)&__code_size;
-    char *start = (char *)&__begin;
-    for (unsigned long long i = 0; i < size; i++)
-    {
-        addr[i] = start[i];
-    }
-
-    ((void (*)(char *))addr)(_dtb);
 }

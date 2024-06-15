@@ -1,82 +1,37 @@
+#ifndef _MEMORY_H_
+#define _MEMORY_H_
+
 #include "utility.h"
-#ifndef _MEMORY_H
-#define _MEMORY_H
+#include "stdint.h"
 
-#define BUDDY_SYSTEM_BASE 0x0 //0x1000000    // for basic 1
-#define WHOLE_MEMORY 0x3B400000
-#define BUDDY_SYSTEM_PAGE_COUNT 0x3B400 // for basic 1
+#define PAGE_FRAME_SHIFT 12 // 4KB
+#define PAGE_FRAME_SIZE (1 << PAGE_FRAME_SHIFT)
+#define MAX_VAL 17 // max buddy frame size: 4KB * 2^6
+// min cache size: 2^(5) = 32B
+// max cache size: 2^(5 + MAX_ORDER) = 2KB
+#define BASE_ORDER 5
+#define MAX_ORDER 6
+#define NOT_CACHE -1
 
-#define PAGE_SIZE 0x1000 // 4kB
-#define CACHE_SIZE 0x10  // 16Bytes
-
-enum results
+typedef struct frame
 {
-    Fault = 0,
-    Success,
-};
+	struct list_head listhead;
+	int8_t val;
+	int8_t order;			  // 2^(BASE_ORDER + order) = size
+	uint8_t cache_used_count; // 4KB / 2^(BASE_ORDER) = 128. max count is 128. Max num of type is 256
+} frame_t;
 
-enum page_status
-{
-    FREE,
-    isBelonging,
-    Allocated,
-};
-
-typedef enum
-{
-    FRAME_IDX_0 = 0,     //  0x1000
-    FRAME_IDX_1,         //  0x2000
-    FRAME_IDX_2,         //  0x4000
-    FRAME_IDX_3,         //  0x8000
-    FRAME_IDX_4,         // 0x10000
-    FRAME_IDX_5,         // 0x20000
-    FRAME_IDX_FINAL = 6, // 0x40000
-    FRAME_MAX_IDX = 7
-} page_size_order;
-
-typedef enum
-{
-    CACHE_NONE = -1,    // Cache not used
-    CACHE_IDX_0 = 0,    //  0x10 256 chunks
-    CACHE_IDX_1,        //  0x20 128 chunks
-    CACHE_IDX_2,        //  0x40 64 chunks
-    CACHE_IDX_3,        //  0x80 32 chunks
-    CACHE_IDX_4,        // 0x100 16 chunks
-    CACHE_IDX_5,        // 0x200 8 chunks
-    CACHE_IDX_6,        // 0x400 4 chunks
-    CACHE_IDX_FINAL = 7 // 0x800 2 chunks
-} cache_size_order;
-
-typedef struct page_frame
-{
-    /* data */
-    struct list_head listhead;
-    enum page_status status;
-    int order;
-    unsigned int idx;
-    int cache_order;
-    int cache_used_count;
-} page_frame_t;
-
-// lab 4 basic 1
 void init_memory_space();
-void *page_alloc(unsigned int size);
-void page_free(void *pg_ptr);
-enum results buddy_can_merge(page_frame_t *pg_ptr);
-void pg_info_dump();
-page_frame_t *split_to_target_freelist(int order);
-page_frame_t *find_buddy(page_frame_t *pg_ptr);
-page_frame_t *merge(page_frame_t *pg_ptr);
+void *kmalloc(long size);
+void kfree(void *ptr);
+long get_memory_size();
+void init_cache();
+int memory_reserve(long start, long end);
 
-// lab 4 basic 2
-void *cache_alloc(unsigned int size);
-void cache_free(void *cache_ptr);
-void page_to_cache_pool(int cache_order);
-void cache_info_dump();
+void *page_malloc(long size);
+int page_free(void *frame);
 
-// lab 4 adv 2
-void *kmalloc(unsigned int size);
-void kfree(void *ptr); // Adding at 6/13 for lab 5
-void memory_reserve(unsigned long long start,unsigned long long end);
+frame_t *get_free_frame(int val);
+frame_t *split_frame(int8_t val);
 
-#endif
+#endif /* _MEMORY_H_ */
