@@ -3,6 +3,7 @@
 
 #define CORE0_TIMER_IRQ_CTRL 0x40000040
 #include "list.h"
+#include "stdint.h"
 
 // Def for timer event
 typedef struct timer_event {
@@ -19,8 +20,10 @@ void                set_timer_interrupt_by_tick(unsigned long long tick);
 unsigned long long  get_cpu_tick_plus_s(unsigned long long seconds);
 void                set_alert_2S(char* str);
 void                add_timer(void *callback, unsigned long long timeout, char* args);
+void                add_timer_by_tick(void *callback, uint64_t tick, void *args);
 void                timer_event_callback(timer_event_t * timer_event);
 void                core_timer_handler();
 void                timer_list_init();
+uint64_t            get_tick_plus_t(uint64_t tick);
 
 #endif  /*_TIMER_H_ */

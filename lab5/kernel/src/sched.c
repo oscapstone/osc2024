@@ -13,10 +13,9 @@ list_head_t     *run_queue;
 thread_t        *threads[MAX_PID + 1];
 thread_t        *curr_thread;
 int             pid_history = 0;
-int             done_sched_init = 0;
+int             need_to_schedule = 0;
 
 void init_thread_sched() {
-    lock();
     run_queue = kmalloc(sizeof(list_head_t));
     INIT_LIST_HEAD(run_queue);
 
@@ -29,7 +28,7 @@ void init_thread_sched() {
 	sprintf(thread_name, "shell");
 	thread_create(cli_start_shell, thread_name);
 
-    unlock();
+    schedule_timer();
 }
 
 thread_t *_init_thread_0(char* name, int64_t pid, void *start) {
@@ -86,27 +85,47 @@ thread_t *thread_create(void *start, char* name) {
     return t;
 }
 
+void thread_exit() {
+	// thread cannot deallocate the stack while still using it, wait for someone to recycle it.
+	// In this lab, idle thread handles this task, instead of parent thread.
+	lock();
+	uart_puts("[-] Thread %d exit\n", curr_thread->pid);
+	curr_thread->status = THREAD_ZOMBIE;
+	list_del_entry((list_head_t *)curr_thread); // remove from run queue, still in parent's child list
+	unlock();
+	schedule();
+}
+
+void thread_exit_by_pid(int64_t pid) {
+	lock();
+	uart_puts("[-] Thread %d exit\n", curr_thread->pid);
+    thread_t *t = threads[pid];
+	t->status = THREAD_ZOMBIE;
+	list_del_entry((list_head_t *)t); 
+	unlock();
+	schedule();
+}
+
 void dump_thread_info(thread_t* t) {
-    uart_puts("[+] New thread(PID)   %s(%d)\n", t->name, t->pid);
-    uart_puts("    thread_address    0x%x\n", t);
-    uart_puts("    user_stack_base   0x%x\n", t->user_stack_base);
-    uart_puts("    kernel_stack_base 0x%x\n", t->kernel_stack_base);
-    uart_puts("    context.sp        0x%x\n", t->context.sp);
-    uart_puts("    run_queue         0x%x\n", t->user_stack_base);
+    uart_puts(YEL "[+] New thread(PID)   %s(%d)\n" CRESET, t->name, t->pid);
+    uart_puts(GRN "    thread_address    0x%x\n" CRESET, t);
+    uart_puts(GRN "    user_stack_base   0x%x\n" CRESET, t->user_stack_base);
+    uart_puts(GRN "    kernel_stack_base 0x%x\n" CRESET, t->kernel_stack_base);
+    uart_puts(GRN "    context.sp        0x%x\n" CRESET, t->context.sp);
+    uart_puts(GRN "    run_queue         0x%x\n" CRESET, t->user_stack_base);
     uart_puts("\r\n");
 }
 
 void idle() {
-    core_timer_enable();
-    while (list_size(run_queue) > 1) {
-        uart_puts("This is idle\n"); // debug
+    unlock();
+    while (1) {
+        uart_puts("[*] Thread idle(0) is running.\n"); // debug
         schedule();     // switch to next thread in run queue
     }
 }
 
 void schedule() {
     lock();
-    uart_puts("This is schedule\n"); // debug
 	do {
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
 		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
@@ -117,7 +136,31 @@ void schedule() {
 	// DEBUG("PGD: 0x%x, ttbr0_el1: 0x%x\r\n", curr_thread->context.pgd, ttbr0_el1_value);
 	// DEBUG("curr_thread->pid: %d\r\n", curr_thread->pid);
 	unlock();
+    // uart_puts("[*] Schedule to %s(%d)\n", curr_thread->name, curr_thread->pid); // debug
     switch_to(get_current(), &(curr_thread->context));
+}
+
+void schedule_timer() {
+    unsigned long long cntfrq_el0;
+    __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0));
+	// 32 * default timer -> trigger next schedule timer
+	add_timer_by_tick(schedule_timer, cntfrq_el0 >> 5, NULL);
+	need_to_schedule = 1;
+}
+
+void foo() {
+    // Lab5 Basic 1 Test function
+    for (int i = 0; i < 3; ++i)
+    {
+        uart_puts("foo() thread pid is %d in for loop index = %d\n", curr_thread->pid, i);
+        int r = 1000000;
+        while (r--) {
+            asm volatile("nop");
+        }
+        schedule();
+        uart_puts("In for loop - foo() thread pid is %d in for loop index = %d\n", curr_thread->pid, i);
+    }
+    thread_exit();
 }
 
 // void schedule_timer() {

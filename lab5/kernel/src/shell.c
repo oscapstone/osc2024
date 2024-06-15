@@ -8,6 +8,7 @@
 #include "dtb.h"
 #include "exception.h"
 #include "timer.h"
+#include "ANSI.h"
 
 #define CLI_MAX_CMD 8
 #define MAX_ARGS 10
@@ -15,14 +16,16 @@
 
 void*   CPIO_DEFAULT_PLACE;
 char    input_buf[MAX_CMD_LEN];
+static unsigned long long lock_count;
 
 
 void cli_start_shell() {
+    uart_puts("lock count: %d", lock_count);
     cli_print_welcome_msg();
 
     while (1) {
 		cli_clear_cmd(input_buf, MAX_CMD_LEN);
-		uart_puts("▬▬ι═══════- $ ");
+		puts("▬▬ι" CYN "═══════- " CRESET "$ " );
 		cli_read_cmd(input_buf);
 		cli_exec_cmd(input_buf);
 	}

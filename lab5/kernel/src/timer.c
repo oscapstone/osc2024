@@ -65,6 +65,14 @@ unsigned long long get_cpu_tick_plus_s(unsigned long long seconds){
     return (cntpct_el0 + cntfrq_el0*seconds);
 }
 
+// get cpu tick add some tick
+uint64_t get_tick_plus_t(uint64_t tick) {
+    uint64_t cntpct_el0 = 0;
+    __asm__ __volatile__("mrs %0, cntpct_el0\n\t" : "=r"(cntpct_el0)); // tick auchor
+    //DEBUG("cntpct_el0: %d\r\n", cntpct_el0);
+    return (cntpct_el0 + tick);
+}
+
 void set_alert_2S(char* str) {
     unsigned long long cntpct_el0;
     unsigned long long cntfrq_el0;
@@ -111,6 +119,35 @@ void add_timer(void *callback, unsigned long long timeout, char* args) {
     }
 
     set_timer_interrupt_by_tick(((timer_event_t*)timer_list->next)->interrupt_time);
+}
+
+void add_timer_by_tick(void *callback, uint64_t tick, void *args) {
+    // DEBUG("add_timer_by_tick: %d\r\n", tick);
+    timer_event_t *e = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
+    // store all the related information in timer_event
+    e->args = args;
+    e->interrupt_time = get_tick_plus_t(tick);
+    // DEBUG("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
+    e->callback = callback;
+    INIT_LIST_HEAD(&e->listhead);
+
+    // add the timer_event into timer_event_list (sorted)
+    struct list_head *curr;
+    list_for_each(curr, timer_list)
+    {
+        if (((timer_event_t *)curr)->interrupt_time > e->interrupt_time)
+        {
+            list_add(&e->listhead, curr->prev); // add this timer at the place just before the bigger one (sorted)
+            break;
+        }
+    }
+    // if the timer_event is the biggest, run this code block
+    if (list_is_head(curr, timer_list)) {
+        list_add_tail(&e->listhead, timer_list);
+    }
+    // set interrupt to first event
+    set_timer_interrupt_by_tick(((timer_event_t *)timer_list->next)->interrupt_time);
+    core_timer_enable();
 }
 
 void core_timer_handler() {

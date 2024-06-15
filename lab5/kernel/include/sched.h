@@ -57,11 +57,16 @@ typedef struct thread {
 void            init_thread_sched();
 thread_t*       _init_thread_0(char* name, int64_t pid, void *start);
 thread_t*       thread_create(void *start, char* name); 
+void            thread_exit();
+void            thread_exit_by_pid(int64_t pid);
 void            schedule();
 void            schedule_timer();
 void            idle();
 void            exec_thread(char *data, unsigned int filesize);
 void            dump_thread_info(thread_t* t);
+
+// Test function
+void            foo();
 
 
 #endif /*_SCHED_H_*/

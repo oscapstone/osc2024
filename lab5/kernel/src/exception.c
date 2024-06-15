@@ -11,6 +11,7 @@ int                 curr_task_priority = 9999; // Small number has higher priori
 struct              list_head *irqtask_list;
 extern list_head_t  *run_queue;
 extern int          done_sched_init;
+extern int          need_to_schedule;
 
 
 static unsigned long long lock_count = 0;
@@ -55,24 +56,25 @@ void el1h_irq_router() {
             irqtask_add(uart_write_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
-        }
-        else if (*AUX_MU_IER_REG & 1) {
+        } else if (*AUX_MU_IER_REG & 1) {
             *AUX_MU_IER_REG &= ~(1);
             irqtask_add(uart_read_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive();
         }
-    }
-    else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) {
+    } else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         unlock();
         irqtask_run_preemptive();
         core_timer_enable();
-        // if (done_sched_init) schedule();
-    }   
-    else {
+    } else {
         uart_puts("UNKNOWN el1h_irq_router\r\n");
+    }
+
+    if (need_to_schedule) {
+        need_to_schedule = 0;
+        schedule();
     }
 }
 
