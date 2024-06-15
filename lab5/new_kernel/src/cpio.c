@@ -1,5 +1,6 @@
 #include "cpio.h"
 #include "shell.h"
+#include "utility.h"
 
 // due to the reason of the data stored in Hex, we want to show the strings that we can recongize
 static unsigned int parse_hex_str(char *s, unsigned int max_len)
@@ -71,3 +72,16 @@ int cpio_newc_parse_header(struct cpio_newc_header *this_header_pointer, char **
     return 0;
 };
 
+int cpio_get_file(const char *filepath, unsigned int *c_filesize, char **c_filedata)
+{
+    char *c_filepath;
+    int error;
+
+    CPIO_FOR_EACH(&c_filepath, c_filesize, c_filedata, error, {
+        if (strcmp(c_filepath, filepath) == 0)
+        {
+            return CPIO_SUCCESS;
+        }
+    });
+    return error;
+}

@@ -11,6 +11,8 @@ unsigned int vsprintf(char *dst, char *fmt, __builtin_va_list args);
 char *str_seperate(char *head);
 char *memcpy(void *dest, const void *src, unsigned long long len);
 char *strcpy(char *dest, const char *src);
+int strcmp(const char *p1, const char *p2);
+
 
 // For Timer Multiplexing
 typedef struct list_head
