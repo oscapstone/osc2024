@@ -1,14 +1,16 @@
 #ifndef SCHED_H
 #define SCHED_H
 
+#include "bool.h"
 #include "def.h"
 #include "list.h"
 
-#define current_context (get_current_context())
-#define current_task \
-    (container_of(current_context, struct task_struct, cpu_context))
+#define current_task    (get_current_task())
+#define current_context (current_task->cpu_context)
 
-#define THREAD_STACK_SIZE 0x1000
+#define THREAD_STACK_SIZE 0x2000ULL
+#define PF_KTHREAD        0x2
+#define NR_SIGNAL         10
 
 typedef enum {
     TASK_RUNNING,
@@ -19,6 +21,7 @@ typedef enum {
 } task_state_t;
 
 typedef int pid_t;
+
 
 struct cpu_context {
     unsigned long x19;
@@ -44,25 +47,39 @@ struct task_struct {
     long preempt_count;
     struct list_head list;
     pid_t pid;
-    int exit_code;
-    void* stack;
+    void* kernel_stack;
+    void* user_stack;
+    void* prog;
+    void* sig_stack;
+    void(*sig_handler[NR_SIGNAL]);
+    bool sig_handling;
+    long sig_pending;
+    unsigned long flags;
 };
 
-#define INIT_TASK                                                       \
-    {                                                                   \
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, TASK_RUNNING, 0, 1, 0, \
-            {NULL, NULL}, 0, 0, NULL                                    \
+#define INIT_SIGNAL                                                \
+    {                                                              \
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL \
+    }
+
+#define INIT_TASK                                                           \
+    {                                                                       \
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, TASK_RUNNING, 0, 1, 0,     \
+            {NULL, NULL}, 0, NULL, NULL, NULL, NULL, INIT_SIGNAL, false, 0, \
+            PF_KTHREAD                                                      \
     }
 
 extern void cpu_switch_to(struct cpu_context* prev, struct cpu_context* next);
-extern struct cpu_context* get_current_context(void);
-extern void set_current_context(struct cpu_context* cntx);
+extern struct task_struct* get_current_task(void);
+extern void set_current_task(struct task_struct* task);
 extern void ret_from_fork(void);
 
 int sched_init(void);
 struct task_struct* create_task(long prioriy, long preempt_count);
 void add_task(struct task_struct* task);
-void kill_task(struct task_struct* task, int status);
+void kill_task(struct task_struct* task);
+struct task_struct* find_task(int pid);
+void exit_process(void);
 void delete_task(struct task_struct* task);
 void kill_zombies(void);
 void schedule(void);

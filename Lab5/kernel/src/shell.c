@@ -95,14 +95,14 @@ void parse_command(char* cmd)
     else if (!str_cmp(cmd_name, "info"))
         info();
     else if (!str_cmp(cmd_name, "ls"))
-        ls();
+        cpio_ls();
     else if (!str_cmp(cmd_name, "cat")) {
         char* file_name = str_tok(NULL, " ");
         if (!file_name) {
             uart_send_string("Usage: cat <filename>\n");
             return;
         }
-        cat(file_name);
+        cpio_cat(file_name);
     } else if (!str_cmp(cmd_name, "malloc")) {
         char* size = str_tok(NULL, " ");
         if (!size) {
@@ -136,7 +136,7 @@ void parse_command(char* cmd)
             uart_send_string("Usage: exec <filename>\n");
             return;
         }
-        exec(file_name);
+        cpio_exec(file_name);
     } else if (!str_cmp(cmd_name, "async")) {
         test_uart_async();
     } else if (!str_cmp(cmd_name, "set_timeout")) {

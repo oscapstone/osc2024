@@ -1,4 +1,5 @@
 #include "irq.h"
+#include "arm/sysregs.h"
 #include "bool.h"
 #include "def.h"
 #include "entry.h"
@@ -7,6 +8,7 @@
 #include "mini_uart.h"
 #include "peripheral/mini_uart.h"
 #include "peripheral/timer.h"
+#include "signal.h"
 #include "slab.h"
 #include "timer.h"
 #include "utils.h"
@@ -83,18 +85,18 @@ static void run_irq_task(void)
 
 
 
-const char* entry_error_type[] = {
-    "SYNC_INVALID_EL1t",   "IRQ_INVALID_EL1t",
-    "FIQ_INVALID_EL1t",    "ERROR_INVALID_EL1t",
+const char* entry_error_type[] = {"SYNC_INVALID_EL1t",   "IRQ_INVALID_EL1t",
+                                  "FIQ_INVALID_EL1t",    "ERROR_INVALID_EL1t",
 
-    "SYNC_INVALID_EL1h",   "IRQ_INVALID_EL1h",
-    "FIQ_INVALID_EL1h",    "ERROR_INVALID_EL1h",
+                                  "SYNC_INVALID_EL1h",   "IRQ_INVALID_EL1h",
+                                  "FIQ_INVALID_EL1h",    "ERROR_INVALID_EL1h",
 
-    "SYNC_INVALID_EL0_64", "IRQ_INVALID_EL0_64",
-    "FIQ_INVALID_EL0_64",  "ERROR_INVALID_EL0_64",
+                                  "SYNC_INVALID_EL0_64", "IRQ_INVALID_EL0_64",
+                                  "FIQ_INVALID_EL0_64",  "ERROR_INVALID_EL0_64",
 
-    "SYNC_INVALID_EL0_32", "IRQ_INVALID_EL0_32",
-    "FIQ_INVALID_EL0_32",  "ERROR_INVALID_EL0_32"};
+                                  "SYNC_INVALID_EL0_32", "IRQ_INVALID_EL0_32",
+                                  "FIQ_INVALID_EL0_32",  "ERROR_INVALID_EL0_32",
+                                  "SYNC_ERROR",          "SYSCALL_ERROR"};
 
 void show_invalid_entry_message(int type,
                                 unsigned long spsr,
@@ -107,7 +109,7 @@ void show_invalid_entry_message(int type,
     uart_send_string(": ");
     // decode exception type (some, not all. See ARM DDI0487B_b chapter
     // D10.2.28)
-    switch (esr >> 26) {
+    switch (esr >> ESR_ELx_EC_SHIFT) {
     case 0b000000:
         uart_send_string("Unknown");
         break;
@@ -146,7 +148,8 @@ void show_invalid_entry_message(int type,
         break;
     }
     // decode data abort cause
-    if (esr >> 26 == 0b100100 || esr >> 26 == 0b100101) {
+    if (esr >> ESR_ELx_EC_SHIFT == 0b100100 ||
+        esr >> ESR_ELx_EC_SHIFT == 0b100101) {
         uart_send_string(", ");
         switch ((esr >> 2) & 0x3) {
         case 0:
@@ -227,5 +230,6 @@ void irq_handler(void)
     run_irq_task();
     enable_all_exception();
 
+    handle_sig();
     // uart_printf("irq_handler end\n");
 }

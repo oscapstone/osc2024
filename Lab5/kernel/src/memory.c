@@ -5,6 +5,7 @@
 #include "dtb.h"
 #include "list.h"
 #include "mini_uart.h"
+#include "utils.h"
 
 static char* heap_ptr = (char*)HEAP_START;
 
@@ -58,11 +59,19 @@ void* mem_alloc_align(uint64_t size, uint32_t align)
     return mem_alloc(size);
 }
 
-void mem_set(void* b, int c, size_t len)
+
+/*
+ * with `-nostdlib` compiler flag, we have to implement this function since
+ * compiler may generate references to this function
+ */
+void memset(void* b, int c, size_t len)
 {
+    size_t offset = mem_align(b, sizeof(void*)) - b;
+    len -= offset;
     size_t word_size = len / sizeof(void*);
     size_t byte_size = len % sizeof(void*);
-    unsigned long* word_ptr = (unsigned long*)b;
+    unsigned char* offset_ptr = (unsigned char*)b;
+    unsigned long* word_ptr = (unsigned long*)(offset_ptr + offset);
     unsigned char* byte_ptr = (unsigned char*)(word_ptr + word_size);
     unsigned char ch = (unsigned char)c;
     unsigned long byte = (unsigned long)ch;
@@ -70,9 +79,26 @@ void mem_set(void* b, int c, size_t len)
                          (byte << 32) | (byte << 24) | (byte << 16) |
                          (byte << 8) | byte;
 
-    for (int i = 0; i < word_size; i++)
+    for (size_t i = 0; i < offset; i++)
+        offset_ptr[i] = ch;
+
+    for (size_t i = 0; i < word_size; i++)
         word_ptr[i] = word;
 
-    for (int i = 0; i < byte_size; i++)
+    for (size_t i = 0; i < byte_size; i++)
         byte_ptr[i] = ch;
+}
+
+/*
+ * with `-nostdlib` compiler flag, we have to implement this function since
+ * compiler may generate references to this function
+ */
+void* memcpy(void* dst, const void* src, size_t n)
+{
+    char* dst_cp = dst;
+    char* src_cp = (char*)src;
+    for (size_t i = 0; i < n; i++)
+        dst_cp[i] = src_cp[i];
+
+    return dst;
 }

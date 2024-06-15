@@ -14,7 +14,11 @@ CFLAGS := -Wall -mcpu=cortex-a53+nosimd -nostdlib -nostdinc -nostartfiles -ffree
 CPPFLAGS := -I$(INC_DIR) -MMD
 ASMFLAGS := -I$(INC_DIR) -MMD
 OCFLAGS := -O binary
-EMUFLAGS := -M raspi3b -serial null -serial stdio -display none -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
+EMUFLAGS := -M raspi3b -serial null -serial stdio -initrd ../initramfs.cpio -dtb ../bcm2710-rpi-3-b-plus.dtb
+
+ifneq ($(ver), display)
+EMUFLAGS += -display none
+endif
 
 ifeq ($(ver), debug)
 CFLAGS += -g

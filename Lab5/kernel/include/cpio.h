@@ -10,9 +10,10 @@
 #define CPIO_EXIT_ERROR   1
 
 
-void ls(void);
-void cat(char*);
-void exec(char*);
+void cpio_ls(void);
+void cpio_cat(char*);
+void cpio_exec(char*);
+int cpio_load(char*);
 
 uintptr_t get_cpio_start(void);
 void set_cpio_start(uintptr_t);

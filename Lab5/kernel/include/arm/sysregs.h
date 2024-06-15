@@ -6,8 +6,8 @@
  * SCTLR_EL1, System Control Register (EL1), Page 2025 of
  * AArch64-Reference-Manual
  *******************************************************************************/
-#define SCTLR_RESERVED ((3 << 28) | (3 << 22) | (1 << 20) | (1 << 11))
-#define SCTLR_EE_LITTLE_ENDIAN (0 << 25)
+#define SCTLR_RESERVED          ((3 << 28) | (3 << 22) | (1 << 20) | (1 << 11))
+#define SCTLR_EE_LITTLE_ENDIAN  (0 << 25)
 #define SCTLR_E0E_LITTLE_ENDIAN (0 << 24)
 #define SCTLR_I_CACHE_DISABLED  (0 << 12)
 #define SCTLR_D_CACHE_DISABLED  (0 << 2)
@@ -40,16 +40,22 @@
  * SPSR_EL2, Saved Program Status Register (EL2), Page 283 of
  * AArch64-Reference-Manual
  *******************************************************************************/
-#define SPSR_MASK_D   (1 << 9)
-#define SPSR_MASK_A   (1 << 8)
-#define SPSR_MASK_I   (1 << 7)
-#define SPSR_MASK_F   (1 << 6)
+#define SPSR_MASK_D (1 << 9)
+#define SPSR_MASK_A (1 << 8)
+#define SPSR_MASK_I (1 << 7)
+#define SPSR_MASK_F (1 << 6)
 
 #define SPSR_MASK_ALL (SPSR_MASK_D | SPSR_MASK_A | SPSR_MASK_I | SPSR_MASK_F)
 
-#define SPSR_EL1h     (5 << 0)
-#define SPSR_EL0t     (0)
-#define SPSR_VALUE    (SPSR_MASK_ALL | SPSR_EL1h)
+#define SPSR_EL1h  (5 << 0)
+#define SPSR_EL0t  (0)
+#define SPSR_VALUE (SPSR_MASK_ALL | SPSR_EL1h)
 
+/*******************************************************************************
+ * ESR_ELx, Exception Syndrome Register (ELx), Page 2436 of
+ * AArch64-Reference-Manual
+ *******************************************************************************/
+#define ESR_ELx_EC_SHIFT 26
+#define ESR_ELx_EC_SVC64 0x15
 
 #endif /* SYSREGS_H */

@@ -3,15 +3,15 @@
 #include "utils.h"
 
 /* mailbox message buffer */
-volatile unsigned int __attribute__((aligned(16))) mbox[36];
+volatile unsigned int __attribute__((aligned(16))) mbox_buf[36];
 
 /**
  * Make a mailbox call. Returns 1 on success, 0 on failure.
  */
-int mbox_call(unsigned char ch)
+int mailbox_call(unsigned char ch, unsigned int* mbox)
 {
     unsigned int r =
-        (((unsigned int)((unsigned long)&mbox) & ~0xF) | (ch & 0xF));
+        (((unsigned int)((unsigned long)mbox) & ~0xF) | (ch & 0xF));
 
     // wait until we can write to the mailbox
     while (get32(MBOX_STATUS) & MBOX_FULL)
@@ -27,40 +27,40 @@ int mbox_call(unsigned char ch)
         // is it a response to our message?
         if (r == get32(MBOX_READ))
             // is it a valid successful response?
-            return mbox[1] == MBOX_RESPONSE;
+            return *(volatile unsigned int*)(mbox + 1) == MBOX_RESPONSE;
     }
     return 0;
 }
 
 int mbox_get_board_revision(void)
 {
-    mbox[0] = 7 * 4;  // buffer size in bytes
-    mbox[1] = MBOX_REQUEST;
+    mbox_buf[0] = 7 * 4;  // buffer size in bytes
+    mbox_buf[1] = MBOX_REQUEST;
     // tags begin
-    mbox[2] = MBOX_TAG_GET_REVISION;  // tag identifier
-    mbox[3] = 4;  // maximum of request and response value buffer's length.
-    mbox[4] = MBOX_TAG_REQUEST_CODE;
-    mbox[5] = 0;  // value buffer
+    mbox_buf[2] = MBOX_TAG_GET_REVISION;  // tag identifier
+    mbox_buf[3] = 4;  // maximum of request and response value buffer's length.
+    mbox_buf[4] = MBOX_TAG_REQUEST_CODE;
+    mbox_buf[5] = 0;  // value buffer
     // tags end
-    mbox[6] = MBOX_TAG_LAST;
+    mbox_buf[6] = MBOX_TAG_LAST;
 
-    return mbox_call(MBOX_CH_PROP);
+    return mailbox_call(MBOX_CH_PROP, (unsigned int*)mbox_buf);
 }
 
 int mbox_get_arm_memory(void)
 {
-    mbox[0] = 8 * 4;  // buffer size in bytes
-    mbox[1] = MBOX_REQUEST;
+    mbox_buf[0] = 8 * 4;  // buffer size in bytes
+    mbox_buf[1] = MBOX_REQUEST;
     // tags begin
-    mbox[2] = MBOX_TAG_GET_ARM_MEMORY;  // tag identifier
-    mbox[3] = 8;  // maximum of request and response value buffer's length.
-    mbox[4] = MBOX_TAG_REQUEST_CODE;
-    mbox[5] = 0;  // value buffer
-    mbox[6] = 0;  // value buffer
+    mbox_buf[2] = MBOX_TAG_GET_ARM_MEMORY;  // tag identifier
+    mbox_buf[3] = 8;  // maximum of request and response value buffer's length.
+    mbox_buf[4] = MBOX_TAG_REQUEST_CODE;
+    mbox_buf[5] = 0;  // value buffer
+    mbox_buf[6] = 0;  // value buffer
     // tags end
-    mbox[7] = MBOX_TAG_LAST;
+    mbox_buf[7] = MBOX_TAG_LAST;
 
-    return mbox_call(MBOX_CH_PROP);
+    return mailbox_call(MBOX_CH_PROP, (unsigned int*)mbox_buf);
 }
 
 
@@ -73,7 +73,7 @@ void print_board_revision(void)
 
     uart_send_string("Board revision: ");
     uart_send_string("0x");
-    uart_send_hex(mbox[5]);
+    uart_send_hex(mbox_buf[5]);
     uart_send_string("\n");
 }
 
@@ -86,11 +86,11 @@ void print_arm_memory(void)
 
     uart_send_string("ARM base address: ");
     uart_send_string("0x");
-    uart_send_hex(mbox[5]);
+    uart_send_hex(mbox_buf[5]);
     uart_send_string("\n");
 
     uart_send_string("ARM memory size: ");
     uart_send_string("0x");
-    uart_send_hex(mbox[6]);
+    uart_send_hex(mbox_buf[6]);
     uart_send_string(" bytes\n");
 }

@@ -23,7 +23,7 @@ struct task_struct* create_task(long priority, long preempt_count)
     struct task_struct* new_task = alloc_task();
     if (!new_task)
         return NULL;
-    mem_set(new_task, 0, sizeof(struct task_struct));
+    memset(new_task, 0, sizeof(struct task_struct));
     new_task->state = TASK_INIT;
     new_task->pid = nr_tasks++;
     new_task->priority = priority;
@@ -38,23 +38,45 @@ void add_task(struct task_struct* task)
     enable_irq();
 }
 
-void kill_task(struct task_struct* task, int status)
+void kill_task(struct task_struct* task)
 {
-    disable_irq();
+    if (!task)
+        return;
+    preempt_disable();
     task->state = TASK_STOPPED;
     list_del_init(&task->list);
 
-    task->exit_code = status;
     list_add(&task->list, &stopped_queue);
     nr_tasks--;
-    enable_irq();
+    preempt_enable();
     schedule();
+}
+
+struct task_struct* find_task(int pid)
+{
+    struct task_struct* curr;
+    list_for_each_entry (curr, &running_queue, list) {
+        if (curr->pid == pid)
+            return curr;
+    }
+    return NULL;
+}
+
+void exit_process(void)
+{
+    kill_task(current_task);
 }
 
 void delete_task(struct task_struct* task)
 {
-    if (task->stack)
-        kfree(task->stack);
+    if (task->kernel_stack)
+        kfree(task->kernel_stack);
+    if (task->user_stack)
+        kfree(task->user_stack);
+    if (task->prog)
+        kfree(task->prog);
+    if (task->sig_stack)
+        kfree(task->sig_stack);
     free_task(task);
 }
 
@@ -77,7 +99,7 @@ int sched_init(void)
     if (!task_struct)
         return 0;
 
-    set_current_context(&init_task.cpu_context);
+    set_current_task(&init_task);
     add_task(&init_task);
     add_timer(timer_tick, NULL, SCHED_CYCLE, true);
 
@@ -132,7 +154,7 @@ void switch_to(struct task_struct* next)
 {
     if (current_task == next)
         return;
-    cpu_switch_to(current_context, &next->cpu_context);
+    cpu_switch_to(&current_task->cpu_context, &next->cpu_context);
 }
 
 void schedule_tail(void)

@@ -29,6 +29,12 @@ int timer_init(void)
     timer = kmem_cache_create("timer", sizeof(timeout_event_t), -1);
     if (!timer)
         return 0;
+
+    uint64_t tmp;
+    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+    tmp |= 1;
+    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+
     return 1;
 }
 
@@ -98,7 +104,6 @@ void core_timer_handle_irq(void)
     // uart_printf("timer_handler\n");
     // unsigned long current_ticks = get_current_ticks();
     // unsigned long freq = get_freq();
-
 
     timeout_event_t* first_event =
         list_first_entry(&timeout_event_head, timeout_event_t, list);

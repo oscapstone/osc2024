@@ -40,7 +40,7 @@ get_freq:
 .globl set_core_timer_timeout_ticks
 set_core_timer_timeout_ticks:
     msr cntp_tval_el0, x0
-    ret 
+    ret
 
 .globl set_core_timer_timeout_secs
 set_core_timer_timeout_secs:

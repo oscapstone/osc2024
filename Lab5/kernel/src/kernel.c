@@ -51,7 +51,13 @@ void kernel_main(uintptr_t dtb_ptr)
 
     enable_irq();
 
-    copy_process(&shell, NULL);
+    // test_thread();
+
+    copy_process(PF_KTHREAD, shell, NULL);
+    // cpio_exec("syscall.img");
+
+    // copy_process(PF_KTHREAD, kernel_process, fork_test);
+    // copy_process(PF_KTHREAD, kernel_process, exec_test);
 
     idle();
 

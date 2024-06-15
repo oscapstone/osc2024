@@ -353,7 +353,7 @@ found_object:
     slab->inuse++;
 
     if (flags & __GFP_ZERO)
-        mem_set(object_addr, 0, cachep->object_size);
+        memset(object_addr, 0, cachep->object_size);
 
     return object_addr;
 }

@@ -9,7 +9,7 @@ all:
 	make -C kernel ver=$(ver)
 	make -C user_program
 
-rootfs: 
+rootfs:
 	$(shell cp user_program/prog1.img rootfs/)
 	$(shell cd rootfs && find . | cpio -o -H newc > ../initramfs.cpio && cd ..)
 

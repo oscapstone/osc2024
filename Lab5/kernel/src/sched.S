@@ -20,12 +20,12 @@ cpu_switch_to:
   msr tpidr_el1, x1
   ret
 
-.global get_current_context
-get_current_context:
+.global get_current_task
+get_current_task:
   mrs x0, tpidr_el1
   ret
 
-.global set_current_context
-set_current_context:
+.global set_current_task
+set_current_task:
   msr tpidr_el1, x0
   ret
