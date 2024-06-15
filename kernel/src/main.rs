@@ -28,11 +28,11 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc::collections::BinaryHeap;
+use alloc::boxed::Box;
 use core::alloc::Layout;
 
 use fs::cpio::CpioHandler;
 use fs::vfs;
-use fs::vfs::FileSystem;
 
 use driver::mailbox;
 use driver::uart;
@@ -95,7 +95,8 @@ fn timer_callback(message: String, _: *mut u64) {
 }
 
 fn fs_shell() {
-    let mut fs = vfs::Vfs::new("rootfs");
+    let mut fs = Box::new(fs::tmpfs::Tmpfs::new());
+    let mut vfs = fs::vfs::VFS::new(fs);
     let mut working_dir = "/".to_string().clone();
     loop {
         print!("{}>> ", &working_dir);
@@ -104,7 +105,7 @@ fn fs_shell() {
         let cmd = inp.trim().split(' ').collect::<Vec<&str>>();
         match cmd[0] {
             "ls" => {
-                let ls = fs.ls(&working_dir);
+                let ls = vfs.ls(&working_dir);
                 match ls {
                     Ok(files) => {
                         for file in files {
@@ -122,7 +123,7 @@ fn fs_shell() {
                     continue;
                 }
                 let path = working_dir.to_owned() + "/" + cmd[1];
-                let res = fs.mkdir(&path);
+                let res = vfs.mkdir(&path);
                 match res {
                     Ok(_) => {}
                     Err(e) => {
@@ -131,35 +132,10 @@ fn fs_shell() {
                 }
             }
             "cd" => {
-                if cmd.len() != 2 {
-                    println!("Usage: cd <dir>");
-                    continue;
-                }
-                let path = working_dir.to_owned() + "/" + cmd[1];
-                let res = fs.ls(path.as_str());
-                match res {
-                    Ok(_) => {
-                        working_dir = "/".to_owned() + &fs::util::clean_path(&path);
-                    }
-                    Err(e) => {
-                        println!("{}", e);
-                    }
-                }
+                unimplemented!("cd");
             }
             "rmdir" => {
-                if cmd.len() < 2 {
-                    println!("Usage: rmdir <dir>");
-                    continue;
-                }
-                let path = working_dir.to_owned() + "/" + cmd[1];
-                let path = fs::util::clean_path(&path);
-                let res = fs.rmdir(&path);
-                match res {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("{}", e);
-                    }
-                }
+                unimplemented!("rmdir");
             }
             "exit" => {
                 break;
