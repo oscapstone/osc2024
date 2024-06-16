@@ -4,9 +4,9 @@
 #include "memory.h"
 #include "shell.h"
 #include "syscall.h"
-
 #include "timer.h"
 #include "signal.h"
+#include "utils.h"
 
 list_head_t *run_queue;
 
@@ -109,6 +109,9 @@ thread_t *thread_create(void *start)
     r->kernel_stack_allocated_base = kmalloc(KSTACK_SIZE);
     r->context.sp = (unsigned long long)r->kernel_stack_allocated_base + KSTACK_SIZE;
     r->context.fp = r->context.sp; // frame pointer for local variable, which is also in stack.
+
+    //Lab7
+    strcpy(r->vfs.curr_working_dir, "/");
 
     //Lab5- Advanced Exercise 1
     r->signal.lock = 0;

@@ -3,6 +3,7 @@
 
 #include "u_list.h"
 #include "signal.h"
+#include "vfs.h"
 
 #define PIDMAX 32768
 #define USTACK_SIZE 0x10000
@@ -40,6 +41,12 @@ typedef struct signal_struct
     char*            stack_base;
 }signal_t;
 
+typedef struct vfs_struct
+{
+    char             curr_working_dir[MAX_PATH_NAME+1];
+    struct file*     file_descriptors_table[MAX_FD+1];
+}vfs_t;
+
 typedef struct thread
 {
     list_head_t      listhead;                              // Freelist node
@@ -52,6 +59,7 @@ typedef struct thread
     char*            data;                                  // Process itself
     unsigned int     datasize;                              // Process size
     signal_t         signal;                                // Signal info
+    vfs_t            vfs;                                   // VFS info
 } thread_t;
 
 void init_thread_sched();

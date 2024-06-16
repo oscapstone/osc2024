@@ -192,6 +192,12 @@ char* strcpy (char *dest, const char *src)
     return memcpy (dest, src, strlen (src) + 1);
 }
 
+char* strcat (char *dest, const char *src)
+{
+  strcpy (dest + strlen (dest), src);
+  return dest;
+}
+
 void *memset(void *s, int c, size_t n)
 {
   char *start = s;

@@ -5,7 +5,7 @@
 #include "uart1.h"
 
 struct vnode_operations tmpfs_vnode_operations = {tmpfs_lookup, tmpfs_create, tmpfs_mkdir};
-struct file_operations tmpfs_file_operations = {tmpfs_write, tmpfs_read, tmpfs_open, tmpfs_close, tmpfs_lseek64};
+struct file_operations tmpfs_file_operations = {tmpfs_write, tmpfs_read, tmpfs_open, tmpfs_close, tmpfs_lseek64, tmpfs_getsize};
 
 int register_tmpfs()
 {
@@ -208,4 +208,10 @@ int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *compo
 
     *target = _vnode;
     return 0;
+}
+
+long tmpfs_getsize(struct vnode *vd)
+{
+    struct tmpfs_inode *inode = vd->internal;
+    return inode->datasize;
 }

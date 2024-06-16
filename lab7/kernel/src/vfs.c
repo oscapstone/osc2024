@@ -40,7 +40,8 @@ int vfs_open(const char *pathname, int flags, struct file **target)
     // 1. Lookup pathname
     // 3. Create a new file if O_CREAT is specified in flags and vnode not found
     struct vnode *node;
-    if (vfs_lookup(pathname, &node) != 0 && (flags & O_CREAT)) // 如果路徑不在，就創建
+    // If the file does not exist, create it
+    if (vfs_lookup(pathname, &node) != 0 && (flags & O_CREAT))
     {
         // uart_sendline("O_CREAT\r\n");
         // grep all of the directory path
@@ -57,6 +58,7 @@ int vfs_open(const char *pathname, int flags, struct file **target)
         strcpy(dirname, pathname);
         dirname[last_slash_idx] = 0;
         // update dirname to node
+        // If the upper directory does not exist, the creation fails.
         if (vfs_lookup(dirname, &node) != 0)
         {
             uart_sendline("cannot ocreate no dir name\r\n");
@@ -137,7 +139,7 @@ int vfs_mkdir(const char *pathname)
         return 0;
     }
 
-    uart_sendline("vfs_mkdir cannot find pathname");
+    uart_sendline("vfs_mkdir cannot find upper directory");
     return -1;
 }
 
@@ -234,6 +236,7 @@ void init_rootfs()
 
 void vfs_test()
 {
+    // Lab7- Basic Exercise 1 & 2
     uart_sendline("rootfs name: %s\n", rootfs->fs->name);
     // test read/write
     if (vfs_mkdir("/dir1") == -1)
@@ -261,5 +264,50 @@ void vfs_test()
         uart_sendline("close testfilew failed\n");
     if (vfs_close(testfiler) != 0)
         uart_sendline("close testfiler failed\n");
+}
 
+char *get_absolute_path(char *path, char *curr_working_dir)
+{
+    // if relative path -> add root path
+    if (path[0] != '/')
+    {
+        char tmp[MAX_PATH_NAME];
+        strcpy(tmp, curr_working_dir);
+        if (strcmp(curr_working_dir, "/") != 0)
+            strcat(tmp, "/");
+        strcat(tmp, path); // "/curr_working_dir/path"
+        strcpy(path, tmp);
+    }
+
+    char absolute_path[MAX_PATH_NAME + 1] = {};
+    int idx = 0;
+    for (int i = 0; i < strlen(path); i++)
+    {
+        // meet /.. -> delete last level directory
+        if (path[i] == '/' && path[i + 1] == '.' && path[i + 2] == '.')
+        {
+            for (int j = idx; j >= 0; j--)
+            {
+                if (absolute_path[j] == '/')
+                {
+                    absolute_path[j] = 0;
+                    idx = j;
+                }
+            }
+            i += 2;
+            continue;
+        }
+
+        // ignore /.
+        if (path[i] == '/' && path[i + 1] == '.')
+        {
+            i++;
+            continue;
+        }
+
+        absolute_path[idx++] = path[i];
+    }
+    absolute_path[idx] = 0;
+
+    return strcpy(path, absolute_path);
 }

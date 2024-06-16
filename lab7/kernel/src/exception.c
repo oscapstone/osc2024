@@ -137,6 +137,28 @@ void el0_sync_router(trapframe_t *tpf){
         case 10:
             sigreturn(tpf);
             break;
+        // Lab7
+        case 11:
+            open(tpf, (char*)tpf->x0, tpf->x1);
+            break;
+        case 12:
+            close(tpf, tpf->x0);
+            break;
+        case 13:
+            write(tpf, tpf->x0, (void *)tpf->x1, tpf->x2);
+            break;
+        case 14:
+            read(tpf, tpf->x0, (void *)tpf->x1, tpf->x2);
+            break;
+        case 15:
+            mkdir(tpf, (char *)tpf->x0, tpf->x1);
+            break;
+        case 16:
+            mount(tpf, (char *)tpf->x0, (char *)tpf->x1, (char *)tpf->x2, tpf->x3, (void*)tpf->x4);
+            break;
+        case 17:
+            chdir(tpf, (char *)tpf->x0);
+            break;
         default:
             break;
     }

@@ -20,6 +20,14 @@ void   signal_register(int signal, void (*handler)());
 void   signal_kill(int pid, int signal);
 void   sigreturn();
 
+int    open(trapframe_t *tpf, const char *pathname, int flags);
+int    close(trapframe_t *tpf, int fd);
+long   write(trapframe_t *tpf, int fd, const void *buf, unsigned long count);
+long   read(trapframe_t *tpf, int fd, void *buf, unsigned long count);
+int    mkdir(trapframe_t *tpf, const char *pathname, unsigned mode);
+int    mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+int    chdir(trapframe_t *tpf, const char *path);
+
 unsigned int get_file_size(char *thefilepath);
 char *get_file_start(char *thefilepath);
 
