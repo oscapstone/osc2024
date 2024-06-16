@@ -49,6 +49,9 @@ int copy_process(unsigned long clone_flags, void* fn, void* arg)
             new_task->sig_handler[i] = current_task->sig_handler[i];
     }
 
+    if (clone_flags & PF_WAIT)
+        wait_task(current_task, new_task);
+
     new_task->flags = clone_flags;
     new_task->counter = new_task->priority;
     new_task->state = TASK_RUNNING;

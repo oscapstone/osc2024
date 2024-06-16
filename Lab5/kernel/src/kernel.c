@@ -18,6 +18,7 @@
 static void idle(void)
 {
     while (1) {
+        check_waiting();
         kill_zombies();
         schedule();
     }

@@ -56,7 +56,7 @@ static inline void cpio_exec_program(char* file_addr, unsigned int file_size)
 {
     void* target = kmalloc(file_size, 0);
     memcpy(target, file_addr, file_size);
-    copy_process(PF_KTHREAD, kernel_process, target);
+    copy_process(PF_KTHREAD | PF_WAIT, kernel_process, target);
 
     // if (!current_task->user_stack)
     //     current_task->user_stack = kmalloc(THREAD_STACK_SIZE, 0);

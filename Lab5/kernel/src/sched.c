@@ -62,6 +62,20 @@ struct task_struct* find_task(int pid)
     return NULL;
 }
 
+void wait_task(struct task_struct* task, struct task_struct* wait_for)
+{
+    if (!task || !wait_for)
+        return;
+    if (task->state == TASK_WAITING)
+        return;
+    preempt_disable();
+    task->wait_task = wait_for;
+    task->state = TASK_WAITING;
+    list_del(&task->list);
+    list_add_tail(&task->list, &waiting_queue);
+    preempt_enable();
+}
+
 void exit_process(void)
 {
     kill_task(current_task);
@@ -87,6 +101,22 @@ void kill_zombies(void)
     list_for_each_entry_safe (entry, safe, &stopped_queue, list) {
         list_del_init(&entry->list);
         delete_task(entry);
+    }
+    enable_irq();
+}
+
+void check_waiting(void)
+{
+    disable_irq();
+    struct task_struct *entry, *safe;
+    list_for_each_entry_safe (entry, safe, &waiting_queue, list) {
+        if (entry->wait_task->flags & PF_WAIT &&
+            entry->wait_task->state == TASK_STOPPED) {
+            entry->wait_task = NULL;
+            list_del(&entry->list);
+            entry->state = TASK_RUNNING;
+            list_add_tail(&entry->list, &running_queue);
+        }
     }
     enable_irq();
 }
