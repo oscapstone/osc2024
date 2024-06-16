@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "utils.h"
 #include "uart1.h"
+#include "initramfs.h"
 
 struct mount *rootfs;
 struct filesystem reg_fs[MAX_FS_REG];
@@ -231,6 +232,11 @@ void init_rootfs()
     rootfs = kmalloc(sizeof(struct mount));
     reg_fs[idx].setup_mount(&reg_fs[idx], rootfs);
 
+    // initramfs
+    vfs_mkdir("/initramfs");
+    register_initramfs();
+    vfs_mount("/initramfs","initramfs");
+    
     vfs_test();
 }
 
@@ -251,9 +257,9 @@ void vfs_test()
     struct file *testfiler;
     char testbufw[0x30] = "0123456789abcdef";
     char testbufr[0x30] = {};
-    if (vfs_open("/dir1/dir2/file1\n", O_CREAT, &testfilew) == -1)
+    if (vfs_open("/dir1/dir2/file1.txt\n", O_CREAT, &testfilew) == -1)
         uart_sendline("open failed\n");
-    if (vfs_open("/dir1/dir2/file1\n", O_CREAT, &testfiler) == -1)
+    if (vfs_open("/dir1/dir2/file1.txt\n", O_CREAT, &testfiler) == -1)
         uart_sendline("open failed\n");
     if (vfs_write(testfilew, testbufw, 10) != 10)
         uart_sendline("write failed\n");
@@ -264,6 +270,12 @@ void vfs_test()
         uart_sendline("close testfilew failed\n");
     if (vfs_close(testfiler) != 0)
         uart_sendline("close testfiler failed\n");
+
+    // Lab7- Basic Exercise 4
+    struct file *testfile_initramfs;
+    vfs_open("/initramfs/file0.txt", O_CREAT, &testfile_initramfs);
+    vfs_read(testfile_initramfs, testbufr, 0x20);
+    uart_sendline("Read from testfile_initramfs testbufr: %s\n", testbufr);
 }
 
 char *get_absolute_path(char *path, char *curr_working_dir)
