@@ -14,10 +14,21 @@
 #define SYS_SIGNAL        8
 #define SYS_SIGKILL       9
 #define SYS_SIGRETURN    10
+#define SYS_OPEN         11
+#define SYS_CLOSE        12
+#define SYS_WRITE        13
+#define SYS_READ         14
+#define SYS_MKDIR        15
+#define SYS_MOUNT        16
+#define SYS_CHDIR        17
 
-#define SYSCALL_NUM 11
-#define SYSCALL_SUCCESS 0
-#define SYSCALL_ERROR -1
+#define SYSCALL_NUM      (18)
+#define SYSCALL_SUCCESS  (0)
+#define SYSCALL_ERROR    (-1)
+
+#ifndef O_CREAT
+#define O_CREAT          (100)
+#endif
 
 /** 
  * Because include syscall.h will copy all the content in header file,
@@ -54,8 +65,22 @@ extern void exit(int status);
 extern int mailbox_call(unsigned char ch, unsigned int *mbox);
 /* system call: void kill(int pid) */
 extern void kill(int pid);
-/* System call to return kernel from signal handling. */
+/* system call to return kernel from signal handling. */
 extern void sigreturn(void);
+/* system call to open a file and return file descriptor. */
+extern int open(const char *pathname, int flags);
+/* system to close file according to file descriptor. */
+extern int close(int fd);
+/* system call to write file, remember to return read size or error code */
+extern long write(int fd, const void *buf, unsigned long count);
+/* system call to read file, remember to return read size or error code */
+extern long read(int fd, void *buf, unsigned long count);
+/* system call to make directory, you can ignore mode, since there is no access control */
+extern int mkdir(const char *pathname, unsigned mode);
+/* system call to mount file system, you can ignore arguments other than target (where to mount) and filesystem (fs name) */
+extern int mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+/* system call to change current working directory. */
+extern int chdir(const char *path);
 
 /* for syscall.c, kernel space handler function */
 int sys_get_taskid(struct trapframe *trapframe);
@@ -69,6 +94,13 @@ int sys_kill(struct trapframe *trapframe);
 int sys_signal(struct trapframe *trapframe);
 int sys_sigkill(struct trapframe *trapframe);
 int sys_sigreturn(struct trapframe *trapframe);
+int sys_open(struct trapframe *trapframe);
+int sys_close(struct trapframe *trapframe);
+int sys_write(struct trapframe *trapframe);
+int sys_read(struct trapframe *trapframe);
+int sys_mkdir(struct trapframe *trapframe);
+int sys_mount(struct trapframe *trapframe);
+int sys_chdir(struct trapframe *trapframe);
 
 typedef int (*syscall_t)(struct trapframe *);
 extern syscall_t sys_call_table[SYSCALL_NUM];

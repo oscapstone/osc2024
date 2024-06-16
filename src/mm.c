@@ -17,7 +17,6 @@ int isDemo = 0;
 #endif
 
 /* page frame: to map the physical memory */
-// static struct page pages[NR_PAGES] = {0}; // Not sure whether we should initialize it or not. (.bss problem)
 struct page *mem_map = NULL;
 
 unsigned long nr_pages = 0;
@@ -164,9 +163,9 @@ static inline void page_frame_init(void)
     /* Allocate memory from memblock. */
     mem_map = (struct page *) memblock_phys_alloc(sizeof(struct page) * nr_pages);
 
-    /* Initialize page structure*/
+    /* Initialize page structure */
     for_each_memblock_type(i, &memblock.reserved, rgn) {
-        for (unsigned long pfn = rgn->base >> 12; pfn < (rgn->base + rgn->size) >> 12; pfn++) {
+        for (unsigned long pfn = rgn->base >> 12; pfn <= ((rgn->base + rgn->size) >> 12); pfn++) {
             mem_map[pfn].flags = PG_RESERVED;
             INIT_LIST_HEAD(&(mem_map[pfn].buddy_list));
         }
@@ -359,13 +358,13 @@ void *kmalloc(unsigned long size)
         return (void *) phys_to_virt(page_to_phys(__alloc_pages(order)));
     } else {
         /* Use slab allocator to allocate memory. */
-        return (void *) phys_to_virt((unsigned long) get_object(size));
+        return (void *) phys_to_virt((unsigned long)get_object(size));
     }
 }
 
 void kfree(void *obj)
 {
-    struct page *page = phys_to_page((unsigned long) obj);
+    struct page *page = phys_to_page(virt_to_phys((unsigned long)obj));
     unsigned long pfn = page_to_pfn(page);
     unsigned int order = buddy_order(page);
 

@@ -84,10 +84,10 @@ void syscall_handler(struct trapframe *trapframe)
 
     if (syscall_num >= 0 && syscall_num < SYSCALL_NUM) {
         if (sys_call_table[syscall_num](trapframe)) {
-            uart_puts("System call failed\n");
+            uart_puts("[syscall_handler] System call failed\n");
         }
     } else {
-        uart_puts("Unknown syscall\n");
+        uart_puts("[syscall_handler] Unknown syscall\n");
     }
     return;
 }

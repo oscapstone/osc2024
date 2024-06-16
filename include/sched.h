@@ -4,6 +4,7 @@
 #include "uart.h"
 #include "stdint.h"
 #include "signal.h"
+#include "vfs.h"
 
 #define NR_TASKS 16
 #define KSTACK_SIZE 4096
@@ -70,11 +71,13 @@ struct task_struct {
     struct task_state_segment tss; // because context switch occurs in kernel mode,sp are in el1 (sp_el1);
     
     struct mm_struct mm;
+
+    char current_dir[MAX_PATH_LEN]; // current working directory
+    struct file *fd_table[FD_TABLE_SIZE]; // file descriptor table
 };
 
 extern struct task_struct task_pool[NR_TASKS];
 extern char kstack_pool[NR_TASKS][KSTACK_SIZE];
-extern char ustack_pool[NR_TASKS][USTACK_SIZE];
 extern int num_running_task;
 
 /* Get the task_struct of current task. */

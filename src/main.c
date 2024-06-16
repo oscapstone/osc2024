@@ -10,6 +10,9 @@
 #include "exec.h"
 #include "syscall.h"
 #include "mm.h"
+#include "vfs.h"
+
+#include "demo.h"
 
 // get the end of bss segment from linker
 extern unsigned char _end;
@@ -22,6 +25,7 @@ void main()
     timer_init();
     tasklet_init();
     mm_init();
+    rootfs_init();
     sched_init();
 
 

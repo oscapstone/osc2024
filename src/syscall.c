@@ -8,6 +8,9 @@
 #include "initrd.h"
 #include "mm.h"
 #include "string.h"
+#include "vfs.h"
+
+#define DEBUG_FS_SYSCALL
 
 /* The definition of system call handler function */
 syscall_t sys_call_table[SYSCALL_NUM] = {
@@ -21,7 +24,14 @@ syscall_t sys_call_table[SYSCALL_NUM] = {
     sys_kill,
     sys_signal,
     sys_sigkill,
-    sys_sigreturn
+    sys_sigreturn,
+    sys_open,
+    sys_close,
+    sys_write,
+    sys_read,
+    sys_mkdir,
+    sys_mount,
+    sys_chdir,
 };
 
 /* As a handler function for svc, setup the return value to trapframe */
@@ -229,12 +239,155 @@ int sys_sigreturn(struct trapframe *trapframe)
 #ifdef DEBUG_SYSCALL
     printf("[sys_sigreturn] Task %d return from signal handler\n", current->task_id);
 #endif
-
     /* Free the signal stack. */
     kfree((void *) trapframe->sp);
 
     /* Restore the previous stack (before signal handling) */
     current->tss.sp = current->tss.sp_backup;
     sig_restore_context(&current->tss);
+    return SYSCALL_SUCCESS;
+}
+
+
+int sys_open(struct trapframe *trapframe)
+{
+    char *path = (char *) trapframe->x[0];
+    int flags = (int) trapframe->x[1], i;
+    char absolute_path[MAX_PATH_LEN];
+
+#ifdef DEBUG_FS_SYSCALL
+    printf("[sys_open] Task %d open %s\n", current->task_id, path);
+#endif
+
+    strcpy(absolute_path, path);
+    /* Update absolute path from current working directory */
+    get_absolute_path(absolute_path, current->current_dir);
+    for (i = 0; i < FD_TABLE_SIZE; i++) {
+        if (!current->fd_table[i]) { // if the file descriptor is empty
+            if (vfs_open(absolute_path, flags, &current->fd_table[i])) {
+                trapframe->x[0] = i; // return the file descriptor
+                return SYSCALL_SUCCESS;
+            } else {
+                printf("[sys_open] vfs_open function failed.\n");
+                trapframe->x[0] = -1;
+                return SYSCALL_ERROR;
+            }
+        }
+    }
+    printf("[sys_open] No available file descriptor.\n");
+    trapframe->x[0] = -1;
+    return SYSCALL_ERROR;
+}
+
+int sys_close(struct trapframe *trapframe)
+{
+    int fd = (int) trapframe->x[0];
+
+#ifdef DEBUG_FS_SYSCALL
+    printf("[sys_close] Task %d close fd %d\n", current->task_id, fd);
+#endif
+    
+    if (current->fd_table[fd]) {
+        if (vfs_close(current->fd_table[fd])) {
+            current->fd_table[fd] = NULL;
+            trapframe->x[0] = 0;
+            return SYSCALL_SUCCESS;
+        } else {
+            printf("[sys_close] vfs_close function failed.\n");
+            trapframe->x[0] = -1;
+            return SYSCALL_ERROR;
+        }
+    }
+    printf("[sys_close] The file descriptor is not valid.\n");
+    trapframe->x[0] = -1;
+    return SYSCALL_ERROR;
+}
+
+int sys_write(struct trapframe *trapframe)
+{
+    int fd = (int) trapframe->x[0];
+    char *buf = (char *) trapframe->x[1];
+    size_t len = (size_t) trapframe->x[2];
+
+#ifdef DEBUG_FS_SYSCALL
+    printf("[sys_write] fd: %d, buf: %x, len: %d\n", fd, buf, len);
+#endif
+
+    if (current->fd_table[fd]) {
+        trapframe->x[0] = vfs_write(current->fd_table[fd], buf, len);
+        return SYSCALL_SUCCESS;
+    }
+    printf("[sys_write] The file descriptor is not valid.\n");
+    trapframe->x[0] = -1;
+    return SYSCALL_ERROR;
+}
+
+int sys_read(struct trapframe *trapframe)
+{
+    int fd = (int)trapframe->x[0];
+    char *buf = (char *)trapframe->x[1];
+    size_t len = (size_t)trapframe->x[2];
+
+#ifdef DEBUG_FS_SYSCALL
+    printf("[sys_read] fd: %d, buf: %x, len: %d\n", fd, buf, len);
+#endif
+
+    if (current->fd_table[fd]) {
+        trapframe->x[0] = vfs_read(current->fd_table[fd], buf, len);
+        return SYSCALL_SUCCESS;
+    }
+    printf("[sys_read] The file descriptor is not valid.\n");
+    trapframe->x[0] = -1;
+    return SYSCALL_ERROR;
+}
+
+int sys_mkdir(struct trapframe *trapframe)
+{
+    char *path = (char *)trapframe->x[0];
+
+#ifdef DEBUG_FS_SYSCALL
+    printf("[sys_mkdir] Task %d mkdir %s\n", current->task_id, path);
+#endif
+    get_absolute_path(path, current->current_dir);
+    trapframe->x[0] = vfs_mkdir(path);
+    return SYSCALL_SUCCESS;
+}
+
+int sys_mount(struct trapframe *trapframe)
+{
+    const char *target = (char *)trapframe->x[1];
+    const char *file_system = (char *)trapframe->x[2];
+    char absolute_path[MAX_PATH_LEN];
+
+#ifdef DEBUG_FS_SYSCALL
+    printf("[sys_mount] Task %d mount file system %s at path %s\n", current->task_id, file_system, target);
+#endif
+
+    strcpy(absolute_path, target);
+    get_absolute_path(absolute_path, current->current_dir);
+
+    trapframe->x[0] = vfs_mount(absolute_path, file_system);
+    return SYSCALL_SUCCESS;
+}
+
+int sys_chdir(struct trapframe *trapframe)
+{
+    const char *path = (char *)trapframe->x[0];
+    char absolute_path[MAX_PATH_LEN];
+    struct vnode *dir;
+
+#ifdef DEBUG_FS_SYSCALL
+    printf("[sys_chdir] Task %d change directory to %s\n", current->task_id, path);
+#endif
+
+    strcpy(absolute_path, path);
+    get_absolute_path(absolute_path, current->current_dir);
+    if (!vfs_lookup(absolute_path, &dir)) {
+        printf("[sys_chdir] change to a empty directory %s\n", absolute_path);
+        trapframe->x[0] = -1;
+        return SYSCALL_ERROR;
+    }
+    strcpy(current->current_dir, absolute_path);
+    trapframe->x[0] = 0;
     return SYSCALL_SUCCESS;
 }
