@@ -17,7 +17,7 @@
 #define O_CREAT 00000100 // octal 100=64
 #define SEEK_SET 0
 #define MAX_FS_REG 0x50
-// #define MAX_DEV_REG 0x10
+#define MAX_DEV_REG 0x10
 
 enum fsnode_type
 {
@@ -75,6 +75,7 @@ struct vnode_operations
 };
 
 int register_filesystem(struct filesystem *fs);
+int register_dev(struct file_operations* fo);
 struct filesystem *find_filesystem(const char *fs_name);
 int vfs_open(const char *pathname, int flags, struct file **target);
 int vfs_close(struct file *file);
@@ -83,6 +84,7 @@ int vfs_read(struct file *file, void *buf, size_t len);
 int vfs_mkdir(const char *pathname);
 int vfs_mount(const char *target, const char *filesystem);
 int vfs_lookup(const char *pathname, struct vnode **target);
+int vfs_mknod(char* pathname, int id);
 
 void init_rootfs();
 void vfs_test();

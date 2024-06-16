@@ -151,6 +151,12 @@ int exec_thread(char *data, unsigned int filesize)
         t->data[i] = data[i];
     }
     curr_thread = t;
+
+    // Lab7- Advance 1
+    vfs_open("/dev/uart", 0, &curr_thread->vfs.file_descriptors_table[0]); // stdin (press 'x')
+    vfs_open("/dev/uart", 0, &curr_thread->vfs.file_descriptors_table[1]); // stdout
+    vfs_open("/dev/uart", 0, &curr_thread->vfs.file_descriptors_table[2]); // stderr
+
     add_timer(schedule_timer, 2, "", 0); // start scheduler
     // eret to exception level 0
     asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
