@@ -106,7 +106,7 @@ static inline void *__get_object(struct kmem_cache *cache)
     list_for_each_entry(slab, &cache->node.partial, slab_list) {
         if (slab->freelist) {
             object = slab->freelist;
-            slab->freelist = *(void **) object;
+            slab->freelist = *(void **) phys_to_virt((unsigned long)object);
             return object;
         }
     }
@@ -116,7 +116,7 @@ static inline void *__get_object(struct kmem_cache *cache)
     if (!slab)
         return NULL;
     object = slab->freelist;
-    slab->freelist = *(void **) object;
+    slab->freelist = *(void **) phys_to_virt((unsigned long)object);
     return object;
 }
 
@@ -144,7 +144,7 @@ void free_object(void *object)
     struct page *slab;
 
     /* Use object physical address to get the slab and slab cache*/
-    slab = phys_to_page(object);
+    slab = phys_to_page(virt_to_phys((unsigned long)object));
 
     /* Check whether the page is a slab */
     if (slab->flags != PG_slab)

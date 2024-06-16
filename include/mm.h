@@ -194,7 +194,7 @@ void get_buddy_info(void);
 /* Reserve memory to mem_block. */
 void reserve_mem(unsigned long start, unsigned long end);
 
-/* Kernel memory allocate, return physical address. */
+/* Kernel memory allocate, return kernel virtual address. */
 void *kmalloc(unsigned long size);
 void kfree(void *obj);
 

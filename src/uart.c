@@ -129,7 +129,7 @@ void printf(char *fmt, ...)
     __builtin_va_start(args, fmt);
     // we don't have memory allocation yet, so we
     // simply place our string after our code
-    static char tmp[32];
+    static char tmp[128];
     // char *s = (char*)&_end;
     char *s = tmp;
     // use sprintf to format our string
@@ -142,6 +142,7 @@ void printf(char *fmt, ...)
         uart_send(*s++);
     }
 }
+
 int check_digit(char ch)
 {
     return (ch >= '0') && (ch <= '9');

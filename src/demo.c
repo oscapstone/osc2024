@@ -99,47 +99,32 @@ void demo_memory_allocator(void)
     uart_puts("==Get order 2 page for 6 times==\n\n");
     for (int i = 0; i < tmp; i++) {
         addr[i] = (char *) kmalloc(4096 << 2);
-        uart_puts("addr: ");
-        uart_hex((unsigned long) addr[i]);
-        uart_puts("\n\n");
+        printf("addr: %x\n\n", addr[i]);
     }
     get_buddy_info();
     uart_puts("Free order 2 page for 6 times\n");
-    for (int i = 0; i < tmp; i++) {
+    for (int i = 0; i < tmp; i++)
         kfree(addr[i]);
-    }
     get_buddy_info();
 
     addr[0] = (char *) kmalloc(8);
-    uart_puts("Get 8 bytes memory ");
-    uart_puts("addr: ");
-    uart_hex((unsigned long) addr[0]);
-    uart_send('\n');
+    printf("Get 8 bytes memory addr: %x\n", addr[0]);
 
     addr[0] = (char *) kmalloc(8);
-    uart_puts("Get 8 bytes memory ");
-    uart_puts("addr: ");
-    uart_hex((unsigned long) addr[0]);
-    uart_send('\n');
+    printf("Get 8 bytes memory addr: %x\n", addr[0]);
 
     addr[1] = (char *) kmalloc(16);
-    uart_puts("Get 16 bytes memory ");
-    uart_puts("addr: ");
-    uart_hex((unsigned long) addr[1]);
-    uart_send('\n');
+    printf("Get 16 bytes memory addr: %x\n", addr[1]);
 
     addr[2] = (char *) kmalloc(16);
-    uart_puts("Get 16 bytes memory ");
-    uart_puts("addr: ");
-    uart_hex((unsigned long) addr[2]);
-    uart_send('\n');
+    printf("Get 16 bytes memory addr: %x\n", addr[2]);
 
     uart_puts("Free the previous 16 bytes\n");
     kfree(addr[1]);
 
     addr[1] = (char *) kmalloc(16);
-    uart_puts("Get 16 bytes memory ");
-    uart_puts("addr: ");
-    uart_hex((unsigned long) addr[1]);
-    uart_send('\n');
+    printf("Get 16 bytes memory addr: %x\n", addr[1]);
+
+    addr[3] = (char *) kmalloc(16);
+    printf("Get 16 bytes memory addr: %x\n", addr[3]);
 }
