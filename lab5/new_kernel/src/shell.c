@@ -347,47 +347,35 @@ void shell_exec(int argc, char **argv)
     }
     else
     {
-        puts("Incorrect number of parameters\r\n");
+        uart_puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    char *c_filepath;
     char *c_filedata;
     unsigned int c_filesize;
-    CPIO_DEFAULT_PLACE = (void *)(unsigned long)0x8000000;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
-    while (header_ptr != 0)
+    int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
+    if (result == CPIO_TRAILER)
     {
-        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        // if parse header error
-        if (error)
-        {
-            uart_puts("cpio parse error");
-            break;
-        }
-
-        if (shell_cmd_strcmp(c_filepath, filepath) == 0)
-        {
-            // exec c_filedata
-            char *ustack = heap_malloc(0x1000);
-            asm volatile("msr elr_el1, %0\n\t" // elr_el1: Set the address to return to: c_filedata
-                         " mov x3, 0x3c0\n\t"
-                         "msr spsr_el1, x3\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
-                         "msr sp_el0, %1\n\t"   // user program stack pointer set to new stack.
-                         "eret\n\t"             // Perform exception return. EL1 -> EL0
-                         :
-                         : "r"(c_filedata), "r"(ustack + 0x1000));
-            break;
-        }
-
-        // if this is TRAILER!!! (last of file)
-        if (header_ptr == 0)
-        {
-            uart_puts("cat: ");
-            uart_puts(filepath);
-            uart_puts(": No such file or directory\n");
-        }
+        uart_puts("exec: ");
+        uart_puts(filepath);
+        uart_puts(": No such file or directory\r\n");
+        return -1;
     }
+    else if (result == CPIO_ERROR)
+    {
+        uart_puts("cpio parse error\r\n");
+        return -1;
+    }
+
+    if (kernel_fork() == 0)
+    { // child process
+        kernel_exec_user_program(filepath, NULL);
+    }
+    else
+    {
+       wait();
+    }
+    return 0;
 }
 
 char *strcpy1(char *dest, const char *src)

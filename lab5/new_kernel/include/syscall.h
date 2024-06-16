@@ -5,6 +5,25 @@
 #include "exception.h"
 #include "stdint.h"
 
+#define JUMP_TO_USER_SPACE(wrapper, dest, user_sp, kernel_sp)                                          \
+	do                                                                                                 \
+	{                                                                                                  \
+		DEBUG("Jump to user space\n");                                                                 \
+		curr_thread->context.lr = (uint64_t)wrapper;                                                   \
+		if (kernel_sp != NULL)                                                                         \
+			asm volatile("mov sp, %0\n\t" ::"r"(kernel_sp)); /* set kernel stack pointer */            \
+		if (user_sp != NULL)                                                                           \
+			asm volatile("msr sp_el0, %0\n\t" ::"r"(user_sp)); /* el0 stack pointer for el1 process */ \
+		el1_interrupt_disable();                                                                       \
+		asm volatile(                                                                                  \
+			"msr tpidr_el1, %0\n\t" /* Hold the \"kernel(el1)\" thread structure information */        \
+			"msr elr_el1, %1\n\t"	/* When el0 -> el1, store return address for el1 -> el0 */         \
+			"msr spsr_el1, xzr\n\t" /* Enable interrupt in EL0 -> Used for thread scheduler */         \
+			"mov x0, %2\n\t"		/* Move destination address to x0 */                               \
+			"eret\n\t"                                                                                 \
+			:                                                                                          \
+			: "r"(&curr_thread->context), "r"(curr_thread->context.lr), "r"(dest));                    \
+	} while (0)
 
 #define CALL_SYSCALL(syscall_num) \
 	do                            \
@@ -35,6 +54,12 @@ enum syscall_num
 	SYSCALL_MAX
 };
 
+// void run_user_task_wrapper(char *dest);
+// int exec(const char *name, char *const argv[]);
+// int fork();
+// void lock_interrupt();
+// void unlock_interrupt();
+
 int sys_getpid(trapframe_t *tpf);
 size_t sys_uart_read(trapframe_t *tpf, char buf[], size_t size);
 size_t sys_uart_write(trapframe_t *tpf, const char buf[], size_t size);
@@ -43,5 +68,16 @@ int sys_fork(trapframe_t *tpf);
 int sys_exit(trapframe_t *tpf, int status);
 int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox);
 int sys_kill(trapframe_t *tpf, int pid);
+// Advance 1
+int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void));
+int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL);
+int sys_signal_return(trapframe_t *tpf);
+void sys_lock_interrupt(trapframe_t *tpf);
+void sys_unlock_interrupt(trapframe_t *tpf);
 
-#endif
+int kernel_fork();
+int kernel_exec_user_program(const char *name, char *const argv[]);
+void kernel_lock_interrupt();
+void kernel_unlock_interrupt();
+
+#endif /* _SYSCALL_H_ */

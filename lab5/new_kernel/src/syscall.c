@@ -131,3 +131,42 @@ int sys_kill(trapframe_t *tpf, int pid)
     // thread_exit_by_pid(pid);
     return 0;
 }
+
+int kernel_fork()
+{
+	lock();
+	thread_t *parent = curr_thread;
+	char *new_name = kmalloc(strlen(parent->name) + 1);
+	thread_t *child = thread_create(parent->code, new_name);
+	int64_t pid = child->pid;
+	//("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
+	child->datasize = parent->datasize;
+	child->status = THREAD_IS_READY;
+	// SIGNAL_COPY(child, parent);
+
+	child->code = parent->code;
+	//("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
+	//("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
+
+	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
+	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
+	// Because make a function call, so lr is the next instruction address
+	// When context switch, child process will start from the next instruction
+	store_context(get_current_thread_context());
+	//("child: 0x%x, parent: 0x%x\r\n", child, parent);
+
+	if (child->pid != curr_thread->pid) // Parent process
+	{
+		//("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
+		child->context = curr_thread->context;
+		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
+		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
+		unlock();
+		return child->pid;
+	}
+	else // Child process
+	{
+		//("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
+		return 0;
+	}
+}

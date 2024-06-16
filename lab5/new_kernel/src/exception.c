@@ -140,8 +140,12 @@ void sync_exc_router(unsigned long spsr, unsigned long elr, unsigned long esr)
     else
     {
         uart_puts("Not svc syscall but el0 syn router \n");
-        return;
     }
+    while (1)
+    {
+        /* code */
+    }
+    
 }
 void breakpt()
 {
