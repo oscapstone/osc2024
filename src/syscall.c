@@ -10,8 +10,6 @@
 #include "string.h"
 #include "vfs.h"
 
-#define DEBUG_FS_SYSCALL
-
 /* The definition of system call handler function */
 syscall_t sys_call_table[SYSCALL_NUM] = {
     sys_get_taskid,

@@ -14,7 +14,9 @@ int register_filesystem(struct filesystem *fs)
     for (int i = 0; i < NR_FILESYSTEM; i++) {
         if (!filesystems[i]) {
             filesystems[i] = fs;
+#ifdef VFS_DEBUG
             printf("    [register_filesystem] File system %s registered idx %d\n", filesystems[i]->name, i);
+#endif
             return 1; // 1 means success
         }
     }
@@ -68,8 +70,7 @@ int vfs_lookup(const char *pathname, struct vnode **target)
     char path[MAX_PATH_LEN];
     int i, idx = 0;
 
-    if (strlen(pathname) == 0 || (strlen(pathname) == 1 && pathname[0] == '/')) {
-        printf("    [vfs_lookup] Return rootfs->root\n");
+    if (strlen(pathname) == 0 || (strlen(pathname) == 1 && pathname[0] == '/')) { // return root
         *target = rootfs->root;
         return 1;
     }
@@ -78,7 +79,9 @@ int vfs_lookup(const char *pathname, struct vnode **target)
         if (pathname[i] == '/') { // the current path[] is directory name
             path[idx++] = '\0';
             if (!dir->v_ops->lookup(dir, &dir, path)) {
+#ifdef VFS_DEBUG
                 printf("    [vfs_lookup] lookup failed, %s not found\n", path);
+#endif
                 return 0;
             }
 
@@ -91,7 +94,9 @@ int vfs_lookup(const char *pathname, struct vnode **target)
     }
     path[idx] = '\0';
     if (!dir->v_ops->lookup(dir, &dir, path)) { // last lookup, should be the target
+#ifdef VFS_DEBUG
         printf("    [vfs_lookup] lookup failed, %s not found\n", path);
+#endif
         return 0;
     }
 
@@ -110,13 +115,17 @@ int vfs_open(const char* pathname, int flags, struct file** target)
     char path[MAX_PATH_LEN];
     int i, idx = 0;
 
+#ifdef VFS_DEBUG
     printf("    [vfs_open] Open file %s\n", pathname);
+#endif
 
     /* Lookup path name*/
     if (!vfs_lookup(pathname, &node)) {
         /* If vnode not found and O_CREAT is specified in flags, create a new file */
         if (flags & O_CREAT) {
+#ifdef VFS_DEBUG
             printf("    [vfs_open] vfs_lookup %s failed, but O_CREAT is specified\n", pathname);
+#endif
             /* Find the directory. First get the directory path */
             for (i = 0; i < strlen(pathname); i++) {
                 if (pathname[i] == '/')
@@ -138,10 +147,11 @@ int vfs_open(const char* pathname, int flags, struct file** target)
             target_node->f_ops->open(target_node, target);
             (*target)->flags = flags;
 
-            printf("    [vfs_open] file %s created\n", pathname);
             return 1;
         }
+#ifdef VFS_DEBUG
         printf("    [vfs_open] vnode not found and O_CREAT not specified\n");
+#endif
         return 0;
     }
 
@@ -178,26 +188,16 @@ int vfs_read(struct file* file, void* buf, size_t len)
 void rootfs_init(void)
 {
     register_filesystem(&tmpfs_filesystem);
-    // register_filesystem(&initramfs_filesystem);
+    register_filesystem(&initramfs_filesystem);
 
     /* Setup "/" path to tmpfs file system manually */
-    rootfs = (struct mount*)kmalloc(sizeof(struct mount));
+    rootfs = (struct mount*) kmalloc(sizeof(struct mount));
     filesystems[0]->setup_mount(filesystems[0], rootfs);
 
     /* Mount initramfs on path "/initramfs" */
-    // vfs_mkdir("/initramfs");
-    // vfs_mount("/initramfs", "initramfs");
-
-
-    /* Test my vfs */
-    // struct file *test_file;
-    // struct vnode *test_vnode;
-    // vfs_open("/tmpfile", O_CREAT, &test_file);
-    // vfs_lookup("/tmpfile", &test_vnode);
-    // if (test_vnode == NULL)
-    //     printf("test lookup failed.");
+    vfs_mkdir("/initramfs");
+    vfs_mount("/initramfs", "initramfs");
 }
-
 
 /**
  * Get the absolute path from the current directory path and path.
@@ -215,9 +215,8 @@ void get_absolute_path(char *path, char *current_path)
         if (strcmp(current_path, "/")) // if current_path is not root, we should add '/'
             strcat(abs_path, "/");
         strcat(abs_path, path);
-    } else { // path is absolute path, just copy it
+    } else // path is absolute path, just copy it
         strcpy(abs_path, path);
-    }
 
     /* Deals with abs_path with "..", ".", then store it to path. */
     for (i = 0; i < strlen(abs_path); i++) {

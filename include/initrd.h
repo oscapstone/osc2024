@@ -26,16 +26,7 @@
 #define INITRD_H
 
 #include "dtb.h"
-
-extern char *cpio_base;
-
-void initrd_list();
-void initrd_ls();
-void initrd_cat();
-void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name);
-void initrd_usr_prog(char *cmd);
-
-void initrd_reserve_memory(void);
+#include "initramfs.h"
 
 typedef struct {
     char magic[6]; // "070701"
@@ -53,5 +44,17 @@ typedef struct {
     char namesize[8];
     char check[8];
 } __attribute__((packed)) cpio_f;
+
+extern char *cpio_base;
+
+void initrd_list();
+void initrd_ls();
+void initrd_cat();
+void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name);
+void initrd_usr_prog(char *cmd);
+
+void initrd_reserve_memory(void);
+
+void initramfs_init(struct initramfs_inode *dir);
 
 #endif

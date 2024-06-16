@@ -19,7 +19,9 @@ struct vnode_operations tmpfs_vnode_operations = {
 
 int tmpfs_setup_mount(struct filesystem* fs, struct mount* mount)
 {
+#ifdef VFS_DEBUG
     printf("        [tmpfs_setup_mount]\n");
+#endif
 
     mount->fs = fs;
     mount->root = tmpfs_create_vnode(0, FSNODE_TYPE_DIR);
@@ -142,7 +144,9 @@ int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
             return 1;
         }
     }
+#ifdef VFS_DEBUG
     printf("        [tmpfs_lookup] %s not found\n", component_name);
+#endif
     return 0;
 }
 
@@ -153,7 +157,9 @@ int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *comp
     int child_idx;
     struct vnode *new_vnode;
 
+#ifdef VFS_DEBUG
     printf("        [tmpfs_create] component name: %s\n", component_name);
+#endif
 
     /* Get the inode of dir_node*/
     inode = dir_node->internal;

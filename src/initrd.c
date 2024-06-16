@@ -31,6 +31,8 @@
 #include "memblock.h"
 #include "exec.h"
 #include "mm.h"
+#include "vfs.h"
+#include "initramfs.h"
 
 #define buf_size 128
 
@@ -213,4 +215,42 @@ void initrd_reserve_memory(void)
     /* reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns */
     buf += ALIGN(sizeof(cpio_f) + 10, 4);
     memblock_reserve((unsigned long) virt_to_phys((unsigned long)cpio_base), ALIGN(buf - cpio_base, 8));
+}
+
+/* Iterate all the files in .cpio and put it under initramfs_inode */
+void initramfs_init(struct initramfs_inode *dir)
+{
+    cpio_f *header;
+    char *buf = cpio_base, *file_name, *data;
+    struct vnode *file_vnode;
+    struct initramfs_inode *file_inode;
+    int idx = 0, ns, fs;
+
+    if (memcmp(buf, "070701", 6))
+        return;
+
+    // if it's a cpio newc archive. Cpio also has a trailer entry
+    while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) {
+        header = (cpio_f*) buf;
+        ns = hex2bin(header->namesize, 8);
+        fs = ALIGN(hex2bin(header->filesize, 8), 4);
+        file_name = buf + sizeof(cpio_f);
+        data = buf + ALIGN(sizeof(cpio_f) + ns, 4);
+
+        /* Ignore directory */
+        if (fs == 0)
+            goto next_file;
+        
+        /* Create file vnode */
+        file_vnode = initramfs_create_vnode(0, FSNODE_TYPE_FILE);
+        file_inode = file_vnode->internal;
+        /* Update initramfs inode information */
+        strcpy(file_inode->name, file_name);
+        file_inode->data = data;
+        file_inode->data_size = fs;
+        dir->childs[idx++] = file_vnode;
+
+next_file: // jump to the next file
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
+    }
 }
