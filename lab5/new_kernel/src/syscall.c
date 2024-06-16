@@ -21,6 +21,13 @@ extern thread_t *curr_thread;
         }                                             \
     } while (0)
 
+
+void run_user_task_wrapper(char *dest)
+{
+	((void (*)(void))dest)();
+	CALL_SYSCALL(SYSCALL_EXIT);
+}
+
 int sys_getpid(trapframe_t *tpf)
 {
     return curr_thread->pid;
@@ -169,4 +176,37 @@ int kernel_fork()
 		//("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
 		return 0;
 	}
+}
+
+int kernel_exec_user_program(const char *program_name, char *const argv[])
+{
+	unsigned int filesize;
+	char *filedata;
+	int result = cpio_get_file(program_name, &filesize, &filedata);
+	if (result == CPIO_TRAILER)
+	{
+		// WARNING("exec: %s: No such file or directory\r\n", program_name);
+		return -1;
+	}
+	else if (result == CPIO_ERROR)
+	{
+		// ERROR("cpio parse error\r\n");
+		return -1;
+	}
+
+	if (thread_code_can_free(curr_thread))
+	{
+		kfree(curr_thread->code);
+	}
+	lock();
+	char *filepath = kmalloc(strlen(program_name) + 1);
+	strcpy(filepath, program_name);
+	curr_thread->datasize = filesize;
+	curr_thread->name = filepath;
+	curr_thread->code = kmalloc(filesize);
+	MEMCPY(curr_thread->code, filedata, filesize);
+	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
+	unlock();
+	JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
+	return 0;
 }

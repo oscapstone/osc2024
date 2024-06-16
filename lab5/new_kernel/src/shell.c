@@ -7,6 +7,7 @@
 #include "dtb.h"
 #include "cpio.h"
 #include "sysregs.h"
+#include "sched.h"
 char input_buffer[CMD_MAX_LEN];
 
 extern void el0_enter(void);

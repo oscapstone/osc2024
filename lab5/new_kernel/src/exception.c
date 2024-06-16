@@ -8,6 +8,7 @@
 #include "stdint.h"
 #include "exception.h"
 #include "memory.h"
+#include "syscall.h"
 
 extern int8_t need_to_schedule;
 struct list_head *task_list;
@@ -147,13 +148,111 @@ void sync_exc_router(unsigned long spsr, unsigned long elr, unsigned long esr)
     }
     
 }
-void breakpt()
+void el0_sync_router(trapframe_t *tpf)
 {
+    static int count = 0;
+    // uint64_t esr_el1 = read_esr_el1();
+    // if (!is_el0_syscall())
+    // {
+    //     const char *exception_name = get_exception_name(esr_el1);
+    //     if (count == 0)
+    //         ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
+    //     count++;
+    //     return;
+    // }
+    // Basic #3 - Based on System Call Format in Video Player’s Test Program
+    uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
+    // //"syscall_no: %d\r\n", syscall_no);
+    // only work with GCC
+    void *syscall_router[] = {&&__getpid_label,           // 0
+                              &&__uart_read_label,        // 1
+                              &&__uart_write_label,       // 2
+                              &&__exec_label,             // 3
+                              &&__fork_label,             // 4
+                              &&__exit_label,             // 5
+                              &&__mbox_call_label,        // 6
+                              &&__kill_label,             // 7
+                              &&__signal_register_label,  // 8
+                              &&__signal_kill_label,      // 9
+                              &&__signal_return_label,    // 10
+                              &&__lock_interrupt_label,   // 11
+                              &&__unlock_interrupt_label, // 12
+                              &&__invalid_syscall_label}; // 13
+
+    goto *syscall_router[syscall_no];
+
+__getpid_label:
+    // //"sys_getpid\r\n");
+    tpf->x0 = sys_getpid(tpf);
+    return;
+
+__uart_read_label:
+    // //"sys_uart_read\r\n");
+    tpf->x0 = sys_uart_read(tpf, (char *)tpf->x0, tpf->x1);
+    return;
+
+__uart_write_label:
+    // //"sys_uart_write\r\n");
+    tpf->x0 = sys_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
+    return;
+
+__exec_label:
+    // //"sys_exec\r\n");
+    tpf->x0 = sys_exec(tpf, (char *)tpf->x0, (char **)tpf->x1);
+    return;
+
+__fork_label:
+    //"sys_fork\r\n");
+    tpf->x0 = sys_fork(tpf);
+    return;
+
+__exit_label:
+    //"sys_exit\r\n");
+    tpf->x0 = sys_exit(tpf, tpf->x0);
+    return;
+
+__mbox_call_label:
+    //"sys_mbox_call\r\n");
+    tpf->x0 = sys_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
+    //"mbox_call return: %d\r\n", tpf->x0);
+    return;
+
+__kill_label:
+    //"sys_kill\r\n");
+    tpf->x0 = sys_kill(tpf, (int)tpf->x0);
+    return;
+
+__signal_register_label:
+    //"sys_signal_register\r\n");
+    // tpf->x0 = sys_signal_register(tpf, (int)tpf->x0, (void (*)(void))(tpf->x1));
+    return;
+
+__signal_kill_label:
+    //"sys_signal_kill\r\n");
+    // tpf->x0 = sys_signal_kill(tpf, (int)tpf->x0, (int)tpf->x1);
+    return;
+
+__signal_return_label:
+    //"sys_signal_return\r\n");
+    // sys_signal_return(tpf);
+    return;
+
+__lock_interrupt_label:
+    //"sys_lock_interrupt\r\n");
+    // sys_lock_interrupt(tpf);
+    return;
+
+__unlock_interrupt_label:
+    //"sys_unlock_interrupt\r\n");
+    // sys_unlock_interrupt(tpf);
+    return;
+
+__invalid_syscall_label:
+    // ERROR("Invalid system call number: %d\r\n", syscall_no);
+    return;
 }
 
-void breakpt2()
-{
-}
+
 void irq_exc_router()
 {
     lock();
@@ -167,7 +266,6 @@ void irq_exc_router()
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
     if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTR_SRC & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        breakpt();
         if (*AUX_MU_IER_REG & 2)
         { // & (0b10) : enable write
 

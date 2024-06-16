@@ -135,6 +135,9 @@ static inline int list_size(const struct list_head *head)
 
 
 int atoi(char* str);
-
+#define list_for_each_safe(pos, n, head)    \
+	for (pos = (head)->next, n = pos->next; \
+		 !list_is_head(pos, (head));        \
+		 pos = n, n = pos->next)
 
 #endif

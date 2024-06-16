@@ -150,12 +150,10 @@ void delay()
 }
 void add_timer_by_tick(uint64_t tick, void *callback, void *args_struct)
 {
-    // DEBUG("add_timer_by_tick: %d\r\n", tick);
     timer_event_t *the_timer_event = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
     the_timer_event->args = args_struct;
     the_timer_event->interrupt_time = get_tick_plus_s(tick);
-    // DEBUG("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
     the_timer_event->callback = callback;
     INIT_LIST_HEAD(&the_timer_event->listhead);
 

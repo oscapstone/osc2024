@@ -8,7 +8,6 @@
 #define JUMP_TO_USER_SPACE(wrapper, dest, user_sp, kernel_sp)                                          \
 	do                                                                                                 \
 	{                                                                                                  \
-		DEBUG("Jump to user space\n");                                                                 \
 		curr_thread->context.lr = (uint64_t)wrapper;                                                   \
 		if (kernel_sp != NULL)                                                                         \
 			asm volatile("mov sp, %0\n\t" ::"r"(kernel_sp)); /* set kernel stack pointer */            \

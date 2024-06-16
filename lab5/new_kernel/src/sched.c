@@ -13,9 +13,16 @@ list_head_t *run_queue;
 thread_t *threads[MAX_PID + 1];
 thread_t *curr_thread;
 
+extern char __begin;
+extern char __end;
+
 static int64_t pid_history = 0;
 int8_t need_to_schedule = 0;
 
+static inline int8_t in_kernel_img_space(uint64_t addr)
+{
+	return addr >= &__begin && addr < & __end;
+}
 thread_t *init_idle_thread(void *code, char *name, signed long pid, signed long ppid)
 {
     thread_t *thread = (thread_t *)kmalloc(sizeof(thread_t));
@@ -36,6 +43,46 @@ thread_t *init_idle_thread(void *code, char *name, signed long pid, signed long 
     thread->context.fp = thread->context.sp;
     list_add((list_head_t *)thread, run_queue);
     return thread;
+}
+inline int8_t thread_code_can_free(thread_t *thread)
+{
+	return !in_kernel_img_space((uint64_t)thread->code);
+}
+
+static inline thread_t *child_node_to_thread(child_node_t *node)
+{
+	return threads[(node)->pid];
+}
+
+static inline int free_child_thread(thread_t *child_thread)
+{
+	list_head_t *curr;
+	list_head_t *n;
+	//("free child thread: %d\n", child_thread->pid);
+
+	list_for_each_safe(curr, n, (list_head_t *)child_thread->child_list)
+	{
+		thread_t *curr_child = child_node_to_thread((child_node_t *)curr);
+		curr_child->ppid = 1; // assign to init process
+		//("move child thread: %d to init process\n", curr_child->pid);
+		list_del_entry(curr);
+		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
+	}
+
+	if (thread_code_can_free(child_thread))
+	{
+		kfree(child_thread->code);
+	}
+	threads[child_thread->pid] = NULL;
+	kfree(child_thread->child_list);
+	kfree(child_thread->user_stack_base);
+	kfree(child_thread->kernel_stack_base);
+	kfree(child_thread->name);
+	block();
+	kfree(child_thread);
+	//("child_thread: 0x%x, curr_thread: 0x%x\n", child_thread, curr_thread);
+	// dump_run_queue();
+	return 0;
 }
 
 void init_thread_sched()
@@ -134,6 +181,42 @@ thread_t *thread_create(char *name, void *code)
     return t;
 }
 
+int64_t wait()
+{
+	lock();
+	//("block thread: %d\n", curr_thread->pid);
+	curr_thread->status = THREAD_IS_BLOCKED;
+	while (1)
+	{
+		// //("wait thread: %d\n", curr_thread->pid);
+		unlock();
+		schedule();
+		lock();
+		// //_BLOCK({
+		// 	dump_child_thread(curr_thread);
+		// });
+		struct list_head *curr_child_node;
+		list_head_t *n;
+		list_for_each_safe(curr_child_node, n, (list_head_t *)curr_thread->child_list)
+		{
+			thread_t *child_thread = child_node_to_thread((child_node_t *)curr_child_node);
+			if (child_thread->status == THREAD_IS_ZOMBIE)
+			{
+				// dump_run_queue();
+				int64_t pid = child_thread->pid;
+				//("wait thread kfree child: %d\n", pid);
+				free_child_thread(child_thread);
+
+				list_del_entry(curr_child_node);
+				unlock();
+				return pid;
+			}
+		}
+	}
+	unlock();
+	return 0;
+}
+
 void foo()
 {
     uart_puts(curr_thread->name);
@@ -218,13 +301,3 @@ void thread_exit()
 };
 
 
-// int thread_info_dump(int argc, char **argv)
-// {
-//     if (argc != 0)
-//     {
-//         puts("Incorrect number of parameters\r\n");
-//         return -1;
-//     }
-//     dump_run_queue();
-//     return 0;
-// }

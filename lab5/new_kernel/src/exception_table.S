@@ -89,7 +89,7 @@ exception_table:
     ventry error_invalid_el1h //SError EL1h
 
     //Exception vector in 64 bits EL0 mode
-    ventry sync_exc_handler
+    ventry el0_sync_64
     ventry irq_exc_handler //
     ventry fiq_invalid_el0_64
     ventry error_invalid_el0_64
@@ -145,6 +145,14 @@ fiq_invalid_el0_32:
 error_invalid_el0_32:
     handle_invalid_entry  ERROR_INVALID_EL0_32
 
+el0_sync_64:
+    kernel_entry
+    bl el1_interrupt_enable
+    mov x0, sp
+    bl el0_sync_router
+    bl el1_interrupt_disable
+    kernel_exit
+    
 sync_exc_handler:
     kernel_entry
     mrs x0, SPSR_EL1
