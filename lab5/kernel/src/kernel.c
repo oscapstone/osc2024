@@ -11,11 +11,12 @@ extern thread_t *curr_thread;
 extern thread_t *threads[];
 
 void kernel_main(char* arg) {
+	lock();
     dtb_init(arg);
 
 	uart_init();
-	uart_flush_FIFO();
 	uart_interrupt_enable();
+	uart_flush_FIFO();
 	core_timer_enable();
 
 	memory_init();
@@ -23,7 +24,6 @@ void kernel_main(char* arg) {
     timer_list_init();
 
 	init_thread_sched();
-	el1_interrupt_enable();
 	
 	load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
 }

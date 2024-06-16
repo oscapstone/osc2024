@@ -81,9 +81,13 @@ void            thread_exit_by_pid(int64_t pid);
 void            schedule();
 void            schedule_timer();
 void            idle();
+void            init();
+int64_t         wait();
 void            exec_thread(char *data, unsigned int filesize);
+void            free_child_thread(thread_t *child_thread); 
 void            dump_thread_info(thread_t* t);
 void            dump_child_thread(thread_t *thread);
+void            dump_run_queue(thread_t *root, int64_t level);
 
 // Test function
 void            foo();

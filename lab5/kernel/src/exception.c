@@ -40,7 +40,7 @@ void print_currentEL(){
 }
 
 void print_lock() {
-    uart_puts("[*] Locks: %d", lock_count);
+    uart_puts("[*] Locks: %d\r\n", lock_count);
 }
 
 // DAIF, Interrupt Mask Bits
@@ -113,6 +113,10 @@ void unlock() {
     lock_count--;
     if (lock_count == 0)
         el1_interrupt_enable();
+    else if (lock_count < 0) {
+        uart_puts("lock interrupt counter error\r\n");
+        while(1);
+    }
 }
 
 void irqtask_list_init() {

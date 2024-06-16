@@ -16,8 +16,6 @@
 
 void*   CPIO_DEFAULT_PLACE;
 char    input_buf[MAX_CMD_LEN];
-static unsigned long long lock_count;
-
 
 void cli_start_shell() {
     cli_print_welcome_msg();

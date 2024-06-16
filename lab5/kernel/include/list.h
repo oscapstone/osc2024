@@ -121,6 +121,17 @@ static inline int list_empty(const struct list_head *head)
 	for (pos = (head)->next; !list_is_head(pos, (head)); pos = pos->next)
 
 /**
+ * list_for_each_safe - iterate over a list safe against removal of list entry
+ * @pos:	the &struct list_head to use as a loop cursor.
+ * @n:		another &struct list_head to use as temporary storage
+ * @head:	the head for your list.
+ */
+#define list_for_each_safe(pos, tmp, head)    \
+	for (pos = (head)->next, tmp = pos->next; \
+		 !list_is_head(pos, (head));        \
+		 pos = tmp, tmp = pos->next)
+
+/**
  * list_empty - tests whether a list is empty
  * @head: the list to test.
  */
