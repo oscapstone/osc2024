@@ -273,7 +273,7 @@ void init_rootfs()
     int framebuffer_id = init_dev_framebuffer();
     vfs_mknod("/dev/framebuffer", framebuffer_id);
 
-    vfs_test();
+    // vfs_test();
 }
 
 void vfs_test()
