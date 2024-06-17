@@ -94,11 +94,25 @@ void initrd_exec(const char *target)
         if (!strcmp(target, pathname)) {
             void *program = kmalloc(filesize);
             memcpy(program, fptr + headsize, filesize);
-            struct task_struct *task = kthread_create((void *)program);
+            struct task_struct *task = kthread_create((void *)0x0);
+
+            map_pages(task->pgd, 0x0, filesize,
+                      (unsigned long)VIRT_TO_PHYS(program), 0);
+            map_pages(task->pgd, 0xFFFFFFFFB000, 0x4000,
+                      (unsigned long)VIRT_TO_PHYS(task->user_stack), 0);
+            map_pages(task->pgd, 0x3C000000, 0x3F000000 - 0x3C000000,
+                      0x3C000000, 0);
+
+            asm volatile("dsb ish");
+            asm volatile("msr ttbr0_el1, %0" ::"r"(task->pgd));
+            asm volatile("tlbi vmalle1is");
+            asm volatile("dsb ish");
+            asm volatile("isb");
+
             asm volatile("msr tpidr_el1, %0;" ::"r"(task));
             asm volatile("msr spsr_el1, %0" ::"r"(0x340));
-            asm volatile("msr elr_el1, %0" ::"r"(task->context.lr));
-            asm volatile("msr sp_el0, %0" ::"r"(task->user_stack + STACK_SIZE));
+            asm volatile("msr elr_el1, %0" ::"r"(0x0));
+            asm volatile("msr sp_el0, %0" ::"r"(0xFFFFFFFFF000));
             asm volatile("mov sp, %0" ::"r"(task->stack + STACK_SIZE));
             asm volatile("eret");
             return;

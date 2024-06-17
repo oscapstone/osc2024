@@ -99,11 +99,13 @@ struct task_struct *kthread_create(void (*func)())
     memset(task->sighand, 0, sizeof(task->sighand));
     task->sigpending = 0;
     task->siglock = 0;
-    task->pgd = 0;
+    task->pgd = (unsigned long)VIRT_TO_PHYS(kmalloc(PAGE_SIZE));
+    memset((void *)PHYS_TO_VIRT(task->pgd), 0, PAGE_SIZE);
     task->mmap = 0;
+    // TODO: Check VIRT_TO_PHYS needed or not
     task->context.lr = (unsigned long)func;
-    task->context.sp = (unsigned long)task->user_stack + STACK_SIZE;
-    task->context.fp = (unsigned long)task->user_stack + STACK_SIZE;
+    task->context.sp = (unsigned long)task->stack + STACK_SIZE;
+    task->context.fp = (unsigned long)task->stack + STACK_SIZE;
     enqueue(&run_queue, task);
     return task;
 }
