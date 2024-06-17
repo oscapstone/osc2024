@@ -186,6 +186,33 @@ void c_system_call_handler(trapframe_t* tf) {
 		uart_printf ("Do a kill\r\n");
 		do_sigkill(tf -> x[0], tf -> x[1]);
 	}
+	else if (id == 11) {
+		tf -> x[0] = do_open(tf -> x[0], tf -> x[1]);
+	}
+	else if (id == 12) {
+		tf -> x[0] = do_close(tf -> x[0]);
+	}
+	else if (id == 13) {
+		tf -> x[0] = do_write(tf -> x[0], tf -> x[1], tf -> x[2]);
+	}
+	else if(id == 14) {
+		tf -> x[0] = do_read(tf -> x[0], tf -> x[1], tf -> x[2]);
+	}
+	else if(id == 15) {
+		tf -> x[0] = do_mkdir(tf -> x[0], tf -> x[1]);
+	}
+	else if(id == 16) {
+		tf -> x[0] = do_mount(tf -> x[0], tf -> x[1], tf -> x[2], tf -> x[3], tf -> x[4]);
+	}
+	else if(id == 17) {
+		tf -> x[0] = do_chdir(tf -> x[0]);
+	}
+	else if(id == 18) {
+		tf -> x[0] = do_lseek64(tf -> x[0], tf -> x[1], tf -> x[2]);	
+	}
+	else if(id == 19) {
+		tf -> x[0] = do_ioctl(tf -> x[0], tf -> x[1], tf -> x[2]);
+	}
 	else {
 		uart_printf ("This is unexpected systemcall, proc hang\r\n");
 		while (1);

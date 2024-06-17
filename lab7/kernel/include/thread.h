@@ -1,6 +1,8 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include "vfs.h"
+
 typedef struct thread {
 	unsigned long long reg[10];
 	void* fp;
@@ -17,6 +19,8 @@ typedef struct thread {
 	int signal[10];
 	void* code;
 	int code_size;
+	file* fds[16];
+	char cwd[256];
 } thread;
 
 void thread_init();

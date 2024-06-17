@@ -7,6 +7,8 @@
 #include "thread.h"
 #include "mmu.h"
 #include "utils.h"
+#include "vfs.h"
+#include "initramfs.h"
 
 extern char* _cpio_file;
 char buff[1024];
@@ -129,11 +131,24 @@ void cpio_load(char* str) {
 	long xxx = read_sysreg(tpidr_el1);
 	uart_printf ("xxx: %llx\r\n", xxx);
 
-	void* pos = cpio_find(str); 
-	cur -> code = my_malloc(4096 * 256);
-	cur -> code_size = 4096 * 256;
+	vnode* t;
+	if (vfs_lookup(str, &t) != 0) {
+		uart_printf ("Fail to get exec program\r\n");
+		return;
+	}
+	initramfs_node* inode = t -> internal;
+	uart_printf ("t -> internal: %llx\r\n", t -> internal);
+	int sz = (inode -> size + 4096 - 1) / 4096 * 4096;
+	uart_printf ("loading size %d\r\n", sz);
+
+	void* pos = cpio_find(str);
+	cur -> code = my_malloc(sz);
+	cur -> code_size = sz;
+
+	uart_printf ("inode data size: %d\r\n", inode -> size);
+
 	for (int i = 0; i < cur -> code_size; i ++) {
-		((char*)cur -> code)[i] = ((char*)pos)[i];
+		((char*)cur -> code)[i] = inode -> data[i];
 	}
 
 	uart_printf ("%llx, %llx, %llx\r\n", cur -> PGD, pa2va(cur -> PGD), &(cur -> PGD));

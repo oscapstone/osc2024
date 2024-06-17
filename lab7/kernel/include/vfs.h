@@ -5,6 +5,12 @@
 
 #define O_CREAT 00000100
 
+#define MAX_FS_NUM 100
+#define MAX_PATH_SIZE 255
+#define MAX_DATA_SIZE 4096
+#define MAX_NAME_SIZE 15
+#define MAX_ENTRY_SIZE 16
+
 typedef struct vnode {
   struct mount* mount;
   struct vnode_operations* v_ops;
@@ -15,9 +21,10 @@ typedef struct vnode {
 // file handle
 typedef struct file {
   struct vnode* vnode;
-  size_t f_pos;  // RW position of this file handle
+  unsigned long f_pos;  // RW position of this file handle
   struct file_operations* f_ops;
   int flags;
+  int ref; // not used
 } file;
 
 typedef struct mount {
@@ -46,8 +53,6 @@ typedef struct vnode_operations {
   int (*mkdir)(struct vnode* dir_node, struct vnode** target,
               const char* component_name);
 } vnode_operations;
-
-struct mount* rootfs;
 
 int register_filesystem(struct filesystem* fs);
   // register the file system to the kernel.
@@ -78,5 +83,7 @@ int vfs_mount(const char* target, const char* filesystem);
 int vfs_lookup(const char* pathname, struct vnode** target);
 
 void filesystem_init();
+
+const char* to_absolute(char*, char*);
 
 #endif

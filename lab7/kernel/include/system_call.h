@@ -26,4 +26,16 @@ void output_sp(void*);
 
 void im_fineee();
 
+#define O_CREAT 00000100
+int do_open(const char *pathname, int flags);
+int do_close(int fd);
+long do_write(int fd, const void *buf, unsigned long count);
+long do_read(int fd, void *buf, unsigned long count);
+int do_mkdir(const char *pathname, unsigned mode);
+int do_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+int do_chdir(const char *path);
+
+long do_lseek64(int fd, long offset, int whence);
+int do_ioctl();
+
 #endif

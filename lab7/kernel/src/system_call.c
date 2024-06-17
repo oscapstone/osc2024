@@ -8,12 +8,121 @@
 #include "exception.h"
 #include "utils.h"
 #include "mmu.h"
+#include "framebufferfs.h"
 
 extern thread* get_current();
 extern thread** threads;
 extern void** thread_fn;
 
 #define stack_size 4096
+
+long do_lseek64(int fd, long offset, int whence) {
+	if (get_current() -> fds[fd] == NULL) {
+		uart_printf ("lseeked a NULL\r\n");
+		return -1;
+	}
+	if (whence == 0) {
+		get_current() -> fds[fd] -> f_pos = offset;
+	}
+	return 0;
+}
+
+typedef struct framebuffer_info {
+  unsigned int width;
+  unsigned int height;
+  unsigned int pitch;
+  unsigned int isrgb;
+} framebuffer_info;
+
+int do_ioctl(int fd, unsigned long request, void* info) {
+	if (get_current() -> fds[fd] == NULL) {
+		uart_printf ("[IOCTL] no such fd %d\r\n", fd);
+		return -1;
+	}
+	framebuffer_node* inode = get_current() -> fds[fd] -> vnode -> internal;
+	if (request == 0) {
+		((framebuffer_info*)info) -> width = inode -> width;
+		((framebuffer_info*)info) -> height = inode -> height;
+		((framebuffer_info*)info) -> pitch = inode -> pitch;
+		((framebuffer_info*)info) -> isrgb = inode -> isrgb;
+	}
+	return 0;
+}
+
+int do_open(const char* pathname, int flags) {
+	const char* path = to_absolute(pathname, get_current() -> cwd);
+	uart_printf ("[OPEN] %s, %s, %d\r\n", pathname, path, flags); 
+	for (int i = 0; i < 16; i ++) {
+		if (get_current() -> fds[i] == NULL) {
+			get_current() -> fds[i] = my_malloc(sizeof(file*));
+			if (vfs_open(path, flags, &(get_current() -> fds[i])) < 0) {
+				uart_printf ("fail to open file %s\r\n", path);
+				my_free(get_current() -> fds[i]);
+				return -1;
+			}
+			uart_printf ("[OPEN] %s as %d, fs[%d] = %llx\r\n", path, i, i, get_current() -> fds[i]);
+			return i;
+		}
+	}
+	uart_printf ("not enough fds\r\n");
+	return -1;
+}
+
+int do_close(int fd) {
+	uart_printf ("[CLOSE] %d\r\n", fd);
+	if (fd < 0 || fd >= 16) {
+		uart_printf ("invalid fd when closing\r\n");
+	}
+	vfs_close(get_current() -> fds[fd]);
+	get_current() -> fds[fd] = NULL;
+	return 0;
+}
+
+long do_write(int fd, const void* buf, unsigned long count) {
+	if (fd < 0 || fd >= 16) {
+		uart_printf ("[WRITE] fd %d out of bound\r\n", fd);
+		return -1;
+	}
+	// uart_printf ("[WRITE] to %d, size: %d\r\n", fd, count);
+	if (get_current() -> fds[fd] == NULL) {
+		uart_printf ("[WRITE] no fd %d, fail\r\n");
+		return -1;
+	}
+	return vfs_write(get_current() -> fds[fd], buf, count);
+}
+
+long do_read(int fd, void* buf, unsigned long count) {
+	if (fd < 0 || fd >= 16) {
+		uart_printf ("[READ] fd %d out of bound, fail\r\n", fd);
+		return -1;
+	}
+	uart_printf ("[READ] from %d, size: %d\r\n", fd, count);
+	if (get_current() -> fds[fd] == NULL) {
+		uart_printf ("read: no fd, fail\r\n");
+		return -1;
+	}
+	return vfs_read(get_current() -> fds[fd], buf, count);
+}
+
+int do_mkdir(const char* pathname, unsigned mode) {
+	const char* path = to_absolute(pathname, get_current() -> cwd);
+	uart_printf ("[MKDIR] %s\r\n", path);
+	return vfs_mkdir(path);
+}
+
+int do_mount(const char* src, const char* target, const char* filesystem, unsigned long flags, const void* data) {
+	const char* path = to_absolute(target, get_current() -> cwd);
+	uart_printf ("[MOUNT] %s, %s\r\n", path, filesystem);
+	return vfs_mount(path, filesystem);
+}
+
+int do_chdir(const char* path) {
+	const char* p = to_absolute(path, get_current() -> cwd);
+	uart_printf ("[CHDIR]%s\r\n", p);
+	uart_printf ("Ori: %s, new: %s\r\n",get_current() -> cwd, p);
+	strcpy(p, get_current() -> cwd, strlen(p));
+	return 0;
+}
 
 int do_getpid() {
 	return get_current() -> id;
@@ -66,6 +175,15 @@ int do_fork(trapframe_t* tf) {
 	for (int i = 0; i < 10; i ++) {
 		child -> reg[i] = cur -> reg[i];
 	}
+
+	for (int i = 0; i < 16; i ++) {
+		if (cur -> fds[i] != NULL) {
+			child -> fds[i] = my_malloc(sizeof(file));
+			strcpy(cur -> fds[i], child -> fds[i], sizeof(file));
+		}
+	}
+
+	strcpy(cur -> cwd, child -> cwd, strlen(cur -> cwd));
 		
 	for (int i = 0; i < stack_size; i ++) {
 		((char*) child -> kstack_start)[i] = ((char*)(cur -> kstack_start))[i];

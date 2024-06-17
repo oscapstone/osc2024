@@ -1,6 +1,9 @@
 #ifndef CPIO_H
 #define CPIO_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 struct cpio_newc_header {
 	 char    c_magic[6];
 	 char    c_ino[8];
@@ -25,5 +28,8 @@ void cpio_load(char*);
 void* cpio_find(char*);
 
 char* get_cpio_end();
+
+uint8_t hex_char_to_bin(char c);
+uint64_t hex_to_bin(const char* hex);
 
 #endif

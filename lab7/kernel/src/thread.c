@@ -6,6 +6,7 @@
 #include "signal.h"
 #include "mmu.h"
 #include "utils.h"
+#include "system_call.h"
 
 #define stack_size 4096
 #define max_thread_num 500 
@@ -39,6 +40,12 @@ void thread_init() {
 	
 	x -> stack_start = my_malloc(stack_size * 4);
 
+	for (int i = 0; i < 16; i ++) {
+		x -> fds[i] = NULL;
+	}
+	x -> cwd[0] = '/';
+	x -> cwd[1] = '\0';
+
 	long* PGD = my_malloc(4096);
 	for (int i = 0; i < 4096; i ++) {
 		((char*)PGD)[i] = 0;
@@ -48,6 +55,14 @@ void thread_init() {
 	for (int i = 0; i < 10; i ++) {
 		x -> signal[i] = 0;
 		x -> signal_handler[i] = NULL;
+	}
+	
+	for (int i = 0; i < 16; i ++) {
+		x -> fds[i] = NULL;
+	}
+	for (int i = 0; i < 3; i ++) {
+		x -> fds[i] = my_malloc(sizeof(file*));
+		vfs_open("/dev/uart", O_CREAT, &(x -> fds[i]));
 	}
 
 	write_sysreg(tpidr_el1, x);
@@ -199,6 +214,17 @@ int thread_create(void* func) {
 			return -1;
 		}
 	}
+
+	for (int i = 0; i < 16; i ++) {
+		x -> fds[i] = NULL;
+	}
+	/*
+	for (int i = 0; i < 3; i ++) {
+		x -> fds[i] = my_malloc(sizeof(file*));
+		vfs_open("/dev/uart", O_CREAT, &(x -> fds[i]));
+	}
+	*/
+
 
 	x -> next = NULL; 
 	x -> prev = thread_tail;

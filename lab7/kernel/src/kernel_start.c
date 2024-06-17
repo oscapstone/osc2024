@@ -25,6 +25,8 @@ void kernel_begin(char* fdt) {
 	fdt_traverse(get_initramfs_addr); // also set _cpio_file
 	manage_init();
 	
+	filesystem_init();
+	
 	thread_init();
 	get_current() -> code = _code_start;
 	get_current() -> code_size = (_code_end - _code_start + 1);

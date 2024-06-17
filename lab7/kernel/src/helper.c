@@ -44,6 +44,13 @@ void strcpy(char* from, char* to, int size) {
 	for (int i = 0; i < size; i ++) {
 		to[i] = from[i];
 	}
+	to[size] = '\0';
+}
+void strcpy_to0(char* from, char* to) {
+	for (int i = 0; ; i ++) {
+		to[i] = from[i];
+		if (to[i] == '\0') break;
+	}
 }
 
 void delay (unsigned long long t) {
