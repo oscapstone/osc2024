@@ -32,11 +32,7 @@ int getpid(trapframe_t *tpf)
 size_t uartread(trapframe_t *tpf, char buf[], size_t size)
 {
     int i = 0;
-    for (int i = 0; i < size; i++)
-    {
-        buf[i] = uart_async_recv();
-        // buf[i] = uart_recv();
-    }
+    stdio_op(stdin, buf, size);
     tpf->x0 = i;
     return i;
 }
@@ -44,13 +40,8 @@ size_t uartread(trapframe_t *tpf, char buf[], size_t size)
 size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size)
 {
     int i = 0;
-    // uart_sendlinek("buf[i]: %s\n",buf);
-    // uart_sendlinek("buf[i] size: %d\n",size);
-    for (int i = 0; i < size; i++)
-    {
-        uart_async_send(buf[i]);
-        // uart_send(buf[i]);
-    }
+    char *cptr = buf;
+    stdio_op(stdout, buf, size);
     tpf->x0 = i;
     return i;
 }
@@ -58,24 +49,49 @@ size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size)
 // In this lab, you won’t have to deal with argument passing
 int exec(trapframe_t *tpf, const char *name, char *const argv[])
 {
+    lock();
     mmu_del_vma(curr_thread);
     INIT_LIST_HEAD(&curr_thread->vma_list);
 
-    curr_thread->datasize = get_file_size((char *)name);
-    char *new_data = get_file_start((char *)name);
+    // use virtual file system
+    char abs_path[MAX_PATH_NAME];
+    strcpy(abs_path, name);
+    get_absolute_path(abs_path, curr_thread->curr_working_dir);
+
+    // uart_sendlinek("file name : %s\n", name);
+    // uart_sendlinek("curr_working_dir : %s\n", curr_thread->curr_working_dir);
+    // uart_sendlinek("abs_path : %s\n", abs_path);
+
+    struct vnode *target_file;
+    if (vfs_lookup(abs_path, &target_file) != 0)
+    {
+        WARING("File : %s Does not Exit!!", abs_path);
+        return 0;
+    };
+    curr_thread->datasize = target_file->f_ops->getsize(target_file);
+    uart_sendlinek("datasize : %d\n", curr_thread->datasize);
+
+    // curr_thread->data = kmalloc(curr_thread->datasize > PAGESIZE ? curr_thread->datasize : PAGESIZE);
     curr_thread->data = kmalloc(curr_thread->datasize);
     curr_thread->stack_alloced_ptr = kmalloc(USTACK_SIZE);
 
+    // data copy
+    memcpy(curr_thread->signal_handler, curr_thread->signal_handler, SIGNAL_MAX * 8);
+    struct file *f;
+    vfs_open(abs_path, 0, &f);
+    vfs_read(f, curr_thread->data, curr_thread->datasize);
+    vfs_close(f);
+
+    // clean vma & page_tables
     asm("dsb ish\n\t"); // ensure write has completed
     mmu_free_page_tables(curr_thread->context.pgd, 0);
-    memset(PHYS_TO_VIRT(curr_thread->context.pgd), 0, 0x1000);
+    memset((void *)PHYS_TO_KERNEL_VIRT(curr_thread->context.pgd), 0, 0x1000);
     asm("tlbi vmalle1is\n\t" // invalidate all TLB entries
         "dsb ish\n\t"        // ensure completion of TLB invalidatation
         "isb\n\t");          // clear pipeline
     mmu_del_vma(curr_thread);
 
-    memcpy(curr_thread->signal_handler, curr_thread->signal_handler, SIGNAL_MAX * 8);
-    memcpy(curr_thread->data, new_data, curr_thread->datasize);
+    // new vma
     mmu_add_vma(curr_thread, USER_DATA_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->data), 0b111, 1, USER_DATA);
     mmu_add_vma(curr_thread, USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->stack_alloced_ptr), 0b011, 1, USER_STACK);
     mmu_add_vma(curr_thread, PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b011, 0, PERIPHERAL);
@@ -83,8 +99,9 @@ int exec(trapframe_t *tpf, const char *name, char *const argv[])
     mmu_add_vma(curr_thread, USER_EXEC_WRAPPER_VA, 0x2000, ALIGN_DOWN((size_t)KERNEL_VIRT_TO_PHYS(exec_wrapper), PAGESIZE), 0b101, 0, USER_EXEC_WRAPPER);
 
     tpf->elr_el1 = USER_DATA_BASE;
-    tpf->sp_el0 = USER_STACK_BASE-STACK_BASE_OFFSET;
+    tpf->sp_el0 = USER_STACK_BASE - STACK_BASE_OFFSET;
     tpf->x0 = 0;
+    unlock();
     return 0;
 }
 
@@ -93,14 +110,20 @@ int fork(trapframe_t *tpf)
 {
     lock();
     thread_t *newt = thread_create(curr_thread->data);
-
     // mmu_set_PTE_readonly(curr_thread->context.pgd,0);
     // mmu_pagetable_copy(newt->context.pgd,curr_thread->context.pgd,0);
-    //uart_sendlinek("fork\n");
+    // uart_sendlinek("fork\n");
     memcpy(newt->signal_handler, curr_thread->signal_handler, SIGNAL_MAX * 8);
     memcpy(newt->stack_alloced_ptr, curr_thread->kernel_stack_alloced_ptr, USTACK_SIZE);
     memcpy(newt->kernel_stack_alloced_ptr, curr_thread->kernel_stack_alloced_ptr, KSTACK_SIZE);
-    mmu_add_vma(newt, USER_DATA_BASE, curr_thread->datasize, (size_t)KERNEL_VIRT_TO_PHYS(curr_thread->data), 0b111, 1, USER_DATA);
+    memcpy(newt->curr_working_dir, curr_thread->curr_working_dir,MAX_PATH_NAME+1);
+
+    newt->datasize = curr_thread->datasize;
+    newt->data = kmalloc(newt->datasize);
+    memcpy(newt->data,curr_thread->data,newt->datasize);
+    //newt->curr_working_dir = curr_thread->curr_working_dir;
+    // memcpy(newt->file_descriptors_table, curr_thread->file_descriptors_table, MAX_FD * 8); // <------------------------------------------------
+    mmu_add_vma(newt, USER_DATA_BASE, newt->datasize, (size_t)KERNEL_VIRT_TO_PHYS(newt->data), 0b111, 1, USER_DATA);
     mmu_add_vma(newt, USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(newt->stack_alloced_ptr), 0b011, 1, USER_STACK);
     mmu_add_vma(newt, PERIPHERAL_START, PERIPHERAL_END - PERIPHERAL_START, PERIPHERAL_START, 0b011, 0, PERIPHERAL);
     mmu_add_vma(newt, USER_SIGNAL_WRAPPER_VA, 0x1000, ALIGN_DOWN((size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), 0x1000), 0b101, 0, USER_SIGNAL_WRAPPER);
@@ -119,6 +142,7 @@ int fork(trapframe_t *tpf)
     void *temp_pgd = newt->context.pgd;
     newt->context = curr_thread->context;
     newt->context.pgd = temp_pgd;
+    //memcpy(newt->context.pgd,curr_thread->context.pgd,PAGESIZE);
 
     newt->context.fp += newt->kernel_stack_alloced_ptr - curr_thread->kernel_stack_alloced_ptr; // move fp
     newt->context.sp += newt->kernel_stack_alloced_ptr - curr_thread->kernel_stack_alloced_ptr; // move kernel sp

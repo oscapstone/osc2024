@@ -73,14 +73,14 @@ thread_t *thread_create(void *start)
     r->context.sp = (unsigned long long)r->kernel_stack_alloced_ptr + KSTACK_SIZE - STACK_BASE_OFFSET;
     r->context.fp = r->context.sp; // frame pointer for local variable, which is also in stack.
 
-    // new <---------------------------------------------------------------------------------------------------------------
-    // r->data = kmalloc(c_execfile.filesize);
-    // r->datasize = c_execfile.filesize;
+    strcpy(r->curr_working_dir, "/"); // new <-----------------------------------------------------------------------
+    vfs_open("/dev/uart", 0, &r->file_descriptors_table[stdin]);
+    vfs_open("/dev/uart", 0, &r->file_descriptors_table[stdout]);
+    vfs_open("/dev/uart", 0, &r->file_descriptors_table[stderr]);
+
     r->context.pgd = kmalloc(0x1000);
-    // uart_sendlinek("r->context.pgd: %x\n", r->context.pgd);
     memset(r->context.pgd, 0, 0x1000);
     r->context.pgd = (void *)KERNEL_VIRT_TO_PHYS(r->context.pgd);
-    // new <---------------------------------------------------------------------------------------------------------------
 
     r->signal_is_checking = 0;
     // initial all signal handler with signal_default_handler (kill thread)
@@ -151,8 +151,13 @@ void kill_zombies()
             list_del_entry(curr);
             mmu_free_page_tables(t->context.pgd, 0);
             mmu_del_vma(t);
+            for (int i = 0; i < MAX_FD; i++)
+            {
+                if (t->file_descriptors_table[i])
+                    vfs_close(t->file_descriptors_table[i]);
+            }
             kfree(t->kernel_stack_alloced_ptr);
-            kfree((void*)PHYS_TO_KERNEL_VIRT(t->context.pgd));
+            kfree((void *)PHYS_TO_KERNEL_VIRT(t->context.pgd));
             t->iszombie = 0;
             t->isused = 0;
         }
@@ -198,15 +203,24 @@ int exec_thread()
 
 void exec_proc()
 {
-    //lock();
     el1_interrupt_disable(); // daif 會在 eret 時更改。
-    char *data = c_execfile.data;
-    unsigned int filesize = c_execfile.filesize;
+    // char *data = c_execfile.data;
+    // unsigned int filesize = c_execfile.filesize;
     thread_t *t = curr_thread;
-    // uart_sendlinek("filesize : %d\n", filesize);
+
+    // char *data = target_file->f_ops;
+    unsigned int filesize = (c_execfile.vnode)->f_ops->getsize(c_execfile.vnode);
+
     t->data = kmalloc(filesize);
     t->datasize = filesize;
-    // t->context.lr = (unsigned long)t->data; // set return address to program if function call completes
+    
+    // copy file into data
+    struct file *f;
+    vfs_open(c_execfile.pathname, 0, &f);
+    vfs_read(f, t->data, t->datasize);
+    vfs_close(f);
+
+    //memcpy(t->data, data, t->datasize);
 
     mmu_add_vma(t, USER_DATA_BASE, t->datasize, (size_t)KERNEL_VIRT_TO_PHYS(t->data), 0b111, 1, USER_DATA);
     mmu_add_vma(t, USER_STACK_BASE - USTACK_SIZE, USTACK_SIZE, (size_t)KERNEL_VIRT_TO_PHYS(t->stack_alloced_ptr), 0b111, 1, USER_STACK);
@@ -214,26 +228,19 @@ void exec_proc()
     mmu_add_vma(t, USER_SIGNAL_WRAPPER_VA, 0x1000, ALIGN_DOWN((size_t)KERNEL_VIRT_TO_PHYS(signal_handler_wrapper), PAGESIZE), 0b101, 0, USER_SIGNAL_WRAPPER);
     mmu_add_vma(t, USER_EXEC_WRAPPER_VA, 0x2000, ALIGN_DOWN((size_t)KERNEL_VIRT_TO_PHYS(exec_wrapper), PAGESIZE), 0b101, 0, USER_EXEC_WRAPPER);
 
-    // t->context.pgd = KERNEL_VIRT_TO_PHYS(t->context.pgd);
     t->context.sp = USER_STACK_BASE - STACK_BASE_OFFSET;
     t->context.fp = USER_STACK_BASE - STACK_BASE_OFFSET;
     t->context.lr = USER_DATA_BASE;
 
-    // copy file into data
-    for (int i = 0; i < filesize; i++)
-    {
-        t->data[i] = data[i];
-    }
+    // for (int i = 0; i < filesize; i++)
+    // {
+    //     t->data[i] = data[i];
+    // }
     // dump_vma();
-    // eret to exception level 0
-    // lock();
 
-    // asm("dsb ish\n\t" // ensure write has completed
-    //     "msr ttbr0_el1, %0\n\t"
-    //     "tlbi vmalle1is\n\t" // invalidate all TLB entries
-    //     "dsb ish\n\t"        // ensure completion of TLB invalidatation
-    //     "isb\n\t"            // clear pipeline"
-    //     ::"r"(t->context.pgd));
+    // vfs_open("/dev/uart", 0, &curr_thread->file_descriptors_table[0]); // stdin
+    // vfs_open("/dev/uart", 0, &curr_thread->file_descriptors_table[1]); // stdout
+    // vfs_open("/dev/uart", 0, &curr_thread->file_descriptors_table[2]); // stderr
 
     asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
         "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
@@ -243,19 +250,11 @@ void exec_proc()
         "mov x0, %4\n\t" ::"r"(&t->context),
         "r"(exec_wrapper), "r"(t->context.sp), "r"(t->kernel_stack_alloced_ptr + KSTACK_SIZE - STACK_BASE_OFFSET), "r"(t->context.lr));
 
-    //unlock();
     asm("eret\n\t");
 }
 
 void exec_wrapper()
 {
-    // unlock
-    // uart_sendlinek("exec_handler : %x\n", exec_addr);
-    // uart_sendlinek("curr_thread : %x\n", curr_thread);
-    // uart_sendlinek(curr_thread->context.lr));
-    // asm("mov x8,514\n\t"
-    //     "svc 0\n\t");
-
     asm("blr x0\n\t"
         "mov x8,50\n\t"
         "svc 0\n\t");
