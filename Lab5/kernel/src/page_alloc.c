@@ -162,21 +162,29 @@ void coalesce(struct page* page, size_t order)
     add_page_to_freelist(page, order);
 }
 
+static inline size_t pfn_find_order(size_t pfn, size_t nr_pages)
+{
+    size_t lsb = get_lowest_set_bit(pfn);
+    size_t max_order = get_highest_set_bit(nr_pages);
+    if (!lsb)
+        return max_order;
+    size_t order = LOG2LL(lsb);
+    return (order <= max_order) ? order : max_order;
+}
+
 static void add_continuous_pages_to_freelist(struct page* base_page,
                                              size_t nr_pages)
 {
     if (nr_pages > zone.managed_pages ||
         page_to_pfn(base_page) >= zone.managed_pages)
         return;
-
-    size_t hsb = 0;
-    size_t order = 0;
-    while (nr_pages) {
-        hsb = get_highest_set_bit(nr_pages);
-        order = LOG2LL(hsb);
-        coalesce(base_page, order);
-        base_page += hsb;
-        nr_pages ^= hsb;
+    struct page* end = base_page + nr_pages;
+    while (base_page < end) {
+        size_t pfn = page_to_pfn(base_page);
+        size_t order = pfn_find_order(pfn, nr_pages);
+        add_page_to_freelist(base_page, order);
+        base_page += (1 << order);
+        nr_pages -= (1 << order);
     }
 }
 
@@ -526,7 +534,7 @@ void pageinfo(void)
 
     uart_printf("| address | size | status |\n");
 
-    while (pfn != zone.managed_pages) {
+    while (pfn < zone.managed_pages) {
         page = pfn_to_page(pfn);
 
         if (PageReserved(page)) {
