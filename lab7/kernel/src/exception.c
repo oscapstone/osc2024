@@ -68,7 +68,6 @@ void el1h_irq_router(trapframe_t *tpf){
         unlock();
         irqtask_run_preemptive();
         core_timer_enable();
-        el1_interrupt_disable();
         //at least two threads running -> schedule for any timer irq
         if (list_size(run_queue) >2 ) schedule();
     }
@@ -78,7 +77,6 @@ void el1h_irq_router(trapframe_t *tpf){
         // uart_sendline("tpf->spsr_el1: %x\n", tpf->spsr_el1);
         check_signal(tpf);
     }
-        el1_interrupt_disable();
 }
 
 void el0_sync_router(trapframe_t *tpf){
@@ -210,7 +208,6 @@ void el0_irq_64_router(trapframe_t *tpf){
         unlock();
         irqtask_run_preemptive();
         core_timer_enable();
-        el1_interrupt_disable();
         if (list_size(run_queue) >2 ) schedule();
     }
     //only do signal handler when return to user mode
@@ -219,7 +216,6 @@ void el0_irq_64_router(trapframe_t *tpf){
         // uart_sendline("tpf->spsr_el1: %x\n", tpf->spsr_el1);
         check_signal(tpf);
     }
-    el1_interrupt_disable();
 }
 
 void invalid_exception_router(unsigned long long x0){

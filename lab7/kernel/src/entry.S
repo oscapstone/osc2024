@@ -126,6 +126,7 @@ el1h_irq:
     save_all
     mov x0, sp
     bl el1h_irq_router
+    bl el1_interrupt_disable
     load_all
     eret
 el1h_fiq_invalid:
@@ -143,8 +144,8 @@ el1h_error_invalid:
 
 el0_sync_64:
     save_all
-    bl el1_interrupt_enable
     mov x0, sp
+    bl el1_interrupt_enable
     bl el0_sync_router
     bl el1_interrupt_disable
     load_all
@@ -153,6 +154,7 @@ el0_irq_64:
     save_all
     mov x0, sp
     bl el0_irq_64_router
+    bl el1_interrupt_disable
     load_all
     eret
 el0_fiq_invalid_64:
