@@ -7,7 +7,7 @@ volatile unsigned int __attribute__((aligned(16))) pt[64];
 
 int mbox_call(mbox_channel_type channel, unsigned int value)
 {
-	kernel_lock_interrupt();
+	lock();
 	unsigned long r = (((unsigned long)((unsigned long)value) & ~0xF) | (channel & 0xF));
 	do
 	{
@@ -23,9 +23,9 @@ int mbox_call(mbox_channel_type channel, unsigned int value)
 		DEBUG("MBOX_WRITE: 0x%x\n", r);
 		if (r == *MBOX_READ)
 		{
-			kernel_unlock_interrupt();
+			unlock();
 			return ((unsigned int *)value)[1] == MBOX_REQUEST_SUCCEED;
 		}
 	}
-	kernel_unlock_interrupt();
+	unlock();
 }

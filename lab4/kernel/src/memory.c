@@ -175,7 +175,7 @@ void memory_init()
     allocate_frame();
     init_cache();
 
-    // INFO_BLOCK(test_memory(););
+    INFO_BLOCK(test_memory(););
     memory_reserve(0x0000, 0x1000); // Spin tables for multicore boot (0x0000 - 0x1000)
     INFO("_start: 0x%x, _end: 0x%x\n", &_start, &_end);
     memory_reserve((size_t)&_start, (size_t)&_end);
@@ -200,12 +200,12 @@ void init_cache()
 
 void *kmalloc(size_t size)
 {
-    kernel_lock_interrupt();
+    lock();
     if (size >= PAGE_FRAME_SIZE / 2)
     {
         void *ptr = page_malloc(size);
         // DEBUG("use page_malloc: ptr: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, phy_addr_to_frame(ptr)->order, phy_addr_to_frame(ptr)->cache_used_count, phy_addr_to_frame(ptr)->val);
-        kernel_unlock_interrupt();
+        unlock();
         return ptr;
     }
     int8_t order = 0;
@@ -222,7 +222,7 @@ void *kmalloc(size_t size)
         curr->next = curr->prev = curr;
         phy_addr_to_frame(curr)->cache_used_count++;
         // DEBUG("kmalloc: find the exact size, cache address: 0x%x, frame->cache_used_count: %d, frame->val: %d, frame address: 0x%x\n", curr, phy_addr_to_frame(curr)->cache_used_count, phy_addr_to_frame(curr)->val, phy_addr_to_frame(curr));
-        kernel_unlock_interrupt();
+        unlock();
         return (void *)curr;
     }
 
@@ -236,20 +236,20 @@ void *kmalloc(size_t size)
     {
         list_add((list_head_t *)(ptr + i * order_size), cache_freelist[(size_t)order]);
     }
-    kernel_unlock_interrupt();
+    unlock();
     return ptr;
 }
 
 void kfree(void *ptr)
 {
-    kernel_lock_interrupt();
+    lock();
     frame_t *frame = cache_to_frame(ptr);
     // DEBUG("kfree: address: 0x%x, frame->order: %d, frame->cache_used_count: %d, frame->val: %d\n", ptr, frame->order, frame->cache_used_count, frame->val);
     if (frame->order == NOT_CACHE)
     {
         // DEBUG("kfree: page_free: 0x%x\n", ptr);
         page_free(ptr);
-        kernel_unlock_interrupt();
+        unlock();
         return;
     }
     frame->cache_used_count--;
@@ -266,18 +266,18 @@ void kfree(void *ptr)
         }
         frame->order = NOT_CACHE;
         page_free(ptr);
-        kernel_unlock_interrupt();
+        unlock();
         return;
     }
     // DEBUG("kfree: cache_used_count != 0, add to cache_freelist: 0x%x\n", ptr);
     // DEBUG("add finish\r\n");
-    kernel_unlock_interrupt();
+    unlock();
     return;
 }
 
 int memory_reserve(size_t start, size_t end)
 {
-    kernel_lock_interrupt();
+    lock();
     size_t start_index = start / PAGE_FRAME_SIZE;                                    // align
     size_t end_index = end / PAGE_FRAME_SIZE + (end % PAGE_FRAME_SIZE == 0 ? 0 : 1); // padding
     // split the start frame to fit the start address
@@ -343,7 +343,7 @@ int memory_reserve(size_t start, size_t end)
         }
     }
     INFO("end reserve: (0x%x -> 0x%x)\n", frame_addr_to_phy_addr(start_frame), frame_addr_to_phy_addr(end_frame + 1));
-    kernel_unlock_interrupt();
+    unlock();
     return 0;
 }
 
@@ -404,7 +404,7 @@ void test_memory()
  */
 void *page_malloc(size_t size)
 {
-    kernel_lock_interrupt();
+    lock();
     int8_t val = 0;
     while (val_to_num_of_frame(val) * PAGE_FRAME_SIZE < size)
     {
@@ -413,14 +413,14 @@ void *page_malloc(size_t size)
     frame_t *frame = get_free_frame(val);
     if (frame == 1) // can't find the frame to allocate
     {
-        kernel_unlock_interrupt();
+        unlock();
         ERROR("page_malloc: can't find the frame to allocate\r\n");
         return 0;
     }
     frame->val = val;
     frame->order = NOT_CACHE;
     frame->cache_used_count = 0;
-    kernel_unlock_interrupt();
+    unlock();
     return frame_addr_to_phy_addr(frame);
 }
 
@@ -500,7 +500,7 @@ frame_t *split_frame(int8_t val)
 
 int page_free(void *ptr)
 {
-    kernel_lock_interrupt();
+    lock();
     frame_t *curr = phy_addr_to_frame(ptr);
     int8_t val = curr->val;
     curr->val = F_FRAME_VAL;
@@ -524,13 +524,13 @@ int page_free(void *ptr)
     curr->val = val;
     // uart_puts("curr address: 0x%x, curr->prev address: 0x%x, curr->next address: 0x%x\n", frame_addr_to_phy_addr(curr), frame_addr_to_phy_addr(curr->listhead.prev), frame_addr_to_phy_addr(curr->listhead.next));
     page_insert(val, curr);
-    kernel_unlock_interrupt();
+    unlock();
     return 0;
 }
 
 void dump_frame()
 {
-    kernel_lock_interrupt();
+    lock();
     for (size_t i = MAX_VAL; i >= 0; i--)
     {
         size_t count = 0;
@@ -563,12 +563,12 @@ void dump_frame()
 #endif
     }
     uart_puts("---------------------------------------------------------\r\n");
-    kernel_unlock_interrupt();
+    unlock();
 }
 
 void dump_cache()
 {
-    kernel_lock_interrupt();
+    lock();
     for (size_t i = MAX_ORDER; i >= 0; i--)
     {
         size_t count = 0;
@@ -612,5 +612,5 @@ void dump_cache()
 #endif
     }
     uart_puts("---------------------------------------------------------\r\n");
-    kernel_unlock_interrupt();
+    unlock();
 }
