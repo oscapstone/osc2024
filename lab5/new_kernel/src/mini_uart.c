@@ -159,8 +159,6 @@ char uart_async_getc()
     return r;
 }
 
-// uart_async_putc writes to buffer
-// uart_w_irq_handler read from buffer then output
 void uart_async_putc(char c)
 {
     lock();
@@ -171,7 +169,6 @@ void uart_async_putc(char c)
         *AUX_MU_IER_REG |= 2; // enable write interrupt
         lock();
     }
-    // uart_puts("[uart_async_putc] \n");
     uart_tx_buffer[uart_tx_buffer_widx++] = c;
     if (uart_tx_buffer_widx >= 0x100)
         uart_tx_buffer_widx = 0; // cycle pointer

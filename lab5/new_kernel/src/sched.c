@@ -230,7 +230,7 @@ void foo()
         put_int(i);
         uart_puts("\r\n");
         // schedule();
-        delay();
+        // delay();
     }
     thread_exit();
 }
