@@ -8,6 +8,7 @@
 #include "memory.h"
 #include "cpio.h"
 #include "vfs.h"
+#include "dev_framebuffer.h"
 
 extern thread_t *curr_thread;
 // extern void *CPIO_DEFAULT_START;
@@ -114,6 +115,17 @@ int fork(trapframe_t *tpf)
     // copy datasize into new process
     child_thread->datasize = parent_thread->datasize;
 
+    // copy vfs info
+    child_thread->vfs = parent_thread->vfs;
+    // for (int i = 0; i <= MAX_FD; i++)
+    // {
+    //     if (parent_thread->vfs.file_descriptors_table[i])
+    //     {
+    //         child_thread->vfs.file_descriptors_table[i] = kmalloc(sizeof(struct file));
+    //         *child_thread->vfs.file_descriptors_table[i] = *parent_thread->vfs.file_descriptors_table[i];
+    //     }
+    // }
+    
     store_context(get_current());
 
     // for child
@@ -301,6 +313,40 @@ int chdir(trapframe_t *tpf, const char *path)
     strcpy(curr_thread->vfs.curr_working_dir, abs_path);
 
     return 0;
+}
+
+long lseek64(trapframe_t *tpf, int fd, long offset, int whence)
+{
+    if(whence == SEEK_SET) // used for dev_framebuffer
+    {
+        curr_thread->vfs.file_descriptors_table[fd]->f_pos = offset;
+        tpf->x0 = offset;
+    }
+    else // other is not supported
+    {
+        tpf->x0 = -1;
+    }
+
+    return tpf->x0;
+}
+
+extern unsigned int height;
+extern unsigned int isrgb;
+extern unsigned int pitch;
+extern unsigned int width;
+int ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info)
+{
+    if(request == 0) // used for get info (SPEC)
+    {
+        struct framebuffer_info *fb_info = info;
+        fb_info->height = height;
+        fb_info->isrgb = isrgb;
+        fb_info->pitch = pitch;
+        fb_info->width = width;
+    }
+
+    tpf->x0 = 0;
+    return tpf->x0;
 }
 
 // Lab 5

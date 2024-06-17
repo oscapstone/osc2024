@@ -159,9 +159,16 @@ void el0_sync_router(trapframe_t *tpf){
         case 17:
             chdir(tpf, (char *)tpf->x0);
             break;
+        case 18:
+            lseek64(tpf, tpf->x0, tpf->x1, tpf->x2);
+            break;
+        case 19:
+            ioctl(tpf, tpf->x0, tpf->x1, (void*)tpf->x2);
+            break;
         default:
             break;
     }
+    el1_interrupt_disable();
 }
 
 // void el0_irq_64_router(){
