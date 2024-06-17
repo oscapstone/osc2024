@@ -1,10 +1,6 @@
 use crate::alloc::string::ToString;
 use crate::interrupt::timer::add_timer;
-use crate::print;
-use crate::print_polling;
 use crate::println_polling;
-use alloc::collections::linked_list::Cursor;
-use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
@@ -124,8 +120,6 @@ pub struct Process {
     pub elr_el1: u64,
 }
 
-
-
 impl Process {
     fn new(pid: usize, code: &[u8]) -> Self {
         // alloc some page for the process
@@ -203,7 +197,7 @@ impl Process {
                 parent_map.stack.size,
             );
         }
-        
+
         let mut child_registers = self.registers.clone();
         child_registers.x0 = 0;
         let new_sp = self.sp_el0 - parent_map.stack.start + proc_map.stack.start;
@@ -220,8 +214,8 @@ impl Process {
     }
 
     pub fn do_uart_read(&mut self) {
-        let mut buf: *mut u8 = unsafe { self.registers.x0 as *mut u8 };
-        let buf_len: usize = unsafe { self.registers.x1 as usize };
+        let mut buf: *mut u8 = self.registers.x0 as *mut u8;
+        let buf_len: usize = self.registers.x1 as usize;
         let buf_end = unsafe { buf.add(buf_len) };
         let mut read_len: usize = 0;
         while let Some(u) = uart::pop_read_buf() {
@@ -236,9 +230,7 @@ impl Process {
             }
         }
         // println_polling!("read_len: {}", read_len);
-        unsafe {
-            self.registers.x0 = read_len as u64;
-        }
+        self.registers.x0 = read_len as u64;
         self.state = ProcessState::Ready;
     }
 
@@ -246,7 +238,11 @@ impl Process {
         // copy code to the text section
         println_polling!("copy code to text section");
         unsafe {
-            core::ptr::copy(code.as_ptr(), self.proc_map.text.start as *mut u8, code.len());
+            core::ptr::copy(
+                code.as_ptr(),
+                self.proc_map.text.start as *mut u8,
+                code.len(),
+            );
         }
         self.sp_el0 = self.proc_map.stack.start + self.proc_map.stack.size;
         self.elr_el1 = self.proc_map.text.start as u64;
@@ -301,7 +297,7 @@ pub fn context_switch(message: String, sp: *mut u64) {
     let (cur_pid, cur_process) = process_scheduler.save_current_process(ProcessState::Ready, sp);
 
     // find the next ready process
-    let mut next_pid = process_scheduler.get_next_ready(process_scheduler.get_current_pid());
+    let next_pid = process_scheduler.get_next_ready(process_scheduler.get_current_pid());
 
     // run the next process
     process_scheduler.set_next_process(next_pid);
@@ -347,9 +343,9 @@ impl ProcessScheduler {
     // fork current process
     pub fn fork(&mut self) -> usize {
         let new_pid = self.processes.len();
-        let mut process = self.processes.get_mut(self.current_pid).unwrap();
-        
-        let mut new_process = process.fork(new_pid);
+        let process = self.processes.get_mut(self.current_pid).unwrap();
+
+        let new_process = process.fork(new_pid);
         self.processes.push(new_process);
         // println_polling!("Forked process {} from process {}", new_pid, self.current_pid);
         new_pid
@@ -367,11 +363,15 @@ impl ProcessScheduler {
         self.processes.get_mut(pid)
     }
 
-    pub fn save_current_process(&mut self, state: ProcessState, sp: *mut u64) -> (usize, &mut Process){
+    pub fn save_current_process(
+        &mut self,
+        state: ProcessState,
+        sp: *mut u64,
+    ) -> (usize, &mut Process) {
         let current_pid = self.get_current_pid();
-        let registers = unsafe { sp as *mut Registers };
+        let registers = sp as *mut Registers;
         let current_process = self.get_process(current_pid).unwrap();
-        current_process.registers = unsafe {*registers};
+        current_process.registers = unsafe { *registers };
         current_process.elr_el1 = get_elr_el1();
         current_process.sp_el0 = get_sp_el0() as usize;
         current_process.state = state;
@@ -384,7 +384,7 @@ impl ProcessScheduler {
             // println_polling!("process {}: {:?}", i, self.processes[i].state);
         }
         self.current_pid = next_pid;
-        let registers = unsafe { self.ksp as *mut Registers };
+        let registers = self.ksp as *mut Registers;
         let next_process = self.get_process(next_pid).unwrap();
         next_process.state = ProcessState::Running;
         // set the next process to current process
@@ -413,7 +413,7 @@ impl ProcessScheduler {
     }
 
     pub fn get_waiting_process(&mut self, io_type: IOType) -> Option<&mut Process> {
-        for (pid, process) in self.processes.iter_mut().enumerate() {
+        for (_pid, process) in self.processes.iter_mut().enumerate() {
             match &process.state {
                 ProcessState::Waiting(t) => {
                     if *t == io_type {
@@ -444,5 +444,4 @@ impl ProcessScheduler {
             self.next_process();
         }
     }
-
 }

@@ -4,9 +4,8 @@ mod system_call;
 
 use core::arch::global_asm;
 
-use crate::fs::cpio;
-use crate::process::{self, IOType, ProcessScheduler, ProcessState, Registers};
-use crate::{print, print_polling, println, println_polling};
+use crate::process::{IOType, ProcessState, Registers};
+use crate::{println, println_polling};
 
 use driver::mailbox;
 use driver::uart;
@@ -41,7 +40,6 @@ pub extern "C" fn rust_sync_handler(sp: *mut u64) {
     }
     // check the interrupt source
     let ec = (esr_el1 >> 26) & 0b111111;
-    let iss = esr_el1 & 0xFFFFFF;
     match ec {
         0b010101 => {
             // println_polling!("svc call from user program");
@@ -64,8 +62,6 @@ pub extern "C" fn rust_sync_handler(sp: *mut u64) {
                     // println_polling!("uart read");
                     process_scheduler
                         .save_current_process(ProcessState::Waiting(IOType::UartRead), sp);
-                    let current_pid = process_scheduler.get_current_pid();
-                    // println_polling!("process: {} is waiting for uart read", current_pid);
                     process_scheduler.next_process();
                 }
                 2 => {
@@ -92,7 +88,7 @@ pub extern "C" fn rust_sync_handler(sp: *mut u64) {
                         let prog_name_array = core::slice::from_raw_parts(prog_name, prog_name_len);
                         let prog_name_str = core::str::from_utf8(prog_name_array).unwrap();
                         println_polling!("exec: {}", prog_name_str);
-                        let cpio_handler = unsafe { crate::CPIO_HANDLER.as_mut().unwrap() };
+                        let cpio_handler = crate::CPIO_HANDLER.as_mut().unwrap();
                         let mut file = cpio_handler.get_files().find(|file| file.get_name() == prog_name_str).unwrap();
                         let file_size = file.get_size();
                         let file_data = file.read(file_size);
@@ -163,13 +159,13 @@ fn rust_serr_handler() {
 #[no_mangle]
 fn rust_irq_handler(sp: *mut u64) {
     // read IRQ basic pending register
-    let mut irq_basic_pending: u32;
+    let irq_basic_pending: u32;
     const IRQ_BASE: *mut u64 = 0x3F00B000 as *mut u64;
     const IRQ_BASIC_PENDING: *mut u32 = 0x3F00B200 as *mut u32;
     const IRQ_PENDING_1: *mut u32 = 0x3F00B204 as *mut u32;
 
-    let mut irq_pending_1: u32;
-    let mut irq_source: u32;
+    let irq_pending_1: u32;
+    let irq_source: u32;
     const CORE0_IRQ_SOURCE: u64 = 0x40000060;
     unsafe {
         irq_pending_1 = read_volatile(IRQ_PENDING_1 as *mut u32);
@@ -195,7 +191,7 @@ fn rust_irq_handler(sp: *mut u64) {
                 uart::push_read_buf(u);
             };
             if process_scheduler.is_running() {
-                if let Some(mut current_process) =
+                if let Some(current_process) =
                     process_scheduler.get_waiting_process(IOType::UartRead)
                 {
                     current_process.do_uart_read();

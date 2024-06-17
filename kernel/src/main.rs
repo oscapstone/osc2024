@@ -95,9 +95,10 @@ fn timer_callback(message: String, _: *mut u64) {
 }
 
 fn fs_shell() {
-    let mut fs = Box::new(fs::tmpfs::Tmpfs::new());
+    let fs = Box::new(fs::tmpfs::Tmpfs::new());
     let mut vfs = fs::vfs::VFS::new(fs);
-    let mut working_dir = "/".to_string().clone();
+    let working_dir = "/".to_string().clone();
+    
     loop {
         print!("{}>> ", &working_dir);
         let mut in_buf: [u8; 128] = [0; 128];
@@ -105,7 +106,12 @@ fn fs_shell() {
         let cmd = inp.trim().split(' ').collect::<Vec<&str>>();
         match cmd[0] {
             "ls" => {
-                let ls = vfs.ls(&working_dir);
+                let path = if cmd.len() < 2 {
+                    working_dir.to_owned()
+                } else {
+                    working_dir.to_owned() + "/" + cmd[1]
+                };
+                let ls = vfs.ls(&path);
                 match ls {
                     Ok(files) => {
                         for file in files {
@@ -150,7 +156,7 @@ fn fs_shell() {
 
 #[no_mangle]
 fn kernel_init() -> ! {
-    let mut dtb_addr = addr_loader::load_dtb_addr();
+    let dtb_addr = addr_loader::load_dtb_addr();
     let dtb_parser = fdt::DtbParser::new(dtb_addr);
     // init process scheduler
     unsafe {
@@ -163,7 +169,7 @@ fn kernel_init() -> ! {
     
     // find initrd value by dtb traverse
     
-    let mut initrd_start: *mut u8;
+    let initrd_start: *mut u8;
     if let Some(addr) = dtb_parser.traverse(get_initrd_addr) {
         initrd_start = addr as *mut u8;
         println_polling!("Initrd start address: {:#x}", initrd_start as u64)
@@ -173,15 +179,13 @@ fn kernel_init() -> ! {
     unsafe {
         CPIO_HANDLER = Some(CpioHandler::new(initrd_start as *mut u8));
     }
-    let mut cpio_handler = unsafe {CPIO_HANDLER.as_mut().unwrap()};
-    let mut bh: BinaryHeap<u32> = BinaryHeap::new();
-    
+    let cpio_handler = unsafe {CPIO_HANDLER.as_mut().unwrap()};
 
     // load symbol address usr_load_prog_base
     
     let mut in_buf: [u8; 128] = [0; 128];
     
-    let mut page_alloc = unsafe {&mut PAGE_ALLOC};
+    let page_alloc = unsafe {&mut PAGE_ALLOC};
     page_alloc.init(0x00000000, 0x3C000000 , 4096);
 
     page_alloc.reserve_addr(0x0, 0x1000);
@@ -238,7 +242,7 @@ fn kernel_init() -> ! {
                 }
             }
             "dtb" => {
-                unsafe { println!("Start address: {:#x}", dtb_addr as u64) };
+                println!("Start address: {:#x}", dtb_addr as u64);
                 println!("dtb load address: {:#x}", dtb_addr as u64);
                 println!("dtb pos: {:#x}", unsafe {*(dtb_addr)});
                 dtb_parser.parse_struct_block();
@@ -250,27 +254,26 @@ fn kernel_init() -> ! {
                 println!("ARM memory size: {:#x}", size);
             }
             "exec" => {
-                let usr_load_prog_base = addr_loader::usr_load_prog_base();
                 if cmd.len() < 2 {
                     println!("Usage: exec <file>");
                     continue;
                 }
-                let mut file = cpio_handler.get_files().find(|f| {
+                let file = cpio_handler.get_files().find(|f| {
                     f.get_name() == cmd[1]}
                 );
 
-                let mut idle_proc_code = cpio_handler.get_files().find(|f| {
+                let idle_proc_code = cpio_handler.get_files().find(|f| {
                     f.get_name() == "prog"}
                 );
                 if let Some(mut f) = file {
                     let file_size = f.get_size();
                     println!("File size: {}", file_size);
-                    let mut data = f.read(file_size);
+                    let data = f.read(file_size);
                     let process_scheduler = unsafe {PROCESS_SCHEDULER.as_mut().unwrap()};
                     if let Some(mut f) = idle_proc_code {
                         let idle_proc_size = f.get_size();
                         println!("Idle process size: {}", idle_proc_size);
-                        let mut idle_proc_data = f.read(idle_proc_size);
+                        let idle_proc_data = f.read(idle_proc_size);
                         let idle_pid = process_scheduler.create_process(&idle_proc_data);
                         println!("Idle process created with pid: {}", idle_pid);
                     }
@@ -327,12 +330,12 @@ fn kernel_init() -> ! {
             }
             "palloc" => {
                 let size: usize = cmd[1].parse().unwrap();
-                let pn = unsafe {page_alloc.palloc(size)} as usize;
+                let pn = page_alloc.palloc(size) as usize;
                 println!("Allocated page: {}", pn);
             }
             "pfree" => {
                 let addr: usize = cmd[1].parse().unwrap();
-                unsafe {page_alloc.pfree(addr)};
+                page_alloc.pfree(addr);
             }
             "show" => {
                 if cmd.len() < 2 {
@@ -358,7 +361,7 @@ fn kernel_init() -> ! {
                 }
                 let start: usize = cmd[1].parse().unwrap();
                 let end: usize = cmd[2].parse().unwrap();
-                unsafe {page_alloc.reserve_addr(start, end)};
+                page_alloc.reserve_addr(start, end);
             }
             "fs" => {
                 fs_shell();

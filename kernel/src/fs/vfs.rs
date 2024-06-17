@@ -1,15 +1,11 @@
+use crate::println;
+
 use super::utils::{clean_path, split_path};
 
 use alloc::format;
-use core::{num::ParseIntError, panic, ptr::NonNull};
+use core::ptr::NonNull;
 
-use alloc::{
-    boxed::Box,
-    rc::{Rc, Weak},
-    string::{String, ToString},
-    vec::Vec,
-};
-
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 pub struct VFS {
     mount: NonNull<dyn VnodeOperations>,
@@ -18,7 +14,7 @@ pub struct VFS {
 impl VFS {
     pub fn new(fs: Box<dyn FileSystemOperations>) -> Self {
         VFS {
-            mount: unsafe {fs.as_ref().mount()},
+            mount: fs.as_ref().mount(),
         }
     }
 
@@ -28,46 +24,74 @@ impl VFS {
 
     pub fn lookup(&self, path: &str) -> Option<NonNull<dyn VnodeOperations>> {
         let path_vec = split_path(path);
-        let mut vnode = unsafe {self.mount.as_ref()};
+        let vnode = unsafe { self.mount.as_ref() };
         vnode.lookup(&path_vec)
     }
 
-    pub fn open(&self, path: &str) -> Option<File> {
+    pub fn open(&mut self, path: &str) -> Option<File> {
         let vnode = self.lookup(path);
         match vnode {
-            Some(vnode) => unsafe {
+            Some(vnode) => {
                 let file = File {
                     vnode: vnode,
                     f_pos: 0,
                 };
                 Some(file)
-            },
+            }
             None => {
-                // create file
                 let path_vec = split_path(path);
-                let mut vnode = unsafe {self.mount.as_ref()};
-                vnode.create(&path_vec);
-                let vnode = vnode.lookup(&path_vec).unwrap();
-                unsafe {
-                    let file = File {
-                        vnode: vnode,
-                        f_pos: 0,
-                    };
-                    Some(file)
-                }                
-            },
+                let parent_path_vec = path_vec[0..path_vec.len() - 1].to_vec();
+
+                let mount = unsafe { self.mount.as_mut() };
+                // create file
+                let mut parent_vnode = match mount.lookup(&parent_path_vec) {
+                    Some(parent_node) => parent_node,
+                    None => {
+                        return None;
+                    }
+                };
+                let file_name = path_vec[path_vec.len() - 1];
+                let new_vnode = unsafe { parent_vnode.as_mut() }.mkfile(file_name);
+                match new_vnode {
+                    Ok(new_vnode) => {
+                        let file = File {
+                            vnode: new_vnode,
+                            f_pos: 0,
+                        };
+                        Some(file)
+                    }
+                    Err(_) => {
+                        return None;
+                    }
+                }
+            }
         }
     }
 
     pub fn ls(&self, path: &str) -> Result<Vec<String>, String> {
         let vnode = self.lookup(path);
         match vnode {
-            Some(vnode) => unsafe {
-                Ok(vnode.as_ref().ls())
-            },
+            Some(vnode) => {
+                let vnode = unsafe { vnode.as_ref() };
+                match vnode.list_dir() {
+                    Some(vnodes) => Ok(vnodes
+                        .iter()
+                        .map(|vnode| {
+                            let vnode = unsafe { vnode.as_ref() };
+                            vnode.get_name()
+                        })
+                        .collect()),
+                    None => {
+                        return Err(format!("ls: {} is not dir", path));
+                    }
+                }
+            }
             None => {
-                Err(format!("ls: cannot access '{}': No such file or directory", path))
-            },
+                return Err(format!(
+                    "ls: cannot access '{}': No such file or directory",
+                    path
+                ));
+            }
         }
     }
 
@@ -83,11 +107,39 @@ impl VFS {
         unimplemented!("VFS::close()")
     }
 
-    pub fn mkdir(&self, path: &str) -> Result<(), String> {
-        unimplemented!("VFS::mkdir()")
+    pub fn mkdir(&mut self, path: &str) -> Result<(), String> {
+        let path_vec = split_path(path);
+        println!("mkdir: {:?}", path_vec);
+        let vnode = unsafe { self.mount.as_mut().lookup(&path_vec) };
+        match vnode {
+            Some(_) => {
+                return Err(format!(
+                    "mkdir: cannot create directory '{}': File exists",
+                    path
+                ));
+            }
+            None => {
+                let vnode = unsafe { self.mount.as_mut() };
+                let parent_path_vec = path_vec[0..path_vec.len() - 1].to_vec();
+                let parent = vnode.lookup(&parent_path_vec);
+                let file_name = path_vec[path_vec.len() - 1];
+                match parent {
+                    Some(mut parent) => {
+                        let parent = unsafe { parent.as_mut() };
+                        parent.mkdir(file_name);
+                    }
+                    None => {
+                        return Err(format!(
+                            "mkdir: cannot create directory '{}': No such file or directory",
+                            path
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
-
 
 struct File {
     vnode: NonNull<dyn VnodeOperations>,
@@ -98,18 +150,18 @@ pub trait FileSystemOperations {
     fn mount(&self) -> NonNull<dyn VnodeOperations>;
 }
 
-
-
 pub trait VnodeOperations {
     fn lookup(&self, path_vec: &Vec<&str>) -> Option<NonNull<dyn VnodeOperations>>;
-    fn create(&self, path_vec: &Vec<&str>) -> Option<NonNull<dyn VnodeOperations>>;
-    fn mkdir(&self, path_vec: Vec<String>) -> Option<NonNull<dyn VnodeOperations>>;
+    fn mkfile(&mut self, file_name: &str) -> Result<NonNull<dyn VnodeOperations>, String>;
+    fn mkdir(&mut self, file_name: &str) -> Result<NonNull<dyn VnodeOperations>, String>;
+
     // replace current vnode with new vnode
-    fn mount(&self, fs: *mut dyn FileSystemOperations, path_vec: Vec<String>) -> Option<NonNull<dyn  VnodeOperations>>;
+    fn mount(&mut self, fs: NonNull<dyn FileSystemOperations>, path_vec: Vec<String>);
     // recover vnode
-    fn umount(&self);
-    fn get_parent(&self) -> Option<*mut dyn VnodeOperations>;
-    fn ls(&self) -> Vec<String>;
+    fn umount(&mut self);
+    fn get_parent(&self) -> Option<NonNull<dyn VnodeOperations>>;
+    fn get_name(&self) -> String;
+    fn list_dir(&self) -> Option<Vec<NonNull<dyn VnodeOperations>>>;
 }
 
 pub trait FileOperations {
@@ -119,5 +171,3 @@ pub trait FileOperations {
     fn close(&self);
     fn seek(&self, offset: usize) -> usize;
 }
-
-

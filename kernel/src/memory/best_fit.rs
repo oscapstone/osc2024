@@ -1,6 +1,6 @@
 
-use alloc::collections::{btree_map::BTreeMap, linked_list::Cursor};
-use core::{alloc::Layout, borrow::Borrow, iter};
+use alloc::collections::btree_map::BTreeMap;
+use core::alloc::Layout;
 
 use crate::println;
 
@@ -30,7 +30,7 @@ impl BestFitAllocator {
     pub fn alloc(&mut self, layout: Layout) ->Option<*mut u8> {
         let size = layout.size();
         let align = layout.align();
-        let mut addr = self.mem_start;
+        let addr = self.mem_start;
         for (block_addr, block_state) in &self.addr_map {
             match block_state {
                 BlockState::Free(block_size) => {

@@ -110,20 +110,18 @@ pub fn push_write_buf(c: u8) {
 #[inline(never)]
 pub fn async_getline(s: &mut [u8; 128], is_echo: bool) -> &str {
     let mut ptr: usize = 0;
-    unsafe {
-        loop {
-            if let Some(i) = pop_read_buf() {
-                if is_echo {
-                    write_u8_buf(i as u8);
-                    flush();
-                }
-                if i == 13 {
-                    write_u8_buf(10);
-                    break;
-                }
-                s[ptr] = i as u8;
-                ptr = ptr + 1;
+    loop {
+        if let Some(i) = pop_read_buf() {
+            if is_echo {
+                write_u8_buf(i as u8);
+                flush();
             }
+            if i == 13 {
+                write_u8_buf(10);
+                break;
+            }
+            s[ptr] = i as u8;
+            ptr = ptr + 1;
         }
     }
     core::str::from_utf8(&s[0..ptr]).unwrap()
