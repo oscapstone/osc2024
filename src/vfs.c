@@ -1,15 +1,17 @@
 #include "vfs.h"
 
 #include "cpio_.h"
+#include "fat32.h"
 #include "mbox.h"
 #include "mem.h"
 #include "multitask.h"
+#include "sd_card.h"
 #include "string.h"
 #include "tmpfs.h"
 #include "uart1.h"
 #include "utli.h"
 
-mount rootfs_mount_point;
+mount* rootfs_mount_point;
 
 static vnode* vfs_lookup(const char* pathname, char* filename) {
   // parse the file pathname to get the names of the target file and its
@@ -17,7 +19,7 @@ static vnode* vfs_lookup(const char* pathname, char* filename) {
   vnode* target_dir_node;
   if (pathname[0] == '/') {
     pathname += 1;
-    target_dir_node = rootfs_mount_point.root;
+    target_dir_node = rootfs_mount_point->root;
   } else if (pathname[0] == '.' && pathname[1] == '/') {
     pathname += 2;
     target_dir_node = current_thread->cwd;
@@ -49,9 +51,8 @@ static vnode* vfs_lookup(const char* pathname, char* filename) {
 
 static void vfs_freevnode(vnode* node) {
   // free the vnode and its child nodes recursively
-  if (node == REGULAR_FILE) {
-    free(node->internal);
-  } else {
+  free(node->internal);
+  if (node->type == DIRECTORY) {
     for (uint32_t i = 0; i < MAX_SUBDIR_N; i++) {
       if (node->subdirs[i]) {
         vfs_freevnode(node->subdirs[i]);
@@ -170,6 +171,8 @@ int32_t vfs_mount(const char* mountpoint, const char* fs) {
     fs_t = uartfs_init();
   } else if (!strcmp(fs, "fbfs")) {
     fs_t = fbfs_init();
+  } else if (!strcmp(fs, "fat32fs")) {
+    fs_t = fat32fs_init();
   } else {
     uart_puts("vfs_mount: unsupported filesystem type");
     return -1;
@@ -221,11 +224,30 @@ int32_t vfs_lseek64(file* fp, int64_t offset, int32_t whence) {
   return 0;
 }
 
+static void vfs_sync(vnode* node) {
+  if (node->mountpoint && node->mountpoint->fs->syncfs) {
+    node->mountpoint->fs->syncfs();
+  }
+
+  for (uint32_t i = 0; i < MAX_SUBDIR_N; i++) {
+    if (node->subdirs[i] && node->subdirs[i]->type == DIRECTORY) {
+      vfs_sync(node->subdirs[i]);
+    }
+  }
+}
+
+int32_t vfs_syncall() {
+  vfs_sync(rootfs_mount_point->root);
+  return 0;
+}
+
 void rootfs_init() {
+  rootfs_mount_point = (mount*)malloc(sizeof(mount));
+
   // initialize the root file system
   filesystem* tmpfs = tmpfs_init();
   register_filesystem(tmpfs);
-  tmpfs->setup_mnt(tmpfs, &rootfs_mount_point, "/");
+  tmpfs->setup_mnt(tmpfs, rootfs_mount_point, "/");
 
   // initialize the initram file system
   filesystem* initramfs = initramfs_init();
@@ -245,4 +267,7 @@ void rootfs_init() {
   register_filesystem(fbfs);
   vfs_mkdir("/dev/framebuffer");
   vfs_mount("/dev/framebuffer", "fbfs");
+
+  vfs_mkdir("/boot");
+  sd_mount("/boot");
 }

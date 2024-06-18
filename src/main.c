@@ -2,6 +2,7 @@
 #include "interrupt.h"
 #include "mem.h"
 #include "multitask.h"
+#include "sd_card.h"
 #include "shell.h"
 #include "uart1.h"
 #include "utli.h"
@@ -14,6 +15,7 @@ void kernel_init(void *arg) {
   shell_init();
   fdt_traverse(get_cpio_addr);
   init_mem();
+  sd_init();
   rootfs_init();
   print_cur_sp();
   init_sched_thread();

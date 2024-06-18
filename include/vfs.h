@@ -30,6 +30,7 @@ typedef int32_t (*vfs_read_fp_t)(file*, void*, uint32_t);
 typedef int32_t (*vfs_write_fp_t)(file*, const void*, uint32_t);
 typedef int32_t (*vfs_setup_mount)(filesystem*, mount*, const char*);
 typedef int32_t (*vfs_register_fs)();
+typedef int32_t (*vfs_syncfs)();
 
 struct mount {
   vnode* root;  // root directory
@@ -50,6 +51,7 @@ struct filesystem {
   char name[16];
   vfs_register_fs register_fs;
   vfs_setup_mount setup_mnt;
+  vfs_syncfs syncfs;
 };
 
 // file handle
@@ -82,6 +84,7 @@ int32_t vfs_mkdir(const char* pathname);
 int32_t vfs_mount(const char* mountpoint, const char* fs);
 int32_t vfs_chdir(const char* pathname);
 int32_t vfs_lseek64(file* fp, int64_t offset, int32_t whence);
+int32_t vfs_syncall();
 
 void rootfs_init();
 #endif

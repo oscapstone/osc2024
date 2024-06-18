@@ -374,6 +374,7 @@ filesystem *uartfs_init() {
     uartfs->setup_mnt = (vfs_setup_mount)phy2vir((uint64_t)uartfs_setup_mount);
     uartfs->register_fs =
         (vfs_register_fs)phy2vir((uint64_t)uartfs_register_fs);
+    uartfs->syncfs = (vfs_syncfs)0;
   }
   return uartfs;
 }

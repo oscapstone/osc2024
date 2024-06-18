@@ -112,6 +112,9 @@ void el0_64_sync_handler(trapframe_t *tpf) {
       case SYSCALL_LSEEK64:
         sys_lseek64(tpf);
         break;
+      case SYSCALL_SYNCFS:
+        sys_syncfs(tpf);
+        break;
       case SIG_RETURN:
         sig_return();
         break;

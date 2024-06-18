@@ -22,6 +22,7 @@
 #define SYSCALL_MOUNT 16
 #define SYSCALL_CHDIR 17
 #define SYSCALL_LSEEK64 18
+#define SYSCALL_SYNCFS 20
 #define SIG_RETURN 32
 #define SIG_NUM 32
 
@@ -59,6 +60,7 @@ void sys_mkdir(trapframe_t *tpf);
 void sys_mount(trapframe_t *tpf);
 void sys_chdir(trapframe_t *tpf);
 void sys_lseek64(trapframe_t *tpf);
+void sys_syncfs(trapframe_t *tpf);
 void check_signal();
 void sig_kill_default_handler();
 void sig_return();

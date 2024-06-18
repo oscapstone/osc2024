@@ -54,17 +54,6 @@ static vnode* tmpfs_create_vnode(vnode* parent, const char* name,
   return tmpfs_vnode;
 }
 
-static int32_t tmpfs_setup_mount(filesystem* fs, mount* mount,
-                                 const char* name) {
-  mount->fs = fs;
-  mount->root = tmpfs_create_vnode((vnode*)0, name, DIRECTORY);
-  if (!mount->root) {
-    return -1;
-  }
-  mount->root->mountpoint = mount;
-  return 0;
-}
-
 static int32_t tmpfs_vnode_lookup(vnode* dir_node, vnode** target,
                                   const char* component_name) {
   if (!strcmp(".", component_name)) {
@@ -146,6 +135,17 @@ static int32_t tmpfs_file_write(file* fp, const void* buf, uint32_t len) {
   return i;
 }
 
+static int32_t tmpfs_setup_mount(filesystem* fs, mount* mount,
+                                 const char* name) {
+  mount->fs = fs;
+  mount->root = tmpfs_create_vnode((vnode*)0, name, DIRECTORY);
+  if (!mount->root) {
+    return -1;
+  }
+  mount->root->mountpoint = mount;
+  return 0;
+}
+
 static int32_t tmpfs_register_fs() {
   if (!tmpfs_v_ops) {
     tmpfs_v_ops = (vnode_operations*)malloc(sizeof(vnode_operations));
@@ -178,6 +178,7 @@ filesystem* tmpfs_init() {
     strcpy(tmpfs->name, "tmpfs");
     tmpfs->setup_mnt = (vfs_setup_mount)phy2vir((uint64_t)tmpfs_setup_mount);
     tmpfs->register_fs = (vfs_register_fs)phy2vir((uint64_t)tmpfs_register_fs);
+    tmpfs->syncfs = (vfs_syncfs)0;
   }
 
   return tmpfs;

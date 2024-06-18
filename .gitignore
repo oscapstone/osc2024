@@ -5,3 +5,4 @@ build
 bootloader/bootloader.*
 bootloader_norlc/bootloader.*
 *.txt
+*.img

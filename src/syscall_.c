@@ -415,3 +415,6 @@ void sys_lseek64(trapframe_t* tpf) {
     tpf->x[0] = vfs_lseek64(fp, offset, whence);
   }
 }
+
+// call VFS api to sync
+void sys_syncfs(trapframe_t* tpf) { tpf->x[0] = vfs_syncall(); }

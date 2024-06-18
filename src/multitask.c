@@ -183,7 +183,7 @@ task_struct* get_free_thread() {
 
 void user_thread_exec() {
   uint32_t file_sz;
-  char* usr_prog = cpio_load("vfs1.img", &file_sz);
+  char* usr_prog = cpio_load("vfs2.img", &file_sz);
   if (!usr_prog) {
     return;
   }

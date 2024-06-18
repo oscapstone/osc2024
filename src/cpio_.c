@@ -276,6 +276,7 @@ filesystem *initramfs_init() {
         (vfs_setup_mount)phy2vir((uint64_t)initramfs_setup_mount);
     initramfs->register_fs =
         (vfs_register_fs)phy2vir((uint64_t)initramfs_register_fs);
+    initramfs->syncfs = (vfs_syncfs)0;
   }
   return initramfs;
 }
