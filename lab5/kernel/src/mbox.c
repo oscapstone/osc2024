@@ -16,7 +16,7 @@ int mbox_call( mbox_channel_type channel, unsigned int value )
         while ( *MBOX_STATUS & BCM_ARM_VC_MS_EMPTY ) {}
         // Read from Register
         if (value == *MBOX_READ)
-            return pt[1] == MBOX_REQUEST_SUCCEED;
+            return !(pt[1] == MBOX_REQUEST_SUCCEED);
     }
     return 0;
 }

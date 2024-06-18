@@ -194,7 +194,7 @@ void free_child_thread(thread_t *child_thread) {
 		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
 	}
     /* check if the code is in kernel space */
-    if (!((void*)&child_thread >= (void*)&_start && (void*)&child_thread < (void*)&_end)) {
+    if (thread_code_can_free(child_thread)) {
         uart_puts("    child thread addr: 0x%x, _start: 0x%x, _end: 0x%x\n", child_thread, &_start, &_end);
 		kfree(child_thread->code);
 	}
@@ -268,6 +268,15 @@ void dump_run_queue(thread_t *root, int64_t level) {
 		dump_run_queue(threads[((child_node_t *)curr)->pid], level + 1);
 		// ERROR("OVER");
 	}
+}
+
+int8_t thread_code_can_free(thread_t *thread) {
+	return !in_kernel_img_space((uint64_t)thread->code);
+}
+
+int8_t in_kernel_img_space(uint64_t addr) {
+	// uart_puts("addr: 0x%x, _start: 0x%x, _end: 0x%x\n", addr, &_start, &_end);
+	return addr >= &_start && addr < &_end;
 }
 
 void foo() {

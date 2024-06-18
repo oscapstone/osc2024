@@ -13,6 +13,10 @@ struct list_head* timer_list;
 void timer_list_init() {
     timer_list = malloc(sizeof(timer_event_t));
     INIT_LIST_HEAD(timer_list);
+    uint64_t tmp;
+    asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+    tmp |= 1;
+    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
 }
 
 void core_timer_enable() {

@@ -9,13 +9,17 @@
 #include "exception.h"
 #include "timer.h"
 #include "ANSI.h"
+#include "sched.h"
+#include "syscall.h"
+#include "stddef.h"
 
 #define CLI_MAX_CMD 8
 #define MAX_ARGS 10
 #define USER_STACK_SIZE 0x10000
 
-void*   CPIO_DEFAULT_PLACE;
-char    input_buf[MAX_CMD_LEN];
+extern void         *CPIO_START;
+extern thread_t     *curr_thread;
+char                input_buf[MAX_CMD_LEN];
 
 void cli_start_shell() {
     cli_print_welcome_msg();
@@ -201,7 +205,7 @@ void cmd_ls() {
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    struct cpio_newc_header *header_ptr = CPIO_START;
 
     while(header_ptr != 0) {
         int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
@@ -219,7 +223,7 @@ void cmd_cat(char* filepath) {
     char* c_filepath;
     char* c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
+    struct cpio_newc_header *header_ptr = CPIO_START;
 
     while(header_ptr != 0) {
         int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
@@ -256,38 +260,38 @@ void cmd_dtb() {
 }
 
 void cmd_exec_program(char* filepath){
-    char* c_filepath;
-    char* c_filedata;
+    char *c_filedata;
     unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_PLACE;
 
-    while(header_ptr != 0) {
-        int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        if (err) {
-            uart_puts("CPIO parse error\r\n");
-            break;
-        }
-        if (header_ptr != 0 && strcmp(filepath, c_filepath) == 0) {
-            char* user_stack = malloc(USER_STACK_SIZE);
-            /*
-            set spsr_el1 to 0x3c0 and elr_el1 to the program’s start address.
-            set the user program’s stack pointer to a proper position by setting sp_el0.
-            issue eret to return to the user code. 
-            */
-            asm(
-                "mov    x10,        0x3c0\n\t"
-                "msr    spsr_el1,   x10\n\t"
-                "msr    elr_el1,    %0\n\t"
-                "msr    sp_el0,     %1\n\t"
-                "eret   \n\t"
-                :: "r"(c_filedata), "r"(user_stack + USER_STACK_SIZE)
-            );
-            break;
-        }
-        if (header_ptr == 0) 
-            uart_puts("cat: %s: No such file or directory\n", filepath);
+    int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
+    if (result == CPIO_TRAILER) {
+        puts("exec: ");
+        puts(filepath);
+        puts(": No such file or directory\r\n");
+        return;
+    } else if (result == CPIO_ERROR) {
+        puts("cpio parse error\r\n");
+        return;
+    }
+
+    if (kernel_fork() == 0) { // child process
+        kernel_exec_user_program(filepath, NULL);
+    } else {
+       wait();
     }
 }
+
+// void cmd_fork_test(){
+//     thread_t *t = thread_create(fork_test, "fork_test");
+//     asm(
+//         "mov    x10,        0x3c0\n\t"
+//         "msr    spsr_el1,   x10\n\t"
+//         "msr    elr_el1,    %0\n\t"
+//         "msr    sp_el0,     %1\n\t"
+//         "eret   \n\t"
+//         :: "r"(t->context.lr), "r"(t->code)
+//     );
+// }
 
 void cmd_currentEL() {
     print_currentEL();

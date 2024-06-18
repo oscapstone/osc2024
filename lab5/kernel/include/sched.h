@@ -88,6 +88,8 @@ void            free_child_thread(thread_t *child_thread);
 void            dump_thread_info(thread_t* t);
 void            dump_child_thread(thread_t *thread);
 void            dump_run_queue(thread_t *root, int64_t level);
+int8_t          thread_code_can_free(thread_t *thread);
+int8_t          in_kernel_img_space(uint64_t addr);
 
 // Test function
 void            foo();
