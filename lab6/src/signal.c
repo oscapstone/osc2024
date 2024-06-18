@@ -37,10 +37,13 @@ void do_signal(trap_frame *regs)
             // Save the sigframe
             memcpy(&get_current()->sigframe, regs, sizeof(trap_frame));
             get_current()->sig_stack = kmalloc(STACK_SIZE);
+            map_pages((unsigned long)get_current()->pgd, 0xFFFFFFFF7000, 0x4000,
+                      (unsigned long)VIRT_TO_PHYS(get_current()->sig_stack), 0);
+
             regs->x30 = (unsigned long)sigreturn;
             regs->spsr_el1 = 0x340;
             regs->elr_el1 = (unsigned long)get_current()->sighand[signum];
-            regs->sp_el0 = (unsigned long)get_current()->sig_stack + STACK_SIZE;
+            regs->sp_el0 = (unsigned long)0xFFFFFFFFB000;
             return; // Jump to the signal handler after eret
         }
         signum++;

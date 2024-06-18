@@ -134,11 +134,20 @@ void initrd_sys_exec(const char *target)
         char pathname[namesize];
         strncpy(pathname, fptr + sizeof(cpio_t), namesize);
         if (!strcmp(target, pathname)) {
-            // TODO: Implement sys_exec
-            // void *program = kmalloc(filesize);
-            // memcpy(program, fptr + headsize, filesize);
-            // get_current()->sigpending = 0;
-            // memset(get_current()->sighand, 0, sizeof(get_current()->sighand));
+            void *program = kmalloc(filesize);
+            memcpy(program, fptr + headsize, filesize);
+
+            struct task_struct *task = get_current();
+            // TODO: Should free the old page tables
+            memset(task->pgd, 0, PAGE_SIZE);
+            map_pages((unsigned long)task->pgd, 0x0, filesize,
+                      (unsigned long)VIRT_TO_PHYS(program), 0);
+            map_pages((unsigned long)task->pgd, 0xFFFFFFFFB000, 0x4000,
+                      (unsigned long)VIRT_TO_PHYS(task->user_stack), 0);
+            map_pages((unsigned long)task->pgd, 0x3C000000, 0x1000000,
+                      0x3C000000, 0);
+            task->sigpending = 0;
+            memset(task->sighand, 0, sizeof(task->sighand));
             return;
         }
         fptr += headsize + datasize;
