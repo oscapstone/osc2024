@@ -39,7 +39,7 @@ struct task_struct {
     int siglock;
     trap_frame sigframe;
     void *sig_stack;
-    unsigned long pgd;
+    void *pgd;
     struct vm_area_struct *mmap;
     struct task_struct *prev;
     struct task_struct *next;

@@ -28,10 +28,55 @@ void map_pages(unsigned long pgd, unsigned long va, unsigned long size,
         walk(pgd, va + i, pa + i, prot);
 }
 
-void insert_vm_struct(struct vm_area_struct **vma)
+void add_vma(struct vm_area_struct **head, unsigned long va, unsigned long pa,
+             unsigned long size, unsigned long prot)
+{
+    struct vm_area_struct *vma = kmalloc(sizeof(struct vm_area_struct));
+    vma->va = va & ~(PAGE_SIZE - 1);
+    vma->pa = pa & ~(PAGE_SIZE - 1);
+    vma->size = (size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    vma->prot = prot;
+    vma->prev = 0;
+    vma->next = 0;
+
+    if (*head == 0 || vma->va < (*head)->va) {
+        vma->next = *head;
+        if (*head != 0)
+            (*head)->prev = vma;
+        *head = vma;
+        return;
+    }
+
+    struct vm_area_struct *current = *head;
+    while (current->next != 0 && current->next->va <= vma->va)
+        current = current->next;
+    vma->next = current->next;
+    if (current->next != 0)
+        current->next->prev = vma;
+    current->next = vma;
+    vma->prev = current;
+}
+
+void del_vma(struct vm_area_struct **head, unsigned long va)
+{
+    struct vm_area_struct *current = *head;
+    while (current != 0 && current->va != va)
+        current = current->next;
+    if (current == 0)
+        return;
+    if (current->prev != 0)
+        current->prev->next = current->next;
+    if (current->next != 0)
+        current->next->prev = current->prev;
+    if (current == *head)
+        *head = current->next;
+    kfree(current);
+}
+
+void copy_vmas(struct vm_area_struct *from, struct vm_area_struct **to)
 {
 }
 
-void remove_vm_struct(struct vm_area_struct *vm)
+void page_fault_handler()
 {
 }

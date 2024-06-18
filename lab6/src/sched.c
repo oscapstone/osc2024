@@ -46,7 +46,7 @@ void display_run_queue()
 
 void schedule()
 {
-    switch_mm(get_current()->next->pgd);
+    switch_mm((unsigned long)VIRT_TO_PHYS(get_current()->next->pgd));
     switch_to(get_current(), get_current()->next);
 }
 
@@ -99,8 +99,8 @@ struct task_struct *kthread_create(void (*func)())
     memset(task->sighand, 0, sizeof(task->sighand));
     task->sigpending = 0;
     task->siglock = 0;
-    task->pgd = (unsigned long)VIRT_TO_PHYS(kmalloc(PAGE_SIZE));
-    memset((void *)PHYS_TO_VIRT(task->pgd), 0, PAGE_SIZE);
+    task->pgd = kmalloc(PAGE_SIZE);
+    memset(task->pgd, 0, PAGE_SIZE);
     task->mmap = 0;
     // TODO: Check VIRT_TO_PHYS needed or not
     task->context.lr = (unsigned long)func;

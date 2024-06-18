@@ -251,6 +251,7 @@ void *kmalloc(unsigned int size)
 
 void kfree(void *ptr)
 {
+    // FIXME: Use page->cache to retrieve the cache order
     // If the pointer is page-aligned and its corresponding
     // page is not divided into cache objects, then free the
     // page directly. Otherwise, free the cache object.

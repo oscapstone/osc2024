@@ -96,15 +96,15 @@ void initrd_exec(const char *target)
             memcpy(program, fptr + headsize, filesize);
             struct task_struct *task = kthread_create((void *)0x0);
 
-            map_pages(task->pgd, 0x0, filesize,
+            map_pages((unsigned long)task->pgd, 0x0, filesize,
                       (unsigned long)VIRT_TO_PHYS(program), 0);
-            map_pages(task->pgd, 0xFFFFFFFFB000, 0x4000,
+            map_pages((unsigned long)task->pgd, 0xFFFFFFFFB000, 0x4000,
                       (unsigned long)VIRT_TO_PHYS(task->user_stack), 0);
-            map_pages(task->pgd, 0x3C000000, 0x3F000000 - 0x3C000000,
+            map_pages((unsigned long)task->pgd, 0x3C000000, 0x1000000,
                       0x3C000000, 0);
 
             asm volatile("dsb ish");
-            asm volatile("msr ttbr0_el1, %0" ::"r"(task->pgd));
+            asm volatile("msr ttbr0_el1, %0" ::"r"(VIRT_TO_PHYS(task->pgd)));
             asm volatile("tlbi vmalle1is");
             asm volatile("dsb ish");
             asm volatile("isb");
@@ -134,11 +134,11 @@ void initrd_sys_exec(const char *target)
         char pathname[namesize];
         strncpy(pathname, fptr + sizeof(cpio_t), namesize);
         if (!strcmp(target, pathname)) {
-            void *program = kmalloc(filesize);
-            memcpy(program, fptr + headsize, filesize);
-            get_current()->sigpending = 0;
-            memset(get_current()->sighand, 0, sizeof(get_current()->sighand));
-            get_current()->context.lr = (unsigned long)program;
+            // TODO: Implement sys_exec
+            // void *program = kmalloc(filesize);
+            // memcpy(program, fptr + headsize, filesize);
+            // get_current()->sigpending = 0;
+            // memset(get_current()->sighand, 0, sizeof(get_current()->sighand));
             return;
         }
         fptr += headsize + datasize;
@@ -151,5 +151,5 @@ void initrd_callback(void *addr)
     uart_puts("[INFO] Initrd is mounted at ");
     uart_hex((uintptr_t)addr);
     uart_putc('\n');
-    RAMFS_BASE = (char *)addr;
+    RAMFS_BASE = (char *)PHYS_TO_VIRT(addr);
 }

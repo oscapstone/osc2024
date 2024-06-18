@@ -42,8 +42,8 @@ void exception_entry(trap_frame *tf)
         break;
     case 3:
         tf->x0 = sys_exec((const char *)tf->x0, (char *const *)tf->x1);
-        tf->elr_el1 = get_current()->context.lr;
-        tf->sp_el0 = (unsigned long)get_current()->user_stack + STACK_SIZE;
+        tf->elr_el1 = 0x0;
+        tf->sp_el0 = 0xFFFFFFFFF000;
         break;
     case 4:
         tf->x0 = sys_fork(tf);

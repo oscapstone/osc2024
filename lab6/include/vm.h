@@ -38,11 +38,12 @@
 // #define MAP_POPULATE  0x4000
 
 struct vm_area_struct {
-    unsigned long vm_start;
-    unsigned long vm_end;
-    unsigned long vm_page_prot;
-    struct vm_area_struct *vm_prev;
-    struct vm_area_struct *vm_next;
+    unsigned long va;
+    unsigned long pa;
+    unsigned long size;
+    unsigned long prot;
+    struct vm_area_struct *prev;
+    struct vm_area_struct *next;
 };
 
 void map_pages(unsigned long pgd, unsigned long va, unsigned long size,
