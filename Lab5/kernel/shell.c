@@ -1,18 +1,19 @@
 #include "shell.h"
 
 void print_menu(){
-    async_uart_puts("\nhelp       : print this help menu");
-    async_uart_puts("\nhello      : print Hello World!");
-    async_uart_puts("\nmailbox    : print mailbox info");
-    async_uart_puts("\nreboot     : reboot the device");  
-    async_uart_puts("\ncat        : cat all files in file system");
-    async_uart_puts("\nls         : list all files in file system");
-    async_uart_puts("\nexec       : execute user program");
-    async_uart_puts("\nasync      : async read/write");
-    async_uart_puts("\ntimer      : test timer");
-    async_uart_puts("\npreempt    : test preemption");
-    async_uart_puts("\nalloc      : simple allocator");
-    async_uart_puts("\nmalloc     : test malloc");
+    async_uart_puts("\nhelp     : print this help menu");
+    async_uart_puts("\nhello    : print Hello World!");
+    async_uart_puts("\nmailbox  : print mailbox info");
+    async_uart_puts("\nreboot   : reboot the device");  
+    async_uart_puts("\ncat      : cat all files in file system");
+    async_uart_puts("\nls       : list all files in file system");
+    async_uart_puts("\nexec     : execute user program");
+    async_uart_puts("\nasync    : async read/write");
+    async_uart_puts("\ntimer    : test timer");
+    async_uart_puts("\npreempt  : test preemption");
+    async_uart_puts("\nalloc    : simple allocator");
+    async_uart_puts("\nmalloc   : test malloc");
+    async_uart_puts("\nfork     : test fork");
 }
 
 void print_rpi_info(){
@@ -160,6 +161,7 @@ void test_malloc(){
 }
 
 void shell(){
+
     async_uart_puts("\nAngus@Rpi3B+ > ");
 
     char cmd[256];
@@ -194,7 +196,13 @@ void shell(){
         test_preempt();
     }else if (strcmp(cmd, "malloc")){
         test_malloc();
+    }else if (strcmp(cmd, "fork")){
+        // new_user_thread(fork_test);
+        thread_exec(fork_test, 0);
     }else{
         async_uart_puts("\nCommand Not Found");
     }
+
+
 }
+

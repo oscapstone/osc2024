@@ -3,12 +3,14 @@
 
 #include "mem.h"
 #include "io.h"
+#include "thread.h"
 
 #define LOW_PRIO 0x100
 #define TIMER_PRIO 0x010
 #define UART_PRIO 0x001
 
 typedef struct task_struct task_t;
+typedef struct thread thread_t;
 
 typedef void (*task_callback_t)(void);
 

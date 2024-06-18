@@ -38,6 +38,12 @@ void strncpy(char* src, char* dst, uint32_t len){
     }
 }
 
+void memcpy(char* src, char* dst, uint32_t len){
+    for (int i = 0; i < len; i++){
+        dst[i] = src[i];
+    }
+}
+
 uint32_t strlen(char* str){
     uint32_t len = 0;
 
@@ -74,4 +80,49 @@ uint32_t to_little_endian(uint32_t val){
             ((val >> 8)  & (0x0000ff00)) |
             ((val << 8)  & (0x00ff0000)) |
             ((val << 24) & (0xff000000));
+}
+
+void delay(int ncycles){
+    for (int i = 0; i < ncycles; i++)
+        asm volatile("nop");
+}
+
+void print_dec(int dec_val){
+    char val_str[20];
+    int idx = 0;
+
+    if (dec_val == 0){
+        idx = 1;
+        val_str[0] = '0';
+    }
+    
+    while (dec_val > 0){
+        char ch = '0' + (dec_val % 10);
+        val_str[idx++] = ch;
+
+        dec_val /= 10;
+    }
+
+    for (int i = idx-1; i >= 0; i--){
+        print_char(val_str[i]);
+    }
+}
+
+uint32_t read_DAIF(){
+    uint32_t value;
+    asm volatile ("mrs %0, DAIF" : "=r" (value));
+
+    return value;
+}
+
+uint32_t read_core_timer_enable(){
+    uint32_t value;
+    asm volatile ("mrs  %0, cntp_ctl_el0;" : "=r"(value));
+    return value;
+}
+
+uint32_t read_core_timer_expire(){
+    uint32_t value;
+    asm volatile ("mrs  %0, cntp_tval_el0" : "=r"(value));
+    return value;
 }

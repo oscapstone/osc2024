@@ -5,6 +5,10 @@
 #include "type.h"
 #include "io.h"
 #include "exception.h"
+#include "mem.h"
+#include "thread.h"
+
+typedef struct thread thread_t;
 
 typedef struct {
     void (*func_arg)(char*);
@@ -13,11 +17,13 @@ typedef struct {
     char* arg;
     int with_arg;
     int valid;
-}timer_t;
+} timer_t;
 
 
 
 void init_time_queue();
+void set_kernel_timer();
+// void set_sched_timer();
 
 void enable_core_timer();
 void disable_core_timer();

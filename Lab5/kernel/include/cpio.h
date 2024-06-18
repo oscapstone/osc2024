@@ -5,6 +5,8 @@
 #include "io.h" 
 #include "type.h"
 #include "devtree.h"
+// #include "thread.h"
+// #include "sched.h"
 // #include "exception.h"
 
 #define CPIO_END "TRAILER!!!"
@@ -14,6 +16,8 @@
 
 #define CPIO_BASE_RPI 0x20000000
 #define CPIO_BASE_QEMU 0x8000000
+
+typedef struct thread thread_t;
 
 struct cpio_newc_header {
     char c_magic[6];        // The string 070701 for new ASCII
@@ -36,5 +40,7 @@ void cpio_ls();
 void cpio_cat();
 void cpio_exec();
 void initramfs_callback(char*, char*, struct fdt_prop*);
+char* get_cpio_file(char*);
+int get_cpio_fsize(char*);
 
 #endif

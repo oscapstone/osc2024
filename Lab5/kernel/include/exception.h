@@ -5,6 +5,10 @@
 #include "mini_uart.h"
 #include "timer.h"
 #include "task.h"
+#include "thread.h"
+#include "syscall.h"
+
+typedef struct trap_frame trap_frame_t;
 
 #define CORE0_TIMER_IRQ_CTRL        ((volatile unsigned int*)(0x40000040))
 #define CORE0_IRQ_SOURCE            ((volatile unsigned int*)(0x40000060))
@@ -17,5 +21,7 @@ void enable_interrupt();
 void exception_entry();
 void el0_irq_entry();
 void el1_irq_entry();
+void el0_sync_entry(trap_frame_t* tpf);
+
 
 #endif

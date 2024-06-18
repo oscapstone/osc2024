@@ -3,6 +3,8 @@
 task_t* task_head;
 int cur_prio = LOW_PRIO;
 
+extern thread_t* cur_thread;
+
 void init_task_queue(){
     task_head = (task_t*)simple_alloc(sizeof(task_t));
     task_t* task_end = (task_t*)simple_alloc(sizeof(task_t));
@@ -17,14 +19,12 @@ void init_task_queue(){
 }
 
 void add_task(task_callback_t callback, int prio){
-    task_t* new_task = (task_t*)simple_alloc(sizeof(task_t));
+    task_t* new_task = (task_t*)malloc(sizeof(task_t));
     
     new_task->prio = prio;
     new_task->callback = callback;
 
     disable_interrupt();
-
-    // print_str("\nAdding task...");
 
     task_t* iter = task_head;
     
@@ -44,10 +44,14 @@ void add_task(task_callback_t callback, int prio){
 
     iter = task_head;
 
-    // while (iter->prio < LOW_PRIO){
-    //     print_hex(iter->prio);
-    //     print_str(" ");
-    //     iter = iter->next;
+    
+    // if (cur_thread->id == 2){
+    //     print_str("\nADD: ");
+    //     while (iter->prio < LOW_PRIO){
+    //         print_hex(iter->prio);
+    //         print_str(" ");
+    //         iter = iter->next;
+    //     }
     // }
 
     enable_interrupt();
@@ -56,18 +60,36 @@ void add_task(task_callback_t callback, int prio){
 void pop_task(){
 
     disable_interrupt();
+
+    // if (cur_thread->id == 2){
+    //     print_str("\nPopping task...");
+    // }
     // print_str("\nPopping task...");
     task_t* exec_task = task_head->next;
     
+    task_t* iter = task_head;
     if (exec_task->prio == LOW_PRIO){
         enable_interrupt();
         return;
     }
+
     // print_newline();
     // print_hex(exec_task->prio);
 
-    if (exec_task->prio >= cur_prio)
+    // print_str("\ncur_prio: ");
+    // print_hex(cur_prio);
+
+    if (exec_task->prio > cur_prio)
         return;
+
+    // if (cur_thread->id == 2){
+    //     print_str("\nPOP: ");
+    //     while (iter->prio < LOW_PRIO){
+    //         print_hex(iter->prio);
+    //         print_str(" ");
+    //         iter = iter->next;
+    //     }
+    // }
 
     int orin_prio = cur_prio;
 
@@ -80,6 +102,7 @@ void pop_task(){
     exec_task->callback();
 
     disable_interrupt();
+    free(exec_task);
     cur_prio = orin_prio;
     enable_interrupt();
 }

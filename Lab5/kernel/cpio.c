@@ -2,6 +2,7 @@
 
 uint32_t DEVTREE_CPIO_BASE = 0;
 uint32_t DEVTREE_CPIO_END = 0;
+extern thread_t* cur_thread;
 
 void cpio_ls(){
     struct cpio_newc_header *head = (struct cpio_newc_header *)DEVTREE_CPIO_BASE;
@@ -106,11 +107,12 @@ void cpio_exec(){
             char* file_content = (char*)head + file_offset;
             // print_hex((uint32_t)file_content);
 
-            uint32_t sp_loc = 0x3600000;
+            // uint32_t sp_loc = 0x3600000;
 
             // print_str("\nhere");
 
-            exec_in_el0(file_content, sp_loc);
+            // new_user_thread(file_content, f_size);
+            thread_exec(file_content, f_size);
 
             break;
         }
@@ -140,4 +142,77 @@ void initramfs_callback(char* node_name, char* prop_name, struct fdt_prop* prop)
         // print_str("\nDevice Tree End: 0x");
         // print_hex(DEVTREE_CPIO_END);
     }
+}
+
+char* get_cpio_file(char* name){
+
+    struct cpio_newc_header *head = (struct cpio_newc_header *)DEVTREE_CPIO_BASE;
+    uint32_t h_size = sizeof(struct cpio_newc_header);
+
+    while (strncmp(head->c_magic, CPIO_MAGIC, MAGIC_SIZE)){
+        char* f_name = ((char*)head) + h_size;
+
+        uint32_t name_len = atoi(head->c_namesize, FIELD_SIZE);
+        uint32_t f_size = atoi(head->c_filesize, FIELD_SIZE);
+        uint32_t file_offset = h_size + name_len;
+
+        if (strncmp(f_name, CPIO_END, name_len))
+            break;
+
+        if (file_offset % 4 != 0) 
+            file_offset = 4 * ((file_offset + 4) / 4);
+
+        if (strncmp(f_name, name, name_len)){
+            char* file_content = (char*)head + file_offset;
+            // print_hex((uint32_t)file_content);
+
+            // print_str("\nhere");
+            return file_content;
+        }
+
+        if(f_size % 4 != 0) 
+            f_size = 4 * ((f_size + 4) / 4);
+
+        head = (struct cpio_newc_header*)((uint8_t*)head + file_offset + f_size);
+    }
+
+    print_str("\nNo Match File");
+
+    return 0;
+}
+
+int get_cpio_fsize(char* name){
+    struct cpio_newc_header *head = (struct cpio_newc_header *)DEVTREE_CPIO_BASE;
+    uint32_t h_size = sizeof(struct cpio_newc_header);
+
+    while (strncmp(head->c_magic, CPIO_MAGIC, MAGIC_SIZE)){
+        char* f_name = ((char*)head) + h_size;
+
+        uint32_t name_len = atoi(head->c_namesize, FIELD_SIZE);
+        uint32_t f_size = atoi(head->c_filesize, FIELD_SIZE);
+        uint32_t file_offset = h_size + name_len;
+
+        if (strncmp(f_name, CPIO_END, name_len))
+            break;
+
+        if (file_offset % 4 != 0) 
+            file_offset = 4 * ((file_offset + 4) / 4);
+
+        if (strncmp(f_name, name, name_len)){
+            
+            return f_size;
+            // print_hex((uint32_t)file_content);
+
+            // print_str("\nhere");
+        }
+
+        if(f_size % 4 != 0) 
+            f_size = 4 * ((f_size + 4) / 4);
+
+        head = (struct cpio_newc_header*)((uint8_t*)head + file_offset + f_size);
+    }
+
+    print_str("\nNo Match File");
+
+    return 0;
 }

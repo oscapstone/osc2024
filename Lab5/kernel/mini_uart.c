@@ -79,6 +79,7 @@ void async_uart_handler(){
         disable_uart_read_interrupt();
         rx_interrupt_handler();
     }else if (*AUX_MU_IIR & 0x02){
+        // print_str("\nwrite interrupt");
         disable_uart_write_interrupt();
         tx_interrupt_handler();
     }
@@ -145,11 +146,12 @@ void async_uart_puts(char* str){
     // print_str(async_write_buf);
 
     enable_interrupt();
-
     enable_uart_write_interrupt();
 }
 
 void async_uart_hex(uint32_t dec_val){
+
+    disable_interrupt();
 
     // print hex value
     for (int shft = 28; shft >= 0; shft -= 4){
@@ -163,6 +165,42 @@ void async_uart_hex(uint32_t dec_val){
         if (write_end == 1024)
             write_end = 0;
     }
+
+    enable_interrupt();
+    enable_uart_write_interrupt();
+
+}
+
+void async_uart_dec(int dec_val){
+    // print decimal value
+
+    disable_interrupt();
+
+    char val_str[20];
+    int idx = 0;
+
+    if (dec_val == 0){
+        idx = 1;
+        val_str[0] = '0';
+    }
+    
+    while (dec_val > 0){
+        char ch = '0' + (dec_val % 10);
+        val_str[idx++] = ch;
+
+        dec_val /= 10;
+    }
+
+    for (int i = idx-1; i >= 0; i--){
+        async_write_buf[write_end++] = val_str[i];
+
+        if (write_end == 1024)
+            write_end = 0;
+    }
+
+    enable_interrupt();
+    enable_uart_write_interrupt();
+
 }
 
 void async_uart_newline(){

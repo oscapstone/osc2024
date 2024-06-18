@@ -3,6 +3,8 @@
 .global from_el2_to_el1
 .global set_exception_vector_table
 .global exception_vector_table
+.global child_fork_ret
+.type child_fork_ret, @function
 
 // save general registers to stack
 .macro save_all
@@ -25,10 +27,13 @@
     str x30, [sp, 16 * 15]
 
     mrs x0,  spsr_el1
-    str x0,  [sp, 16 * 16]
+    str x0,  [sp, 16 * 15 + 8]
     mrs x0,  elr_el1
-    str x0,  [sp, 16 * 17]
-    ldp x0, x1, [sp ,16 * 0]    
+    str x0,  [sp, 16 * 16]
+    mrs x0,  sp_el0
+    str x0,  [sp, 16 * 16 + 8]
+
+    mov x0, sp    
 
 .endm
 
@@ -51,10 +56,12 @@
     ldp x28, x29, [sp ,16 * 14]
     ldr x30, [sp, 16 * 15]
     
-    ldr x0, [sp, 16 * 16]
-    msr spsr_el1,x0
-    ldr x0,  [sp, 16 * 17]
+    ldr x0,  [sp, 16 * 15 + 8]
+    msr spsr_el1, x0
+    ldr x0,  [sp, 16 * 16]
     msr elr_el1, x0
+    ldr x0,  [sp, 16 * 16 + 8]
+    msr sp_el0, x0
 
     ldp x0, x1, [sp ,16 * 0] 
     
@@ -90,6 +97,12 @@ el0_irq_handler:
     load_all
     eret
 
+el0_sync_handler:
+    save_all
+    bl el0_sync_entry
+    load_all
+    eret
+
 .align 11                   // vector table should be aligned to 0x800
 exception_vector_table:
     b exception_handler     // branch to a handler function.
@@ -110,7 +123,7 @@ exception_vector_table:
     b exception_handler
     .align 7
 
-    b exception_handler
+    b el0_sync_handler
     .align 7
     b el0_irq_handler
     .align 7
@@ -131,4 +144,10 @@ exception_vector_table:
 set_exception_vector_table:
     adr x0, exception_vector_table
     msr vbar_el1, x0
-    ret
+    ret  
+
+child_fork_ret:
+    bl enable_core_timer
+    bl enable_interrupt
+    load_all
+    eret
