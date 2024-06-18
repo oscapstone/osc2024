@@ -56,9 +56,15 @@ int vfs_mount(const char* target, const char* filesystem)
     mount = (struct mount*)kmalloc(sizeof(struct mount));
     if (!fs->setup_mount(fs, mount)) {
         printf("    [vfs_mount] File system setup_mount failed\n");
+        kfree(mount);
         return 0;
     }
 
+    if (target_node->mount) {
+        printf("    [vfs_mount] target vnode is already mounted\n");
+        kfree(mount);
+        return 0;
+    }
     target_node->mount = mount; // Jump to the mounted file system by target_node->mount->root
     return 1;
 }
@@ -67,7 +73,7 @@ int vfs_mount(const char* target, const char* filesystem)
 int vfs_lookup(const char *pathname, struct vnode **target)
 {
     struct vnode *dir = rootfs->root;
-    char path[MAX_PATH_LEN];
+    char path[MAX_PATH_LEN] = {0};
     int i, idx = 0;
 
     if (strlen(pathname) == 0 || (strlen(pathname) == 1 && pathname[0] == '/')) { // return root
@@ -86,7 +92,7 @@ int vfs_lookup(const char *pathname, struct vnode **target)
             }
 
             /* Redirect to mounted file system. */
-            while (dir->mount)
+            if (dir->mount)
                 dir = dir->mount->root;
             idx = 0;
         } else
@@ -101,7 +107,7 @@ int vfs_lookup(const char *pathname, struct vnode **target)
     }
 
     /* Redirect to mounted file system. */
-    while (dir->mount)
+    if (dir->mount)
         dir = dir->mount->root;
     *target = dir;
 
@@ -112,7 +118,7 @@ int vfs_lookup(const char *pathname, struct vnode **target)
 int vfs_open(const char* pathname, int flags, struct file** target)
 {
     struct vnode *node, *target_node;
-    char path[MAX_PATH_LEN];
+    char path[MAX_PATH_LEN] = {0};
     int i, idx = 0;
 
 #ifdef VFS_DEBUG
@@ -205,7 +211,7 @@ void rootfs_init(void)
  */
 void get_absolute_path(char *path, char *current_path)
 {
-    char abs_path[MAX_PATH_LEN];
+    char abs_path[MAX_PATH_LEN] = {0};
     int i, idx = 0;
 
     /* Check whether path is relative path or not. */
@@ -246,7 +252,7 @@ void get_absolute_path(char *path, char *current_path)
 /* make directory to path*/
 int vfs_mkdir(const char* path)
 {
-    char dir_name[MAX_PATH_LEN], new_dir_name[MAX_PATH_LEN];
+    char dir_name[MAX_PATH_LEN] = {0}, new_dir_name[MAX_PATH_LEN] = {0};
     unsigned int last_slash = 0, i;
     struct vnode *vnode;
 

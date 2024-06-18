@@ -51,7 +51,7 @@ void context_switch(struct task_struct *next)
     /* Before the process returns to user mode, check the pending signals. */
     if (current->pending != 0) {
         /* Allocate signal stack for the task. */
-        void *sig_stack = (void *) kmalloc(USTACK_SIZE);
+        void *sig_stack = (void *)kmalloc(USTACK_SIZE);
 
         current->process_sig = current->pending;
         current->pending = 0;

@@ -98,7 +98,7 @@ void demo_memory_allocator(void)
     get_buddy_info();
     uart_puts("==Get order 2 page for 6 times==\n\n");
     for (int i = 0; i < tmp; i++) {
-        addr[i] = (char *) kmalloc(4096 << 2);
+        addr[i] = (char *)kmalloc(4096 << 2);
         printf("addr: %x\n\n", addr[i]);
     }
     get_buddy_info();

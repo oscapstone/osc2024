@@ -158,7 +158,7 @@ void *_initrd_usr_prog(char *cmd, unsigned int *size)
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
                 /* Allocate a page and copy the user program to the page. */
-                prog_page = (char *) kmalloc(fs);
+                prog_page = (char *)kmalloc(fs);
                 memmove(prog_page, prog_addr, fs);
 
                 return prog_page;

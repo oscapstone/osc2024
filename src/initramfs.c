@@ -55,6 +55,7 @@ struct vnode *initramfs_create_vnode(struct mount *mount, enum fsnode_type type)
 
     /* Create initramfs inode */
     inode = (struct initramfs_inode *)kmalloc(sizeof(struct initramfs_inode));
+    memset(inode, 0, sizeof(struct initramfs_inode));
     inode->type = type;
     inode->data = (char *)kmalloc(DEFAULT_INODE_SIZE);
 
@@ -125,7 +126,7 @@ int initramfs_lookup(struct vnode *dir_node, struct vnode **target, const char *
 
     /* Search the child inode. */
     dir_inode = dir_node->internal;
-    for (child_idx = 0; child_idx <= MAX_DIR_NUM; child_idx++) {
+    for (child_idx = 0; child_idx < MAX_DIR_NUM; child_idx++) {
         vnode = dir_inode->childs[child_idx];
         if (!vnode)
             break;

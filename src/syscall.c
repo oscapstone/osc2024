@@ -124,7 +124,7 @@ int sys_fork(struct trapframe *trapframe)
     memcpy(child_stack, parent_stack, USER_STACK_SIZE);
 
     /* Copy the content of parent process's user program */
-    child_task->mm.prog_addr = (unsigned long) kmalloc(current->mm.prog_sz);
+    child_task->mm.prog_addr = (unsigned long)kmalloc(current->mm.prog_sz);
     child_task->mm.prog_sz = current->mm.prog_sz;
     memcpy((void *) child_task->mm.prog_addr, (void *) current->mm.prog_addr, current->mm.prog_sz);
 
@@ -251,7 +251,7 @@ int sys_open(struct trapframe *trapframe)
 {
     char *path = (char *) trapframe->x[0];
     int flags = (int) trapframe->x[1], i;
-    char absolute_path[MAX_PATH_LEN];
+    char absolute_path[MAX_PATH_LEN] = {0};
 
 #ifdef DEBUG_FS_SYSCALL
     printf("[sys_open] Task %d open %s\n", current->task_id, path);
@@ -355,7 +355,7 @@ int sys_mount(struct trapframe *trapframe)
 {
     const char *target = (char *)trapframe->x[1];
     const char *file_system = (char *)trapframe->x[2];
-    char absolute_path[MAX_PATH_LEN];
+    char absolute_path[MAX_PATH_LEN] = {0};
 
 #ifdef DEBUG_FS_SYSCALL
     printf("[sys_mount] Task %d mount file system %s at path %s\n", current->task_id, file_system, target);
@@ -371,7 +371,7 @@ int sys_mount(struct trapframe *trapframe)
 int sys_chdir(struct trapframe *trapframe)
 {
     const char *path = (char *)trapframe->x[0];
-    char absolute_path[MAX_PATH_LEN];
+    char absolute_path[MAX_PATH_LEN] = {0};
     struct vnode *dir;
 
 #ifdef DEBUG_FS_SYSCALL

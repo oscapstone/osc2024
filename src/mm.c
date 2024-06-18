@@ -412,7 +412,7 @@ unsigned long *create_empty_page_table(void)
 {
     unsigned long *pgd;
 
-    pgd = (unsigned long *) kmalloc(PAGE_SIZE);
+    pgd = (unsigned long *)kmalloc(PAGE_SIZE);
     memset(pgd, 0, PAGE_SIZE);
     return pgd;
 }
