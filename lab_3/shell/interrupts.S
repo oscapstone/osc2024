@@ -60,6 +60,7 @@ core_timer_enable:
     mov x0, 2
     ldr x1, =CORE0_TIMER_IRQ_CTRL
     str w0, [x1] // unmask timer interrupt
+    ret
 
 .global core_timer_handler
 core_timer_handler:

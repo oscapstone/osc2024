@@ -37,6 +37,17 @@ extern void core_timer_enable();
 void main(int argc, char* argv[]){
    uart_init();
    set_exception_vector_table();
+
+    // show el
+    unsigned long el;
+    asm volatile ("mrs %0, CurrentEL" : "=r" (el));
+    el = el >> 2; // CurrentEL的值在高两位
+
+    // print current exception level
+    uart_puts("Booted! Current EL: ");
+    uart_send('0' + el);
+    uart_puts("\n");
+
    //cpio_exec("user_program.img");   
    core_timer_enable();
    while(1){
@@ -50,7 +61,7 @@ void main(int argc, char* argv[]){
          c = uart_getc();
          command[length] = c;
          // print what user input to screen
-         // uart_send(c);
+         //uart_send(c);
       }
       command[length==MAX_BUFFER?length-2:length-1] = '\0';
       if(strcmp(command, "help") == 0){

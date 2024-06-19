@@ -15,7 +15,7 @@ RUN apt-get update
 # Install QEMU for emulation
 RUN apt-get install -y \
     qemu-system-arm \
-    gdb \
+    gdb-multiarch \
     sudo
 
 # Install the AArch64 cross-compiler toolchain
@@ -32,6 +32,8 @@ RUN echo "alias gcc='aarch64-linux-gnu-gcc'" >> ~/.bashrc
 
 # install python dependicies
 RUN apt install -y python3-pip
+
+RUN pip install pyserial
 
 # clean up package caches
 RUN rm -rf /var/lib/apt/lists/*
