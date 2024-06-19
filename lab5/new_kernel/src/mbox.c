@@ -14,13 +14,14 @@ int mbox_call(mbox_channel_type channel, unsigned int value)
 	{
 		asm volatile("nop");
 	} while (*MBOX_STATUS & BCM_ARM_VC_MS_FULL);
+			uart_puts("MBOX_STATUS :");
 			uart_hex(*MBOX_STATUS);
 	*MBOX_WRITE = r;
     uart_puts(" [+] in mbox call [-] ");
 
 	while (1)
 	{
-			uart_puts("\r\n");
+			uart_puts("  BCM_ARM_VC_MS_EMPTY : ");
 			uart_hex(BCM_ARM_VC_MS_EMPTY);
 		do
 		{
