@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "sched.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "exception.h": "c",
+        "utility.h": "c"
     }
 }
