@@ -88,7 +88,7 @@ void idle();
 int64_t wait();
 void schedule();
 
-thread_t *thread_create(char *name, void *code);
+thread_t *thread_create(void *code,char *name );
 int8_t thread_code_can_free(thread_t *thread);
 int8_t has_child(thread_t *thread);
 void thread_exit();

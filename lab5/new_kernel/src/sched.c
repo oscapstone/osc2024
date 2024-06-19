@@ -99,25 +99,30 @@ void init_thread_sched()
     set_current_thread_context(&(idle_thread->context));
     curr_thread = idle_thread;
 
-    // init process
+    // foo process
     thread_name = kmalloc(5);
     strcpy(thread_name, "foo");
-    thread_t *init_thread = thread_create(thread_name, foo);
-    init_thread->datasize = 0x4000;
+    thread_t *foo_thread = thread_create(foo,thread_name );
+    foo_thread->datasize = 0x4000;
     // curr_thread = init_thread;
 
-    // init process
+    // foo process
     thread_name = kmalloc(5);
     strcpy(thread_name, "foo2");
-    thread_t *foo_2 = thread_create(thread_name, foo);
-    foo_2->datasize = 0x4000;
+    thread_t *foo2_thread = thread_create(foo,thread_name );
+    foo2_thread->datasize = 0x4000;
 
-    // curr_thread = idle_thread;
+    //init process
+    thread_name = kmalloc(5);
+	strcpy(thread_name, "init");
+	thread_t * init_thread = thread_create(init,thread_name );
+	init_thread->datasize = 0x4000;
+	curr_thread = init_thread;
 
     // kernel shell process
     thread_name = kmalloc(7);
     strcpy(thread_name, "kshell");
-    thread_t *kshell = thread_create( thread_name, shell);
+    thread_t *kshell = thread_create( shell,thread_name);
     kshell->datasize = 0x100000;
     curr_thread = idle_thread;
 
@@ -125,7 +130,15 @@ void init_thread_sched()
     unlock();
 }
 
-thread_t *thread_create(char *name, void *code)
+void init()
+{
+	while (1)
+	{
+		int64_t pid = wait();
+	}
+}
+
+thread_t *thread_create(void *code,char *name )
 {
     lock();
     thread_t *t;
@@ -179,18 +192,13 @@ thread_t *thread_create(char *name, void *code)
 int64_t wait()
 {
 	lock();
-	//("block thread: %d\n", curr_thread->pid);
     uart_puts("wait thread \r\n");
 	curr_thread->status = THREAD_IS_BLOCKED;
 	while (1)
 	{
-		// //("wait thread: %d\n", curr_thread->pid);
 		unlock();
 		schedule();
 		lock();
-		// //_BLOCK({
-		// 	dump_child_thread(curr_thread);
-		// });
 		struct list_head *curr_child_node;
 		list_head_t *n;
 		list_for_each_safe(curr_child_node, n, (list_head_t *)curr_thread->child_list)
@@ -237,7 +245,7 @@ void schedule_timer()
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0));
     // 32 * default timer -> trigger next schedule timer
     // put_int(cntfrq_el0 / 0x10000000);
-    add_timer(schedule_timer, 2, NULL);
+    add_timer(schedule_timer, cntfrq_el0 >> 6, NULL);
     need_to_schedule = 1;
 }
 void schedule()
@@ -245,7 +253,6 @@ void schedule()
     // 執行下一個 thread
     //  current thread 換成 run queue->next
     lock();
-    // uart_puts("[+] Scheduler \r\n");
 
     thread_t *prev_thread = curr_thread;
     do
@@ -262,8 +269,8 @@ void schedule()
     } while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 
     curr_thread->status = THREAD_IS_RUNNING;
+    // uart_puts("[+] Scheduler \r\n");
     unlock();
-    // uart_puts("[+] switching \r\n");
     switch_to(get_current_thread_context(), &(curr_thread->context));
 }
 void idle()
@@ -295,5 +302,17 @@ void thread_exit()
     unlock();
     schedule();
 };
+
+void thread_exit_by_pid(int64_t pid)
+{
+	// thread cannot deallocate the stack while still using it, wait for someone to recycle it.
+	// In this lab, idle thread handles this task, instead of parent thread.
+	lock();
+	// DEBUG("thread %d exit\n", pid);
+	thread_t *t = threads[pid];
+	t->status = THREAD_IS_ZOMBIE;
+	list_del_entry((list_head_t *)t); // remove from run queue, still in parent's child list
+	unlock();
+}
 
 

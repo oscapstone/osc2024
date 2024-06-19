@@ -146,6 +146,12 @@ void sync_exc_router(unsigned long spsr, unsigned long elr, unsigned long esr)
     {
         uart_puts("Not svc syscall but el0 syn router \n");
     }
+
+    if (need_to_schedule == 1)
+    {
+        need_to_schedule = 0;
+        schedule();
+    }
     while (1)
     {
         /* code */
@@ -215,7 +221,7 @@ void el0_sync_router(trapframe_t *tpf)
     uart_puts("  ------- [+] el0 sync router | ");
     uart_puts("------- lock counter is ");
     put_int(lock_counter);
-    uart_puts(" -------\r\n");
+    uart_puts(" ------- ");
 
     // static int count = 0;
     // uint64_t esr_el1 = read_esr_el1();
@@ -223,7 +229,6 @@ void el0_sync_router(trapframe_t *tpf)
     // {
     //     const char *exception_name = get_exception_name(esr_el1);
     //     if (count == 0)
-    //         // ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
     //         uart_puts("El0 sync router \r\n");
     //     count++;
     //     return;

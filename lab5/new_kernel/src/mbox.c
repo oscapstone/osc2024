@@ -21,8 +21,8 @@ int mbox_call(mbox_channel_type channel, unsigned int value)
 
 	while (1)
 	{
-			uart_puts("  BCM_ARM_VC_MS_EMPTY : ");
-			uart_hex(BCM_ARM_VC_MS_EMPTY);
+		uart_puts("  BCM_ARM_VC_MS_EMPTY : ");
+		uart_hex(BCM_ARM_VC_MS_EMPTY);
 		do
 		{
 			asm volatile("nop");
@@ -31,6 +31,7 @@ int mbox_call(mbox_channel_type channel, unsigned int value)
 		if (r == *MBOX_READ)
 		{
 			unlock();
+
 			return ((unsigned int *)value)[1] == MBOX_REQUEST_SUCCEED;
 		}
 	}

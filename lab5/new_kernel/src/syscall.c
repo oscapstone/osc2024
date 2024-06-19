@@ -24,7 +24,7 @@ extern thread_t *curr_thread;
 void run_user_task_wrapper(char *dest)
 {   
     // while(1);
-    delay();
+    // delay();
     ((void (*)(void))dest)();
     CALL_SYSCALL(SYSCALL_EXIT);
 }
@@ -68,7 +68,6 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
     }
     else if (result == CPIO_ERROR)
     {
-        // ERROR("cpio parse error\r\n");
         return -1;
     }
 
@@ -129,7 +128,6 @@ int sys_fork(trapframe_t *tpf)
         tpf->sp_el0 += (uint64_t)child->user_stack_base - (uint64_t)parent->user_stack_base;
         return 0;
     }
-    while(1){"xxx";}
 }
 
 int sys_exit(trapframe_t *tpf, int status)
@@ -145,7 +143,7 @@ int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 }
 int sys_kill(trapframe_t *tpf, int pid)
 {
-    // thread_exit_by_pid(pid);
+    thread_exit_by_pid(pid);
     return 0;
 }
 

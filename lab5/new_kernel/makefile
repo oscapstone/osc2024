@@ -35,11 +35,11 @@ clean:
 	rm -rf $(BUILD_DIR) *.img
 
 run_pty: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio
 
 run: all
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -display none
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb 
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -S -s -dtb bcm2710-rpi-3-b-plus.dtb -initrd initramfs.cpio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio  -S -s -dtb bcm2710-rpi-3-b-plus.dtb -initrd initramfs.cpio
 
