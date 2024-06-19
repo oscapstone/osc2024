@@ -2,6 +2,7 @@
 
 #include "alloc.h"
 #include "initrd.h"
+#include "irq.h"
 #include "mm.h"
 #include "sched.h"
 #include "string.h"
@@ -92,9 +93,12 @@ void initrd_exec(const char *target)
         char pathname[namesize];
         strncpy(pathname, fptr + sizeof(cpio_t), namesize);
         if (!strcmp(target, pathname)) {
+            disable_interrupt();
+
+            struct task_struct *task = kthread_create(0);
+
             void *program = kmalloc(filesize);
             memcpy(program, fptr + headsize, filesize);
-            struct task_struct *task = kthread_create((void *)0x0);
 
             map_pages((unsigned long)task->pgd, 0x0, filesize,
                       (unsigned long)VIRT_TO_PHYS(program), 0);
@@ -115,6 +119,8 @@ void initrd_exec(const char *target)
             asm volatile("msr sp_el0, %0" ::"r"(0xFFFFFFFFF000));
             asm volatile("mov sp, %0" ::"r"(task->stack + STACK_SIZE));
             asm volatile("eret");
+
+            enable_interrupt();
             return;
         }
         fptr += headsize + datasize;

@@ -7,17 +7,17 @@ static void walk(unsigned long pt, unsigned long va, unsigned long pa,
 {
     unsigned long *table = (unsigned long *)pt;
     for (int level = 0; level <= 3; level++) {
-        unsigned long off = (va >> (39 - 9 * level)) & 0x1FF;
+        unsigned long offset = (va >> (39 - 9 * level)) & 0x1FF;
         if (level == 3) {
-            table[off] = (pa | PE_NORMAL_ATTR | prot);
+            table[offset] = pa | PE_NORMAL_ATTR;
             return;
         }
-        if (!table[off]) {
+        if (!table[offset]) {
             unsigned long *t = kmalloc(PAGE_SIZE);
             memset(t, 0, PAGE_SIZE);
-            table[off] = (VIRT_TO_PHYS((unsigned long)t) | PD_TABLE); // TODO:
+            table[offset] = VIRT_TO_PHYS((unsigned long)t) | PD_TABLE;
         }
-        table = (unsigned long *)PHYS_TO_VIRT((table[off] & ~0xFFF));
+        table = (unsigned long *)PHYS_TO_VIRT((table[offset] & ~0xFFF));
     }
 }
 

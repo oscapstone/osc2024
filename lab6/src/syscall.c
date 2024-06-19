@@ -46,10 +46,12 @@ int sys_fork(trap_frame *tf)
     struct task_struct *parent = get_current();
     struct task_struct *child = kthread_create(0);
 
-    map_pages((unsigned long)child->pgd, 0x0, 0x3C6C0, 0x8140000, 0);
+    // FIXME: Hardcoded program size and physical address
+    map_pages((unsigned long)child->pgd, 0x0, 0x3C6C0, 0x20140000, 0);
+    // map_pages((unsigned long)child->pgd, 0x0, 0x3C6C0, 0x8140000, 0);
     map_pages((unsigned long)child->pgd, 0xFFFFFFFFB000, 0x4000,
               (unsigned long)VIRT_TO_PHYS(child->user_stack), 0);
-    map_pages((unsigned long)child->pgd, 0x3C000000, 0x1000000, 0x3C000000, 0);
+    map_pages((unsigned long)child->pgd, 0x3C000000, 0x3000000, 0x3C000000, 0);
 
     // Copy kernel stack and user stack
     memcpy(child->stack, parent->stack, STACK_SIZE);
