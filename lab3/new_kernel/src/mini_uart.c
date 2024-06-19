@@ -2,6 +2,7 @@
 #include "rpi_gpio.h"
 #include "rpi_irq.h"
 #include "utility.h"
+#include "timer.h"
 // implement first in first out buffer with a read index and a write index
 char uart_tx_buffer[0x100] = {};
 int uart_tx_buffer_widx = 0; // write buffer written index
@@ -223,6 +224,19 @@ void uart_interrupt_disable()
 void uart_r_irq_handler()
 {
     lock();
+
+    //補 Lab3 Advanced 3
+    if (*CORE0_TIMER_IRQ_CTRL &= 2)
+    {
+        uart_puts("\r\nUart Looping \r\n");
+        unlock();
+        for (int i = 0; i < 1000000000; i++)
+        {
+        };
+        lock();
+        uart_puts("Uart looping over \r\n");
+    };
+
     if ((uart_rx_buffer_widx + 1) % 0x100 == uart_rx_buffer_ridx)
     {
         *AUX_MU_IER_REG &= ~(1); // disable read interrupt
@@ -232,7 +246,8 @@ void uart_r_irq_handler()
     unlock();
     uart_rx_buffer[uart_rx_buffer_widx] = uart_recv();
     lock();
-    uart_puts("[uart r irq handler] \n"); 
+    uart_puts("[R] [uart r irq handler] \n");
+    core_timer_disable();
     uart_rx_buffer_widx++;
     if (uart_rx_buffer_widx >= 0x100)
         uart_rx_buffer_widx = 0;
@@ -252,7 +267,7 @@ void uart_w_irq_handler()
     unlock();
     uart_send(uart_tx_buffer[uart_tx_buffer_ridx]);
     lock();
-    // uart_puts("[uart_w_irq_handler()] \n"); 
+    // uart_puts("[W] [uart_w_irq_handler()] \n");
     uart_tx_buffer_ridx++;
     if (uart_tx_buffer_ridx >= 0x100)
         uart_tx_buffer_ridx = 0;
