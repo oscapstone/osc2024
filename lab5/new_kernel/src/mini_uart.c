@@ -224,6 +224,17 @@ void uart_interrupt_disable()
 void uart_r_irq_handler()
 {
     lock();
+    //補 Lab3 Advanced 3
+    // if (*CORE0_TIMER_IRQ_CTRL &= 2)
+    // {
+    //     uart_puts("\r\nUart Looping \r\n");
+    //     unlock();
+    //     for (int i = 0; i < 1000000000; i++)
+    //     {
+    //     };
+    //     lock();
+    //     uart_puts("Uart looping over \r\n");
+    // };
     if ((uart_rx_buffer_widx + 1) % 0x100 == uart_rx_buffer_ridx)
     {
         *AUX_MU_IER_REG &= ~(1); // disable read interrupt
@@ -244,15 +255,6 @@ int timerup = 0;
 
 void uart_w_irq_handler()
 {
-    // for Lab 3 Premmptive
-    // unlock();
-    // if (*CORE0_TIMER_IRQ_CTRL &= 1)
-    // {
-    //     for (int i = 0; i < 1000000000; i++)
-    //     {
-    //     };
-    // };
-    // lock();
     lock();
     if (uart_tx_buffer_ridx == uart_tx_buffer_widx)
     {

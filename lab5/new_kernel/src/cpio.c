@@ -2,6 +2,8 @@
 #include "shell.h"
 #include "utility.h"
 
+char *CPIO_START;
+char *CPIO_END;
 // due to the reason of the data stored in Hex, we want to show the strings that we can recongize
 static unsigned int parse_hex_str(char *s, unsigned int max_len)
 {

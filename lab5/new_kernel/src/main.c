@@ -4,12 +4,11 @@
 #include "timer.h"
 #include "memory.h"
 #include "sched.h"
+#include "dtb.h"
 
 extern char *__boot_loader_addr;
 extern unsigned long long __code_size;
 extern unsigned long long __begin;
-extern void set_for_el_switch(void);
-char *_dtb;
 char *exceptionLevel;
 static int EL2_to_EL1_flag = 1;
 
@@ -18,8 +17,9 @@ extern thread_t *threads[];
 // x0 is for the parameter
 void main(char *arg)
 {
-    exceptionLevel = arg;
-
+    // exceptionLevel = arg;
+    lock();
+    dtb_init(arg);
     uart_init();
     uart_interrupt_enable();
     uart_flush_FIFO();
@@ -27,7 +27,6 @@ void main(char *arg)
     init_memory_space();
     irqtask_list_init();
     timer_list_init();
-
     el1_interrupt_enable(); // enable interrupt in EL1 -> EL1
     shell_banner();
 
@@ -36,7 +35,6 @@ void main(char *arg)
     init_thread_sched();
     schedule_timer();
     timer_init();
-    lock();
     uart_puts("=====curr thread======= : ");
     uart_puts(curr_thread->name);
     uart_puts("\r\n");

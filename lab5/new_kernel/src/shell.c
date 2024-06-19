@@ -169,7 +169,8 @@ void shell_2sTimer()
 
 void shell_dtb(int argc, char **argv)
 {
-    // traverse_device_tree(dtb_ptr, dtb_callback_show_tree);
+    traverse_device_tree(dtb_callback_show_tree);
+    return 0;
 }
 
 void shell_timer()
@@ -201,12 +202,13 @@ void shell_clear(char *buffer, int len)
 }
 
 void shell()
-{   
-    while(1){
-    shell_clear(input_buffer, CMD_MAX_LEN);
-    uart_puts("ヽ(▽ﾟ▽ﾟ)ノ >> \t");
-    shell_cmd_read(input_buffer);
-    shell_cmd_exe(input_buffer);
+{
+    while (1)
+    {
+        shell_clear(input_buffer, CMD_MAX_LEN);
+        uart_puts("ヽ(▽ﾟ▽ﾟ)ノ >> \t");
+        shell_cmd_read(input_buffer);
+        shell_cmd_exe(input_buffer);
     }
 }
 
@@ -392,7 +394,7 @@ void shell_exec(int argc, char **argv)
     }
     else
     {
-       wait();
+        wait();
     }
     return 0;
 }
@@ -433,7 +435,7 @@ void shell_page_dump()
 }
 
 void shell_page_alloc()
-{   
+{
 
     // char *c_test1 = cache_alloc(0x800);
     // // uart_puts("\n[~] C_test 1 address: ");
@@ -491,15 +493,13 @@ void shell_page_alloc()
     // cache_free(c_test3);
     // cache_free(c_test2);
 }
-void shell_cache_alloc(){
-
+void shell_cache_alloc()
+{
 
     // char *c_test1 = cache_alloc(0x800);
     // // uart_puts("\n[~] C_test 1 address: ");
     // // uart_hex(c_test1);
     // // uart_puts("\r\n");
-
-
 
     // char *c_test2 = cache_alloc(0x100);
     // // uart_puts("\n[~] C_test 2 address: ");
@@ -516,13 +516,8 @@ void shell_cache_alloc(){
     // char *c_test7 = cache_alloc(16);
     // char *c_test8 = cache_alloc(16);
 
-
     // cache_free(c_test8);
     // cache_free(c_test7);
-
-
-
-
 
     // cache_free(c_test1);
     // cache_free(c_test3);

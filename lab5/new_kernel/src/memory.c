@@ -18,8 +18,10 @@
 extern unsigned char __heap_top;
 extern char __begin;
 extern char __end;
- char *CPIO_START = 0x80000000;
- char *CPIO_END =   0x81000000;
+extern char *CPIO_START ;
+extern char *CPIO_END ;
+extern char *DTB_START;
+extern char *DTB_END;
 
 static unsigned char *khtop_ptr = &__heap_top;
 static long memory_size;
@@ -139,9 +141,9 @@ static int allocate_frame()
 
     memory_size = 0x3B400000;
 
-    max_frame = memory_size / PAGE_FRAME_SIZE;                                                                                                                    // each frame is 4KB
+    max_frame = memory_size / PAGE_FRAME_SIZE; // each frame is 4KB
     //("memory_size: 0x%x, max_frame: 0x%x, frame_size: %d, list_head size: %d, int8_t size: %d, unsigned char size: %d\n", memory_size, max_frame, sizeof(frame_t)); // 24 Bytes
-    frame_array = (frame_t *)startup_malloc(max_frame * sizeof(frame_t));                                                                                         // in 0x3C000000 Bytes Ram, array size is 0x5A0030 Bytes
+    frame_array = (frame_t *)startup_malloc(max_frame * sizeof(frame_t)); // in 0x3C000000 Bytes Ram, array size is 0x5A0030 Bytes
     int begin_frame = 0;
     for (long i = MAX_VAL; i >= 0; i--)
     {
@@ -162,6 +164,7 @@ void init_memory_space()
     memory_reserve((long)&__begin, (long)&__end);
 
     memory_reserve((long)CPIO_START, (long)CPIO_END);
+    memory_reserve((size_t)DTB_START, (size_t)DTB_END);
 }
 
 void init_cache()
@@ -239,8 +242,8 @@ void kfree(void *ptr)
     return;
 }
 
-void block(){
-
+void block()
+{
 }
 
 int memory_reserve(long start, long end)
@@ -310,7 +313,7 @@ int memory_reserve(long start, long end)
 
     //("end reserve: (0x%x -> 0x%x)\n", frame_addr_to_phy_addr(start_frame), frame_addr_to_phy_addr(end_frame + 1));
     block();
-    uart_puts("fdsafd");
+
     return 0;
 }
 
@@ -318,7 +321,6 @@ long get_memory_size()
 {
     return 0x3c000000;
 }
-
 
 /**
  * page_malloc - allocate a page frame by size
@@ -357,7 +359,8 @@ frame_t *get_free_frame(int val)
     else
     {
         curr = split_frame(val);
-        if(curr == 1){
+        if (curr == 1)
+        {
             return 1;
         }
     }
@@ -405,7 +408,8 @@ frame_t *split_frame(int8_t val)
             break;
         upper_val++;
     }
-    if(upper_val > MAX_VAL){
+    if (upper_val > MAX_VAL)
+    {
         return 1;
     }
 
