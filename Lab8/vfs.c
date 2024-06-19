@@ -186,10 +186,13 @@ void init_rootfs(){
     int idx = reg_tmpfs();
     fs_register[idx].setup_mount(&fs_register[idx], rootfs);
 
+    uart_puts("[Boot] Start Init rootfs\n\r");
     sd_init();
+    uart_puts("[Boot] Successfully initialized SD card!\n\r");
     reg_fat32();
     vfs_mkdir("/boot");
     vfs_mount("/boot", "fat32");
+    uart_puts("[Boot] FAT32 mounted\n\r");
     struct file * temp;
     // vfs_open("/boot/FAT_R.TXT",0, &temp);
     // vfs_read(temp, buf, 10);

@@ -61,12 +61,15 @@ void main(void* dtb)
     unsigned long el;
     // set up serial console
     uart_init();
+    hin(777);
     fdt_tranverse(dtb, "linux,initrd-start", initramfs_start_callback);
     fdt_tranverse(dtb, "linux,initrd-end", initramfs_end_callback);
     // say hello
     frames_init();
     init_rootfs();
+    uart_puts("[BOOT] init_rootfs complete!\n\r");
     thread_init();
+    uart_puts("[BOOT] thread initialized\n\r");
     // show el
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
     el = el >> 2;
@@ -78,6 +81,14 @@ void main(void* dtb)
 
     create_thread(test_svc, 2);
     schedule();
+
+    // struct file * temp;
+    // char buf[512];
+    // vfs_open("/boot/FAT_W.TXT",0, &temp);
+    // int hmn = vfs_read(temp, buf, 10);
+    // uart_puts(buf);
+    // newline();
+    
     //exec("/initramfs/vfs1.img");
     //idle();
     int idx = 0;
