@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "exception.h"
 #include "stddef.h"
+#include "signal.h"
 
 #define MAX_SYSCALL 14
 
@@ -36,6 +37,17 @@
 			: "r"(&curr_thread->context), "r"(curr_thread->context.lr), "r"(dest)); \
 	} while (0)
 
+#define CALL_SYSCALL(syscall_num) \
+	do                            \
+	{                             \
+		asm volatile(             \
+			"mov x8, %0\n\t"      \
+			"svc 0\n\t"           \
+			:                     \
+			: "r"(syscall_num)    \
+			: "x8");              \
+	} while (0)
+
 enum syscall_num {
 	SYSCALL_GETPID = 0,
 	SYSCALL_UART_READ,
@@ -44,13 +56,13 @@ enum syscall_num {
 	SYSCALL_FORK,
 	SYSCALL_EXIT,
 	SYSCALL_MBOX_CALL,
-	SYSCALL_KILL
-	// SYSCALL_SIGNAL_REGISTER,
-	// SYSCALL_SIGNAL_KILL,
-	// SYSCALL_SIGNAL_RETURN,
-	// SYSCALL_LOCK_INTERRUPT,
-	// SYSCALL_UNLOCK_INTERRUPT,
-	// SYSCALL_MAX
+	SYSCALL_KILL,
+	SYSCALL_SIGNAL_REGISTER,
+	SYSCALL_SIGNAL_KILL,
+	SYSCALL_SIGNAL_RETURN,
+	SYSCALL_LOCK_INTERRUPT,
+	SYSCALL_UNLOCK_INTERRUPT,
+	SYSCALL_MAX
 };
 
 size_t      sys_uart_read(trapframe_t *tpf, char buf[], size_t size);
@@ -61,12 +73,17 @@ int         sys_exec(trapframe_t *tpf, const char *filepath, char *const argv[])
 int         sys_fork(trapframe_t *tpf);
 int         sys_exit(trapframe_t *tpf, int status);
 int         sys_kill(trapframe_t *tpf, int pid);
-
 int         sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int mbox);
 
 void        run_user_task_wrapper(char *dest);
 int         kernel_exec_user_program(const char *program_name, char *const argv[]);
 int         kernel_fork();
 void        fork_test();
+
+int         sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void));
+int         sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL);
+int         sys_signal_return(trapframe_t *tpf);
+void        sys_lock_interrupt(trapframe_t *tpf);
+void        sys_unlock_interrupt(trapframe_t *tpf);
 
 #endif  /*_SYSCALL_H */

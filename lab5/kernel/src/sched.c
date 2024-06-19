@@ -42,6 +42,7 @@ void init_thread_sched() {
 
 thread_t *_init_thread_0(char* name, int64_t pid, int64_t ppid, void *start) {
     thread_t *thread = (thread_t *)kmalloc(sizeof(thread_t));
+    init_thread_signal(thread);
     threads[0] = thread;
     thread->name = name;
 	thread->pid = pid;
@@ -81,6 +82,7 @@ thread_t *thread_create(void *start, char* name) {
     }
 
     t = (thread_t*)kmalloc(sizeof(thread_t));
+    init_thread_signal(t);
     threads[new_pid] = t;
     t->name = name;
     t->pid = new_pid;

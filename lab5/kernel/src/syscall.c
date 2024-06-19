@@ -7,6 +7,7 @@
 #include "exception.h"
 #include "memory.h"
 #include "cpio.h"
+#include "signal.h"
 
 extern thread_t     *curr_thread;
 extern void         *CPIO_START;
@@ -102,7 +103,7 @@ int sys_fork(trapframe_t *tpf) {
 	// uart_puts("child pid: %d\r\n", pid);
 	child->datasize = parent->datasize;
 	child->status = THREAD_READY;
-	// SIGNAL_COPY(child, parent);
+	signal_copy(child, parent);
 
 	child->code = kmalloc(parent->datasize);
 	MEMCPY(child->code, parent->code, parent->datasize);
@@ -142,7 +143,7 @@ int kernel_fork() {
 	child->status = THREAD_READY;
     // uart_puts("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
 
-	// SIGNAL_COPY(child, parent);
+	signal_copy(child, parent);
 
 	child->code = parent->code;
 	// uart_puts("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
@@ -222,4 +223,26 @@ int kernel_exec_user_program(const char *program_name, char *const argv[]) {
 
 	JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
 	return 0;
+}
+
+
+/* Signal Part */
+int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void)) {
+	signal_register_handler(SIGNAL, handler);
+}
+
+int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL) {
+	signal_send(pid, SIGNAL);
+}
+
+int sys_signal_return(trapframe_t *tpf) {
+	signal_return();
+}
+
+void sys_lock_interrupt(trapframe_t *tpf) {
+	lock();
+}
+
+void sys_unlock_interrupt(trapframe_t *tpf) {
+	unlock();
 }
