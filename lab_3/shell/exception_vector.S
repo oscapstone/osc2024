@@ -11,13 +11,13 @@ exception_vector_table:
   b exception_handler // reserved for SError
 .align 7
 
-  b core_timer_handler // synchronous: caused by current excution instr.
+  b interrupt_handler // synchronous: caused by current excution instr.
 .align 7
-  b core_timer_handler
+  b interrupt_handler
 .align 7
-  b core_timer_handler
+  b interrupt_handler
 .align 7
-  b core_timer_handler
+  b interrupt_handler
 .align 7
 
   b exception_handler   // time interrupt

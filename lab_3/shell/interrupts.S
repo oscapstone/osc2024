@@ -62,9 +62,11 @@ core_timer_enable:
     str w0, [x1] // unmask timer interrupt
     ret
 
-.global core_timer_handler
-core_timer_handler:
+.global interrupt_handler
+interrupt_handler:
   save_all
-  bl print_boot_timer
+  bl interrupt_entry
   load_all
   eret
+
+  

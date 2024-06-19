@@ -76,6 +76,13 @@ void uart_init()
     }
 }
 
+void uart_enable_interrupt(){
+    // enable tx rx interrupt in uart
+    *AUX_MU_IER |= 0x02;
+    *IRQS1 |= 1 << 29;
+}
+
+
 /**
  * Send a character
  */

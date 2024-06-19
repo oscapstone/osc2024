@@ -47,7 +47,6 @@ void main(int argc, char* argv[]){
     uart_puts("Booted! Current EL: ");
     uart_send('0' + el);
     uart_puts("\n");
-
    //cpio_exec("user_program.img");   
    core_timer_enable();
    while(1){
@@ -66,9 +65,11 @@ void main(int argc, char* argv[]){
       command[length==MAX_BUFFER?length-2:length-1] = '\0';
       if(strcmp(command, "help") == 0){
          uart_puts("help\t: print this help menu\n");
-         uart_puts("ls\t: list all files in the root filesystem\n");
-         uart_puts("cat <filename>\t: print the content of file in root filesystem\n");
+         uart_puts("ls\t: list all files in initfs\n");
+         uart_puts("cat <filename>\t: print the content of file in initfs\n");
          uart_puts("hello\t: print hello world!\n");
+         uart_puts("exec: execute user program in initfs");
+         uart_puts("async_uart: switch to async uart mode (currently for demo only)");
          uart_puts("reboot\t: reboot the device\n");
       }
       else if(strcmp(command, "hello") == 0){
@@ -76,6 +77,9 @@ void main(int argc, char* argv[]){
       }
       else if(strcmp(command, "ls") == 0){
          cpio_ls();
+      }
+      else if(strcmp(command, "async_uart") == 0){
+         demo_async_uart();
       }
       else if(strcmp(command, "reboot") == 0){
          reset();

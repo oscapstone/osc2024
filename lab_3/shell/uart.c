@@ -24,23 +24,26 @@
  */
 
 #include "include/gpio.h"
-
+#include "include/uart.h"
 /** Auxilary mini UART registers
  * Address & Description refer: https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf Page.8
  */
 
-#define AUX_ENABLE      ((volatile unsigned int*)(MMIO_BASE+0x00215004))
-#define AUX_MU_IO       ((volatile unsigned int*)(MMIO_BASE+0x00215040))
-#define AUX_MU_IER      ((volatile unsigned int*)(MMIO_BASE+0x00215044))
-#define AUX_MU_IIR      ((volatile unsigned int*)(MMIO_BASE+0x00215048))
-#define AUX_MU_LCR      ((volatile unsigned int*)(MMIO_BASE+0x0021504C))
-#define AUX_MU_MCR      ((volatile unsigned int*)(MMIO_BASE+0x00215050))
-#define AUX_MU_LSR      ((volatile unsigned int*)(MMIO_BASE+0x00215054))
-#define AUX_MU_MSR      ((volatile unsigned int*)(MMIO_BASE+0x00215058))
-#define AUX_MU_SCRATCH  ((volatile unsigned int*)(MMIO_BASE+0x0021505C))
-#define AUX_MU_CNTL     ((volatile unsigned int*)(MMIO_BASE+0x00215060))
-#define AUX_MU_STAT     ((volatile unsigned int*)(MMIO_BASE+0x00215064))
-#define AUX_MU_BAUD     ((volatile unsigned int*)(MMIO_BASE+0x00215068))
+
+/*
+    The definition below is for async uart IO
+*/
+
+#define BUFFER_SIZE 1024
+#define IRQS1 ((volatile unsigned int *)(0x3f00b210))
+char uart_read_buffer[BUFFER_SIZE];
+unsigned int read_idx = 0;
+
+char uart_write_buffer[BUFFER_SIZE];
+unsigned int write_idx = 0;
+unsigned int write_cur = 0;
+int async;
+
 
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
@@ -74,7 +77,7 @@ void uart_init()
  * Send a character
  */
 void uart_send(unsigned int c) {
-    /* wait until we can send */
+    /* This bit is set if the transmit FIFO can accept at least one byte*/
     do{asm volatile("nop");}while(!(*AUX_MU_LSR&0x20));
     /* write the character to the buffer */
     *AUX_MU_IO=c;
@@ -117,5 +120,43 @@ void uart_hex(unsigned int d) {
         // 0-9 => '0'-'9', 10-15 => 'A'-'F'
         n+=n>9?0x37:0x30;
         uart_send(n);
+    }
+}
+
+void uart_enable_interrupt(){
+    *AUX_MU_IER |= 0x02;
+    *IRQS1 |= 1 << 29;
+}
+
+void uart_load_buffer(){
+    while(write_cur < write_idx){
+        uart_send(uart_write_buffer[write_cur]);
+    }
+}
+
+void demo_async_uart(){
+    uart_puts("turning to async mode...\n");
+    uart_enable_interrupt();
+    while(1){
+        asm volatile("nop");
+    }
+}
+
+void uart_read_handler() {
+    char ch = (char)(*AUX_MU_IO);
+    uart_read_buffer[write_idx] = ch;
+    write_idx++;
+    uart_write_buffer[write_idx] = ch; 
+    read_idx++;
+    write_idx++;
+    if(ch == '\r'){
+        uart_puts(uart_write_buffer);
+    }
+}
+
+void uart_write_handler(){
+    if(write_cur < write_idx){
+        *AUX_MU_IO=uart_read_buffer[write_cur];
+        write_cur++;
     }
 }
