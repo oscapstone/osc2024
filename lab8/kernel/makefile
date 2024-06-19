@@ -8,7 +8,7 @@ SRC_DIR = src
 
 GDB := gdb-multiarch
 QEMU := qemu-system-aarch64
-QOPS = -M raspi3b -kernel kernel8.img -dtb bcm2710-rpi-3-b-plus.dtb -initrd initramfs.cpio  -display none
+QOPS = -M raspi3b -kernel kernel8.img -dtb bcm2710-rpi-3-b-plus.dtb -initrd initramfs.cpio -serial null -serial stdio -drive if=sd,file=sdcard.img,format=raw -display none
 GDBOPS = --init-eval-command="file $(BUILD_DIR)/kernel8.elf" --init-eval-command="target remote :1234"
 SESSION_NAME := my-os
 #---------------------------------------------------------------------------------------
@@ -40,8 +40,10 @@ clean:
 	rm -rf $(BUILD_DIR) *.img
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+	cp -f ../create_diskimg/sdcard.img .
+	$(QEMU) $(QOPS)
 
 debug:
-	tmux new-session -d -s $(SESSION_NAME) '$(QEMU) $(QOPS) -S -s  -serial null -serial stdio' \; split-window -h '$(GDB) $(GDBOPS)' \; attach -t $(SESSION_NAME)
+	cp -f ../create_diskimg/sdcard.img .
+	tmux new-session -d -s $(SESSION_NAME) '$(QEMU) $(QOPS) -S -s' \; split-window -h '$(GDB) $(GDBOPS)' \; attach -t $(SESSION_NAME)
 #qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -S -s
