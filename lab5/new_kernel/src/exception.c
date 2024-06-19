@@ -212,8 +212,11 @@ const char *get_exception_name(uint64_t esr_el1)
 }
 void el0_sync_router(trapframe_t *tpf)
 {
+    uart_puts("  ------- [+] el0 sync router | ");
+    uart_puts("------- lock counter is ");
     put_int(lock_counter);
-    uart_puts(" lock counter -------\r\n");
+    uart_puts(" -------\r\n");
+
     // static int count = 0;
     // uint64_t esr_el1 = read_esr_el1();
     // if (!is_el0_syscall())
@@ -225,13 +228,13 @@ void el0_sync_router(trapframe_t *tpf)
     //     count++;
     //     return;
     // }
+
+
     // Basic #3 - Based on System Call Format in Video Player’s Test Program
     uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
-    uart_puts("================= ");
+    uart_puts("================= syscall no ");
     put_int(syscall_no);
-    uart_puts(" ================= ");
-
-    // //"syscall_no: %d\r\n", syscall_no);
+    uart_puts(" ================= \r\n");
     // only work with GCC
     void *syscall_router[] = {&&__getpid_label,           // 0
                               &&__uart_read_label,        // 1

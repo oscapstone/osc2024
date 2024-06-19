@@ -139,7 +139,7 @@ int sys_exit(trapframe_t *tpf, int status)
 int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 {
 
-    uart_puts("done");
+    uart_puts("[+] sys_mbox_call done [-] ");
     enum mbox_buffer_status_code status = mbox_call(ch, mbox);
     return status;
 }

@@ -146,9 +146,7 @@ char uart_async_getc()
     *AUX_MU_IER_REG |= 1; // Enable receive interrupts. [0]bit 負責接收interrupt的開關
 
     lock();
-    // put_int(uart_rx_buffer_ridx);
-    // put_int(uart_rx_buffer_widx);
-    uart_puts("[uart_async_getc] \n");
+    // uart_puts("[uart_async_getc] \n");
 
     // el1_interrupt_enable(); // ahban
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx)

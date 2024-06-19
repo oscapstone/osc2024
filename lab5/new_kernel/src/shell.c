@@ -7,6 +7,7 @@
 #include "dtb.h"
 #include "cpio.h"
 #include "sysregs.h"
+#include "mbox.h"
 #include "sched.h"
 char input_buffer[CMD_MAX_LEN];
 
@@ -227,26 +228,43 @@ void shell_help()
 
 void shell_info()
 {
-    unsigned int board_revision;
-    get_board_revision(&board_revision);
-    uart_puts("Board revision is : 0x");
-    uart_hex(board_revision);
-    uart_puts("\n");
+    // print hw revision
+    pt[0] = 8 * 4;
+    pt[1] = MBOX_REQUEST_PROCESS;
+    pt[2] = MBOX_TAG_GET_BOARD_REVISION;
+    pt[3] = 4;
+    pt[4] = MBOX_TAG_REQUEST_CODE;
+    pt[5] = 0;
+    pt[6] = 0;
+    pt[7] = MBOX_TAG_LAST_BYTE;
 
-    unsigned int arm_mem_base_addr;
-    unsigned int arm_mem_size;
+    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((uint64_t)&pt)))
+    {
+        uart_puts("Hardware Revision\t: 0x");
+        // put_hex(pt[6]);
+        uart_hex(pt[5]);
+        uart_puts("\r\n");
+    }
+    // print arm memory
+    pt[0] = 8 * 4;
+    pt[1] = MBOX_REQUEST_PROCESS;
+    pt[2] = MBOX_TAG_GET_ARM_MEMORY;
+    pt[3] = 8;
+    pt[4] = MBOX_TAG_REQUEST_CODE;
+    pt[5] = 0;
+    pt[6] = 0;
+    pt[7] = MBOX_TAG_LAST_BYTE;
 
-    get_arm_memory_info(&arm_mem_base_addr, &arm_mem_size);
-    uart_puts("ARM memory base address in bytes : 0x");
-    uart_hex(arm_mem_base_addr);
-    uart_puts("\n");
-    uart_puts("ARM memory size in bytes : 0x");
-    uart_hex(arm_mem_size);
-    uart_puts("\n");
-
-    uart_puts("\n");
-    uart_puts("This is a simple shell for raspi3.\n");
-    uart_puts("type help for more information\n");
+    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((uint64_t)&pt)))
+    {
+        uart_puts("ARM Memory Base Address\t: 0x");
+        uart_hex(pt[5]);
+        uart_puts("\r\n");
+        uart_puts("ARM Memory Size\t\t: 0x");
+        uart_hex(pt[6]);
+        uart_puts("\r\n");
+    }
+    return 0;
 }
 
 void shell_reboot()
