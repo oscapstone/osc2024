@@ -147,6 +147,7 @@ void delay()
     for (int i = 0; i < 100000000; i++)
     {
     }
+    uart_puts("done delay \r\n");
 }
 void add_timer_by_tick(uint64_t tick, void *callback, void *args_struct)
 {

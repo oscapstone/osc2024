@@ -4,6 +4,10 @@
 #include "utility.h"
 #include "stdint.h"
 
+#define ESR_EL1_EC_SHIFT 26
+#define ESR_EL1_EC_MASK 0x3F
+#define ESR_EL1_EC_SVC64 0x15
+
 
 typedef struct irqtask
 {

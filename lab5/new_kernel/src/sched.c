@@ -150,16 +150,11 @@ thread_t *thread_create(char *name, void *code)
         pid_history = new_pid;
     }
     t = (thread_t *)kmalloc(sizeof(thread_t));
+	// init_thread_signal(t);
     // signal?
     threads[new_pid] = t;
     t->name = name;
-    // uart_puts("thread create:");
-    // uart_puts(t->name);
-    // uart_puts("\r\n");
     t->pid = new_pid;
-    // uart_puts("thread pid:");
-    // put_int(t->pid);
-    // uart_puts("\r\n");
     t->ppid = curr_thread->pid;
     t->child_list = (child_node_t *)kmalloc(sizeof(child_node_t));
     INIT_LIST_HEAD((list_head_t *)t->child_list);
@@ -185,6 +180,7 @@ int64_t wait()
 {
 	lock();
 	//("block thread: %d\n", curr_thread->pid);
+    uart_puts("wait thread \r\n");
 	curr_thread->status = THREAD_IS_BLOCKED;
 	while (1)
 	{
@@ -241,7 +237,7 @@ void schedule_timer()
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0));
     // 32 * default timer -> trigger next schedule timer
     // put_int(cntfrq_el0 / 0x10000000);
-    add_timer(schedule_timer, 1, NULL);
+    add_timer(schedule_timer, 2, NULL);
     need_to_schedule = 1;
 }
 void schedule()

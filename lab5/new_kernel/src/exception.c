@@ -18,6 +18,10 @@ void lock()
 {
     el1_interrupt_disable();
     lock_counter++;
+    if(lock_counter!= 1){
+        (lock_counter);
+    }
+
 }
 
 void unlock()
@@ -146,22 +150,87 @@ void sync_exc_router(unsigned long spsr, unsigned long elr, unsigned long esr)
     {
         /* code */
     }
-    
+}
+
+// 定義異常類型名稱
+const char *exception_type[] = {
+    "Unknown reason",
+    "Trapped WFI or WFE instruction execution",
+    "Trapped MCR or MRC access with (coproc==0b1111) (AArch32)",
+    "Trapped MCRR or MRRC access with (coproc==0b1111) (AArch32)",
+    "Trapped MCR or MRC access with (coproc==0b1110) (AArch32)",
+    "Trapped LDC or STC access (AArch32)",
+    "Trapped FP access",
+    "Trapped VMRS access",
+    "Trapped PSTATE (AArch32)",
+    "Instruction Abort from a lower Exception level",
+    "Instruction Abort taken without a change in Exception level",
+    "PC alignment fault",
+    "Data Abort from a lower Exception level",
+    "Data Abort taken without a change in Exception level",
+    "SP alignment fault",
+    "Trapped floating-point exception",
+    "SError interrupt",
+    "Breakpoint from a lower Exception level",
+    "Breakpoint taken without a change in Exception level",
+    "Software Step from a lower Exception level",
+    "Software Step taken without a change in Exception level",
+    "Watchpoint from a lower Exception level",
+    "Watchpoint taken without a change in Exception level",
+    "BKPT instruction execution (AArch32)",
+    "Vector Catch exception (AArch32)",
+    "BRK instruction execution (AArch64)"};
+
+// 讀取ESR_EL1暫存器的值
+static inline uint64_t read_esr_el1(void)
+{
+    uint64_t value;
+    asm volatile("mrs %0, esr_el1" : "=r"(value));
+    return value;
+}
+
+// 判斷異常是否由EL0觸發的syscall
+static inline int is_el0_syscall(void)
+{
+    uint64_t esr_el1 = read_esr_el1();
+    uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
+    if (ec == ESR_EL1_EC_SVC64)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+const char *get_exception_name(uint64_t esr_el1)
+{
+    uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
+    if (ec < sizeof(exception_type) / sizeof(exception_type[0]))
+    {
+        return exception_type[ec];
+    }
+    return "Unknown exception";
 }
 void el0_sync_router(trapframe_t *tpf)
 {
-    static int count = 0;
+    put_int(lock_counter);
+    uart_puts(" lock counter -------\r\n");
+    // static int count = 0;
     // uint64_t esr_el1 = read_esr_el1();
     // if (!is_el0_syscall())
     // {
     //     const char *exception_name = get_exception_name(esr_el1);
     //     if (count == 0)
-    //         ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
+    //         // ERROR("el0_sync_router: exception occurred - %s\r\n", exception_name);
+    //         uart_puts("El0 sync router \r\n");
     //     count++;
     //     return;
     // }
     // Basic #3 - Based on System Call Format in Video Player’s Test Program
     uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
+    uart_puts("================= ");
+    put_int(syscall_no);
+    uart_puts(" ================= ");
+
     // //"syscall_no: %d\r\n", syscall_no);
     // only work with GCC
     void *syscall_router[] = {&&__getpid_label,           // 0
@@ -187,12 +256,10 @@ __getpid_label:
     return;
 
 __uart_read_label:
-    // //"sys_uart_read\r\n");
     tpf->x0 = sys_uart_read(tpf, (char *)tpf->x0, tpf->x1);
     return;
 
 __uart_write_label:
-    // //"sys_uart_write\r\n");
     tpf->x0 = sys_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
     return;
 
@@ -252,7 +319,6 @@ __invalid_syscall_label:
     return;
 }
 
-
 void irq_exc_router()
 {
     lock();
@@ -297,9 +363,9 @@ void irq_exc_router()
         uart_puts("Hello World el 64 router other interrupt!\r\n");
     }
     if (need_to_schedule == 1)
-    {   
+    {
         need_to_schedule = 0;
-        schedule(); 
+        schedule();
         // uart_puts("Interrupt Switch \r\n");
     }
 }

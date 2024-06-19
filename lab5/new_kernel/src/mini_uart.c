@@ -142,16 +142,22 @@ void uart_hex(unsigned int d)
 // uart_r_irq_handler write to buffer then output
 char uart_async_getc()
 {
+
     *AUX_MU_IER_REG |= 1; // Enable receive interrupts. [0]bit 負責接收interrupt的開關
 
     lock();
+    // put_int(uart_rx_buffer_ridx);
+    // put_int(uart_rx_buffer_widx);
+    uart_puts("[uart_async_getc] \n");
+
+    // el1_interrupt_enable(); // ahban
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx)
     {
         unlock();
         *AUX_MU_IER_REG |= 1; // Enable receive interrupts.
+        // syscall fork stuck in here
         lock();
     }
-    // uart_puts("[uart_async_getc] \n");
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
     if (uart_rx_buffer_ridx >= 0x100)
         uart_rx_buffer_ridx = 0;
@@ -241,7 +247,7 @@ int timerup = 0;
 void uart_w_irq_handler()
 {
     // for Lab 3 Premmptive
-	// unlock();
+    // unlock();
     // if (*CORE0_TIMER_IRQ_CTRL &= 1)
     // {
     //     for (int i = 0; i < 1000000000; i++)

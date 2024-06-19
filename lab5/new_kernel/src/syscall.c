@@ -21,11 +21,12 @@ extern thread_t *curr_thread;
         }                                             \
     } while (0)
 
-
 void run_user_task_wrapper(char *dest)
-{
-	((void (*)(void))dest)();
-	CALL_SYSCALL(SYSCALL_EXIT);
+{   
+    // while(1);
+    delay();
+    ((void (*)(void))dest)();
+    CALL_SYSCALL(SYSCALL_EXIT);
 }
 
 int sys_getpid(trapframe_t *tpf)
@@ -34,16 +35,20 @@ int sys_getpid(trapframe_t *tpf)
 }
 size_t sys_uart_read(trapframe_t *tpf, char buf[], size_t size)
 {
+
     char c;
     for (int i = 0; i < size; i++)
     {
         c = uart_async_getc();
+        // uart_puts("\r\n [sys_uart_read]");
         buf[i] = c == '\r' ? '\n' : c;
     }
     return size;
 }
 size_t sys_uart_write(trapframe_t *tpf, const char buf[], size_t size)
 {
+    // uart_puts("\r\n [sys_uart_write]");
+
     for (int i = 0; i < size; i++)
     {
         uart_async_putc(buf[i]);
@@ -68,10 +73,10 @@ int sys_exec(trapframe_t *tpf, const char *name, char *const argv[])
     }
 
     // //("sys_exec: %s\r\n", name);
-    // if (thread_code_can_free(curr_thread))
-    // {
-    //     kfree(curr_thread->code);
-    // }
+    if (thread_code_can_free(curr_thread))
+    {
+        kfree(curr_thread->code);
+    }
     lock();
     char *filepath = kmalloc(strlen(name) + 1);
     strcpy(filepath, name);
@@ -124,6 +129,7 @@ int sys_fork(trapframe_t *tpf)
         tpf->sp_el0 += (uint64_t)child->user_stack_base - (uint64_t)parent->user_stack_base;
         return 0;
     }
+    while(1){"xxx";}
 }
 
 int sys_exit(trapframe_t *tpf, int status)
@@ -132,6 +138,10 @@ int sys_exit(trapframe_t *tpf, int status)
 }
 int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 {
+
+    uart_puts("done");
+    enum mbox_buffer_status_code status = mbox_call(ch, mbox);
+    return status;
 }
 int sys_kill(trapframe_t *tpf, int pid)
 {
@@ -141,72 +151,72 @@ int sys_kill(trapframe_t *tpf, int pid)
 
 int kernel_fork()
 {
-	lock();
-	thread_t *parent = curr_thread;
-	char *new_name = kmalloc(strlen(parent->name) + 1);
-	thread_t *child = thread_create(parent->code, new_name);
-	int64_t pid = child->pid;
-	//("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
-	child->datasize = parent->datasize;
-	child->status = THREAD_IS_READY;
-	// SIGNAL_COPY(child, parent);
+    lock();
+    thread_t *parent = curr_thread;
+    char *new_name = kmalloc(strlen(parent->name) + 1);
+    thread_t *child = thread_create(parent->code, new_name);
+    int64_t pid = child->pid;
+    //("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
+    child->datasize = parent->datasize;
+    child->status = THREAD_IS_READY;
+    // SIGNAL_COPY(child, parent);
 
-	child->code = parent->code;
-	//("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
-	//("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
+    child->code = parent->code;
+    //("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
+    //("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
 
-	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
-	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
-	// Because make a function call, so lr is the next instruction address
-	// When context switch, child process will start from the next instruction
-	store_context(get_current_thread_context());
-	//("child: 0x%x, parent: 0x%x\r\n", child, parent);
+    MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
+    MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
+    // Because make a function call, so lr is the next instruction address
+    // When context switch, child process will start from the next instruction
+    store_context(get_current_thread_context());
+    //("child: 0x%x, parent: 0x%x\r\n", child, parent);
 
-	if (child->pid != curr_thread->pid) // Parent process
-	{
-		//("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		child->context = curr_thread->context;
-		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
-		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
-		unlock();
-		return child->pid;
-	}
-	else // Child process
-	{
-		//("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		return 0;
-	}
+    if (child->pid != curr_thread->pid) // Parent process
+    {
+        //("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
+        child->context = curr_thread->context;
+        child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
+        child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
+        unlock();
+        return child->pid;
+    }
+    else // Child process
+    {
+        //("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
+        return 0;
+    }
 }
 
 int kernel_exec_user_program(const char *program_name, char *const argv[])
 {
-	unsigned int filesize;
-	char *filedata;
-	int result = cpio_get_file(program_name, &filesize, &filedata);
-	if (result == CPIO_TRAILER)
-	{
-		// WARNING("exec: %s: No such file or directory\r\n", program_name);
-		return -1;
-	}
-	else if (result == CPIO_ERROR)
-	{
-		// ERROR("cpio parse error\r\n");
-		return -1;
-	}
+    unsigned int filesize;
+    char *filedata;
+    int result = cpio_get_file(program_name, &filesize, &filedata);
+    if (result == CPIO_TRAILER)
+    {
+        // WARNING("exec: %s: No such file or directory\r\n", program_name);
+        return -1;
+    }
+    else if (result == CPIO_ERROR)
+    {
+        // ERROR("cpio parse error\r\n");
+        return -1;
+    }
 
-	if (thread_code_can_free(curr_thread))
-	{
-		kfree(curr_thread->code);
-	}
-	lock();
-	char *filepath = kmalloc(strlen(program_name) + 1);
-	strcpy(filepath, program_name);
-	curr_thread->datasize = filesize;
-	curr_thread->name = filepath;
-	curr_thread->code = kmalloc(filesize);
-	MEMCPY(curr_thread->code, filedata, filesize);
-	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
-	unlock();
-	JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
-	return 0;
+    if (thread_code_can_free(curr_thread))
+    {
+        kfree(curr_thread->code);
+    }
+    lock();
+    char *filepath = kmalloc(strlen(program_name) + 1);
+    strcpy(filepath, program_name);
+    curr_thread->datasize = filesize;
+    curr_thread->name = filepath;
+    curr_thread->code = kmalloc(filesize);
+    MEMCPY(curr_thread->code, filedata, filesize);
+    curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
+    unlock();
+    JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
+    return 0;
 }

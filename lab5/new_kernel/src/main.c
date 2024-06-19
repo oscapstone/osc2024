@@ -42,4 +42,5 @@ void main(char *arg)
     uart_puts("\r\n");
     set_current_thread_context(&curr_thread->context);
     load_context(&curr_thread->context); // jump to idle thread and unlock interrupt
+    // unlock();
 }
