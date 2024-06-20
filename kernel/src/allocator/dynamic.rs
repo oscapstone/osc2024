@@ -113,10 +113,12 @@ unsafe impl GlobalAlloc for DynamicAllocator {
             return BumpAllocator.dealloc(ptr, layout);
         }
         if layout.size() > FRAME_SIZE {
-            debug!(
-                "Deallocating 0x{:x} with size > {}",
-                ptr as usize, FRAME_SIZE
-            );
+            if DYNAMIC_ALLOCATOR.verbose {
+                debug!(
+                    "Deallocating 0x{:x} with size > {}",
+                    ptr as usize, FRAME_SIZE
+                );
+            }
             return BUDDY_SYSTEM.dealloc(ptr, layout);
         }
         if DYNAMIC_ALLOCATOR.verbose {

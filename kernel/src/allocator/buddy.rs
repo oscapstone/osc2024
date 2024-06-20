@@ -79,7 +79,6 @@ impl BuddyAllocator {
             }
         }
         println!("Free list: {:?}", BUDDY_SYSTEM.free_list);
-        BUDDY_SYSTEM.initialized = true;
     }
 
     pub unsafe fn print_info(&self) {
@@ -115,7 +114,7 @@ impl BuddyAllocator {
         if align < FRAME_SIZE {
             layer = 0;
         } else {
-            while (1 << layer) < align {
+            while (1 << layer) * FRAME_SIZE < align {
                 layer += 1;
             }
         }

@@ -1,8 +1,19 @@
-.section ".text._start_kernel"
+.section ".text._start_section"
 
 .global _start
 
 _start:
+    mrs x0, CurrentEL
+    and x0, x0, #0xc
+    cmp x0, #0b1000
+    bne _loop
+
+    bl from_el2_to_el1
+    bl set_mmu
+
+    ldr x0, =_boot_rest
+    br x0
+_boot_rest:
     // set stack before our code
     ldr     x1, =_start
     mov     sp, x1
@@ -16,17 +27,11 @@ _start:
     cbnz    w2, 3b
 
 _start_kernel:
-    mrs x0, CurrentEL
-    and x0, x0, #0xc
-    cmp x0, #0b1000
-    bne _loop
-
-    bl from_el2_to_el1
-
     adr x0, exception_vector_table
     msr vbar_el1, x0
 
-    b _start_rust
+    ldr x0, =_start_rust
+    br x0
 
 from_el2_to_el1:
     mov x0, (1 << 31) // EL1 uses aarch64

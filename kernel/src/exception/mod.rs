@@ -20,5 +20,5 @@ unsafe fn unknown_exception_handler(eidx: u64) {
     );
     debug!("ESR_EL1: 0x{:x}", esr_el1);
     debug!("ELR_EL1: 0x{:x}", elr_el1);
-    panic!("Unknown exception {}", eidx);
+    panic!("Unknown exception handler {}", eidx);
 }

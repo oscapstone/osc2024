@@ -1,9 +1,10 @@
-use crate::exception::trap_frame;
-use core::arch::asm;
+use super::page::page_fault;
+use crate::{exception::trap_frame, mmu::vm::VirtualMemory};
+use core::{arch::asm, fmt::Debug};
 use stdio::{debug, println};
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 struct Syscall {
     arg0: u64,
     arg1: u64,
@@ -42,21 +43,42 @@ impl Syscall {
     }
 }
 
+impl Debug for Syscall {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Syscall {{ idx: 0x{:x}, arg0: 0x{:x}, arg1: 0x{:x}, arg2: 0x{:x}, arg3: 0x{:x}, arg4: 0x{:x}, arg5: 0x{:x}, arg6: 0x{:x}, arg7: 0x{:x} }}",
+            self.idx, self.arg0, self.arg1, self.arg2, self.arg3, self.arg4, self.arg5, self.arg6, self.arg7
+        )
+    }
+}
+
 #[no_mangle]
-unsafe fn svc_handler(eidx: u64, sp: u64) {
-    trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
-    // let syscall = Syscall::new(sp);
-    // println!("Exception {}", eidx);
-    // debug!("Syscall idx: {}", syscall.idx);
-    // debug!("Syscall {:?}", syscall);
-    match eidx {
-        4 => el1_interrupt(sp),
-        8 => syscall_handler(sp),
+unsafe fn lower_exception_handler(eidx: u64, sp: u64) {
+    let esr_el1: u64;
+    asm!(
+        "mrs {0}, esr_el1",
+        out(reg) esr_el1,
+    );
+    let ec = esr_el1 >> 26;
+    match ec {
+        0b010101 => svc_handler(sp),
+        0b001110 => {
+            panic!("Illegal Execution state.");
+        }
+        0b100000 | 0b100001 | 0b100100 => page_fault(),
         _ => {
             println!("Exception {}", eidx);
             println!("Unknown exception");
+            println!("ec: 0b{:06b}", ec);
+            el1_interrupt(sp);
         }
     }
+}
+
+unsafe fn svc_handler(sp: u64) {
+    trap_frame::TRAP_FRAME = Some(trap_frame::TrapFrame::new(sp));
+    syscall_handler(sp);
     trap_frame::TRAP_FRAME.unwrap().restore();
     trap_frame::TRAP_FRAME = None;
 }
@@ -88,15 +110,17 @@ unsafe fn el1_interrupt(sp: u64) {
 unsafe fn syscall_handler(sp: u64) {
     let syscall = Syscall::new(sp);
     assert!(trap_frame::TRAP_FRAME.is_some());
+    let vm = VirtualMemory::load(trap_frame::TRAP_FRAME.as_ref().unwrap().state.l0);
     match syscall.idx {
         0 => {
-            println!("Syscall get_pid");
+            // println!("Syscall get_pid");
             let pid = crate::syscall::get_pid();
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = pid;
         }
         1 => {
             // println!("Syscall read");
             let buf = syscall.arg0 as *mut u8;
+            let buf = vm.get_phys(buf as u64);
             let size = syscall.arg1 as usize;
             let read = crate::syscall::read(buf, size);
             assert!(size == 1);
@@ -109,6 +133,7 @@ unsafe fn syscall_handler(sp: u64) {
         2 => {
             // println!("Syscall write");
             let buf = syscall.arg0 as *const u8;
+            let buf = vm.get_phys(buf as u64);
             let size = syscall.arg1 as usize;
             let written = crate::syscall::write(buf, size);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = written as u64;
@@ -116,6 +141,7 @@ unsafe fn syscall_handler(sp: u64) {
         3 => {
             // println!("Syscall exec");
             let name = syscall.arg0 as *const u8;
+            let name = vm.get_phys(name as u64);
             let ret = crate::syscall::exec(name);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret;
         }
@@ -132,6 +158,7 @@ unsafe fn syscall_handler(sp: u64) {
             // println!("Syscall mbox_call");
             let channel = syscall.arg0 as u8;
             let mbox = syscall.arg1 as *mut u32;
+            let mbox = vm.get_phys(mbox as u64) as *mut u32;
             let ret = crate::syscall::mbox_call(channel, mbox);
             trap_frame::TRAP_FRAME.as_mut().unwrap().state.x[0] = ret as u64;
         }
