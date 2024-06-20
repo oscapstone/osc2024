@@ -1,0 +1,8 @@
+-Wall
+-Iinclude/
+-mcpu=cortex-a53+nosimd
+-nostdlib
+-nostdinc
+-nostartfiles
+-ffreestanding
+-mgeneral-regs-only
