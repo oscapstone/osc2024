@@ -9,9 +9,6 @@ OrderList order_list[MAX_ORDER];
 /*Pop the top element in linked list, note I assume there EXIST AT LEAST ONE AVAILABLE NODE*/
 struct Node* list_pop(OrderList* target){
     Node* to_ret = target->root;
-    while(to_ret -> next != NULL){
-        to_ret = to_ret->next;
-    }
     target->root = target->root->next;
     return to_ret;
 }
@@ -90,11 +87,16 @@ int check_list_has_element(OrderList* target){
 
 Node* get_buddy(OrderList* target, int target_page_index){
     Node* cur = target->root;
-    Node* prev = target->root;
+    Node* prev = NULL;
     while(cur != NULL){
-        uart_puts("AAAA");
         if(cur->page_index == target_page_index){
-            prev->next = cur->next;
+            if(prev != NULL){
+                prev->next = cur->next;
+            }
+            // root is the buddy
+            else{
+                target->root = target->root->next;
+            }
             cur->next = NULL;
             return cur;
         }
@@ -113,9 +115,10 @@ void free_page(void* to_free){
         uart_puts("[Assertion Error] releasing free page head\n");
     }
     the_array[page_index].available = FREE;
-    int next_block_index = page_index+free_block_size;
+    int next_block_index = page_index+free_block_size+1;
     uart_puts("[Free] block that contains ");
-    uart_hex(free_block_size);
+    // block size starts from zero, thus need to +1
+    uart_hex(free_block_size+1);
     uart_puts(" pages started from address 0x");
     uart_hex((unsigned int)to_free);
     uart_puts(" to address 0x");
@@ -125,14 +128,12 @@ void free_page(void* to_free){
     uart_puts("\n");
 
     if(the_array[next_block_index].available == FREE){
-        uart_puts("Accessing location: 0x");
-        uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*next_block_index));
-        uart_puts("\n");
+        // debug: print the address of next page of freed block
+        // uart_puts("Accessing location: 0x");
+        // uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*next_block_index));
+        // uart_puts("\n");
+
         // same size, can merge
-        uart_hex(free_block_size);
-        uart_puts(" v.s ");
-        uart_hex(the_array[next_block_index].block_size);
-        uart_puts("\n");
         if(the_array[next_block_index].block_size == free_block_size && free_block_size!=FREE){
             int order =0, block_size = free_block_size;
             // get sqrt(2) of block_size to obtain order
@@ -140,7 +141,6 @@ void free_page(void* to_free){
                 order++;
                 block_size/=2;
             }
-            uart_hex(order);
             Node* buddy = get_buddy(&order_list[order], next_block_index);
             if(buddy != NULL){
                 Node* new_node = simple_malloc(sizeof(Node));
@@ -156,7 +156,8 @@ void free_page(void* to_free){
                 uart_puts(" pages started from address 0x");
                 uart_hex((unsigned int)to_free);
                 uart_puts(" to address 0x");
-                uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*(next_block_index+free_block_size-1)));
+                uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*(next_block_index+free_block_size)));
+                uart_puts("\n");
                 do_merge = 1;
             }
         }
@@ -181,7 +182,7 @@ unsigned char* malloc_page(int request_page_num){
     int current_order = 0;
     int cut_freg = 0;
     // start from allocating the smallest block until is can satisfy needs
-    
+    //print_order_list(&order_list[2]);
     while(current_order<MAX_ORDER){
         if(request_page_num > _pow(2, current_order)){
             current_order++;
@@ -191,8 +192,8 @@ unsigned char* malloc_page(int request_page_num){
                 struct Node* allocated_address = list_pop(&order_list[current_order]);
                 // mark the block as OCCUPIED
                 the_array[(unsigned int)allocated_address->page_index].available = OCCUPIED;
-                the_array[(unsigned int)allocated_address->page_index].block_size = _pow(2, current_order);
-                //uart_hex((unsigned int)allocated_address->address-HEAP_START_ADDRESS);
+                // the block_size start from zero, thus we need to -1
+                the_array[(unsigned int)allocated_address->page_index].block_size = _pow(2, current_order)-1;
                 // print the log
                 uart_puts("[Malloc] block that contains ");
                 uart_hex(_pow(2, current_order));
@@ -213,24 +214,20 @@ unsigned char* malloc_page(int request_page_num){
                     // push into order list
                     new_node->address = (unsigned char*) HEAP_START_ADDRESS+(PAGE_SIZE*(mid_page_index+1));
                     new_node->page_index = mid_page_index+1;
-                    the_array[new_node->page_index].block_size = _pow(2, current_order-cutter_count);
-                    uart_hex(the_array[new_node->page_index].block_size );
-                    uart_puts(" pages freed.\n");
+                    the_array[new_node->page_index].block_size = _pow(2, current_order-cutter_count)-1;
                     uart_puts("[Release redundant memory] block that contains ");
                     uart_hex(_pow(2, current_order-cutter_count));
                     uart_puts(" pages started from address 0x");
                     uart_hex(new_node->address);
                     uart_puts(" to address 0x");
-                    uart_hex(new_node->address+((the_array[new_node->page_index].block_size-1)*PAGE_SIZE));
+                    uart_hex(new_node->address+((the_array[new_node->page_index].block_size)*PAGE_SIZE));
                     uart_puts(" is freed \n");
                     list_push_back(new_node, current_order-cutter_count);
                     cut_freg--;
                     cutter_count++;
                 }
                 if(cutter_count>1){
-                    the_array[(unsigned int)allocated_address->page_index].block_size = _pow(2, current_order-(cutter_count-1));
-                    uart_hex(the_array[(unsigned int)allocated_address->page_index].block_size);
-                    uart_puts(" pages allocated.\n");
+                    the_array[(unsigned int)allocated_address->page_index].block_size = _pow(2, current_order-(cutter_count-1))-1;
                 }
 
                 return allocated_address->address;
@@ -249,8 +246,8 @@ unsigned char* malloc_page(int request_page_num){
 
 void list_push_back(Node* to_push, int order){
     OrderList* target_list = &(order_list[order]);
-    if(target_list->root == NULL){
-        target_list->root = to_push;
+    if(order_list[order].root == NULL){
+        order_list[order].root = to_push;
     }
     else{
         Node* current = target_list->root;

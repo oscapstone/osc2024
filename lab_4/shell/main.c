@@ -90,6 +90,7 @@ void main(int argc, char* argv[]){
          free_page(my_array4);
          free_page(my_array5);
          //free_page(my_array6);
+         
          my_array = malloc_page(3);
          my_array2 = malloc_page(3);
          my_array3 = malloc_page(3);
