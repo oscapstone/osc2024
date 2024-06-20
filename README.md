@@ -83,3 +83,15 @@ Goals of this lab:
 * Understand how the kernel manages memory for user processes.
 * Understand how demand paging works.
 * Understand how copy-on-write works.
+
+### Lab 7: Virtual File System
+In this lab, you’ll implement a VFS interface for your kernel, and a memory-based file system (tmpfs) that mounts as the root file system, you’ll also implement special file for uart and framebuffer.
+
+Goals of this lab:
+
+* Understand how VFS interface works.
+* Understand how to set up a root file system.
+* Understand how to operate on files.
+* Understand how to mount a file system and look up a file across file systems.
+* Understand how special file works.
+
