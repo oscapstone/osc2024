@@ -1,0 +1,1 @@
+void irq_except_handler_timer_c();

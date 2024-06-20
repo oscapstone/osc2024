@@ -2,8 +2,9 @@ ARMGNU ?= aarch64-linux-gnu
 CC := aarch64-linux-gnu-gcc
 LD := aarch64-linux-gnu-ld
 OBJCOPY := aarch64-linux-gnu-objcopy
+OBJDUMP := aarch64-linux-gnu-objdump
 
-COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
+COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only -O0
 ASMOPS = -Iinclude 
 
 BUILD_DIR = build
@@ -39,3 +40,6 @@ run: kernel8.img
 	
 onboard: kernel8.img
 	screen /dev/ttyUSB0 115200
+	
+dump: $(BUILD_DIR)/kernel8.elf
+	$(OBJDUMP) $(BUILD_DIR)/kernel8.elf -D

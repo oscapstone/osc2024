@@ -2,9 +2,7 @@
 #include"cpio.h"
 #include"str.h"
 #include"memalloc.h"
-char* cpio_addr;
-
-extern char _stack_top;
+void* cpio_addr;
 
 unsigned int hex_to_int(char* arr,int len){
     if(!len) return 0;
@@ -31,8 +29,8 @@ void cpio_ls()
     puts("cpio_addr:0x");
     put_hex((unsigned long long)cpio_addr);
     puts("\r\n");
-    //struct cpio_newc_header* head=(struct cpio_newc_header*)pointer;
-    //check magic value
+    // struct cpio_newc_header* head=(struct cpio_newc_header*)pointer;
+    // //check magic value
     // if(strcmp_len(pointer,"070701",6)){
     //     puts("error: cpio magic value error\r\n");
     //     puts_len((char*)pointer,6);
@@ -147,4 +145,34 @@ int cpio_load(char* filename,char* load_base){
         puts("loadimg error\r\n");
         return 1;
     }
+}
+
+unsigned long long cpio_end()
+{
+    char* pointer=cpio_addr;
+    puts("cpio_addr:0x");
+    put_hex((unsigned long long)cpio_addr);
+    puts("\r\n");
+    int flag=0;
+    while(1){
+        if(strcmp((char*)pointer+sizeof(struct cpio_newc_header),"TRAILER!!!")){
+            flag=1;
+        }
+        struct cpio_newc_header* head=(struct cpio_newc_header*)pointer;
+        if(strcmp_len((char*)head,"070701",6)){
+            puts("error: cpio magic value error\r\n");
+            puts_len((char*)pointer,6);
+            puts("\r\n");
+            return 0;
+        }
+        unsigned int namesize=hex_to_int(head->c_namesize,8);
+        unsigned int filesize=hex_to_int(head->c_filesize,8);
+        pointer+=sizeof(struct cpio_newc_header);
+        //pointer=mem_alin(pointer,4);
+        pointer=mem_alin(pointer+namesize,4);
+        pointer=mem_alin(pointer+filesize,4);
+        if(flag)break;
+    }
+    
+    return pointer;
 }

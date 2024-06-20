@@ -83,16 +83,17 @@ void put_int(int num)
         temp[idx++] = (char)(num % 10 + '0');
         num /= 10;
     }
-
+    int flag=0;
     // Reverse output the character digits
     while (idx > 0)
-    {
-        putchar(temp[--idx]);
+    {   
+        if(!flag && temp[idx] != '0')flag=1;
+        if(flag)putchar(temp[--idx]);
     }
 }
 
 void put_hex(unsigned int num)
-{
+{   puts("0x");
     unsigned int hex;
     int index = 28;
     while (index >= 0)
