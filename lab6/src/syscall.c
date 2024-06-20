@@ -9,6 +9,7 @@
 #include "traps.h"
 #include "uart.h"
 #include "utils.h"
+#include "vm.h"
 
 extern void child_ret_from_fork();
 
@@ -45,6 +46,13 @@ int sys_fork(trap_frame *tf)
     struct task_struct *parent = get_current();
     struct task_struct *child = kthread_create(0);
 
+    // FIXME: Hardcoded program size and physical address
+    map_pages((unsigned long)child->pgd, 0x0, 0x3C6C0, 0x20140000, 0);
+    // map_pages((unsigned long)child->pgd, 0x0, 0x3C6C0, 0x8140000, 0);
+    map_pages((unsigned long)child->pgd, 0xFFFFFFFFB000, 0x4000,
+              (unsigned long)VIRT_TO_PHYS(child->user_stack), 0);
+    map_pages((unsigned long)child->pgd, 0x3C000000, 0x3000000, 0x3C000000, 0);
+
     // Copy kernel stack and user stack
     memcpy(child->stack, parent->stack, STACK_SIZE);
     memcpy(child->user_stack, parent->user_stack, STACK_SIZE);
@@ -55,11 +63,11 @@ int sys_fork(trap_frame *tf)
     unsigned long sp_off = (unsigned long)tf - (unsigned long)parent->stack;
     trap_frame *child_trap_frame = (trap_frame *)(child->stack + sp_off);
 
-    child->context.sp = (unsigned long)child_trap_frame;
     child->context.lr = (unsigned long)child_ret_from_fork;
+    child->context.sp = (unsigned long)child_trap_frame;
+    child->context.fp = (unsigned long)child_trap_frame;
 
-    unsigned long sp_el0_off = tf->sp_el0 - (unsigned long)parent->user_stack;
-    child_trap_frame->sp_el0 = (unsigned long)child->user_stack + sp_el0_off;
+    child_trap_frame->sp_el0 = tf->sp_el0;
     child_trap_frame->x0 = 0;
 
     enable_interrupt();
@@ -73,6 +81,13 @@ void sys_exit()
 
 int sys_mbox_call(unsigned char ch, unsigned int *mbox)
 {
+    if (((unsigned long)mbox & 0xFFFF000000000000) == 0) {
+        unsigned int *temp = kmalloc(mbox[0]);
+        memcpy(temp, mbox, mbox[0]);
+        int ret = mbox_call(ch, (unsigned int *)temp);
+        memcpy(mbox, temp, mbox[0]);
+        return ret;
+    }
     return mbox_call(ch, mbox);
 }
 
@@ -96,7 +111,7 @@ void sys_sigreturn(trap_frame *regs)
     // Restore the sigframe
     memcpy(regs, &get_current()->sigframe, sizeof(trap_frame));
     kfree(get_current()->sig_stack);
-    get_current()->sighandling = 0;
+    get_current()->siglock = 0;
     return; // Jump to the previous context (user program) after eret
 }
 
@@ -187,9 +202,11 @@ void fork_test()
 
 void run_fork_test()
 {
+    // FIXME: Unable to run when virtual memory is enabled
+    struct task_struct *current = get_current();
     asm volatile("msr spsr_el1, %0" ::"r"(0x340));
     asm volatile("msr elr_el1, %0" ::"r"(fork_test));
-    asm volatile("msr sp_el0, %0" ::"r"(get_current()->context.sp));
-    asm volatile("mov sp, %0" ::"r"(get_current()->stack + STACK_SIZE));
+    asm volatile("msr sp_el0, %0" ::"r"(current->user_stack + STACK_SIZE));
+    asm volatile("mov sp, %0" ::"r"(current->stack + STACK_SIZE));
     asm volatile("eret");
 }
