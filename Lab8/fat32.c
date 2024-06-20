@@ -89,6 +89,9 @@ struct fat32_node{
 };
 
 struct vnode * fat32_create_vnode(const char * name, int type, uint32_t start_cluster, uint32_t size){
+    uart_puts("[FAT32] Create vnode for file ");
+    uart_puts(name);
+    newline();
     struct vnode * node = allocate_page(4096);
     memset(node, 4096);
     node -> f_ops = &fat32_file_operations;
@@ -190,6 +193,7 @@ uint32_t find_free_cluster() {
 
     char buffer[512];  // Assuming sector size is 512 bytes
 
+    // FAT table https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system
     for (uint32_t sector = 0; sector < boot_sector->fat_size_32; sector++) {
         readblock(fat_table_sector + sector, buffer);
         for (uint32_t entry = 0; entry < clusters_per_sector; entry++) {
@@ -203,22 +207,7 @@ uint32_t find_free_cluster() {
     return 0;  // No free cluster found
 }
 
-uint32_t get_next_cluster(uint32_t current_cluster) {
-    uint32_t fat_table_sector = fat_start_block + boot_sector->reserved_sector_count;
-    uint32_t sector_offset = (current_cluster * sizeof(uint32_t)) / boot_sector->bytes_per_sector;
-    uint32_t entry_offset = (current_cluster * sizeof(uint32_t)) % boot_sector->bytes_per_sector;
-    
-    char buffer[512];  // Assuming sector size is 512 bytes
-    uint32_t next_cluster;
-
-    readblock(fat_table_sector + sector_offset, buffer);
-    memcpy(&next_cluster, buffer + entry_offset, sizeof(uint32_t));
-
-    return next_cluster;
-}
-
-void write_directory_entry(struct fat32_node *file_node) {
-
+void update_file_size(struct fat32_node *file_node) {
     char buf[512];
     readblock(root_dir_start_block, buf);
     struct DirectoryEntry *dir = (struct DirectoryEntry *)buf;
@@ -230,7 +219,6 @@ void write_directory_entry(struct fat32_node *file_node) {
         format_filename(formatted_name, dir[i].name);
 
         if (strcmp(formatted_name, file_node->name) == 0) {
-
             dir[i].file_size = file_node->size;
             writeblock(root_dir_start_block, buf);
             return;
@@ -238,19 +226,13 @@ void write_directory_entry(struct fat32_node *file_node) {
     }
 }
 
-
 int fat32_write(struct file *file, const void *buf, size_t len) {
+    //find cluster and write block
     struct fat32_node *file_node = (struct fat32_node*) file->vnode->internal;
     uint32_t cluster_number = file_node->start_cluster;
-    // uart_int(cluster_number);
-    // newline();
     uint32_t sector_offset = file->f_pos / boot_sector->bytes_per_sector;
     uint32_t cluster_offset = sector_offset / boot_sector->sectors_per_cluster;
     uint32_t current_cluster = cluster_number;
-
-    while (cluster_offset--) {
-        current_cluster = get_next_cluster(current_cluster);
-    }
 
     uint32_t sector_in_cluster = sector_offset % boot_sector->sectors_per_cluster;
     uint32_t byte_offset = file->f_pos % boot_sector->bytes_per_sector;
@@ -269,7 +251,7 @@ int fat32_write(struct file *file, const void *buf, size_t len) {
 
     if (file->f_pos > file_node->size) {
         file_node->size = file->f_pos; 
-        write_directory_entry(file_node);
+        update_file_size(file_node);
     }
     // uart_int(file_node -> size);
     // newline();
@@ -315,6 +297,9 @@ int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
     struct fat32_node * internal = dir_node -> internal;
     while(internal -> entry[idx]){
         struct fat32_node * entry_node = internal -> entry[idx] -> internal;
+        // uart_puts("First Level Lookup, filename: ");
+        // uart_puts(entry_node -> name);
+        // newline();
         if(strcmp(entry_node -> name, component_name) == 0){
             *target = internal -> entry[idx];
             return 0;
@@ -393,12 +378,10 @@ void format_83_filename(char *dest, const char *src) {
     }
 }
 
-void write_directory_entry2(struct DirectoryEntry *entry, uint32_t directory_start_block, int entry_index) {
-
+void write_directory_entry(struct DirectoryEntry *entry, uint32_t directory_start_block, int entry_index) {
     uint32_t entries_per_sector = boot_sector->bytes_per_sector / sizeof(struct DirectoryEntry);
     uint32_t sector_number = directory_start_block + (entry_index / entries_per_sector);
     uint32_t offset_in_sector = (entry_index % entries_per_sector) * sizeof(struct DirectoryEntry);
-
 
     char sector_buffer[512]; 
     readblock(sector_number, sector_buffer);
@@ -420,7 +403,8 @@ int fat32_create(struct vnode *dir_node, struct vnode **target, const char *comp
     if (empty_index == -1) {
         return -1;
     }
-
+    
+    // look for empty dir
     uint32_t free_cluster = find_free_cluster();
     if (free_cluster == 0) {
         return -1; 
@@ -437,9 +421,26 @@ int fat32_create(struct vnode *dir_node, struct vnode **target, const char *comp
     dir[empty_index].fst_clus_lo = free_cluster & 0xFFFF;
     dir[empty_index].file_size = 0;
     dir[empty_index].attr = 0x20;
-    write_directory_entry2(&dir[empty_index], root_dir_start_block, empty_index);
+    write_directory_entry(&dir[empty_index], root_dir_start_block, empty_index);
+    
+    struct fat32_node * internal = dir_node -> internal;
+    int idx = -1;
 
-    *target = fat32_create_vnode(component_name, 3, free_cluster, 0);
+    for(int i=0; i<MAX_ENTRY; i++){
+        if(internal -> entry[i] == 0){
+            idx = i;
+            break;
+        }
+        struct fat32_node* infile = internal -> entry[i] -> internal;
+        if(strcmp(infile -> name, component_name) == 0){
+            uart_puts("FILE EXISTED!!!\n\r");
+            return -1;
+        }
+    }
+    
+    struct vnode * node = fat32_create_vnode(component_name, 3, free_cluster, 0);
+    internal -> entry[idx] = node;
+    *target = node;
     return 0;
 }
 

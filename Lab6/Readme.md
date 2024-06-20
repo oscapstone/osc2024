@@ -147,9 +147,9 @@ setting of different memory (just google mair-el1  if cant open)
 nGnRnE: access gather(match),access order, signal write
 
 ### Note
-* TTBR Res0: 因為一個 page 是 4096 (2^12)，要 align
-* 找地址: 前 16 高低位， 48 開始每次 9，最後 12 是 offset (2^12)
-* Entry mask: 最後 12 bit (for) settings
-* init 的 n : 2MB x 512 = 1 GB, 2MB = 2 ^ 21 -> n = 20
+* TTBR Res0: One page is 4096 (2^12) to align.
+* Find address: from 48 every 9 is an entry, last 12 is offset (2^12)
+* Entry mask: last 12 bit (for) settings
+* init n : 2MB x 512 = 1 GB, 2MB = 2 ^ 21 -> n = 20
 * 1GB -> 31:30 0 or 1 -> PMD (2 ^ 31)
 * ttbr0 -> map for 0000 start (lower, user), ttbr1 -> map for ffff start (upper, kernel)
