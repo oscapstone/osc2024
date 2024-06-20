@@ -111,7 +111,7 @@ void thread_exit() {
 	// thread cannot deallocate the stack while still using it, wait for someone to recycle it.
 	// In this lab, idle thread handles this task, instead of parent thread.
 	lock();
-	uart_puts("[-] Thread %d exit\n", curr_thread->pid);
+	// uart_puts("[-] Thread %d exit\n", curr_thread->pid);
 	curr_thread->status = THREAD_ZOMBIE;
 	list_del_entry((list_head_t *)curr_thread); // remove from run queue, still in parent's child list
 	unlock();
@@ -120,7 +120,7 @@ void thread_exit() {
 
 void thread_exit_by_pid(int64_t pid) {
 	lock();
-	uart_puts("[-] Thread %d exit\n", curr_thread->pid);
+	// uart_puts("[-] Thread %d exit\n", curr_thread->pid);
     thread_t *t = threads[pid];
 	t->status = THREAD_ZOMBIE;
 	list_del_entry((list_head_t *)t); 
