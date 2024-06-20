@@ -31,7 +31,8 @@ void init_mem(){
 
     // init frame_arr
 
-    async_uart_puts("\nInit Frame Array...");
+    print_str("\nInit Frame Array...");
+
     for (int i = 0; i < MAX_FRAME; i++){
         frame_arr[i].status = FREE;
         
@@ -47,7 +48,8 @@ void init_mem(){
         frame_arr[i].id_node = id_node;
     }
 
-    async_uart_puts("\nMem Pool Array...");
+    print_str("\nMem Pool Array...");
+
     for (int i = 0; i < MAX_FRAME; i++){
         
         for (int j = 0; j < MAX_CHUNK_PER_FRAME; j++)
@@ -68,17 +70,17 @@ void init_mem(){
         free_chunk_list[i] = 0;
     }
 
-    async_uart_puts("\nReserving Memory...");
+    print_str("\nReserving Memory...");
 
     memory_reserve(0x0, 0x1000);
     memory_reserve((uint32_t)kernel_head, 0x06000000);
     memory_reserve((uint32_t)DEVTREE_BEGIN, (uint32_t)DEVTREE_END);
     memory_reserve(DEVTREE_CPIO_BASE, DEVTREE_CPIO_END);
-    memory_reserve(0x30000000, MEM_END);
+    memory_reserve(0x3b000000, MEM_END);
 
-    async_uart_puts("\nSet up Free Memory...");
+    print_str("\nSet up Free Memory...");
     set_free_mem();
-    check_frames();
+    // check_frames();
 }
 
 void set_free_mem(){
@@ -87,9 +89,9 @@ void set_free_mem(){
     uint32_t nframe = 1;
 
     while (1){
-        // async_uart_puts("\nOrder: 0x");
+        // print_str("\nOrder: 0x");
         // async_uart_hex(order);
-        // async_uart_puts("\nnframe: 0x");
+        // print_str("\nnframe: 0x");
         // async_uart_hex(nframe);
         for (uint32_t frame_id = 0; frame_id < MAX_FRAME; frame_id += 2*nframe){
             uint32_t buddy_id = frame_id ^ nframe;
@@ -100,14 +102,14 @@ void set_free_mem(){
                 frame_arr[frame_id].order++;
                 frame_arr[buddy_id].order = MERGED;
 
-                // async_uart_puts("\n[ITERATIVE MERGE] 0x");
+                // print_str("\n[ITERATIVE MERGE] 0x");
                 // async_uart_hex(id2Addr(frame_id));
-                // async_uart_puts("-0x");
+                // print_str("-0x");
                 // async_uart_hex(id2Addr(buddy_id));
 
-                // async_uart_puts(" & 0x");
+                // print_str(" & 0x");
                 // async_uart_hex(id2Addr(buddy_id));
-                // async_uart_puts("-0x");
+                // print_str("-0x");
                 // async_uart_hex(id2Addr(buddy_id+nframe));
 
             }else if (frame_arr[frame_id].status == FREE){
@@ -260,15 +262,15 @@ void iterative_split(uint32_t target_order){
         target_id_node->next = 0;
         target_id_node->prev = 0;
 
-        async_uart_puts("\n[ITERATIVE SPLIT] 0x");
-        async_uart_hex(id2Addr(target_id));
-        async_uart_puts("-0x");
-        async_uart_hex(id2Addr(buddy_id));
+        // async_uart_puts("\n[ITERATIVE SPLIT] 0x");
+        // async_uart_hex(id2Addr(target_id));
+        // async_uart_puts("-0x");
+        // async_uart_hex(id2Addr(buddy_id));
 
-        async_uart_puts(" & 0x");
-        async_uart_hex(id2Addr(buddy_id));
-        async_uart_puts("-0x");
-        async_uart_hex(id2Addr(buddy_id+nframe));
+        // async_uart_puts(" & 0x");
+        // async_uart_hex(id2Addr(buddy_id));
+        // async_uart_puts("-0x");
+        // async_uart_hex(id2Addr(buddy_id+nframe));
 
         // async_uart_newline();
 
@@ -326,15 +328,15 @@ void iterative_merge(uint32_t order, uint32_t frame_id){
         frame_arr[target_frame_id].order = ++target_order;
         frame_arr[target_buddy_id].order = 0xffffffff;
 
-        async_uart_puts("\n[ITERATIVE MERGE] 0x");
-        async_uart_hex(id2Addr(target_frame_id));
-        async_uart_puts("-0x");
-        async_uart_hex(id2Addr(target_buddy_id));
+        // async_uart_puts("\n[ITERATIVE MERGE] 0x");
+        // async_uart_hex(id2Addr(target_frame_id));
+        // async_uart_puts("-0x");
+        // async_uart_hex(id2Addr(target_buddy_id));
 
-        async_uart_puts(" & 0x");
-        async_uart_hex(id2Addr(target_buddy_id));
-        async_uart_puts("-0x");
-        async_uart_hex(id2Addr(target_buddy_id+nframe));
+        // async_uart_puts(" & 0x");
+        // async_uart_hex(id2Addr(target_buddy_id));
+        // async_uart_puts("-0x");
+        // async_uart_hex(id2Addr(target_buddy_id+nframe));
 
         nframe = nframe << 1;
 
@@ -456,7 +458,7 @@ void merge_chunk(uint32_t frame_id, uint32_t chunk_opt){
 
     // async_uart_puts("\n[MERGE CHUNK] All chunks are free in frame");
     mem_pool[frame_id].n_chunk = 1;
-    async_uart_puts("\r");
+    // async_uart_puts("\r");
     mem_pool[frame_id].chunk_opt = MAX_CHUNK_OPT-1;
     mem_pool[frame_id].free_chunk = 1;
 
@@ -578,10 +580,10 @@ void* malloc(uint32_t size){
         mem_size = chunk_option[mem_pool[frame_id].chunk_opt];
     else mem_size = (1 << frame_arr[frame_id].order) * FRAME_SIZE;
 
-    async_uart_puts("\n[ALLOCATE INFO] Allocated Mem: 0x");
-    async_uart_hex((uint32_t)mem_ptr);
-    async_uart_puts(" - 0x");
-    async_uart_hex((uint32_t)mem_ptr + mem_size);
+    // async_uart_puts("\n[ALLOCATE INFO] Allocated Mem: 0x");
+    // async_uart_hex((uint32_t)mem_ptr);
+    // async_uart_puts(" - 0x");
+    // async_uart_hex((uint32_t)mem_ptr + mem_size);
 
     return mem_ptr;
 }
@@ -599,10 +601,10 @@ void free(void* mem_ptr){
         buddy_free(mem_ptr);
     else slab_free(mem_ptr);
 
-    async_uart_puts("\n[FREE INFO] Free MEM: 0x");
-    async_uart_hex((uint32_t)mem_ptr);
-    async_uart_puts(" - 0x");
-    async_uart_hex((uint32_t)mem_ptr + mem_size);
+    // async_uart_puts("\n[FREE INFO] Free MEM: 0x");
+    // async_uart_hex((uint32_t)mem_ptr);
+    // async_uart_puts(" - 0x");
+    // async_uart_hex((uint32_t)mem_ptr + mem_size);
 }
 
 uint32_t addr2ID(uint32_t addr){
@@ -617,10 +619,10 @@ void memory_reserve(uint32_t begin, uint32_t end){
     uint32_t begin_id = addr2ID(begin);
     uint32_t end_id = addr2ID(end + FRAME_SIZE - 1);
 
-    async_uart_puts("\nReserved Mem: 0x");
-    async_uart_hex(id2Addr(begin_id));
-    async_uart_puts(" - 0x");
-    async_uart_hex(id2Addr(end_id));
+    print_str("\nReserved Mem: 0x");
+    print_hex(id2Addr(begin_id));
+    print_str(" - 0x");
+    print_hex(id2Addr(end_id));
 
     for (int i = begin_id; i < end_id; i++){
         frame_arr[i].order = 1;
