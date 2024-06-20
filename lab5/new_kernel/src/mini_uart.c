@@ -1,8 +1,8 @@
 #include "rpi_mini_uart.h"
 #include "rpi_gpio.h"
 #include "rpi_irq.h"
-#include "utility.h"
 #include "timer.h"
+#include "utility.h"
 // implement first in first out buffer with a read index and a write index
 char uart_tx_buffer[0x100] = {};
 int uart_tx_buffer_widx = 0; // write buffer written index
@@ -51,7 +51,7 @@ void uart_init(void)
 void put_currentEL(void)
 {
     unsigned long long currentEL;
-    __asm__ __volatile__("mrs %0, currentEL\n\t" : "=r"(currentEL)); // 
+    __asm__ __volatile__("mrs %0, currentEL\n\t" : "=r"(currentEL)); //
     put_int(currentEL);
     uart_puts("\n");
 };
@@ -142,16 +142,20 @@ void uart_hex(unsigned int d)
 // uart_r_irq_handler write to buffer then output
 char uart_async_getc()
 {
+
     *AUX_MU_IER_REG |= 1; // Enable receive interrupts. [0]bit 負責接收interrupt的開關
 
     lock();
+    // uart_puts("[uart_async_getc] \n");
+
+    // el1_interrupt_enable(); // ahban
     while (uart_rx_buffer_ridx == uart_rx_buffer_widx)
     {
         unlock();
         *AUX_MU_IER_REG |= 1; // Enable receive interrupts.
+        // syscall fork stuck in here
         lock();
     }
-    // uart_puts("[uart_async_getc] \n"); 
     char r = uart_rx_buffer[uart_rx_buffer_ridx++];
     if (uart_rx_buffer_ridx >= 0x100)
         uart_rx_buffer_ridx = 0;
@@ -159,8 +163,6 @@ char uart_async_getc()
     return r;
 }
 
-// uart_async_putc writes to buffer
-// uart_w_irq_handler read from buffer then output
 void uart_async_putc(char c)
 {
     lock();
@@ -171,7 +173,6 @@ void uart_async_putc(char c)
         *AUX_MU_IER_REG |= 2; // enable write interrupt
         lock();
     }
-    // uart_puts("[uart_async_putc] \n"); 
     uart_tx_buffer[uart_tx_buffer_widx++] = c;
     if (uart_tx_buffer_widx >= 0x100)
         uart_tx_buffer_widx = 0; // cycle pointer
@@ -206,7 +207,6 @@ int is_uart_tx_buffer_full()
     return (uart_tx_buffer_widx + 1) % 0x100 == uart_tx_buffer_ridx;
 }
 
-
 // AUX_MU_IER_REG -> BCM2837-ARM-Peripherals.pdf - Pg.12
 void uart_interrupt_enable()
 {
@@ -224,19 +224,17 @@ void uart_interrupt_disable()
 void uart_r_irq_handler()
 {
     lock();
-
     //補 Lab3 Advanced 3
-    if (*CORE0_TIMER_IRQ_CTRL &= 2)
-    {
-        uart_puts("\r\nUart Looping \r\n");
-        unlock();
-        for (int i = 0; i < 1000000000; i++)
-        {
-        };
-        lock();
-        uart_puts("Uart looping over \r\n");
-    };
-
+    // if (*CORE0_TIMER_IRQ_CTRL &= 2)
+    // {
+    //     uart_puts("\r\nUart Looping \r\n");
+    //     unlock();
+    //     for (int i = 0; i < 1000000000; i++)
+    //     {
+    //     };
+    //     lock();
+    //     uart_puts("Uart looping over \r\n");
+    // };
     if ((uart_rx_buffer_widx + 1) % 0x100 == uart_rx_buffer_ridx)
     {
         *AUX_MU_IER_REG &= ~(1); // disable read interrupt
@@ -246,14 +244,14 @@ void uart_r_irq_handler()
     unlock();
     uart_rx_buffer[uart_rx_buffer_widx] = uart_recv();
     lock();
-    uart_puts("[R] [uart r irq handler] \n");
-    core_timer_disable();
+    // uart_puts("[uart r irq handler] \n");
     uart_rx_buffer_widx++;
     if (uart_rx_buffer_widx >= 0x100)
         uart_rx_buffer_widx = 0;
     *AUX_MU_IER_REG |= 1;
     unlock();
 }
+int timerup = 0;
 
 void uart_w_irq_handler()
 {
@@ -267,7 +265,7 @@ void uart_w_irq_handler()
     unlock();
     uart_send(uart_tx_buffer[uart_tx_buffer_ridx]);
     lock();
-    // uart_puts("[W] [uart_w_irq_handler()] \n");
+    // uart_puts("[uart_w_irq_handler()] \n");
     uart_tx_buffer_ridx++;
     if (uart_tx_buffer_ridx >= 0x100)
         uart_tx_buffer_ridx = 0;
@@ -280,10 +278,10 @@ void uart_flush_FIFO()
     // https://cs140e.sergio.bz/docs/BCM2837-ARM-Peripherals.pdf Pg.13
     // Both bits always read as 1 as the FIFOs are always enabled
 
-    //The AUX_MU_IIR_REG register shows the interrupt status. 
-    //It also has two FIFO enable status bits and (when writing) FIFO clear bits.
-    *AUX_MU_IIR_REG |= 6; 
-    // On write:  
-    // Writing with bit 1 set will clear the receive FIFO 
+    // The AUX_MU_IIR_REG register shows the interrupt status.
+    // It also has two FIFO enable status bits and (when writing) FIFO clear bits.
+    *AUX_MU_IIR_REG |= 6;
+    // On write:
+    // Writing with bit 1 set will clear the receive FIFO
     // Writing with bit 2 set will clear the transmit FIFO
 }
