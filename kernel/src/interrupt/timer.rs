@@ -41,7 +41,7 @@ pub fn add_timer(callback: fn(String, *mut u64), time_ms: u64, message: String) 
     let current_time = get_current_time();
     let time_duration = ms_to_tick(time_ms);
     let target_time = time_duration + current_time;
-    let mut entry: TimerEntry = TimerEntry {
+    let entry: TimerEntry = TimerEntry {
         target_time: target_time, // the time to trigger the timer
         callback: callback,
         message: message,

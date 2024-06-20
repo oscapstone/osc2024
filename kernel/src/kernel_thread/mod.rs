@@ -90,7 +90,7 @@ pub fn schedule() {
         ", out("x0") _, out("x9") _);
     }
     let cur_tpidr_el1 = get_current_tpidr_el1();
-    let mut scheduler = unsafe { &mut SCHEDULER };
+    let scheduler = unsafe { &mut SCHEDULER };
     let current_thread_pos = scheduler
         .run_queue
         .iter()
@@ -98,7 +98,7 @@ pub fn schedule() {
         .unwrap();
 
     let current_thread = scheduler.run_queue.get(current_thread_pos).unwrap();
-    let mut scheduler = unsafe { &mut SCHEDULER };
+    let scheduler = unsafe { &mut SCHEDULER };
 
     let next_thread_pos = (current_thread_pos + 1) % scheduler.run_queue.len();
     // determine the next thread to run

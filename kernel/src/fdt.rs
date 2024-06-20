@@ -52,7 +52,7 @@ pub struct DtbParser {
 
 impl DtbParser {
     pub fn new(dtb: *const u8) -> DtbParser {
-        let mut h: *mut FdtHeader = dtb as *mut FdtHeader;
+        let h: *mut FdtHeader = dtb as *mut FdtHeader;
         unsafe {
             DtbParser {
                 header: dtb as *mut FdtHeader,
@@ -199,7 +199,7 @@ impl DtbParser {
 }
 
 fn mem_rsvmap_paser(dtb: *const u8, off_mem_rsvmap: u32) -> Vec<FdtReserveEntry> {
-    let mut h: *mut FdtHeader = dtb as *mut FdtHeader;
+    let h: *mut FdtHeader = dtb as *mut FdtHeader;
     let mut entries = Vec::new();
     let mut offset = off_mem_rsvmap.swap_bytes();
     unsafe {
