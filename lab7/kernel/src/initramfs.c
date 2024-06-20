@@ -9,8 +9,8 @@
 #include "debug.h"
 #include "cpio.h"
 
-file_operations_t initramfs_file_operations = {initramfs_write, initramfs_read, initramfs_open, initramfs_close, initramfs_lseek64, initramfs_getsize};
-vnode_operations_t initramfs_vnode_operations = {initramfs_lookup, initramfs_create, initramfs_mkdir, initramfs_readdir};
+const file_operations_t initramfs_file_operations = {initramfs_write, initramfs_read, initramfs_open, initramfs_close, initramfs_lseek64, initramfs_getsize};
+const vnode_operations_t initramfs_vnode_operations = {initramfs_lookup, initramfs_create, initramfs_mkdir, initramfs_readdir};
 filesystem_t *initramfs_fs;
 extern char *CPIO_START;
 extern char *CPIO_END;
@@ -141,8 +141,8 @@ vnode_t *initramfs_create_vnode(mount_t *superblock, enum fsnode_type type, vnod
 {
 	vnode_t *node = create_vnode();
 	node->superblock = superblock;
-	node->superblock->v_ops = &initramfs_vnode_operations;
-	node->superblock->f_ops = &initramfs_file_operations;
+	node->v_ops = &initramfs_vnode_operations;
+	node->f_ops = &initramfs_file_operations;
 	node->parent = parent;
 	node->mount = NULL;
 	node->type = type;
@@ -218,7 +218,7 @@ int initramfs_read(struct file *file, void *buf, size_t len)
 int initramfs_open(struct vnode *file_node, struct file **target)
 {
 	(*target)->vnode = file_node;
-	(*target)->f_ops = file_node->superblock->f_ops;
+	(*target)->f_ops = file_node->f_ops;
 	(*target)->f_pos = 0;
 	return 0;
 }
@@ -241,6 +241,8 @@ long initramfs_lseek64(struct file *file, long offset, int whence)
 
 long initramfs_getsize(struct vnode *vd)
 {
+	struct initramfs_inode *inode = vd->internal;
+	return inode->datasize;
 }
 
 // vnode operations
@@ -319,7 +321,8 @@ int initramfs_readdir(struct vnode *dir_node, const char name_array[])
 	{
 		child_vnode = ((vnode_list_t *)curr)->vnode;
 		DEBUG("initramfs_readdir: child_vnode->name %s\r\n", child_vnode->name);
-		strcpy(name_array_start, child_vnode->name);
+		*name_array_start = child_vnode->type;
+		strcpy(++name_array_start, child_vnode->name);
 		name_array_start += strlen(child_vnode->name) + 1;
 	}
 

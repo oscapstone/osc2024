@@ -8,6 +8,7 @@
 #include "stdint.h"
 #include "syscall.h"
 #include "sched.h"
+#include "mmu.h"
 
 extern int8_t need_to_schedule;
 extern thread_t *curr_thread;
@@ -23,18 +24,21 @@ void el1_interrupt_disable()
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
-static uint64_t lock_counter = 0;
+uint64_t lock_counter = 0;
+// static uint64_t lock_counter = 0;
 
 void __lock_interrupt()
 {
     el1_interrupt_disable();
     lock_counter++;
+    // DEBUG("l%d \n", lock_counter);
     // DEBUG("kernel_lock_interrupt counter: %d\r\n", lock_counter);
 }
 
 void __unlock_interrupt()
 {
     lock_counter--;
+    // DEBUG("u%d \n", lock_counter);
     // DEBUG("kernel_unlock_interrupt counter: %d\r\n", lock_counter);
     if (lock_counter < 0)
     {
@@ -254,10 +258,12 @@ void el0_sync_router(trapframe_t *tpf)
                               &&__mkdir_label,            // 15
                               &&__mount_label,            // 16
                               &&__chdir_label,            // 17
-                              &&__signal_return_label,    // 18
-                              &&__lock_interrupt_label,   // 19
-                              &&__unlock_interrupt_label, // 20
-                              &&__invalid_syscall_label}; // 21
+                              &&__lseek64_label,          // 18
+                              &&__ioctl_label,            // 19
+                              &&__signal_return_label,    // 20
+                              &&__lock_interrupt_label,   // 21
+                              &&__unlock_interrupt_label, // 22
+                              &&__invalid_syscall_label}; // 23
 
     goto *syscall_router[syscall_no];
 
@@ -355,18 +361,18 @@ __mmap_label:
 
 __open_label:
     DEBUG("sys_open\r\n");
-    tpf->x0 = sys_open(tpf,(const char *)tpf->x0, (int)tpf->x1);
+    tpf->x0 = sys_open(tpf, (const char *)tpf->x0, (int)tpf->x1);
     return;
 
 __close_label:
     DEBUG("sys_close\r\n");
-    tpf->x0 = sys_close(tpf,(int)tpf->x0);
+    tpf->x0 = sys_close(tpf, (int)tpf->x0);
     return;
 
 __write_label:
     // remember to return read size or error code
-    DEBUG("sys_write\r\n");
-    tpf->x0 = sys_write(tpf,(int)tpf->x0, (const void *)tpf->x1, (uint64_t)tpf->x2);
+    // DEBUG("sys_write\r\n");
+    tpf->x0 = sys_write(tpf, (int)tpf->x0, (const void *)tpf->x1, (uint64_t)tpf->x2);
     return;
 
 __read_label:
@@ -390,6 +396,18 @@ __mount_label:
 __chdir_label:
     DEBUG("sys_chdir\r\n");
     tpf->x0 = sys_chdir(tpf, (const char *)tpf->x0);
+    return;
+
+__lseek64_label:
+    // you can ignore whence, since there is no file access control
+    // DEBUG("sys_lseek64\r\n");
+    tpf->x0 = sys_lseek64(tpf, (int)tpf->x0, (long)tpf->x1, (int)tpf->x2);
+    return;
+
+__ioctl_label:
+    // you can ignore arguments other than fd and request
+    DEBUG("sys_ioctl\r\n");
+    tpf->x0 = sys_ioctl(tpf, (int)tpf->x0, (unsigned long)tpf->x1, (unsigned long)tpf->x2);
     return;
 
 __signal_return_label:
@@ -473,6 +491,7 @@ void invalid_exception_router(uint64_t x0)
         ERROR("spsr_el1: 0x%016lx\r\n", spsr_el1_value);
         ERROR("elr_el1: 0x%016lx\r\n", elr_el1_value);
         ERROR("esr_el1: 0x%016lx\r\n", esr_el1_value);
+        dump_vma(curr_thread);
         count++;
     }
 }

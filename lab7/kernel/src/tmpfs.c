@@ -8,8 +8,8 @@
 #include "list.h"
 #include "debug.h"
 
-file_operations_t tmpfs_file_operations = {tmpfs_write, tmpfs_read, tmpfs_open, tmpfs_close, tmpfs_lseek64, tmpfs_getsize};
-vnode_operations_t tmpfs_vnode_operations = {tmpfs_lookup, tmpfs_create, tmpfs_mkdir, tmpfs_readdir};
+const file_operations_t tmpfs_file_operations = {tmpfs_write, tmpfs_read, tmpfs_open, tmpfs_close, tmpfs_lseek64, tmpfs_getsize};
+const vnode_operations_t tmpfs_vnode_operations = {tmpfs_lookup, tmpfs_create, tmpfs_mkdir, tmpfs_readdir};
 filesystem_t *tmpfs_fs;
 
 int register_tmpfs()
@@ -41,8 +41,8 @@ vnode_t *tmpfs_create_vnode(mount_t *superblock, enum fsnode_type type, vnode_t 
 {
 	vnode_t *node = create_vnode();
 	node->superblock = superblock;
-	node->superblock->v_ops = &tmpfs_vnode_operations;
-	node->superblock->f_ops = &tmpfs_file_operations;
+	node->v_ops = &tmpfs_vnode_operations;
+	node->f_ops = &tmpfs_file_operations;
 	node->parent = parent;
 	node->mount = NULL;
 	node->type = type;
@@ -92,15 +92,17 @@ int tmpfs_write(struct file *file, const void *buf, size_t len)
 {
 	struct tmpfs_inode *inode = file->vnode->internal;
 	DEBUG("tmpfs_write: %s, len: %d, 0x%x->0x%x\r\n", file->vnode->name, len, inode->data + file->f_pos, inode->data + file->f_pos + len);
-	if(inode->data == NULL)
+	if (inode->data == NULL)
 	{
 		inode->data = kmalloc(MAX_FILE_SIZE);
 	}
-	if(file->f_pos + len > MAX_FILE_SIZE)
+	if (file->f_pos + len > MAX_FILE_SIZE)
 	{
 		len = MAX_FILE_SIZE - file->f_pos;
 	}
 	// write from f_pos
+	DEBUG("tmpfs_write: %s, len: %d, 0x%x->0x%x\r\n", file->vnode->name, len, inode->data + file->f_pos, inode->data + file->f_pos + len);
+	DEBUG("tmpfs_write: file->f_pos: %d, inode->datasize: %d\r\n", file->f_pos, inode->datasize);
 	memcpy(inode->data + file->f_pos, buf, len);
 	// update f_pos and size
 	file->f_pos += len;
@@ -133,13 +135,14 @@ int tmpfs_read(struct file *file, void *buf, size_t len)
 int tmpfs_open(struct vnode *file_node, struct file **target)
 {
 	(*target)->vnode = file_node;
-	(*target)->f_ops = file_node->superblock->f_ops;
+	(*target)->f_ops = file_node->f_ops;
 	(*target)->f_pos = 0;
 	return 0;
 }
 
 int tmpfs_close(struct file *file)
 {
+	DEBUG("tmpfs_close: %s\r\n", file->vnode->name);
 	kfree(file);
 	return 0;
 }
@@ -156,11 +159,14 @@ long tmpfs_lseek64(struct file *file, long offset, int whence)
 
 long tmpfs_getsize(struct vnode *vd)
 {
+	struct tmpfs_inode *inode = vd->internal;
+	return inode->datasize;
 }
 
 // vnode operations
 int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name)
 {
+	DEBUG("tmpfs_lookup: %s\r\n", dir_node->name);
 	tmpfs_inode_t *dir_inode = (tmpfs_inode_t *)dir_node->internal;
 	list_head_t *curr;
 	vnode_t *child_vnode;
@@ -243,7 +249,8 @@ int tmpfs_readdir(struct vnode *dir_node, const char name_array[])
 	{
 		child_vnode = ((vnode_list_t *)curr)->vnode;
 		DEBUG("tmpfs_readdir: child_vnode->name %s, child: 0x%x\r\n", child_vnode->name, child_vnode);
-		strcpy(name_array_start, child_vnode->name);
+		*name_array_start = child_vnode->type;
+		strcpy(++name_array_start, child_vnode->name);
 		name_array_start += strlen(child_vnode->name) + 1;
 	}
 

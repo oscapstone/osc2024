@@ -129,6 +129,7 @@ el1h_irq:
     save_all
     mov x0, sp
     bl el1h_irq_router
+    bl el1_interrupt_disable
     load_all
     eret
 el1h_fiq_invalid:
@@ -156,6 +157,7 @@ el0_irq_64:
     save_all
     mov x0, sp
     bl el0_irq_64_router
+    bl el1_interrupt_disable
     load_all
     eret
 el0_fiq_invalid_64:

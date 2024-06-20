@@ -26,9 +26,11 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] = {
     {.command = "info", .help = "get device information via mailbox", .func = do_cmd_info},
     {.command = "kmalloc", .help = "test kmalloc", .func = do_cmd_kmalloc},
     {.command = "ls", .help = "list directory contents", .func = do_cmd_ls},
+    {.command = "mkdir", .help = "make directories", .func = do_cmd_mkdir},
     {.command = "ps", .help = "print all threads", .func = do_cmd_ps},
     {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS]", .func = do_cmd_setTimeout},
     {.command = "set2sAlert", .help = "set core timer interrupt every 2 second", .func = do_cmd_set2sAlert},
+    {.command = "write", .help = "write to a file", .func = do_cmd_write},
     {.command = "reboot", .help = "reboot the device", .func = do_cmd_reboot},
 };
 
@@ -303,7 +305,20 @@ int do_cmd_ls(int argc, char **argv)
     while (!(buf[end_index] == 0 && buf[end_index + 1] == 0))
     {
         end_index += strlen(buf + start_index) + 1;
-        printf("%s ", buf + start_index);
+        switch (buf[start_index])
+        {
+        case FS_DIR:
+            printf(BBLU "%s " CRESET, buf + start_index + 1);
+            break;
+        case FS_FILE:
+            printf("%s ", buf + start_index + 1);
+            break;
+        case FS_DEV:
+            printf(BCYN "%s " CRESET, buf + start_index + 1);
+            break;
+        }
+
+        // printf("%s ", buf + start_index);
         start_index = end_index;
     }
     puts("\r\n");
@@ -337,7 +352,8 @@ int do_cmd_cat(int argc, char **argv)
     return 0;
 }
 
-int do_cmd_cd(int argc, char **argv){
+int do_cmd_cd(int argc, char **argv)
+{
     char *filepath;
     // char *c_filedata;
     // unsigned int c_filesize;
@@ -392,23 +408,15 @@ int do_cmd_exec(int argc, char **argv)
         puts("Incorrect number of parameters\r\n");
         return -1;
     }
-    char *c_filedata;
-    unsigned int c_filesize;
-
-    int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
-    if (result == CPIO_TRAILER)
+    vnode_t *vnode;
+    if (vfs_lookup(curr_thread->pwd, filepath, &vnode) == -1)
     {
         puts("exec: ");
         puts(filepath);
         puts(": No such file or directory\r\n");
         return -1;
     }
-    else if (result == CPIO_ERROR)
-    {
-        puts("cpio parse error\r\n");
-        return -1;
-    }
-
+    INFO("exec: %s\r\n", filepath);
     if (kernel_fork() == 0)
     { // child process
         kernel_exec_user_program(filepath, NULL);
@@ -458,5 +466,51 @@ int do_cmd_ps(int argc, char **argv)
         return -1;
     }
     dump_run_queue();
+    return 0;
+}
+
+int do_cmd_write(int argc, char **argv)
+{
+    char *filepath;
+    char *content;
+    if (argc == 2)
+    {
+        filepath = argv[0];
+        content = argv[1];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    file_t *file;
+    if (vfs_open(curr_thread->pwd, filepath, 0, &file) == -1)
+    {
+        puts("File not found\r\n");
+        return -1;
+    }
+    size_t size = strlen(content);
+    vfs_write(file, content, size);
+    vfs_close(file);
+    return 0;
+}
+
+int do_cmd_mkdir(int argc, char **argv)
+{
+    char *dirpath;
+    if (argc == 1)
+    {
+        dirpath = argv[0];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    if (vfs_mkdir(curr_thread->pwd, dirpath))
+    {
+        puts("mkdir failed\r\n");
+        return -1;
+    }
     return 0;
 }

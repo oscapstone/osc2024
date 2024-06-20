@@ -5,6 +5,9 @@
 #include "vfs.h"
 #include "list.h"
 
+#define INITRAMFS_PATH "/initramfs"
+#define KERNEL_PATH "/initramfs/kernel8.img"
+
 typedef struct initramfs_inode
 {
     vnode_list_t *child_list;
