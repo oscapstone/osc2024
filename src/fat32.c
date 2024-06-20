@@ -4,8 +4,7 @@
 #include "string.h"
 #include "sd.h"
 #include "mbr.h"
-
-#define VFS_DEBUG
+#include "kernel.h"
 
 struct fat_boot_sector fat_boot_sector;
 struct fat32_info fat_info;
@@ -23,6 +22,9 @@ int fat32_create(struct vnode *dir_node, struct vnode **target, const char *comp
 int fat32_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name);
 
 void setup_fat32(struct fat32_inode *dir_inode);
+
+unsigned int get_free_fat_cluster(void);
+void write_fat_table(unsigned int cluster, unsigned int value);
 
 struct filesystem fat32_filesystem = {
     .name = "fat32",
@@ -49,7 +51,7 @@ int fat32_setup_mount(struct filesystem* fs, struct mount* mount)
     char buf[BLOCK_SIZE];
 
 #ifdef VFS_DEBUG
-    printf("        [fat32_setup_mount]\n");
+    printf("            [fat32_setup_mount]\n");
 #endif
 
     mount->fs = fs;
@@ -64,6 +66,8 @@ int fat32_setup_mount(struct filesystem* fs, struct mount* mount)
     readblock(fat_info.data_region, buf);
     memcpy(root_inode->data, buf, BLOCK_SIZE);
 
+    root_inode->cluster = fat_boot_sector.root_dir;
+    root_inode->abs_block_num = fat_info.data_region + (root_inode->cluster - 2) * fat_info.blocks_per_cluster;
     /* Setup all the vnodes and inodes under FAT32 file system. */
     setup_fat32(root_inode);
 
@@ -79,7 +83,6 @@ struct vnode *fat32_create_vnode(struct mount *mount, enum fsnode_type type)
 {
     struct vnode *node;
     struct fat32_inode *inode;
-    int i;
 
     /* Create vnode */
     node = (struct vnode*)kmalloc(sizeof(struct vnode));
@@ -91,8 +94,6 @@ struct vnode *fat32_create_vnode(struct mount *mount, enum fsnode_type type)
     inode = (struct fat32_inode *)kmalloc(sizeof(struct fat32_inode));
     memset(inode, 0, sizeof(struct fat32_inode));
     inode->type = type;
-    for (i = 0; i < MAX_DIR_NUM; i++)
-        inode->childs[i] = NULL;
     inode->data = (char *)kmalloc(BLOCK_SIZE);
 
     /* Assign inode to vnode */
@@ -111,12 +112,18 @@ int fat32_write(struct file *file, const void *buf, size_t len)
     inode = file->vnode->internal;
     /* Copy data from buf to f_pos */
     memcpy(inode->data + file->f_pos, buf, len);
+    /* Update data block on SD card. */
+    writeblock(inode->abs_block_num, inode->data);
     /* Update f_pos and size */
     file->f_pos += len;
 
     /* Check boundary. */
     if (inode->data_size < file->f_pos)
         inode->data_size = file->f_pos;
+
+#ifdef VFS_DEBUG
+    printf("        [fat32_write] file name: %s, size: %d\n", inode->name, inode->data_size);
+#endif
     return len;
 }
 
@@ -125,7 +132,13 @@ int fat32_read(struct file *file, void *buf, size_t len)
 {
     struct fat32_inode *inode;
 
+#ifdef VFS_DEBUG
+    printf("        [fat32_read] file name: %s, size: %d\n", ((struct fat32_inode *)file->vnode->internal)->name, len);
+#endif
+
     inode = file->vnode->internal;
+    /* Update contents from SD card */
+    readblock(inode->abs_block_num, inode->data);
     /*if buffer overflow, shrink the request read length. Then read from f_pos */
     if ((file->f_pos + len) > inode->data_size) {
         len = inode->data_size - file->f_pos;
@@ -196,8 +209,10 @@ int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
 int fat32_create(struct vnode *dir_node, struct vnode **target, const char *component_name)
 {
     struct fat32_inode *inode, *child_inode, *new_inode;
-    int child_idx;
+    int child_idx, i, j, idx = 0;
     struct vnode *new_vnode;
+    unsigned int new_cluster;
+    struct sfn_entry *dir_table;
 
 #ifdef VFS_DEBUG
     printf("        [fat32_create] component name: %s\n", component_name);
@@ -226,7 +241,7 @@ int fat32_create(struct vnode *dir_node, struct vnode **target, const char *comp
         return 0;
     }
 
-    if (strlen(component_name) > MAX_PATH_LEN) {
+    if (strlen(component_name) > MAX_FILE_NAME_LEN) {
         printf("        [fat32_create] file name too long.\n");
         return 0;
     }
@@ -238,6 +253,52 @@ int fat32_create(struct vnode *dir_node, struct vnode **target, const char *comp
     /* Copy the component_name to inode. */
     new_inode = new_vnode->internal;
     strcpy(new_inode->name, component_name);
+
+    /* Create new file on SD card, get an empty cluster number */
+    new_cluster = get_free_fat_cluster();
+    new_inode->cluster = new_cluster;
+    new_inode->abs_block_num = fat_info.data_region + ((new_cluster - 2) * fat_info.blocks_per_cluster);
+    /* Update the contents of directory table */
+    dir_table = (struct sfn_entry *)inode->data;
+    for (i = 0; i < BLOCK_SIZE / DIR_ENTRY_SIZE; i++) {
+        if (dir_table[i].name[0] != '\0') // Skip the used entry
+            continue;
+        
+        /* Put file name to SFN entry. */
+        for (j = 0; j < 8; j++) {
+            if (component_name[idx] == '.' || component_name[idx] == '\0')
+                dir_table[i].name[j] = ' ';
+            else
+                dir_table[i].name[j] = component_name[idx++];
+        }
+        for (j = 0; j < 3; j++) {
+            if (component_name[idx] == '\0')
+                dir_table[i].file_ext[j] = ' ';
+            else
+                dir_table[i].file_ext[j] = component_name[++idx];
+        }
+
+        dir_table[i].cluster_high = new_cluster >> 16;
+        dir_table[i].cluster_low = new_cluster & 0xffff;
+        dir_table[i].file_size = BLOCK_SIZE;
+
+#ifdef VFS_DEBUG
+        char *tmp = (char *)&dir_table[i];
+        printf("new cluster: %d\n", new_cluster);
+        printf("        [fat32_create] new file entry: ");
+        for (int k = 0; k < 32; k++)
+            printf("%c.", tmp[k]);
+        printf("\n");
+        printf("at entry %d\n", i);
+#endif
+
+        /* Write the directory table to SD card */
+        writeblock(inode->abs_block_num, (char *)dir_table);
+        break;
+    }
+
+    /* Update the FAT table */
+    write_fat_table(new_cluster, FAT_ENTRY_EOC); // Set the cluster value to 0x0fffffff
 
     *target = new_vnode;
     return 1;
@@ -282,6 +343,36 @@ int fat32_mkdir(struct vnode *dir_node, struct vnode **target, const char *compo
     return 0;
 }
 
+/* Find an empty entry in FAT table, return its cluster number. */
+unsigned int get_free_fat_cluster(void)
+{
+    unsigned int *fat_table, block_idx = 0;
+    char buf[BLOCK_SIZE];
+
+    for (block_idx = fat_info.fat_region; block_idx < fat_info.fat_region + fat_info.sectors_per_fat; block_idx++) {
+        readblock(block_idx, buf);
+        fat_table = (unsigned int *)buf;
+        for (int i = 0; i < BLOCK_SIZE / sizeof(unsigned int); i++)
+            if (FAT_ENTRY(fat_table[i]) == FAT_ENTRY_FREE)
+                return i;
+    }
+    printf("[get_free_fat_cluster] no free cluster\n");
+    return 0;
+}
+
+/* Write values at FAT table entry according cluster number */
+void write_fat_table(unsigned int cluster, unsigned int value)
+{
+    unsigned int *fat_table, block_idx = 0;
+    char buf[BLOCK_SIZE];
+
+    block_idx = fat_info.fat_region + cluster / (BLOCK_SIZE / sizeof(unsigned int));
+    readblock(block_idx, buf);
+    fat_table = (unsigned int *)buf;
+    fat_table[cluster % (BLOCK_SIZE / sizeof(unsigned int))] |= value;
+    writeblock(block_idx, buf);
+}
+
 /* Get FAT32 boot sector and extract meta data to fat_info. */
 void get_fat32_boot_sector(void)
 {
@@ -304,9 +395,9 @@ void get_fat32_boot_sector(void)
     fat_info.fat_region = fat_info.starting_sector + fat_boot_sector.nr_reserved_sectors;
     fat_info.data_region = fat_info.fat_region + (fat_boot_sector.nr_fat_copies * fat_boot_sector.sectors_per_fat);
     fat_info.blocks_per_cluster = fat_boot_sector.sectors_per_cluster;
+    fat_info.sectors_per_fat = fat_boot_sector.sectors_per_fat;
+    fat_info.sectors_per_cluster = fat_boot_sector.sectors_per_cluster;
     fat_info.file_name_type = mbr.partitions[0].partition_type; // 0xb for SFN, 0xc for LFN
-
-    print_fat32_boot_sector();
 }
 
 /**
@@ -336,7 +427,7 @@ void setup_fat32(struct fat32_inode *dir_inode)
         if (dir_table[i].attr & ATTR_DIRECTORY) {
             dir_inode->childs[child_idx] = fat32_create_vnode(0, FSNODE_TYPE_DIR);
 
-            for (j = 0; j < 5; j++)
+            for (j = 0; j < 8; j++)
                 if (dir_table[i].name[j] != ' ')
                     file_name[idx++] = dir_table[i].name[j];
             file_name[idx] = '\0';
@@ -345,8 +436,8 @@ void setup_fat32(struct fat32_inode *dir_inode)
             
             /* Parse the file name under root directory */
             if ((dir_table[i].attr & ATTR_LONG_NAME) == ATTR_LONG_NAME)
-                while (1); // LFN is not supported for now.
-            for (j = 0; j < 5; j++)
+                printf("            [setup_fat32] No LFN supported.\n"); // LFN is not supported for now.
+            for (j = 0; j < 8; j++)
                 if (dir_table[i].name[j] != ' ')
                     file_name[idx++] = dir_table[i].name[j];
             file_name[idx++] = '.';
@@ -371,7 +462,7 @@ void setup_fat32(struct fat32_inode *dir_inode)
         child_inode->data_size = dir_table[i].file_size;
 
 #ifdef VFS_DEBUG
-        printf("[FAT32] file name: %s, type %d, cluster: %d, abs_block_num: %d, size: %d\n",
+        printf("[setup_fat32] file name: %s, type %d, cluster: %d, abs_block_num: %d, size: %d\n",
                child_inode->name, child_inode->type, child_inode->cluster, child_inode->abs_block_num, child_inode->data_size);
 #endif
 

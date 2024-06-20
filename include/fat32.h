@@ -25,10 +25,15 @@
 /* define file name type */
 #define SFN                             (0x0b) // used in partition entry in MBR
 #define LFN                             (0x0c)
-
+/* https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system#Cluster_values */
 #define FAT_ENTRY_MASK                  (0x0fffffff) // mask for FAT32 entry in FAT table, upper 4 bits are reserved.
+#define FAT_ENTRY_INVALID               (0x0ffffff0) // invalid cluster entry: reserved cluster, bad cluster, end of file.
+#define FAT_ENTRY_FREE                  (0x0) // free cluster entry
+#define FAT_ENTRY_EOC                   (0x0fffffff) // end of cluster chain
 
-#define DIR_ENTRY_SIZE                  (32) // size of directory entry in FAT32
+#define FAT_ENTRY(cluster)              (cluster & FAT_ENTRY_MASK)
+
+#define DIR_ENTRY_SIZE                  (32) // size of directory entry in FAT32 direcotry table.
 
 /** 
  * https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system#BPB20
@@ -46,14 +51,14 @@ struct fat_boot_sector {
     uint16_t nr_root_entry; // 0 for FAT32
     uint16_t nr_sectors_fat16; // total number of sectors in the file system, in case partition < 32 Mb
     uint8_t media_descripter_type;
-    uint16_t nr_sectors_per_fat; // 0 for FAT32 
+    uint16_t nr_sectors_per_fat16; // 0 for FAT32.
     // DOS 3.31 BPB
     uint16_t nr_sectors_per_track;
     uint16_t nr_heads;
     uint32_t nr_hidden_sectors; // Default Boot Sector ends here
     uint32_t nr_sectors_fat32; // total number of sectors in FAT32
     // FAT32 Extended BPB
-    uint32_t sectors_per_fat; // sectors per FAT table.
+    uint32_t sectors_per_fat; // sectors per FAT table. (for FAT32);
     uint16_t mirror_flags;
     uint16_t fs_version;
     uint32_t root_dir; // first cluster of root directory, usually 2
@@ -122,6 +127,8 @@ struct fat32_info {
     unsigned int data_region; // also root dir starting block number.
 
     unsigned int blocks_per_cluster;
+    unsigned int sectors_per_fat; // number of sectors(blocks) in a FAT table.
+    unsigned int sectors_per_cluster;
 
     unsigned char file_name_type; // 0x0b for SFN, 0x0c for LFN
 };
@@ -129,6 +136,9 @@ struct fat32_info {
 extern struct filesystem fat32_filesystem;
 extern struct fat_boot_sector fat_boot_sector;
 extern struct fat32_info fat_info;
+
+extern unsigned int *fat_table;
+extern unsigned int nr_fat_table_entry;
 
 struct vnode *fat32_create_vnode(struct mount *mount, enum fsnode_type type);
 void get_fat32_boot_sector(void);

@@ -215,7 +215,7 @@ void print_block(int block_idx)
     readblock(block_idx, buf);
     /* Print block information*/
     for (int i = 0; i < 512; i++) {
-        printf("%c", buf[i]);
+        printf("%x ", buf[i]);
         if ((i % 32) == 31)
             uart_send('\n');
     }

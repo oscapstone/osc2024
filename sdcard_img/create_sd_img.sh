@@ -12,7 +12,7 @@ echo 1 # Partition number
 echo   # First sector (Accept default: 1)
 echo   # Last sector (Accept default: varies)
 echo t # Change partition type
-echo b # Master Boot Record primary partitions type:SFN
+echo b # Master Boot Record primary partitions type:SFN, 'c' for LBA
 echo w # Write changes
 ) | sudo fdisk $IMG_NAME
 
