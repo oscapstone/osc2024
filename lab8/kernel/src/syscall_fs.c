@@ -16,9 +16,9 @@ int open(trapframe_t *tpf, const char *pathname, int flags)
     char abs_path[MAX_PATH_NAME];
     strcpy(abs_path, pathname);
 
-    // uart_sendlinek("file name : %s\n", pathname);
-    // uart_sendlinek("curr_working_dir : %s\n", curr_thread->curr_working_dir);
-    // uart_sendlinek("abs_path : %s\n", abs_path);
+    uart_sendlinek("file name : %s\n", pathname);
+    uart_sendlinek("curr_working_dir : %s\n", curr_thread->curr_working_dir);
+    uart_sendlinek("abs_path : %s\n", abs_path);
 
     // update abs_path
     get_absolute_path(abs_path, curr_thread->curr_working_dir);
@@ -141,6 +141,17 @@ int ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info)
         fb_info->width = width;
     }
 
+    tpf->x0 = 0;
+    return tpf->x0;
+}
+
+int sync(trapframe_t *tpf)
+{
+    for (int i = 0; i < MAX_FS_REG;i++)
+    {
+        if(!reg_fs[i].name) continue;
+        vfs_sync(&reg_fs[i]);
+    }
     tpf->x0 = 0;
     return tpf->x0;
 }
