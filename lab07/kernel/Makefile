@@ -21,6 +21,10 @@ ifdef DYNAMIC_ALLOC_DEBUG
 COPS += -DYNAMIC_ALLOC_DEBUG
 endif 
 
+ifdef SYSCALL_DEBUG
+COPS += -DSYSCALL_DEBUG
+endif
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR) *.img

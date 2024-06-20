@@ -103,8 +103,8 @@ lseek64:
     ret
 
 
-//.global ioctl
-//ioctl:
-//    mov w8, #SYS_IOCTL_NUM
-//    svc #0
-//    ret
+.global ioctl
+ioctl:
+    mov w8, #SYS_IOCTL_NUM
+    svc #0
+    ret
