@@ -1,6 +1,7 @@
 # OSC2024 Lab6
+This document needs to be finalized later
 ## Translation Control Register (TCR)
-set tcr_el1 to 0b10000000000100000000000000010000: 指定虛擬記憶體的地址範圍為 48 位，並且頁面大小為 4KB。
+set tcr_el1 to 0b10000000000100000000000000010000
 [tct_el1](https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/TCR-EL1--Translation-Control-Register--EL1-?lang=en#fieldset_0-5_0)
 ```
 #define TCR_CONFIG_REGION_48bit (((64 - 48) << 0) | ((64 - 48) << 16))
@@ -146,14 +147,9 @@ setting of different memory (just google mair-el1  if cant open)
 nGnRnE: access gather(match),access order, signal write
 
 ### Note
-* TTBR Res0: 因為一個 page 是 4096 (2^12)，要 align
-* 找地址: 前 16 高低位， 48 開始每次 9，最後 12 是 offset (2^12)
-* Entry mask: 最後 12 bit (for) settings
-* init 的 n : 2MB x 512 = 1 GB, 2MB = 2 ^ 21 -> n = 20
+* TTBR Res0: One page is 4096 (2^12) to align.
+* Find address: from 48 every 9 is an entry, last 12 is offset (2^12)
+* Entry mask: last 12 bit (for) settings
+* init n : 2MB x 512 = 1 GB, 2MB = 2 ^ 21 -> n = 20
 * 1GB -> 31:30 0 or 1 -> PMD (2 ^ 31)
-
-
-## 問 
-* allocate_page 問題
-* 最後一層 BLOCK vs TABLE (SPEC)
-* init 不能都給 PD_KERNEL_USER_ACCESS
+* ttbr0 -> map for 0000 start (lower, user), ttbr1 -> map for ffff start (upper, kernel)

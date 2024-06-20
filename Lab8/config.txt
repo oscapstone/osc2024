@@ -1,0 +1,3 @@
+kernel=KERNEL8.IMG
+arm_64bit=1
+initramfs INITRD.IO 0x20000000
