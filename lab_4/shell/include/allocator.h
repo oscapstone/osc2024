@@ -7,6 +7,11 @@
 #define OCCUPIED -2
 #define NULL 0
 
+typedef struct TheArray{
+    int available;
+    int block_size;
+}TheArray;
+
 typedef struct Node{
     unsigned char* address;
     int page_index; // the index of node in The Array
@@ -25,3 +30,5 @@ void init_order_list();
 unsigned char* malloc_page(int request_page_num);
 int check_list_has_element(OrderList* target);
 void list_push_back(Node* to_push, int order);
+void free_page(void* to_free);
+Node* get_buddy(OrderList* target, int target_page_index);

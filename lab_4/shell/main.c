@@ -54,7 +54,7 @@ void main(int argc, char* argv[]){
    char* my_array3 = malloc_page(3);
    char* my_array4 = malloc_page(3);
    char* my_array5 = malloc_page(3);
-   char* my_array6 = malloc_page(3);
+   //char* my_array6 = malloc_page(3);
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';
@@ -74,12 +74,28 @@ void main(int argc, char* argv[]){
          uart_puts("ls\t: list all files in initfs\n");
          uart_puts("cat <filename>\t: print the content of file in initfs\n");
          uart_puts("hello\t: print hello world!\n");
-         uart_puts("exec: execute user program in initfs");
-         uart_puts("async_uart: switch to async uart mode (currently for demo only)");
+         uart_puts("exec: execute user program in initfs\n");
+         uart_puts("async_uart: switch to async uart mode (currently for demo only)\n");
+         uart_puts("malloc <page size>\t: malloc memory of size <page size>\n");
+         uart_puts("free\t: free all malloced page memory (for demo, the memory alloced in simple malloc will not be freed)\n");
          uart_puts("reboot\t: reboot the device\n");
       }
       else if(strcmp(command, "hello") == 0){
          uart_puts("Hello World!\n");
+      }
+      else if(strcmp(command, "free") == 0){
+         free_page(my_array);
+         free_page(my_array2);
+         free_page(my_array3);
+         free_page(my_array4);
+         free_page(my_array5);
+         //free_page(my_array6);
+         my_array = malloc_page(3);
+         my_array2 = malloc_page(3);
+         my_array3 = malloc_page(3);
+         my_array4 = malloc_page(3);
+         my_array5 = malloc_page(3);
+
       }
       else if(strcmp(command, "ls") == 0){
          cpio_ls();
