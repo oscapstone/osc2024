@@ -10,10 +10,14 @@
 #define SYS_MBOXCALL    6
 #define SYS_KILL        7
 
+#define SIGKILL 9
+#define SIGRET  32
+
 #include "sched.h"
 #include "uart.h"
 #include "cpio.h"
 #include "thread.h"
+#include "sched.h"  
 #include "util.h"
 
 typedef struct trap_frame trap_frame_t;
@@ -26,6 +30,10 @@ int sys_fork(trap_frame_t* tpf);
 void sys_exit();
 int sys_mbox_call(unsigned char ch, unsigned int* mbox);
 void sys_kill(int pid);
+
+void signal_register(int, void(*)());
+void signal_kill(int, int);
+void signal_return(trap_frame_t*);
 
 void fork_test();
 

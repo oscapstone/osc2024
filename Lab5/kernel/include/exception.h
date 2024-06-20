@@ -7,6 +7,7 @@
 #include "task.h"
 #include "thread.h"
 #include "syscall.h"
+#include "signal.h"
 
 typedef struct trap_frame trap_frame_t;
 

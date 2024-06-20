@@ -11,6 +11,7 @@ void init_thread_arr(){
         thread_arr[i].id = i;
         thread_arr[i].prev = 0;
         thread_arr[i].next = 0;
+        // thread_arr[i].parent = 0;
         thread_arr[i].prog_size = 0;
     }
 }   
@@ -26,6 +27,11 @@ thread_t* _thread_create(void (*func)(void)){
             thread_arr[id].user_sp = (uint8_t*)malloc(KSTACK_SIZE);
             thread_arr[id].ctx.sp = (uint64_t)(thread_arr[id].kernel_sp + KSTACK_SIZE);
             thread_arr[id].ctx.fp = thread_arr[id].ctx.sp;
+
+            for (int j = 0; j <= MAX_SIGNAL; j++){
+                thread_arr[id].signal_handler[j] = 0;
+                thread_arr[id].signal_count[j] = 0;
+            }
 
             return (thread_t*)(&(thread_arr[id]));
         }

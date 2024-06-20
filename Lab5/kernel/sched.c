@@ -71,6 +71,9 @@ void schedule(){
 
         // if (off_thread->status == DEAD)
         //     check_RQ();
+
+        // if (off_thread->id == 2 && off_thread->status == DEAD)
+        //     check_RQ();
         
         switch_to(get_current(), &(cur_thread->ctx));
 
@@ -88,8 +91,6 @@ void kill_zombies(){
     while (th_ptr != 0){
         if (th_ptr->status == DEAD){
 
-            // check_RQ();
-
             if (th_ptr == RQ_tail){
                 RQ_tail = th_ptr->prev;
             }
@@ -98,6 +99,11 @@ void kill_zombies(){
 
             free(th_ptr->kernel_sp);
             free(th_ptr->user_sp);
+
+            for (int i = 0; i < MAX_SIGNAL; i++){
+                th_ptr->signal_handler[i] = 0;
+                th_ptr->signal_count[i] = 0;
+            }
             
             if (th_ptr->prog_size > 0){
                 free(th_ptr->prog);
@@ -106,7 +112,9 @@ void kill_zombies(){
             
             if (th_ptr->prev == 0){
                 RQ_head = th_ptr->next;
-                th_ptr->next->prev = 0;
+
+                if (th_ptr->next != 0)
+                    th_ptr->next->prev = 0;
             }else {
                 th_ptr->prev->next = th_ptr->next;
 
@@ -184,6 +192,10 @@ int copy_thread(trap_frame_t* tpf){
         memcpy(cur_thread->prog, child_thread->prog, cur_thread->prog_size);
     }
 
+    for (int i = 0; i < MAX_SIGNAL; i++)
+        child_thread->signal_handler[i] = cur_thread->signal_handler[i];
+    
+
     trap_frame_t* child_tpf = (trap_frame_t*)((uint8_t*)tpf + ((uint8_t*)child_thread->kernel_sp - (uint8_t*)cur_thread->kernel_sp));
     
     child_thread->ctx.sp = child_tpf;
@@ -228,15 +240,16 @@ void new_user_thread(void* prog){
     // }
 
     new_thread->ctx.x19 = prog;
+    push_rq(new_thread);
 
-    thread_t* off_thread = cur_thread;
-    off_thread->status = READY;
+    // thread_t* off_thread = cur_thread;
+    // off_thread->status = READY;
 
-    cur_thread = new_thread;
-    cur_thread->status = RUNNING;
+    // cur_thread = new_thread;
+    // cur_thread->status = RUNNING;
     
-    push_rq(off_thread);
-    switch_to(get_current(), &(new_thread->ctx));
+    // push_rq(off_thread);
+    // switch_to(get_current(), &(new_thread->ctx));
 }
 
 void user_thread_run(){

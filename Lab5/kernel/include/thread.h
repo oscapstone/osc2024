@@ -15,6 +15,10 @@
 #define USTACK_SIZE 0x1000
 #define KSTACK_SIZE 0x1000
 
+#define MAX_SIGNAL 10
+
+typedef void (*signal_handler_t)(void);
+
 typedef struct thread_ctx {
     uint64_t x19;
     uint64_t x20;
@@ -31,6 +35,13 @@ typedef struct thread_ctx {
     uint64_t sp;
 } thread_ctx_t;
 
+typedef struct signal_ctx {
+    uint64_t sp_el0;
+    uint64_t elr_el1;
+    uint64_t spsr_el1;
+    uint64_t x30;
+} signal_ctx_t;
+
 typedef struct thread {
     uint32_t id;
     uint32_t status;
@@ -39,6 +50,13 @@ typedef struct thread {
     uint8_t* kernel_sp;
     uint8_t* prog;
     uint32_t prog_size;
+    
+    signal_handler_t signal_handler[MAX_SIGNAL+1];
+    signal_handler_t cur_signal_handler;
+    uint32_t signal_count[MAX_SIGNAL+1];
+    uint8_t* signal_handler_sp;
+    signal_ctx_t sig_ctx;
+
     struct thread* prev;    
     struct thread* next;
 } thread_t;

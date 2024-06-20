@@ -12,6 +12,7 @@
 #include "mem.h"
 #include "thread.h"
 #include "syscall.h"
+#include "signal.h"
 
 void print_menu();
 void print_rpi_info();

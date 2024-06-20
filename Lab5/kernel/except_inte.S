@@ -94,12 +94,16 @@ el1_irq_handler:
 el0_irq_handler:
     save_all
     bl el0_irq_entry
+    mov x0, sp
+    bl check_signal
     load_all
     eret
 
 el0_sync_handler:
     save_all
     bl el0_sync_entry
+    mov x0, sp
+    bl check_signal
     load_all
     eret
 

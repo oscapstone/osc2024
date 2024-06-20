@@ -1,24 +1,24 @@
 #include "exception.h"
 
-// int lock_count = 0;
+int lock_count = 0;
 
 extern thread_t* cur_thread;
 
 void disable_interrupt(){
 
-    // if (lock_count == 0)
-    asm volatile("msr DAIFSet, 0xf;");   
+    if (lock_count == 0)
+        asm volatile("msr DAIFSet, 0xf;");   
     
-    // lock_count++;
+    lock_count++;
 }
 
 void enable_interrupt(){
 
-    // if (lock_count > 0)
-    //     lock_count--;
+    if (lock_count > 0)
+        lock_count--;
     
-    // if (lock_count == 0)
-    asm volatile("msr DAIFClr, 0xf;");
+    if (lock_count == 0)
+        asm volatile("msr DAIFClr, 0xf;");
 }
 
 void exception_entry(){
@@ -170,11 +170,18 @@ void el0_sync_entry(trap_frame_t* tpf){
         case 7:
             sys_kill(tpf->x0);
             break;
+        case 8:
+            signal_register(tpf->x0, tpf->x1);
+            break;
+        case 9:
+            signal_kill(tpf->x0, tpf->x1);
+            break;
+        case 10:
+            signal_return(tpf);
+            break;
         default:
             break;
     }
-
-
 
     enable_interrupt();
 

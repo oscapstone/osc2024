@@ -106,10 +106,54 @@ void sys_kill(int pid){
         return;
     }
 
+    // print_str("\nHere");
     thread_arr[pid].status = DEAD;
     enable_interrupt();
 
     return;
+}
+
+void signal_register(int SIGNAL, void(*handler)()){
+    if (SIGNAL > MAX_SIGNAL || SIGNAL < 0)
+        return;
+
+    cur_thread->signal_handler[SIGNAL] = handler;
+}
+
+void signal_kill(int pid, int SIGNAL){
+
+    disable_interrupt();
+    if (pid < 0 || pid >= MAX_TID || thread_arr[pid].status == FREE){
+        enable_interrupt();
+        return;
+    }
+
+    thread_arr[pid].signal_count[SIGNAL]++;
+    // print_str("\nKill PID: ");
+    // print_dec(pid);
+    // print_str("\nsignal_count: ");
+    // print_dec(thread_arr[pid].signal_count[SIGNAL]);
+    enable_interrupt();
+}
+
+void signal_return(trap_frame_t* tpf){
+    free(cur_thread->signal_handler_sp);
+
+    tpf->elr_el1 = cur_thread->sig_ctx.elr_el1;
+    tpf->sp_el0 = cur_thread->sig_ctx.sp_el0;
+    tpf->x30 = cur_thread->sig_ctx.x30;
+    tpf->spsr_el1 = cur_thread->sig_ctx.spsr_el1;
+
+    // enable_interrupt();
+
+    // print_str("\nReturn Address: ");
+    // print_hex(cur_thread->ctx.lr);
+    // print_str("\nFree signal_sp: ");
+    // print_hex(cur_thread->signal_handler_sp);
+    
+    load_ctx(&cur_thread->ctx);
+    // print_str("\nHere");
+    // schedule();
 }
 
 void fork_test(){
@@ -149,8 +193,8 @@ void fork_test(){
             print_hex(cur_sp);
 
             while(1){
-                delay(1000000);
-                print_str("\nAAAA");
+                // delay(1000000);
+                // print_str("\nAAAA");
             }
         }
         else{
@@ -171,8 +215,8 @@ void fork_test(){
             }
 
             while(1){
-                delay(1000000);
-                print_str("\nBBBB");
+                // delay(1000000);
+                // print_str("\nBBBB");
             }
         }
         exit();
@@ -186,9 +230,10 @@ void fork_test(){
         // exit();
 
         while(1){
-            delay(1000000);
-            print_str("\nCCCC");
+            // delay(1000000);
+            // print_str("\nCCCC");
         }
+
     }
 
 }
