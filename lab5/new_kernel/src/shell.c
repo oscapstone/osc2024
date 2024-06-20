@@ -11,6 +11,7 @@
 #include "sched.h"
 char input_buffer[CMD_MAX_LEN];
 
+extern thread_t *curr_thread;
 extern void el0_enter(void);
 extern char *_dtb;
 void *CPIO_DEFAULT_PLACE = (void *)(unsigned long)0x8000000;
@@ -26,8 +27,9 @@ struct CLI_CMDS cmd_list[11] = {
     {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS]", .func = shell_setTimeout},
     {.command = "2sTimer", .help = "set core timer interrupt every 2 second", .func = shell_2sTimer},
     {.command = "timer", .help = "turn on timer", .func = shell_timer},
-    {.command = "reboot", .help = "reboot the device", .func = shell_reboot},
     {.command = "ls", .help = "list directory contents", .func = shell_ls},
+    {.command = "ps", .help = "print all threads", .func = shell_ps},
+    {.command = "reboot", .help = "reboot the device", .func = shell_reboot},
     {.command = "malloc", .help = "test kmalloc", .func = shell_malloc},
     {.command = "pageDump", .help = "page Dump", .func = shell_page_dump},
     {.command = "pageAlloc", .help = "page Allocate", .func = shell_page_alloc},
@@ -522,4 +524,9 @@ void shell_cache_alloc()
     // cache_free(c_test1);
     // cache_free(c_test3);
     // cache_free(c_test2);
+}
+
+
+void shell_ps(){
+    dump_run_queue();
 }

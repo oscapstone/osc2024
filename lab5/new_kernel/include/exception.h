@@ -25,6 +25,7 @@ void irqtask_list_init();
 
 void lock();
 void unlock();
+void print_lock();
 
 typedef struct trapframe
 {

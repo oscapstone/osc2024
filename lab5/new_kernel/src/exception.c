@@ -38,6 +38,14 @@ void unlock()
         el1_interrupt_enable();
     }
 }
+
+void print_lock(){
+    uart_puts("[*] Locks : ");
+    put_int(lock_counter);
+    uart_puts("   ");
+
+}
+
 void irqtask_list_init()
 {
     task_list = kmalloc(sizeof(irqtask_t));
@@ -240,6 +248,8 @@ void el0_sync_router(trapframe_t *tpf)
     uart_puts("================= syscall no ");
     put_int(syscall_no);
     uart_puts(" ================= \r\n");
+    print_lock();
+
     // only work with GCC
     void *syscall_router[] = {&&__getpid_label,           // 0
                               &&__uart_read_label,        // 1

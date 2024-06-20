@@ -154,14 +154,10 @@ int kernel_fork()
     char *new_name = kmalloc(strlen(parent->name) + 1);
     thread_t *child = thread_create(parent->code, new_name);
     int64_t pid = child->pid;
-    //("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
     child->datasize = parent->datasize;
     child->status = THREAD_IS_READY;
-    // SIGNAL_COPY(child, parent);
 
     child->code = parent->code;
-    //("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
-    //("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
 
     MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
     MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
@@ -183,7 +179,7 @@ int kernel_fork()
     {
         //("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
         return 0;
-    }
+    }    
 }
 
 int kernel_exec_user_program(const char *program_name, char *const argv[])

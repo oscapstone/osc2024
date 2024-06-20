@@ -37,6 +37,7 @@ void shell_2sTimer();
 void shell_page_dump();
 void shell_page_alloc();
 void shell_cache_alloc();
+void shell_ps();
 
 
 

@@ -7,7 +7,8 @@
 volatile unsigned int __attribute__((aligned(16))) pt[64];
 
 int mbox_call(mbox_channel_type channel, unsigned int value)
-{
+{	
+	print_lock();
 	lock();
 	unsigned long r = (((unsigned long)((unsigned long)value) & ~0xF) | (channel & 0xF));
 	do
@@ -18,7 +19,8 @@ int mbox_call(mbox_channel_type channel, unsigned int value)
 			uart_hex(*MBOX_STATUS);
 	*MBOX_WRITE = r;
     uart_puts(" [+] in mbox call [-] ");
-
+    print_lock();
+	
 	while (1)
 	{
 		uart_puts("  BCM_ARM_VC_MS_EMPTY : ");
@@ -35,5 +37,7 @@ int mbox_call(mbox_channel_type channel, unsigned int value)
 			return ((unsigned int *)value)[1] == MBOX_REQUEST_SUCCEED;
 		}
 	}
-	unlcok();
+	unlock();
+    // print_lock();
+
 }

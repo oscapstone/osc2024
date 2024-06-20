@@ -98,6 +98,12 @@ void init_thread_sched()
     thread_t *idle_thread = init_idle_thread(idle, thread_name, 0, 0);
     set_current_thread_context(&(idle_thread->context));
     curr_thread = idle_thread;
+    //init process
+    thread_name = kmalloc(5);
+	strcpy(thread_name, "init");
+	thread_t * init_thread = thread_create(init,thread_name );
+	init_thread->datasize = 0x4000;
+	curr_thread = init_thread;
 
     // foo process
     thread_name = kmalloc(5);
@@ -112,12 +118,6 @@ void init_thread_sched()
     thread_t *foo2_thread = thread_create(foo,thread_name );
     foo2_thread->datasize = 0x4000;
 
-    //init process
-    thread_name = kmalloc(5);
-	strcpy(thread_name, "init");
-	thread_t * init_thread = thread_create(init,thread_name );
-	init_thread->datasize = 0x4000;
-	curr_thread = init_thread;
 
     // kernel shell process
     thread_name = kmalloc(7);
@@ -182,7 +182,7 @@ thread_t *thread_create(void *code,char *name )
     child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
     child->pid = new_pid;
     list_add_tail((list_head_t *)child, (list_head_t *)curr_thread->child_list);
-    list_add_tail((list_head_t *)t, run_queue);
+    list_add((list_head_t *)t, run_queue);
     uart_puts("[+] Add a thread \r\n");
 
     unlock();
@@ -245,7 +245,7 @@ void schedule_timer()
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t" : "=r"(cntfrq_el0));
     // 32 * default timer -> trigger next schedule timer
     // put_int(cntfrq_el0 / 0x10000000);
-    add_timer(schedule_timer, cntfrq_el0 >> 6, NULL);
+    add_timer(schedule_timer, cntfrq_el0 >> 5, NULL);
     need_to_schedule = 1;
 }
 void schedule()
@@ -258,14 +258,6 @@ void schedule()
     do
     {
         curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-        // put_int(prev_thread->pid);
-        // uart_puts("\r\n");
-        // uart_puts(prev_thread->name);
-        // uart_puts("\r\n");
-        // put_int(curr_thread->pid);
-        // uart_puts("\r\n");
-        // uart_puts(curr_thread->name);
-        // uart_puts("\r\n");
     } while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 
     curr_thread->status = THREAD_IS_RUNNING;
@@ -314,5 +306,47 @@ void thread_exit_by_pid(int64_t pid)
 	list_del_entry((list_head_t *)t); // remove from run queue, still in parent's child list
 	unlock();
 }
-
+void dump_thread_info(thread_t *thread)
+{
+	// printf("%s\t%d\t%d\t", thread->name, thread->pid, thread->ppid);
+	uart_puts("thread name : ");
+    uart_puts(thread->name);
+	uart_puts("  thread pid :  ");
+    put_int(thread->pid);
+	uart_puts(" thread ppid :  ");
+    put_int(thread->ppid);
+	switch (thread->status)
+	{
+	case THREAD_IS_RUNNING:
+		uart_puts(" is RUNNING\r\n");
+		break;
+	case THREAD_IS_READY:
+		uart_puts(" is READY\r\n");
+		break;
+	case THREAD_IS_BLOCKED:
+		uart_puts(" is BLOCKED\r\n");
+		break;
+	case THREAD_IS_ZOMBIE:
+		uart_puts(" is ZOMBIE\r\n");
+		break;
+	}
+}
+void recursion_run_queue(thread_t *root, int64_t level)
+{
+	for (int i = 0; i < level; i++)
+		uart_puts("   ");
+	uart_puts(" |---");
+	dump_thread_info(root);
+	list_head_t *curr;
+	list_for_each(curr, (list_head_t *)root->child_list)
+	{
+		// INFO("child: %d\n", child_node_to_thread((child_node_t *)curr)->pid);
+		recursion_run_queue(child_node_to_thread((child_node_t *)curr), level + 1);
+		// ERROR("OVER");
+	}
+}
+void dump_run_queue()
+{
+	recursion_run_queue(threads[1], 0);
+}
 
