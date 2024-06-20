@@ -136,7 +136,8 @@ void thread_exit()
 
 int exec_thread(char *data, unsigned int filesize)
 {
-    lock();
+    // lock();
+    el1_interrupt_disable();
     thread_t *t = thread_create(data);
     t->data = kmalloc(filesize);
     t->datasize = filesize;
@@ -155,7 +156,7 @@ int exec_thread(char *data, unsigned int filesize)
         "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process, user program stack pointer set to new stack.
         "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
         ::"r"(&t->context),"r"(t->context.lr), "r"(t->stack_allocated_base + USTACK_SIZE), "r"(t->context.sp));
-    unlock();
+    // unlock();
 
     asm("eret\n\t");
 

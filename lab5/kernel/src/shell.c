@@ -419,7 +419,6 @@ void fork_test()
     asm volatile("mov %0, sp" : "=r"(tpf));
     uart_sendline("Fork test, pid %d\n", getpid(tpf));
     // load_context(&main_thread->context);
-    // lock();
     int cnt = 1;
     int ret = 0;
     if ((ret = fork(tpf)) == 0)
@@ -456,11 +455,9 @@ void fork_test()
         uart_sendline("parent here, pid %d, child %d\n", getpid(tpf), ret);
         // schedule();
     }
-    // unlock();
 }
 void do_cmd_fork_tester()
 {
-        lock();
         thread_t *main_thread = thread_create(fork_test);        
         // eret to exception level 0
         // asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information

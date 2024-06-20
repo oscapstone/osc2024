@@ -5,6 +5,7 @@
 *kernel8.img
 *bootloader.img
 *user_proc.img
+*sdcard.img
 */kernel/*.cpio
 */bootloader/*.cpio
 */kernel/.vscode

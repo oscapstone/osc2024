@@ -48,6 +48,7 @@ size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size)
 //In this lab, you won’t have to deal with argument passing
 int exec(trapframe_t *tpf, const char *name, char *const argv[])
 {
+    lock();
     curr_thread->datasize = get_file_size((char*)name);
     char *file_start = get_file_start((char *)name);
     for (unsigned int i = 0; i < curr_thread->datasize;i++)
@@ -63,6 +64,7 @@ int exec(trapframe_t *tpf, const char *name, char *const argv[])
 
     tpf->elr_el1 = (unsigned long) curr_thread->data;
     tpf->sp_el0 = (unsigned long) curr_thread->stack_allocated_base + USTACK_SIZE;
+    unlock();
     tpf->x0 = 0;
     return 0;
 }
