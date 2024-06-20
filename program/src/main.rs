@@ -28,9 +28,18 @@ fn delay(n: u64) {
 }
 #[start]
 fn main(_: isize, _: *const *const u8) -> isize {
-    thread_test();
+    basic_test();
     syscall::exit(0);
     return 0;
+}
+
+#[allow(dead_code)]
+fn basic_test() {
+    // println("Hello, world!");
+    let pid = syscall::get_pid();
+    print("PID=");
+    print_hex(pid);
+    println("");
 }
 
 #[allow(dead_code)]
@@ -164,35 +173,6 @@ fn fork_test() {
         println("");
     }
 }
-
-// void fork_test(){
-//     printf("\nFork Test, pid %d\n", get_pid());
-//     int cnt = 1;
-//     int ret = 0;
-//     if ((ret = fork()) == 0) { // child
-//         long long cur_sp;
-//         asm volatile("mov %0, sp" : "=r"(cur_sp));
-//         printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", get_pid(), cnt, &cnt, cur_sp);
-//         ++cnt;
-
-//         if ((ret = fork()) != 0){
-//             asm volatile("mov %0, sp" : "=r"(cur_sp));
-//             printf("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", get_pid(), cnt, &cnt, cur_sp);
-//         }
-//         else{
-//             while (cnt < 5) {
-//                 asm volatile("mov %0, sp" : "=r"(cur_sp));
-//                 printf("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", get_pid(), cnt, &cnt, cur_sp);
-//                 delay(1000000);
-//                 ++cnt;
-//             }
-//         }
-//         exit();
-//     }
-//     else {
-//         printf("parent here, pid %d, child %d\n", get_pid(), ret);
-//     }
-// }
 
 #[repr(C, align(16))]
 pub struct MailBox {

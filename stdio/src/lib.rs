@@ -4,8 +4,8 @@ pub mod macros;
 use driver::uart;
 
 pub fn send(c: u8) {
-    // uart::send(c);
-    uart::send_async(c);
+    uart::send(c);
+    // uart::send_async(c);
 }
 
 fn _recv() -> u8 {
@@ -17,8 +17,8 @@ fn _recv() -> u8 {
 }
 
 pub fn recv() -> u8 {
-    // let c = uart::recv();
-    let c = _recv();
+    let c = uart::recv();
+    // let c = _recv();
     match c {
         b'\r' | b'\n' => {
             write(b"\r\n");

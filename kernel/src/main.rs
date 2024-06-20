@@ -11,6 +11,7 @@ mod commands;
 mod dtb;
 mod exception;
 mod kernel;
+mod mmu;
 mod panic;
 mod scheduler;
 mod syscall;
@@ -25,7 +26,7 @@ pub static mut INITRAMFS_ADDR: u32 = 0;
 fn main() -> ! {
     boot();
     println!("Kernel booted successfully!");
-    commands::execute(b"exec syscall.img");
+    // commands::execute(b"exec vm.img");
     kernel_shell();
 }
 
@@ -70,13 +71,17 @@ fn buddy_init() {
         BUDDY_SYSTEM.init();
     }
     buddy_reserve_memory();
-    allocator::utils::toggle_bump_verbose();
     unsafe {
+        BUDDY_SYSTEM.initialized = true;
         BUDDY_SYSTEM.print_info();
     }
 }
 
 fn buddy_reserve_memory() {
+    unsafe {
+        BUDDY_SYSTEM.reserve_by_addr_range(0x1000, 0x1_0000);
+    }
+
     let rsv_mem = dtb::get_reserved_memory();
     for (addr, size) in rsv_mem {
         unsafe {
