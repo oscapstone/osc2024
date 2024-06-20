@@ -17,7 +17,6 @@ mod scheduler;
 mod syscall;
 mod thread;
 mod timer;
-mod vfs;
 
 use allocator::buddy::BUDDY_SYSTEM;
 use stdio::{debug, gets, print, println};
