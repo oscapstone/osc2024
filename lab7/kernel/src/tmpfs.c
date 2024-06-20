@@ -166,6 +166,7 @@ long tmpfs_getsize(struct vnode *vd)
 // vnode operations
 int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name)
 {
+	DEBUG("tmpfs_lookup: %s\r\n", dir_node->name);
 	tmpfs_inode_t *dir_inode = (tmpfs_inode_t *)dir_node->internal;
 	list_head_t *curr;
 	vnode_t *child_vnode;

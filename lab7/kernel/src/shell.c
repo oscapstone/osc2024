@@ -416,7 +416,7 @@ int do_cmd_exec(int argc, char **argv)
         puts(": No such file or directory\r\n");
         return -1;
     }
-
+    INFO("exec: %s\r\n", filepath);
     if (kernel_fork() == 0)
     { // child process
         kernel_exec_user_program(filepath, NULL);

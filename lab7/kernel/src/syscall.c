@@ -475,6 +475,7 @@ int kernel_fork()
 	int64_t pid = child->pid;
 	DEBUG("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
 	child->datasize = parent->datasize;
+	child->pwd = parent->pwd;
 	child->status = THREAD_READY;
 	SIGNAL_COPY(child, parent);
 
