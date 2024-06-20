@@ -3,6 +3,7 @@ use crate::interrupt::timer::add_timer;
 use crate::println_polling;
 use alloc::string::String;
 use alloc::vec::Vec;
+use crate::fs::vfs::File;
 
 use crate::uart;
 
@@ -110,7 +111,6 @@ impl Registers {
         }
     }
 }
-#[derive(Debug)]
 pub struct Process {
     pub pid: usize,
     pub state: ProcessState,
@@ -118,6 +118,8 @@ pub struct Process {
     pub sp_el0: usize,
     proc_map: ProcessMemoryLayout,
     pub elr_el1: u64,
+    pub current_dir: String,
+    pub open_files: Vec<File>,
 }
 
 impl Process {
@@ -154,6 +156,8 @@ impl Process {
             sp_el0: proc_map.stack.start + proc_map.stack.size,
             proc_map,
             elr_el1: proc_mem_start as u64,
+            current_dir: "/".to_string(),
+            open_files: Vec::new(),
         }
     }
 
@@ -210,6 +214,8 @@ impl Process {
             sp_el0: new_sp,
             proc_map,
             elr_el1: self.elr_el1,
+            current_dir: self.current_dir.clone(),
+            open_files: Vec::new(),
         }
     }
 
