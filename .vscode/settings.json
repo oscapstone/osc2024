@@ -12,6 +12,8 @@
         "uart.h": "c",
         "exception.h": "c",
         "initrd.h": "c",
-        "shell.h": "c"
+        "shell.h": "c",
+        "vfs.h": "c",
+        "initramfs.h": "c"
     }
 }

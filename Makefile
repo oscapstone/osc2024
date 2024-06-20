@@ -57,10 +57,16 @@ kernel8.img: $(SRC_OBJS)
 
 clean:
 	rm -rf $(BUILD_DIR)/*
-	rm *.elf *.img *.o >/dev/null 2>/dev/null || true
+	rm *.elf kernel8.img *.o >/dev/null 2>/dev/null || true
 
 run: initramfs.cpio
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial stdio -drive file=test.dd,if=sd,format=raw
+	qemu-system-aarch64 -M raspi3b \
+	-kernel kernel8.img \
+	-initrd initramfs.cpio \
+	-dtb bcm2710-rpi-3-b-plus.dtb \
+	-serial null -serial stdio \
+	-drive if=sd,file=sd_sfn.img,format=raw
+	# -drive if=sd,file=sdcard.img,format=raw 
 
 dtb: initramfs.cpio
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -serial null -serial stdio

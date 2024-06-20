@@ -5,6 +5,8 @@
 #include "stddef.h"
 #include "tmpfs.h"
 #include "initramfs.h"
+#include "sd.h"
+#include "fat32.h"
 
 struct filesystem *filesystems[NR_FILESYSTEM];
 struct mount *rootfs;
@@ -23,7 +25,6 @@ int register_filesystem(struct filesystem *fs)
     printf("    [register_filesystem] No space for more filesystem\n");
     return 0; // 0 means error
 }
-
 
 /**
  * Mount given file system on target path (path should be absolute path).
@@ -193,8 +194,11 @@ int vfs_read(struct file* file, void* buf, size_t len)
 
 void rootfs_init(void)
 {
+    sd_init();
+
     register_filesystem(&tmpfs_filesystem);
     register_filesystem(&initramfs_filesystem);
+    register_filesystem(&fat32_filesystem);
 
     /* Setup "/" path to tmpfs file system manually */
     rootfs = (struct mount*) kmalloc(sizeof(struct mount));
@@ -203,6 +207,9 @@ void rootfs_init(void)
     /* Mount initramfs on path "/initramfs" */
     vfs_mkdir("/initramfs");
     vfs_mount("/initramfs", "initramfs");
+
+    vfs_mkdir("/boot");
+    vfs_mount("/boot", "fat32");
 }
 
 /**

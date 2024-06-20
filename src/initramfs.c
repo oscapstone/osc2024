@@ -4,6 +4,27 @@
 #include "string.h"
 #include "initrd.h"
 
+#ifndef DEFAULT_INODE_SIZE
+#define DEFAULT_INODE_SIZE             (4096)
+#endif
+
+int initramfs_setup_mount(struct filesystem* fs, struct mount* mount);
+
+int initramfs_write(struct file *file, const void *buf, size_t len);
+int initramfs_read(struct file *file, void *buf, size_t len);
+int initramfs_open(struct vnode *file_node, struct file **target);
+int initramfs_close(struct file *file);
+long initramfs_lseek64(struct file *file, long offset, int whence);
+
+int initramfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name);
+int initramfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name);
+int initramfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name);
+
+struct filesystem initramfs_filesystem = {
+    .name = "initramfs",
+    .setup_mount = initramfs_setup_mount,
+};
+
 struct file_operations initramfs_file_operations = {
     .write   = initramfs_write,
     .read    = initramfs_read,
@@ -16,11 +37,6 @@ struct vnode_operations initramfs_vnode_operations = {
     .lookup  = initramfs_lookup,
     .create  = initramfs_create,
     .mkdir   = initramfs_mkdir,
-};
-
-struct filesystem initramfs_filesystem = {
-    .name = "initramfs",
-    .setup_mount = initramfs_setup_mount,
 };
 
 int initramfs_setup_mount(struct filesystem* fs, struct mount* mount)

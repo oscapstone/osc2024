@@ -91,6 +91,6 @@ void do_shell(void)
 
 void do_user_image(void)
 {
-    initrd_usr_prog("vfs1.img");
+    initrd_usr_prog("vfs2.img");
     while (1);
 }

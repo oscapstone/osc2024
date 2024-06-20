@@ -28,11 +28,6 @@ void main()
     rootfs_init();
     sched_init();
 
-
-    // do_shell_user();
-    // printf("shouldn not be here\n");
-
-
     /* sched_init() will make kernel be the task 0, then run shell in user mode. So there should not be returned. */
     while (1);
 }

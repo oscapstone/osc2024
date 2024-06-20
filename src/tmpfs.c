@@ -3,6 +3,23 @@
 #include "mm.h"
 #include "string.h"
 
+int tmpfs_setup_mount(struct filesystem* fs, struct mount* mount);
+
+int tmpfs_write(struct file *file, const void *buf, size_t len);
+int tmpfs_read(struct file *file, void *buf, size_t len);
+int tmpfs_open(struct vnode *file_node, struct file **target);
+int tmpfs_close(struct file *file);
+long tmpfs_lseek64(struct file *file, long offset, int whence);
+
+int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name);
+int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name);
+int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name);
+
+struct filesystem tmpfs_filesystem = {
+    .name = "tmpfs",
+    .setup_mount = tmpfs_setup_mount,
+};
+
 struct file_operations tmpfs_file_operations = {
     .write   = tmpfs_write,
     .read    = tmpfs_read,
@@ -36,7 +53,6 @@ struct vnode *tmpfs_create_vnode(struct mount *mount, enum fsnode_type type)
 {
     struct vnode *node;
     struct tmpfs_inode *inode;
-    int i;
 
     /* Create vnode */
     node = (struct vnode*)kmalloc(sizeof(struct vnode));
@@ -48,19 +64,12 @@ struct vnode *tmpfs_create_vnode(struct mount *mount, enum fsnode_type type)
     inode = (struct tmpfs_inode *)kmalloc(sizeof(struct tmpfs_inode));
     memset(inode, 0, sizeof(struct tmpfs_inode));
     inode->type = type;
-    for (i = 0; i < MAX_DIR_NUM; i++)
-        inode->childs[i] = 0;
     inode->data = (char *)kmalloc(DEFAULT_INODE_SIZE);
 
     /* Assign inode to vnode */
     node->internal = inode;
     return node;
 }
-
-struct filesystem tmpfs_filesystem = {
-    .name = "tmpfs",
-    .setup_mount = tmpfs_setup_mount,
-};
 
 /* file write operation */
 int tmpfs_write(struct file *file, const void *buf, size_t len)
