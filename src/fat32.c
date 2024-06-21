@@ -6,12 +6,11 @@
 #include "mbr.h"
 #include "kernel.h"
 
-#define VFS_DEBUG
-
 struct fat_boot_sector fat_boot_sector;
 struct fat32_info fat_info;
 
 int fat32_setup_mount(struct filesystem* fs, struct mount* mount);
+void setup_fat32(struct fat32_inode *dir_inode);
 
 int fat32_write(struct file *file, const void *buf, size_t len);
 int fat32_read(struct file *file, void *buf, size_t len);
@@ -23,11 +22,10 @@ int fat32_lookup(struct vnode *dir_node, struct vnode **target, const char *comp
 int fat32_create(struct vnode *dir_node, struct vnode **target, const char *component_name);
 int fat32_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name);
 
-void setup_fat32(struct fat32_inode *dir_inode);
-
 unsigned int get_free_fat_cluster(void);
 unsigned int read_fat_entry(unsigned int cluster);
 void write_fat_table(unsigned int cluster, unsigned int value);
+
 void fat32_new_dir_entry(unsigned int dir_cluster, struct sfn_entry *new_entry);
 void print_fat32_dir(unsigned int cluster);
 
@@ -70,10 +68,9 @@ int fat32_setup_mount(struct filesystem* fs, struct mount* mount)
     /* Get the root directory and store at root_inode->data. */
     readblock(fat_info.data_region, buf);
     memcpy(root_inode->data, buf, BLOCK_SIZE);
-
+    /* Setup root directory cluster number. */
     root_inode->cluster = fat_boot_sector.root_dir;
     root_inode->abs_block_num = fat_info.data_region + (root_inode->cluster - 2) * fat_info.blocks_per_cluster;
-    print_fat32_dir(root_inode->cluster);
     /* Setup all the vnodes and inodes under FAT32 file system. */
     setup_fat32(root_inode);
 
@@ -400,8 +397,6 @@ void get_fat32_boot_sector(void)
     fat_info.sectors_per_fat = fat_boot_sector.sectors_per_fat;
     fat_info.sectors_per_cluster = fat_boot_sector.sectors_per_cluster;
     fat_info.file_name_type = mbr.partitions[0].partition_type; // 0xb for SFN, 0xc for LFN
-
-    print_fat32_boot_sector();
 }
 
 /**
@@ -548,7 +543,6 @@ void fat32_new_dir_entry(unsigned int dir_cluster, struct sfn_entry *new_entry)
                 continue;
             // memcpy(&dir_table[i], new_entry, sizeof(struct sfn_entry));
             dir_table[i] = *new_entry;
-            printf("new entry success\n");
             writeblock(fat_info.data_region + (cur_entry - 2) * fat_info.blocks_per_cluster, (char *)dir_table);
             return;
         }

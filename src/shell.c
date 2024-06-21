@@ -91,6 +91,6 @@ void do_shell(void)
 
 void do_user_image(void)
 {
-    initrd_usr_prog("vfs2.img");
+    initrd_usr_prog("vfs2.img"); // vm.img for Lab6, vfs2.img for Lab7 and Lab8.
     while (1);
 }
