@@ -29,9 +29,10 @@
 #define FAT_ENTRY_MASK                  (0x0fffffff) // mask for FAT32 entry in FAT table, upper 4 bits are reserved.
 #define FAT_ENTRY_INVALID               (0x0ffffff0) // invalid cluster entry: reserved cluster, bad cluster, end of file.
 #define FAT_ENTRY_FREE                  (0x0) // free cluster entry
-#define FAT_ENTRY_EOC                   (0x0fffffff) // end of cluster chain
+#define FAT_ENTRY_EOC                   (0x0ffffff8) // end of cluster chain
 
 #define FAT_ENTRY(cluster)              (cluster & FAT_ENTRY_MASK)
+#define IS_FAT_ENTRY_VALID(cluster)     (FAT_ENTRY(cluster) < FAT_ENTRY_INVALID && FAT_ENTRY(cluster) >= 2)
 
 #define DIR_ENTRY_SIZE                  (32) // size of directory entry in FAT32 direcotry table.
 

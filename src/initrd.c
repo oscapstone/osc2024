@@ -180,7 +180,7 @@ void initrd_usr_prog(char *cmd)
     if (prog != NULL)
         do_exec((void (*)(void)) prog, size);
     else
-        uart_puts("File not found\n");
+        printf("file %s not found\n", cmd);
     return;
 }
 

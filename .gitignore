@@ -1,6 +1,4 @@
 *.o
-*.img
 *.elf
-*.cpio
-*.txt
+objdumt.txt
 .DS_Store
