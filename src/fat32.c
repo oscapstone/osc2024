@@ -64,7 +64,6 @@ static void writeblock(uint32_t block_idx, void* buf) {
     memcpy((void*)cache_node->block, buf, BLOCK_SIZE);
   } else {
     cache_list_push_front(block_idx, buf, 1);
-    // sd_writeblock(block_idx, buf);
   }
 }
 
@@ -511,26 +510,26 @@ void fat32fs_init_metadata(mbr_partition_entry* partition_entry,
     fat32_md->n_sectors_per_fat = fat32_bootsec->n_sectors_per_fat;
     fat32_md->root_dir_cluster_idx = fat32_bootsec->root_dir_cluster_idx;
 
-    uart_send_string("fat32_md->fat_region_block_idx: ");
-    uart_int(fat32_md->fat_region_block_idx);
-    uart_send_string("\r\n");
-    uart_send_string("fat32_md->data_region_block_idx: ");
-    uart_int(fat32_md->data_region_block_idx);
-    uart_send_string("\r\n");
-    uart_send_string("fat32_md->n_fats: ");
-    uart_int(fat32_md->n_fats);
-    uart_send_string("\r\n");
-    uart_send_string("fat32_md->n_sectors: ");
-    uart_int(fat32_md->n_sectors);
-    uart_send_string("\r\n");
-    uart_send_string("fat32_md->n_sectors_per_cluster: ");
-    uart_int(fat32_md->n_sectors_per_cluster);
-    uart_send_string("\r\n");
-    uart_send_string("fat32_md->n_sectors_per_fat: ");
-    uart_int(fat32_md->n_sectors_per_fat);
-    uart_send_string("\r\n");
-    uart_send_string("fat32_md->root_dir_cluster_idx: ");
-    uart_int(fat32_md->root_dir_cluster_idx);
-    uart_send_string("\r\n");
+    // uart_send_string("fat32_md->fat_region_block_idx: ");
+    // uart_int(fat32_md->fat_region_block_idx);
+    // uart_send_string("\r\n");
+    // uart_send_string("fat32_md->data_region_block_idx: ");
+    // uart_int(fat32_md->data_region_block_idx);
+    // uart_send_string("\r\n");
+    // uart_send_string("fat32_md->n_fats: ");
+    // uart_int(fat32_md->n_fats);
+    // uart_send_string("\r\n");
+    // uart_send_string("fat32_md->n_sectors: ");
+    // uart_int(fat32_md->n_sectors);
+    // uart_send_string("\r\n");
+    // uart_send_string("fat32_md->n_sectors_per_cluster: ");
+    // uart_int(fat32_md->n_sectors_per_cluster);
+    // uart_send_string("\r\n");
+    // uart_send_string("fat32_md->n_sectors_per_fat: ");
+    // uart_int(fat32_md->n_sectors_per_fat);
+    // uart_send_string("\r\n");
+    // uart_send_string("fat32_md->root_dir_cluster_idx: ");
+    // uart_int(fat32_md->root_dir_cluster_idx);
+    // uart_send_string("\r\n");
   }
 }

@@ -125,11 +125,10 @@ static void segmentation_fault_handler(uint64_t vm_addr) {
 }
 
 void translation_fault_handler(uint64_t vm_addr) {
-#ifdef DEBUG
   uart_send_string("\r\n[Translation fault]: ");
   uart_hex_64(vm_addr);
   uart_send_string("\r\n");
-#endif
+
   uint32_t pgd_idx = (vm_addr & (PD_MASK << PGD_SHIFT)) >> PGD_SHIFT;
   uint32_t pud_idx = (vm_addr & (PD_MASK << PUD_SHIFT)) >> PUD_SHIFT;
   uint32_t pmd_idx = (vm_addr & (PD_MASK << PMD_SHIFT)) >> PMD_SHIFT;
@@ -152,11 +151,10 @@ void translation_fault_handler(uint64_t vm_addr) {
 }
 
 void permission_fault_handler(uint64_t vm_addr) {
-#ifdef DEBUG
   uart_send_string("\r\n[Permission fault]: ");
   uart_hex_64(vm_addr);
   uart_send_string("\r\n");
-#endif
+
   uint32_t pgd_idx = (vm_addr & (PD_MASK << PGD_SHIFT)) >> PGD_SHIFT;
   uint32_t pud_idx = (vm_addr & (PD_MASK << PUD_SHIFT)) >> PUD_SHIFT;
   uint32_t pmd_idx = (vm_addr & (PD_MASK << PMD_SHIFT)) >> PMD_SHIFT;
@@ -175,7 +173,7 @@ void permission_fault_handler(uint64_t vm_addr) {
 
       if (ptr->vm_type == CODE) {
         ptr->vm_prot |= VM_PROT_EXEC;
-      } else if (ptr->vm_type == STACK) {
+      } else if (ptr->vm_type == STACK || ptr->vm_type == DATA) {
         ptr->vm_prot |= VM_PROT_WRITE;
       } else {
         segmentation_fault_handler(vm_addr);
