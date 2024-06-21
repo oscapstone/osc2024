@@ -161,6 +161,7 @@ void signal_return(trapframe_t *tf)
 {
     unsigned long signal_ustack; // to get the start address of the user stack
     if (tf->sp_el0 % USTACK_SIZE != 0) {
+        // if the stack uses stack, return to the start of the stack
         signal_ustack = tf->sp_el0 - (tf->sp_el0 % USTACK_SIZE);
     }
     else {

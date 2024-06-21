@@ -69,7 +69,7 @@ thread_t *thread_create(void *start, int priority)
     r->used = 1;
     r->ustack_ptr = (char *)kmalloc(USTACK_SIZE);
     r->kstack_ptr = (char *)kmalloc(KSTACK_SIZE);
-    r->cpu_context.lr = (unsigned long)start;
+    r->cpu_context.lr = (unsigned long)start; // current thread's return address
     r->cpu_context.sp = (unsigned long)(r->ustack_ptr + USTACK_SIZE);
     r->cpu_context.fp = (unsigned long)(r->ustack_ptr + USTACK_SIZE);
 
@@ -190,11 +190,13 @@ int exec_thread(char *data, unsigned int datasize)
 
 void run_user_process()
 {
-    asm("msr tpidr_el1, %0\n\t"
-        "msr elr_el1, %1\n\t"
-        "msr spsr_el1, xzr\n\t"
+    asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+        "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
+        "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
         "msr sp_el0, %2\n\t"
         "mov sp, %3\n\t"
         "eret\n\t" ::"r"(&current->cpu_context),
-        "r"((unsigned long)current->data), "r"(current->cpu_context.sp), "r"(current->kstack_ptr + KSTACK_SIZE));
+        "r"((unsigned long)current->data), "r"(current->cpu_context.sp),
+        "r"(current->kstack_ptr + KSTACK_SIZE)); // sp is reference for the same el process. For example, el2 cannot use
+                                                 // sp_el2, it has to use sp to find its own stack.
 }

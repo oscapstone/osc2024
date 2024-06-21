@@ -82,6 +82,7 @@ void irq_handler_c(trapframe_t *tf)
             schedule();
     }
 
+    // only do signal handler when return to user mode (0b0000)
     if ((tf->spsr_el1 & 0b1100) == 0) {
         check_signal(tf);
     }
@@ -147,15 +148,12 @@ void el0_sync_router(trapframe_t *tf)
         kill(tf, (int)tf->regs[0]);
         break;
     case 8:
-        // uart_printf("syscall_no: %d\n", syscall_no);
         signal_register(tf->regs[0], (void (*)())tf->regs[1]);
         break;
     case 9:
-        // uart_printf("syscall_no: %d\n", syscall_no);
         signal_kill(tf->regs[0], tf->regs[1]);
         break;
     case 50:
-        // uart_printf("syscall_no: %d\n", syscall_no);
         signal_return(tf);
         break;
     default:
@@ -188,6 +186,7 @@ void el0_irq_router(trapframe_t *tf)
             schedule();
     }
 
+    // only do signal handler when return to user mode (0b0000)
     if ((tf->spsr_el1 & 0b1100) == 0) {
         check_signal(tf);
     }
