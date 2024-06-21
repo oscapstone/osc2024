@@ -17,12 +17,6 @@ void print_message(char* msg) {
 
 void add_timer(timer_callback cb, char* msg, uint32_t sec) {
   timer_event* new_event = (timer_event*)malloc(sizeof(timer_event));
-
-  if (!new_event) {
-    uart_puts("add_timer: fail due to memory allocation fail");
-    return;
-  }
-
   new_event->next = (timer_event*)0;
   new_event->func = cb;
   new_event->expire_time = get_timestamp() + sec;

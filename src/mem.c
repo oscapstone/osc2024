@@ -8,15 +8,17 @@
 
 extern char __kernel_start;
 extern char __kernel_end;
-extern char* cpio_start_addr;
-extern char* cpio_end_addr;
+extern char __pt_start;
+extern char __pt_end;
+extern void* cpio_start_addr;
+extern void* cpio_end_addr;
 extern void* _dtb_ptr_start;
 extern void* _dtb_ptr_end;
 extern void* startup_alloc_start;
 extern void* startup_alloc_end;
 
 static uint32_t chunk_sizes[] = {16, 32, 64, 128, 256, 512, 1024, 2048};
-static frame_entry* frame_entry_arr;
+frame_entry* frame_entry_arr;
 static frame_node* free_frame_lists[MAX_ORDER + 1];
 static chunk_entry* chunk_entry_arr;
 static chunk_node* free_chunk_lists[CHUNK_SIZE_TYPES];
@@ -25,7 +27,7 @@ static void* idx2address(uint32_t idx) {
   return (void*)(MEM_START + (uint64_t)idx * FRAME_SIZE);
 }
 
-static uint32_t address2idx(void* address) {
+uint32_t address2idx(void* address) {
   return ((uint64_t)address - MEM_START) / FRAME_SIZE;
 }
 
@@ -94,6 +96,7 @@ static void init_frames() {
     frame_entry_arr[i].order = 0;
     frame_entry_arr[i].status = FREE;
     frame_entry_arr[i].node = (frame_node*)0;
+    frame_entry_arr[i].ref_cnt = 0;
   }
 
   for (int i = 0; i <= MAX_ORDER; i++) {
@@ -167,6 +170,12 @@ void init_mem() {
   uart_send_string("kernel end address: ");
   uart_hex_64((uint64_t)&__kernel_end);
   uart_send_string("\r\n");
+  uart_send_string("page table start address: ");
+  uart_hex_64((uint64_t)&__pt_start);
+  uart_send_string("\r\n");
+  uart_send_string("page table end address: ");
+  uart_hex_64((uint64_t)&__pt_end);
+  uart_send_string("\r\n");
   uart_send_string("dtb start address: ");
   uart_hex_64((uint64_t)_dtb_ptr_start);
   uart_send_string("\r\n");
@@ -191,6 +200,7 @@ void init_mem() {
 
   mem_reserve(SPIN_TABLE_START, SPIN_TABLE_END);
   mem_reserve((void*)&__kernel_start, (void*)&__kernel_end);
+  mem_reserve((void*)&__pt_start, (void*)&__pt_end);
   mem_reserve(_dtb_ptr_start, _dtb_ptr_end);
   mem_reserve(cpio_start_addr, cpio_end_addr);
   mem_reserve(startup_alloc_start, startup_alloc_end);
@@ -223,7 +233,6 @@ static void* alloc_frame(uint32_t frame_num) {
 
   frame_entry_arr[frame_idx].status = ALLOCATED;
   frame_entry_arr[frame_idx].order = real_alloc_order;
-
   return idx2address(frame_idx);
 }
 
@@ -256,18 +265,18 @@ static void* alloc_chunk(uint32_t size) {
 }
 
 void* malloc(uint32_t size) {
-  void* ret = (void*)0;
+  void* addr = (void*)0;
   OS_enter_critical();
   if (size != 0) {
     if (size <= MAX_CHUNK_SIZE) {
-      ret = alloc_chunk(size);
+      addr = alloc_chunk(size);
     } else {
       uint32_t frame_num = (size + FRAME_SIZE - 1) / FRAME_SIZE;
-      ret = alloc_frame(frame_num);
+      addr = alloc_frame(frame_num);
     }
   }
   OS_exit_critical();
-  return ret;
+  return addr;
 }
 
 static void free_chunk(void* addr) {
@@ -326,3 +335,5 @@ void free(void* addr) {
   free_frame(addr);
   OS_exit_critical();
 }
+
+

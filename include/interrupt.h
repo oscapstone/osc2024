@@ -3,11 +3,13 @@
 
 #include "peripherals/mmio.h"
 #include "types.h"
+#include "vm_macro.h"
 
-#define CORE0_INT_SRC     \
-  ((volatile unsigned int \
-        *)0x40000060)  // The interrupt source register which
-                       // shows what the source bits are for IRQ/FIQ
+#define CORE0_INT_SRC             \
+  ((volatile unsigned int         \
+        *)((uint32_t)0x40000060 | \
+           KERNEL_VIRT_BASE))  // The interrupt source register which
+                               // shows what the source bits are for IRQ/FIQ
 #define CORE_INT_SRC_TIMER (1 << 1)
 #define CORE_INT_SRC_GPU (1 << 8)
 
@@ -21,7 +23,27 @@
                              0x0000B210))  // Set to enable IRQ source 31:0 (IRQ
                                            // table in the BCM2837 document)
 
-void el0_64_sync_interrupt_handler();
+#define EXCEPTION_SVC 0x15
+#define EXCEPTION_INSTR_ABORT_FR_LOW 0x20
+#define EXCEPTION_INSTR_ABORT_FR_SAME 0x21
+#define EXCEPTION_DATA_ABORT_FR_LOW 0x24
+#define EXCEPTION_DATA_ABORT_FR_SAME 0x25
+
+#define EC_MASK 0xFC000000
+#define EC_shift 26
+
+#define DFSC_MASK 0b111111
+#define TASNSLATION_FAULT_L0 0b000100
+#define TASNSLATION_FAULT_L1 0b000101
+#define TASNSLATION_FAULT_L2 0b000110
+#define TASNSLATION_FAULT_L3 0b000111
+#define PERMISSION_FAULT_L0 0b001100
+#define PERMISSION_FAULT_L1 0b001101
+#define PERMISSION_FAULT_L2 0b001110
+#define PERMISSION_FAULT_L3 0b001111
+
+void el1h_sync_handler();
+void el0_64_sync_handler();
 void irq_interrupt_handler();
 void fake_long_handler();
 void OS_enter_critical();

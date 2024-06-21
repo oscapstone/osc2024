@@ -13,6 +13,16 @@
 #define SYSCALL_KILL 7
 #define SYSCALL_SIG 8
 #define SYSCALL_SIGKILL 9
+#define SYSCALL_MMAP 10
+#define SYSCALL_OPEN 11
+#define SYSCALL_CLOSE 12
+#define SYSCALL_WRITE 13
+#define SYSCALL_READ 14
+#define SYSCALL_MKDIR 15
+#define SYSCALL_MOUNT 16
+#define SYSCALL_CHDIR 17
+#define SYSCALL_LSEEK64 18
+#define SYSCALL_SYNCFS 20
 #define SIG_RETURN 32
 #define SIG_NUM 32
 
@@ -41,6 +51,16 @@ uint32_t sys_mbox_call(trapframe_t *tpf, uint8_t ch, uint32_t *mbox);
 void kill(uint32_t pid);
 void signal(uint32_t SIGNAL, sig_handler_func handler);
 void sig_kill(uint32_t pid, uint32_t SIGNAL);
+void sys_mmap(trapframe_t *tpf);
+void sys_open(trapframe_t *tpf);
+void sys_close(trapframe_t *tpf);
+void sys_write(trapframe_t *tpf);
+void sys_read(trapframe_t *tpf);
+void sys_mkdir(trapframe_t *tpf);
+void sys_mount(trapframe_t *tpf);
+void sys_chdir(trapframe_t *tpf);
+void sys_lseek64(trapframe_t *tpf);
+void sys_syncfs(trapframe_t *tpf);
 void check_signal();
 void sig_kill_default_handler();
 void sig_return();

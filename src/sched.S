@@ -1,3 +1,5 @@
+#include "vm_macro.h"
+
 .global switch_to
 switch_to: 
     stp x19, x20, [x0, 16 * 0]  // save the callee-saved registers(x19-x28) and the stack pointer of the 
@@ -14,12 +16,19 @@ switch_to:
     ldp x23, x24, [x1, 16 * 2]
     ldp x25, x26, [x1, 16 * 3]
     ldp x27, x28, [x1, 16 * 4]
-    ldp fp, lr, [x1, 16 * 5]
-    ldr x9, [x1, 16 * 6]
+    ldp fp, lr,   [x1, 16 * 5]
+    ldp x9, x10,  [x1, 16 * 6]
     mov sp,  x9
     msr tpidr_el1, x1           // TPIDR_EL1: thread pointer/ID register for EL1, which provides a location where software executing at
                                 // EL1 can store thread identifying information for OS management purposes.
-    msr DAIFClr, 0xf            // enable interrupt after ctxsw                
+    dsb ish                     // ensure write has completed
+    msr ttbr0_el1, x10          // set pgd
+    tlbi vmalle1is              // invalidate all TLB entries
+    dsb ish                     // ensure completion of TLB invalidatation
+    isb                         // clear pipeline (synchronize context and ensure that no instructions are fetched using the old translation)
+  
+    ldr x1, =KERNEL_VIRT_BASE
+    orr lr, lr, x1
     ret  
 
 .global store_cpu_context
@@ -54,4 +63,13 @@ get_current_thread:
 .global set_current_thread
 set_current_thread:
     msr tpidr_el1, x0      
+    ret
+
+.global set_current_pgd
+set_current_pgd:
+    dsb ish             // (Data Synchronization Barrier, Inner Shareable domain) ensure write has completed
+    msr ttbr0_el1, x0   // set translation base address
+    tlbi vmalle1is      // invalidate all TLB entries
+    dsb ish             // ensure completion of TLB invalidatation
+    isb                 // clear pipeline
     ret

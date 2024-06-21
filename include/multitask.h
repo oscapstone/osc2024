@@ -3,10 +3,24 @@
 #include "multitask.h"
 #include "syscall_.h"
 #include "types.h"
-#define USR_STK_SZ (1 << 12)  // 4 KB
-#define KER_STK_SZ (1 << 12)  // 4 KB
+#include "vfs.h"
+#include "vm.h"
+#include "vm_macro.h"
+
+#define USR_STK_SZ (1 << 14)      // 16 KB
+#define USR_SIG_STK_SZ (1 << 12)  // 4 KB
+#define KER_STK_SZ (1 << 14)      // 16 KB
+
+#define USR_CODE_ADDR 0x0
+#define USR_STK_ADDR 0xffffffffb000
+#define USR_SIG_STK_ADDR 0xffffffff7000
+
+#define IO_PM_START_ADDR 0x3C000000
+#define IO_PM_END_ADDR 0x40000000
 
 #define PROC_NUM 1024
+
+#define current_thread get_current_thread()
 
 typedef void (*start_routine_t)(void);
 
@@ -36,17 +50,18 @@ typedef enum task_state_t {
   THREAD_FREE,
   THREAD_READY,
   THREAD_DEAD,
+  THREAD_RUNNING,
 } task_state_t;
 
-struct task_struct;
 typedef struct task_struct_node {
   struct task_struct_node *prev, *next;
   struct task_struct* ts;
 } task_struct_node;
 
 typedef struct task_struct {
-  uint64_t pid;
   cpu_context_t cpu_context;
+  mm_struct mm;
+  uint64_t pid;
   cpu_context_t sig_cpu_context;
   task_state_t status;
   task_struct_node ts_node;
@@ -58,6 +73,8 @@ typedef struct task_struct {
   sig_handler_func cur_exec_sig_func;
   sig_handler_t sig_handlers[SIG_NUM];
   uint8_t sig_is_check;
+  vnode* cwd;
+  file* fdtable[MAX_FD];
 } task_struct;
 
 typedef struct ts_que {
@@ -69,19 +86,22 @@ typedef struct ts_deque {
   task_struct_node* tail;
 } ts_deque;
 
-extern void switch_to(cpu_context_t* cur, cpu_context_t* to);
+extern void switch_to(task_struct* cur, task_struct* to);
 extern void store_cpu_context(cpu_context_t* context);
 extern void load_cpu_context(cpu_context_t* context);
-extern cpu_context_t* get_current_thread();
-extern void set_current_thread(cpu_context_t* cpu_context);
+extern task_struct* get_current_thread();
+extern void set_current_thread(task_struct* cpu_context);
+extern void set_current_pgd(uint64_t pgd);
 
 void ready_que_del_node(task_struct* thread);
 void ready_que_push_back(task_struct* thread);
 task_struct* ready_que_pop_front();
+void idle_task();
 void foo();
 void schedule();
 void init_sched_thread();
 task_struct* get_free_thread();
+void user_thread_exec();
 task_struct* thread_create(start_routine_t start_routine);
 void startup_thread_exec(char* file);
 void task_exit();

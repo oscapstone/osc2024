@@ -12,6 +12,7 @@
 #include "timer.h"
 #include "uart1.h"
 #include "utli.h"
+#include "vfs.h"
 
 enum shell_status { Read, Parse };
 enum ANSI_ESC { Unknown, CursorForward, CursorBackward, Delete };
@@ -132,6 +133,8 @@ void shell_controller(char *cmd) {
     uart_puts("demo_preempt: for the demo of the preemption mechanism");
     uart_puts(
         "demo_multi_threads: for the demo of the multiple threads execution");
+    uart_puts("lab7: lab7 demo");
+    uart_puts("lab8: lab8 demo");
   } else if (!strcmp(cmd, "hello")) {
     uart_puts("Hello World!");
   } else if (!strcmp(cmd, "ls")) {
@@ -141,8 +144,7 @@ void shell_controller(char *cmd) {
   } else if (!strcmp(cmd, "reboot")) {
     uart_puts("Rebooting...");
     reset(1000);
-    while (1)
-      ;  // hang until reboot
+    while (1);  // hang until reboot
   } else if (!strcmp(cmd, "poweroff")) {
     uart_puts("Shutdown the board...");
     power_off();
@@ -207,6 +209,75 @@ void shell_controller(char *cmd) {
     for (int i = 0; i < 3; ++i) {  // N should > 2
       thread_create(foo);
     }
+  } else if (!strcmp(cmd, "lab7")) {
+    vfs_mkdir("/hello");
+    vfs_mkdir("hi");
+    file *fp = vfs_open("hello", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+    fp = vfs_open("/hi", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+
+    vfs_mkdir("/hello/hello1");
+    fp = vfs_open("hello/hello1", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+    vfs_mkdir("/hello/hello2");
+    fp = vfs_open("/hello/hello2", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_puts("--------------");
+
+    fp = vfs_open("dev/uart", O_CREAT);
+    uart_puts(fp->vnode->name);
+    uart_hex_64((uint64_t)fp->vnode->f_ops->read);
+    uart_send_string("\r\n");
+    uart_hex_64((uint64_t)fp->f_ops->read);
+    uart_puts("\r\n--------------");
+  } else if (!strcmp(cmd, "lab8")) {
+    file *fp;
+    int32_t n;
+    char buf[512];
+
+    // memset((void *)buf, 0, 512);
+    // fp = vfs_open("/boot/FAT_R.TXT", 0);
+    // uart_puts("---------------------");
+    // n = vfs_read(fp, buf, 10);
+    // uart_int(n);
+    // uart_send_string(" ");
+    // uart_puts(buf);
+    // uart_puts("---------------------");
+    // vfs_close(fp);
+
+    memset((void *)buf, 0, 512);
+    fp = vfs_open("/boot/FAT_WS.TXT", O_CREAT);
+    uart_puts("---------------------");
+    n = vfs_read(fp, buf, 20);
+    uart_int(n);
+    uart_send_string(" ");
+    uart_puts(buf);
+    uart_puts("---------------------");
+    vfs_close(fp);
+
+    // memset((void *)buf, 0, 512);
+    // fp = vfs_open("/boot/FAT_WS.TXT", 0);
+    // strcpy(buf, "test55test");
+    // n = vfs_write(fp, buf, 20);
+    // uart_send_string("write ");
+    // uart_int(n);
+    // uart_send_string("\r\n");
+    // uart_puts("---------------------");
+    // vfs_close(fp);
+    // vfs_syncall();
+
+    // memset((void *)buf, 0, 512);
+    // fp = vfs_open("/boot/FAT_WS.TXT", 0);
+    // n = vfs_read(fp, buf, 20);
+    // uart_int(n);
+    // uart_send_string(" ");
+    // uart_puts(buf);
+    // uart_puts("---------------------");
+    // vfs_close(fp);
   } else {
     uart_puts("shell: unvaild command");
   }
