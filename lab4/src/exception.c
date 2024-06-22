@@ -5,6 +5,7 @@
 #include "../include/peripherals/mini_uart.h"
 #include "../include/task_queue.h"
 #include "../include/list.h"
+#include "../include/mem_utils.h"
 #include <stddef.h>
 
 void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
@@ -107,6 +108,7 @@ static void exec_task()
 		// nested_interrupted_task--;
 
 		list_del((struct list_head *)event);
+		chunk_free((char *)event);
 	}
 }
 
