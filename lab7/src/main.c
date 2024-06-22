@@ -8,6 +8,7 @@
 #include "syscall.h"
 #include "timer.h"
 #include "uart.h"
+#include "vfs.h"
 
 int main()
 {
@@ -19,6 +20,7 @@ int main()
     fdt_traverse(initrd_callback);
     mem_init();
     kthread_init();
+    vfs_init();
 
     /* Shell */
     uart_puts("Welcome!\n");
