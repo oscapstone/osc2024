@@ -63,6 +63,28 @@ void exception_entry(trap_frame *tf)
     case 9:
         sys_sigkill(tf->x0, tf->x1);
         break;
+    case 11:
+        tf->x0 = sys_open((const char *)tf->x0, tf->x1);
+        break;
+    case 12:
+        tf->x0 = sys_close(tf->x0);
+        break;
+    case 13:
+        tf->x0 = sys_write(tf->x0, (const void *)tf->x1, tf->x2);
+        break;
+    case 14:
+        tf->x0 = sys_read(tf->x0, (void *)tf->x1, tf->x2);
+        break;
+    case 15:
+        tf->x0 = sys_mkdir((const char *)tf->x0, tf->x1);
+        break;
+    case 16:
+        tf->x0 = sys_mount((const char *)tf->x0, (const char *)tf->x1,
+                           (const char *)tf->x2, tf->x3, (const void *)tf->x4);
+        break;
+    case 17:
+        tf->x0 = sys_chdir((const char *)tf->x0);
+        break;
     case 139:
         sys_sigreturn(tf);
         break;

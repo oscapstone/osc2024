@@ -101,8 +101,8 @@ struct task_struct *kthread_create(void (*func)())
     task->siglock = 0;
     task->pgd = kmalloc(PAGE_SIZE);
     memset(task->pgd, 0, PAGE_SIZE);
-    task->mmap = 0;
-    // TODO: Check VIRT_TO_PHYS needed or not
+    memset(task->cwd, 0, PATH_MAX);
+    memset(task->fdt, 0, sizeof(task->fdt));
     task->context.lr = (unsigned long)func;
     task->context.sp = (unsigned long)task->stack + STACK_SIZE;
     task->context.fp = (unsigned long)task->stack + STACK_SIZE;

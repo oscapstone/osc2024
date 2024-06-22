@@ -9,6 +9,7 @@
 #include "traps.h"
 #include "uart.h"
 #include "utils.h"
+#include "vfs.h"
 #include "vm.h"
 
 extern void child_ret_from_fork();
@@ -113,6 +114,67 @@ void sys_sigreturn(trap_frame *regs)
     kfree(get_current()->sig_stack);
     get_current()->siglock = 0;
     return; // Jump to the previous context (user program) after eret
+}
+
+int sys_open(const char *pathname, int flags)
+{
+    uart_puts("[SYS_OPEN] ");
+    uart_puts(pathname);
+    uart_puts("\n");
+    // TODO: Realpath
+    for (int i = 0; i < MAX_FD; i++)
+        if (!get_current()->fdt[i])
+            if (vfs_open(pathname, flags, &get_current()->fdt[i]) == 0)
+                return i;
+    return -1;
+}
+
+int sys_close(int fd)
+{
+    uart_puts("[SYS_CLOSE]\n");
+    if (get_current()->fdt[fd]) {
+        vfs_close(get_current()->fdt[fd]);
+        get_current()->fdt[fd] = 0;
+        return 0;
+    }
+    return -1;
+}
+
+long sys_write(int fd, const void *buf, unsigned long count)
+{
+    uart_puts("[SYS_WRITE]\n");
+    if (get_current()->fdt[fd])
+        return vfs_write(get_current()->fdt[fd], buf, count);
+    return -1;
+}
+
+long sys_read(int fd, void *buf, unsigned long count)
+{
+    uart_puts("[SYS_READ]\n");
+    if (get_current()->fdt[fd])
+        return vfs_read(get_current()->fdt[fd], buf, count);
+    return 0;
+}
+
+int sys_mkdir(const char *pathname, unsigned mode)
+{
+    uart_puts("[SYS_MKDIR]\n");
+    // TODO: Realpath
+    return vfs_mkdir(pathname);
+}
+
+int sys_mount(const char *src, const char *target, const char *filesystem,
+              unsigned long flags, const void *data)
+{
+    uart_puts("[SYS_MOUNT]\n");
+    // TODO: Realpath
+    return vfs_mount(target, filesystem);
+}
+
+int sys_chdir(const char *path)
+{
+    uart_puts("[SYS_CHDIR]\n");
+    return 0;
 }
 
 /* System Call Test */

@@ -3,9 +3,6 @@
 #include "string.h"
 #include "vfs_tmpfs.h"
 
-#define MAX_FS  16
-#define MAX_DEV 16
-
 struct mount *rootfs;
 struct filesystem fs_list[MAX_FS];
 struct file_operations dev_list[MAX_DEV];
@@ -132,12 +129,14 @@ int vfs_lookup(const char *pathname, struct vnode **target)
             component[idx++] = pathname[i];
         }
     }
-
     component[idx] = '\0';
-    if (node->v_ops->lookup(node, target, component) != 0)
+
+    if (node->v_ops->lookup(node, &node, component) != 0)
         return -1;
+
     while (node->mount)
         node = node->mount->root;
+
     *target = node;
     return 0;
 }

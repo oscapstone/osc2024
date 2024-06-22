@@ -3,6 +3,7 @@
 
 #include "signal.h"
 #include "traps.h"
+#include "vfs.h"
 #include "vm.h"
 
 #define STACK_SIZE 0x4000
@@ -40,7 +41,8 @@ struct task_struct {
     trap_frame sigframe;
     void *sig_stack;
     void *pgd;
-    struct vm_area_struct *mmap;
+    char cwd[PATH_MAX];
+    struct file *fdt[MAX_FD];
     struct task_struct *prev;
     struct task_struct *next;
 };

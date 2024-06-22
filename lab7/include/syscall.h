@@ -16,6 +16,14 @@ void sys_kill(int pid);
 void sys_signal(int signum, void (*handler)());
 void sys_sigkill(int pid, int sig);
 void sys_sigreturn(trap_frame *regs);
+int sys_open(const char *pathname, int flags);
+int sys_close(int fd);
+long sys_write(int fd, const void *buf, unsigned long count);
+long sys_read(int fd, void *buf, unsigned long count);
+int sys_mkdir(const char *pathname, unsigned mode);
+int sys_mount(const char *src, const char *target, const char *filesystem,
+              unsigned long flags, const void *data);
+int sys_chdir(const char *path);
 void run_fork_test();
 
 #endif // SYSCALL_H

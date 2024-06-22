@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 
+#define MAX_FS   16
+#define MAX_DEV  16
+#define MAX_FD   16
 #define PATH_MAX 255
 #define SEEK_SET 0
 #define O_CREAT  00000100

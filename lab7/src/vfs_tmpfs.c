@@ -31,6 +31,7 @@ struct vnode *tmpfs_create_vnode(enum fsnode_type type)
     memset(tmpfs_vnode, 0, sizeof(struct tmpfs_vnode));
     tmpfs_vnode->type = type;
     tmpfs_vnode->data = kmalloc(MAX_FILE_SIZE);
+    memset(tmpfs_vnode->data, 0, MAX_FILE_SIZE);
 
     struct vnode *vnode = kmalloc(sizeof(struct vnode));
     vnode->mount = 0;
@@ -75,7 +76,7 @@ int tmpfs_write(struct file *file, const void *buf, size_t len)
 {
     struct tmpfs_vnode *inode = file->vnode->internal;
     memcpy(inode->data + file->f_pos, buf, len);
-    file->f_ops += len;
+    file->f_pos += len;
     if (inode->datasize < file->f_pos)
         inode->datasize = file->f_pos;
     return len;
@@ -111,8 +112,10 @@ int tmpfs_create(struct vnode *dir_node, struct vnode **target,
                  const char *component_name)
 {
     struct tmpfs_vnode *inode = dir_node->internal;
+
     if (inode->type != FS_DIR)
         return -1; // Not a directory
+
     int idx = 0;
     while (idx < MAX_DIR_ENTRY && inode->entry[idx]) {
         struct tmpfs_vnode *entry_inode = inode->entry[idx]->internal;
