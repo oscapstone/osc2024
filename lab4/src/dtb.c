@@ -5,6 +5,8 @@
 #include "../include/cpio.h"
 
 char *cpio_addr;
+char *cpio_addr_end;
+char *dtb_end;
 
 /* Lexical structure */
 /* 1. FDT_BEGIN_NODE      0x00000001
@@ -72,16 +74,10 @@ static unsigned int iterate_nodes(fdt_callback cb, char *struct_ptr, char *strin
 uint32_t fdt_traverse(fdt_callback cb, uint64_t dtb_addr)
 {
     /* get the address of dtb and cast to pointert to fdt_header_t */
-    // uart_hex(dtb_addr);
-    // uart_send_string("\r\n");
-    // uart_send_string("debug1\r\n");
     char *dtb_ptr = (char *)dtb_addr;
     fdt_header_t *header = (fdt_header_t *)dtb_ptr;
 
     /* check the magic number is  0xd00dfeed or not */
-    // uart_send_string("0x");
-    // uart_hex((*(uint32_t *)dtb_ptr));
-    // uart_send_string("\r\n");
     if (dtb_get_uint32(&(header->magic)) != 0xd00dfeed)
         return  FDT_TRAVERSE_HEADER_ERROR;
 
@@ -98,4 +94,26 @@ void get_cpio_addr(uint32_t token, char *nameptr, char *dataptr, uint32_t v)
     if (token == FDT_PROP && my_strcmp((char *)nameptr, "linux,initrd-start") == 0) {
         cpio_addr = (char *)(uintptr_t)dtb_get_uint32((char *)dataptr);
     }
+}
+
+void get_cpio_end(uint32_t token, char *nameptr, char *dataptr, uint32_t v)
+{
+    if (token == FDT_PROP && my_strcmp((char *)nameptr, "linux,initrd-end") == 0) {
+        cpio_addr_end = (char *)(uintptr_t)dtb_get_uint32((char *)dataptr);
+    }
+}
+
+uint32_t set_dtb_end(uint64_t dtb_addr)
+{
+    /* get the address of dtb and cast to pointert to fdt_header_t */
+    char *dtb_ptr = (char *)dtb_addr;
+    fdt_header_t *header = (fdt_header_t *)dtb_ptr;
+
+    /* check the magic number is  0xd00dfeed or not */
+    if (dtb_get_uint32(&(header->magic)) != 0xd00dfeed)
+        return  FDT_TRAVERSE_HEADER_ERROR;
+    
+    /* set the dtb_end */
+    dtb_end = (char *)((uint64_t)dtb_addr + dtb_get_uint32((uint64_t) &(header->totalsize)));
+    return FDT_TRAVERSE_CORRECT;
 }

@@ -11,7 +11,7 @@
 
 #define BUFFER_SIZE 100
 
-extern char bss_end;
+extern char _end;
 
 void shell()
 {
@@ -96,9 +96,37 @@ void parse_command(char *buffer)
         uart_hex(my_strlen(tmp));
         uart_send_string("\r\n");
     } else if (my_strcmp(buffer, "heap_limit") == 0){ 
-        printf("heap_start: %8x\n", &bss_end);
+        printf("heap_start: %8x\n", &_end);
         printf("heap_end:   %8x\n", show_heap_end());
-    } else {
+    } else if (my_strcmp(buffer, "buddy_init") == 0) {
+        buddy_system_init();
+    } else if (my_strcmp(buffer, "page_alloc") == 0){
+        char tmp_buffer[BUFFER_SIZE];
+        uart_send_string("Enter number: ");
+        read_command(tmp_buffer);
+        char *page_addr = (char *)page_frame_allocate(my_stoi(tmp_buffer));
+        printf("The start address of page: %8x\n", page_addr);
+    } else if (my_strcmp(buffer, "page_free") == 0) {
+        char tmp_buffer[BUFFER_SIZE];
+        uart_send_string("Enter addr: ");
+        read_command(tmp_buffer);
+        page_frame_free((char *)hexstr2val(tmp_buffer, 8));
+    } else if (my_strcmp(buffer, "layout") == 0) {
+        show_memory_layout();
+    } else if (my_strcmp(buffer, "d_alloc_init") == 0) {
+        dynamic_allocator_init();
+    } else if (my_strcmp(buffer, "chunk_alloc") == 0) {
+        char tmp_buffer[BUFFER_SIZE];
+        uart_send_string("Enter number: (bytes)");
+        read_command(tmp_buffer);
+        char *addr = (char *)chunk_alloc(my_stoi(tmp_buffer));
+        printf("The start address of chunk: %8x\n", addr);
+    } else if (my_strcmp(buffer, "chunk_free") == 0) {
+        char tmp_buffer[BUFFER_SIZE];
+        uart_send_string("Enter addr: ");
+        read_command(tmp_buffer);
+        chunk_free((char *)hexstr2val(tmp_buffer, 8));
+    } else{
         uart_send_string("command ");
         uart_send_string(buffer);
         uart_send_string(" not found\r\n");
@@ -107,18 +135,25 @@ void parse_command(char *buffer)
 
 void help()
 {
-    uart_send_string("help        print all available commands\r\n");
-    uart_send_string("hello       print Hello World!\r\n");
-    uart_send_string("info        print board revision and memory base address and size\r\n");
-    uart_send_string("reboot      reboot the rpi3b+\r\n");
-    uart_send_string("ls          show all files in rootfs\r\n");
-    uart_send_string("cat         print out the content of specific file\r\n");
-    uart_send_string("load        load user program and execute\r\n");
-    uart_send_string("timer       add timer event\r\n");
-    uart_send_string("async       async uart demo\r\n");
-    uart_send_string("test        test the function my_atoi\r\n");
-    uart_send_string("malloc      try to print the content of malloc\r\n");
-    uart_send_string("heap_limit  try to print out the limit of heap\r\n");
+    uart_send_string("help          print all available commands\r\n");
+    uart_send_string("hello         print Hello World!\r\n");
+    uart_send_string("info          print board revision and memory base address and size\r\n");
+    uart_send_string("reboot        reboot the rpi3b+\r\n");
+    uart_send_string("ls            show all files in rootfs\r\n");
+    uart_send_string("cat           print out the content of specific file\r\n");
+    uart_send_string("load          load user program and execute\r\n");
+    uart_send_string("timer         add timer event\r\n");
+    uart_send_string("async         async uart demo\r\n");
+    uart_send_string("test          test the function my_atoi\r\n");
+    uart_send_string("malloc        try to print the content of malloc\r\n");
+    uart_send_string("heap_limit    try to print out the limit of heap\r\n");
+    uart_send_string("buddy_init    try to initialize the buddy system\r\n");
+    uart_send_string("page_alloc    allocate the page by the number (KB)\r\n");
+    uart_send_string("page_free     free the page by its address\r\n");
+    uart_send_string("layout        show memory layout of buddy system\r\n");
+    uart_send_string("d_alloc_init  dynamic allocator init\r\n");
+    uart_send_string("chunk_alloc   allocate chunk to user\r\n");
+    uart_send_string("chunk_free    free the chunk\r\n");
 }
 
 void hello()

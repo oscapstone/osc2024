@@ -51,5 +51,7 @@ typedef void (*fdt_callback)(uint32_t token, char *nameptr, char *dataptr, uint3
 
 uint32_t fdt_traverse(fdt_callback cb, uint64_t dtb_addr);
 void get_cpio_addr(uint32_t token, char *nameptr, char *dataptr, uint32_t v);
+void get_cpio_end(uint32_t token, char *nameptr, char *dataptr, uint32_t v);
+uint32_t set_dtb_end(uint64_t dtb_addr);
 
 #endif

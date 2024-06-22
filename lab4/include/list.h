@@ -1,3 +1,4 @@
+#include "mini_uart.h"
 struct list_head {
     struct list_head *prev, *next;
 };
@@ -15,7 +16,7 @@ static inline void INIT_LIST_HEAD(struct list_head *head)
 }
 
 /*
- * list_add() - add a node in doubly linked list
+ * list_add() - add a node in the head of doubly linked list
  * @node: pointer to added node
  * @prev: pointer to previous node
  * @next: pointer to next node
@@ -26,6 +27,20 @@ static inline void list_add(struct list_head *node, struct list_head *prev, stru
     next->prev = node;
     node->prev = prev;
     node->next = next;
+}
+
+/*
+ * list_add_tail() - add a node in the tail of doubly linked list
+ * @node: pointer to added node
+ * @prev: pointer to previous node
+ * @next: pointer to next node
+ */
+
+static inline void list_add_tail(struct list_head *node, struct list_head *head)
+{
+    // printf("node: %8x\n", node);
+    // printf("head: %8x\n", head);
+    list_add(node, head->prev, head);
 }
 
 /*

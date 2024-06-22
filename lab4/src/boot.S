@@ -36,7 +36,8 @@ master:
     mov     x2, x12
     mov     x3, x13
 	
-	mov	sp, #LOW_MEMORY
+    ldr x4, =_start
+	mov	sp, x4
 	bl	kernel_main
 	b 	proc_hang		// should never come here
 
