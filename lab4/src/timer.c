@@ -63,7 +63,7 @@ struct timer_event {
 
 static struct timer_event *timer_event_create(timer_event_call_back cb, char *msg, uint64_t duration)
 {
-    struct timer_event *event = malloc(sizeof(struct timer_event));
+    struct timer_event *event = chunk_alloc(sizeof(struct timer_event));
     INIT_LIST_HEAD(&event->head);
     event->command_time = get_current_time();
     event->expired_time = event->command_time + duration;
@@ -149,6 +149,7 @@ void timer_interrupt_handler()
     uart_send_string(" s\r\n");
 
     list_del((struct list_head *)event);
+    chunk_free((char *)event);
 
     if (!list_is_empty(&timer_event_queue)) {
         struct timer_event *first = (struct timer_event *) timer_event_queue.next;

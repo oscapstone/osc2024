@@ -66,7 +66,7 @@ struct task_event {
 
 static struct task_event *task_event_create(task_callback cb, int priority)
 {
-	struct task_event *event = malloc(sizeof(struct task_event));
+	struct task_event *event = chunk_alloc(sizeof(struct task_event));
 	event->cb = cb;
 	event->priority = priority;
 	return event;
