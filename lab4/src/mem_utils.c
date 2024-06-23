@@ -556,15 +556,17 @@ void *chunk_alloc(uint32_t size)
 {
     /* 1. find the chunk_list index */
     uint32_t size_index = find_chunk_index(size);
+    size = 16 * pow2(size_index);
+    printf("Corresponding size: %d\n");
     printf("index of chunk list: %d\n", size_index);
 
     /* 2. check the chunk_list_start[size_index].head if it is empty */
     if (list_is_empty(&chunk_list_start[size_index].head)) {
-        printf("Need to allocate a new page\n");
+        // printf("Need to allocate a new page\n");
 
         void *page_address = page_frame_allocate(4);
         uint32_t frame_index = count_frame_index(page_address);
-        printf("Allocate page number %d\n", frame_index);
+        // printf("Allocate page number %d\n", frame_index);
         array_start[frame_index].size = size;
 
         for (uint32_t i = 0; i < PAGE_SIZE; i += size) {
@@ -584,11 +586,11 @@ void chunk_free(char *addr)
 {
     /* 1. search the page index */
     uint32_t page_index = count_frame_index(addr);
-    printf("address is in page number %d\n", page_index);
+    // printf("address is in page number %d\n", page_index);
 
     /* 2. find the index of chunk list through "size" in frame array */
     uint32_t size = array_start[page_index].size;
-    printf("Corresponding size: %d\n", size);
+    // printf("Corresponding size: %d\n", size);
     uint32_t size_index = find_chunk_index(size);
 
     /* 3. free the space into the chunk_list */
