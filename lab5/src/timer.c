@@ -128,13 +128,8 @@ void timer_interrupt_handler()
     uart_send_string("In timer interrupt handler: \r\n");
 
     struct timer_event *event = (struct timer_event *) timer_event_queue.next;
-
-    // for (int i = 0; i < 15; i++) {
-    //     uart_send('a');
-    //     delay(1 << 28);
-    // }
-
-    // uart_send_string("\r\n");
+    
+    list_del((struct list_head *)event);
 
     // add delay time
     delay((uint64_t)1 << 22);
@@ -148,7 +143,6 @@ void timer_interrupt_handler()
     uart_hex(get_current_time());
     uart_send_string(" s\r\n");
 
-    list_del((struct list_head *)event);
     chunk_free((char *)event);
 
     if (!list_is_empty(&timer_event_queue)) {

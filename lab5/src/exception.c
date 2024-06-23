@@ -95,6 +95,7 @@ static void exec_task()
 {
 	if (!list_is_empty((struct list_head *)&task_queue)) {
 		struct task_event *event = (struct task_event *)task_queue.next;
+				list_del((struct list_head *)event);
 		// nested_interrupted_task++;
 		// uart_send_string("# of nested interrupted event: ");
 		// uart_hex(nested_interrupted_task);
@@ -106,8 +107,6 @@ static void exec_task()
 		// uart_hex(nested_interrupted_task);
 		// uart_send_string("\r\n");
 		// nested_interrupted_task--;
-
-		list_del((struct list_head *)event);
 		chunk_free((char *)event);
 	}
 }
