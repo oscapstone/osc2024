@@ -36,7 +36,7 @@ def read_line(s):
         received_string += c
     return received_string
 
-size = os.stat("../shell/shell_kernel.img").st_size
+size = os.stat("/home/laxiflora/Desktop/osc2024/lab_4/shell/shell_kernel.img").st_size
 print(size)
 # size = os.stat("./kernel8.img").st_size
 
@@ -51,7 +51,7 @@ while s.in_waiting > 0:
     received_content = read_line(s)
     print(received_content)
 
-with open("../shell/shell_kernel.img", "rb") as f:
+with open("/home/laxiflora/Desktop/osc2024/lab_4/shell/shell_kernel.img", "rb") as f:
     sent_size = 0  # Initialize size counter
 
     byte = f.read(1)  # Read the first byte

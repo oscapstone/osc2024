@@ -47,11 +47,9 @@ void init_order_list(){
 
 void print_order_list(OrderList* list){
     Node* cur = list->root;
+    uart_puts("address : \n");
     while(cur != NULL){
-        uart_puts("address ");
         uart_hex(cur->address);
-        uart_puts("\n");
-        uart_hex(cur->page_index);
         uart_puts("\n");
         cur = cur->next;
         
@@ -97,6 +95,7 @@ Node* get_buddy(OrderList* target, int target_page_index){
         cur = cur->next;
     }
     uart_puts("[Assertion Error] buddy not found\n");
+    print_order_list(target);
     return NULL;
 }
 
@@ -122,18 +121,19 @@ void free_page(void* to_free){
 
     if(the_array[next_block_index].available == FREE){
         // debug: print the address of next page of freed block
-        uart_puts("Accessing location: 0x");
-        uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*next_block_index));
-        uart_puts("\n");
+        // uart_puts("Accessing location: 0x");
+        // uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*next_block_index));
+        // uart_puts("\n");
 
         // same size, can merge
-        if(the_array[next_block_index].block_size == free_block_size && free_block_size!=FREE){
+        if(the_array[next_block_index].block_size == free_block_size && the_array[next_block_index].available==FREE){
             int order =0, block_size = free_block_size;
             // get sqrt(2) of block_size to obtain order
-            while(block_size > 2){
+            while(block_size > 0){
                 order++;
                 block_size/=2;
             }
+    print_order_list(&order_list[order]);
             Node* buddy = get_buddy(&order_list[order], next_block_index);
             if(buddy != NULL){
                 Node* new_node = simple_malloc(sizeof(Node));
@@ -161,7 +161,7 @@ void free_page(void* to_free){
         new_node->page_index = page_index;
         int order =0, block_size = free_block_size;
         // get sqrt(2) of block_size to obtain order
-        while(block_size > 2){
+        while(block_size > 0){
             order++;
             block_size/=2;
         }
@@ -241,8 +241,8 @@ unsigned char* malloc_page(int request_page_num){
 
 void list_push_back(Node* to_push, int order){
     OrderList* target_list = &(order_list[order]);
-    if(order_list[order].root == NULL){
-        order_list[order].root = to_push;
+    if(target_list->root == NULL){
+        target_list->root = to_push;
     }
     else{
         Node* current = target_list->root;
@@ -251,4 +251,5 @@ void list_push_back(Node* to_push, int order){
         }
         current->next = to_push;
     }
+    //print_order_list(target_list);
 }

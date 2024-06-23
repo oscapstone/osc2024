@@ -53,31 +53,26 @@ void main(int argc, char* argv[]){
    init_buddy_system();
    init_dynamic_allocator();
    // char* my_array = malloc_page(1);
-      char* my_variablwe = (char*)malloc(1023);
+   //   char* my_variablwe = (char*)malloc(1023);
             // char* my_varieable = (char*)malloc(1023);
             //       char* wmy_variable = (char*)malloc(1023);
             //             char* my_vrariable = (char*)malloc(1023);
             //                   char* my_variatble = (char*)malloc(1023);
-   free(my_variablwe);
-   my_variablwe = (char*)malloc(7642);
-   free(my_variablwe);
-      my_variablwe = (char*)malloc(1023);
-   free(my_variablwe);
-      my_variablwe = (char*)malloc(1023);
-   free(my_variablwe);
+   // free(my_variablwe);
+   // my_variablwe = (char*)malloc(7642);
+   // free(my_variablwe);
+   //    my_variablwe = (char*)malloc(1023);
+   // free(my_variablwe);
+   //    my_variablwe = (char*)malloc(1023);
+   // free(my_variablwe);
    // free(my_variatble);
-   // char* my_variable = (char*)malloc(12);
-   //    char* my_variable2 = (char*)malloc(12);
-   //       char* my_variable3 = (char*)malloc(12);
-   //          char* my_variable4 = (char*)malloc(12);
-   //             char* my_variable5 = (char*)malloc(12);
-   //                char* my_variable6= (char*)malloc(12);
-   //                   char* my_variable7 = (char*)malloc(12);
+
+   // char* my_array = malloc_page(3);
    // char* my_array2 = malloc_page(3);
    // char* my_array3 = malloc_page(3);
    // char* my_array4 = malloc_page(3);
    // char* my_array5 = malloc_page(3);
-   //char* my_array6 = malloc_page(3);
+   // char* my_array6 = malloc_page(3);
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';
@@ -119,7 +114,6 @@ void main(int argc, char* argv[]){
          // my_array3 = malloc_page(3);
          // my_array4 = malloc_page(3);
          // my_array5 = malloc_page(3);
-
       }
       else if(strcmp(command, "ls") == 0){
          cpio_ls();

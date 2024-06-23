@@ -42,9 +42,9 @@ void init_dynamic_allocator(){
 int free(void* to_free){
     int pool[] = POOL;
     int part[] = PARTITION;
-    // uart_puts("address 0x");
-    // uart_hex(to_free);
-    // uart_puts("\n");
+    uart_puts("address 0x");
+    uart_hex(to_free);
+    uart_puts("\n");
     unsigned int* prefix_address = ((unsigned int)to_free & (unsigned int)0xFFFFF000);
     unsigned int* offset = ((unsigned int)to_free & (unsigned int)0x00000FFF);
     for(int i=0;i<dynamic_allocator.allocated_page_num;i++){
