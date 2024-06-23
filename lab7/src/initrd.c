@@ -8,6 +8,7 @@
 #include "string.h"
 #include "uart.h"
 #include "utils.h"
+#include "vfs.h"
 
 // TODO: Convert to virtual memory address
 void *RAMFS_BASE = (void *)0x8000000;
@@ -106,6 +107,10 @@ void initrd_exec(const char *target)
                       (unsigned long)VIRT_TO_PHYS(task->user_stack), 0);
             map_pages((unsigned long)task->pgd, 0x3C000000, 0x1000000,
                       0x3C000000, 0);
+
+            vfs_open("/dev/uart", 0, &task->fdt[0]); // stdin
+            vfs_open("/dev/uart", 0, &task->fdt[1]); // stdout
+            vfs_open("/dev/uart", 0, &task->fdt[2]); // stderr
 
             asm volatile("dsb ish");
             asm volatile("msr ttbr0_el1, %0" ::"r"(VIRT_TO_PHYS(task->pgd)));

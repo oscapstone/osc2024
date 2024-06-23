@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "dev_uart.h"
 #include "mm.h"
 #include "sched.h"
 #include "string.h"
@@ -18,6 +19,9 @@ void vfs_init()
     vfs_mkdir("/initramfs");
     ramfs_register();
     vfs_mount("/initramfs", "initramfs");
+
+    vfs_mkdir("/dev");
+    vfs_mknod("/dev/uart", dev_uart_register());
 }
 
 int register_filesystem(struct filesystem *fs)
@@ -26,6 +30,17 @@ int register_filesystem(struct filesystem *fs)
         if (!fs_list[i].name) {
             fs_list[i].name = fs->name;
             fs_list[i].setup_mount = fs->setup_mount;
+            return i;
+        }
+    }
+    return -1;
+}
+
+int register_device(struct file_operations *f_ops)
+{
+    for (int i = 0; i < MAX_DEV; i++) {
+        if (!dev_list[i].open) {
+            dev_list[i] = *f_ops;
             return i;
         }
     }
@@ -144,6 +159,15 @@ int vfs_lookup(const char *pathname, struct vnode **target)
         node = node->mount->root;
 
     *target = node;
+    return 0;
+}
+
+int vfs_mknod(char *pathname, int id)
+{
+    struct file *file;
+    vfs_open(pathname, O_CREAT, &file);
+    file->vnode->f_ops = &dev_list[id];
+    vfs_close(file);
     return 0;
 }
 
