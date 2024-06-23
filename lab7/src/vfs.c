@@ -2,6 +2,7 @@
 #include "mm.h"
 #include "sched.h"
 #include "string.h"
+#include "vfs_ramfs.h"
 #include "vfs_tmpfs.h"
 
 struct mount *rootfs;
@@ -11,8 +12,12 @@ struct file_operations dev_list[MAX_DEV];
 void vfs_init()
 {
     rootfs = (struct mount *)kmalloc(sizeof(struct mount));
-    int idx = register_tmpfs();
+    int idx = tmpfs_register();
     fs_list[idx].setup_mount(&fs_list[idx], rootfs);
+
+    vfs_mkdir("/initramfs");
+    ramfs_register();
+    vfs_mount("/initramfs", "initramfs");
 }
 
 int register_filesystem(struct filesystem *fs)
@@ -145,12 +150,15 @@ int vfs_lookup(const char *pathname, struct vnode **target)
 char *realpath(const char *path, char *resolved_path)
 {
     char *cwd = get_current()->cwd;
+
     if (path[0] == '.' && path[1] == '/') {
         strncpy(resolved_path, cwd, strlen(cwd));
         int is_root = (strlen(cwd) == 1 && cwd[0] == '/');
         strcat(resolved_path, is_root ? path + 2 : path + 1);
         return resolved_path;
-    } else if (path[0] == '.' && path[1] == '.') {
+    }
+
+    if (path[0] == '.' && path[1] == '.') {
         int len = strlen(cwd);
         for (int i = len - 1; i >= 0; i--) {
             if (cwd[i] == '/') {
@@ -160,8 +168,8 @@ char *realpath(const char *path, char *resolved_path)
                 return resolved_path;
             }
         }
-    } else {
-        strncpy(resolved_path, path, strlen(path));
-        return resolved_path;
     }
+
+    strncpy(resolved_path, path, strlen(path));
+    return resolved_path;
 }

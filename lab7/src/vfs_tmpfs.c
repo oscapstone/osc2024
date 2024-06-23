@@ -17,7 +17,7 @@ struct vnode_operations tmpfs_vnode_ops = {
     .mkdir = tmpfs_mkdir,
 };
 
-int register_tmpfs()
+int tmpfs_register()
 {
     struct filesystem fs;
     fs.name = "tmpfs";
@@ -30,8 +30,8 @@ struct vnode *tmpfs_create_vnode(enum fsnode_type type)
     struct tmpfs_vnode *tmpfs_vnode = kmalloc(sizeof(struct tmpfs_vnode));
     memset(tmpfs_vnode, 0, sizeof(struct tmpfs_vnode));
     tmpfs_vnode->type = type;
-    tmpfs_vnode->data = kmalloc(MAX_FILE_SIZE);
-    memset(tmpfs_vnode->data, 0, MAX_FILE_SIZE);
+    tmpfs_vnode->data = kmalloc(TMPFS_MAX_FILE_SIZE);
+    memset(tmpfs_vnode->data, 0, TMPFS_MAX_FILE_SIZE);
 
     struct vnode *vnode = kmalloc(sizeof(struct vnode));
     vnode->mount = 0;
@@ -94,14 +94,13 @@ long tmpfs_lseek64(struct file *file, long offset, int whence)
 int tmpfs_lookup(struct vnode *dir_node, struct vnode **target,
                  const char *component_name)
 {
-    struct tmpfs_vnode *inode = dir_node->internal;
-    for (int i = 0; i < MAX_DIR_ENTRY; i++) {
-        struct vnode *entry = inode->entry[i];
-        if (!entry)
+    struct tmpfs_vnode *dentry = dir_node->internal;
+    for (int i = 0; i < TMPFS_MAX_DIR_ENTRY; i++) {
+        if (!dentry->entry[i])
             return -1;
-        struct tmpfs_vnode *entry_inode = entry->internal;
-        if (!strcmp(entry_inode->name, component_name)) {
-            *target = entry;
+        struct tmpfs_vnode *inode = dentry->entry[i]->internal;
+        if (!strcmp(inode->name, component_name)) {
+            *target = dentry->entry[i];
             return 0;
         }
     }
@@ -117,7 +116,7 @@ int tmpfs_create(struct vnode *dir_node, struct vnode **target,
         return -1; // Not a directory
 
     int idx = 0;
-    while (idx < MAX_DIR_ENTRY && inode->entry[idx]) {
+    while (idx < TMPFS_MAX_DIR_ENTRY && inode->entry[idx]) {
         struct tmpfs_vnode *entry_inode = inode->entry[idx]->internal;
         if (!strcmp(entry_inode->name, component_name))
             return -1; // File exists
@@ -139,7 +138,7 @@ int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target,
 {
     struct tmpfs_vnode *inode = dir_node->internal;
     int idx = 0;
-    while (idx < MAX_DIR_ENTRY && inode->entry[idx])
+    while (idx < TMPFS_MAX_DIR_ENTRY && inode->entry[idx])
         idx++;
 
     struct vnode *vnode = tmpfs_create_vnode(FS_DIR);

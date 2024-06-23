@@ -19,6 +19,7 @@ typedef struct {
     char c_check[8];
 } cpio_t;
 
+int hextoi(char *s, int n);
 void initrd_list();
 void initrd_cat(const char *target);
 void initrd_exec(const char *target);

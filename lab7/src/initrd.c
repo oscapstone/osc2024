@@ -10,12 +10,12 @@
 #include "utils.h"
 
 // TODO: Convert to virtual memory address
-static void *RAMFS_BASE = (void *)0x8000000;
+void *RAMFS_BASE = (void *)0x8000000;
 
 // Convert hexadecimal string to int
 // @param s: hexadecimal string
 // @param n: string length
-static int hextoi(char *s, int n)
+int hextoi(char *s, int n)
 {
     int r = 0;
     while (n-- > 0) {
