@@ -122,9 +122,9 @@ void free_page(void* to_free){
 
     if(the_array[next_block_index].available == FREE){
         // debug: print the address of next page of freed block
-        // uart_puts("Accessing location: 0x");
-        // uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*next_block_index));
-        // uart_puts("\n");
+        uart_puts("Accessing location: 0x");
+        uart_hex((unsigned int)HEAP_START_ADDRESS+(PAGE_SIZE*next_block_index));
+        uart_puts("\n");
 
         // same size, can merge
         if(the_array[next_block_index].block_size == free_block_size && free_block_size!=FREE){
