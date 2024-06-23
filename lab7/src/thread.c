@@ -171,11 +171,15 @@ thread_t* create_thread(void (*func)(void)) {
     t -> prev = 0;
     t -> next = 0;
 
-    t -> max_fd = -1;
     t -> working_dir = rootfs -> root;
     for(int i=0;i<THREAD_MAX_FD;i++) {
         t -> fds[i].vnode = 0;
     }
+    vfs_open("/dev/uart", 0, &t->fds[0]);
+    vfs_open("/dev/uart", 0, &t->fds[1]);
+    vfs_open("/dev/uart", 0, &t->fds[2]);
+    t -> max_fd = 2; // because we have 3 fds
+
     // TODO: pass data into function
     uart_send_string("creating thread\n");
     // if(running_q_head)
@@ -204,11 +208,16 @@ thread_t* create_fork_thread() {
     t -> prev = 0;
     t -> next = 0;
 
-    t -> max_fd = -1;
     t -> working_dir = rootfs -> root;
     for(int i=0;i<THREAD_MAX_FD;i++) {
         t -> fds[i].vnode = 0;
     }
+
+    vfs_open("/dev/uart", 0, &t->fds[0]);
+    vfs_open("/dev/uart", 0, &t->fds[1]);
+    vfs_open("/dev/uart", 0, &t->fds[2]);
+    t -> max_fd = 2;
+
 
     return t;
 }

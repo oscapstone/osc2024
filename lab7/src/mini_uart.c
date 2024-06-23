@@ -33,10 +33,24 @@ char uart_recv ( void )
 	return(*AUX_MU_IO_REG);
 }
 
+void uart_recvn(char *buffer, int n)
+{
+    while (n--) {
+        *buffer++ = uart_recv();
+    }
+}
+
 void uart_send_string(const char* str)
 {
 	while (*str) {
 		uart_send(*str++);
+	}
+}
+
+void uart_sendn(const char* buffer, int n)
+{
+	while (*buffer && n--) {
+		uart_send(*buffer++);
 	}
 }
 
