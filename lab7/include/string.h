@@ -10,5 +10,5 @@ void *memcpy(void *dst, const void *src, size_t len);
 char *strncpy_(char *dest, const char *src, int n);
 int strlen(const char *str);
 int strncmp(const char *s1, const char *s2, int n);
-
+int strcpy(char *dst, const char *src);
 #endif // _STRING_H

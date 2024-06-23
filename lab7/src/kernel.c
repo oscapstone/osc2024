@@ -7,6 +7,7 @@
 #include "exception.h"
 #include "thread.h"
 #include "timer.h"
+#include "fs_fsinit.h"
 #include <stdint.h>
 
 #define TEST_SIZE 30
@@ -55,6 +56,9 @@ void main(char* base) {
 	alloc_init();
 	// demo_mm();
 	uart_send_string("mm finished\n");
+	fs_early_init();
+	fs_init();
+	uart_send_string("fs finished\n");
 	uart_enable_interrupt();
 	core_timer_init();
 	core_timer_enable();

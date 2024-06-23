@@ -10,6 +10,7 @@
 #include "thread.h"
 #include "reboot.h"
 #include "signal.h"
+#include "fs_vfs.h"
 
 extern timer_t *timer_head;
 
@@ -50,7 +51,8 @@ void exception_handler_c() {
 	uart_send_string("ec: ");
 	uart_hex(ec);
 	uart_send_string("\n");
-    while(1);
+    // while(1);
+    reset(1);
 }
 
 void user_irq_exception_handler_c() {
@@ -132,6 +134,41 @@ void user_exception_handler_c(trapframe_t* tf) {
             break;
         case 9:
             posix_kill((int)tf -> x[0], (int)tf -> x[1]);
+            break;
+        case 11:
+            uart_send_string("[INFO] system call: open\n");
+            syscall_open(tf, (const char*)tf -> x[0], tf -> x[1]);
+            break;
+        case 12:
+            uart_send_string("[INFO] system call: close\n");
+            syscall_close(tf, tf -> x[0]);
+            break;
+        case 13:
+            uart_send_string("[INFO] system call: write\n");
+            syscall_write(tf, tf -> x[0], (const void*)tf -> x[1], tf -> x[2]);
+            break;
+        case 14:
+            uart_send_string("[INFO] system call: read\n");
+            syscall_read(tf, tf -> x[0], (void*)tf -> x[1], tf -> x[2]);
+            break;
+        case 15:
+            uart_send_string("[INFO] system call: mkdir\n");
+            syscall_mkdir(tf, (const char*)tf -> x[0], tf -> x[1]);
+            break;
+        case 16:
+            uart_send_string("[INFO] system call: mount\n");
+            syscall_mount(
+                tf,
+                (const char*)tf -> x[0], // ignore source
+                (const char*)tf -> x[1],
+                (const char*)tf -> x[2],
+                0, // ignore flags
+                0 // ignore data
+            );
+            break;
+        case 17:
+            uart_send_string("[INFO] system call: chdir\n");
+            syscall_chdir(tf, (const char*)tf -> x[0]);
             break;
         case 20:
             sigreturn();

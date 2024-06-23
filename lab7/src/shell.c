@@ -23,23 +23,26 @@ void shell(){
             uart_send_string("Mailbox info: \n");
             get_board_revision();
             get_memory_info();
-        } else if(!strcmp(str, "ls")){
-            initrd_list();
-        } else if (!strcmp(str, "cat")){
-            uart_async_send_string("Enter file name: ");
-            char file_name[100];
-            uart_recv_command(file_name);
-            uart_async_send_string("\n");
-            initrd_cat(file_name);
-        } else if (!strcmp(str, "exec")){
+        } 
+        // else if(!strcmp(str, "ls")){
+        //     initrd_list();
+        // } else if (!strcmp(str, "cat")){
+        //     uart_async_send_string("Enter file name: ");
+        //     char file_name[100];
+        //     uart_recv_command(file_name);
+        //     uart_async_send_string("\n");
+        //     initrd_cat(file_name);
+        // } 
+        else if (!strcmp(str, "exec")){
             uart_async_send_string("Enter program name: ");
             char file_name[100];
             uart_recv_command(file_name);
             uart_async_send_string("\n");
-            initrd_exec_prog(file_name);
-        } else if (!strcmp(str, "run")){
-            initrd_run_syscall();
-        }  else if (!strncmp(str, "setTimeout", 10)){
+            initrd_run_prog(file_name);
+        } else if(!strcmp(str, "run")){
+            initrd_run_prog("/initramfs/vfs1.img");
+        }
+        else if (!strncmp(str, "setTimeout", 10)){
             // str = setTimeout MESSAGE SECONDS
             // split the message and seconds into two char*
             // without using lib
@@ -81,8 +84,8 @@ void shell(){
             uart_async_send_string("help\t: print this help menu\n");
             uart_async_send_string("hello\t: print Hello World!\n");
             uart_async_send_string("mailbox\t: print board revision and memory info\n");
-            uart_async_send_string("ls\t: list files in the ramdisk\n");
-            uart_async_send_string("cat\t: print content of a file\n");
+            // uart_async_send_string("ls\t: list files in the ramdisk\n");
+            // uart_async_send_string("cat\t: print content of a file\n");
             uart_async_send_string("reboot\t: reboot this device\n");
             uart_async_send_string("exec\t: execute program from initramfs\n");
             uart_async_send_string("setTimeout\t: setTimeout MESSAGE SECONDS\n");

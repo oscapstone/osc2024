@@ -17,6 +17,8 @@ thread_t* idle_thread = 0;
 int cur_tid = 0;
 int cnt_ = 0;
 
+is_init_thread = 0;
+
 void push(thread_t** head, thread_t* t) {
     // uart_send_string("push thread\n"); 
     // uart_hex(t->tid);
@@ -137,6 +139,12 @@ void kill_zombies() {
         uart_send_string("\n");
         kfree(zombie->user_stack);
         kfree(zombie->kernel_stack);
+        // close files
+        for(int i=0;i <= zombie -> max_fd;i++) {
+            if(zombie->fds[i].vnode) {
+                zombie -> fds[i].f_ops -> close(&zombie->fds[i]);
+            }
+        }
         kfree(zombie);
         uart_send_string("[KILL] killed\n");
     }
@@ -162,6 +170,12 @@ thread_t* create_thread(void (*func)(void)) {
 
     t -> prev = 0;
     t -> next = 0;
+
+    t -> max_fd = -1;
+    t -> working_dir = rootfs -> root;
+    for(int i=0;i<THREAD_MAX_FD;i++) {
+        t -> fds[i].vnode = 0;
+    }
     // TODO: pass data into function
     uart_send_string("creating thread\n");
     // if(running_q_head)
@@ -189,6 +203,13 @@ thread_t* create_fork_thread() {
 
     t -> prev = 0;
     t -> next = 0;
+
+    t -> max_fd = -1;
+    t -> working_dir = rootfs -> root;
+    for(int i=0;i<THREAD_MAX_FD;i++) {
+        t -> fds[i].vnode = 0;
+    }
+
     return t;
 }
 
@@ -220,6 +241,7 @@ void thread_init() {
     uart_send_string("[INFO] Init thread\n");
     idle_thread = create_thread(idle);
     asm volatile("msr tpidr_el1, %0" :: "r"(idle_thread));
+    is_init_thread = 1;
 }
 
 void thread_exit() {

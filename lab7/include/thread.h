@@ -4,8 +4,12 @@
 
 #define T_STACK_SIZE (2 * 0x1000) // 2^12 = 4096 = 4KB = 1 page
 #define SIGNAL_NUM 9
+#define THREAD_MAX_FD 16
 
 #include <stdint.h>
+#include "fs_vfs.h"
+
+extern int is_init_thread;
 
 typedef enum thread_state {
     TASK_RUNNING,
@@ -50,6 +54,11 @@ typedef struct thread_t {
     // use in queue
     struct thread_t *prev;
     struct thread_t *next;
+
+    // use in file
+    int max_fd;
+    file fds[THREAD_MAX_FD];
+    vnode *working_dir;
 } thread_t;
 
 

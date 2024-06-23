@@ -8,10 +8,12 @@
 #include "thread.h"
 #include "exception.h"
 #include "timer.h"
+#include "fs_vfs.h"
+#include "mm.h"
 
 char *ramfs_base;
 char *ramfs_end;
-
+char *exec_path_name;
 
 // Convert hexadecimal string to int
 // @param s: hexadecimal string
@@ -169,111 +171,86 @@ void initrd_callback(unsigned int node_type, char *name, void *value, unsigned i
     }
 }
 
-void initrd_exec_prog(char* target) {
-    el1_interrupt_disable();
-    void* target_addr;
-    char *filepath;
-    char *filedata;
-    unsigned int filesize;
-    // current pointer
-    cpio_t *header_pointer = (cpio_t *)(ramfs_base);
+// void initrd_exec_prog(char* target) {
+//     el1_interrupt_disable();
+//     void* target_addr;
+//     char *filepath;
+//     char *filedata;
+//     unsigned int filesize;
+//     // current pointer
+//     cpio_t *header_pointer = (cpio_t *)(ramfs_base);
 
-    // print every cpio pathname
-    while (header_pointer)
-    {
-        // uart_send_string("header_pointer: ");
-        // uart_hex((unsigned long)header_pointer);
-        // uart_send_string("\n");
-        int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
-        // if parse header error
-        if (error)
-        {
-            // uart_printf("error\n");
-            uart_send_string("Error parsing cpio header\n");
-            break;
-        }
-        if (!strcmp(target, filepath))
-        {
-            uart_send_string("filesize: ");
-            uart_hex(filesize);
-            uart_send_string("\n");
-            target_addr = kmalloc(filesize);
-            memcpy(target_addr, filedata, filesize);
-            break;
-        }
-        // uart_send_string("header_pointer: ");
-        // uart_hex((unsigned long)header_pointer);
-        // uart_send_string("\n");
-        // if this is not TRAILER!!! (last of file)
-        if (header_pointer == 0){
-            uart_send_string("Program not found\n");
-            return;
-        }
-    }
-    uart_send_string("prog addr: ");
-    uart_hex(target_addr);
-    uart_send_string("\n");
-    thread_t* t = create_thread(target_addr);
-    el1_interrupt_enable();
-    unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
-    unsigned long elr_el1 = t -> callee_reg.lr;
-    unsigned long user_sp = t -> callee_reg.sp;
-    unsigned long kernel_sp = (unsigned long)t -> kernel_stack + T_STACK_SIZE;
-    // "r": Any general-purpose register, except sp
-    asm volatile("msr tpidr_el1, %0" : : "r" (t));
-    asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
-    asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
-    asm volatile("msr sp_el0, %0" : : "r" (user_sp));
-    asm volatile("mov sp, %0" :: "r" (kernel_sp));
-    asm volatile("eret"); // jump to user program
-    return;
-}
+//     // print every cpio pathname
+//     while (header_pointer)
+//     {
+//         // uart_send_string("header_pointer: ");
+//         // uart_hex((unsigned long)header_pointer);
+//         // uart_send_string("\n");
+//         int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
+//         // if parse header error
+//         if (error)
+//         {
+//             // uart_printf("error\n");
+//             uart_send_string("Error parsing cpio header\n");
+//             break;
+//         }
+//         if (!strcmp(target, filepath))
+//         {
+//             uart_send_string("filesize: ");
+//             uart_hex(filesize);
+//             uart_send_string("\n");
+//             target_addr = kmalloc(filesize);
+//             memcpy(target_addr, filedata, filesize);
+//             break;
+//         }
+//         // uart_send_string("header_pointer: ");
+//         // uart_hex((unsigned long)header_pointer);
+//         // uart_send_string("\n");
+//         // if this is not TRAILER!!! (last of file)
+//         if (header_pointer == 0){
+//             uart_send_string("Program not found\n");
+//             return;
+//         }
+//     }
+//     uart_send_string("prog addr: ");
+//     uart_hex(target_addr);
+//     uart_send_string("\n");
+//     thread_t* t = create_thread(target_addr);
+//     el1_interrupt_enable();
+//     unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
+//     unsigned long elr_el1 = t -> callee_reg.lr;
+//     unsigned long user_sp = t -> callee_reg.sp;
+//     unsigned long kernel_sp = (unsigned long)t -> kernel_stack + T_STACK_SIZE;
+//     // "r": Any general-purpose register, except sp
+//     asm volatile("msr tpidr_el1, %0" : : "r" (t));
+//     asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
+//     asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
+//     asm volatile("msr sp_el0, %0" : : "r" (user_sp));
+//     asm volatile("mov sp, %0" :: "r" (kernel_sp));
+//     asm volatile("eret"); // jump to user program
+//     return;
+// }
 
-void initrd_exec_syscall() {
-    void* target_addr;
-    char *filepath;
-    char *filedata;
-    unsigned int filesize;
-    char* target = "syscall.img";
-    // current pointer
-    cpio_t *header_pointer = (cpio_t *)(ramfs_base);
-    // print_running();
-    // print every cpio pathname
-    while (header_pointer)
-    {
-        // uart_send_string("header_pointer: ");
-        // uart_hex((unsigned long)header_pointer);
-        // uart_send_string("\n");
-        int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
-        // if parse header error
-        if (error)
-        {
-            // uart_printf("error\n");
-            uart_send_string("Error parsing cpio header\n");
-            break;
-        }
-        if (!strcmp(target, filepath))
-        {
-            uart_send_string("filesize: ");
-            uart_hex(filesize);
-            uart_send_string("\n");
-            target_addr = kmalloc(filesize);
-            uart_send_string("Copying user program\n");
-            memcpy(target_addr, filedata, filesize);
-            uart_send_string("Finished\n");
-            break;
-        }
-        // uart_send_string("header_pointer: ");
-        // uart_hex((unsigned long)header_pointer);
-        // uart_send_string("\n");
-        // if this is not TRAILER!!! (last of file)
-        if (header_pointer == 0){
-            uart_send_string("Program not found\n");
-            return;
-        }
-    }
+void initrd_exec_prog() {
+    int data_len, aligned_data_len;
+    file f;
+    void* data;
+    int ret;
+    ret = vfs_open(exec_path_name, 0, &f);
+    
+    if(ret < 0) return;
+
+    data_len = f.vnode -> v_ops -> getsize(f.vnode);
+    aligned_data_len = ALIGN(data_len, PAGE_SIZE);
+    data = kmalloc(aligned_data_len);
+    memzero(data, aligned_data_len); // clear data
+
+    ret = vfs_read(&f, data, data_len);
+
+    vfs_close(&f);
+
     uart_send_string("prog addr: ");
-    uart_hex(target_addr);
+    uart_hex(data);
     uart_send_string("\n");
     thread_t* t = get_current_thread();
     uart_send_string("thread tid: ");
@@ -286,14 +263,14 @@ void initrd_exec_syscall() {
     }
 
     unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
-    unsigned long elr_el1 = target_addr;
+    unsigned long elr_el1 = data;
     unsigned long user_sp = t -> user_stack + T_STACK_SIZE;
     unsigned long kernel_sp = (unsigned long)t -> kernel_stack + T_STACK_SIZE;
     // unsigned long kernel_sp = (unsigned long)kmalloc(T_STACK_SIZE) + T_STACK_SIZE;
     
 
     // reset t call reg
-    t -> callee_reg.lr = target_addr;
+    t -> callee_reg.lr = data;
     // core_timer_enable();
     // el1_interrupt_enable();
     
@@ -308,9 +285,11 @@ void initrd_exec_syscall() {
     // print_running();
 }
 
-void initrd_run_syscall() {
+void initrd_run_prog(const char* path_name) {
+    exec_path_name = (char*)kmalloc(strlen(path_name) + 1);
+    strcpy(exec_path_name, path_name);
     // core_timer_disable();
     // el1_interrupt_disable();
-    int tid = create_thread(initrd_exec_syscall) -> tid;
+    int tid = create_thread(initrd_exec_prog) -> tid;
     thread_wait(tid);
 }

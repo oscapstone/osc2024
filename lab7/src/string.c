@@ -92,3 +92,19 @@ int strncmp(const char *s1, const char *s2, int n) {
     }
     return *(const unsigned char *) s1 - *(const unsigned char *) s2;
 }
+
+int strcpy(char *dst, const char *src)
+{
+    int ret = 0;
+
+    while (*src) {
+        *dst = *src;
+        dst++;
+        src++;
+        ret++;
+    }
+
+    *dst = '\0';
+
+    return ret;
+}
