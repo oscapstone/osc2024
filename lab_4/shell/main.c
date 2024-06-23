@@ -27,7 +27,8 @@
 #include "include/utils.h"
 #include "include/mbox.h"
 #include "include/cpio.h"
-#include "include/allocator.h"
+#include "include/page_allocator.h"
+#include "include/dynamic_allocator.h"
 
 extern void set_exception_vector_table();
 extern void core_timer_enable();
@@ -36,6 +37,7 @@ extern void core_timer_enable();
 
 void main(int argc, char* argv[]){
    uart_init();
+   init_simple_malloc();
    set_exception_vector_table();
 
     // show el
@@ -49,11 +51,19 @@ void main(int argc, char* argv[]){
     uart_puts("\n");
 
    init_buddy_system();
-   char* my_array = malloc_page(3);
-   char* my_array2 = malloc_page(3);
-   char* my_array3 = malloc_page(3);
-   char* my_array4 = malloc_page(3);
-   char* my_array5 = malloc_page(3);
+   init_dynamic_allocator();
+   // char* my_array = malloc_page(1);
+   char* my_variable = (char*)malloc(12);
+      char* my_variable2 = (char*)malloc(12);
+         char* my_variable3 = (char*)malloc(12);
+            char* my_variable4 = (char*)malloc(12);
+               char* my_variable5 = (char*)malloc(12);
+                  char* my_variable6= (char*)malloc(12);
+                     char* my_variable7 = (char*)malloc(12);
+   // char* my_array2 = malloc_page(3);
+   // char* my_array3 = malloc_page(3);
+   // char* my_array4 = malloc_page(3);
+   // char* my_array5 = malloc_page(3);
    //char* my_array6 = malloc_page(3);
    while(1){
       char command[MAX_BUFFER];
@@ -84,18 +94,18 @@ void main(int argc, char* argv[]){
          uart_puts("Hello World!\n");
       }
       else if(strcmp(command, "free") == 0){
-         free_page(my_array);
-         free_page(my_array2);
-         free_page(my_array3);
-         free_page(my_array4);
-         free_page(my_array5);
+         // free_page(my_array);
+         // free_page(my_array2);
+         // free_page(my_array3);
+         // free_page(my_array4);
+         // free_page(my_array5);
          //free_page(my_array6);
          
-         my_array = malloc_page(3);
-         my_array2 = malloc_page(3);
-         my_array3 = malloc_page(3);
-         my_array4 = malloc_page(3);
-         my_array5 = malloc_page(3);
+         // my_array = malloc_page(3);
+         // my_array2 = malloc_page(3);
+         // my_array3 = malloc_page(3);
+         // my_array4 = malloc_page(3);
+         // my_array5 = malloc_page(3);
 
       }
       else if(strcmp(command, "ls") == 0){

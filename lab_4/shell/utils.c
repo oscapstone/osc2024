@@ -20,11 +20,12 @@ unsigned long utils_atoi(const char *s, int char_size) {
 }
 
 int _pow(int base, int exp){
-    int temp = base;
+
+    int ret = 1;
     for(int i=0;i<exp;i++){
-        base *= temp;
+        ret *= base;
     }
-    return base;
+    return ret;
 }
 
 
@@ -95,6 +96,12 @@ void cancel_reset() {
 
 static unsigned char simple_malloc_buffer[SIMPLE_MALLOC_BUFFER_SIZE];
 static unsigned long simple_malloc_offset = 0;
+
+void init_simple_malloc(){
+    for(int i=0;i<simple_malloc_buffer;i++){
+        simple_malloc_buffer[i] = 0;
+    }
+}
 
 void* simple_malloc(unsigned long size){
 	//align to 8 bytes

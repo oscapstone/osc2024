@@ -1,4 +1,4 @@
-#include "include/allocator.h"
+#include "include/page_allocator.h"
 #include "include/utils.h"
 #include "include/uart.h"
 
@@ -16,19 +16,6 @@ struct Node* list_pop(OrderList* target){
 void init_order_list(){
     int current_order = MAX_ORDER-1;
     int current_page_index = 0;
-
-    // initialize The Array
-    for(int i=0;i<AVAILABLE_PAGE_NUM; i++){
-        the_array[i].available = FREE;
-        the_array[i].block_size = 0;
-    }
-
-    // initialize order_list
-    for(int i=0;i<MAX_ORDER;i++){
-        order_list[i].chain_length=0;
-        order_list[i].root = NULL;
-    }
-
     // assume all pages are available at beginnig, greedly allocate pages in max order size
     while(current_order >= 0){
         while((current_page_index+_pow(2, current_order)-1) < AVAILABLE_PAGE_NUM){
@@ -55,12 +42,6 @@ void init_order_list(){
         }
         current_order--;
     }
-    // for(int i=0;i<MAX_ORDER;i++){
-    //     uart_puts("\nin list number ");
-    //     uart_hex(i);
-    //     uart_puts("\n");
-    //     print_order_list(&order_list[i]);
-    // }
 
 }
 
@@ -78,8 +59,20 @@ void print_order_list(OrderList* list){
 }
 
 void init_buddy_system(){
+    // initialize The Array
+    for(int i=0;i<AVAILABLE_PAGE_NUM; i++){
+        the_array[i].available = FREE;
+        the_array[i].block_size = 0;
+    }
+
+    // initialize order_list
+    for(int i=0;i<MAX_ORDER;i++){
+        order_list[i].chain_length=0;
+        order_list[i].root = NULL;
+    }
     init_order_list();
 }
+
 
 int check_list_has_element(OrderList* target){
     return target->root != NULL;
@@ -184,6 +177,8 @@ unsigned char* malloc_page(int request_page_num){
     // start from allocating the smallest block until is can satisfy needs
     //print_order_list(&order_list[2]);
     while(current_order<MAX_ORDER){
+        // TODO: Mysterious print, without it the mallocation will failed on resp pi 3B+
+        uart_puts("");
         if(request_page_num > _pow(2, current_order)){
             current_order++;
         }
