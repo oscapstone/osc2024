@@ -36,10 +36,11 @@ extern void core_timer_enable();
 
 
 void main(int argc, char* argv[]){
+   // init uart
    uart_init();
    init_simple_malloc();
+   // init exception table and interrupt (lab3)
    set_exception_vector_table();
-
     // show el
     unsigned long el;
     asm volatile ("mrs %0, CurrentEL" : "=r" (el));
@@ -49,9 +50,11 @@ void main(int argc, char* argv[]){
     uart_puts("Booted! Current EL: ");
     uart_send('0' + el);
     uart_puts("\n");
-
+   // init memory (lab4)
+   init_reserve_memory();
    init_buddy_system();
    init_dynamic_allocator();
+
    // char* my_array = malloc_page(1);
    //   char* my_variablwe = (char*)malloc(1023);
             // char* my_varieable = (char*)malloc(1023);

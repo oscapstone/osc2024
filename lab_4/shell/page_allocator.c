@@ -4,7 +4,8 @@
 
 struct TheArray the_array[AVAILABLE_PAGE_NUM];
 OrderList order_list[MAX_ORDER];
-
+extern void* _head;
+extern void* _end;
 
 /*Pop the top element in linked list, note I assume there EXIST AT LEAST ONE AVAILABLE NODE*/
 struct Node* list_pop(OrderList* target){
@@ -253,3 +254,33 @@ void list_push_back(Node* to_push, int order){
     }
     //print_order_list(target_list);
 }
+
+void init_reserve_memory(){
+    // Spin tables for multicore boot (0x0000 - 0x1000)
+    memory_reserve(0x0000, 0x1000);
+    // initramfs, allocate 4 pages
+    memory_reserve(0x8000000, 0x8000000 + 0x4000);
+    // kernel image
+    memory_reserve(&_head, (unsigned int)&_head+((unsigned int)&_end));
+}
+
+
+void memory_reserve(unsigned int start, unsigned int end){
+    start = start-(start % PAGE_SIZE);
+    end = end % PAGE_SIZE ? end + PAGE_SIZE - (end % PAGE_SIZE) : end;
+
+    uart_puts("[Reserve] Memory Reserve: Start from adress 0x");
+    uart_hex(start);
+    uart_puts(" to 0x");
+    uart_hex(end);
+    uart_puts("\n");
+
+    int start_index = (start-HEAP_START_ADDRESS)/PAGE_SIZE;
+    // assume end_index do not exceed limit
+    int end_index = (end-HEAP_START_ADDRESS)/PAGE_SIZE;
+
+    for(int i=start_index;i<end_index;i++){
+        the_array[i].available = OCCUPIED;
+        the_array[i].block_size = -1;
+    }
+};

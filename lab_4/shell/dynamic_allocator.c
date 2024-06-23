@@ -39,6 +39,7 @@ void init_dynamic_allocator(){
     }
 }
 
+
 int free(void* to_free){
     int pool[] = POOL;
     int part[] = PARTITION;
@@ -145,3 +146,4 @@ void* malloc(unsigned long size){
     dynamic_allocator.allocated_page_num++;
     return address;
 }
+

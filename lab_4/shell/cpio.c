@@ -3,7 +3,7 @@
 #include "include/stdint.h"
 #include "include/utils.h"
 
-char* cpio_addr = (char *)0x8000000;;
+char* cpio_addr = (char *)0x8000000;
 
 void cpio_ls(){
 	char* addr = (char*) cpio_addr;

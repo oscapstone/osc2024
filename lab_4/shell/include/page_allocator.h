@@ -34,3 +34,5 @@ int check_list_has_element(OrderList* target);
 void list_push_back(Node* to_push, int order);
 void free_page(void* to_free);
 Node* get_buddy(OrderList* target, int target_page_index);
+void memory_reserve(unsigned int start, unsigned int end);
+void init_reserve_memory();
