@@ -102,6 +102,7 @@ struct task_struct *kthread_create(void (*func)())
     task->pgd = kmalloc(PAGE_SIZE);
     memset(task->pgd, 0, PAGE_SIZE);
     memset(task->cwd, 0, PATH_MAX);
+    strncpy(task->cwd, "/", 1);
     memset(task->fdt, 0, sizeof(task->fdt));
     task->context.lr = (unsigned long)func;
     task->context.sp = (unsigned long)task->stack + STACK_SIZE;

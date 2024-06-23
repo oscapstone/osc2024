@@ -120,11 +120,14 @@ int sys_open(const char *pathname, int flags)
 {
     uart_puts("[SYS_OPEN] ");
     uart_puts(pathname);
-    uart_puts("\n");
-    // TODO: Realpath
+    uart_puts(" (");
+    char path[PATH_MAX] = { 0 };
+    uart_puts(realpath(pathname, path));
+    uart_puts(")\n");
+
     for (int i = 0; i < MAX_FD; i++)
         if (!get_current()->fdt[i])
-            if (vfs_open(pathname, flags, &get_current()->fdt[i]) == 0)
+            if (vfs_open(path, flags, &get_current()->fdt[i]) == 0)
                 return i;
     return -1;
 }
@@ -158,7 +161,9 @@ long sys_read(int fd, void *buf, unsigned long count)
 
 int sys_mkdir(const char *pathname, unsigned mode)
 {
-    uart_puts("[SYS_MKDIR]\n");
+    uart_puts("[SYS_MKDIR] ");
+    uart_puts(pathname);
+    uart_puts("\n");
     // TODO: Realpath
     return vfs_mkdir(pathname);
 }
@@ -173,7 +178,18 @@ int sys_mount(const char *src, const char *target, const char *filesystem,
 
 int sys_chdir(const char *path)
 {
-    uart_puts("[SYS_CHDIR]\n");
+    uart_puts("[SYS_CHDIR] ");
+    uart_puts(path);
+    uart_puts("\n");
+
+    char buf[PATH_MAX];
+    realpath(path, buf);
+    memset(get_current()->cwd, 0, PATH_MAX);
+    strncpy(get_current()->cwd, buf, strlen(buf));
+
+    uart_puts("cwd = ");
+    uart_puts(get_current()->cwd);
+    uart_puts("\n");
     return 0;
 }
 

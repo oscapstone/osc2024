@@ -1,5 +1,6 @@
 #include "vfs.h"
 #include "mm.h"
+#include "sched.h"
 #include "string.h"
 #include "vfs_tmpfs.h"
 
@@ -139,4 +140,28 @@ int vfs_lookup(const char *pathname, struct vnode **target)
 
     *target = node;
     return 0;
+}
+
+char *realpath(const char *path, char *resolved_path)
+{
+    char *cwd = get_current()->cwd;
+    if (path[0] == '.' && path[1] == '/') {
+        strncpy(resolved_path, cwd, strlen(cwd));
+        int is_root = (strlen(cwd) == 1 && cwd[0] == '/');
+        strcat(resolved_path, is_root ? path + 2 : path + 1);
+        return resolved_path;
+    } else if (path[0] == '.' && path[1] == '.') {
+        int len = strlen(cwd);
+        for (int i = len - 1; i >= 0; i--) {
+            if (cwd[i] == '/') {
+                strncpy(resolved_path, cwd, i);
+                resolved_path[i] = '\0';
+                strcat(resolved_path, path + 2);
+                return resolved_path;
+            }
+        }
+    } else {
+        strncpy(resolved_path, path, strlen(path));
+        return resolved_path;
+    }
 }
