@@ -90,7 +90,7 @@ int sys_fork() // [TODO]
 {
     unsigned long stack = (unsigned long)balloc(THREAD_SIZE);
     if((void*)stack == NULL) return -1;
-    memzero_asm(stack, 4*THREAD_SIZE);
+    memzero_asm(stack, THREAD_SIZE);
     return copy_process(0, 0, 0, stack);
 }
 

@@ -3,5 +3,6 @@
 *.img
 *.d
 *.elf
+initramfs.cpio.test
 
 **yuchang**
