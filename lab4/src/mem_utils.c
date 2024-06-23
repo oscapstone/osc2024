@@ -557,7 +557,7 @@ void *chunk_alloc(uint32_t size)
     /* 1. find the chunk_list index */
     uint32_t size_index = find_chunk_index(size);
     size = 16 * pow2(size_index);
-    printf("Corresponding size: %d\n");
+    printf("Corresponding size: %d\n", size);
     printf("index of chunk list: %d\n", size_index);
 
     /* 2. check the chunk_list_start[size_index].head if it is empty */
