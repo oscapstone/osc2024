@@ -11,6 +11,7 @@
 #include "uart.h"
 #include "utils.h"
 #include "vfs.h"
+#include "vfs_ramfs.h"
 #include "vm.h"
 
 extern unsigned int height;
@@ -43,11 +44,25 @@ size_t sys_uart_write(const char *buf, size_t size)
 
 int sys_exec(const char *name, char *const argv[])
 {
-    // TODO: Implement exec
-    uart_puts("[SYS_EXEC]\n");
-    while (1)
-        ;
-    // initrd_sys_exec(name);
+    char path[PATH_MAX] = { 0 };
+    realpath(name, path);
+    struct vnode *target;
+    vfs_lookup(path, &target);
+
+    struct task_struct *task = get_current();
+    task->start = ((struct ramfs_vnode *)target->internal)->data;
+    task->code_size = ((struct ramfs_vnode *)target->internal)->datasize;
+
+    // FIXME: Free the page table
+    memset(task->pgd, 0, PAGE_SIZE);
+    map_pages((unsigned long)task->pgd, 0x0, task->code_size,
+              (unsigned long)VIRT_TO_PHYS(task->start), 0);
+    map_pages((unsigned long)task->pgd, 0xFFFFFFFFB000, 0x4000,
+              (unsigned long)VIRT_TO_PHYS(task->user_stack), 0);
+    map_pages((unsigned long)task->pgd, 0x3C000000, 0x3000000, 0x3C000000, 0);
+
+    task->sigpending = 0;
+    memset(task->sighand, 0, sizeof(task->sighand));
     return 0;
 }
 
