@@ -13,6 +13,7 @@
 #ifndef __ASSEMBLER__
 
 void memzero(unsigned long src, unsigned long n);
+void memncpy(char *dst, const char *src, unsigned long n);
 
 #endif
 

@@ -11,6 +11,7 @@
 #include "reboot.h"
 #include "signal.h"
 #include "fs_vfs.h"
+#include "c_utils.h"
 
 extern timer_t *timer_head;
 
@@ -95,18 +96,13 @@ void irq_exception_handler_c(){
 }
 
 void user_exception_handler_c(trapframe_t* tf) {
+    // check svc syscall from el0
     unsigned long long esr_el1 = 0;
 	asm volatile("mrs %0, esr_el1":"=r"(esr_el1));
-    // uart_send_string("esr_el1: ");
-	// uart_hex(esr_el1);
-	// uart_send_string("\n");
-    unsigned ec = (esr_el1 >> 26) & 0x3F; //0x3F = 0b111111(6)
-	// uart_send_string("ec: ");
-	// uart_hex(ec);
-	// uart_send_string("\n");
+    unsigned ec = (esr_el1 >> 26) & 0x3F;
 
     if(ec != 0x15) {
-        uart_send_string("User Exception Occurs!\n");
+        exception_handler_c();
         return;
     }
     int print_info = 0;
@@ -128,9 +124,9 @@ void user_exception_handler_c(trapframe_t* tf) {
         case 4:
             if(print_info) uart_send_string("[INFO] system call: fork\n");
             core_timer_disable();
-            el1_interrupt_disable();
+            // el1_interrupt_disable();
             fork(tf);
-            el1_interrupt_enable();
+            // el1_interrupt_enable();
             core_timer_enable();
             break;
         case 5:
@@ -160,11 +156,11 @@ void user_exception_handler_c(trapframe_t* tf) {
             break;
         case 13:
             if(print_info) uart_send_string("[INFO] system call: write\n");
-            core_timer_disable();
-            el1_interrupt_disable();
+            // core_timer_disable();
+            // el1_interrupt_disable();
             syscall_write(tf, tf -> x[0], (const void*)tf -> x[1], tf -> x[2]);
-            el1_interrupt_enable();
-            core_timer_enable();
+            // el1_interrupt_enable();
+            // core_timer_enable();
             break;
         case 14:
             if(print_info) uart_send_string("[INFO] system call: read\n");
@@ -191,7 +187,11 @@ void user_exception_handler_c(trapframe_t* tf) {
             break;
         case 18:
             if(print_info) uart_send_string("[INFO] system call: lseek64\n");
+            // core_timer_disable();
+            // el1_interrupt_disable();
             syscall_lseek64(tf, tf -> x[0], tf -> x[1], tf -> x[2]);
+            // el1_interrupt_enable();
+            // core_timer_enable();
             break;
         case 19:
             if(print_info) uart_send_string("[INFO] system call: ioctl\n");
@@ -209,6 +209,8 @@ void user_exception_handler_c(trapframe_t* tf) {
             sigreturn();
             break;
     }
+    el1_interrupt_disable();
+    // uart_send_string("sysre\n");
     return;
 }
 

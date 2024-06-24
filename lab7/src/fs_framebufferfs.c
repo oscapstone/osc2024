@@ -1,6 +1,7 @@
 #include "fs_framebufferfs.h"
 #include "fs_tmpfs.h"
 #include "exception.h"
+#include "mm.h"
 
 uint32_t __attribute__((aligned(0x10))) mbox[36];
 
@@ -129,7 +130,7 @@ int framebufferfs_close(file *target) {
 }
 
 int framebufferfs_write(file *target, const void *buf, size_t len) {
-    // uart_send_string("framebufferfs_write\n");
+    // uart_send_string("w ");
     framebufferfs_internal *internal = (framebufferfs_internal *)target -> vnode -> internal;
 
     if(!internal -> isinit) {
@@ -141,10 +142,9 @@ int framebufferfs_write(file *target, const void *buf, size_t len) {
         uart_send_string("framebufferfs_write: Write out of bounds\n");
         return -1;
     }
-    el1_interrupt_disable();
-    memcpy((void *)(internal -> lfb + target -> f_pos), buf, len);
+    memncpy((void *)(internal -> lfb + target -> f_pos), buf, len);
     target -> f_pos += len;
-    el1_interrupt_enable();
+    // uart_send_string("WS\n");
     return len;
 }
 
@@ -168,6 +168,7 @@ long framebufferfs_lseek64(file *target, long offset, int whence) {
             base = internal -> lfbsize;
             break;
         default:
+            uart_send_string("framebufferfs_lseek64: Invalid whence\n");
             el1_interrupt_enable();
             return -1;
     }
@@ -191,6 +192,9 @@ int framebufferfs_ioctl(struct file *file, uint64_t request, va_list args) {
 
     framebufferfs_internal *internal = (framebufferfs_internal *)file -> vnode -> internal;
 
+    if(internal -> isinit) {
+        return 0;
+    }
     uint32_t width, height, pitch, isrgb;
 
     mbox[0] = 35 * 4;

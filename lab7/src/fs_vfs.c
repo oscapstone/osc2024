@@ -417,7 +417,9 @@ int write_wrapper(int fd, const void *buf, size_t len) {
 
     int ret;
     ret = vfs_write(&get_current_thread() -> fds[fd], buf, len);
-
+    if(ret < 0) {
+        uart_send_string("write_wrapper: failed to write\n");
+    }
     return ret;
 }
 
@@ -468,6 +470,7 @@ int chdir_wrapper(const char* path) {
 }
 
 long lseek64_wrapper(int fd, long offset, int whence) {
+    // uart_send_string("lseek64_wrapper\n");
     if(fd < 0 || fd > get_current_thread() -> max_fd) {
         uart_send_string("lseek64_wrapper: invalid fd\n");
         return -1;
@@ -480,7 +483,9 @@ long lseek64_wrapper(int fd, long offset, int whence) {
 
     int ret;
     ret = vfs_lseek64(&get_current_thread() -> fds[fd], offset, whence);
-
+    if(ret < 0) {
+        uart_send_string("lseek64_wrapper: failed to lseek\n");
+    }
     return ret;
 }
 

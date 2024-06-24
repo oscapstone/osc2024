@@ -2,7 +2,7 @@
 #define _THREAD_H
 
 
-#define T_STACK_SIZE (2 * 0x1000) // 2^12 = 4096 = 4KB = 1 page
+#define T_STACK_SIZE (10 * 0x1000) // 2^12 = 4096 = 4KB = 1 page
 #define SIGNAL_NUM 9
 #define THREAD_MAX_FD 16
 

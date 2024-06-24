@@ -156,10 +156,13 @@ void fork(trapframe_t* tf) {
     child_tf -> sp_el0 = (void*)((uint64_t)tf -> sp_el0 - (uint64_t)parent_thread->user_stack + (uint64_t)child_thread->user_stack);
     child_tf -> spsr_el1 = tf -> spsr_el1;
     child_tf -> elr_el1 = tf -> elr_el1;
-    tf -> x[0] = child_thread -> tid;
     push_running(child_thread);
+    tf -> x[0] = child_thread -> tid;
 SYSCALL_FORK_END:
-    // uart_send_string("forked end\n");
+    int tid = get_current_thread() -> tid;
+    uart_send_string("forked tid: ");
+    uart_hex(tid);    
+    uart_send_string("\nforked end\n");
     asm volatile("nop");
     return;
 }
