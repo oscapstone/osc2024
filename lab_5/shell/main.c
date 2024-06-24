@@ -51,18 +51,16 @@ void main(int argc, char* argv[]){
     uart_send('0' + el);
     uart_puts("\n");
    // init memory (lab4)
+   init_reserve_memory();
    init_buddy_system();
-       uart_puts("Booted! Current EL: ");
-    uart_send('0' + el);
-    uart_puts("\n");
    init_dynamic_allocator();
 
    // char* my_array = malloc_page(1);
    //   char* my_variablwe = (char*)malloc(1023);
-   //          char* my_varieable = (char*)malloc(1023);
-   //                char* wmy_variable = (char*)malloc(1023);
-   //                      char* my_vrariable = (char*)malloc(1023);
-   //                            char* my_variatble = (char*)malloc(1023);
+            // char* my_varieable = (char*)malloc(1023);
+            //       char* wmy_variable = (char*)malloc(1023);
+            //             char* my_vrariable = (char*)malloc(1023);
+            //                   char* my_variatble = (char*)malloc(1023);
    // free(my_variablwe);
    // my_variablwe = (char*)malloc(7642);
    // free(my_variablwe);
@@ -72,12 +70,12 @@ void main(int argc, char* argv[]){
    // free(my_variablwe);
    // free(my_variatble);
 
-   char* my_array = malloc_page(3);
-   char* my_array2 = malloc_page(3);
-   char* my_array3 = malloc_page(3);
-   char* my_array4 = malloc_page(3);
-   char* my_array5 = malloc_page(3);
-   char* my_array6 = malloc_page(3);
+   // char* my_array = malloc_page(3);
+   // char* my_array2 = malloc_page(3);
+   // char* my_array3 = malloc_page(3);
+   // char* my_array4 = malloc_page(3);
+   // char* my_array5 = malloc_page(3);
+   // char* my_array6 = malloc_page(3);
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';
@@ -107,17 +105,18 @@ void main(int argc, char* argv[]){
          uart_puts("Hello World!\n");
       }
       else if(strcmp(command, "free") == 0){
-         free_page(my_array);
-         free_page(my_array2);
-         free_page(my_array3);
-         free_page(my_array4);
-         free_page(my_array5);
+         // free_page(my_array);
+         // free_page(my_array2);
+         // free_page(my_array3);
+         // free_page(my_array4);
+         // free_page(my_array5);
+         //free_page(my_array6);
          
-         my_array = malloc_page(3);
-         my_array2 = malloc_page(3);
-         my_array3 = malloc_page(3);
-         my_array4 = malloc_page(3);
-         my_array5 = malloc_page(3);
+         // my_array = malloc_page(3);
+         // my_array2 = malloc_page(3);
+         // my_array3 = malloc_page(3);
+         // my_array4 = malloc_page(3);
+         // my_array5 = malloc_page(3);
       }
       else if(strcmp(command, "ls") == 0){
          cpio_ls();

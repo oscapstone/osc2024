@@ -16,81 +16,33 @@ struct Node* list_pop(OrderList* target){
 
 void init_order_list(){
     int current_order = MAX_ORDER-1;
-    int current_page_start = 0;
-    // advanced: handle cases that some pages are reserved
-    while((HEAP_START_ADDRESS+(PAGE_SIZE*current_page_start)) < HEAP_END_ADDRESS){
-        int continuous_block = 0;
-        while(continuous_block < _pow(2, MAX_ORDER) && current_page_start+continuous_block<AVAILABLE_PAGE_NUM){
-            if(the_array[current_page_start+continuous_block].available == (unsigned int)FREE){
-                // uart_hex(current_page_start+continuous_block);
-                // uart_puts("\n");
-                continuous_block++;
-            }
-            else{
-                if(continuous_block == 0){
-                    current_page_start++;
-                }
-                else{
-                    break;
-                }
-            }
-        }
-        unsigned int compare = 0x1;
-        int order = 0;
-        while(compare<<1 <= continuous_block){
-            compare=compare<<1;
-            order++;
-        }
-        continuous_block &= compare;
-
-        unsigned int allocated_size = continuous_block*PAGE_SIZE;
-        // record the grouped block at The Array, start from 0 thus need to -1
-        the_array[current_page_start].block_size = continuous_block-1;
-        // malloc a struct node to record the meta data of this block
-        Node* new_node = simple_malloc(sizeof(Node));
-        // push into order list
-        new_node->address = (unsigned char*) HEAP_START_ADDRESS+(PAGE_SIZE*current_page_start);
-        new_node->page_index = current_page_start;
-        list_push_back(new_node, order);
-
-        uart_puts("[Init] grouping block at address 0x");
-        uart_hex(new_node->address);
-        uart_puts(" with 0x");
-        uart_hex((unsigned int)allocated_size/PAGE_SIZE);
-        uart_puts(" pages and start at index ");
-        uart_hex((unsigned int)new_node->page_index);
-        uart_puts(" in The Array");
-        uart_puts("\n");                
-        current_page_start = current_page_start +continuous_block;
-        current_page_start++;
-    }
-
+    int current_page_index = 0;
     // assume all pages are available at beginnig, greedly allocate pages in max order size
-    // while(current_order >= 0){
-    //     while((current_page_index+_pow(2, current_order)-1) < AVAILABLE_PAGE_NUM){
-    //         unsigned int allocated_size = _pow(2, current_order)*PAGE_SIZE;
-    //         // record the grouped block at The Array
-    //         the_array[current_page_index].block_size = _pow(2, current_order);
-    //         // malloc a struct node to record the meta data of this block
-    //         Node* new_node = simple_malloc(sizeof(Node));
-    //         // push into order list
-    //         new_node->address = (unsigned char*) HEAP_START_ADDRESS+(PAGE_SIZE*current_page_index);
-    //         new_node->page_index = current_page_index;
-    //         list_push_back(new_node, current_order);
+    while(current_order >= 0){
+        while((current_page_index+_pow(2, current_order)-1) < AVAILABLE_PAGE_NUM){
+            unsigned int allocated_size = _pow(2, current_order)*PAGE_SIZE;
+            // record the grouped block at The Array
+            the_array[current_page_index].block_size = _pow(2, current_order);
+            // malloc a struct node to record the meta data of this block
+            Node* new_node = simple_malloc(sizeof(Node));
+            // push into order list
+            new_node->address = (unsigned char*) HEAP_START_ADDRESS+(PAGE_SIZE*current_page_index);
+            new_node->page_index = current_page_index;
+            list_push_back(new_node, current_order);
 
-    //         uart_puts("[Init] grouping block at address 0x");
-    //         uart_hex(new_node->address);
-    //         uart_puts(" with 0x");
-    //         uart_hex((unsigned int)allocated_size/PAGE_SIZE);
-    //         uart_puts(" pages and start at index ");
-    //         uart_hex((unsigned int)new_node->page_index);
-    //         uart_puts(" in The Array");
-    //         uart_puts("\n");
+            uart_puts("[Init] grouping block at address 0x");
+            uart_hex(new_node->address);
+            uart_puts(" with 0x");
+            uart_hex((unsigned int)allocated_size/PAGE_SIZE);
+            uart_puts(" pages and start at index ");
+            uart_hex((unsigned int)new_node->page_index);
+            uart_puts(" in The Array");
+            uart_puts("\n");
 
-    //         current_page_index = current_page_index+_pow(2, current_order)+1;
-    //     }
-    //     current_order--;
-    // }
+            current_page_index = current_page_index+_pow(2, current_order)+1;
+        }
+        current_order--;
+    }
 
 }
 
@@ -101,6 +53,7 @@ void print_order_list(OrderList* list){
         uart_hex(cur->address);
         uart_puts("\n");
         cur = cur->next;
+        
     }
 }
 
@@ -116,7 +69,6 @@ void init_buddy_system(){
         order_list[i].chain_length=0;
         order_list[i].root = NULL;
     }
-    init_reserve_memory();
     init_order_list();
 }
 
@@ -305,7 +257,7 @@ void list_push_back(Node* to_push, int order){
 
 void init_reserve_memory(){
     // Spin tables for multicore boot (0x0000 - 0x1000)
-    memory_reserve(0x00000000, 0x00001000);
+    memory_reserve(0x0000, 0x1000);
     // initramfs, allocate 4 pages
     memory_reserve(0x8000000, 0x8000000 + 0x4000);
     // kernel image
@@ -323,9 +275,10 @@ void memory_reserve(unsigned int start, unsigned int end){
     uart_hex(end);
     uart_puts("\n");
 
-    int start_index = (int)((start-HEAP_START_ADDRESS)/PAGE_SIZE);
+    int start_index = (start-HEAP_START_ADDRESS)/PAGE_SIZE;
     // assume end_index do not exceed limit
     int end_index = (end-HEAP_START_ADDRESS)/PAGE_SIZE;
+
     for(int i=start_index;i<end_index;i++){
         the_array[i].available = OCCUPIED;
         the_array[i].block_size = -1;
