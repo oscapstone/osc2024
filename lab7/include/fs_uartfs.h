@@ -28,6 +28,7 @@ int uartfs_close(file *target);
 int uartfs_write(file *target, const void *buf, size_t len);
 int uartfs_read(file *target, void *buf, size_t len);
 long uartfs_lseek64(file *target, long offset, int whence);
+int uartfs_ioctl(struct file *file, uint64_t request, va_list args);
 
 extern file_operations uartfs_f_ops;
 

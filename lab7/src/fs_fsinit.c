@@ -2,7 +2,7 @@
 #include "mm.h"
 
 void fs_early_init(void) {
-    filesystem *tmpfs, *cpiofs, *uartfs;
+    filesystem *tmpfs, *cpiofs, *uartfs, *framebufferfs;
 
     vfs_init();
     // init tmpfs
@@ -13,6 +13,8 @@ void fs_early_init(void) {
     // init uartfs
     uartfs = uartfs_init();
 
+    framebufferfs = framebufferfs_init();
+
     uart_send_string("cpiofs_init\n");
     register_filesystem(tmpfs);
     uart_send_string("register tmpfs\n");
@@ -20,6 +22,8 @@ void fs_early_init(void) {
     uart_send_string("register cpiofs\n");
     register_filesystem(uartfs);
     uart_send_string("register uartfs\n");
+    register_filesystem(framebufferfs);
+    uart_send_string("register framebufferfs\n");
 
     vfs_init_rootfs(tmpfs);
     uart_send_string("init rootfs\n");
@@ -38,4 +42,8 @@ void fs_init(void) {
     vfs_mkdir("/dev/uart");
     uart_send_string("mkdir /dev/uart\n");
     vfs_mount("/dev/uart", "uartfs");
+
+    // mount framebufferfs
+    vfs_mkdir("/dev/framebuffer");
+    vfs_mount("/dev/framebuffer", "framebufferfs");
 }

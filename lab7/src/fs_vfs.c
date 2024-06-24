@@ -137,7 +137,12 @@ int vfs_open(const char* pathname, int flags, file* target) {
     vnode* file_node;
     int ret;
     
-    dir_node = get_vnode_from_path(get_current_thread() -> working_dir, &cur_name);
+    if(is_init_thread){
+        dir_node = get_vnode_from_path(get_current_thread() -> working_dir, &cur_name);
+    } else {
+        dir_node = get_vnode_from_path(rootfs -> root, &cur_name);
+    }
+
     if(!dir_node) {
         uart_send_string("vfs_open: failed to get dir node\n");
         return -1;
@@ -170,11 +175,20 @@ int vfs_open(const char* pathname, int flags, file* target) {
     }
 
     if(!file_node) {
+        uart_send_string("vfs_open: failed to get file node\n");
         return -1;
     }
+    char* name2;
+    file_node -> v_ops -> getname(file_node, &name2);
+    uart_send_string("vfs_open: ");
+    uart_send_string(name2);
+    uart_send_string("\n");
 
     ret = file_node -> f_ops -> open(file_node, target);
-    if(ret < 0) return ret;
+    if(ret < 0){
+        uart_send_string("vfs_open: failed to open file\n");
+        return ret;
+    }
 
     target -> flags = 0;
 
@@ -319,6 +333,15 @@ int vfs_lookup(const char *pathname, vnode **target) {
     return 0;
 }
 
+long vfs_lseek64(file *f, long offset, int whence) {
+    return f -> f_ops -> lseek64(f, offset, whence);
+}
+
+int vfs_ioctl(file *f, uint64_t request, va_list args) {
+    return f -> f_ops -> ioctl(f, request, args);
+}
+
+// wrapper's 
 int open_wrapper(const char* pathname, int flags) {
     int i, ret;
     for(i = 0; i <= get_current_thread() -> max_fd; i++ ) {
@@ -355,6 +378,7 @@ int open_wrapper(const char* pathname, int flags) {
     
     if(ret < 0) {
         uart_send_string("open_wrapper: failed to open file\n");
+        get_current_thread() -> fds[i].vnode = 0;
         return -1;
     }
 
@@ -443,29 +467,69 @@ int chdir_wrapper(const char* path) {
     return 0;
 }
 
+long lseek64_wrapper(int fd, long offset, int whence) {
+    if(fd < 0 || fd > get_current_thread() -> max_fd) {
+        uart_send_string("lseek64_wrapper: invalid fd\n");
+        return -1;
+    }
+
+    if(get_current_thread() -> fds[fd].vnode == 0) {
+        uart_send_string("lseek64_wrapper: file not opened\n");
+        return -1;
+    }
+
+    int ret;
+    ret = vfs_lseek64(&get_current_thread() -> fds[fd], offset, whence);
+
+    return ret;
+}
+
+int ioctl_wrapper(int fd, uint64_t cmd, va_list args) {
+    if(fd < 0 || fd > get_current_thread() -> max_fd) {
+        uart_send_string("ioctl_wrapper: invalid fd\n");
+        return -1;
+    }
+
+    if(get_current_thread() -> fds[fd].vnode == 0) {
+        uart_send_string("ioctl_wrapper: file not opened\n");
+        return -1;
+    }
+
+    int ret;
+    uart_send_string("ioctl_wrapper\n");
+    ret = vfs_ioctl(&get_current_thread() -> fds[fd], cmd, args);
+
+    return ret;
+}
+
 void syscall_open(trapframe_t *tf, const char *pathname, int flags) {
     int fd = open_wrapper(pathname, flags);
     tf -> x[0] = fd;
+    return;
 }
 
 void syscall_close(trapframe_t *tf, int fd) {
     int ret = close_wrapper(fd);
     tf -> x[0] = ret;
+    return;
 }
 
 void syscall_write(trapframe_t *tf, int fd, const void *buf, size_t len) {
     int ret = write_wrapper(fd, buf, len);
     tf -> x[0] = ret;
+    return;
 }
 
 void syscall_read(trapframe_t *tf, int fd, void *buf, size_t len) {
     int ret = read_wrapper(fd, buf, len);
     tf -> x[0] = ret;
+    return;
 }
 
 void syscall_mkdir(trapframe_t *tf, const char *pathname, uint32_t mode) {
     int ret = mkdir_wrapper(pathname);
     tf -> x[0] = ret;
+    return;
 }
 
 void syscall_mount(
@@ -486,13 +550,18 @@ void syscall_chdir(trapframe_t *tf, const char *path) {
 }
 
 void syscall_lseek64(trapframe_t *tf, int fd, long offset, int whence) {
-    // TODO: 
-    int ret = -1;
+    long ret = lseek64_wrapper(fd, offset, whence);
     tf -> x[0] = ret;
 }
 
-void syscall_ioctl(trapframe_t *tf, int fd, unsigned long cmd, unsigned long arg) {
-    // TODO: 
-    int ret = -1;
+void syscall_ioctl(trapframe_t *tf, int fd, uint64_t requests, ...) {
+    uart_send_string("syscall_ioctl\n");
+    int ret;
+    va_list args;
+
+    va_start(args, requests);
+    ret = ioctl_wrapper(fd, requests, args);
+    va_end(args);
+
     tf -> x[0] = ret;
 }

@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include "list.h"
 #include "exception.h"
 
@@ -45,6 +46,7 @@ typedef struct file_operations {
     int (*open)(vnode *file_node, file *target);
     int (*close)(file *f);
     long (*lseek64)(file *f, long offset, int whence);
+    int (*ioctl)(file *file, uint64_t request, va_list args);
 } file_operations;
 
 typedef struct vnode_operations {
@@ -72,6 +74,8 @@ int vfs_read(file *f, void *buf, size_t len);
 int vfs_mkdir(const char *pathname);
 int vfs_mount(const char* target, const char* filesystem);
 int vfs_lookup(const char *pathname, vnode **target);
+long vfs_lseek64(file *f, long offset, int whence);
+int vfs_ioctl(struct file *file, uint64_t request, va_list args);
 
 void syscall_open(trapframe_t *tf, const char *pathname, int flags);
 void syscall_close(trapframe_t *tf, int fd);
@@ -88,10 +92,7 @@ void syscall_mount(
 );
 void syscall_chdir(trapframe_t *tf, const char *path);
 void syscall_lseek64(trapframe_t *tf, int fd, long offset, int whence);
-
-// TODO: implement ioctl
-void syscall_ioctl(trapframe_t *tf, int fd, unsigned long cmd, unsigned long arg);
-
+void syscall_ioctl(trapframe_t *tf, int fd, uint64_t requests, ...);
 
 // static methods
 
@@ -102,6 +103,8 @@ int read_wrapper(int fd, void *buf, size_t len);
 int mkdir_wrapper(const char* pathname);
 int mount_wrapper(const char* target, const char* fs_name);
 int chdir_wrapper(const char* path);
+long lseek64_wrapper(int fd, long offset, int whence);
+int ioctl_wrapper(int fd, uint64_t cmd, va_list args);
 
 
 #endif // _FS_VFS_H

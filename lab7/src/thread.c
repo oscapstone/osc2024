@@ -142,7 +142,7 @@ void kill_zombies() {
         // close files
         for(int i=0;i <= zombie -> max_fd;i++) {
             if(zombie->fds[i].vnode) {
-                zombie -> fds[i].f_ops -> close(&zombie->fds[i]);
+                vfs_close(&zombie->fds[i]);
             }
         }
         kfree(zombie);

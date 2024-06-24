@@ -40,6 +40,7 @@ int cpiofs_close(file *target);
 int cpiofs_write(file *target, const void *buf, size_t len);
 int cpiofs_read(file *target, void *buf, size_t len);
 long cpiofs_lseek64(file *target, long offset, int whence);
+int cpiofs_ioctl(struct file *file, uint64_t request, va_list args);
 
 
 uint32_t cpio_read_8hex(const char *s);

@@ -25,6 +25,7 @@ struct file_operations tmpfs_f_ops = {
     .open = tmpfs_open,
     .close = tmpfs_close,
     .lseek64 = tmpfs_lseek64,
+    .ioctl = tmpfs_ioctl,
 };
 
 filesystem *tmpfs_init(void) {
@@ -390,4 +391,8 @@ long tmpfs_lseek64(file *target, long offset, int whence) {
     target -> f_pos = base + offset;
 
     return 0;
+}
+
+int tmpfs_ioctl(struct file *file, uint64_t request, va_list args) {
+    return -1;
 }

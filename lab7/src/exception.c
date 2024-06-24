@@ -95,6 +95,21 @@ void irq_exception_handler_c(){
 }
 
 void user_exception_handler_c(trapframe_t* tf) {
+    unsigned long long esr_el1 = 0;
+	asm volatile("mrs %0, esr_el1":"=r"(esr_el1));
+    // uart_send_string("esr_el1: ");
+	// uart_hex(esr_el1);
+	// uart_send_string("\n");
+    unsigned ec = (esr_el1 >> 26) & 0x3F; //0x3F = 0b111111(6)
+	// uart_send_string("ec: ");
+	// uart_hex(ec);
+	// uart_send_string("\n");
+
+    if(ec != 0x15) {
+        uart_send_string("User Exception Occurs!\n");
+        return;
+    }
+    int print_info = 0;
     int syscall_code = tf -> x[8];
     el1_interrupt_enable();
     switch (syscall_code) {
@@ -111,7 +126,7 @@ void user_exception_handler_c(trapframe_t* tf) {
             tf -> x[0] = exec((const char*)tf -> x[0], tf->x[1]);
             break;
         case 4:
-            uart_send_string("[INFO] system call: fork\n");
+            if(print_info) uart_send_string("[INFO] system call: fork\n");
             core_timer_disable();
             el1_interrupt_disable();
             fork(tf);
@@ -136,27 +151,31 @@ void user_exception_handler_c(trapframe_t* tf) {
             posix_kill((int)tf -> x[0], (int)tf -> x[1]);
             break;
         case 11:
-            uart_send_string("[INFO] system call: open\n");
+            if(print_info) uart_send_string("[INFO] system call: open\n");
             syscall_open(tf, (const char*)tf -> x[0], tf -> x[1]);
             break;
         case 12:
-            uart_send_string("[INFO] system call: close\n");
+            if(print_info) uart_send_string("[INFO] system call: close\n");
             syscall_close(tf, tf -> x[0]);
             break;
         case 13:
-            uart_send_string("[INFO] system call: write\n");
+            if(print_info) uart_send_string("[INFO] system call: write\n");
+            core_timer_disable();
+            el1_interrupt_disable();
             syscall_write(tf, tf -> x[0], (const void*)tf -> x[1], tf -> x[2]);
+            el1_interrupt_enable();
+            core_timer_enable();
             break;
         case 14:
-            uart_send_string("[INFO] system call: read\n");
+            if(print_info) uart_send_string("[INFO] system call: read\n");
             syscall_read(tf, tf -> x[0], (void*)tf -> x[1], tf -> x[2]);
             break;
         case 15:
-            uart_send_string("[INFO] system call: mkdir\n");
+            if(print_info) uart_send_string("[INFO] system call: mkdir\n");
             syscall_mkdir(tf, (const char*)tf -> x[0], tf -> x[1]);
             break;
         case 16:
-            uart_send_string("[INFO] system call: mount\n");
+            if(print_info) uart_send_string("[INFO] system call: mount\n");
             syscall_mount(
                 tf,
                 (const char*)tf -> x[0], // ignore source
@@ -167,8 +186,24 @@ void user_exception_handler_c(trapframe_t* tf) {
             );
             break;
         case 17:
-            uart_send_string("[INFO] system call: chdir\n");
+            if(print_info) uart_send_string("[INFO] system call: chdir\n");
             syscall_chdir(tf, (const char*)tf -> x[0]);
+            break;
+        case 18:
+            if(print_info) uart_send_string("[INFO] system call: lseek64\n");
+            syscall_lseek64(tf, tf -> x[0], tf -> x[1], tf -> x[2]);
+            break;
+        case 19:
+            if(print_info) uart_send_string("[INFO] system call: ioctl\n");
+            syscall_ioctl(
+                tf,
+                tf -> x[0],
+                tf -> x[1],
+                tf -> x[2],
+                tf -> x[3],
+                tf -> x[4],
+                tf -> x[5]
+            );
             break;
         case 20:
             sigreturn();

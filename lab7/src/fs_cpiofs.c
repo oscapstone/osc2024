@@ -29,6 +29,7 @@ struct file_operations cpiofs_f_ops = {
     .open = cpiofs_open,
     .close = cpiofs_close,
     .lseek64 = cpiofs_lseek64,
+    .ioctl = cpiofs_ioctl,
 };
 
 
@@ -218,6 +219,10 @@ long cpiofs_lseek64(file *target, long offset, int whence) {
     target -> f_pos = base + offset;
 
     return 0;
+}
+
+int cpiofs_ioctl(struct file *file, uint64_t request, va_list args) {
+    return -1;
 }
 
 uint32_t cpio_read_8hex(const char *s) {

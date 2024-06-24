@@ -25,6 +25,7 @@ file_operations uartfs_f_ops = {
     .open = uartfs_open,
     .close = uartfs_close,
     .lseek64 = uartfs_lseek64,
+    .ioctl = uartfs_ioctl,
 };
 
 int uartfs_mount(filesystem *fs, mount *mnt) {
@@ -84,12 +85,16 @@ int uartfs_open(vnode *file_node, file *target) {
     target -> vnode = file_node;
     target -> f_pos = 0;
     target -> f_ops = file_node -> f_ops;
+
+    return 0;
 }
 
 int uartfs_close(file *target) {
     target -> vnode = NULL;
     target -> f_pos = 0;
     target -> f_ops = NULL;
+
+    return 0;
 }
 
 int uartfs_write(file *target, const void *buf, size_t len) {
@@ -105,5 +110,9 @@ int uartfs_read(file *target, void *buf, size_t len) {
 }
 
 long uartfs_lseek64(file *target, long offset, int whence) {
+    return -1;
+}
+
+int uartfs_ioctl(struct file *file, uint64_t request, va_list args) {
     return -1;
 }

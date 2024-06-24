@@ -34,6 +34,8 @@ int tmpfs_close(file *target);
 int tmpfs_write(file *target, const void *buf, size_t len);
 int tmpfs_read(file *target, void *buf, size_t len);
 long tmpfs_lseek64(file *target, long offset, int whence);
+int tmpfs_ioctl(struct file *file, uint64_t request, va_list args);
+
 
 extern struct file_operations tmpfs_f_ops;
 
