@@ -309,7 +309,7 @@ void init_reserve_memory(){
     // initramfs, allocate 4 pages
     memory_reserve(0x8000000, 0x8000000 + 0x4000);
     // kernel image
-    memory_reserve(&_head, (unsigned int)&_head+((unsigned int)&_end));
+    memory_reserve(&_head, &_end);
 }
 
 
