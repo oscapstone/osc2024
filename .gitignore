@@ -1,4 +1,4 @@
 *.o
 *.elf
-objdumt.txt
+objdump.txt
 .DS_Store

@@ -400,7 +400,7 @@ void setup_page_table(void)
             pmd[i] = (unsigned long) addr | DEVICE_BLOCK_ATTR;
         else
             pmd[i] = (unsigned long) addr | NORMAL_BLOCK_ATTR;
-        pmd1[i] = (unsigned long) (addr + 0x40000000) | NORMAL_BLOCK_ATTR;
+        pmd1[i] = (unsigned long) (addr + 0x40000000) | DEVICE_BLOCK_ATTR;
     }
 
     asm volatile("msr ttbr0_el1, %0" : : "r" (MMU_PGD_ADDR));
