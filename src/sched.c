@@ -32,7 +32,7 @@ void task_init()
     // TODO: check whether we can fork() from task[0].
     update_current(&task_pool[0]);
     num_running_task = 1;
-    task_pool[0].tss.lr = (uint64_t) do_user_image;
+    task_pool[0].tss.lr = (uint64_t) do_shell_user; //do_user_image;
     task_pool[0].tss.sp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
     task_pool[0].tss.fp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
 }
