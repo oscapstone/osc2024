@@ -96,16 +96,17 @@ void initrd_exec(const char *target)
         if (!strcmp(target, pathname)) {
             disable_interrupt();
 
-            struct task_struct *task = kthread_create(0);
-
             void *program = kmalloc(filesize);
             memcpy(program, fptr + headsize, filesize);
+
+            struct task_struct *task = kthread_create(program);
+            task->code_size = filesize;
 
             map_pages((unsigned long)task->pgd, 0x0, filesize,
                       (unsigned long)VIRT_TO_PHYS(program), 0);
             map_pages((unsigned long)task->pgd, 0xFFFFFFFFB000, 0x4000,
                       (unsigned long)VIRT_TO_PHYS(task->user_stack), 0);
-            map_pages((unsigned long)task->pgd, 0x3C000000, 0x1000000,
+            map_pages((unsigned long)task->pgd, 0x3C000000, 0x3000000,
                       0x3C000000, 0);
 
             vfs_open("/dev/uart", 0, &task->fdt[0]); // stdin
@@ -125,8 +126,8 @@ void initrd_exec(const char *target)
             asm volatile("mov sp, %0" ::"r"(task->stack + STACK_SIZE));
             asm volatile("eret");
 
-            enable_interrupt();
-            return;
+            // enable_interrupt();
+            // return;
         }
         fptr += headsize + datasize;
     }

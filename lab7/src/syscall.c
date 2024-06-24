@@ -1,4 +1,5 @@
 #include "syscall.h"
+#include "dev_framebuffer.h"
 #include "initrd.h"
 #include "irq.h"
 #include "mbox.h"
@@ -11,6 +12,11 @@
 #include "utils.h"
 #include "vfs.h"
 #include "vm.h"
+
+extern unsigned int height;
+extern unsigned int width;
+extern unsigned int pitch;
+extern unsigned int isrgb;
 
 extern void child_ret_from_fork();
 
@@ -37,7 +43,11 @@ size_t sys_uart_write(const char *buf, size_t size)
 
 int sys_exec(const char *name, char *const argv[])
 {
-    initrd_sys_exec(name);
+    // TODO: Implement exec
+    uart_puts("[SYS_EXEC]\n");
+    while (1)
+        ;
+    // initrd_sys_exec(name);
     return 0;
 }
 
@@ -47,9 +57,8 @@ int sys_fork(trap_frame *tf)
     struct task_struct *parent = get_current();
     struct task_struct *child = kthread_create(0);
 
-    // FIXME: Hardcoded program size and physical address
-    // map_pages((unsigned long)child->pgd, 0x0, 0x62AF8, 0x20140000, 0);
-    map_pages((unsigned long)child->pgd, 0x0, 0x62AF8, 0x8180000, 0);
+    map_pages((unsigned long)child->pgd, 0x0, parent->code_size,
+              VIRT_TO_PHYS((unsigned long)parent->start), 0);
     map_pages((unsigned long)child->pgd, 0xFFFFFFFFB000, 0x4000,
               (unsigned long)VIRT_TO_PHYS(child->user_stack), 0);
     map_pages((unsigned long)child->pgd, 0x3C000000, 0x3000000, 0x3C000000, 0);
@@ -60,6 +69,14 @@ int sys_fork(trap_frame *tf)
 
     // Copy signal handlers
     memcpy(child->sighand, parent->sighand, sizeof(parent->sighand));
+
+    // Copy file descriptor table
+    for (int i = 0; i < MAX_FD; i++) {
+        if (parent->fdt[i]) {
+            child->fdt[i] = kmalloc(sizeof(struct file));
+            memcpy(child->fdt[i], parent->fdt[i], sizeof(struct file));
+        }
+    }
 
     unsigned long sp_off = (unsigned long)tf - (unsigned long)parent->stack;
     trap_frame *child_trap_frame = (trap_frame *)(child->stack + sp_off);
@@ -190,6 +207,29 @@ int sys_chdir(const char *path)
     uart_puts("cwd = ");
     uart_puts(get_current()->cwd);
     uart_puts("\n");
+    return 0;
+}
+
+long sys_lseek64(int fd, long offset, int whence)
+{
+    uart_puts("[SYS_LSEEK64]\n");
+    if (whence == SEEK_SET) {
+        get_current()->fdt[fd]->f_pos = offset;
+        return offset;
+    }
+    return -1;
+}
+
+int sys_ioctl(int fd, unsigned long request, void *info)
+{
+    uart_puts("[SYS_IOCTL]\n");
+    if (request == 0) {
+        struct framebuffer_info *fb_info = info;
+        fb_info->height = height;
+        fb_info->width = width;
+        fb_info->pitch = pitch;
+        fb_info->isrgb = isrgb;
+    }
     return 0;
 }
 

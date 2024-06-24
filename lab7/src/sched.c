@@ -94,6 +94,8 @@ struct task_struct *kthread_create(void (*func)())
     struct task_struct *task = kmalloc(sizeof(struct task_struct));
     task->pid = thread_count++;
     task->state = TASK_RUNNING;
+    task->start = func;
+    task->code_size = 0;
     task->stack = kmalloc(STACK_SIZE);
     task->user_stack = kmalloc(STACK_SIZE);
     memset(task->sighand, 0, sizeof(task->sighand));

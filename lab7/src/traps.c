@@ -85,6 +85,12 @@ void exception_entry(trap_frame *tf)
     case 17:
         tf->x0 = sys_chdir((const char *)tf->x0);
         break;
+    case 18:
+        tf->x0 = sys_lseek64(tf->x0, tf->x1, tf->x2);
+        break;
+    case 19:
+        tf->x0 = sys_ioctl(tf->x0, tf->x1, (void *)tf->x2);
+        break;
     case 139:
         sys_sigreturn(tf);
         break;

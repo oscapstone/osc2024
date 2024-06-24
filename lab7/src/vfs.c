@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "dev_framebuffer.h"
 #include "dev_uart.h"
 #include "mm.h"
 #include "sched.h"
@@ -22,6 +23,7 @@ void vfs_init()
 
     vfs_mkdir("/dev");
     vfs_mknod("/dev/uart", dev_uart_register());
+    vfs_mknod("/dev/framebuffer", dev_fb_register());
 }
 
 int register_filesystem(struct filesystem *fs)

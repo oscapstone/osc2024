@@ -33,6 +33,8 @@ struct task_struct {
     struct thread_struct context;
     int pid;
     enum task_state state;
+    void *start;
+    long code_size;
     void *stack;
     void *user_stack;
     void (*sighand[NSIG + 1])();
