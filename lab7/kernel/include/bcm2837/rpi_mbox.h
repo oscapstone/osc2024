@@ -1,9 +1,9 @@
 #ifndef _RPI_MBOX_H_
 #define _RPI_MBOX_H_
 
-#include "peripherals/base.h"
+#include "bcm2837/rpi_base.h"
 
-#define MBOX_BASE     (PBASE+0x0000B880)
+#define MBOX_BASE     (PERIPHERAL_BASE+0x0000B880)
 
 // The register access to a mailbox
 // https://jsandler18.github.io/extra/mailbox.html

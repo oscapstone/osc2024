@@ -1,11 +1,6 @@
-#ifndef _STDDEF_H
-#define _STDDEF_H
+#ifndef STDDEF_H
+#define STDDEF_H
 
-#define NULL ((void *)0)
+#define size_t unsigned long
 
-enum {
-	false	= 0,
-	true	= 1
-};
-
-#endif /* _STDDEF_H */
+#endif

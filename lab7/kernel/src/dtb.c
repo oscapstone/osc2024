@@ -1,117 +1,154 @@
 #include "dtb.h"
-#include "mini_uart.h"
+#include "uart1.h"
 #include "utils.h"
 #include "cpio.h"
+#include "memory.h"
 
-extern char *CPIO_START;
-extern char *CPIO_END;
-char *DTB_START;
-char *DTB_END;
+// extern void* CPIO_DEFAULT_PLACE;
+void* CPIO_DEFAULT_START;
+void* CPIO_DEFAULT_END;
+extern char* dtb_ptr;
 
-// Can check details from p.51, p.52 in device tree spec v0.4
-struct fdt_header { 
-    uint32_t magic;             // This field shoud contain 0xd00dfeed (big-endian)
-    uint32_t totalsize;         // Total size in bytes of the devicetree data structure
-    uint32_t off_dt_struct;     // The offset in bytes of the structure block
-    uint32_t off_dt_strings;    // The offset in bytes of the strings block
-    uint32_t off_mem_rsvmap;    // The offset in bytes of the memory reservation block
-    uint32_t version;           // The version of the devicetree data structure
-    uint32_t last_comp_version; // The lowest version of the devicetree data structure
-    uint32_t boot_cpuid_phys;   // The physical ID of the system’s boot CPU
-    uint32_t size_dt_strings;   // The length in bytes of the strings block section
-    uint32_t size_dt_struct;    // The length in bytes of the structure block section
+//stored as big endian
+struct fdt_header {
+    uint32_t magic;
+    uint32_t totalsize;
+    uint32_t off_dt_struct;
+    uint32_t off_dt_strings;
+    uint32_t off_mem_rsvmap;
+    uint32_t version;
+    uint32_t last_comp_version;
+    uint32_t boot_cpuid_phys;
+    uint32_t size_dt_strings;
+    uint32_t size_dt_struct;
 };
 
-uint32_t big_to_little_endian(uint32_t data) {
-    return ((data >> 24) & 0xFF)       
-         | ((data >> 8) & 0xFF00)      
-         | ((data << 8) & 0xFF0000)    
-         | ((data << 24) & 0xFF000000);
+// memory reservation block - https://zhuanlan.zhihu.com/p/144863497
+struct fdt_reserve_entry {
+    uint64_t address;
+    uint64_t size;
+};
+
+uint64_t uint64_endian_big2lttle(uint64_t data)
+{
+    char *r = (char *)&data;
+    return ((unsigned long long)r[7] << 0) | ((unsigned long long)r[6] << 8) | ((unsigned long long)r[5] << 16) | ((unsigned long long)r[4] << 24) | ((unsigned long long)r[3] << 32) | ((unsigned long long)r[2] << 40) | ((unsigned long long)r[1] << 48) | ((unsigned long long)r[0] << 56);
 }
 
-void parse_dtb_tree(dtb_callback callback) {
-    struct fdt_header* header = (struct fdt_header *)DTB_START;
-    // Check magic number
-    if(big_to_little_endian(header->magic) != 0xD00DFEED) {
-        uart_puts("FDT header: Wrong magic number");
+uint32_t uint32_endian_big2lttle(uint32_t data)
+{
+    char* r = (char*)&data;
+    return (r[3]<<0) | (r[2]<<8) | (r[1]<<16) | (r[0]<<24);
+}
+
+void traverse_device_tree(void *dtb_ptr, dtb_callback callback)
+{
+    struct fdt_header* header = dtb_ptr;
+    if(uint32_endian_big2lttle(header->magic) != 0xD00DFEED)
+    {
+        uart_puts("traverse_device_tree : wrong magic in traverse_device_tree");
         return;
     }
-    uint32_t total_struct_size = big_to_little_endian(header->size_dt_struct);
-    char* struct_ptr = (char*)header + big_to_little_endian(header->off_dt_struct);
-    char* string_ptr = (char*)header + big_to_little_endian(header->off_dt_strings);
-    char* struct_tail = (char*)struct_ptr + total_struct_size;
-    char* ptr = struct_ptr;
-    
-    while(ptr < struct_tail) {
-        // Get the token
-        uint32_t token = big_to_little_endian(*(uint32_t*)ptr);
-        ptr += 4;
+    // https://abcamus.github.io/2016/12/28/uboot%E8%AE%BE%E5%A4%87%E6%A0%91-%E8%A7%A3%E6%9E%90%E8%BF%87%E7%A8%8B/
+    // https://blog.csdn.net/wangdapao12138/article/details/82934127
+    uint32_t struct_size = uint32_endian_big2lttle(header->size_dt_struct);
+    char* dt_struct_ptr = (char*)((char*)header + uint32_endian_big2lttle(header->off_dt_struct));
+    char* dt_strings_ptr = (char*)((char*)header + uint32_endian_big2lttle(header->off_dt_strings));
 
-        if(token == FDT_BEGIN_NODE) {
-            callback(token, ptr, 0, 0);
-            ptr += strlen(ptr);
-            // Alignment 4 byte
-            ptr += 4 - (unsigned long long) ptr % 4;
-        } 
-        else if(token == FDT_END_NODE) {
-            callback(token, 0, 0, 0);
-        } 
-        else if(token == FDT_PROP) {
-            uint32_t len = big_to_little_endian(*(uint32_t*)ptr);
-            ptr += 4;
-            char* name = (char*)string_ptr + big_to_little_endian(*(uint32_t*)ptr);
-            ptr += 4;
-            callback(token, name, ptr, len);
-            ptr += len;
-            if((unsigned long long)ptr % 4 != 0) { 
-                //alignment 4 byte
-                ptr += 4 - (unsigned long long)ptr%4;
-            }
-        }
-        else if(token == FDT_NOP) {
-            callback(token, 0, 0, 0);
-        }
-        else if(token == FDT_END) {
-            callback(token, 0, 0, 0);
-        }
-        else {
-            uart_puts("error type:%x\n",token);
+    char* end = (char*)dt_struct_ptr + struct_size;
+    char* pointer = dt_struct_ptr;
+
+    while(pointer < end)
+    {
+        uint32_t token_type = uint32_endian_big2lttle(*(uint32_t*)pointer);
+
+        pointer += 4;
+        if(token_type == FDT_BEGIN_NODE)
+        {
+            callback(token_type, pointer, 0, 0);
+            pointer += strlen(pointer);
+            pointer += 4 - (unsigned long long) pointer % 4;           //alignment 4 byte
+        }else if(token_type == FDT_END_NODE)
+        {
+            callback(token_type, 0, 0, 0);
+        }else if(token_type == FDT_PROP)
+        {
+            uint32_t len = uint32_endian_big2lttle(*(uint32_t*)pointer);
+            pointer += 4;
+            char* name = (char*)dt_strings_ptr + uint32_endian_big2lttle(*(uint32_t*)pointer);
+            pointer += 4;
+            callback(token_type, name, pointer, len);
+            pointer += len;
+            if((unsigned long long)pointer % 4 != 0) pointer += 4 - (unsigned long long)pointer%4;   //alignment 4 byte
+        }else if(token_type == FDT_NOP)
+        {
+            callback(token_type, 0, 0, 0);
+        }else if(token_type == FDT_END)
+        {
+            callback(token_type, 0, 0, 0);
+        }else
+        {
+            uart_puts("error type:%x\n",token_type);
             return;
         }
     }
+}
 
+void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t name_size)
+{
+    static int level = 0;
+    if(node_type==FDT_BEGIN_NODE)
+    {
+        for(int i=0;i<level;i++)uart_puts("   ");
+        uart_puts("%s{\n",name);
+        level++;
+    }else if(node_type==FDT_END_NODE)
+    {
+        level--;
+        for(int i=0;i<level;i++)uart_puts("   ");
+        uart_puts("}\n");
+    }else if(node_type==FDT_PROP)
+    {
+        for(int i=0;i<level;i++)uart_puts("   ");
+        uart_puts("%s\n",name);
+    }
 }
 
 void dtb_callback_initramfs(uint32_t node_type, char *name, void *value, uint32_t name_size) {
     // https://github.com/stweil/raspberrypi-documentation/blob/master/configuration/device-tree.md
     // linux,initrd-start will be assigned by start.elf based on config.txt
-
-    if (node_type == FDT_PROP && strcmp(name, "linux,initrd-start") == 0) {
-		CPIO_START = (void *)(unsigned long long)big_to_little_endian(*(uint32_t *)value);
-	}
-	if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0) {
-		CPIO_END = (void *)(unsigned long long)big_to_little_endian(*(uint32_t *)value);
-	}
-}
-
-void dtb_callback_show_tree(uint32_t node_type, char *name, void *data, uint32_t name_size) {
-    static int level = 0;
-    if(node_type==FDT_BEGIN_NODE) {
-        for(int i=0;i<level;i++) uart_puts("   ");
-        uart_puts("%s{\n",name);
-        level++;
-    } else if(node_type==FDT_END_NODE) {
-        level--;
-        for(int i=0;i<level;i++) uart_puts("   ");
-        uart_puts("}\n");
-    } else if(node_type==FDT_PROP){
-        for(int i=0;i<level;i++) uart_puts("   ");
-        uart_puts("%s\n",name);
+    if (node_type==FDT_PROP && strcmp(name,"linux,initrd-start")==0)
+    {
+        CPIO_DEFAULT_START = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t*)value);
+    }
+    if (node_type == FDT_PROP && strcmp(name, "linux,initrd-end") == 0)
+    {
+        CPIO_DEFAULT_END = (void *)(unsigned long long)uint32_endian_big2lttle(*(uint32_t *)value);
     }
 }
 
-void dtb_init(void *dtb_ptr) {
-	DTB_START = dtb_ptr;
-	DTB_END = (char *)dtb_ptr + big_to_little_endian(((struct fdt_header*)dtb_ptr)->totalsize);
-	parse_dtb_tree(dtb_callback_initramfs);
+void dtb_find_and_store_reserved_memory()
+{
+    struct fdt_header *header = (struct fdt_header *) dtb_ptr;
+    if (uint32_endian_big2lttle(header->magic) != 0xD00DFEED)
+    {
+        uart_puts("traverse_device_tree : wrong magic in traverse_device_tree");
+        return;
+    }
+
+    // off_mem_rsvmap stores all of reserve memory map with address and size
+    char *dt_mem_rsvmap_ptr = (char *)((char *)header + uint32_endian_big2lttle(header->off_mem_rsvmap));
+    struct fdt_reserve_entry *reverse_entry = (struct fdt_reserve_entry *)dt_mem_rsvmap_ptr;
+
+    // reserve memory which is defined by dtb
+    while (reverse_entry->address != 0 || reverse_entry->size != 0)
+    {
+        unsigned long long start = uint64_endian_big2lttle(reverse_entry->address);
+        unsigned long long end = uint64_endian_big2lttle(reverse_entry->size) + start;
+        memory_reserve(start, end);
+        reverse_entry++;
+    }
+
+    // reserve device tree itself
+    memory_reserve((unsigned long long)dtb_ptr, (unsigned long long)dtb_ptr + uint32_endian_big2lttle(header->totalsize));
 }

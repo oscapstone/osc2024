@@ -1,493 +1,361 @@
 #include "vfs.h"
-#include "stddef.h"
-#include "stdint.h"
-#include "utils.h"
-#include "list.h"
-#include "memory.h"
 #include "tmpfs.h"
-#include "mini_uart.h"
+#include "memory.h"
+#include "utils.h"
+#include "uart1.h"
 #include "initramfs.h"
-#include "sched.h"
-#include "syscall.h"
+#include "dev_uart.h"
 #include "dev_framebuffer.h"
-#include "dev_uart1.h"
 
-extern thread_t *curr_thread;
+struct mount *rootfs;
+struct filesystem reg_fs[MAX_FS_REG];
+struct file_operations reg_dev[MAX_DEV_REG];
 
-vnode_t *root_vnode;
-mount_t *root_mount;
-
-filesystem_t *filesystems[MAX_FS_REG];
-dev_t *devs[MAX_DEV_REG];
-
-extern int framebuffer_dev_id;
-extern int uart1_dev_id;
-
-static inline filesystem_t *get_fs(const char *name)
+// Register the file system to the kernel. Initialize memory pool of the file system.
+int register_filesystem(struct filesystem *fs)
 {
-	filesystem_t *fs;
-	for (int i = 0; i < MAX_FS_REG; i++)
-	{
-		fs = filesystems[i];
-		if (fs && strcmp(fs->name, name) == 0)
-		{
-			return fs;
-		}
-	}
-	return NULL;
+    for (int i = 0; i < MAX_FS_REG; i++)
+    {
+        if (!reg_fs[i].name)
+        {
+            reg_fs[i].name = fs->name;
+            reg_fs[i].setup_mount = fs->setup_mount;
+            return i;
+        }
+    }
+    return -1;
+}
+
+int register_dev(struct file_operations *fo)
+{
+    for (int i = 0; i < MAX_FS_REG; i++)
+    {
+        if (!reg_dev[i].open)
+        {
+            // return unique id for the assigned device
+            reg_dev[i] = *fo;
+            return i;
+        }
+    }
+    return -1;
+}
+
+struct filesystem *find_filesystem(const char *fs_name)
+{
+    for (int i = 0; i < MAX_FS_REG; i++)
+    {
+        if (strcmp(reg_fs[i].name, fs_name) == 0)
+        {
+            return &reg_fs[i];
+        }
+    }
+    return 0;
+}
+
+// file ops
+int vfs_open(const char *pathname, int flags, struct file **target)
+{
+    // 1. Lookup pathname
+    // 3. Create a new file if O_CREAT is specified in flags and vnode not found
+    struct vnode *node;
+    // If the file does not exist, create it
+    if (vfs_lookup(pathname, &node) != 0 && (flags & O_CREAT))
+    {
+        // uart_sendline("O_CREAT\r\n");
+        // grep all of the directory path
+        int last_slash_idx = 0;
+        for (int i = 0; i < strlen(pathname); i++)
+        {
+            if (pathname[i] == '/')
+            {
+                last_slash_idx = i;
+            }
+        }
+
+        char dirname[MAX_PATH_NAME + 1];
+        strcpy(dirname, pathname);
+        dirname[last_slash_idx] = 0;
+        // update dirname to node
+        // If the upper directory does not exist, the creation fails.
+        if (vfs_lookup(dirname, &node) != 0)
+        {
+            uart_sendline("cannot ocreate no dir name\r\n");
+            return -1;
+        }
+        // create a new file node on node, &node is new file, 3rd arg is filename
+        node->v_ops->create(node, &node, pathname + last_slash_idx + 1);
+        *target = kmalloc(sizeof(struct file));
+        // attach opened file on the new node
+        node->f_ops->open(node, target);
+        (*target)->flags = flags;
+        return 0;
+    }
+    else // 2. Create a new file handle for this vnode if found.
+    {
+        // attach opened file on the node
+        *target = kmalloc(sizeof(struct file));
+        node->f_ops->open(node, target);
+        (*target)->flags = flags;
+        return 0;
+    }
+
+    // lookup error code shows if file exist or not or other error occurs
+    // 4. Return error code if fails
+    return -1;
+}
+
+// file ops
+int vfs_close(struct file *file)
+{
+    // 1. release the file handle
+    // 2. Return error code if fails
+    return file->f_ops->close(file);
+}
+
+// file ops
+int vfs_write(struct file *file, const void *buf, size_t len)
+{
+    // 1. write len byte from buf to the opened file.
+    // 2. return written size or error code if an error occurs.
+    return file->f_ops->write(file, buf, len);
+}
+
+// file ops
+int vfs_read(struct file *file, void *buf, size_t len)
+{
+    // 1. read min(len, readable size) byte to buf from the opened file.
+    // 2. block if nothing to read for FIFO type
+    // 2. return read size or error code if an error occurs.
+    return file->f_ops->read(file, buf, len);
+}
+
+// file ops
+int vfs_mkdir(const char *pathname)
+{
+    char dirname[MAX_PATH_NAME] = {};    // before add folder
+    char newdirname[MAX_PATH_NAME] = {}; // after  add folder
+
+    // search for last directory
+    int last_slash_idx = 0;
+    for (int i = 0; i < strlen(pathname); i++)
+    {
+        if (pathname[i] == '/')
+        {
+            last_slash_idx = i;
+        }
+    }
+
+    memcpy(dirname, pathname, last_slash_idx);
+    strcpy(newdirname, pathname + last_slash_idx + 1);
+
+    // create new directory if upper directory is found
+    struct vnode *node;
+    if (vfs_lookup(dirname, &node) == 0)
+    {
+        // node is the old dir, &node is new dir
+        node->v_ops->mkdir(node, &node, newdirname);
+        return 0;
+    }
+
+    uart_sendline("vfs_mkdir cannot find upper directory");
+    return -1;
+}
+
+int vfs_mount(const char *target, const char *filesystem)
+{
+    struct vnode *dirnode;
+    // search for the target filesystem
+    struct filesystem *fs = find_filesystem(filesystem);
+    if (!fs)
+    {
+        uart_sendline("vfs_mount cannot find filesystem\r\n");
+        return -1;
+    }
+
+    if (vfs_lookup(target, &dirnode) == -1)
+    {
+        uart_sendline("vfs_mount cannot find dir\r\n");
+        return -2;
+    }
+    else
+    {
+        // mount fs on dirnode
+        dirnode->mount = kmalloc(sizeof(struct mount));
+        fs->setup_mount(fs, dirnode->mount);
+    }
+    return 0;
+}
+
+int vfs_lookup(const char *pathname, struct vnode **target)
+{
+    // if no path input, return root
+    if (strlen(pathname) == 0)
+    {
+        *target = rootfs->root;
+        return 0;
+    }
+
+    struct vnode *dirnode = rootfs->root;
+    char component_name[MAX_FILE_NAME + 1] = {};
+    int c_idx = 0;
+    // deal with directory
+    for (int i = 1; i < strlen(pathname); i++)
+    {
+        if (pathname[i] == '/')
+        {
+            component_name[c_idx] = 0;
+            // if fs's v_ops error, return -1
+            if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0)
+            {
+                // uart_sendline("vfs_lookup cannot find directory %s\r\n", component_name);
+                return -1;
+            }
+            // redirect to mounted filesystem
+            while (dirnode->mount)
+            {
+                dirnode = dirnode->mount->root;
+            }
+            c_idx = 0;
+        }
+        else
+        {
+            component_name[c_idx++] = pathname[i];
+        }
+    }
+
+    // deal with file
+    component_name[c_idx++] = 0;
+    // if fs's v_ops error, return -1
+    if (dirnode->v_ops->lookup(dirnode, &dirnode, component_name) != 0)
+    {
+        // uart_sendline("vfs_lookup cannot find file %s\r\n", component_name);
+        return -1;
+    }
+    // redirect to mounted filesystem
+    while (dirnode->mount)
+    {
+        dirnode = dirnode->mount->root;
+    }
+    // return file's vnode
+    *target = dirnode;
+
+    return 0;
+}
+
+// for device operations only
+int vfs_mknod(char* pathname, int id)
+{
+    struct file* f = kmalloc(sizeof(struct file));
+    // create leaf and its file operations
+    vfs_open(pathname, O_CREAT, &f);
+    f->vnode->f_ops = &reg_dev[id];
+    vfs_close(f);
+    return 0;
 }
 
 void init_rootfs()
 {
-	for (int i = 0; i < MAX_FS_REG; i++)
-	{
-		filesystems[i] = NULL;
-	}
-	for (int i = 0; i < MAX_DEV_REG; i++)
-	{
-		devs[i] = NULL;
-	}
+    // tmpfs
+    int idx = register_tmpfs();
+    rootfs = kmalloc(sizeof(struct mount));
+    reg_fs[idx].setup_mount(&reg_fs[idx], rootfs);
 
-	register_tmpfs();
-	filesystem_t *fs = get_fs("tmpfs");
-	root_mount = kmalloc(sizeof(mount_t));
-	fs->setup_mount(fs, root_mount, NULL, "");
-	root_vnode = root_mount->root;
-	uart_puts("root_vnode: %x\r\n", root_vnode);
-	root_vnode->parent = root_vnode;
-	vnode_t *curr_vnode;
-	curr_vnode = root_vnode;
-	file_t *file;
-	vfs_open(curr_vnode, "/test", O_CREAT, &file);
-	vfs_write(file, "hello world", 11);
-	vfs_open(curr_vnode, "/test1", O_CREAT, &file);
-	vfs_open(curr_vnode, "test123", O_CREAT, &file);
+    // initramfs
+    vfs_mkdir("/initramfs");
+    register_initramfs();
+    vfs_mount("/initramfs","initramfs");
+    
+    // dev_fs
+    vfs_mkdir("/dev");
+    int uart_id = init_dev_uart();
+    vfs_mknod("/dev/uart", uart_id);
 
-	vfs_mkdir(curr_vnode, "/dir1");
-	vfs_mkdir(curr_vnode, "/dir2");
-	vfs_mkdir(curr_vnode, "/dir2/dir3");
-	vfs_open(curr_vnode, "/dir2/test", O_CREAT, &file);
+    int framebuffer_id = init_dev_framebuffer();
+    vfs_mknod("/dev/framebuffer", framebuffer_id);
 
-	vfs_mkdir(curr_vnode, INITRAMFS_PATH);
-	register_initramfs();
-	vfs_mount(curr_vnode, INITRAMFS_PATH, "initramfs");
-
-	vfs_mkdir(curr_vnode, "/dev");
-	init_dev_framebuffer();
-	vfs_mknod(curr_vnode, "/dev/framebuffer", framebuffer_dev_id);
-	init_dev_uart1();
-	vfs_mknod(curr_vnode, "/dev/uart1", uart1_dev_id);
+    // vfs_test();
 }
 
-void init_thread_vfs(struct thread *t)
+void vfs_test()
 {
-	for (int i = 0; i < MAX_FD + 1; i++)
-	{
-		t->file_descriptors_table[i] = NULL;
-	}
-	t->pwd = get_root_vnode();
-	file_t *file;
+    // Lab7- Basic Exercise 1 & 2
+    uart_sendline("rootfs name: %s\n", rootfs->fs->name);
+    // test read/write
+    if (vfs_mkdir("/dir1") == -1)
+        uart_sendline("mkdir1 failed\n");
+    if (vfs_mkdir("/dir1/dir2") == -1)
+        uart_sendline("mkdir2 failed\n");
+    // test mount
+    if (vfs_mount("/dir1/dir2", "tmpfs") < 0)
+        uart_sendline("mount failed\n");
 
-	vfs_open(t->pwd, "/dev/uart1", 0, &file);
-	file->f_ops = get_stdin_ops();
-	thread_insert_file_to_fdtable(t, file);
-	vfs_open(t->pwd, "/dev/uart1", 0, &file);
-	file->f_ops = get_stdout_ops();
-	thread_insert_file_to_fdtable(t, file);
-	vfs_open(t->pwd, "/dev/uart1", 0, &file);
-	file->f_ops = get_stdout_ops();
-	thread_insert_file_to_fdtable(t, file);
+    struct file *testfilew;
+    struct file *testfiler;
+    char testbufw[0x30] = "0123456789abcdef";
+    char testbufr[0x30] = {};
+    if (vfs_open("/dir1/dir2/file1.txt\n", O_CREAT, &testfilew) == -1)
+        uart_sendline("open failed\n");
+    if (vfs_open("/dir1/dir2/file1.txt\n", O_CREAT, &testfiler) == -1)
+        uart_sendline("open failed\n");
+    if (vfs_write(testfilew, testbufw, 10) != 10)
+        uart_sendline("write failed\n");
+    if (vfs_read(testfiler, testbufr, 10) != 10)
+        uart_sendline("read failed\n");
+    uart_sendline("testbufr: %s\n", testbufr);
+    if (vfs_close(testfilew) != 0)
+        uart_sendline("close testfilew failed\n");
+    if (vfs_close(testfiler) != 0)
+        uart_sendline("close testfiler failed\n");
+
+    // Lab7- Basic Exercise 4
+    struct file *testfile_initramfs;
+    vfs_open("/initramfs/file0.txt", O_CREAT, &testfile_initramfs);
+    vfs_read(testfile_initramfs, testbufr, 0x20);
+    uart_sendline("Read from testfile_initramfs testbufr: %s\n", testbufr);
 }
 
-vnode_t *get_root_vnode()
+char *get_absolute_path(char *path, char *curr_working_dir)
 {
-	return root_vnode;
-}
+    // if relative path -> add root path
+    if (path[0] != '/')
+    {
+        char tmp[MAX_PATH_NAME];
+        strcpy(tmp, curr_working_dir);
+        if (strcmp(curr_working_dir, "/") != 0)
+            strcat(tmp, "/");
+        strcat(tmp, path); // "/curr_working_dir/path"
+        strcpy(path, tmp);
+    }
 
-int handling_relative_path(const char *path, vnode_t *curr_vnode, vnode_t **target, size_t *start_idx)
-{
-	size_t len = strlen(path);
-	if (len != 0)
-	{
-		if (len >= 3 && strncmp(path, "../", 3) == 0)
-		{
-			// uart_puts("handling_relative_path: path is ../, *target: 0x%x\r\n", curr_vnode->parent);
-			*target = curr_vnode->parent;
-			*start_idx = 3;
-			return 1;
-		}
-		else if (len == 2 && strncmp(path, "..", 3) == 0)
-		{
-			// uart_puts("handling_relative_path: path is .., *target: 0x%x\r\n", curr_vnode->parent);
-			*target = curr_vnode->parent;
-			*start_idx = 2;
-			return 0;
-		}
-		else if (len >= 2 && strncmp(path, "./", 2) == 0)
-		{
-			// uart_puts("handling_relative_path: path is ./, *target: 0x%x\r\n", curr_vnode);
-			*target = curr_vnode;
-			*start_idx = 2;
-			return 1;
-		}
-		else if (len == 1 && (strncmp(path, ".", 1) == 0 || strncmp(path, "/", 1) == 0))
-		{
-			// uart_puts("handling_relative_path: path is . or /, *target: 0x%x\r\n", curr_vnode);
-			*target = curr_vnode;
-			*start_idx = 1;
-			return 0;
-		}
-	}
-	else
-	{
-		*target = curr_vnode;
-		*start_idx = 0;
-		// uart_puts("handling_relative_path: path is empty, *target: 0x%x\r\n", *target);
-		return 0;
-	}
-	// uart_puts("handling_relative_path: path is %s, *target: 0x%x\r\n", path, curr_vnode);
-	*start_idx = 0;
-	*target = curr_vnode;
-	return 0;
-}
+    char absolute_path[MAX_PATH_NAME + 1] = {};
+    int idx = 0;
+    for (int i = 0; i < strlen(path); i++)
+    {
+        // meet /.. -> delete last level directory
+        if (path[i] == '/' && path[i + 1] == '.' && path[i + 2] == '.')
+        {
+            for (int j = idx; j >= 0; j--)
+            {
+                if (absolute_path[j] == '/')
+                {
+                    absolute_path[j] = 0;
+                    idx = j;
+                }
+            }
+            i += 2;
+            continue;
+        }
 
-vnode_t *create_vnode()
-{
-	vnode_t *node = kmalloc(sizeof(vnode_t));
-	node->superblock = NULL;
-	node->internal = NULL;
-	node->name = NULL;
-	node->mount = NULL;
-	node->parent = NULL;
-	return node;
-}
+        // ignore /.
+        if (path[i] == '/' && path[i + 1] == '.')
+        {
+            i++;
+            continue;
+        }
 
-int register_filesystem(struct filesystem *fs)
-{
-	for (int i = 0; i < MAX_FS_REG; i++)
-	{
-		if (filesystems[i] == NULL)
-		{
-			filesystems[i] = fs;
-			return i;
-		}
-	}
-	return -1;
-}
+        absolute_path[idx++] = path[i];
+    }
+    absolute_path[idx] = 0;
 
-int register_dev(dev_t *dev)
-{
-	for (int i = 0; i < MAX_DEV_REG; i++)
-	{
-		if (devs[i] == NULL)
-		{
-			uart_puts("register_dev: %s, id: %d, dev: 0x%x\r\n", dev->name, i, dev);
-			devs[i] = dev;
-			return i;
-		}
-	}
-	return -1;
-}
-
-int vfs_open(struct vnode *dir_node, const char *pathname, int flags, struct file **target)
-{
-	lock();
-	vnode_t *node;
-	uart_puts("vfs_open: %s\r\n", pathname);
-	if (vfs_lookup(dir_node, pathname, &node) == -1)
-	{
-		if (!(flags & O_CREAT))
-		{
-			uart_puts("cannot find pathname\r\n");
-			return -1;
-		}
-		// grep all of the directory path
-		int last_slash_idx = 0;
-		for (int i = last_slash_idx; i < strlen(pathname); i++)
-		{
-			if (pathname[i] == '/')
-			{
-				last_slash_idx = i;
-			}
-		}
-
-		char dirname[MAX_PATH_NAME + 1];
-		strcpy(dirname, pathname);
-		dirname[last_slash_idx] = 0;
-		// update dirname to node
-		if (vfs_lookup(dir_node, dirname, &node) != 0)
-		{
-			uart_puts("cannot ocreate no dir name\r\n");
-			unlock();
-			return -1;
-		}
-		// create a new file node on node, &node is new file, 3rd arg is filename
-		uart_puts("create file: %s, node: 0x%x\r\n", pathname + last_slash_idx + 1, node);
-		node->v_ops->create(node, &node, pathname + last_slash_idx + 1);
-	}
-	*target = kmalloc(sizeof(struct file));
-	// attach opened file on the new node
-	uart_puts("open file %s\r\n", pathname);
-	node->f_ops->open(node, target);
-	(*target)->flags = flags;
-	(*target)->f_pos = 0;
-	uart_puts("vfs_open: %s, file: 0x%x, f_ops: 0x%x\r\n", pathname, *target, (*target)->f_ops);
-	unlock();
-	return 0;
-}
-
-int vfs_close(struct file *file)
-{
-	// 1. release the file handle
-	// 2. Return error code if fails
-	// uart_puts("vfs_close: file: 0x%x, f_ops: 0x%x\r\n", file, file->f_ops);
-	file->f_ops->close(file);
-	return 0;
-}
-
-int vfs_write(struct file *file, const void *buf, size_t len)
-{
-	// 1. write len byte from buf to the opened file.
-	// 2. return written size or error code if an error occurs.
-	// uart_puts("vfs_write: %s, len: %d, file: 0x%x, f_ops: 0x%x\r\n", buf, len, file, file->f_ops);
-	return file->f_ops->write(file, buf, len);
-}
-
-int vfs_read(struct file *file, void *buf, size_t len)
-{
-	// 1. read min(len, readable size) byte to buf from the opened file.
-	// 2. block if nothing to read for FIFO type
-	// 2. return read size or error code if an error occurs.
-	return file->f_ops->read(file, buf, len);
-}
-
-int vfs_readdir(struct vnode *dir_node, const char *pathname, const char buf[])
-{
-	uart_puts("vfs_readdir: %s, pathname[0]: %d, pathname[1]: %d\r\n", pathname, pathname[0], pathname[1]);
-	struct vnode *node;
-
-	if (vfs_lookup(dir_node, pathname, &node) == -1)
-	{
-		uart_puts("vfs_readdir cannot find pathname");
-		return -1;
-	}
-	else
-	{
-		node->v_ops->readdir(node, buf);
-		return 0;
-	}
-}
-
-int vfs_mkdir(struct vnode *dir_node, const char *pathname)
-{
-	char parent_dir_name[MAX_PATH_NAME] = {}; // before add folder
-	char new_dir_name[MAX_PATH_NAME] = {};	  // after  add folder
-
-	// search for last directory
-	int last_slash_idx = -1;
-	for (int i = 0; i < strlen(pathname); i++)
-	{
-		if (pathname[i] == '/')
-		{
-			last_slash_idx = i;
-		}
-	}
-	uart_puts("last_slash_idx: %d, dir_node->name: %s\r\n", last_slash_idx, dir_node->name);
-	struct vnode *node;
-	if (last_slash_idx == -1)
-	{
-		strcpy(new_dir_name, pathname);
-		node = dir_node;
-	}
-	else
-	{
-		memcpy(parent_dir_name, pathname, last_slash_idx);
-		strcpy(new_dir_name, pathname + last_slash_idx + 1);
-
-		// create new directory if upper directory is found
-		if (vfs_lookup(dir_node, parent_dir_name, &node) != 0)
-		{
-			uart_puts("vfs_mkdir cannot find pathname");
-			return -1;
-		}
-	}
-	struct vnode *new_node;
-	uart_puts("vfs_mkdir: new_dir_name: %s\r\n", new_dir_name);
-	node->v_ops->mkdir(node, &new_node, new_dir_name);
-	new_node->type = FS_DIR;
-	return 0;
-}
-
-int vfs_mount(struct vnode *dir_node, const char *target, const char *filesystem)
-{
-	get_fs(filesystem);
-
-	struct vnode *node;
-	// search for the target filesystem
-	struct filesystem *fs = get_fs(filesystem);
-	if (!fs)
-	{
-		uart_puts("vfs_mount cannot find filesystem\r\n");
-		return -1;
-	}
-
-	if (vfs_lookup(dir_node, target, &node) == -1)
-	{
-		uart_puts("vfs_mount cannot find dir\r\n");
-		return -1;
-	}
-	else
-	{
-		// mount fs on dirnode
-		node->mount = kmalloc(sizeof(struct mount));
-		fs->setup_mount(fs, node->mount, node->parent, node->name);
-	}
-	return 0;
-}
-
-// for device operations only
-int vfs_mknod(struct vnode *dir_node, char *pathname, int id)
-{
-	dev_t *dev = devs[id];
-	file_t *f = kmalloc(sizeof(file_t));
-	// create leaf and its file operations
-	vfs_open(dir_node, pathname, O_CREAT, &f);
-	uart_puts("vfs_mknod: %s, id: %d, dev: 0x%x, f_ops: 0x%x\r\n", pathname, id, dev, f->f_ops);
-	f->vnode->f_ops = dev->f_ops;
-	f->vnode->type = FS_DEV;
-	f->vnode->internal = dev;
-	f->vnode->v_ops = NULL;
-	uart_puts("vfs_mknod: %s, id: %d, dev: 0x%x, file: 0x%x, f_ops: 0x%x, dev->f_ops: 0x%x\r\n", pathname, id, dev, f, f->vnode->f_ops, dev->f_ops);
-	vfs_close(f);
-	return 0;
-}
-
-static inline int __vfs_lookup_depth_1(char *component_name, vnode_t *node, vnode_t **target)
-{
-	// if fs's v_ops error, return -1
-	if (strlen(component_name) != 0) // if component_name is empty, skip
-	{
-		if (node->v_ops->lookup(node, &node, component_name) != 0)
-		{
-			uart_puts("vfs_lookup: lookup error\r\n");
-			return -1;
-		}
-	}
-	// redirect to mounted filesystem
-	while (node->mount)
-	{
-		uart_puts("vfs_lookup: node->mount->root: 0x%x\r\n", node->mount->root);
-		node = node->mount->root;
-	}
-	*target = node;
-	return 0;
-}
-
-int vfs_lookup(struct vnode *dir_node, const char *pathname, struct vnode **target)
-{
-	lock();
-	vnode_t *node;
-	size_t i_start = 0;
-	// translate absolute path to relative path
-	if (pathname[0] == '/')
-	{
-		uart_puts("vfs_lookup: pathname start with /\r\n");
-		node = root_vnode;
-		i_start = 1;
-	}
-	else
-	{
-		node = dir_node;
-	}
-
-	uart_puts("vfs_lookup: pathname \"%s\", str_len: %d, dir_node: 0x%x, node: 0x%x\r\n", pathname, strlen(pathname), dir_node, node);
-
-	char component_name[MAX_FILE_NAME + 1] = {0};
-	size_t offset = 0;
-	int comp_len = 0;
-	int i = i_start;
-	// deal with directory
-	do
-	{
-		uart_puts("vfs_lookup: i: %d, c_idx: %d, pathname[i]: %c\r\n", i, comp_len, pathname[i]);
-		while (handling_relative_path(pathname + i, node, &node, &offset)) // if path is relative
-		{
-			i += offset;
-			uart_puts("i: %d, offset: %d\r\n", i, offset);
-		}
-		i += offset;
-		uart_puts("i: %d, offset: %d\r\n", i, offset);
-		if (pathname[i - 1] == '/' && pathname[i] == '\0')
-			break;
-		if (pathname[i] == '/' || pathname[i] == '\0')
-		{
-			uart_puts("in if pathname[i] == / or \0\r\n");
-			component_name[comp_len++] = 0;
-			if (__vfs_lookup_depth_1(component_name, node, &node) == -1)
-			{
-				uart_puts("vfs_lookup: lookup error\r\n");
-				unlock();
-				return -1;
-			}
-			comp_len = 0;
-		}
-		else
-		{
-			component_name[comp_len++] = pathname[i];
-		}
-		i++;
-	} while (i < strlen(pathname) + 1);
-	// uart_puts("vfs_lookup: target %s\r\n", node->name);
-	*target = node;
-	unlock();
-	return 0;
-}
-
-int get_pwd(char *buf)
-{
-	struct vnode *pwd_node = curr_thread->pwd;
-	int index = 0;
-	int path_length = 0;
-	char temp_buf[MAX_PATH_NAME];
-
-	while (pwd_node->parent != pwd_node)
-	{
-		// Store the name in a temporary buffer
-		strcpy(temp_buf, pwd_node->name);
-		int name_length = strlen(pwd_node->name);
-
-		// Copy the name from the temporary buffer to buf
-		memcpy(buf + name_length + 1, buf, path_length);
-		buf[name_length + 1 + path_length] = '\0';
-		memcpy(buf + 1, temp_buf, name_length);
-
-		// Update the path length and index
-		path_length += name_length + 1;
-		index += name_length + 1;
-		buf[0] = '/';
-
-		pwd_node = pwd_node->parent;
-	}
-
-	if (path_length == 0)
-	{
-		buf[index++] = '/';
-	}
-
-	buf[index] = '\0'; // Add null terminator to the end of the string
-	return 0;
-}
-
-struct file *duplicate_file_struct(struct file *file)
-{
-	if(file == NULL)
-	{
-		return NULL;
-	}
-	struct file *new_file = kmalloc(sizeof(struct file));
-	new_file->f_pos = file->f_pos;
-	new_file->flags = file->flags;
-	new_file->vnode = file->vnode;
-	new_file->f_ops = file->f_ops;
-	return new_file;
+    return strcpy(path, absolute_path);
 }

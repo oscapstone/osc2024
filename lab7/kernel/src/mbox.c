@@ -1,4 +1,4 @@
-#include "peripherals/rpi_mbox.h"
+#include "bcm2837/rpi_mbox.h"
 #include "mbox.h"
 
 /* Aligned to 16-byte boundary while we have 28-bits for VC */
@@ -16,7 +16,8 @@ int mbox_call( mbox_channel_type channel, unsigned int value )
         while ( *MBOX_STATUS & BCM_ARM_VC_MS_EMPTY ) {}
         // Read from Register
         if (value == *MBOX_READ)
-            return !(pt[1] == MBOX_REQUEST_SUCCEED);
+            return pt[1] == MBOX_REQUEST_SUCCEED;
     }
     return 0;
 }
+

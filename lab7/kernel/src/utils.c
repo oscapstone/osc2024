@@ -1,7 +1,5 @@
 #include "utils.h"
-#include "mini_uart.h"
-#include "stddef.h"
-#include "stdint.h"
+#include <stddef.h>
 
 unsigned int vsprintf(char *dst, char* fmt, __builtin_va_list args)
 {
@@ -120,10 +118,10 @@ unsigned int sprintf(char *dst, char* fmt, ...)
     return r;
 }
 
-unsigned long long strlen(const char *str) {
+unsigned long long strlen(const char *str)
+{
     size_t count = 0;
-    while((unsigned char)*str++)
-        count++;
+    while((unsigned char)*str++)count++;
     return count;
 }
 
@@ -145,9 +143,11 @@ int strncmp (const char *s1, const char *s2, unsigned long long n)
 {
     unsigned char c1 = '\0';
     unsigned char c2 = '\0';
-    if (n >= 4) {
+    if (n >= 4)
+    {
         size_t n4 = n >> 2;
-        do {
+        do
+        {
             c1 = (unsigned char) *s1++;
             c2 = (unsigned char) *s2++;
             if (c1 == '\0' || c1 != c2)
@@ -167,7 +167,8 @@ int strncmp (const char *s1, const char *s2, unsigned long long n)
         } while (--n4 > 0);
         n &= 3;
     }
-    while (n > 0) {
+    while (n > 0)
+    {
         c1 = (unsigned char) *s1++;
         c2 = (unsigned char) *s2++;
         if (c1 == '\0' || c1 != c2)
@@ -177,172 +178,75 @@ int strncmp (const char *s1, const char *s2, unsigned long long n)
     return c1 - c2;
 }
 
-void str_split(char* str, char delim, char** result, int* count) {
-    *count = 0;
-    while (*str) {
-        while (*str == delim) {
-            *str++ = '\0';
-        }
-        if (*str) {
-            result[(*count)++] = str;
-        }
-        while (*str && *str != delim) {
-            str++;
-        }
-    }
-}
-
-int strstr(const char* str, const char* substring) {
-    const char *a;
-    const char *b;
-    
-    b = substring;
-    if (*b == 0) return 1;
-    
-    while (*str) {
-        if (*str != *b) {
-            str++;
-            continue;
-        }
-        a = str;
-        while (1) {
-            if (*b == 0) return 1;
-            if (*a++ != *b++) break;
-        }
-        str++;
-    }
-    return 0;
-}
-
-char* strcpy(char *dest, const char *src) {
-    char *d = dest;
-    const char *s = src;
-    while( (*d++ = *s++));
-        
-    return dest;
-}
-
-int atoi(const char* str) {
-    int result = 0;
-    int sign = 1;
-    int i = 0;
-
-    while (str[i] == ' ') {
-        i++;
-    }
-
-    if (str[i] == '-') {
-        sign = -1;
-        i++;
-    } else if (str[i] == '+') {
-        i++;
-    }
-
-    while (str[i] >= '0' && str[i] <= '9') {
-        result = result * 10 + (str[i] - '0');
-        i++;
-    }
-
-    return sign * result;
-}
-
-char async_getchar() {
-    char c = uart_async_getc();
-    return c == '\r' ? '\n' : c;
-}
-
-void async_putchar(char c) {
-    uart_async_send(c);
-}
-
-void puts(char *s) {
-    while(*s) 
-        async_putchar(*s++);
-}
-
-void put_int(int num) {
-    // Handle the case when the number is 0
-    if (num == 0) {
-        uart_async_send('0');
-        return;
-    }
-
-    // Temporary array to store the reversed digits as characters
-    char temp[12]; // Assuming int can have at most 10 digits
-    int idx = 0;
-
-    // Handle negative numbers
-    if (num < 0) {
-        uart_async_send('-');
-        num = -num;
-    }
-
-    // Convert the number to characters and store in the temporary array in reverse order
-    while (num > 0)
-    {
-        temp[idx++] = (char)(num % 10 + '0');
-        num /= 10;
-    }
-
-    // Reverse output the character digits
-    while (idx > 0) {
-        uart_async_send(temp[--idx]);
-    }
-}
-
-void put_hex(unsigned int num) {
-    unsigned int hex;
-    int index = 28;
-    
-    puts("0x");
-    while (index >= 0) {
-        hex = (num >> index) & 0xF;
-        hex += hex > 9 ? 0x37 : 0x30;
-        uart_async_send(hex);
-        index -= 4;
-    }
-}
-
-void *memcpy(void *dest, const void *src, size_t n) {
-    char *d = dest;
-    const char *s = src;
-    while (n--) {
-        *d++ = *s++;
-    }
-    return dest;
-}
-
-void *memset(void *s, int c, size_t n) {
-	char *start = s;
-	for (size_t i = 0; i < n; i++)
-	{
-		start[i] = c;
-	}
-
-	return s;
-}
-
-void printf(char *fmt, ...)
+char* memcpy(void *dest, const void *src, unsigned long long len)
 {
-	__builtin_va_list args;
-	__builtin_va_start(args, fmt);
-	char s[VSPRINT_MAX_BUF_SIZE];
-	// use sprintf to format our string
-	vsprintf(s, fmt, args);
-	// print out as usual
-	puts(s);
+    char *d = dest;
+    const char *s = src;
+    while (len--)
+        *d++ = *s++;
+    return dest;
 }
 
-char getchar() {
-	char buf[2] = {0};
-	kernel_read(0, buf, 1);
-	// char c = uart_async_recv();
-	char c = buf[0];
-	return c == '\r' ? '\n' : c;
+char* strcpy (char *dest, const char *src)
+{
+    return memcpy (dest, src, strlen (src) + 1);
 }
 
-void putchar(char c) {
-	char buf[2] = {c, '\0'};
-	kernel_write(1, buf, 1);
-	// uart_async_send(c);
+char* strcat (char *dest, const char *src)
+{
+  strcpy (dest + strlen (dest), src);
+  return dest;
+}
+
+void *memset(void *s, int c, size_t n)
+{
+  char *start = s;
+  for (size_t i = 0; i < n; i++)
+  {
+    start[i] = c;
+  }
+
+  return s;
+}
+
+char* str_SepbySpace(char* head)
+{
+    char* end;
+    while(1){
+        if(*head == '\0')
+        {
+            end = head;
+            break;
+        }
+        if(*head == ' ')
+        {
+            *head = '\0';
+            end = head + 1;
+            break;
+        }
+        head++;
+    }
+    return end;
+}
+
+// A simple atoi() function
+int atoi(char* str)
+{
+    // Initialize result
+    int res = 0;
+
+    // Iterate through all characters
+    // of input string and update result
+    // take ASCII character of corresponding digit and
+    // subtract the code from '0' to get numerical
+    // value and multiply res by 10 to shuffle
+    // digits left to update running total
+    for (int i = 0; str[i] != '\0'; ++i)
+    {
+        if(str[i] > '9' || str[i] < '0')return res;
+        res = res * 10 + str[i] - '0';
+    }
+
+    // return result.
+    return res;
 }

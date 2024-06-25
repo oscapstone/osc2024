@@ -1,256 +1,217 @@
 #include "tmpfs.h"
 #include "vfs.h"
-#include "memory.h"
-#include "mini_uart.h"
-#include "stddef.h"
 #include "utils.h"
-#include "list.h"
+#include "memory.h"
+#include "uart1.h"
 
-const file_operations_t tmpfs_file_operations = {tmpfs_write, tmpfs_read, tmpfs_open, tmpfs_close, tmpfs_lseek64, tmpfs_getsize};
-const vnode_operations_t tmpfs_vnode_operations = {tmpfs_lookup, tmpfs_create, tmpfs_mkdir, tmpfs_readdir};
-filesystem_t *tmpfs_fs;
+struct vnode_operations tmpfs_vnode_operations = {tmpfs_lookup, tmpfs_create, tmpfs_mkdir};
+struct file_operations tmpfs_file_operations = {tmpfs_write, tmpfs_read, tmpfs_open, tmpfs_close, tmpfs_lseek64, tmpfs_getsize};
 
 int register_tmpfs()
 {
-	tmpfs_fs = kmalloc(sizeof(filesystem_t));
-	tmpfs_fs->name = "tmpfs";
-	tmpfs_fs->setup_mount = tmpfs_setup_mount;
-	register_filesystem(tmpfs_fs);
-	return 0;
+    struct filesystem fs;
+    fs.name = "tmpfs";
+    fs.setup_mount = tmpfs_setup_mount;
+    return register_filesystem(&fs);
 }
 
-/**
- * @brief Setup the superblock point for tmpfs
- *
- * @param fs
- * @param _mount
- * @param name superblock point name
- */
-int tmpfs_setup_mount(filesystem_t *fs, mount_t *_mount, vnode_t *parent, const char *name)
+int tmpfs_setup_mount(struct filesystem *fs, struct mount *_mount)
 {
-	_mount->fs = fs;
-	_mount->v_ops = &tmpfs_vnode_operations;
-	_mount->f_ops = &tmpfs_file_operations;
-	_mount->root = tmpfs_create_vnode(_mount, FS_DIR, parent, name);
-	return 0;
+    _mount->fs = fs;
+    _mount->root = tmpfs_create_vnode(dir_t);
+    return 0;
 }
 
-vnode_t *tmpfs_create_vnode(mount_t *superblock, enum fsnode_type type, vnode_t *parent, const char *name)
+struct vnode *tmpfs_create_vnode(enum fsnode_type type)
 {
-	vnode_t *node = create_vnode();
-	node->superblock = superblock;
-	node->v_ops = &tmpfs_vnode_operations;
-	node->f_ops = &tmpfs_file_operations;
-	node->parent = parent;
-	node->mount = NULL;
-	node->type = type;
-	tmpfs_inode_t *inode = tmpfs_create_inode(type, name);
-	node->internal = inode;
-	node->name = inode->name;
-
-	if (parent != NULL)
-	{
-		tmpfs_inode_t *dir_inode = (tmpfs_inode_t *)parent->internal;
-		vnode_list_t *newvnode_list = kmalloc(sizeof(vnode_list_t));
-		newvnode_list->vnode = node;
-		list_add_tail((list_head_t *)newvnode_list, (list_head_t *)dir_inode->child_list);
-	}
-	// uart_puts("node name: %s\r\n", node->name);
-	// uart_puts("inode name: %s\r\n", inode->name);
-	return node;
-}
-
-tmpfs_inode_t *tmpfs_create_inode(enum fsnode_type type, const char *name)
-{
-	struct tmpfs_inode *inode = kmalloc(sizeof(struct tmpfs_inode));
-	inode->data = NULL;
-	inode->datasize = 0;
-	// uart_puts("tmpfs_create_inode: %s\r\n", name);
-	strcpy(inode->name, name);
-	// uart_puts("tmpfs_create_inode: inode->name %s\r\n", inode->name);
-	if (type == FS_DIR)
-	{
-		inode->child_list = kmalloc(sizeof(vnode_list_t));
-		INIT_LIST_HEAD(&inode->child_list->list_head);
-	}
-	else if (type == FS_FILE)
-	{
-		inode->child_list = NULL;
-	}
-	else
-	{
-		// uart_puts("tmpfs_create_inode: unknown type\r\n");
-		return NULL;
-	}
-	return inode;
+    struct vnode *v = kmalloc(sizeof(struct vnode));
+    v->mount = 0;
+    v->v_ops = &tmpfs_vnode_operations;
+    v->f_ops = &tmpfs_file_operations;
+    struct tmpfs_inode *inode = kmalloc(sizeof(struct tmpfs_inode));
+    memset(inode, 0, sizeof(struct tmpfs_inode));
+    inode->type = type;
+    inode->data = kmalloc(0x1000); // 4KB
+    v->internal = inode;
+    return v;
 }
 
 // file operations
 int tmpfs_write(struct file *file, const void *buf, size_t len)
 {
-	struct tmpfs_inode *inode = file->vnode->internal;
-	// uart_puts("tmpfs_write: %s, len: %d, 0x%x->0x%x\r\n", file->vnode->name, len, inode->data + file->f_pos, inode->data + file->f_pos + len);
-	if (inode->data == NULL)
-	{
-		inode->data = kmalloc(MAX_FILE_SIZE);
-	}
-	if (file->f_pos + len > MAX_FILE_SIZE)
-	{
-		len = MAX_FILE_SIZE - file->f_pos;
-	}
-	// write from f_pos
-	// uart_puts("tmpfs_write: %s, len: %d, 0x%x->0x%x\r\n", file->vnode->name, len, inode->data + file->f_pos, inode->data + file->f_pos + len);
-	// uart_puts("tmpfs_write: file->f_pos: %d, inode->datasize: %d\r\n", file->f_pos, inode->datasize);
-	memcpy(inode->data + file->f_pos, buf, len);
-	// update f_pos and size
-	file->f_pos += len;
-	if (inode->datasize < file->f_pos)
-		inode->datasize = file->f_pos;
-	return len;
+    struct tmpfs_inode *inode = file->vnode->internal;
+    // write from f_pos
+    memcpy(inode->data + file->f_pos, buf, len);
+    // update f_pos and size
+    file->f_pos += len;
+    if (inode->datasize < file->f_pos)
+        inode->datasize = file->f_pos;
+    return len;
 }
 
 int tmpfs_read(struct file *file, void *buf, size_t len)
 {
-	struct tmpfs_inode *inode = file->vnode->internal;
-	// if buffer overflow, shrink the request read length
-	// read from f_pos
-	if (len + file->f_pos > inode->datasize)
-	{
-		len = inode->datasize - file->f_pos;
-		memcpy(buf, inode->data + file->f_pos, len);
-		file->f_pos += inode->datasize - file->f_pos;
-		return len;
-	}
-	else
-	{
-		memcpy(buf, inode->data + file->f_pos, len);
-		file->f_pos += len;
-		return len;
-	}
-	return -1;
+    struct tmpfs_inode *inode = file->vnode->internal;
+    // if buffer overflow, shrink the request read length
+    // read from f_pos
+    if (len + file->f_pos > inode->datasize)
+    {
+        len = inode->datasize - file->f_pos;
+        memcpy(buf, inode->data + file->f_pos, len);
+        file->f_pos += inode->datasize - file->f_pos;
+        return len;
+    }
+    else
+    {
+        memcpy(buf, inode->data + file->f_pos, len);
+        file->f_pos += len;
+        return len;
+    }
+    return -1;
 }
 
 int tmpfs_open(struct vnode *file_node, struct file **target)
 {
-	(*target)->vnode = file_node;
-	(*target)->f_ops = file_node->f_ops;
-	(*target)->f_pos = 0;
-	return 0;
+    (*target)->vnode = file_node;
+    (*target)->f_ops = file_node->f_ops;
+    (*target)->f_pos = 0;
+    return 0;
 }
 
 int tmpfs_close(struct file *file)
 {
-	// uart_puts("tmpfs_close: %s\r\n", file->vnode->name);
-	kfree(file);
-	return 0;
+    kfree(file);
+    return 0;
 }
 
 long tmpfs_lseek64(struct file *file, long offset, int whence)
 {
-	if (whence == SEEK_SET)
-	{
-		file->f_pos = offset;
-		return file->f_pos;
-	}
-	return -1;
-}
-
-long tmpfs_getsize(struct vnode *vd)
-{
-	struct tmpfs_inode *inode = vd->internal;
-	return inode->datasize;
+    if (whence == SEEK_SET)
+    {
+        file->f_pos = offset;
+        return file->f_pos;
+    }
+    return -1;
 }
 
 // vnode operations
 int tmpfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name)
 {
-	// uart_puts("tmpfs_lookup: %s\r\n", dir_node->name);
-	tmpfs_inode_t *dir_inode = (tmpfs_inode_t *)dir_node->internal;
-	list_head_t *curr;
-	vnode_t *child_vnode;
-	tmpfs_inode_t *child_inode;
-	list_for_each(curr, (list_head_t *)(dir_inode->child_list))
-	{
-		child_vnode = ((vnode_list_t *)curr)->vnode;
-		child_inode = (tmpfs_inode_t *)(child_vnode->internal);
-		if (strcmp(child_vnode->name, component_name) == 0)
-		{
-			*target = child_vnode;
-			return 0;
-		}
-	}
-	return -1;
+    struct tmpfs_inode *dir_inode = dir_node->internal;
+    // BFS search tree
+    for (int child_idx = 0; child_idx < MAX_DIR_ENTRY; child_idx++)
+    {
+        struct vnode *vnode = dir_inode->entry[child_idx];
+        if (!vnode)
+            break;
+        struct tmpfs_inode *inode = vnode->internal;
+        if (strcmp(component_name, inode->name) == 0)
+        {
+            *target = vnode;
+            return 0;
+        }
+    }
+    return -1;
 }
 
+// file ops
 int tmpfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name)
 {
-	// uart_puts("tmpfs_create: %s\r\n", dir_node->name);
-	struct tmpfs_inode *inode = dir_node->internal;
+    struct tmpfs_inode *inode = dir_node->internal;
+    if (inode->type != dir_t)
+    {
+        uart_sendline("tmpfs create not dir_t\r\n");
+        return -1;
+    }
 
-	if (dir_node->type != FS_DIR)
-	{
-		// uart_puts("tmpfs create not dir_t\r\n");
-		return -1;
-	}
+    if (strlen(component_name) > MAX_FILE_NAME)
+    {
+        uart_sendline("FILE NAME TOO LONG\r\n");
+        return -1;
+    }
 
-	if (strlen(component_name) > MAX_FILE_NAME)
-	{
-		// uart_puts("FILE NAME TOO LONG\r\n");
-		return -1;
-	}
+    int child_idx;
+    for ( child_idx = 0; child_idx < MAX_DIR_ENTRY; child_idx++)
+    {
+        if (!inode->entry[child_idx])
+            break;
+        // if (!inode->entry[child_idx] && create_idx == -1){
+        //     create_idx = child_idx;
+        // }
+        struct tmpfs_inode *child_inode = inode->entry[child_idx]->internal;
+        if (strcmp(child_inode->name, component_name) == 0)
+        {
+            uart_sendline("tmpfs create: cannot create file %s: File exists\r\n", component_name);
+            return -1;
+        }
+    }
 
-	vnode_t *_vnode = tmpfs_create_vnode(dir_node->superblock, FS_FILE, dir_node, component_name);
+    // if (child_idx > MAX_DIR_ENTRY)
+    // {
+    //     uart_sendline("DIR ENTRY FULL\r\n");
+    //     return -1;
+    // }
 
-	*target = _vnode;
-	return 0;
+    struct vnode *_vnode = tmpfs_create_vnode(file_t);
+    inode->entry[child_idx] = _vnode;
+
+    struct tmpfs_inode *newinode = _vnode->internal;
+    strcpy(newinode->name, component_name);
+
+    *target = _vnode;
+    return 0;
 }
 
+// dir ops
 int tmpfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name)
 {
-	struct tmpfs_inode *inode = dir_node->internal;
+    struct tmpfs_inode *inode = dir_node->internal;
 
-	if (dir_node->type != FS_DIR)
-	{
-		// uart_puts("tmpfs mkdir not dir_t\r\n");
-		return -1;
-	}
+    if (inode->type != dir_t)
+    {
+        uart_sendline("tmpfs mkdir not dir_t\r\n");
+        return -1;
+    }
 
-	if (strlen(component_name) > MAX_FILE_NAME)
-	{
-		// uart_puts("FILE NAME TOO LONG\r\n");
-		return -1;
-	}
+    if (strlen(component_name) > MAX_FILE_NAME)
+    {
+        uart_sendline("FILE NAME TOO LONG\r\n");
+        return -1;
+    }
 
-	struct vnode *_vnode = tmpfs_create_vnode(dir_node->superblock, FS_DIR, dir_node, component_name);
-	struct tmpfs_inode *newinode = _vnode->internal;
+    int child_idx;
+    for (child_idx = 0 ; child_idx < MAX_DIR_ENTRY; child_idx++)
+    {
+        if (!inode->entry[child_idx])
+        {
+            break;
+        }
+        struct tmpfs_inode *child_inode = inode->entry[child_idx]->internal;
+        if (strcmp(child_inode->name, component_name) == 0)
+        {
+            uart_sendline("tmpfs mkdir: cannot create directory %s: File exists\r\n", component_name);
+            return -1;
+        }
+    }
 
-	*target = _vnode;
-	return 0;
+    // if (child_idx > MAX_DIR_ENTRY)
+    // {
+    //     uart_sendline("DIR ENTRY FULL\r\n");
+    //     return -1;
+    // }
+
+    struct vnode *_vnode = tmpfs_create_vnode(dir_t);
+    inode->entry[child_idx] = _vnode;
+
+    struct tmpfs_inode *newinode = _vnode->internal;
+    strcpy(newinode->name, component_name);
+
+    *target = _vnode;
+    return 0;
 }
 
-int tmpfs_readdir(struct vnode *dir_node, const char name_array[])
+long tmpfs_getsize(struct vnode *vd)
 {
-	struct tmpfs_inode *inode = dir_node->internal;
-	// uart_puts("tmpfs_readdir: %s\r\n", dir_node->name);
-
-	if (dir_node->type != FS_DIR)
-	{
-		// uart_puts("tmpfs readdir not dir_t\r\n");
-		return -1;
-	}
-
-	list_head_t *curr;
-	vnode_t *child_vnode;
-	size_t max_len = 0;
-	char *name_array_start = name_array;
-	list_for_each(curr, (list_head_t *)(inode->child_list))
-	{
-		child_vnode = ((vnode_list_t *)curr)->vnode;
-		// uart_puts("tmpfs_readdir: child_vnode->name %s, child: 0x%x\r\n", child_vnode->name, child_vnode);
-		*name_array_start = child_vnode->type;
-		strcpy(++name_array_start, child_vnode->name);
-		name_array_start += strlen(child_vnode->name) + 1;
-	}
-
-	return 0;
+    struct tmpfs_inode *inode = vd->internal;
+    return inode->datasize;
 }

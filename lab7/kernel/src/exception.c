@@ -1,429 +1,310 @@
-#include "peripherals/rpi_irq.h"
-#include "peripherals/mini_uart.h"
+#include "bcm2837/rpi_irq.h"
+#include "bcm2837/rpi_uart1.h"
+#include "uart1.h"
 #include "exception.h"
-#include "mini_uart.h"
-#include "utils.h"
 #include "timer.h"
 #include "memory.h"
-#include "sched.h"
 #include "syscall.h"
-
-int                 curr_task_priority = 9999; // Small number has higher priority
-struct              list_head *irqtask_list;
-extern list_head_t  *run_queue;
-extern int          done_sched_init;
-extern int          need_to_schedule;
-
-#define ESR_EL1_EC_SHIFT 26
-#define ESR_EL1_EC_MASK 0x3F
-#define ESR_EL1_EC_SVC64 0x15
-
-static unsigned long long lock_count = 0;
-
-const char *exception_type[] = {
-    "Unknown reason",
-    "Trapped WFI or WFE instruction execution",
-    "Trapped MCR or MRC access with (coproc==0b1111) (AArch32)",
-    "Trapped MCRR or MRRC access with (coproc==0b1111) (AArch32)",
-    "Trapped MCR or MRC access with (coproc==0b1110) (AArch32)",
-    "Trapped LDC or STC access (AArch32)",
-    "Trapped FP access",
-    "Trapped VMRS access",
-    "Trapped PSTATE (AArch32)",
-    "Instruction Abort from a lower Exception level",
-    "Instruction Abort taken without a change in Exception level",
-    "PC alignment fault",
-    "Data Abort from a lower Exception level",
-    "Data Abort taken without a change in Exception level",
-    "SP alignment fault",
-    "Trapped floating-point exception",
-    "SError interrupt",
-    "Breakpoint from a lower Exception level",
-    "Breakpoint taken without a change in Exception level",
-    "Software Step from a lower Exception level",
-    "Software Step taken without a change in Exception level",
-    "Watchpoint from a lower Exception level",
-    "Watchpoint taken without a change in Exception level",
-    "BKPT instruction execution (AArch32)",
-    "Vector Catch exception (AArch32)",
-    "BRK instruction execution (AArch64)"
-};
-
-void print_currentEL(){
-    unsigned long long currentEL;
-    __asm__ __volatile__("mrs %0, currentEL\n\t" : "=r"(currentEL));
-    
-    switch (currentEL) {
-        case 0:
-            uart_puts("Current EL: EL0\r\n");
-            break;
-        case 4:
-            uart_puts("Current EL: EL1\r\n");
-            break;
-        case 8:
-            uart_puts("Current EL: EL2\r\n");
-            break;
-        case 12:
-            uart_puts("Current EL: EL3\r\n");
-            break;
-        default:
-            uart_puts("Current EL: UNKNOWN\r\n");
-            break;
-    }
-}
-
-void print_lock() {
-    uart_puts("[*] Locks: %d\r\n", lock_count);
-}
+#include "sched.h"
 
 // DAIF, Interrupt Mask Bits
-void el1_interrupt_enable() {
+void el1_interrupt_enable(){
     __asm__ __volatile__("msr daifclr, 0xf"); // umask all DAIF
 }
 
-void el1_interrupt_disable() {
+void el1_interrupt_disable(){
     __asm__ __volatile__("msr daifset, 0xf"); // mask all DAIF
 }
 
-uint64_t read_esr_el1(void) {
-    uint64_t value;
-    asm volatile("mrs %0, esr_el1" : "=r"(value));
-    return value;
+static unsigned long long lock_count = 0;
+void lock()
+{
+    el1_interrupt_disable();
+    lock_count++;
+    // uart_sendline("lock_count++: %d\n", lock_count);
 }
 
-uint64_t read_elr_el1(void) {
-    uint64_t value;
-    asm volatile("mrs %0, elr_el1" : "=r"(value));
-    return value;
+void unlock()
+{
+    lock_count--;
+    // uart_sendline("lock_count--: %d\n", lock_count);
+    if (lock_count == 0)
+        el1_interrupt_enable();
 }
 
-uint64_t read_spsr_el1(void) {
-    uint64_t value;
-    asm volatile("mrs %0, spsr_el1" : "=r"(value));
-    return value;
-}
-
-const char *get_exception_name(uint64_t esr_el1) {
-    uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
-    if (ec < sizeof(exception_type) / sizeof(exception_type[0]))
-    {
-        return exception_type[ec];
-    }
-    return "Unknown exception";
-}
-
-int is_el0_syscall(void) {
-    uint64_t esr_el1 = read_esr_el1();
-    // uart_puts("esr_el1: 0x%x\r\n", esr_el1);
-    uint64_t ec = (esr_el1 >> ESR_EL1_EC_SHIFT) & ESR_EL1_EC_MASK;
-    if (ec == ESR_EL1_EC_SVC64) {
-        return 1;
-    }
-    return 0;
-}
-
-void el1h_irq_router(trapframe_t* tpf) {
+void el1h_irq_router(trapframe_t *tpf){
     lock();
-    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) {
-        if (*AUX_MU_IER_REG & 2) {
-            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-            irqtask_add(uart_write_irq_handler, UART_IRQ_PRIORITY);
+    // decouple the handler into irqtask queue
+    // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
+    // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
+    if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
+    {
+        // if (*AUX_MU_IIR_REG & (1 << 1))//check if write interrupt
+        if (*AUX_MU_IER_REG & 2)//check if write interrupt
+        {
+            *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
+            irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive(); // run the queued task before returning to the program.
-        } else if (*AUX_MU_IER_REG & 1) {
-            *AUX_MU_IER_REG &= ~(1);
-            irqtask_add(uart_read_irq_handler, UART_IRQ_PRIORITY);
+            //uart_sendline("\t");
+            //(async input) Output on terminal will enter this block.
+        }
+        // else if (*AUX_MU_IIR_REG & (2 << 1))//check if read interrupt
+        else if (*AUX_MU_IER_REG & 1)//check if read interrupt
+        {
+            *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
+            irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive();
+            //exercise 3 -> 5
+            //uart_sendline(" ");
+            //(async input) Keyboard input will enter this block.
         }
-    } else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) {
+    }
+    else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
+    {
         core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         unlock();
         irqtask_run_preemptive();
         core_timer_enable();
-    } else {
-        uart_puts("UNKNOWN el1h_irq_router\r\n");
+        //at least two threads running -> schedule for any timer irq
+        if (list_size(run_queue) >2 ) schedule();
     }
-
-    if (need_to_schedule == 1) {
-        need_to_schedule = 0;
-        schedule();
-    }
-    // only do signal handler when return to user mode
-    if ((tpf->spsr_el1 & 0b1100) == 0) {
-        run_pending_signal();
+    //only do signal handler when return to user mode
+    if ((tpf->spsr_el1 & 0b1111) == 0)
+    {
+        // uart_sendline("tpf->spsr_el1: %x\n", tpf->spsr_el1);
+        check_signal(tpf);
     }
 }
 
-void el0_sync_router(trapframe_t *tpf) {
-    static int count = 0;
-    uint64_t esr_el1 = read_esr_el1();
-    if (!is_el0_syscall()) {
-        const char *exception_name = get_exception_name(esr_el1);
-        if (count == 0)
-            uart_puts("el0_sync_router: exception occurred - %s\r\n", exception_name);
-        count++;
-        return;
+void el0_sync_router(trapframe_t *tpf){
+    /*lab3
+    unsigned long long spsr_el1;
+    __asm__ __volatile__("mrs %0, SPSR_EL1\n\t" : "=r" (spsr_el1)); // EL1 configuration, spsr_el1[9:6]=4b0 to enable interrupt
+    unsigned long long elr_el1;
+    __asm__ __volatile__("mrs %0, ELR_EL1\n\t" : "=r" (elr_el1));   // ELR_EL1 holds the address if return to EL1
+    unsigned long long esr_el1;
+    __asm__ __volatile__("mrs %0, ESR_EL1\n\t" : "=r" (esr_el1));   // ESR_EL1 holds symdrome information of exception, to know why the exception happens.
+    uart_sendline("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\n", spsr_el1, elr_el1, esr_el1);
+    // //Test Preemptive
+    // int i = 0;
+    // while(1){
+    //     if( i == 999999999){
+    //         // uart_sendline("%d\t", i);
+    //         uart_sendline("[Exception][el0_sync] spsr_el1 : 0x%x, elr_el1 : 0x%x, esr_el1 : 0x%x\n", spsr_el1, elr_el1, esr_el1);
+    //         break;
+    //     }
+    //     ++i;
+    // }
+    */
+
+    // Lab5 Basic #3
+    // el1_interrupt_enable(); // Allow UART input during exception
+    unsigned long long syscall_no = tpf->x8;
+    switch( syscall_no ){
+        case 0:
+            getpid(tpf);
+            break;
+        case 1:
+            uartread(tpf, (char*)tpf->x0, tpf->x1);
+            break;
+        case 2:
+            uartwrite(tpf, (char*)tpf->x0, tpf->x1);
+            break;
+        case 3:
+            exec(tpf, (char*)tpf->x0, (char**)tpf->x1);
+            break;
+        case 4:
+            fork(tpf);
+            break;
+        case 5:
+            exit(tpf);
+            break;
+        case 6:
+            syscall_mbox_call(tpf, (unsigned char)tpf->x0, (unsigned int *)tpf->x1);
+            break;
+        case 7:
+            kill(tpf, tpf->x0);
+            break;
+        case 8:
+            signal_register(tpf->x0, (void (*)())tpf->x1);
+            break;
+        case 9:
+            signal_kill(tpf->x0, tpf->x1);
+            break;
+        case 10:
+            sigreturn(tpf);
+            break;
+        // Lab7
+        case 11:
+            open(tpf, (char*)tpf->x0, tpf->x1);
+            break;
+        case 12:
+            close(tpf, tpf->x0);
+            break;
+        case 13:
+            write(tpf, tpf->x0, (void *)tpf->x1, tpf->x2);
+            break;
+        case 14:
+            read(tpf, tpf->x0, (void *)tpf->x1, tpf->x2);
+            break;
+        case 15:
+            mkdir(tpf, (char *)tpf->x0, tpf->x1);
+            break;
+        case 16:
+            mount(tpf, (char *)tpf->x0, (char *)tpf->x1, (char *)tpf->x2, tpf->x3, (void*)tpf->x4);
+            break;
+        case 17:
+            chdir(tpf, (char *)tpf->x0);
+            break;
+        case 18:
+            lseek64(tpf, tpf->x0, tpf->x1, tpf->x2);
+            break;
+        case 19:
+            ioctl(tpf, tpf->x0, tpf->x1, (void*)tpf->x2);
+            break;
+        default:
+            break;
     }
-     // Basic #3 - Based on System Call Format in Video Player’s Test Program
-    uint64_t syscall_no = tpf->x8 >= MAX_SYSCALL ? MAX_SYSCALL : tpf->x8;
-    // //"syscall_no: %d\r\n", syscall_no);
-    // only work with GCC
-    void *syscall_router[] = {&&__getpid_label,           // 0
-                              &&__uart_read_label,        // 1
-                              &&__uart_write_label,       // 2
-                              &&__exec_label,             // 3
-                              &&__fork_label,             // 4
-                              &&__exit_label,             // 5
-                              &&__mbox_call_label,        // 6
-                              &&__kill_label,             // 7
-                              &&__signal_register_label,  // 8
-                              &&__signal_kill_label,      // 9
-                              &&__open_label,             // 10
-                              &&__close_label,            // 11
-                              &&__write_label,            // 12
-                              &&__read_label,             // 13
-                              &&__mkdir_label,            // 14
-                              &&__mount_label,            // 15
-                              &&__chdir_label,            // 16
-                              &&__lseek64_label,          // 17
-                              &&__ioctl_label,            // 18
-                              &&__signal_return_label,    // 19
-                              &&__lock_interrupt_label,   // 20
-                              &&__unlock_interrupt_label, // 21
-                              &&__invalid_syscall_label}; // 22
-
-    goto *syscall_router[syscall_no];
-
-__getpid_label:
-    tpf->x0 = sys_getpid(tpf);
-    return;
-
-__uart_read_label:
-    tpf->x0 = sys_uart_read(tpf, (char *)tpf->x0, tpf->x1);
-    return;
-
-__uart_write_label:
-    tpf->x0 = sys_uart_write(tpf, (char *)tpf->x0, (char **)tpf->x1);
-    return;
-
-__exec_label:
-    tpf->x0 = sys_exec(tpf, (char *)tpf->x0, (char **)tpf->x1);
-    return;
-
-__fork_label:
-    tpf->x0 = sys_fork(tpf);
-    return;
-
-__exit_label:
-    tpf->x0 = sys_exit(tpf, tpf->x0);
-    return;
-
-__mbox_call_label:
-    tpf->x0 = sys_mbox_call(tpf, (uint8_t)tpf->x0, (unsigned int *)tpf->x1);
-    return;
-
-__kill_label:
-    tpf->x0 = sys_kill(tpf, (int)tpf->x0);
-    return;
-
-__signal_register_label:
-    tpf->x0 = sys_signal_register(tpf, (int)tpf->x0, (void (*)(void))(tpf->x1));
-    return;
-
-__signal_kill_label:
-    tpf->x0 = sys_signal_kill(tpf, (int)tpf->x0, (int)tpf->x1);
-    return;
-
-__signal_return_label:
-    sys_signal_return(tpf);
-    return;
-
-__lock_interrupt_label:
-    sys_lock_interrupt(tpf);
-    return;
-
-__unlock_interrupt_label:
-    sys_unlock_interrupt(tpf);
-    return;
-
-__open_label:
-    uart_puts("sys_open\r\n");
-    tpf->x0 = sys_open(tpf, (const char *)tpf->x0, (int)tpf->x1);
-    return;
-
-__close_label:
-    uart_puts("sys_close\r\n");
-    tpf->x0 = sys_close(tpf, (int)tpf->x0);
-    return;
-
-__write_label:
-    // remember to return read size or error code
-    // uart_puts("sys_write\r\n");
-    tpf->x0 = sys_write(tpf, (int)tpf->x0, (const void *)tpf->x1, (uint64_t)tpf->x2);
-    return;
-
-__read_label:
-    // remember to return read size or error code
-    uart_puts("sys_read\r\n");
-    tpf->x0 = sys_read(tpf, (int)tpf->x0, (void *)tpf->x1, (uint64_t)tpf->x2);
-    return;
-
-__mkdir_label:
-    // you can ignore mode, since there is no access control
-    uart_puts("sys_mkdir\r\n");
-    tpf->x0 = sys_mkdir(tpf, (const char *)tpf->x0, (unsigned)tpf->x1);
-    return;
-
-__mount_label:
-    // you can ignore arguments other than target (where to mount) and filesystem (fs name)
-    uart_puts("sys_mount\r\n");
-    tpf->x0 = sys_mount(tpf, (const char *)tpf->x0, (const char *)tpf->x1, (const char *)tpf->x2, (uint64_t)tpf->x3, (const void *)tpf->x4);
-    return;
-
-__chdir_label:
-    uart_puts("sys_chdir\r\n");
-    tpf->x0 = sys_chdir(tpf, (const char *)tpf->x0);
-    return;
-
-__lseek64_label:
-    // you can ignore whence, since there is no file access control
-    // uart_puts("sys_lseek64\r\n");
-    tpf->x0 = sys_lseek64(tpf, (int)tpf->x0, (long)tpf->x1, (int)tpf->x2);
-    return;
-
-__ioctl_label:
-    // you can ignore arguments other than fd and request
-    uart_puts("sys_ioctl\r\n");
-    tpf->x0 = sys_ioctl(tpf, (int)tpf->x0, (unsigned long)tpf->x1, (unsigned long)tpf->x2);
-    return;
-
-__invalid_syscall_label:
-    uart_puts("Invalid system call number: %d\r\n", syscall_no);
-    return;
+    // el1_interrupt_disable();
 }
 
-void el0_irq_64_router(trapframe_t *tpf) {
+// void el0_irq_64_router(){
+//     uart_sendline("source : %x\n", *CORE0_INTERRUPT_SOURCE);
+
+//     if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer)
+//     {
+//         core_timer_handler();
+//     }
+// }
+void el0_irq_64_router(trapframe_t *tpf){
     lock();
     // decouple the handler into irqtask queue
     // (1) https://datasheets.raspberrypi.com/bcm2835/bcm2835-peripherals.pdf - Pg.113
     // (2) https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf - Pg.16
-    if (*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
+    if(*IRQ_PENDING_1 & IRQ_PENDING_1_AUX_INT && *CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_GPU) // from aux && from GPU0 -> uart exception
     {
-        if (*AUX_MU_IER_REG & 2) {
-            *AUX_MU_IER_REG &= ~(2); // disable write interrupt
-            irqtask_add(uart_write_irq_handler, UART_IRQ_PRIORITY);
+        if (*AUX_MU_IIR_REG & (0b01 << 1))
+        {
+            *AUX_MU_IER_REG &= ~(2);  // disable write interrupt
+            irqtask_add(uart_w_irq_handler, UART_IRQ_PRIORITY);
             unlock();
-            irqtask_run_preemptive(); // run the queued task before returning to the program.
+            irqtask_run_preemptive();
         }
-        else if (*AUX_MU_IER_REG & 1) {
-            *AUX_MU_IER_REG &= ~(1); // Re-enable core timer interrupt when entering core_timer_handler or add_timer
-            irqtask_add(uart_read_irq_handler, UART_IRQ_PRIORITY);
+        else if (*AUX_MU_IIR_REG & (0b10 << 1))
+        {
+            *AUX_MU_IER_REG &= ~(1);  // disable read interrupt
+            irqtask_add(uart_r_irq_handler, UART_IRQ_PRIORITY);
             unlock();
             irqtask_run_preemptive();
         }
     }
-    else if (*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ) // from CNTPNS (core_timer) // A1 - setTimeout run in el1
+    else if(*CORE0_INTERRUPT_SOURCE & INTERRUPT_SOURCE_CNTPNSIRQ)  //from CNTPNS (core_timer) // A1 - setTimeout run in el1
     {
-        core_timer_disable(); // enable core timer interrupt when entering the handler
+        core_timer_disable();
         irqtask_add(core_timer_handler, TIMER_IRQ_PRIORITY);
         unlock();
         irqtask_run_preemptive();
+        core_timer_enable();
+        if (list_size(run_queue) >2 ) schedule();
     }
-    else
+    //only do signal handler when return to user mode
+    if ((tpf->spsr_el1 & 0b1111) == 0)
     {
-        uart_puts("Hello world! el0_irq_64_router other interrupt!\r\n");
-    }
-    if (need_to_schedule == 1) {
-        need_to_schedule = 0;
-        schedule();
-    }
-    // only do signal handler when return to user mode
-    if ((tpf->spsr_el1 & 0b1100) == 0) {
-        run_pending_signal();
+        // uart_sendline("tpf->spsr_el1: %x\n", tpf->spsr_el1);
+        check_signal(tpf);
     }
 }
 
-void invalid_exception_router(uint64_t x0) {
-    uart_puts("Invalid exception : 0x%x\r\n",x0);
+void invalid_exception_router(unsigned long long x0){
+    //uart_sendline("invalid exception : 0x%x\r\n",x0);
+    //while(1);
 }
 
-void lock() {
-    el1_interrupt_disable();
-    lock_count++;
+/*
+Preemption
+Now, any interrupt handler can preempt the task’s execution, but the newly enqueued task still needs to wait for the currently running task’s completion.
+It’d be better if the newly enqueued task with a higher priority can preempt the currently running task.
+To achieve the preemption, the kernel can check the last executing task’s priority before returning to the previous interrupt handler.
+If there are higher priority tasks, execute the highest priority task.
+*/
+
+int curr_task_priority = 9999;   // Small number has higher priority
+
+struct list_head *task_list;
+void irqtask_list_init()
+{
+    task_list = malloc(sizeof(list_head_t));
+    INIT_LIST_HEAD(task_list);
 }
 
-void unlock() {
-    lock_count--;
-    if (lock_count == 0)
-        el1_interrupt_enable();
-    else if (lock_count < 0) {
-        uart_puts("lock interrupt counter error\r\n");
-        while(1);
-    }
-}
 
-void irqtask_list_init() {
-    irqtask_list = malloc(sizeof(irqtask_t));
-    INIT_LIST_HEAD(irqtask_list);
-}
+void irqtask_add(void *task_function,unsigned long long priority){
+    irqtask_t *the_task = malloc(sizeof(irqtask_t)); // free by irq_tasl_run_preemptive()
 
-void irqtask_add(void *task_function, unsigned long long priority) {
-    irqtask_t *irq_task = malloc(sizeof(irqtask_t));
-    irq_task->priority = priority;
-    irq_task->task_function = task_function;
-    INIT_LIST_HEAD(&(irq_task->listhead));
+    // store all the related information into irqtask node
+    // manually copy the device's buffer
+    the_task->priority = priority;
+    the_task->task_function = task_function;
+    INIT_LIST_HEAD(&the_task->listhead);
 
-    struct list_head *ptr;
-    list_for_each(ptr, irqtask_list) {
-        if (((irqtask_t *)ptr)->priority > irq_task->priority) {
-            list_add(&(irq_task->listhead), ptr->prev);
+    // add the timer_event into timer_event_list (sorted)
+    // if the priorities are the same -> FIFO
+    struct list_head *curr;
+
+    // mask the device's interrupt line
+    lock();
+    // enqueue the processing task to the event queue with sorting.
+    list_for_each(curr, task_list)
+    {
+        if (((irqtask_t *)curr)->priority > the_task->priority)
+        {
+            // uart_sendline("curr->priority : %llu, the_task->priority : %llu\n", ((irqtask_t *)curr)->priority, the_task->priority);
+            list_add(&the_task->listhead, curr->prev);
             break;
         }
     }
-    // Lowest Priority
-    if (list_is_head(ptr, irqtask_list)) {
-        list_add_tail(&(irq_task->listhead), irqtask_list);
+    // if the priority is lowest
+    if (list_is_head(curr, task_list))
+    {
+        list_add_tail(&the_task->listhead, task_list);
     }
+    // unmask the interrupt line
+    unlock();
 }
 
-void irqtask_run(irqtask_t *task) {
-    ((void (*)())task->task_function)();
-}
-
-void irqtask_run_preemptive() {
-    while (!list_empty(irqtask_list)) {
+void irqtask_run_preemptive(){
+    // el1_interrupt_enable();
+    while (!list_empty(task_list))
+    {
+        // critical section protects new coming node
         lock();
-        irqtask_t *irq_task = (irqtask_t *)irqtask_list->next;
-
-        // uart_puts("Current task prio: ");
-        // put_int(curr_task_priority);
-        // uart_puts("\r\n");
-
-        if (curr_task_priority <= irq_task->priority) {
-            // uart_puts("unlock\r\n");
+        irqtask_t *the_task = (irqtask_t *)task_list->next;
+        // Run new task (early return) if its priority is lower than the scheduled task.
+        if (curr_task_priority <= the_task->priority)
+        {
             unlock();
             break;
         }
-        
-        // struct list_head* curr;
-        // uart_puts("uart_puts: ");
-        // list_for_each(curr, irqtask_list) {
-        //     put_int(((irqtask_t *)curr)->priority);
-        //     uart_puts(" ");
-        // }
-        // uart_puts("\r\n");
-
-        list_del_entry((struct list_head *)irq_task);
+        // get the scheduled task and run it.
+        list_del_entry((struct list_head *)the_task);
         int prev_task_priority = curr_task_priority;
-        curr_task_priority = irq_task->priority;
-        
+        curr_task_priority = the_task->priority;
+
         unlock();
-        irqtask_run(irq_task);
+        irqtask_run(the_task);
         lock();
 
         curr_task_priority = prev_task_priority;
         unlock();
+        // free(the_task);
     }
 }
+
+void irqtask_run(irqtask_t* the_task)
+{
+    ((void (*)())the_task->task_function)();
+}
+

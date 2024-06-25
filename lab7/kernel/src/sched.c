@@ -1,325 +1,196 @@
-#include "timer.h"
-#include "list.h"
-#include "stddef.h"
 #include "sched.h"
-#include "memory.h"
+#include "uart1.h"
 #include "exception.h"
-#include "mini_uart.h"
+#include "memory.h"
 #include "shell.h"
+#include "syscall.h"
+#include "timer.h"
+#include "signal.h"
 #include "utils.h"
-#include "ANSI.h"
-#include "vfs.h"
 
-list_head_t                 *run_queue;
-thread_t                    *threads[MAX_PID + 1];
-thread_t                    *curr_thread;
-int                         pid_history = 0;
-int                         need_to_schedule = 0;
-extern char                 _start;
-extern char                 _end;
+list_head_t *run_queue;
 
-void init_thread_sched() {
+thread_t threads[PIDMAX + 1];
+thread_t *curr_thread;
+
+int pid_history = 0;
+
+void init_thread_sched()
+{
+    lock();
+    // init thread freelist and run_queue
     run_queue = kmalloc(sizeof(list_head_t));
     INIT_LIST_HEAD(run_queue);
 
-    /* idle process */
-    char *thread_name = kmalloc(5);
-	strcpy(thread_name, "idle");
-    curr_thread = _init_thread_0(thread_name, 0, 0, idle);
-    set_current(&(threads[0]->context));
-
-    /* init process */
-	thread_name = kmalloc(5);
-	strcpy(thread_name, "init");
-	thread_create(init, thread_name);
-
-    /* shell process */
-    thread_name = kmalloc(7);
-	sprintf(thread_name, "shell");
-	thread_create(cli_start_shell, thread_name);
-
-    schedule_timer();
-}
-
-thread_t *_init_thread_0(char* name, int64_t pid, int64_t ppid, void *start) {
-    thread_t *thread = (thread_t *)kmalloc(sizeof(thread_t));
-    init_thread_signal(thread);
-    threads[0] = thread;
-    thread->name = name;
-	thread->pid = pid;
-    thread->ppid = ppid;
-	thread->child_list = (child_node_t *)kmalloc(sizeof(child_node_t));
-	INIT_LIST_HEAD((list_head_t *)thread->child_list);
-    thread->status = THREAD_READY;
-    thread->user_stack_base = kmalloc(USTACK_SIZE);
-	thread->kernel_stack_base = kmalloc(KSTACK_SIZE);
-	thread->context.lr = (uint64_t)start;
-	thread->context.sp = (uint64_t)thread->kernel_stack_base + KSTACK_SIZE;
-	thread->context.fp = thread->context.sp; // frame pointer for local variable, which is also in stack.
-    init_thread_vfs(thread);
-    thread->file = NULL;
-
-	list_add((list_head_t *)thread, run_queue);
-    // dump_thread_info(thread);
-	return thread;
-}
-
-thread_t *thread_create(void *start, char* name) {
-    lock();
-    thread_t *t;
-    int new_pid = -1;
-    
-    /* Get new PID */
-    for (int i = 1; i < MAX_PID; i++ ) {
-        if (threads[pid_history + i] == NULL) {
-            new_pid = pid_history + i;
-            break;
-        }
-    }
-    /* Check and update PID history */
-    if (new_pid == -1) {
-        uart_puts("[!] No available PID. Fork failed.\n");
-        unlock();
-        return NULL;
-    } else {
-        pid_history = new_pid;
+    // init pids
+    for (int i = 0; i <= PIDMAX; i++)
+    {
+        threads[i].isused = 0;
+        threads[i].pid = i;
+        threads[i].iszombie = 0;
     }
 
-    t = (thread_t*)kmalloc(sizeof(thread_t));
-    init_thread_signal(t);
-    threads[new_pid] = t;
-    t->name = name;
-    t->pid = new_pid;
-    t->ppid = curr_thread->pid;
-    t->child_list = (child_node_t *)kmalloc(sizeof(child_node_t));
-    INIT_LIST_HEAD((list_head_t *)t->child_list);
-    t->user_stack_base = kmalloc(USTACK_SIZE);
-    t->kernel_stack_base = kmalloc(KSTACK_SIZE);
-    t->code = start;
-    t->context.lr = (uint64_t)start;
-    t->context.sp = (uint64_t)t->kernel_stack_base + KSTACK_SIZE;
-    t->context.fp = t->context.sp; // frame pointer for local variable, which is also in stack.
-    init_thread_vfs(t);
-    t->file = NULL;
-
-    /* init child node of this thread and add it to the curr_thread's child list */
-    child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
-	child->pid = new_pid;
-	list_add_tail((list_head_t *)child, (list_head_t *)curr_thread->child_list);
-
-    // dump_thread_info(t);
-    list_add((list_head_t *)t, run_queue);
+    thread_t *idlethread = thread_create(idle);
+    curr_thread = idlethread;
+    asm volatile("msr tpidr_el1, %0" ::"r"(&curr_thread->context));
+    thread_create(start_shell);
+    // unsigned long val;
+    // asm volatile("msr tpidr_el1, %0" ::"r"((curr_thread + sizeof(list_head_t)))); // Don't let thread structure NULL as we enable the functionality
+    // asm volatile("mrs %0, tpidr_el1" : "=r" (val));
+    // uart_sendline("val2: %x\n", val);
     unlock();
-    return t;
 }
 
-void thread_exit() {
-	// thread cannot deallocate the stack while still using it, wait for someone to recycle it.
-	// In this lab, idle thread handles this task, instead of parent thread.
-	lock();
-	// uart_puts("[-] Thread %d exit\n", curr_thread->pid);
-	curr_thread->status = THREAD_ZOMBIE;
-	list_del_entry((list_head_t *)curr_thread); // remove from run queue, still in parent's child list
-	unlock();
-	schedule();
-}
-
-void thread_exit_by_pid(int64_t pid) {
-	lock();
-	// uart_puts("[-] Thread %d exit\n", curr_thread->pid);
-    thread_t *t = threads[pid];
-	t->status = THREAD_ZOMBIE;
-	list_del_entry((list_head_t *)t); 
-	unlock();
-	schedule();
-}
-
-void dump_thread_info(thread_t* t) {
-    uart_puts(YEL "[+] New thread(PID)   %s(%d)\n" CRESET, t->name, t->pid);
-    uart_puts(GRN "    thread_address    0x%x\n" CRESET, t);
-    uart_puts(GRN "    user_stack_base   0x%x\n" CRESET, t->user_stack_base);
-    uart_puts(GRN "    kernel_stack_base 0x%x\n" CRESET, t->kernel_stack_base);
-    uart_puts(GRN "    context.sp        0x%x\n" CRESET, t->context.sp);
-    uart_puts(GRN "    run_queue         0x%x\n" CRESET, t->user_stack_base);
-    uart_puts("\r\n");
-}
-
-void idle() {
-    unlock();
-    // uart_puts("[*] Thread idle(0) is running.\n"); // debug
-    // print_lock();
-    while (1) {
+void idle()
+{
+    core_timer_enable();
+    while (1)
+    {
+        // uart_sendline("This is idle\n"); // debug
+        kill_zombies(); // reclaim threads marked as DEAD
         schedule();     // switch to next thread in run queue
     }
 }
 
-void init() {
-    // uart_puts("[*] Thread init(1) is running.\n"); // debug
-    // print_lock();
-    while (1) {
-		int64_t pid = wait();
-		uart_puts("[i] exit: %d\n", pid);
-	}
+void schedule()
+{
+    lock();
+    // uart_sendline("This is curr_thread->pid %d\n", curr_thread->pid);
+    do
+    {
+        // uart_sendline("This is in schedule curr_thread->pid %d\n", curr_thread->pid);
+        curr_thread = (thread_t *)curr_thread->listhead.next;
+    } while (list_is_head(&curr_thread->listhead, run_queue) || curr_thread->iszombie == 1); // find a runnable thread
+    // uart_sendline("This is finish schedule curr_thread->pid %d\n", curr_thread->pid);
+    unlock();
+    switch_to(get_current(), &curr_thread->context);
 }
 
-int64_t wait() {
+void kill_zombies()
+{
     lock();
-    // uart_puts("[*] Thread %s(%d) is blocked.\n", curr_thread->name, curr_thread->pid); // debug
-    curr_thread->status = THREAD_BLOCKED;
-    while(1) {
-        unlock();
-        schedule();
-        lock();
-
-		struct list_head *curr_child_node;
-        list_head_t *tmp;
-        list_for_each_safe(curr_child_node, tmp, (list_head_t *)curr_thread->child_list) {
-            thread_t *child_thread = threads[((child_node_t*)curr_child_node)->pid];
-            if (child_thread->status == THREAD_ZOMBIE) {
-                int64_t pid = child_thread->pid;
-                uart_puts("   waiting thread kfree child: %d\n", pid);
-                free_child_thread(child_thread);
-                list_del_entry(curr_child_node);
-                unlock();
-                return pid;   
-            }
+    list_head_t *curr;
+    list_for_each(curr, run_queue)
+    {
+        if (((thread_t *)curr)->iszombie)
+        {
+            // uart_sendline("This is zombie pid %d\n", ((thread_t *)curr)->pid);
+            list_del_entry(curr);
+            kfree(((thread_t *)curr)->stack_allocated_base);        // free stack
+            kfree(((thread_t *)curr)->kernel_stack_allocated_base); // free stack
+            // kfree(((thread_t *)curr)->data);                   // Don't free data because children may use data
+            ((thread_t *)curr)->iszombie = 0;
+            ((thread_t *)curr)->isused = 0;
         }
     }
     unlock();
+}
+
+thread_t *thread_create(void *start)
+{
+    lock();
+    thread_t *r;
+    // find usable PID, don't use the previous one
+    if (pid_history > PIDMAX)
+        return 0;
+    if (!threads[pid_history].isused)
+    {
+        r = &threads[pid_history];
+        pid_history += 1;
+        // uart_sendline("This is thread_create->pid %d\n", r->pid);  // for Debug
+    }
+    else
+        return 0;
+
+    r->iszombie = 0;
+    r->isused = 1;
+    r->context.lr = (unsigned long long)start;
+    r->stack_allocated_base = kmalloc(USTACK_SIZE);
+    r->kernel_stack_allocated_base = kmalloc(KSTACK_SIZE);
+    r->context.sp = (unsigned long long)r->kernel_stack_allocated_base + KSTACK_SIZE;
+    r->context.fp = r->context.sp; // frame pointer for local variable, which is also in stack.
+
+    //Lab7
+    strcpy(r->vfs.curr_working_dir, "/");
+
+    //Lab5- Advanced Exercise 1
+    r->signal.lock = 0;
+    //initial all signal handler with signal_default_handler (kill thread)
+    for (int i = 0; i < SIGNAL_MAX;i++)
+    {
+        r->signal.handler_table[i] = signal_default_handler;
+        r->signal.pending[i] = 0;
+    }
+
+    list_add_tail(&r->listhead, run_queue);
+    unlock();
+    return r;
+}
+
+void thread_exit()
+{
+    // thread cannot deallocate the stack while still using it, wait for someone to recycle it.
+    // In this lab, idle thread handles this task, instead of parent thread.
+    lock();
+    curr_thread->iszombie = 1;
+    unlock();
+    schedule();
+}
+
+int exec_thread(char *data, unsigned int filesize)
+{
+    // lock();
+    el1_interrupt_disable();
+    thread_t *t = thread_create(data);
+    t->data = kmalloc(filesize);
+    t->datasize = filesize;
+    t->context.lr = (unsigned long)t->data; // set return address to program if function call completes
+    // copy file into data
+    for (int i = 0; i < filesize;i++)
+    {
+        t->data[i] = data[i];
+    }
+    curr_thread = t;
+
+    // Lab7- Advance 1
+    vfs_open("/dev/uart", 0, &curr_thread->vfs.file_descriptors_table[0]); // stdin (press 'x')
+    vfs_open("/dev/uart", 0, &curr_thread->vfs.file_descriptors_table[1]); // stdout
+    vfs_open("/dev/uart", 0, &curr_thread->vfs.file_descriptors_table[2]); // stderr
+
+    add_timer(schedule_timer, 2, "", 0); // start scheduler
+    // eret to exception level 0
+    asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+        "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
+        "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+        "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process, user program stack pointer set to new stack.
+        "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
+        "eret\n\t"
+        ::"r"(&t->context),"r"(t->context.lr), "r"(t->stack_allocated_base + USTACK_SIZE), "r"(t->context.sp));
+    // unlock();
+
     return 0;
 }
 
-void free_child_thread(thread_t *child_thread) {
-    list_head_t *curr;
-	list_head_t *n;
-    uart_puts(YEL "[-] Free child thread PID(%d)\n" CRESET, child_thread->pid);
-    list_for_each_safe(curr, n, (list_head_t *)child_thread->child_list) {
-		thread_t *curr_child = threads[((child_node_t *)curr)->pid];
-		/* assign to init process */
-        curr_child->ppid = 1;
-		uart_puts("    move child thread: %d to init process\n", curr_child->pid);
-		list_del_entry(curr);
-		list_add_tail(curr, (list_head_t *)threads[1]->child_list);
-	}
-    /* check if the code is in kernel space */
-    if (thread_code_can_free(child_thread)) {
-        uart_puts("    child thread addr: 0x%x, _start: 0x%x, _end: 0x%x\n", child_thread, &_start, &_end);
-		kfree(child_thread->code);
-	}
-    threads[child_thread->pid] = NULL;
-	kfree(child_thread->child_list);
-	kfree(child_thread->user_stack_base);
-	kfree(child_thread->kernel_stack_base);
-	kfree(child_thread->name);
-    kfree(child_thread);
-    uart_puts("    child_thread: 0x%x, curr_thread: 0x%x\n", child_thread, curr_thread);
-}
-
-
-void schedule() {
-    lock();
-	do {
-		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-		// uart_puts("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
-	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
-	curr_thread->status = THREAD_RUNNING;
-	unlock();
-    // uart_puts("[*] Schedule to %s(%d)\n", curr_thread->name, curr_thread->pid); // debug
-    switch_to(get_current(), &(curr_thread->context));
-}
-
-void schedule_timer() {
+void schedule_timer(){
     unsigned long long cntfrq_el0;
     __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0));
-	// 32 * default timer -> trigger next schedule timer
-	add_timer_by_tick(schedule_timer, cntfrq_el0 >> 5, NULL);
-	need_to_schedule = 1;
+    add_timer(schedule_timer, cntfrq_el0 >> 5, "", 1);
+    // 32 * default timer -> trigger next schedule timer
 }
 
-void dump_child_thread(thread_t *thread) {
-	list_head_t *curr;
-	uart_puts(WHT "[i] Child List        %s(%d)\r\n" CRESET, thread->name, thread->pid);
-	list_for_each(curr, (list_head_t *)thread->child_list) {
-		list_head_t *curr_child = (list_head_t *)threads[((child_node_t *)curr)->pid];
-
-		uart_puts(WHT "    %s(%d)          0x%x\n" CRESET, ((thread_t *)curr_child)->name, ((thread_t *)curr_child)->pid, curr_child);
-        uart_puts(WHT "    ppid              0x%x\n" CRESET, ((thread_t *)curr_child)->ppid);
-        uart_puts(WHT "    next              0x%x\n" CRESET, curr_child->next);
-        uart_puts(WHT "    prev              0x%x\n" CRESET, curr_child->prev);
-        
-		switch (((thread_t *)curr_child)->status) {
-		case THREAD_RUNNING:
-			uart_puts(WHT "    status            " GRN "THREAD_RUNNING\r\n" CRESET);
-			break;
-		case THREAD_READY:
-			uart_puts(WHT "    status            " BLU "THREAD_READY\r\n" CRESET);
-			break;
-		case THREAD_BLOCKED:
-			uart_puts(WHT "    status            " RED "THREAD_BLOCKED\r\n" CRESET);
-			break;
-		case THREAD_ZOMBIE:  
-			uart_puts(WHT "    status            " YEL "THREAD_ZOMBIE\r\n" CRESET);
-			break;
-		}
-	}
-    uart_puts("\r\n");
-}
-
-void dump_run_queue(thread_t *root, int64_t level) {
-	for (int i = 0; i < level; i++)
-		uart_puts("   ");
-	uart_puts(" |---");
-	// dump_thread_info(root);
-	list_head_t *curr;
-	list_for_each(curr, (list_head_t *)root->child_list) {
-		// INFO("child: %d\n", child_node_to_thread((child_node_t *)curr)->pid);
-		dump_run_queue(threads[((child_node_t *)curr)->pid], level + 1);
-		// uart_puts("OVER");
-	}
-}
-
-int8_t thread_code_can_free(thread_t *thread) {
-	return !in_kernel_img_space((uint64_t)thread->code);
-}
-
-int8_t in_kernel_img_space(uint64_t addr) {
-	// uart_puts("addr: 0x%x, _start: 0x%x, _end: 0x%x\n", addr, &_start, &_end);
-	return addr >= &_start && addr < &_end;
-}
-
-void foo() {
+void foo()
+{
     // Lab5 Basic 1 Test function
-    for (int i = 0; i < 3; ++i) {
-        uart_puts("foo() thread pid is %d in for loop index = %d\n", curr_thread->pid, i);
+    for (int i = 0; i < 3; ++i)
+    {
+        uart_sendline("foo() thread pid is %d in for loop index = %d\n", curr_thread->pid, i);
         int r = 1000000;
-        while (r--) {
+        while (r--)
+        {
             asm volatile("nop");
         }
         schedule();
-        uart_puts("In for loop - foo() thread pid is %d in for loop index = %d\n", curr_thread->pid, i);
+        uart_sendline("In for loop - foo() thread pid is %d in for loop index = %d\n", curr_thread->pid, i);
     }
     thread_exit();
-}
-
-int thread_insert_file_to_fdtable(thread_t *t, file_t *file)
-{
-	for (int i = 0; i < MAX_FD + 1; i++)
-	{
-		if (t->file_descriptors_table[i] == NULL)
-		{
-			t->file_descriptors_table[i] = file;
-			return i;
-		}
-	}
-	return -1;
-}
-
-int thread_get_file_struct_by_fd(int fd, file_t **file)
-{
-	if (fd < 0 || fd > MAX_FD || curr_thread->file_descriptors_table[fd] == NULL)
-	{
-		return -1;
-	}
-	*file = curr_thread->file_descriptors_table[fd];
-	return 0;
 }

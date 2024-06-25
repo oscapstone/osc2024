@@ -1,137 +1,139 @@
+#include <stddef.h>
 #include "shell.h"
-#include "mini_uart.h"
-#include "power.h"
+#include "uart1.h"
 #include "mbox.h"
+#include "power.h"
 #include "cpio.h"
 #include "utils.h"
-#include "memory.h"
 #include "dtb.h"
-#include "exception.h"
+#include "memory.h"
 #include "timer.h"
-#include "ANSI.h"
 #include "sched.h"
 #include "syscall.h"
-#include "stddef.h"
-#include "vfs.h"
+#include "exception.h"
+#include "ANSI.h"
 
-#define CLI_MAX_CMD 8
-#define MAX_ARGS 10
-#define USER_STACK_SIZE 0x10000
+#define CLI_MAX_CMD 14
+#define USTACK_SIZE 0x10000
 
-extern void         *CPIO_START;
-extern thread_t     *curr_thread;
+struct CLI_CMDS cmd_list[CLI_MAX_CMD] =
+    {
+        {.command = "hello", .help = "print Hello World!"},
+        {.command = "help", .help = "print all available commands"},
+        {.command = "info", .help = "get device information via mailbox"},
+        {.command = "cat", .help = "concatenate files and print on the standard output"},
+        {.command = "ls", .help = "list directory contents"},
+        {.command = "malloc", .help = "simple allocator in heap session"},
+        {.command = "dtb", .help = "show device tree"},
+        {.command = "exec", .help = "execute a command, replacing current image with a new image"},
+        {.command = "setTimeout", .help = "setTimeout [MESSAGE] [SECONDS]"},
+        {.command = "set2sAlert", .help = "set core timer interrupt every 2 second"},
+        {.command = "memTest", .help = "memory testcase generator, allocate and free"},
+        {.command = "thread", .help = "thread tester with dummy function - foo()"},
+        {.command = "fork", .help = "fork tester"},
+        {.command = "reboot", .help = "reboot the device"}};
 
+void cli_cmd_clear(char *buffer, int length)
+{
+    for (int i = 0; i < length; i++)
+    {
+        buffer[i] = '\0';
+    }
+};
 
-void cli_start_shell() {
-    char input_buf[MAX_CMD_LEN];
-    char path_buf[MAX_PATH_NAME];
-    cli_print_welcome_msg();
-
-    while (1) {
-		cli_clear_cmd(input_buf, MAX_CMD_LEN);
-        get_pwd(path_buf);
-		uart_puts("▬▬ι" CYN "═══════- " YEL "%s " CRESET "$ ", path_buf);
-		cli_read_cmd(input_buf);
-		cli_exec_cmd(input_buf);
-	}
-}
-
-int cli_strcmp(const char* p1, const char* p2) {
-    const unsigned char *s1 = (const unsigned char*) p1;
-    const unsigned char *s2 = (const unsigned char*) p2;
-    unsigned char c1, c2;
-
-    do {
-        c1 = (unsigned char) *s1++;
-        c2 = (unsigned char) *s2++;
-        if ( c1 == '\0' ) return c1 - c2;
-    } while ( c1 == c2 );
-    
-    return c1 - c2;
-}
-
-void cli_read_cmd(char* buf) {
+void cli_cmd_read(char *buffer)
+{
     char c = '\0';
     int idx = 0;
-    
-    while(1) {
-        if (idx >= MAX_CMD_LEN) {
-            uart_puts("Exceed the command length limit.");
+    while (1)
+    {
+        if (idx >= CMD_MAX_LEN)
+            break;
+
+        c = uart_async_getc();
+        if (c == '\n')
+        {
             break;
         }
-        c = getchar();
-        if (c == '\n') {
-            uart_puts("\r\n");
-            break;
-        }
-        if ((int)c == 127) {  
-            if (idx > 0) {
-                uart_puts("\b \b");
-                buf[--idx] = '\0';
-            }
-            continue;
-        }
-        if ( c > 16 && c < 32 ) continue;
-        if ( c > 127 ) continue;
-        buf[idx++] = c;
-        putchar(c);
+        buffer[idx++] = c;
     }
 }
 
-void cli_exec_cmd(char* buf) {
-    char* argvs[MAX_ARGS];
-    char* cmd = buf;
-    int argc = 0;
-    str_split(cmd, ' ', argvs, &argc);
-    argc -= 1; // First command part
-    
-    if (cli_strcmp(cmd, "cat") == 0) {
-        cmd_cat(argvs[1]);
-    } else if (cli_strcmp(cmd, "settimer") == 0) {
-        cmd_enable_timer();
-    } else if (cli_strcmp(cmd, "sleep") == 0) {
-        cmd_sleep(argvs, argc);
-    } else if (cli_strcmp(cmd, "setalert2s") == 0) {
-        cmd_set_alert_2s(argvs, argc);
-    } else if (cli_strcmp(cmd, "dtb") == 0) {
-        cmd_dtb();
-    } else if (cli_strcmp(cmd, "currel") == 0) {
-        cmd_currentEL();
-    } else if (cli_strcmp(cmd, "exec") == 0) {
-        cmd_exec_program(argvs, argc);
-    } else if (cli_strcmp(cmd, "help") == 0) {
-        cmd_help();
-    } else if (cli_strcmp(cmd, "hello") == 0) {
-        cmd_hello();
-    } else if (cli_strcmp(cmd, "hwinfo") == 0) {
-        cmd_hwinfo();
-    } else if (cli_strcmp(cmd, "reboot") == 0) {
-        cmd_reboot();
-    } else if (cli_strcmp(cmd, "ls") == 0) {
-        cmd_ls(argvs, argc);
-    } else if (cli_strcmp(cmd, "malloc") == 0) {
-        cmd_malloc();
-    } else if (cli_strcmp(cmd, "kmalloc") == 0) {
-        cmd_kmalloc();
-    } else if (cli_strcmp(cmd, "write") == 0) {
-        cmd_write(argvs, argc);
-    } else if (cli_strcmp(cmd, "cd") == 0) {
-        cmd_cd(argvs, argc);
-    } else if (cli_strcmp(cmd, "mkdir") == 0) {
-        cmd_mkdir(argvs, argc);
-    } else if(*cmd) {
+void cli_cmd_exec(char *buffer)
+{
+    if (!buffer)
+        return;
+
+    char *cmd = buffer;
+    char *argvs = str_SepbySpace(buffer);
+
+    if (strcmp(cmd, "hello") == 0)
+    {
+        do_cmd_hello();
+    }
+    else if (strcmp(cmd, "help") == 0)
+    {
+        do_cmd_help();
+    }
+    else if (strcmp(cmd, "info") == 0)
+    {
+        do_cmd_info();
+    }
+    else if (strcmp(cmd, "cat") == 0)
+    {
+        do_cmd_cat(argvs);
+    }
+    else if (strcmp(cmd, "ls") == 0)
+    {
+        do_cmd_ls(argvs);
+    }
+    else if (strcmp(cmd, "malloc") == 0)
+    {
+        do_cmd_malloc();
+    }
+    else if (strcmp(cmd, "dtb") == 0)
+    {
+        do_cmd_dtb();
+    }
+    else if (strcmp(cmd, "exec") == 0)
+    {
+        do_cmd_exec(argvs);
+    }
+    else if (strcmp(cmd, "memTest") == 0)
+    {
+        do_cmd_memory_tester();
+    }
+    else if (strcmp(cmd, "setTimeout") == 0)
+    {
+        char *sec = str_SepbySpace(argvs);
+        do_cmd_setTimeout(argvs, sec);
+    }
+    else if (strcmp(cmd, "set2sAlert") == 0)
+    {
+        do_cmd_set2sAlert();
+    }
+    else if (strcmp(cmd, "thread") == 0)
+    {
+        do_cmd_thread_tester();
+    }
+    else if (strcmp(cmd, "fork") == 0)
+    {
+        do_cmd_fork_tester();
+    }
+    else if (strcmp(cmd, "reboot") == 0)
+    {
+        do_cmd_reboot();
+    }
+    else if (cmd)
+    {
         uart_puts(cmd);
-        uart_puts(": Command not found QQ, type help to get more information.\r\n");
+        uart_puts(": command not found\r\n");
+        uart_puts("Type 'help' to see command list.\r\n");
     }
 }
 
-void cli_clear_cmd(char* buf, int length) {
-    for (int i=0; i<length; i++) {
-        buf[i] = '\0';
-    }
-}
-
-void cli_print_welcome_msg() {
+void cli_print_banner()
+{
     uart_puts("\r\n");
     uart_puts("                 __,.__                                 \r\n");
     uart_puts("                /  ||  \\            _____     _        \r\n");
@@ -143,29 +145,47 @@ void cli_print_welcome_msg() {
     uart_puts("  ---------------------- May the Force be with you. -----------------------\r\n\r\n");
 }
 
-void cmd_help() {
-    uart_puts("Example usage:\r\n");
-    uart_puts("   help                          - list all commands.\r\n");
-    uart_puts("   hello                         - print hello message.\r\n");
-    uart_puts("   hwinfo                        - print hardware info.\r\n");
-    uart_puts("   currel                        - print current EL.\r\n");
-    uart_puts("   cat           [filePath]      - get content from a file.\r\n");
-    uart_puts("   exec          [filePath]      - execute a img program.\r\n");
-    uart_puts("   ls                            - list all files in directory.\r\n");
-    uart_puts("   dtb                           - show device tree.\r\n");
-    uart_puts("   settimer                      - enable timer.\r\n");
-    uart_puts("   sleep         [msg][sec]      - sleep with message and secs.\r\n");
-    uart_puts("   setalert2s    [msg]           - set 2s alert with message.\r\n");
-    uart_puts("   malloc                        - test malloc function.\r\n");
-    uart_puts("   kmalloc                       - test kmalloc function.\r\n");
-    uart_puts("   reboot                        - reboot the device.\r\n");
+void start_shell()
+{
+    // uart_sendline("In start_shell\n");
+    // while(!uart_recv_echo_flag){
+    while(list_size(run_queue)>2){
+        schedule();
+    }
+    char input_buffer[CMD_MAX_LEN];
+    cli_print_banner();
+    uart_recv_echo_flag = 1;
+    while (1)
+    {
+        cli_cmd_clear(input_buffer, CMD_MAX_LEN);
+        // uart_sendline("lock_counter : %d\n",lock_counter);
+		uart_puts("▬▬ι" CYN "═══════- " CRESET "$ ");
+        cli_cmd_read(input_buffer);
+        cli_cmd_exec(input_buffer);
+        // idle();
+        // uart_sendline("idle finish\n");
+    }
+    // return 0;
 }
 
-void cmd_hello() {
+void do_cmd_help()
+{
+    for (int i = 0; i < CLI_MAX_CMD; i++)
+    {
+        uart_puts(cmd_list[i].command);
+        uart_puts("\t\t: ");
+        uart_puts(cmd_list[i].help);
+        uart_puts("\r\n");
+    }
+}
+
+void do_cmd_hello()
+{
     uart_puts("Hello World!\r\n");
 }
 
-void cmd_hwinfo() {
+void do_cmd_info()
+{
     // print hw revision
     pt[0] = 8 * 4;
     pt[1] = MBOX_REQUEST_PROCESS;
@@ -176,7 +196,8 @@ void cmd_hwinfo() {
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
 
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
+    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
+    {
         uart_puts("Hardware Revision\t: ");
         uart_2hex(pt[6]);
         uart_2hex(pt[5]);
@@ -192,7 +213,8 @@ void cmd_hwinfo() {
     pt[6] = 0;
     pt[7] = MBOX_TAG_LAST_BYTE;
 
-    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)) ) {
+    if (mbox_call(MBOX_TAGS_ARM_TO_VC, (unsigned int)((unsigned long)&pt)))
+    {
         uart_puts("ARM Memory Base Address\t: ");
         uart_2hex(pt[5]);
         uart_puts("\r\n");
@@ -202,246 +224,244 @@ void cmd_hwinfo() {
     }
 }
 
-void cmd_reboot() {
-    uart_puts("Reboot in 5 seconds ...\r\n\r\n");
-    volatile unsigned int* rst_addr = (unsigned int*)PM_RSTC;
-    *rst_addr = PM_PASSWORD | 0x20;
-    volatile unsigned int* wdg_addr = (unsigned int*)PM_WDOG;
-    *wdg_addr = PM_PASSWORD | 5;
-}
+void do_cmd_cat(char *filepath)
+{
+    char *c_filepath;
+    char *c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
 
-void cmd_ls(char **argv, int argc) {
-    char *workdir;
-
-    if (argc == 0)
+    while (header_ptr != 0)
     {
-        workdir = ".";
-    }
-    else
-    {
-        workdir = argv[1];
-    }
-
-    char buf[MAX_NAME_BUF] = {0};
-    uart_puts("root_vnode: 0x%x, curr_thread->pwd: 0x%x\r\n", get_root_vnode(), curr_thread->pwd);
-
-    vfs_readdir(curr_thread->pwd, workdir, buf);
-    uart_puts("readdir:\r\n");
-    int start_index = 0;
-    int end_index = 0;
-    while (!(buf[end_index] == 0 && buf[end_index + 1] == 0))
-    {
-        end_index += strlen(buf + start_index) + 1;
-        switch (buf[start_index])
+        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        // if parse header error
+        if (error)
         {
-        case FS_DIR:
-            printf(BBLU "%s " CRESET, buf + start_index + 1);
-            break;
-        case FS_FILE:
-            printf("%s ", buf + start_index + 1);
-            break;
-        case FS_DEV:
-            printf(BCYN "%s " CRESET, buf + start_index + 1);
+            uart_puts("cpio parse error");
             break;
         }
 
-        // printf("%s ", buf + start_index);
-        start_index = end_index;
-    }
-    puts("\r\n");
+        if (strcmp(c_filepath, filepath) == 0)
+        {
+            uart_puts("%s", c_filedata);
+            break;
+        }
 
-    return 0;
-}
-
-void cmd_cat(char* filepath) {
-    char buf[0x10000] = {0};
-    file_t *file;
-    if (vfs_open(curr_thread->pwd, filepath, 0, &file) == -1)
-        return -1;
-    size_t size = vfs_read(file, buf, 0x10000);
-    for (int i = 0; i < size; i++)
-        printf("%c", buf[i]);
-    vfs_close(file);
-    return 0;
-}
-
-void cmd_malloc() {
-    //Test malloc
-    char* test1 = malloc(0x22);
-    strcpy(test1, "test malloc1");
-    uart_puts("%s\r\n", test1);
-
-    char* test2 = malloc(0x10);
-    strcpy(test2, "test malloc2");
-    uart_puts("%s\r\n", test2);
-
-    char* test3 = malloc(0x17);
-    strcpy(test3, "test malloc3");
-    uart_puts("%s\r\n", test3);
-}
-
-void cmd_dtb() {
-    parse_dtb_tree(dtb_callback_show_tree);
-}
-
-void cmd_exec_program(char **argv, int argc){
-    char *filepath;
-    if (argc == 1) {
-        filepath = argv[1];
-    } 
-    vnode_t *vnode;
-    if (vfs_lookup(curr_thread->pwd, filepath, &vnode) == -1)
-    {
-        puts("exec: ");
-        puts(filepath);
-        puts(": No such file or directory\r\n");
-        return -1;
-    }
-    uart_puts("exec: %s\r\n", filepath);
-    if (kernel_fork() == 0)
-    { // child process
-        kernel_exec_user_program(filepath, NULL);
-    }
-    else
-    {
-        wait();
+        // if this is TRAILER!!! (last of file)
+        if (header_ptr == 0)
+            uart_puts("cat: %s: No such file or directory\n", filepath);
     }
 }
 
-void cmd_currentEL() {
-    print_currentEL();
-}
-
-void cmd_enable_timer() {
-    core_timer_enable();
-}
-
-void cmd_set_alert_2s(char**argvs, int argc) {
-    char *message;
-    if (argc == 1) {
-        message = argvs[1];
-    } else {
-        puts("Invalid arg number.\r\n");
-        return;
-    }
-    add_timer(set_alert_2S, 2, message);
-}
-
-void cmd_sleep(char** argvs, int argc) {
-    char *message, *timeout;
-    if (argc == 2) {
-        message = argvs[1];
-        timeout = argvs[2];
-    } else {
-        puts("Invalid arg number.\r\n");
-        return;
-    }
-    add_timer(puts, atoi(timeout), message);
-}
-
-void cmd_kmalloc() {
-    // test kmalloc
-    char *test1 = kmalloc(0x10000);
-    strcpy(test1, "  test kmalloc1");
-    puts(test1);
-    puts("\r\n");
-
-    char *test2 = kmalloc(0x10000);
-    strcpy(test2, "  test kmalloc2");
-    puts(test2);
-    puts("\r\n");
-
-    char *test3 = kmalloc(0x10000);
-    strcpy(test3, "  test kmalloc3");
-    puts(test3);
-    puts("\r\n");
-
-    char *test4 = kmalloc(0x10000);
-    strcpy(test4, "  test kmalloc4");
-    puts(test4);
-    puts("\r\n");
-
-    char *test5 = kmalloc(0x28);
-    strcpy(test5, "  test kmalloc5");
-    puts(test5);
-    puts("\r\n");
-
-    kfree(test1);
-    // puts("\r\n");
-
-    kfree(test2);
-    // puts("\r\n");
-
-    kfree(test3);
-    // puts("\r\n");
-
-    kfree(test4);
-    // puts("\r\n");
-
-    kfree(test5);
-    // puts("\r\n");
-}
-
-int cmd_write(char **argv, int argc)
+void do_cmd_ls(char *workdir)
 {
-    char *filepath;
-    char *content;
-    if (argc == 2)
+    char *c_filepath;
+    char *c_filedata;
+    unsigned int c_filesize;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
+
+    while (header_ptr != 0)
     {
-        filepath = argv[1];
-        content = argv[2];
+        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        // if parse header error
+        if (error)
+        {
+            uart_puts("cpio parse error");
+            break;
+        }
+
+        // if this is not TRAILER!!! (last of file)
+        if (header_ptr != 0)
+            uart_puts("%s\n", c_filepath);
     }
-    else
-    {
-        puts("Incorrect number of parameters\r\n");
-        return -1;
-    }
-    file_t *file;
-    if (vfs_open(curr_thread->pwd, filepath, 0, &file) == -1)
-    {
-        puts("File not found\r\n");
-        return -1;
-    }
-    size_t size = strlen(content);
-    vfs_write(file, content, size);
-    vfs_close(file);
-    return 0;
 }
 
-int cmd_mkdir(char **argv, int argc)
+void do_cmd_malloc()
 {
-    char *dirpath;
-    if (argc == 1)
-    {
-        dirpath = argv[1];
-    }
-    else
-    {
-        puts("Incorrect number of parameters\r\n");
-        return -1;
-    }
-    if (vfs_mkdir(curr_thread->pwd, dirpath))
-    {
-        puts("mkdir failed\r\n");
-        return -1;
-    }
-    return 0;
+    // test malloc
+    char *test1 = malloc(0x18);
+    memcpy(test1, "test malloc1", sizeof("test malloc1"));
+    uart_puts("%s\n", test1);
+
+    char *test2 = malloc(0x20);
+    memcpy(test2, "test malloc2", sizeof("test malloc2"));
+    uart_puts("%s\n", test2);
+
+    char *test3 = malloc(0x28);
+    memcpy(test3, "test malloc3", sizeof("test malloc3"));
+    uart_puts("%s\n", test3);
 }
 
-int cmd_cd(char **argv, int argc)
+void do_cmd_dtb()
 {
-    char *filepath;
-    // char *c_filedata;
-    // unsigned int c_filesize;
+    traverse_device_tree(dtb_ptr, dtb_callback_show_tree);
+}
 
-    if (argc == 1)
+void do_cmd_exec(char *filepath)
+{
+    char *c_filepath;
+    unsigned int c_filesize;
+    char *c_filedata;
+    struct cpio_newc_header *header_ptr = CPIO_DEFAULT_START;
+
+    while (header_ptr != 0)
     {
-        filepath = argv[1];
+        int error = cpio_newc_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
+        // if parse header error
+        if (error)
+        {
+            uart_puts("cpio parse error");
+            break;
+        }
+        // core_timer_enable(2);
+        if (strcmp(c_filepath, filepath) == 0)
+        {
+            // exec c_filedata
+            /*lab3
+            char* ustack = malloc(USTACK_SIZE);
+            asm("mov x1, 0x3c0\n\t"
+                "msr spsr_el1, x1\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
+                "msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
+                "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
+                "eret\n\t"              // Perform exception return. EL1 -> EL0
+                :: "r" (c_filedata),
+                   "r" (ustack+USTACK_SIZE));
+            break;
+            */
+
+            /*lab5*/
+            uart_recv_echo_flag = 0; // syscall.img has different mechanism on uart I/O.
+            exec_thread(c_filedata, c_filesize);
+            // while(1){
+            //     schedule();
+            // }
+            // uart_recv_echo_flag = 1;
+        }
+
+        // if this is TRAILER!!! (last of file)
+        if (header_ptr == 0)
+            uart_puts("exec: %s: No such file or directory\n", filepath);
+    }
+}
+
+void do_cmd_setTimeout(char *msg, char *sec)
+{
+    add_timer(uart_sendline, atoi(sec), msg, 0);
+}
+
+void do_cmd_set2sAlert()
+{
+    add_timer(timer_set2sAlert, 2, "2sAlert", 0);
+}
+
+void do_cmd_memory_tester()
+{
+
+    char *a = kmalloc(0x10000);
+    char *aa = kmalloc(0x10000);
+    char *aaa = kmalloc(0x10000);
+    char *aaaa = kmalloc(0x10000);
+    char *b = kmalloc(0x4000);
+    char *c = kmalloc(0x1001); // malloc size = 8KB
+    char *d = kmalloc(0x10);   // malloc size = 32B
+    // char *e = kmalloc(0x800);
+    // char *f = kmalloc(0x800);
+    // char *g = kmalloc(0x800);
+
+    kfree(a);
+    kfree(aa);
+    kfree(aaa);
+    kfree(aaaa);
+    kfree(b);
+    kfree(c);
+    kfree(d);
+}
+
+void do_cmd_thread_tester()
+{
+    for (int i = 0; i < 5; ++i)
+    { // N should > 2
+        // uart_sendline("Debug do_cmd_thread_tester i %d\n", i);
+        thread_create(foo);
+    }
+    schedule();
+
+    // add_timer(schedule_timer, 1, "", 0); // start scheduler
+    for (int i = 0; i < 3; ++i)
+    {
+        schedule();
+    }
+}
+
+/*Not finish: EL1->EL0*/
+void fork_test()
+{
+    // asm volatile("msr tpidr_el1, %0" ::"r"(&curr_thread->context));
+    trapframe_t *tpf;
+    // asm volatile("mov %0, %1" : "=r"(tpf) : "r"(curr_thread->context.sp));
+    asm volatile("mov %0, sp" : "=r"(tpf));
+    uart_sendline("Fork test, pid %d\n", getpid(tpf));
+    // load_context(&main_thread->context);
+    int cnt = 1;
+    int ret = 0;
+    if ((ret = fork(tpf)) == 0)
+    { // child
+        long long cur_sp;
+        asm volatile("mov %0, sp" : "=r"(cur_sp));
+        uart_sendline("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(tpf), cnt, &cnt, cur_sp);
+        ++cnt;
+
+        if ((ret = fork(tpf)) != 0)
+        {
+            asm volatile("mov %0, sp" : "=r"(cur_sp));
+            uart_sendline("first child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(tpf), cnt, &cnt, cur_sp);
+        }
+        else
+        {
+            while (cnt < 5)
+            {
+                asm volatile("mov %0, sp" : "=r"(cur_sp));
+                uart_sendline("second child pid: %d, cnt: %d, ptr: %x, sp : %x\n", getpid(tpf), cnt, &cnt, cur_sp);
+                int r = 1000000;
+                while (r--)
+                {
+                    asm volatile("nop");
+                }
+                ++cnt;
+            }
+        }
+        exit(tpf);
+        // schedule();
     }
     else
     {
-        puts("Incorrect number of parameters\r\n");
-        return -1;
+        uart_sendline("parent here, pid %d, child %d\n", getpid(tpf), ret);
+        // schedule();
     }
-    kernel_chdir(filepath);
+}
+void do_cmd_fork_tester()
+{
+        thread_t *main_thread = thread_create(fork_test);        
+        // eret to exception level 0
+        // asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
+        // "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
+        // "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
+        // "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process, user program stack pointer set to new stack.
+        // "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
+        // ::"r"(&main_thread->context),"r"(main_thread->context.lr), "r"(main_thread->stack_allocated_base + USTACK_SIZE), "r"(main_thread->context.sp));
+    
+        asm("msr elr_el1, %0\n\t" ::"r"(main_thread->context.sp));  // When el0 -> el1, store return address for el1 -> el0 
+        asm("msr spsr_el1, xzr\n\t");   // Enable interrupt in EL0 -> Used for thread scheduler
+        
+        add_timer(schedule_timer, 1, "", 0); // start scheduler
+        asm("eret\n\t");
+}
+
+void do_cmd_reboot()
+{
+    uart_puts("Reboot in 5 seconds ...\r\n\r\n");
+    volatile unsigned int *rst_addr = (unsigned int *)PM_RSTC;
+    *rst_addr = PM_PASSWORD | 0x20;
+    volatile unsigned int *wdg_addr = (unsigned int *)PM_WDOG;
+    *wdg_addr = PM_PASSWORD | 5;
 }

@@ -1,5 +1,5 @@
-#ifndef _LIST_H_
-#define _LIST_H_
+#ifndef _U_LIST_H_
+#define _U_LIST_H_
 
 /*
  * Circular doubly linked list implementation.
@@ -10,7 +10,7 @@
  * generate better code by using them directly rather than
  * using the generic single-entry routines.
  *
- * https://github.com/torvalds/linux/blob/master/include/linux/list.h
+ * https://github.com/torvalds/linux/blob/master/include/linux/list.
  * https://elixir.bootlin.com/linux/latest/source/scripts/kconfig/list.h#L24
  */
 
@@ -30,7 +30,6 @@ typedef struct list_head {
  * Initializes the list_head to point to itself.  If it is a list header,
  * the result is an empty list.
  */
-
 static inline void INIT_LIST_HEAD(struct list_head *list)
 {
 	list->next = list;
@@ -121,27 +120,18 @@ static inline int list_empty(const struct list_head *head)
 	for (pos = (head)->next; !list_is_head(pos, (head)); pos = pos->next)
 
 /**
- * list_for_each_safe - iterate over a list safe against removal of list entry
- * @pos:	the &struct list_head to use as a loop cursor.
- * @n:		another &struct list_head to use as temporary storage
- * @head:	the head for your list.
- */
-#define list_for_each_safe(pos, tmp, head)    \
-	for (pos = (head)->next, tmp = pos->next; \
-		 !list_is_head(pos, (head));        \
-		 pos = tmp, tmp = pos->next)
-
-/**
  * list_empty - tests whether a list is empty
  * @head: the list to test.
  */
-static inline int list_size(const struct list_head *head) {
+static inline int list_size(const struct list_head *head)
+{
 	list_head_t *pos;
 	int i= 0;
-	list_for_each(pos, head) {
+	list_for_each(pos, head)
+	{
 		i++;
 	}
 	return i;
 }
 
-#endif /* _LIST_H_ */
+#endif /* _U_LIST_H_ */

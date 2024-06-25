@@ -1,32 +1,42 @@
-#ifndef	_SHELL_H
-#define	_SHELL_H
+#ifndef _SHELL_H_
+#define _SHELL_H_
 
-#define MAX_CMD_NO 4
-#define MAX_CMD_LEN 32
-#define MAX_MSG_LEN 128
+#define CMD_MAX_LEN 32
+#define MSG_MAX_LEN 128
 
-void cli_start_shell();
-int  cli_strcmp(const char* p1, const char* p2);
-void cli_read_cmd(char* buf);
-void cli_exec_cmd(char* buf);
-void cli_clear_cmd(char* buf, int length);
-void cli_print_welcome_msg();
-void cmd_help();
-void cmd_hello();
-void cmd_hwinfo();
-void cmd_reboot();
-void cmd_ls(char **argv, int argc);
-void cmd_cat(char* filepath);
-void cmd_exec_program(char **argv, int argc);
-void cmd_malloc();
-void cmd_dtb();
-void cmd_currentEL();
-void cmd_enable_timer();
-void cmd_set_alert_2s(char**argvs, int argc);
-void cmd_sleep(char** argvs, int argc);
-void cmd_kmalloc();
-int  cmd_mkdir(char **argv, int argc);
-int  cmd_cd(char **argv, int argc);
-int  cmd_write(char **argv, int argc);
+#include "sched.h"
 
-#endif  /*_SHELL_H */
+extern char *dtb_ptr;
+extern void *CPIO_DEFAULT_START;
+extern int   uart_recv_echo_flag;
+extern thread_t *curr_thread;
+
+typedef struct CLI_CMDS
+{
+    char command[CMD_MAX_LEN];
+    char help[MSG_MAX_LEN];
+} CLI_CMDS;
+
+int  cli_cmd_strcmp(const char*, const char*);
+void cli_cmd_clear(char*, int);
+void cli_cmd_read(char*);
+void cli_cmd_exec(char*);
+void cli_print_banner();
+void start_shell();
+
+void do_cmd_cat(char*);
+void do_cmd_help();
+void do_cmd_hello();
+void do_cmd_info();
+void do_cmd_malloc();
+void do_cmd_ls(char*);
+void do_cmd_dtb();
+void do_cmd_exec(char*);
+void do_cmd_setTimeout(char* msg, char* sec);
+void do_cmd_set2sAlert();
+void do_cmd_memory_tester();
+void do_cmd_thread_tester();
+void do_cmd_fork_tester();
+void do_cmd_reboot();
+
+#endif /* _SHELL_H_ */

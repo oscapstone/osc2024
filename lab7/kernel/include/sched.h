@@ -1,107 +1,76 @@
-#ifndef	_SCHED_H_
-#define	_SCHED_H_
+#ifndef _SCHED_H_
+#define _SCHED_H_
 
-#include "list.h"
-#include "stdint.h"
+#include "u_list.h"
+#include "signal.h"
+#include "vfs.h"
 
-#define MAX_PID     32768
-#define MAX_FD      16
+#define PIDMAX 32768
 #define USTACK_SIZE 0x10000
 #define KSTACK_SIZE 0x10000
-#define SIGNAL_MAX  64
-#define MAX_SIGNAL  31
-#define FD_STDIN    0
-#define FD_STDOUT   1
-#define FD_STDERR   2
 
 extern void  switch_to(void *curr_context, void *next_context);
 extern void* get_current();
-extern void* set_current(void *curr_context);
-extern void  store_context(void *curr_context);
-extern void  load_context(void *curr_context);
+extern void load_context(void *curr_context);
 
 // arch/arm64/include/asm/processor.h - cpu_context
-typedef struct cpu_context {
-    uint64_t x19; // callee saved registers: the called function will preserve them and restore them before returning
-    uint64_t x20;
-    uint64_t x21;
-    uint64_t x22;
-    uint64_t x23;
-    uint64_t x24;
-    uint64_t x25;
-    uint64_t x26;
-    uint64_t x27;
-    uint64_t x28;
-    uint64_t fp;  // x29: base pointer for local variable in stack
-    uint64_t lr;  // x30: store return address
-    uint64_t sp;  // stack pointer, varys from function calls
-}cpu_context_t;
+typedef struct thread_context
+{
+    unsigned long x19; // callee saved registers: the called function will preserve them and restore them before returning
+    unsigned long x20;
+    unsigned long x21;
+    unsigned long x22;
+    unsigned long x23;
+    unsigned long x24;
+    unsigned long x25;
+    unsigned long x26;
+    unsigned long x27;
+    unsigned long x28;
+    unsigned long fp;  // base pointer for local variable in stack
+    unsigned long lr;  // store return address
+    unsigned long sp;  // stack pointer, varys from function calls
+} thread_context_t;
 
-enum thread_status {
-    THREAD_RUNNING = 0,
-    THREAD_READY,
-    THREAD_BLOCKED,
-    THREAD_ZOMBIE
-};
-
-typedef struct child_node {
-    struct list_head    listhead;
-    int64_t             pid;
-} child_node_t;
-
-typedef struct signal_node {
-    struct list_head    listhead;
-    int                 signal;
-}signal_node_t;
-
-typedef struct signal_struct {
-    void                (*handler_table[MAX_SIGNAL])();
-    signal_node_t*      pending_list;                        // signal to run
-    int8_t              lock;
-    cpu_context_t       saved_context;
-    char*               signal_stack_base;
+typedef struct signal_struct
+{
+    int              lock;                                // Signal Processing Lock
+    void             (*handler_table[SIGNAL_MAX])();      // Signal handlers for different signal
+    int              pending[SIGNAL_MAX];               // Signal Pending buffer
+    thread_context_t saved_context;                       // Store registers before signal handler involving
+    void             (*curr_handler)();                   // Allow Signal handler overwritten by others
+    char*            stack_base;
 }signal_t;
 
-typedef struct thread {
-    struct list_head    listhead;                               // Freelist node
-    cpu_context_t       context;                                // Thread registers
-    void*               code;                                   // Process itself
-    size_t              datasize;                               // Process size
-    int8_t              status;                                 // Process statement
-    int64_t             pid;                                    // Process ID
-    int64_t             ppid;                                   // Parent Process ID
-    child_node_t*       child_list;                             // Child Process List
-    char*               user_stack_base;                        // User space Stack (Process itself)
-    char*               kernel_stack_base;                      // Kernel space Stack (Kernel syscall)
-    char*               name;
-    signal_t            signal;                                 // Signal struct
-    struct file         *file_descriptors_table[MAX_FD + 1]; // File Descriptor Table
-    struct file         *file;                               // File
-    struct vnode        *pwd;                               // Present Working Directory
+typedef struct vfs_struct
+{
+    char             curr_working_dir[MAX_PATH_NAME+1];
+    struct file*     file_descriptors_table[MAX_FD+1];
+}vfs_t;
+
+typedef struct thread
+{
+    list_head_t      listhead;                              // Freelist node
+    thread_context_t context;                               // Thread registers
+    int              pid;                                   // Process ID
+    int              iszombie;                              // Process statement
+    int              isused;                                // Freelist node statement
+    char*            stack_allocated_base;                  // Process Stack (Process itself)
+    char*            kernel_stack_allocated_base;           // Process Stack (Kernel syscall)
+    char*            data;                                  // Process itself
+    unsigned int     datasize;                              // Process size
+    signal_t         signal;                                // Signal info
+    vfs_t            vfs;                                   // VFS info
 } thread_t;
 
-void            init_thread_sched();
-thread_t*       _init_thread_0(char* name, int64_t pid, int64_t ppid, void *start);
-thread_t*       thread_create(void *start, char* name); 
-void            thread_exit();
-void            thread_exit_by_pid(int64_t pid);
-void            schedule();
-void            schedule_timer();
-void            idle();
-void            init();
-int64_t         wait();
-void            exec_thread(char *data, unsigned int filesize);
-void            free_child_thread(thread_t *child_thread); 
-void            dump_thread_info(thread_t* t);
-void            dump_child_thread(thread_t *thread);
-void            dump_run_queue(thread_t *root, int64_t level);
-int8_t          thread_code_can_free(thread_t *thread);
-int8_t          in_kernel_img_space(uint64_t addr);
-int             thread_insert_file_to_fdtable(thread_t *t, struct file *file);
-int             thread_get_file_struct_by_fd(int fd, struct file **file);
+void init_thread_sched();
+void idle();
+void schedule();
+void kill_zombies();
+void thread_exit();
+thread_t *thread_create(void *start);
+int exec_thread(char *data, unsigned int filesize);
+void schedule_timer();
 
-// Test function
-void            foo();
+void foo();
 
-
-#endif /*_SCHED_H_*/
+#endif /* _SCHED_H_ */

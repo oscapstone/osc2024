@@ -3,23 +3,23 @@
 
 #include "stddef.h"
 #include "vfs.h"
-#include "list.h"
+#include "dtb.h"
 
-#define INITRAMFS_PATH "/initramfs"
-#define KERNEL_PATH "/initramfs/kernel8.img"
+#define INITRAMFS_MAX_DIR_ENTRY 100
+extern void *CPIO_DEFAULT_START;
 
-typedef struct initramfs_inode
+// initramfs basically is same as tmpfs, but it is read-only
+struct initramfs_inode
 {
-    vnode_list_t *child_list;
-    char name[MAX_FILE_NAME]; // Name              : represents file name
+    enum fsnode_type type;
+    char* name;
+    struct vnode *entry[INITRAMFS_MAX_DIR_ENTRY];
     char *data;
     size_t datasize;
-} initramfs_inode_t;
+};
 
 int register_initramfs();
-int initramfs_setup_mount(filesystem_t *fs, mount_t *_mount, vnode_t *parent, const char *name);
-vnode_t *initramfs_create_vnode(mount_t *superblock, enum fsnode_type type, vnode_t *parent, const char *name, char *data, size_t datasize);
-initramfs_inode_t *initramfs_create_inode(enum fsnode_type type, const char *name, char *data, size_t datasize);
+int initramfs_setup_mount(struct filesystem *fs, struct mount *_mount);
 
 int initramfs_write(struct file *file, const void *buf, size_t len);
 int initramfs_read(struct file *file, void *buf, size_t len);
@@ -31,6 +31,7 @@ long initramfs_getsize(struct vnode *vd);
 int initramfs_lookup(struct vnode *dir_node, struct vnode **target, const char *component_name);
 int initramfs_create(struct vnode *dir_node, struct vnode **target, const char *component_name);
 int initramfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name);
-int __initramfs_mkdir(struct vnode *dir_node, struct vnode **target, const char *component_name);
-int initramfs_readdir(struct vnode *dir_node, const char name_array[]);
+
+struct vnode *initramfs_create_vnode(enum fsnode_type type);
+
 #endif /* _INITRAMFS_H_ */

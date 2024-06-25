@@ -1,362 +1,409 @@
-#include "peripherals/rpi_mbox.h"
-#include "mbox.h"
+#include "bcm2837/rpi_mbox.h"
 #include "syscall.h"
 #include "sched.h"
-#include "mini_uart.h"
+#include "uart1.h"
 #include "utils.h"
 #include "exception.h"
+#include "mbox.h"
 #include "memory.h"
 #include "cpio.h"
-#include "signal.h"
 #include "vfs.h"
 #include "dev_framebuffer.h"
 
-extern thread_t     *curr_thread;
-extern void         *CPIO_START;
+extern thread_t *curr_thread;
+// extern void *CPIO_DEFAULT_START;
+extern thread_t threads[PIDMAX + 1];
 
+// trap is like a shared buffer for user space and kernel space
+// Because general-purpose registers are used for both arguments and return value,
+// We may receive the arguments we need, and overwrite them with return value.
 
-// Macro to copy n bytes of memory from src to dest
-#define MEMCPY(dest, src, n)                          \
-	do {                                              \
-		for (int i = 0; i < n; i++) {                 \
-			*((char *)dest + i) = *((char *)src + i); \
-		}                                             \
-	} while (0)
-
-
-void run_user_task_wrapper(char *dest) {
-	// uart_puts("run_user_task_wrapper: 0x%x\r\n", dest);
-    // print_lock();
-	((void (*)(void))dest)();
+int getpid(trapframe_t *tpf)
+{
+    tpf->x0 = curr_thread->pid;
+    return curr_thread->pid;
 }
 
-/* Get the current PID */
-int sys_getpid(trapframe_t *tpf) {
-	return curr_thread->pid;
+size_t uartread(trapframe_t *tpf, char buf[], size_t size)
+{
+    int i = 0;
+    for (int i = 0; i < size; i++)
+    {
+        buf[i] = uart_async_getc();
+    }
+    tpf->x0 = i + 1;
+    return i + 1;
 }
 
-/* Read from UART and put into buffer */
-size_t sys_uart_read(trapframe_t *tpf, char buf[], size_t size) {
-	char c;
-	for (int i = 0; i < size; i++)
-	{
-		c = uart_async_getc();
-		buf[i] = c == '\r' ? '\n' : c;
-	}
-	return size;
+size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size)
+{
+    int i = 0;
+    for (int i = 0; i < size; i++)
+    {
+        uart_async_putc(buf[i]);
+    }
+    tpf->x0 = i + 1;
+    return i + 1;
 }
 
-/* Write from buffer to UART */
-size_t sys_uart_write(trapframe_t *tpf, const char buf[], size_t size) {
-	for (int i = 0; i < size; i++)
-	{
-		uart_async_send(buf[i]);
-	}
-	return size;
-}
+// In this lab, you won’t have to deal with argument passing
+int exec(trapframe_t *tpf, const char *name, char *const argv[])
+{
+    lock();
+    // Lab5- use cpio to get file data
+    // curr_thread->datasize = get_file_size((char *)name);
+    // char *file_start = get_file_start((char *)name);
 
-/* Load and execute a user program. */
-int sys_exec(trapframe_t *tpf, const char *filepath, char *const argv[]) {
-	file_t *file;
-	vfs_open(curr_thread->pwd, filepath, O_RDONLY, &file);
+    // for (unsigned int i = 0; i < curr_thread->datasize; i++)
+    // {
+    //     curr_thread->data[i] = file_start[i];
+    // }
 
-	uart_puts("sys_exec: %s\r\n", filepath);
-	lock();
-	curr_thread->file = file;
-	curr_thread->datasize = file->f_ops->getsize(file->vnode);
-	curr_thread->name = filepath;
-	curr_thread->code = NULL;
-	curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
+    // Lab7- use virtual file system
+    char abs_path[MAX_PATH_NAME];
+    strcpy(abs_path, name);
+    get_absolute_path(abs_path, curr_thread->vfs.curr_working_dir);
 
-	tpf->elr_el1 = (uint64_t)curr_thread->code;
-	tpf->sp_el0 = (uint64_t)curr_thread->user_stack_base + USTACK_SIZE;
+    struct vnode *target_file;
+    vfs_lookup(abs_path, &target_file);
+    curr_thread->datasize = target_file->f_ops->getsize(target_file);
 
-	unlock();
-	return 0;
-}
+    struct file *f;
+    vfs_open(abs_path, 0, &f);
+    vfs_read(f, curr_thread->data, curr_thread->datasize);
+    vfs_close(f);
 
-int sys_fork(trapframe_t *tpf) {
-	lock();
-	thread_t *parent = curr_thread;
-	char *new_name = kmalloc(strlen(parent->name) + 1);
-	strcpy(new_name, parent->name);
-	thread_t *child = thread_create(parent->code, new_name);
-	int64_t pid = child->pid;
-	// uart_puts("child pid: %d\r\n", pid);
-	child->datasize = parent->datasize;
-	child->status = THREAD_READY;
-	signal_copy(child, parent);
-	FD_TABLE_COPY(child, parent);
+    // inital signal handler
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        curr_thread->signal.handler_table[i] = signal_default_handler;
+    }
 
-	child->code = kmalloc(parent->datasize);
-	MEMCPY(child->code, parent->code, parent->datasize);
-	// uart_puts("fork child process, pid: %d, datasize: %d, code: 0x%x\r\n", child->pid, child->datasize, child->code);
-
-	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
-	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
-	// Because make a function call, so lr is the next instruction address
-	// When context switch, child process will start from the next instruction
-	store_context(&(child->context));
-	// uart_puts("child: 0x%x, parent: 0x%x\r\n", child, parent);
-
-    /* Parent process */ 
-	if (child->pid != curr_thread->pid) {
-		// uart_puts("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
-		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
-		unlock();
-		return child->pid;
-	}
-    /* Child process */ 
-	else {
-		// uart_puts("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		tpf = (trapframe_t *)((char *)tpf + (uint64_t)child->kernel_stack_base - (uint64_t)parent->kernel_stack_base); // move tpf
-		tpf->sp_el0 += (uint64_t)child->user_stack_base - (uint64_t)parent->user_stack_base;
-		return 0;
-	}
-}
-
-int kernel_fork() {
-	lock();
-	thread_t *parent = curr_thread;
-	char *new_name = kmalloc(strlen(parent->name) + 1);
-	thread_t *child = thread_create(parent->code, new_name);
-	// int64_t pid = child->pid;
-	child->datasize = parent->datasize;
-	child->status = THREAD_READY;
-    // uart_puts("child pid: %d, datasize: %d\r\n", pid, parent->datasize);
-
-	signal_copy(child, parent);
-
-	child->code = parent->code;
-	// uart_puts("parent->code: 0x%x, child->code: 0x%x\r\n", parent->code, child->code);
-	// uart_puts("parent->datasize: %d, child->datasize: %d\r\n", parent->datasize, child->datasize);
-
-	MEMCPY(child->user_stack_base, parent->user_stack_base, USTACK_SIZE);
-	MEMCPY(child->kernel_stack_base, parent->kernel_stack_base, KSTACK_SIZE);
-	// Because make a function call, so lr is the next instruction address
-	// When context switch, child process will start from the next instruction
-	store_context(get_current());
-	// uart_puts("child: 0x%x, parent: 0x%x\r\n", child, parent);
-
-	if (child->pid != curr_thread->pid) // Parent process
-	{
-		// uart_puts("pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		child->context = curr_thread->context;
-		child->context.fp += child->kernel_stack_base - parent->kernel_stack_base;
-		child->context.sp += child->kernel_stack_base - parent->kernel_stack_base;
-		unlock();
-		return child->pid;
-	}
-	else // Child process
-	{
-		// uart_puts("set_tpf: pid: %d, child: 0x%x, child->pid: %d, curr_thread: 0x%x, curr_thread->pid: %d\r\n", pid, child, child->pid, curr_thread, curr_thread->pid);
-		return 0;
-	}
-}
-
-/* Exit current process */
-int sys_exit(trapframe_t *tpf, int status) {
-	thread_exit();
+    tpf->elr_el1 = (unsigned long)curr_thread->data;
+    tpf->sp_el0 = (unsigned long)curr_thread->stack_allocated_base + USTACK_SIZE;
+    unlock();
+    tpf->x0 = 0;
     return 0;
 }
 
-/* Make a mailbox call */
-int sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int mbox) {
-	int ret = mbox_call(ch, mbox);
-	return ret;
-}
-
-/* Terminate a thread by PID */
-int sys_kill(trapframe_t *tpf, int pid) {
-	thread_exit_by_pid(pid);
-	return 0;
-}
-
-/* Kernel function to execute user program */
-int kernel_exec_user_program(const char *program_name, char *const argv[]) { 
-	// lock();
-	uart_puts("KERNEL EXEC\r\n");
-
-	file_t *file;
-	uart_puts("%s, 0x%x\r\n", curr_thread->pwd, curr_thread->pwd);
-	vfs_open(curr_thread->pwd, program_name, O_RDONLY, &file);
-	
-	char *filepath = kmalloc(strlen(program_name) + 1);
-	strcpy(filepath, program_name);
-	curr_thread->datasize = file->f_ops->getsize(file->vnode);;
-	curr_thread->name = filepath;
-	// curr_thread->code = kmalloc(file->f_ops->getsize(file->vnode));
-	uart_puts("0x%x\r\n", file->f_ops->getsize(file->vnode));
-	// vfs_read(file, curr_thread->code, curr_thread->datasize);
-	// curr_thread->user_stack_base = kmalloc(USTACK_SIZE);
-	// uart_puts("kernel exec: %s, code: 0x%x, filesize: %d\r\n", program_name, curr_thread->code, curr_thread->datasize);
-
-	// JUMP_TO_USER_SPACE(run_user_task_wrapper, curr_thread->code, curr_thread->user_stack_base + USTACK_SIZE, curr_thread->kernel_stack_base + KSTACK_SIZE);
-	return 0;
-}
-
-
-/* Signal Part */
-int sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void)) {
-	signal_register_handler(SIGNAL, handler);
-}
-
-int sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL) {
-	signal_send(pid, SIGNAL);
-}
-
-int sys_signal_return(trapframe_t *tpf) {
-	signal_return();
-}
-
-void sys_lock_interrupt(trapframe_t *tpf) {
-	lock();
-}
-
-void sys_unlock_interrupt(trapframe_t *tpf) {
-	unlock();
-}
-
-int sys_open(trapframe_t *tpf, const char *pathname, int flags)
+int fork(trapframe_t *tpf)
 {
-	return kernel_open(pathname, flags);
+    lock();
+    thread_t *parent_thread = curr_thread;
+    int parent_pid = parent_thread->pid;
+
+    thread_t *child_thread = thread_create(parent_thread->data);
+
+    // copy signal handler
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        child_thread->signal.handler_table[i] = parent_thread->signal.handler_table[i];
+    }
+
+    // copy user stack into new process
+    for (int i = 0; i < USTACK_SIZE; i++)
+    {
+        child_thread->stack_allocated_base[i] = parent_thread->stack_allocated_base[i];
+    }
+
+    // copy stack into new process
+    for (int i = 0; i < KSTACK_SIZE; i++)
+    {
+        child_thread->kernel_stack_allocated_base[i] = parent_thread->kernel_stack_allocated_base[i];
+    }
+
+    // copy datasize into new process
+    child_thread->datasize = parent_thread->datasize;
+
+    // copy vfs info
+    child_thread->vfs = parent_thread->vfs;
+    // for (int i = 0; i <= MAX_FD; i++)
+    // {
+    //     if (parent_thread->vfs.file_descriptors_table[i])
+    //     {
+    //         child_thread->vfs.file_descriptors_table[i] = kmalloc(sizeof(struct file));
+    //         *child_thread->vfs.file_descriptors_table[i] = *parent_thread->vfs.file_descriptors_table[i];
+    //     }
+    // }
+    
+    store_context(get_current());
+
+    // for child
+    if (parent_pid != curr_thread->pid)
+    {
+        goto child;
+    }
+    // copy context into new process
+    child_thread->context = parent_thread->context;
+    // the offset of current syscall should also be updated to new cpu context
+    child_thread->context.sp += child_thread->kernel_stack_allocated_base - parent_thread->kernel_stack_allocated_base;
+    child_thread->context.fp = child_thread->context.sp;
+    unlock();
+    tpf->x0 = child_thread->pid;
+    // schedule();
+    return child_thread->pid; // pid = new
+
+child:
+    // the offset of current syscall should also be updated to new return point
+    tpf = (trapframe_t *)((char *)tpf + (unsigned long)child_thread->kernel_stack_allocated_base - (unsigned long)parent_thread->kernel_stack_allocated_base); // move tpf
+    tpf->sp_el0 += child_thread->kernel_stack_allocated_base - parent_thread->kernel_stack_allocated_base;
+    tpf->x0 = 0;
+    // schedule();
+    return 0; // pid = 0
 }
 
-int sys_close(trapframe_t *tpf, int fd)
+void exit(trapframe_t *tpf)
 {
-	return kernel_close(fd);
+    thread_exit();
 }
 
-long sys_write(trapframe_t *tpf, int fd, const void *buf, unsigned long count)
+int syscall_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int *mbox)
 {
-	return kernel_write(fd, buf, count);
+    lock();
+    // Add channel to mbox lower 4 bit
+    unsigned long r = (((unsigned long)((unsigned long)mbox) & ~0xF) | (ch & 0xF));
+    do
+    {
+        asm volatile("nop");
+    } while (*MBOX_STATUS & BCM_ARM_VC_MS_FULL);
+    // Write to Register
+    *MBOX_WRITE = r;
+    while (1)
+    {
+        do
+        {
+            asm volatile("nop");
+        } while (*MBOX_STATUS & BCM_ARM_VC_MS_EMPTY);
+        // Read from Register
+        if (r == *MBOX_READ)
+        {
+            tpf->x0 = (mbox[1] == MBOX_REQUEST_SUCCEED);
+            unlock();
+            return mbox[1] == MBOX_REQUEST_SUCCEED;
+        }
+    }
+    tpf->x0 = 0;
+    unlock();
+    return 0;
 }
 
-long sys_read(trapframe_t *tpf, int fd, void *buf, unsigned long count)
+void kill(trapframe_t *tpf, int pid)
 {
-	return kernel_read(fd, buf, count);
+    if (pid < 0 || pid >= PIDMAX || !threads[pid].isused)
+        return;
+    lock();
+    threads[pid].iszombie = 1;
+    unlock();
+    schedule();
 }
 
-int sys_mkdir(trapframe_t *tpf, const char *pathname, unsigned mode)
+void signal_register(int signal, void (*handler)())
 {
-	return kernel_mkdir(pathname, mode);
+    if (signal > SIGNAL_MAX || signal < 0)
+        return;
+    curr_thread->signal.handler_table[signal] = handler;
 }
 
-int sys_mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
+void signal_kill(int pid, int signal)
 {
-	return kernel_mount(src, target, filesystem, flags, data);
+    if (pid > PIDMAX || pid < 0 || !threads[pid].isused)
+        return;
+    lock();
+    threads[pid].signal.pending[signal]++;
+    unlock();
 }
 
-int sys_chdir(trapframe_t *tpf, const char *path)
+void sigreturn()
 {
-	return kernel_chdir(path);
+    // unsigned long signal_ustack = tpf->sp_el0 % USTACK_SIZE == 0 ? tpf->sp_el0 - USTACK_SIZE : tpf->sp_el0 & (~(USTACK_SIZE - 1));
+    kfree((char *)curr_thread->signal.stack_base);
+    load_context(&curr_thread->signal.saved_context);
 }
 
-long sys_lseek64(trapframe_t *tpf, int fd, long offset, int whence)
+int open(trapframe_t *tpf, const char *pathname, int flags)
 {
-	return kernel_lseek64(fd, offset, whence);
+    char abs_path[MAX_PATH_NAME];
+    strcpy(abs_path, pathname);
+    // update abs_path
+    get_absolute_path(abs_path, curr_thread->vfs.curr_working_dir);
+    for (int fd = 0; fd < MAX_FD; fd++)
+    {
+        // find a usable fd
+        if (!curr_thread->vfs.file_descriptors_table[fd])
+        {
+            if (vfs_open(abs_path, flags, &curr_thread->vfs.file_descriptors_table[fd]) != 0)
+            {
+                break;
+            }
+
+            tpf->x0 = fd;
+            return fd;
+        }
+    }
+    tpf->x0 = -1;
+    return -1;
+}
+
+int close(trapframe_t *tpf, int fd)
+{
+    // find an opened fd
+    if (curr_thread->vfs.file_descriptors_table[fd])
+    {
+        vfs_close(curr_thread->vfs.file_descriptors_table[fd]);
+        curr_thread->vfs.file_descriptors_table[fd] = 0;
+        tpf->x0 = 0;
+        return 0;
+    }
+
+    tpf->x0 = -1;
+    return -1;
+}
+
+long write(trapframe_t *tpf, int fd, const void *buf, unsigned long count)
+{
+    // find an opened fd
+    if (curr_thread->vfs.file_descriptors_table[fd])
+    {
+        tpf->x0 = vfs_write(curr_thread->vfs.file_descriptors_table[fd], buf, count);
+        return tpf->x0;
+    }
+
+    tpf->x0 = -1;
+    return tpf->x0;
+}
+
+long read(trapframe_t *tpf, int fd, void *buf, unsigned long count)
+{
+    // find an opened fd
+    if (curr_thread->vfs.file_descriptors_table[fd])
+    {
+        tpf->x0 = vfs_read(curr_thread->vfs.file_descriptors_table[fd], buf, count);
+        return tpf->x0;
+    }
+
+    tpf->x0 = -1;
+    return tpf->x0;
+}
+
+int mkdir(trapframe_t *tpf, const char *pathname, unsigned mode)
+{
+    char abs_path[MAX_PATH_NAME];
+    strcpy(abs_path, pathname);
+    get_absolute_path(abs_path, curr_thread->vfs.curr_working_dir);
+    tpf->x0 = vfs_mkdir(abs_path);
+    return tpf->x0;
+}
+
+int mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
+{
+    char abs_path[MAX_PATH_NAME];
+    strcpy(abs_path, target);
+    get_absolute_path(abs_path, curr_thread->vfs.curr_working_dir);
+
+    tpf->x0 = vfs_mount(abs_path, filesystem);
+    return tpf->x0;
+}
+
+// change directory
+int chdir(trapframe_t *tpf, const char *path)
+{
+    char abs_path[MAX_PATH_NAME];
+    strcpy(abs_path, path);
+    get_absolute_path(abs_path, curr_thread->vfs.curr_working_dir);
+    strcpy(curr_thread->vfs.curr_working_dir, abs_path);
+
+    return 0;
+}
+
+long lseek64(trapframe_t *tpf, int fd, long offset, int whence)
+{
+    if(whence == SEEK_SET) // used for dev_framebuffer
+    {
+        curr_thread->vfs.file_descriptors_table[fd]->f_pos = offset;
+        tpf->x0 = offset;
+    }
+    else // other is not supported
+    {
+        tpf->x0 = -1;
+    }
+
+    return tpf->x0;
 }
 
 extern unsigned int height;
 extern unsigned int isrgb;
 extern unsigned int pitch;
 extern unsigned int width;
-int sys_ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info)
+int ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info)
 {
-	return kernel_ioctl(fb, request, info);
+    if(request == 0) // used for get info (SPEC)
+    {
+        struct framebuffer_info *fb_info = info;
+        fb_info->height = height;
+        fb_info->isrgb = isrgb;
+        fb_info->pitch = pitch;
+        fb_info->width = width;
+    }
+
+    tpf->x0 = 0;
+    return tpf->x0;
 }
 
-int kernel_open(const char *pathname, int flags)
-{
-	file_t *file;
-	if (vfs_open(curr_thread->pwd, pathname, flags, &file) != 0)
-	{
-		return -1;
-	}
-	int fd = thread_insert_file_to_fdtable(curr_thread, file);
-	if (fd == -1)
-	{
-		uart_puts("sys_open: fd is full\r\n");
-		vfs_close(file);
-		return -1;
-	}
-	return fd;
-}
+// Lab 5
+// char *get_file_start(char *thefilepath)
+// {
+//     char *filepath;
+//     unsigned int filesize;
+//     char *filedata;
+//     struct cpio_newc_header *header_pointer = CPIO_DEFAULT_START;
 
-int kernel_close(int fd)
-{
-	file_t *file;
-	if (thread_get_file_struct_by_fd(fd, &file) == -1)
-		return -1;
-	vfs_close(file);
-	curr_thread->file_descriptors_table[fd] = NULL;
-	return 0;
-}
+//     while (header_pointer != 0)
+//     {
+//         int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
+//         // if parse header error
+//         if (error)
+//         {
+//             uart_puts("error");
+//             break;
+//         }
 
-long kernel_write(int fd, const void *buf, unsigned long count)
-{
-	file_t *file;
-	if (thread_get_file_struct_by_fd(fd, &file) == -1)
-		return -1;
-	return vfs_write(file, buf, count);
-}
+//         if (strcmp(thefilepath, filepath) == 0)
+//         {
+//             return filedata;
+//         }
 
-long kernel_read(int fd, void *buf, unsigned long count)
-{
-	file_t *file;
-	if (thread_get_file_struct_by_fd(fd, &file) == -1)
-		return -1;
-	return vfs_read(file, buf, count);
-}
+//         // if this is TRAILER!!! (last of file)
+//         if (header_pointer == 0)
+//             uart_puts("execfile: %s: No such file or directory\r\n", thefilepath);
+//     }
+//     return 0;
+// }
 
-int kernel_mkdir(const char *pathname, unsigned mode)
-{
-	return vfs_mkdir(curr_thread->pwd, pathname);
-}
+// unsigned int get_file_size(char *thefilepath)
+// {
+//     char *filepath;
+//     char *filedata;
+//     unsigned int filesize;
+//     struct cpio_newc_header *header_pointer = CPIO_DEFAULT_START;
 
-int kernel_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data)
-{
-	return vfs_mount(curr_thread->pwd, target, filesystem);
-}
+//     while (header_pointer != 0)
+//     {
+//         int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
+//         // if parse header error
+//         if (error)
+//         {
+//             uart_puts("error");
+//             break;
+//         }
 
-int kernel_chdir(const char *path)
-{
-	vnode_t *target;
-	if (vfs_lookup(curr_thread->pwd, path, &target) != 0)
-	{
-		return -1;
-	}
-	curr_thread->pwd = target;
-	return 0;
-}
+//         if (strcmp(thefilepath, filepath) == 0)
+//         {
+//             return filesize;
+//         }
 
-long kernel_lseek64(int fd, long offset, int whence)
-{
-	if (whence == SEEK_SET) // used for dev_framebuffer
-	{
-		curr_thread->file_descriptors_table[fd]->f_pos = offset;
-		return offset;
-	}
-	else // other is not supported
-	{
-		return -1;
-	}
-}
-
-extern unsigned int height;
-extern unsigned int isrgb;
-extern unsigned int pitch;
-extern unsigned int width;
-int kernel_ioctl(int fb, unsigned long request, void *info)
-{
-	if (request == 0) // used for get info (SPEC)
-	{
-		struct framebuffer_info *fb_info = info;
-		fb_info->height = height;
-		fb_info->isrgb = isrgb;
-		fb_info->pitch = pitch;
-		fb_info->width = width;
-	}
-	return 0;
-}
+//         // if this is TRAILER!!! (last of file)
+//         if (header_pointer == 0)
+//             uart_puts("execfile: %s: No such file or directory\r\n", thefilepath);
+//     }
+//     return 0;
+// }

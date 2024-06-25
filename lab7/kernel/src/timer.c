@@ -1,36 +1,47 @@
 #include "timer.h"
-#include "mini_uart.h"
-#include "utils.h"
-#include "list.h"
+#include "uart1.h"
 #include "memory.h"
+#include "utils.h"
+#include "dtb.h"
+#include "exception.h"
 
+#define STR(x) #x
 #define XSTR(s) STR(s)
-#define STR(s) #s
 
-/* Empty head -> timer -> timer .... */
-struct list_head* timer_list; 
+struct list_head* timer_event_list;  // first head has nothing, store timer_event_t after it 
 
-void timer_list_init() {
-    timer_list = malloc(sizeof(timer_event_t));
-    INIT_LIST_HEAD(timer_list);
+void timer_list_init(){
     uint64_t tmp;
     asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
-    tmp |= 1;
-    asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+    tmp |= 1; //This control does not cause any instructions to be trapped.
+    asm volatile("msr cntkctl_el1, %0" ::"r"(tmp));
+
+    timer_event_list = malloc(sizeof(list_head_t));
+    INIT_LIST_HEAD(timer_event_list);
 }
 
-void core_timer_enable() {
+void core_timer_enable( ){
     __asm__ __volatile__(
+        // cntp_ctl_el0[0]: enable, Control register for the EL1 physical timer.
         "mov x1, 1\n\t"
-        "msr cntp_ctl_el0, x1\n\t" // cntp_ctl_el0[0]: enable, Control register for the EL1 physical timer.
-                                   // cntp_tval_el0: Holds the timer value for the EL1 physical timer
+        "msr cntp_ctl_el0, x1\n\t" // enable
+
+        // "mrs x1, cntfrq_el0\n\t"
+        // "mov x2, 0x100000\n\t"
+        // "mul x1, x1, x2\n\t"    //set a big value prevent interrupt immediately
+        // // "mul x1, x1, %0\n\t"
+        // "msr cntp_tval_el0, x1\n\t" // set expired time
+
+        // QA7_rev3.4.pdf: Core0 Timer IRQ allows Non-secure physical timer(nCNTPNSIRQ)
         "mov x2, 2\n\t"
         "ldr x1, =" XSTR(CORE0_TIMER_IRQ_CTRL) "\n\t"
-        "str w2, [x1]\n\t"         // QA7_rev3.4.pdf: Core0 Timer IRQ allows Non-secure physical timer(nCNTPNSIRQ)
+        "str w2, [x1]\n\t" // unmask timer interrupt
+    // :"=r" (expired_time)
     );
 }
 
-void core_timer_disable() {
+void core_timer_disable()
+{
     __asm__ __volatile__(
         "mov x2, 0\n\t"
         "ldr x1, =" XSTR(CORE0_TIMER_IRQ_CTRL) "\n\t"
@@ -38,138 +49,139 @@ void core_timer_disable() {
     );
 }
 
-// set timer interrupt time to [expired_time] seconds after now (relatively)
-void set_timer_interrupt(unsigned long long seconds) {
-    unsigned long long freq;
-    unsigned long long ticks;
+void core_timer_handler(){
+    /*Basic Exercise 2 - Interrupt*/
+    // __asm__ __volatile__("mrs x10, cntpct_el0\n\t");
+    // register unsigned long long cntpct_el0 asm ("x10");
 
-    __asm__ __volatile__(
-        "mrs %0, cntfrq_el0\n\t" : "=r"(freq)
-    );
-    ticks = freq * seconds;
-    __asm__ __volatile__(
-        "msr cntp_tval_el0, %0\n\t" : "=r"(ticks)
-    );
-}
+    // __asm__ __volatile__("mrs x11, cntfrq_el0\n\t");
+    // register unsigned long long cntfrq_el0 asm ("x11");
 
-// directly set timer interrupt time to a cpu tick  (directly)
-void set_timer_interrupt_by_tick(unsigned long long tick) {
-    __asm__ __volatile__(
-        "msr cntp_cval_el0, %0\n\t"  //cntp_cval_el0 -> absolute timer
-        :"=r" (tick)
-    );
-}
+    // uart_puts("## Interrupt - el1_irq ## %d seconds after booting\n", cntpct_el0/cntfrq_el0);
 
-// get cpu tick add some second
-unsigned long long get_cpu_tick_plus_s(unsigned long long seconds){
-    unsigned long long cntpct_el0=0;
-    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick anchor
-    unsigned long long cntfrq_el0=0;
-    __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
-    return (cntpct_el0 + cntfrq_el0*seconds);
-}
-
-// get cpu tick add some tick
-uint64_t get_tick_plus_t(uint64_t tick) {
-    uint64_t cntpct_el0 = 0;
-    __asm__ __volatile__("mrs %0, cntpct_el0\n\t" : "=r"(cntpct_el0)); // tick auchor
-    //uart_puts("cntpct_el0: %d\r\n", cntpct_el0);
-    return (cntpct_el0 + tick);
-}
-
-void set_alert_2S(char* str) {
-    unsigned long long cntpct_el0;
-    unsigned long long cntfrq_el0;
-    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick anchor
-    __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
-    
-    uart_puts("\r\n[Start Alert]\r\n");
-    
-    // for(int i=0;i<1000000000;i++){} 
-    
-    char buf[VSPRINT_MAX_BUF_SIZE];
-    sprintf(buf, "[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
-    uart_puts(buf);
-
-    unsigned long long interrupt_time = get_cpu_tick_plus_s(2);
-    set_timer_interrupt_by_tick(interrupt_time);
-    // Add timer
-    add_timer(set_alert_2S, 2, str);
-}
-
-void add_timer(void *callback, unsigned long long timeout, char* args) {
-    timer_event_t* e = malloc(sizeof(timer_event_t));
-    
-    e->args = malloc(strlen(args) + 1);
-    strcpy(e->args, args);
-
-    e->interrupt_time = get_cpu_tick_plus_s(timeout);
-    e->callback = callback;
-
-    INIT_LIST_HEAD(&e->listhead);
-
-    /* Add timer to the sorted timer_list */
-    struct list_head* ptr;
-    list_for_each(ptr, timer_list) {
-        if (((timer_event_t*)ptr)->interrupt_time > e->interrupt_time) {
-            // Insert the event just before the event with bigger time
-            list_add(&e->listhead, ptr->prev);
-            break;
-        }
-    }
-    /* If the event interrupt time is biggest, add to the tail of the tiemr_list */
-    if (list_is_head(ptr, timer_list)) {
-        list_add_tail(&e->listhead, timer_list);
-    }
-
-    set_timer_interrupt_by_tick(((timer_event_t*)timer_list->next)->interrupt_time);
-}
-
-void add_timer_by_tick(void *callback, uint64_t tick, void *args) {
-    // uart_puts("add_timer_by_tick: %d\r\n", tick);
-    timer_event_t *e = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
-    // store all the related information in timer_event
-    e->args = args;
-    e->interrupt_time = get_tick_plus_t(tick);
-    // uart_puts("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
-    e->callback = callback;
-    INIT_LIST_HEAD(&e->listhead);
-
-    // add the timer_event into timer_event_list (sorted)
-    struct list_head *curr;
-    list_for_each(curr, timer_list)
+    // __asm__ __volatile__(
+    //     "mrs x0, cntfrq_el0\n\t"
+    //     "mov x0, x0, LSL #1\n\t"   //set two second next time
+    //     "msr cntp_tval_el0, x0\n\t"
+    // );
+    if (list_empty(timer_event_list))
     {
-        if (((timer_event_t *)curr)->interrupt_time > e->interrupt_time)
+        set_core_timer_interrupt(10000); // disable timer interrupt (set a very big value)
+        return;
+    }
+    timer_event_callback((timer_event_t *)timer_event_list->next); // do callback and set new interrupt
+}
+
+void timer_event_callback(timer_event_t * timer_event){
+
+    list_del_entry((struct list_head*)timer_event); // delete the event
+    // free(timer_event->args);  // free the arg space
+    // free(timer_event);
+    ((void (*)(char*))timer_event-> callback)(timer_event->args);  // call the callback store in event
+
+    //set interrupt to next time_event if existing
+    if(!list_empty(timer_event_list))
+    {
+        set_core_timer_interrupt_by_tick(((timer_event_t*)timer_event_list->next)->interrupt_time);
+    }
+    else
+    {
+        set_core_timer_interrupt(10000);  // disable timer interrupt (set a very big value)
+    }
+}
+
+void timer_set2sAlert(char* str)
+{
+    unsigned long long cntpct_el0;
+    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
+    unsigned long long cntfrq_el0;
+    __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
+    //Test Preemptive
+    uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
+    // int i = 0;
+    // while(1){
+    //     if( i == 999999999){
+    //         // uart_sendline("%d\t", i);
+    //         uart_sendline("[Interrupt][el1_irq][%s] %d seconds after booting\n", str, cntpct_el0/cntfrq_el0);
+    //         break;
+    //     }
+    //     ++i;
+    // }
+
+    add_timer(timer_set2sAlert,2,"2sAlert",0);
+}
+
+
+void add_timer(void *callback, unsigned long long timeout, char* args, int isTickFormat){
+    timer_event_t* the_timer_event = malloc(sizeof(timer_event_t)); // free by timer_event_callback
+    // store all the related information in timer_event
+    the_timer_event->args = malloc(strlen(args)+1);
+    strcpy(the_timer_event -> args,args);
+
+    if(isTickFormat == 0)
+    {
+        the_timer_event->interrupt_time = get_tick_plus_s(timeout); // store interrupt time into timer_event
+    }else
+    {
+        the_timer_event->interrupt_time = get_tick_plus_s(0) + timeout;
+    }
+
+    the_timer_event->callback = callback;
+    INIT_LIST_HEAD(&the_timer_event->listhead);
+    // uart_sendline("OKOK");
+    // add the timer_event into timer_event_list (sorted)
+    struct list_head* curr;
+    lock();
+    list_for_each(curr,timer_event_list)
+    {
+        if(((timer_event_t*)curr)->interrupt_time > the_timer_event->interrupt_time)
         {
-            list_add(&e->listhead, curr->prev); // add this timer at the place just before the bigger one (sorted)
+            list_add(&the_timer_event->listhead,curr->prev);  // add this timer at the place just before the bigger one (sorted)
             break;
         }
     }
     // if the timer_event is the biggest, run this code block
-    if (list_is_head(curr, timer_list)) {
-        list_add_tail(&e->listhead, timer_list);
+    if(list_is_head(curr,timer_event_list))
+    {
+        list_add_tail(&the_timer_event->listhead,timer_event_list);
     }
     // set interrupt to first event
-    set_timer_interrupt_by_tick(((timer_event_t *)timer_list->next)->interrupt_time);
-    core_timer_enable();
+    set_core_timer_interrupt_by_tick(((timer_event_t*)timer_event_list->next)->interrupt_time);
+    unlock();
 }
 
-void core_timer_handler() {
-    if (list_empty(timer_list)) {
-        set_timer_interrupt(100000); // disable timer interrupt (set a very big value)
-        return;
-    }
-    timer_event_callback((timer_event_t *)timer_list->next); // do callback and set new interrupt
+// get cpu tick add some second
+unsigned long long get_tick_plus_s(unsigned long long second){
+    unsigned long long cntpct_el0=0;
+    __asm__ __volatile__("mrs %0, cntpct_el0\n\t": "=r"(cntpct_el0)); // tick auchor
+    unsigned long long cntfrq_el0=0;
+    __asm__ __volatile__("mrs %0, cntfrq_el0\n\t": "=r"(cntfrq_el0)); // tick frequency
+    return (cntpct_el0 + cntfrq_el0*second);
 }
 
-void timer_event_callback(timer_event_t * timer_event) {
-    list_del_entry((struct list_head*)timer_event); // delete the event in queue
-    ((void (*)(char*))timer_event-> callback)(timer_event->args);  // call the event
+// set timer interrupt time to [expired_time] seconds after now (relatively)
+void set_core_timer_interrupt(unsigned long long expired_time){
+    __asm__ __volatile__(
+        "mrs x1, cntfrq_el0\n\t"    // cntfrq_el0 -> frequency of the timer
+        "mul x1, x1, %0\n\t"        // cntpct_el0 = cntfrq_el0 * seconds: relative timer to cntfrq_el0
+        "msr cntp_tval_el0, x1\n\t" // Set expired time to cntp_tval_el0, which stores time value of EL1 physical timer.
+    :"=r" (expired_time));
+}
 
-    // set queue linked list to next time event if it exists
-    if(!list_empty(timer_list)) {
-        set_timer_interrupt_by_tick(((timer_event_t*)timer_list->next)->interrupt_time);
-    } else {
-        set_timer_interrupt(10000);  // disable timer interrupt (set a very big value)
+// directly set timer interrupt time to a cpu tick  (directly)
+void set_core_timer_interrupt_by_tick(unsigned long long tick){
+    __asm__ __volatile__(
+        "msr cntp_cval_el0, %0\n\t"  //cntp_cval_el0 -> absolute timer
+    :"=r" (tick));
+}
+
+// get timer pending queue size
+int timer_list_get_size(){
+    int r = 0;
+    struct list_head* curr;
+    list_for_each(curr,timer_event_list)
+    {
+        r++;
     }
+    return r;
 }

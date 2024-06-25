@@ -16,15 +16,14 @@
     stp x24, x25, [sp ,16 * 12]
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
-    str x30, [sp, 16 * 15]
+    // str x30, [sp, 16 * 15]
     // information for nested interrupt
     mrs x0, spsr_el1
-    str x0, [sp, 16 * 15 + 8]
+    stp x30, x0, [sp ,16 * 15]
     mrs x0, elr_el1
-    str x0, [sp, 16 * 16]
-    mrs x0, sp_el0
-    str x0, [sp, 16 * 16 + 8]
-    ldp x0, x1, [sp, 16 * 0]
+    mrs x1, sp_el0
+    stp x0, x1, [sp ,16 * 16]
+    //ldp x0, x1, [sp ,16 * 0]  // Debug: restore x0 instead of elr_el1
 .endm
 
 // load general registers from stack
@@ -44,18 +43,16 @@
     ldp x24, x25, [sp ,16 * 12]
     ldp x26, x27, [sp ,16 * 13]
     ldp x28, x29, [sp ,16 * 14]
-    ldr x30, [sp, 16 * 15]
+    // ldr x30, [sp, 16 * 15]
     // information for nested interrupt
-    ldr x0, [sp, 16 * 15 + 8]
+    ldp x30, x0, [sp ,16 * 15]
     msr spsr_el1,x0
-    ldr x0, [sp, 16 * 16]
+    ldp x0, x1, [sp ,16 * 16]
     msr elr_el1, x0
-    ldr x0, [sp, 16 * 16 + 8]
-    msr sp_el0, x0
+    msr sp_el0, x1
     ldp x0, x1, [sp ,16 * 0]  // restore x0 instead of elr_el1
     add sp, sp, 32 * 9
 .endm
-
 
 .macro    ventry    label
     .align    7   // entry should be aligned to 0x80 (2^7)
@@ -92,27 +89,25 @@ exception_vector_table:
     ventry    el0_fiq_invalid_32      // FIQ 32-bit EL0
     ventry    el0_error_invalid_32    // Error 32-bit EL0
 
+
 el1t_sync_invalid:
     save_all
     mov x0,0
     bl invalid_exception_router
     load_all
     eret
-
 el1t_irq_invalid:
     save_all
     mov x0,1
     bl invalid_exception_router
     load_all
     eret
-
 el1t_fiq_invalid:
     save_all
     mov x0,2
     bl invalid_exception_router
     load_all
     eret
-
 el1t_error_invalid:
     save_all
     mov x0,3
@@ -120,27 +115,26 @@ el1t_error_invalid:
     load_all
     eret
 
+
 el1h_sync:
     save_all
     mov x0,4
     bl invalid_exception_router
     load_all
     eret
-
 el1h_irq:
     save_all
     mov x0, sp
     bl el1h_irq_router
+    bl el1_interrupt_disable
     load_all
     eret
-
 el1h_fiq_invalid:
     save_all
     mov x0,6
     bl invalid_exception_router
     load_all
     eret
-
 el1h_error_invalid:
     save_all
     mov x0,7
@@ -151,30 +145,31 @@ el1h_error_invalid:
 el0_sync_64:
     save_all
     mov x0, sp
+    bl el1_interrupt_enable
     bl el0_sync_router
+    bl el1_interrupt_disable
     load_all
     eret
-
 el0_irq_64:
     save_all
     mov x0, sp
     bl el0_irq_64_router
+    bl el1_interrupt_disable
     load_all
     eret
-
 el0_fiq_invalid_64:
     save_all
     mov x0,10
     bl invalid_exception_router
     load_all
     eret
-
 el0_error_invalid_64:
     save_all
     mov x0,11
     bl invalid_exception_router
     load_all
     eret
+
 
 el0_sync_invalid_32:
     save_all
