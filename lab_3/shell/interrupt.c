@@ -118,28 +118,8 @@ void _set_time_out(void (*callback_func)(void *), char* message, unsigned long l
     new_timer->callback_function = callback_func;
     new_timer->trigger_tick = delay_tick+get_current_tick();
     new_timer->next = NULL;
-
-    unsigned long long frweq, ticks, next_tick;
-    asm volatile(
-    "mrs %0, cntfrq_el0;"
-    "mrs %1, cntpct_el0;"
-        : "=r" (frweq), "=r" (ticks)
-    );
-    // set up the next timer - basic
-    // asm volatile (
-    //   "msr cntp_tval_el0, %0" 
-    //     : 
-    //     : "r" (freq * 2)
-    // );
-
-    // set up next timer - advanced (with timer queue)
-    uart_hex(new_timer->trigger_tick);
-    uart_puts("\t");
-    uart_hex(ticks);
     uart_puts("\n");
-
-
-
+    uart_hex(new_timer->trigger_tick);
     if(timer_queue_head == NULL || new_timer->trigger_tick<timer_queue_head->trigger_tick){
         new_timer->next = timer_queue_head;
         timer_queue_head = new_timer;
@@ -149,6 +129,11 @@ void _set_time_out(void (*callback_func)(void *), char* message, unsigned long l
             : 
             : "r" (timer_queue_head->trigger_tick)
         );
+        uart_puts("\nset next interrupt time to 0x");
+        uart_hex(timer_queue_head->trigger_tick);
+        uart_puts(", current tick = 0x");
+        uart_hex(get_current_tick());
+        uart_puts("\n");
         return;
     }
     struct Timer *iter = timer_queue_head;

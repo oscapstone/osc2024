@@ -59,7 +59,7 @@ core_timer_enable:
     mrs x1, cntpct_el0  // get current timer
     add x0, x1, x0       // next exception = 1 second later
     msr cntp_tval_el0, x0 // set expired time
-    mov x0, 2
+    mov x0, 0
     ldr x1, =CORE0_TIMER_IRQ_CTRL
     str w0, [x1] // unmask timer interrupt
     ret

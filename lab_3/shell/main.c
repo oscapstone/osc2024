@@ -52,10 +52,10 @@ void main(int argc, char* argv[]){
     uart_puts("\n");
    //cpio_exec("user_program.img");   
    core_timer_enable();
-               set_time_out("", 8);
-               set_time_out("", 3);
-               set_time_out("", 6);
-               print_time();
+               set_time_out("", 10);
+               set_time_out("", 1);
+               set_time_out("", 7);
+
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';

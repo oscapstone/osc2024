@@ -28,7 +28,7 @@ LD = "aarch64-linux-gnu-ld"
 OBJCPY = "aarch64-linux-gnu-objcopy"
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-CFLAGS = -Wall -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles
+CFLAGS = -Wall -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles -w
 BOOTLOADER_BIN = kernel8.img
 all: clean kernel8.img
 
