@@ -17,8 +17,8 @@ extern int debug;
 typedef struct page {
     unsigned char* addr;
     unsigned long long idx;
-    int val;
-    int order;
+    int val; // if val > 0, it is free
+    int order; // 2^order = size
     struct page* next;
     struct page* prev;
 } page;
@@ -50,6 +50,7 @@ int buddy(int idx);
 
 // print information
 void page_info(page* p);
+void page_info_addr(void* addr);
 void print_chunk_info();
 void free_list_info();
 void check_free_list();

@@ -1,0 +1,477 @@
+qemu-system-aarch64 -M raspi3b -kernel kernel8.img -display none -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
+DTB base address: 08200000
+ramfs_end: 0803C600
+ramfs_base: 08000000
+total_page: 0003B400
+memory_reserve: 00000000 ~ 00001000
+memory_reserve: 08000000 ~ 0803C600
+memory_reserve: 08200000 ~ 08215988
+memory_reserve: 00080000 ~ 00200000
+old_heap_top: 10000000
+heap_top: 10942000
+memory_reserve: 10000000 ~ 10942000
+mm finished
+[INFO] Init thread
+[INFO] Print Queue:
+[00000000, ]
+Welcome to OSC2024 shell!
+# 
+# chunk_alloc: 00000001 (size: 00000000)
+
+no available chunk
+Requesting 00001000 bytes, order: 00000000
+Checking free_list[00000000] = 00082C14
+truncate (addr: 0x000878A0, idx: 00080168, val: 10297480, order: 00000000) to order 00000000
+Allocated (addr: 0x000878A0, idx: 00080168, val: FFFFFFFE, order: 00000000)
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
+new chunk: 0x000978A0
+000878B0
