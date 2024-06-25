@@ -4,15 +4,18 @@
 #include "uart.h"
 #include "stdint.h"
 #include "signal.h"
+#include "vfs.h"
 
 #define NR_TASKS 16
-#define FIRST_TASK task_pool[0]
-#define LAST_TASK task_pool[NR_TASKS - 1]
 #define KSTACK_SIZE 4096
 #define KSTACK_TOP (KSTACK_SIZE)
 #define USTACK_SIZE 4096
 #define USTACK_TOP (USTACK_SIZE)
-#define PAGE_SIZE 4096
+
+#ifndef PAGE_SIZE
+#define PAGE_SIZE               (1 << 12) // 4KB
+#endif // PAGE_SIZE
+
 #define current get_current()
 
 #define USER_TASK_PRIORITY 10
@@ -29,6 +32,12 @@
 #define EXIT_DEAD               0x010
 #define EXIT_ZOMBIE             0x020
 
+/* To store the MMU related data structure */
+struct mm_struct {
+    uint64_t prog_addr; // the kernel virtual address of user program
+    uint64_t prog_sz; // the size of user program
+};
+
 /* cpu context, in linux :thread_struct.cpu_context */
 struct task_state_segment {
     uint64_t x19;
@@ -44,6 +53,7 @@ struct task_state_segment {
     uint64_t fp; // x29, frame pointer
     uint64_t lr; // x30, link register
     uint64_t sp; // sp_el1
+    uint64_t pgd; // ttbr0_el1
     uint64_t sp_backup; // for signal handling
 };
 
@@ -59,11 +69,15 @@ struct task_struct {
 
     int exit_state;
     struct task_state_segment tss; // because context switch occurs in kernel mode,sp are in el1 (sp_el1);
+    
+    struct mm_struct mm;
+
+    char current_dir[MAX_PATH_LEN]; // current working directory
+    struct file *fd_table[FD_TABLE_SIZE]; // file descriptor table
 };
 
 extern struct task_struct task_pool[NR_TASKS];
 extern char kstack_pool[NR_TASKS][KSTACK_SIZE];
-extern char ustack_pool[NR_TASKS][USTACK_SIZE];
 extern int num_running_task;
 
 /* Get the task_struct of current task. */

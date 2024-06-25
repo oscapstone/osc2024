@@ -9,21 +9,14 @@
 #include "memblock.h"
 #include "stddef.h"
 #include "demo.h"
-
-#ifndef MMIO_BASE
-#define MMIO_BASE               (0x3F000000)
-#endif // MMIO_BASE
-
-#ifndef PAGE_SIZE
-#define PAGE_SIZE               (1 << 12) // 4KB
-#endif // PAGE_SIZE
+#include "string.h"
+#include "stdlib.h"
 
 #ifdef DEMO
 int isDemo = 0;
 #endif
 
 /* page frame: to map the physical memory */
-// static struct page pages[NR_PAGES] = {0}; // Not sure whether we should initialize it or not. (.bss problem)
 struct page *mem_map = NULL;
 
 unsigned long nr_pages = 0;
@@ -170,9 +163,9 @@ static inline void page_frame_init(void)
     /* Allocate memory from memblock. */
     mem_map = (struct page *) memblock_phys_alloc(sizeof(struct page) * nr_pages);
 
-    /* Initialize page structure*/
+    /* Initialize page structure */
     for_each_memblock_type(i, &memblock.reserved, rgn) {
-        for (unsigned long pfn = rgn->base >> 12; pfn < (rgn->base + rgn->size) >> 12; pfn++) {
+        for (unsigned long pfn = rgn->base >> 12; pfn <= ((rgn->base + rgn->size) >> 12); pfn++) {
             mem_map[pfn].flags = PG_RESERVED;
             INIT_LIST_HEAD(&(mem_map[pfn].buddy_list));
         }
@@ -185,6 +178,7 @@ static inline void page_frame_init(void)
         INIT_LIST_HEAD(&(mem_map[i].buddy_list));
         __free_one_page(&(mem_map[i]), i, 0); // Treat each page as a free page and insert it into the free list.
     }
+
 #ifdef DEMO
     isDemo = 1;
 #endif
@@ -347,7 +341,10 @@ void get_buddy_info(void)
     printf("=====================\n\n");
 }
 
-/* Kernel memory allocate, return physical address. */
+/**
+ * Kernel memory allocate, return kernel virtual address.
+ * With MMU enabled, we should use kernel virtual address instead of physical address.
+ */
 void *kmalloc(unsigned long size)
 {
     unsigned int order = 0;
@@ -358,17 +355,16 @@ void *kmalloc(unsigned long size)
             size >>= 1;
             order++;
         }
-        
-        return (void *) page_to_phys(__alloc_pages(order));
+        return (void *) phys_to_virt(page_to_phys(__alloc_pages(order)));
     } else {
         /* Use slab allocator to allocate memory. */
-        return (void *) get_object(size);
+        return (void *) phys_to_virt((unsigned long)get_object(size));
     }
 }
 
 void kfree(void *obj)
 {
-    struct page *page = phys_to_page((unsigned long) obj);
+    struct page *page = phys_to_page(virt_to_phys((unsigned long)obj));
     unsigned long pfn = page_to_pfn(page);
     unsigned int order = buddy_order(page);
 
@@ -379,4 +375,110 @@ void kfree(void *obj)
         /* Free the page to buddy system. */
         free_one_page(page, pfn, order);
     }
+}
+
+/* Setup initial kernel PGD, PUD, PMD, PTE. (0x1000 ~ 0x4fff)*/
+void setup_page_table(void)
+{
+    unsigned long addr;
+    unsigned long *pgd = (unsigned long *) MMU_PGD_ADDR;
+    unsigned long *pud = (unsigned long *) MMU_PUD_ADDR;
+    unsigned long *pmd = (unsigned long *) MMU_PMD_ADDR;
+    unsigned long *pmd1 = (unsigned long *) (MMU_PMD_ADDR + 0x1000);
+
+    /* Setup PGD */
+    pgd[0] = (unsigned long) MMU_PUD_ADDR | TABLE_ENTRY;
+
+    /* Setup PUD */
+    pud[0] = (unsigned long) MMU_PMD_ADDR | TABLE_ENTRY;
+    pud[1] = (unsigned long) pmd1 | TABLE_ENTRY;
+
+    /* Setup PMD, each entry points to 2 MB block*/
+    for (int i = 0; i < 512; i++) {
+        addr = i << 21; // i << 21 equals 2 MB
+        if (addr >= PERIPH_MMIO_BASE)
+            pmd[i] = (unsigned long) addr | DEVICE_BLOCK_ATTR;
+        else
+            pmd[i] = (unsigned long) addr | NORMAL_BLOCK_ATTR;
+        pmd1[i] = (unsigned long) (addr + 0x40000000) | DEVICE_BLOCK_ATTR;
+    }
+
+    asm volatile("msr ttbr0_el1, %0" : : "r" (MMU_PGD_ADDR));
+    asm volatile("msr ttbr1_el1, %0" : : "r" (MMU_PGD_ADDR));
+    return;
+}
+
+unsigned long *create_empty_page_table(void)
+{
+    unsigned long *pgd;
+
+    pgd = (unsigned long *)kmalloc(PAGE_SIZE);
+    memset(pgd, 0, PAGE_SIZE);
+    return pgd;
+}
+
+/** 
+ * virt_pgd is the virtual address in kernel of pgd. Linear mapped to physical address.
+ * pa is the physical address of a page frame.
+ * va is the virtual address that we want to map.
+ * flag attibute is not defined yet.
+ */
+void walk(unsigned long *virt_pgd, unsigned long va, unsigned long pa, unsigned long flag)
+{
+    unsigned long *table_p = virt_pgd, *newtable_p;
+    unsigned int level, idx;
+
+    for (level = 0; level < 4; level++) {
+        idx = (unsigned int)((va >> (39 - level * 9)) & 0x1ff); // p.14, 9-bit only
+
+        if (level == 3) {
+            table_p[idx] = pa;
+            table_p[idx] |= NORMAL_PAGE_ATTR | PXN | flag; // el0 only, so PXN is set to prevent el1 access.
+            return;
+        }
+
+        if (!table_p[idx]) { /* Use walk to setup page table, all memory start from empty memory */
+            newtable_p = create_empty_page_table();
+            table_p[idx] = virt_to_phys((unsigned long)newtable_p); // point to that table
+            table_p[idx] |= TABLE_ENTRY;
+        }
+
+        /* Jump to next page table according index */
+        table_p = (unsigned long *) phys_to_virt((unsigned long) (table_p[idx] & ENTRY_ADDR_MASK)); // PAGE_SIZE
+    }
+}
+
+/**
+ * Given virtual address of pgd in kernel space, starting virtual address, starting physical address, size.
+ * It will map the physical memory of size to the virtual address va in the virt_pgd address space.
+ */
+void map_pages(unsigned long *virt_pgd, unsigned long va, unsigned long size, unsigned long pa, unsigned long flags)
+{
+    unsigned long i = 0;
+
+    for (i = 0; i < size; i += PAGE_SIZE)
+        walk(virt_pgd, va + i, pa + i, flags);
+    return;
+}
+
+unsigned long simulate_walk(unsigned long *virt_pgd, unsigned long va)
+{
+    unsigned long *table_p = virt_pgd;
+    unsigned int level;
+    unsigned int idx;
+
+    for (level = 0; level < 4; level++) {
+        idx = (unsigned int)((va >> (39 - level * 9)) & 0x1ff); // p.14, 9-bit only
+
+        if (level == 3)
+            return (table_p[idx] & ENTRY_ADDR_MASK) | (va & 0xfff);
+
+        if (!table_p[idx]) {
+            printf("[simulate_walk] Empty table at pgd %16x, level %d, idx %d\n", virt_pgd, level, idx);
+            return 0;
+        }
+
+        table_p = (unsigned long *)phys_to_virt((unsigned long)(table_p[idx] & ENTRY_ADDR_MASK)); // PAGE_SIZE
+    }
+    return 0;
 }

@@ -30,6 +30,7 @@ int hex2bin(char *s, int n)
     return r;
 }
 
+/* If a == b, return 0. Else return non-zero value. */
 int strcmp(const char *a, const char *b)
 {
     while (*a) {
@@ -49,7 +50,7 @@ int memcmp(void *s1, void *s2, int n)
     return 0;
 }
 
-int strlen(char *str)
+int strlen(const char *str)
 {
     int count = 0;
     while (*str != '\0') {
@@ -59,12 +60,26 @@ int strlen(char *str)
     return count;
 }
 
-int strcpy(char *dst, char *src)
+int strcpy(char *dst, const char *src)
 {
     int i = 0;
     while (src[i] != '\0') {
         dst[i] = src[i];
         i++;
+    }
+    dst[i] = '\0';
+    return i;
+}
+
+int strcat(char *dst, const char *src)
+{
+    int i = 0, j = 0;
+    while (dst[i] != '\0')
+        i++;
+    while (src[j] != '\0') {
+        dst[i] = src[j];
+        i++;
+        j++;
     }
     dst[i] = '\0';
     return i;
@@ -82,4 +97,22 @@ int atoi(char *s)
         s++;
     }
     return n * sign;
+}
+
+void *memset(void *str, int c, unsigned long n) {
+    char *ptr = (char *)str;
+
+    while (n-- > 0)
+        *ptr++ = (char)c;
+    return str;
+}
+
+void *memcpy(void *dest, const void *src, unsigned long n)
+{
+    char *d = dest;
+    const char *s = src;
+
+    while (n--)
+        *d++ = *s++;
+    return dest;
 }

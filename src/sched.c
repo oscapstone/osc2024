@@ -1,4 +1,3 @@
-#include "delays.h"
 #include "sched.h"
 #include "exception.h"
 #include "exec.h"
@@ -13,17 +12,14 @@
 
 struct task_struct task_pool[NR_TASKS];
 char kstack_pool[NR_TASKS][KSTACK_SIZE] __attribute__((aligned(16)));
-char ustack_pool[NR_TASKS][USTACK_SIZE] __attribute__((aligned(16)));
 int num_running_task = 0;
 
 /* Initialize the task_struct and make kernel be task 0. */
 void task_init()
 {
-    for (int i = 0; i < NR_TASKS; i++) {
+    for (int i = 0; i < NR_TASKS; i++) { // all the elements in task_pool are initialized to 0.
         task_pool[i].state = TASK_STOPPED;
         task_pool[i].task_id = i;
-        task_pool[i].pending = 0;
-        task_pool[i].process_sig = 0;
         task_pool[i].sighand = default_sighandler;
     }
 
@@ -33,11 +29,10 @@ void task_init()
     task_pool[0].counter = 1;
 
     // I don't have to initialize the tss of task[0], because when it switch to other task, the tss of task[0] will be saved to its own stack.
-    // TODO: Because I don't initialize the tss of task[0], I can't fork() from task[0].
+    // TODO: check whether we can fork() from task[0].
     update_current(&task_pool[0]);
     num_running_task = 1;
-    // TODO: the task 0's stack are not in kstack_pool[0] and ustack_pool[0]. It is in the stack that start.S set up.
-    task_pool[0].tss.lr = (uint64_t) do_shell;
+    task_pool[0].tss.lr = (uint64_t) do_shell_user; //do_user_image;
     task_pool[0].tss.sp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
     task_pool[0].tss.fp = (uint64_t) &kstack_pool[0][KSTACK_TOP];
 }
@@ -46,16 +41,17 @@ void task_init()
 void context_switch(struct task_struct *next)
 {
     struct task_struct *prev = current; // the current task_struct address
-    update_current(next);
+
 #ifdef DEBUG_MULTITASKING
     printf("[context_switch] Switch from task %d to task %d\n", prev->task_id, next->task_id);
 #endif
+    update_current(next);
     switch_to(&prev->tss, &next->tss);
 
     /* Before the process returns to user mode, check the pending signals. */
     if (current->pending != 0) {
         /* Allocate signal stack for the task. */
-        void *sig_stack = (void *) kmalloc(USTACK_SIZE);
+        void *sig_stack = (void *)kmalloc(USTACK_SIZE);
 
         current->process_sig = current->pending;
         current->pending = 0;
@@ -68,9 +64,8 @@ void context_switch(struct task_struct *next)
         asm volatile("eret");
     }
 
-    if (current->state == TASK_STOPPED) {
+    if (current->state == TASK_STOPPED)
         schedule();
-    }
 }
 
 /* Find empty task_struct. Return task id. */
@@ -110,6 +105,9 @@ int privilege_task_create(void (*func)(), long priority)
 /* Select the task with the highest counter to run. If all tasks' counter is 0, then update all tasks' counter with their priority. */
 void schedule(void)
 {
+#ifdef DEBUG_MULTITASKING
+    printf("[schedule] current task %d\n", current->task_id);
+#endif
     int i = NR_TASKS, c = -1, next = 0;
     while (1) {
         while ((--i) >= 0) { // With `while (--i)`, the task 0 won't be selected.

@@ -37,7 +37,7 @@ static inline void kmem_caches_init(void)
 /* Return the physical address of slab */
 static inline void *slab_address(struct page *slab)
 {
-    return (void *) page_to_phys(slab);
+    return (void *) phys_to_virt(page_to_phys(slab));
 }
 
 /* Setup the object value if needed. But not implemented here, just return the address. */
@@ -50,8 +50,8 @@ static inline void *setup_object(struct kmem_cache *cache, void *object)
 /* Set the free pointer of object. Point to next object. */
 static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
 {
-    void *freeptr_addr = (void **) object + s->offset;
-    *(void **) freeptr_addr = fp;
+    void **freeptr_addr = (void **)(object + s->offset);
+    *freeptr_addr = fp;
 }
 
 /* Allocate a new slab for kmem_cache. */
@@ -82,7 +82,7 @@ static struct page *allocate_slab(struct kmem_cache *cache)
     /* Point freelist to start */
     slab->freelist = (void *) start;
 
-    nr_objects = 4096 / cache->size; // page size/object size
+    nr_objects = PAGE_SIZE / cache->size; // page size/object size
 
     /* Setup the objects in order. */
     for (i = 0, p = start; i < nr_objects - 1; i++)
@@ -106,7 +106,7 @@ static inline void *__get_object(struct kmem_cache *cache)
     list_for_each_entry(slab, &cache->node.partial, slab_list) {
         if (slab->freelist) {
             object = slab->freelist;
-            slab->freelist = *(void **) object;
+            slab->freelist = *(void **) phys_to_virt((unsigned long)object);
             return object;
         }
     }
@@ -116,7 +116,7 @@ static inline void *__get_object(struct kmem_cache *cache)
     if (!slab)
         return NULL;
     object = slab->freelist;
-    slab->freelist = *(void **) object;
+    slab->freelist = *(void **) phys_to_virt((unsigned long)object);
     return object;
 }
 
@@ -144,7 +144,7 @@ void free_object(void *object)
     struct page *slab;
 
     /* Use object physical address to get the slab and slab cache*/
-    slab = phys_to_page(object);
+    slab = phys_to_page(virt_to_phys((unsigned long)object));
 
     /* Check whether the page is a slab */
     if (slab->flags != PG_slab)

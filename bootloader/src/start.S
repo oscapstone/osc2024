@@ -41,6 +41,8 @@ _relocate:
     ldr     x1, =__dtb
     str     x0, [x1]
 
+    mov     x18, x0 // store the dtb address to x18, which is used as the first argument of the main function.
+
     // set top of stack just before our code (stack grows to a lower address per AAPCS64)
     ldr     x1, =_relocate
     mov     sp, x1

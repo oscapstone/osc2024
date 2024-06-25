@@ -2,15 +2,15 @@
 
 .global from_el2_to_el1
 from_el2_to_el1:
-    ldr x1, =0
-    msr sctlr_el1, x1 // disable MMU
+    //ldr x1, =0
+    //msr sctlr_el1, x1 // disable MMU
 
     mov x0, #(1 << 31) // EL1 uses aarch64
     msr hcr_el2, x0
 
     // turn on the accessibility to SIMD and floating registers
-    ldr x1, =0x300000 // 0b11 << 20
-    msr cpacr_el1, x1
+    //ldr x1, =0x300000 // 0b11 << 20
+    //msr cpacr_el1, x1
 
     mov x0, 0x3c5 // EL1h (SPSel = 1) with interrupt disabled
     msr spsr_el2, x0
@@ -26,13 +26,15 @@ from_el2_to_el1:
 /* From el1 to el0 */
 .global move_to_user_mode
 move_to_user_mode:
-    mov x0, 0x70000
-    msr sp_el0, x0 // el1's sp will be 0x40000
+    mov x0, #0x70000
+    msr sp_el0, x0
 
     mov x1, #0x0 // same effect as `ldr x1, =0`
     msr spsr_el1, x1
 
-    msr elr_el1, lr
+    mov x1, lr
+    and x1, x1, #0xffffffffffff // clear the high 16 bits for virtual address
+    msr elr_el1, x1
 
     eret // return to EL0
 
@@ -97,7 +99,7 @@ move_to_user_mode:
 exception_vector_table:
     /* Exception from the current EL while using SP_EL0 */
     .align 7 // synchronous
-    b non_handler
+    b exception_handler
     .align 7 // irq
     b non_handler
     .align 7 // fiq
@@ -137,7 +139,7 @@ exception_vector_table:
 
 .global set_exception_vector_table
 set_exception_vector_table:
-    adr x0, exception_vector_table
+    ldr x0, =exception_vector_table
     msr vbar_el1, x0
     ret
 
@@ -165,7 +167,7 @@ irq_handler:
     eret
 
 non_handler:
-    b non_handler
+    b invalid_exception_handler
 
 .global exit_kernel
 exit_kernel:

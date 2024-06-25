@@ -1,7 +1,9 @@
 #ifndef __EXCEPTION_H__
 #define __EXCEPTION_H__
 
-#define CORE0_IRQ_SOURCE ((volatile unsigned int *)(0x40000060)) // core 0 interrupt source:https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf
+#include "mm.h"
+
+#define CORE0_IRQ_SOURCE ((volatile unsigned int *)(0x40000060 | KERNEL_VADDR_BASE)) // core 0 interrupt source:https://datasheets.raspberrypi.com/bcm2836/bcm2836-peripherals.pdf
 // #define ENABLE_TASKLET
 
 void core_timer_handler();

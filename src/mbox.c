@@ -122,6 +122,9 @@ void __get_memory_info(unsigned int *base, unsigned int *size)
     mbox[7] = 0; // MBOX_TAG_LAST
     mbox_call(8);
 
+    printf("==== init: memory manager ---arm memory base address : 0x%8x\n", mbox[5]);
+    printf("==== init: memory manager ---arm memory base size    :   %8x\n", mbox[6]);
+
     *base = mbox[5];
     *size = mbox[6];
 }

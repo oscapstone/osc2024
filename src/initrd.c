@@ -31,6 +31,8 @@
 #include "memblock.h"
 #include "exec.h"
 #include "mm.h"
+#include "vfs.h"
+#include "initramfs.h"
 
 #define buf_size 128
 
@@ -129,7 +131,7 @@ void initrd_cat()
 }
 
 /* Return the user program execution address */
-void *_initrd_usr_prog(char *cmd)
+void *_initrd_usr_prog(char *cmd, unsigned int *size)
 {
     char *buf = cpio_base, *prog_addr, *prog_page;
     int ns, fs;
@@ -151,11 +153,12 @@ void *_initrd_usr_prog(char *cmd)
                 return NULL;
             } else {
                 printf("\nFound user_program: %s\n", buf + sizeof(cpio_f));
+                *size = fs;
                 /* get program start address */
                 prog_addr = buf + ALIGN(sizeof(cpio_f) + ns, 4);
 
                 /* Allocate a page and copy the user program to the page. */
-                prog_page = (char *) kmalloc(fs);
+                prog_page = (char *)kmalloc(fs);
                 memmove(prog_page, prog_addr, fs);
 
                 return prog_page;
@@ -171,12 +174,13 @@ void *_initrd_usr_prog(char *cmd)
 void initrd_usr_prog(char *cmd)
 {
     char *prog;
+    unsigned int size;
 
-    prog = (char *) _initrd_usr_prog(cmd);
+    prog = (char *) _initrd_usr_prog(cmd, &size);
     if (prog != NULL)
-        do_exec((void (*)(void)) prog);
+        do_exec((void (*)(void)) prog, size);
     else
-        uart_puts("File not found\n");
+        printf("file %s not found\n", cmd);
     return;
 }
 
@@ -184,7 +188,7 @@ void initramfs_callback(fdt_prop *prop, char *node_name, char *property_name)
 {
     if (!strcmp(node_name, "chosen") && !strcmp(property_name, "linux,initrd-start")) {
         uint32_t load_addr = *((uint32_t *)(prop + 1));
-        cpio_base = (char *)((unsigned long)bswap_32(load_addr));
+        cpio_base = (char *)(phys_to_virt((unsigned long)bswap_32(load_addr)));
         printf("-- cpio_base: %x\n", cpio_base);
     }
 }
@@ -210,5 +214,43 @@ void initrd_reserve_memory(void)
     }
     /* reserve the memory from cpio_base to buf + sizeof(cpio_f) + ns */
     buf += ALIGN(sizeof(cpio_f) + 10, 4);
-    memblock_reserve((unsigned long) cpio_base, ALIGN(buf - cpio_base, 8));
+    memblock_reserve((unsigned long) virt_to_phys((unsigned long)cpio_base), ALIGN(buf - cpio_base, 8));
+}
+
+/* Iterate all the files in .cpio and put it under initramfs_inode */
+void initramfs_init(struct initramfs_inode *dir)
+{
+    cpio_f *header;
+    char *buf = cpio_base, *file_name, *data;
+    struct vnode *file_vnode;
+    struct initramfs_inode *file_inode;
+    int idx = 0, ns, fs;
+
+    if (memcmp(buf, "070701", 6))
+        return;
+
+    // if it's a cpio newc archive. Cpio also has a trailer entry
+    while(!memcmp(buf, "070701", 6) && memcmp(buf + sizeof(cpio_f), "TRAILER!!", 9)) {
+        header = (cpio_f*) buf;
+        ns = hex2bin(header->namesize, 8);
+        fs = ALIGN(hex2bin(header->filesize, 8), 4);
+        file_name = buf + sizeof(cpio_f);
+        data = buf + ALIGN(sizeof(cpio_f) + ns, 4);
+
+        /* Ignore directory */
+        if (fs == 0)
+            goto next_file;
+        
+        /* Create file vnode */
+        file_vnode = initramfs_create_vnode(0, FSNODE_TYPE_FILE);
+        file_inode = file_vnode->internal;
+        /* Update initramfs inode information */
+        strcpy(file_inode->name, file_name);
+        file_inode->data = data;
+        file_inode->data_size = fs;
+        dir->childs[idx++] = file_vnode;
+
+next_file: // jump to the next file
+        buf += (ALIGN(sizeof(cpio_f) + ns, 4) + fs);
+    }
 }

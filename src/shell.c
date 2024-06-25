@@ -86,5 +86,11 @@ void do_shell_user(void)
 /* shell: kernel task. */
 void do_shell(void)
 {
-    do_exec(do_shell_user);
+    do_exec(do_shell_user, 1024);
+}
+
+void do_user_image(void)
+{
+    initrd_usr_prog("vfs2.img"); // vm.img for Lab6, vfs2.img for Lab7 and Lab8.
+    while (1);
 }

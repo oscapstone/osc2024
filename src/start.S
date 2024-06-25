@@ -23,6 +23,7 @@
  *
  */
 
+#include "mm.h"
 .section ".text.boot"
 
 //#define BOOTLOADER
@@ -39,9 +40,8 @@ _start:
 2:  // cpu id == 0, continue
 
 #ifndef BOOTLOADER
-    // get the dtb address
-    ldr     x1, =__dtb_address
-    str     x0, [x1] // store the dtb address to the address given by the linker script
+    /* get the dtb address */
+    mov     x18, x0 // store the dtb address to x18, which is used as the first argument of the main function.
 #endif
 
     // set exception vector table
@@ -49,10 +49,28 @@ _start:
 
     // change exception level to EL1
     bl      from_el2_to_el1
-    
-    // If we don't set the sp_elx before `eret`, we have to setup the stack pointer manually.
-    //ldr     x1, =_start
-    //mov     sp, x1 // set stack pointer
+
+    /* set up TCR */
+    ldr     x0, = TCR_CONFIG_DEFAULT
+    msr     tcr_el1, x0
+
+    /* Set up MAIR_EL1 */
+    ldr     x0, =MAIR_CONFIG
+    msr     mair_el1, x0
+
+    /* At this time, the sp is virtual address, set an proper physical address to setup page table. */
+    mov     sp, 0x80000
+    bl      setup_page_table
+
+    /* Enable MMU */
+    mrs     x2, sctlr_el1
+    orr     x2, x2, 1
+    //bic     x2, x2, #(1 << 19) // clear WXN bit
+    msr     sctlr_el1, x2 // enable MMU, cache remains disabled
+
+    /* Then we have to set stack pointer to proper virtual address */
+    ldr     x0, =__KERNEL_START_ADDR
+    mov     sp, x0
 
     // clear bss
     ldr     x1, =__bss_start
@@ -63,7 +81,8 @@ _start:
     sub     w2, w2, #1
     cbnz    w2, 3b
 4:
-    // jump to C code, should not return
-    bl      main
+    /* jump to C code, should not return. Using br will load the absolute address of main(). Using bl or b just jump by offset. */
+    ldr     x0, =main
+    br      x0
     // for failsafe, halt this core too
     b       1b
