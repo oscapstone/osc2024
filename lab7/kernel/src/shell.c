@@ -12,6 +12,7 @@
 #include "sched.h"
 #include "syscall.h"
 #include "stddef.h"
+#include "vfs.h"
 
 #define CLI_MAX_CMD 8
 #define MAX_ARGS 10
@@ -19,14 +20,17 @@
 
 extern void         *CPIO_START;
 extern thread_t     *curr_thread;
-char                input_buf[MAX_CMD_LEN];
+
 
 void cli_start_shell() {
+    char input_buf[MAX_CMD_LEN];
+    char path_buf[MAX_PATH_NAME];
     cli_print_welcome_msg();
 
     while (1) {
 		cli_clear_cmd(input_buf, MAX_CMD_LEN);
-		uart_puts("▬▬ι" CYN "═══════- " CRESET "$ " );
+        get_pwd(path_buf);
+		uart_puts("▬▬ι" CYN "═══════- " YEL "%s " CRESET "$ ", path_buf);
 		cli_read_cmd(input_buf);
 		cli_exec_cmd(input_buf);
 	}
@@ -55,7 +59,7 @@ void cli_read_cmd(char* buf) {
             uart_puts("Exceed the command length limit.");
             break;
         }
-        c = async_getchar();
+        c = getchar();
         if (c == '\n') {
             uart_puts("\r\n");
             break;
@@ -70,7 +74,7 @@ void cli_read_cmd(char* buf) {
         if ( c > 16 && c < 32 ) continue;
         if ( c > 127 ) continue;
         buf[idx++] = c;
-        async_putchar(c);
+        putchar(c);
     }
 }
 
@@ -78,7 +82,6 @@ void cli_exec_cmd(char* buf) {
     char* argvs[MAX_ARGS];
     char* cmd = buf;
     int argc = 0;
-
     str_split(cmd, ' ', argvs, &argc);
     argc -= 1; // First command part
     
@@ -95,7 +98,7 @@ void cli_exec_cmd(char* buf) {
     } else if (cli_strcmp(cmd, "currel") == 0) {
         cmd_currentEL();
     } else if (cli_strcmp(cmd, "exec") == 0) {
-        cmd_exec_program(argvs[1]);
+        cmd_exec_program(argvs, argc);
     } else if (cli_strcmp(cmd, "help") == 0) {
         cmd_help();
     } else if (cli_strcmp(cmd, "hello") == 0) {
@@ -105,11 +108,17 @@ void cli_exec_cmd(char* buf) {
     } else if (cli_strcmp(cmd, "reboot") == 0) {
         cmd_reboot();
     } else if (cli_strcmp(cmd, "ls") == 0) {
-        cmd_ls();
+        cmd_ls(argvs, argc);
     } else if (cli_strcmp(cmd, "malloc") == 0) {
         cmd_malloc();
     } else if (cli_strcmp(cmd, "kmalloc") == 0) {
         cmd_kmalloc();
+    } else if (cli_strcmp(cmd, "write") == 0) {
+        cmd_write(argvs, argc);
+    } else if (cli_strcmp(cmd, "cd") == 0) {
+        cmd_cd(argvs, argc);
+    } else if (cli_strcmp(cmd, "mkdir") == 0) {
+        cmd_mkdir(argvs, argc);
     } else if(*cmd) {
         uart_puts(cmd);
         uart_puts(": Command not found QQ, type help to get more information.\r\n");
@@ -201,43 +210,59 @@ void cmd_reboot() {
     *wdg_addr = PM_PASSWORD | 5;
 }
 
-void cmd_ls() {
-    char* c_filepath;
-    char* c_filedata;
-    unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_START;
+void cmd_ls(char **argv, int argc) {
+    char *workdir;
 
-    while(header_ptr != 0) {
-        int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        if (err) {
-            uart_puts("CPIO parse error\r\n");
-        }
-        if (header_ptr != 0) {
-            uart_puts(c_filepath);
-            uart_puts("\r\n"); 
-        }
+    if (argc == 0)
+    {
+        workdir = ".";
     }
+    else
+    {
+        workdir = argv[1];
+    }
+
+    char buf[MAX_NAME_BUF] = {0};
+    uart_puts("root_vnode: 0x%x, curr_thread->pwd: 0x%x\r\n", get_root_vnode(), curr_thread->pwd);
+
+    vfs_readdir(curr_thread->pwd, workdir, buf);
+    uart_puts("readdir:\r\n");
+    int start_index = 0;
+    int end_index = 0;
+    while (!(buf[end_index] == 0 && buf[end_index + 1] == 0))
+    {
+        end_index += strlen(buf + start_index) + 1;
+        switch (buf[start_index])
+        {
+        case FS_DIR:
+            printf(BBLU "%s " CRESET, buf + start_index + 1);
+            break;
+        case FS_FILE:
+            printf("%s ", buf + start_index + 1);
+            break;
+        case FS_DEV:
+            printf(BCYN "%s " CRESET, buf + start_index + 1);
+            break;
+        }
+
+        // printf("%s ", buf + start_index);
+        start_index = end_index;
+    }
+    puts("\r\n");
+
+    return 0;
 }
 
 void cmd_cat(char* filepath) {
-    char* c_filepath;
-    char* c_filedata;
-    unsigned int c_filesize;
-    struct cpio_newc_header *header_ptr = CPIO_START;
-
-    while(header_ptr != 0) {
-        int err = cpio_parse_header(header_ptr, &c_filepath, &c_filesize, &c_filedata, &header_ptr);
-        if (err) {
-            uart_puts("CPIO parse error\r\n");
-            break;
-        }
-        if (header_ptr != 0 && strcmp(filepath, c_filepath) == 0) {
-            uart_puts("%s\r\n", c_filedata);
-            break; 
-        }
-        if (header_ptr == 0) 
-            uart_puts("cat: %s: No such file or directory\n", filepath);
-    }
+    char buf[0x10000] = {0};
+    file_t *file;
+    if (vfs_open(curr_thread->pwd, filepath, 0, &file) == -1)
+        return -1;
+    size_t size = vfs_read(file, buf, 0x10000);
+    for (int i = 0; i < size; i++)
+        printf("%c", buf[i]);
+    vfs_close(file);
+    return 0;
 }
 
 void cmd_malloc() {
@@ -259,39 +284,29 @@ void cmd_dtb() {
     parse_dtb_tree(dtb_callback_show_tree);
 }
 
-void cmd_exec_program(char* filepath){
-    char *c_filedata;
-    unsigned int c_filesize;
-
-    int result = cpio_get_file(filepath, &c_filesize, &c_filedata);
-    if (result == CPIO_TRAILER) {
+void cmd_exec_program(char **argv, int argc){
+    char *filepath;
+    if (argc == 1) {
+        filepath = argv[1];
+    } 
+    vnode_t *vnode;
+    if (vfs_lookup(curr_thread->pwd, filepath, &vnode) == -1)
+    {
         puts("exec: ");
         puts(filepath);
         puts(": No such file or directory\r\n");
-        return;
-    } else if (result == CPIO_ERROR) {
-        puts("cpio parse error\r\n");
-        return;
+        return -1;
     }
-
-    if (kernel_fork() == 0) { // child process
+    uart_puts("exec: %s\r\n", filepath);
+    if (kernel_fork() == 0)
+    { // child process
         kernel_exec_user_program(filepath, NULL);
-    } else {
-       wait();
+    }
+    else
+    {
+        wait();
     }
 }
-
-// void cmd_fork_test(){
-//     thread_t *t = thread_create(fork_test, "fork_test");
-//     asm(
-//         "mov    x10,        0x3c0\n\t"
-//         "msr    spsr_el1,   x10\n\t"
-//         "msr    elr_el1,    %0\n\t"
-//         "msr    sp_el0,     %1\n\t"
-//         "eret   \n\t"
-//         :: "r"(t->context.lr), "r"(t->code)
-//     );
-// }
 
 void cmd_currentEL() {
     print_currentEL();
@@ -365,4 +380,68 @@ void cmd_kmalloc() {
 
     kfree(test5);
     // puts("\r\n");
+}
+
+int cmd_write(char **argv, int argc)
+{
+    char *filepath;
+    char *content;
+    if (argc == 2)
+    {
+        filepath = argv[1];
+        content = argv[2];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    file_t *file;
+    if (vfs_open(curr_thread->pwd, filepath, 0, &file) == -1)
+    {
+        puts("File not found\r\n");
+        return -1;
+    }
+    size_t size = strlen(content);
+    vfs_write(file, content, size);
+    vfs_close(file);
+    return 0;
+}
+
+int cmd_mkdir(char **argv, int argc)
+{
+    char *dirpath;
+    if (argc == 1)
+    {
+        dirpath = argv[1];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    if (vfs_mkdir(curr_thread->pwd, dirpath))
+    {
+        puts("mkdir failed\r\n");
+        return -1;
+    }
+    return 0;
+}
+
+int cmd_cd(char **argv, int argc)
+{
+    char *filepath;
+    // char *c_filedata;
+    // unsigned int c_filesize;
+
+    if (argc == 1)
+    {
+        filepath = argv[1];
+    }
+    else
+    {
+        puts("Incorrect number of parameters\r\n");
+        return -1;
+    }
+    kernel_chdir(filepath);
 }

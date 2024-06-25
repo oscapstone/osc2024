@@ -8,6 +8,7 @@
 #include "shell.h"
 #include "utils.h"
 #include "ANSI.h"
+#include "vfs.h"
 
 list_head_t                 *run_queue;
 thread_t                    *threads[MAX_PID + 1];
@@ -55,6 +56,9 @@ thread_t *_init_thread_0(char* name, int64_t pid, int64_t ppid, void *start) {
 	thread->context.lr = (uint64_t)start;
 	thread->context.sp = (uint64_t)thread->kernel_stack_base + KSTACK_SIZE;
 	thread->context.fp = thread->context.sp; // frame pointer for local variable, which is also in stack.
+    init_thread_vfs(thread);
+    thread->file = NULL;
+
 	list_add((list_head_t *)thread, run_queue);
     // dump_thread_info(thread);
 	return thread;
@@ -95,6 +99,8 @@ thread_t *thread_create(void *start, char* name) {
     t->context.lr = (uint64_t)start;
     t->context.sp = (uint64_t)t->kernel_stack_base + KSTACK_SIZE;
     t->context.fp = t->context.sp; // frame pointer for local variable, which is also in stack.
+    init_thread_vfs(t);
+    t->file = NULL;
 
     /* init child node of this thread and add it to the curr_thread's child list */
     child_node_t *child = (child_node_t *)kmalloc(sizeof(child_node_t));
@@ -214,7 +220,7 @@ void schedule() {
     lock();
 	do {
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
+		// uart_puts("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 	curr_thread->status = THREAD_RUNNING;
 	unlock();
@@ -268,7 +274,7 @@ void dump_run_queue(thread_t *root, int64_t level) {
 	list_for_each(curr, (list_head_t *)root->child_list) {
 		// INFO("child: %d\n", child_node_to_thread((child_node_t *)curr)->pid);
 		dump_run_queue(threads[((child_node_t *)curr)->pid], level + 1);
-		// ERROR("OVER");
+		// uart_puts("OVER");
 	}
 }
 
@@ -293,4 +299,27 @@ void foo() {
         uart_puts("In for loop - foo() thread pid is %d in for loop index = %d\n", curr_thread->pid, i);
     }
     thread_exit();
+}
+
+int thread_insert_file_to_fdtable(thread_t *t, file_t *file)
+{
+	for (int i = 0; i < MAX_FD + 1; i++)
+	{
+		if (t->file_descriptors_table[i] == NULL)
+		{
+			t->file_descriptors_table[i] = file;
+			return i;
+		}
+	}
+	return -1;
+}
+
+int thread_get_file_struct_by_fd(int fd, file_t **file)
+{
+	if (fd < 0 || fd > MAX_FD || curr_thread->file_descriptors_table[fd] == NULL)
+	{
+		return -1;
+	}
+	*file = curr_thread->file_descriptors_table[fd];
+	return 0;
 }

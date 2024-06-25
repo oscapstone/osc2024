@@ -22,6 +22,8 @@ void kernel_main(char* arg) {
 	memory_init();
 	irqtask_list_init();
     timer_list_init();
+	
+	init_rootfs();
 
 	init_thread_sched();
 	

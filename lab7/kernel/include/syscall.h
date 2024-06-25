@@ -75,15 +75,36 @@ int         sys_exit(trapframe_t *tpf, int status);
 int         sys_kill(trapframe_t *tpf, int pid);
 int         sys_mbox_call(trapframe_t *tpf, unsigned char ch, unsigned int mbox);
 
-void        run_user_task_wrapper(char *dest);
-int         kernel_exec_user_program(const char *program_name, char *const argv[]);
-int         kernel_fork();
-void        fork_test();
-
 int         sys_signal_register(trapframe_t *tpf, int SIGNAL, void (*handler)(void));
 int         sys_signal_kill(trapframe_t *tpf, int pid, int SIGNAL);
 int         sys_signal_return(trapframe_t *tpf);
 void        sys_lock_interrupt(trapframe_t *tpf);
 void        sys_unlock_interrupt(trapframe_t *tpf);
+
+int 		sys_open(trapframe_t *tpf, const char *pathname, int flags);
+int 		sys_close(trapframe_t *tpf, int fd);
+long 		sys_write(trapframe_t *tpf, int fd, const void *buf, unsigned long count);
+long 		sys_read(trapframe_t *tpf, int fd, void *buf, unsigned long count);
+int 		sys_mkdir(trapframe_t *tpf, const char *pathname, unsigned mode);
+int 		sys_mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+int 		sys_chdir(trapframe_t *tpf, const char *path);
+long 		sys_lseek64(trapframe_t *tpf, int fd, long offset, int whence);
+int 		sys_ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info);
+
+void        run_user_task_wrapper(char *dest);
+int         kernel_exec_user_program(const char *program_name, char *const argv[]);
+int         kernel_fork();
+void        fork_test();
+
+/* kernel */
+int 		kernel_open(const char *pathname, int flags);
+int 		kernel_close(int fd);
+long 		kernel_write(int fd, const void *buf, unsigned long count);
+long 		kernel_read(int fd, void *buf, unsigned long count);
+int 		kernel_mkdir(const char *pathname, unsigned mode);
+int 		kernel_mount(const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
+int 		kernel_chdir(const char *path);
+long 		kernel_lseek64(int fd, long offset, int whence);
+int 		kernel_ioctl(int fb, unsigned long request, void *info);
 
 #endif  /*_SYSCALL_H */

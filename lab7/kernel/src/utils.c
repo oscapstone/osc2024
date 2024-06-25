@@ -311,3 +311,38 @@ void *memcpy(void *dest, const void *src, size_t n) {
     }
     return dest;
 }
+
+void *memset(void *s, int c, size_t n) {
+	char *start = s;
+	for (size_t i = 0; i < n; i++)
+	{
+		start[i] = c;
+	}
+
+	return s;
+}
+
+void printf(char *fmt, ...)
+{
+	__builtin_va_list args;
+	__builtin_va_start(args, fmt);
+	char s[VSPRINT_MAX_BUF_SIZE];
+	// use sprintf to format our string
+	vsprintf(s, fmt, args);
+	// print out as usual
+	puts(s);
+}
+
+char getchar() {
+	char buf[2] = {0};
+	kernel_read(0, buf, 1);
+	// char c = uart_async_recv();
+	char c = buf[0];
+	return c == '\r' ? '\n' : c;
+}
+
+void putchar(char c) {
+	char buf[2] = {c, '\0'};
+	kernel_write(1, buf, 1);
+	// uart_async_send(c);
+}

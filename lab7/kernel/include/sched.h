@@ -5,10 +5,14 @@
 #include "stdint.h"
 
 #define MAX_PID     32768
+#define MAX_FD      16
 #define USTACK_SIZE 0x10000
 #define KSTACK_SIZE 0x10000
 #define SIGNAL_MAX  64
 #define MAX_SIGNAL  31
+#define FD_STDIN    0
+#define FD_STDOUT   1
+#define FD_STDERR   2
 
 extern void  switch_to(void *curr_context, void *next_context);
 extern void* get_current();
@@ -71,6 +75,9 @@ typedef struct thread {
     char*               kernel_stack_base;                      // Kernel space Stack (Kernel syscall)
     char*               name;
     signal_t            signal;                                 // Signal struct
+    struct file         *file_descriptors_table[MAX_FD + 1]; // File Descriptor Table
+    struct file         *file;                               // File
+    struct vnode        *pwd;                               // Present Working Directory
 } thread_t;
 
 void            init_thread_sched();
@@ -90,6 +97,8 @@ void            dump_child_thread(thread_t *thread);
 void            dump_run_queue(thread_t *root, int64_t level);
 int8_t          thread_code_can_free(thread_t *thread);
 int8_t          in_kernel_img_space(uint64_t addr);
+int             thread_insert_file_to_fdtable(thread_t *t, struct file *file);
+int             thread_get_file_struct_by_fd(int fd, struct file **file);
 
 // Test function
 void            foo();

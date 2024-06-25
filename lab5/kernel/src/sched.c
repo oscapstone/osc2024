@@ -214,7 +214,7 @@ void schedule() {
     lock();
 	do {
 		curr_thread = (thread_t *)(((list_head_t *)curr_thread)->next);
-		// DEBUG("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
+		// uart_puts("%d: %s -> %d: %s\n", prev_thread->pid, prev_thread->name, curr_thread->pid, curr_thread->name);
 	} while (list_is_head((list_head_t *)curr_thread, run_queue)); // find a runnable thread
 	curr_thread->status = THREAD_RUNNING;
 	unlock();

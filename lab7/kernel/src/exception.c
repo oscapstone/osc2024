@@ -180,10 +180,19 @@ void el0_sync_router(trapframe_t *tpf) {
                               &&__kill_label,             // 7
                               &&__signal_register_label,  // 8
                               &&__signal_kill_label,      // 9
-                              &&__signal_return_label,    // 10
-                              &&__lock_interrupt_label,   // 11
-                              &&__unlock_interrupt_label, // 12
-                              &&__invalid_syscall_label}; // 13
+                              &&__open_label,             // 10
+                              &&__close_label,            // 11
+                              &&__write_label,            // 12
+                              &&__read_label,             // 13
+                              &&__mkdir_label,            // 14
+                              &&__mount_label,            // 15
+                              &&__chdir_label,            // 16
+                              &&__lseek64_label,          // 17
+                              &&__ioctl_label,            // 18
+                              &&__signal_return_label,    // 19
+                              &&__lock_interrupt_label,   // 20
+                              &&__unlock_interrupt_label, // 21
+                              &&__invalid_syscall_label}; // 22
 
     goto *syscall_router[syscall_no];
 
@@ -237,6 +246,57 @@ __lock_interrupt_label:
 
 __unlock_interrupt_label:
     sys_unlock_interrupt(tpf);
+    return;
+
+__open_label:
+    uart_puts("sys_open\r\n");
+    tpf->x0 = sys_open(tpf, (const char *)tpf->x0, (int)tpf->x1);
+    return;
+
+__close_label:
+    uart_puts("sys_close\r\n");
+    tpf->x0 = sys_close(tpf, (int)tpf->x0);
+    return;
+
+__write_label:
+    // remember to return read size or error code
+    // uart_puts("sys_write\r\n");
+    tpf->x0 = sys_write(tpf, (int)tpf->x0, (const void *)tpf->x1, (uint64_t)tpf->x2);
+    return;
+
+__read_label:
+    // remember to return read size or error code
+    uart_puts("sys_read\r\n");
+    tpf->x0 = sys_read(tpf, (int)tpf->x0, (void *)tpf->x1, (uint64_t)tpf->x2);
+    return;
+
+__mkdir_label:
+    // you can ignore mode, since there is no access control
+    uart_puts("sys_mkdir\r\n");
+    tpf->x0 = sys_mkdir(tpf, (const char *)tpf->x0, (unsigned)tpf->x1);
+    return;
+
+__mount_label:
+    // you can ignore arguments other than target (where to mount) and filesystem (fs name)
+    uart_puts("sys_mount\r\n");
+    tpf->x0 = sys_mount(tpf, (const char *)tpf->x0, (const char *)tpf->x1, (const char *)tpf->x2, (uint64_t)tpf->x3, (const void *)tpf->x4);
+    return;
+
+__chdir_label:
+    uart_puts("sys_chdir\r\n");
+    tpf->x0 = sys_chdir(tpf, (const char *)tpf->x0);
+    return;
+
+__lseek64_label:
+    // you can ignore whence, since there is no file access control
+    // uart_puts("sys_lseek64\r\n");
+    tpf->x0 = sys_lseek64(tpf, (int)tpf->x0, (long)tpf->x1, (int)tpf->x2);
+    return;
+
+__ioctl_label:
+    // you can ignore arguments other than fd and request
+    uart_puts("sys_ioctl\r\n");
+    tpf->x0 = sys_ioctl(tpf, (int)tpf->x0, (unsigned long)tpf->x1, (unsigned long)tpf->x2);
     return;
 
 __invalid_syscall_label:
@@ -348,7 +408,7 @@ void irqtask_run_preemptive() {
         }
         
         // struct list_head* curr;
-        // uart_puts("DEBUG: ");
+        // uart_puts("uart_puts: ");
         // list_for_each(curr, irqtask_list) {
         //     put_int(((irqtask_t *)curr)->priority);
         //     uart_puts(" ");
