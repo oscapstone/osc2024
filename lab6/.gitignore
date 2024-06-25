@@ -1,0 +1,6 @@
+.vscode
+build
+rootfs
+temp
+*.img
+*.dtb
