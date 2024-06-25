@@ -30,10 +30,6 @@ void main(char *arg)
     el1_interrupt_enable(); // enable interrupt in EL1 -> EL1
     core_timer_enable();
 
-#if DEBUG
-    cli_cmd_read(input_buffer); // Wait for input, Windows cannot attach to SERIAL from two processes.
-#endif
-
     uart_puts("\n");
     while (1) {
         cli_cmd_clear(input_buffer, CMD_MAX_LEN);

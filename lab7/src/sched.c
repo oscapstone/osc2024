@@ -89,6 +89,10 @@ int thread_exec(char *data, unsigned int filesize)
     curr_thread = t;
     add_timer(schedule_timer, 1, "", 0);
 
+    vfs_open("/dev/uart", 0, &curr_thread->FDT[0]);
+    vfs_open("/dev/uart", 0, &curr_thread->FDT[1]);
+    vfs_open("/dev/uart", 0, &curr_thread->FDT[2]);
+
     // eret to exception level 0
     asm("msr tpidr_el1, %0\n\t"
         "msr elr_el1, %1\n\t"

@@ -38,7 +38,7 @@ struct vnode *tmpfs_create_vnode(struct mount *_mount, enum fsnode_type type)
     struct vnode *v = kmalloc(sizeof(struct vnode));
     v->f_ops = &tmpfs_file_ops;
     v->v_ops = &tmpfs_vnode_ops;
-    v->mount = 0;
+    v->mount = 0; // tmpfs does not support multiple mount points
 
     struct tmpfs_inode *inode = kmalloc(sizeof(struct tmpfs_inode));
     memset(inode, 0, sizeof(struct tmpfs_inode));

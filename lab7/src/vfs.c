@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "dev_uart.h"
 #include "initramfs.h"
 #include "memory.h"
 #include "string.h"
@@ -7,6 +8,7 @@
 
 struct mount *rootfs;
 struct filesystem fs_reg[MAX_FS_REG];
+struct file_operations reg_dev[MAX_DEV_REG];
 
 int register_filesystem(struct filesystem *fs)
 {
@@ -109,10 +111,10 @@ int vfs_mount(const char *target, const char *filesystem)
     struct vnode *dirnode;
     struct filesystem *fs = find_filesystem(filesystem);
     if (fs == 0) {
-        return -1;
+        return -1; // filesystem not found
     }
     if (vfs_lookup(target, &dirnode) == -1) {
-        return -1;
+        return -1; // target not found
     }
 
     dirnode->mount = kmalloc(sizeof(struct mount));
@@ -164,13 +166,20 @@ int vfs_lookup(const char *pathname, struct vnode **target)
 
 void init_rootfs()
 {
+    // tmpfs
     int idx = register_tmpfs();
     rootfs = kmalloc(sizeof(struct mount));
     fs_reg[idx].setup_mount(&fs_reg[idx], rootfs);
 
+    // initramfs
     vfs_mkdir("/initramfs");
     register_initramfs();
     vfs_mount("/initramfs", "initramfs");
+
+    // dev
+    vfs_mkdir("/dev");
+    int uart_id = init_dev_uart();
+    vfs_mknod("/dev/uart", uart_id);
 }
 
 char *get_abs_path(char *path, char *cur_working_dir)
@@ -207,4 +216,27 @@ char *get_abs_path(char *path, char *cur_working_dir)
     }
     abs_path[idx] = 0;
     return strcpy(path, abs_path);
+}
+
+int register_dev(struct file_operations *f_ops)
+{
+    for (int i = 0; i < MAX_FS_REG; i++) {
+        if (!reg_dev[i].open) {
+            reg_dev[i] = *f_ops;
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+int vfs_mknod(char *pathname, int id)
+{
+    // this function is used to create device file
+    struct file *f = kmalloc(sizeof(struct file));
+
+    vfs_open(pathname, O_CREAT, &f);
+    f->vnode->f_ops = &reg_dev[id];
+    vfs_close(f);
+    return 0;
 }
