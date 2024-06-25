@@ -56,6 +56,8 @@ core_timer_enable:
     mov x0, 1
     msr cntp_ctl_el0, x0 // enable
     mrs x0, cntfrq_el0
+    mrs x1, cntpct_el0  // get current timer
+    add x0, x1, x0       // next exception = 1 second later
     msr cntp_tval_el0, x0 // set expired time
     mov x0, 2
     ldr x1, =CORE0_TIMER_IRQ_CTRL
@@ -68,5 +70,3 @@ interrupt_handler:
   bl interrupt_entry
   load_all
   eret
-
-  

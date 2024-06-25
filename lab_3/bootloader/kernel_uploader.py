@@ -68,8 +68,6 @@ print("kernel sent successfully.")
 signal.signal(signal.SIGTSTP, tstp_handler)
 signal.signal(signal.SIGCONT, cont_handler)
 
-print(f"Process ID: {os.getpid()}")
-
 # Run a loop to keep the program alive and responsive to signals
 while True:
     received_content = read_line(s)

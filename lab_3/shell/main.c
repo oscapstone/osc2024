@@ -27,6 +27,7 @@
 #include "include/utils.h"
 #include "include/mbox.h"
 #include "include/cpio.h"
+#include "include/interrupt.h"
 
 
 extern void set_exception_vector_table();
@@ -37,6 +38,8 @@ extern void core_timer_enable();
 void main(int argc, char* argv[]){
    uart_init();
    set_exception_vector_table();
+   // default: disabled, need to set interrupt ticks immediately if enable
+   core_timer_init();
 
     // show el
     unsigned long el;
@@ -49,6 +52,10 @@ void main(int argc, char* argv[]){
     uart_puts("\n");
    //cpio_exec("user_program.img");   
    core_timer_enable();
+               set_time_out("", 8);
+               set_time_out("", 3);
+               set_time_out("", 6);
+               print_time();
    while(1){
       char command[MAX_BUFFER];
       char c = '\0';
@@ -119,6 +126,13 @@ void main(int argc, char* argv[]){
          }
          if(strcmp(arguments[0], "cat") == 0){
             cpio_cat(arguments[1]);
+         }
+         else if(strcmp(arguments[0], "settimeout") == 0){
+            //set_time_out(arguments[1], arguments[2]);
+            // for demo
+               set_time_out("", 8);
+               set_time_out("", 3);
+               set_time_out("", 6);
          }
       }
    }
