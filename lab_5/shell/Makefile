@@ -39,13 +39,14 @@ all: clean kernel8.img
 	$(GCC) $(CFLAGS) -c $< -o $@ -g
 	"aarch64-linux-gnu-gcc" -Wall -w -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles -c exception_vector.S -o exception_vector.o -g
 	"aarch64-linux-gnu-gcc" -Wall -w -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles -c interrupts.S -o interrupts.o -g
+	"aarch64-linux-gnu-gcc" -Wall -w -O0 -ffreestanding -nostdinc -nostdlib -nostartfiles -c _thread.S -o _thread.o -g
 
 %.o: %.c
 	$(GCC) $(CFLAGS) -c $< -w -o $@ -g
 
 
 kernel8.img: start.o $(OBJS)
-	$(LD) -nostdlib -nostartfiles start.o $(OBJS) exception_vector.o interrupts.o -T link.ld -o kernel8.elf
+	$(LD) -nostdlib -nostartfiles start.o $(OBJS) exception_vector.o interrupts.o _thread.o -T link.ld -o kernel8.elf
 	$(OBJCPY) -O binary kernel8.elf shell_kernel.img
 
 clean:

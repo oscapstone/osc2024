@@ -19,6 +19,7 @@ unsigned long utils_atoi(const char *s, int char_size) {
     return num;
 }
 
+
 int _pow(int base, int exp){
 
     int ret = 1;

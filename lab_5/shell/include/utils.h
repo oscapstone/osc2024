@@ -7,3 +7,6 @@ unsigned long utils_atoi(const char *s, int char_size);
 void* simple_malloc(unsigned long size);
 int _pow(int base, int exp);
 void init_simple_malloc();
+void foo();
+void foo2();
+void foo3();
