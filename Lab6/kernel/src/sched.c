@@ -21,7 +21,6 @@ LIST_HEAD(stopped_queue);
 
 struct task_struct* create_task(long priority, long preempt_count)
 {
-    // struct task_struct *new_task = alloc_task();
     struct task_struct* new_task =
         (struct task_struct*)((unsigned long)alloc_task());
     if (!new_task)
@@ -50,8 +49,8 @@ void kill_task(struct task_struct* task)
     preempt_disable();
     task->state = TASK_STOPPED;
     list_del_init(&task->list);
-
     list_add(&task->list, &stopped_queue);
+    nr_tasks--;
     preempt_enable();
     schedule();
 }
@@ -95,6 +94,15 @@ void delete_task(struct task_struct* task)
         kfree(task->prog);
     if (task->sig_stack)
         kfree(task->sig_stack);
+
+    struct vm_area_struct *vm_area, *safe;
+    list_for_each_entry_safe (vm_area, safe, &task->mm.mmap_list, list) {
+        if (task->mm.pgd != pg_dir && vm_area->vm_type == TABLE)
+            kfree((const void*)vm_area->pa_start + VA_START);
+        list_del(&vm_area->list);
+        kfree(vm_area);
+    }
+
     free_task(task);
 }
 

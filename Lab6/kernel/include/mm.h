@@ -35,8 +35,6 @@
 
 void memzero(unsigned long src, unsigned long n);
 
-void map_page(struct task_struct* task, unsigned long va, unsigned long page);
-
 void map_pages(struct task_struct* task,
                enum vm_type vm_type,
                unsigned long va,
@@ -51,11 +49,16 @@ unsigned long allocate_user_pages(struct task_struct* task,
                                   size_t size,
                                   gfp_t flags);
 
+struct vm_area_struct* find_vm_area(struct task_struct* task,
+                                    enum vm_type vm_type);
 void add_vm_area(struct task_struct* task,
                  enum vm_type vm_type,
                  unsigned long va_start,
                  unsigned long pa_start,
                  unsigned long area_sz);
+
+void invalidate_pages(struct task_struct* task, unsigned long va, size_t size);
+unsigned long* find_page_entry(struct task_struct* task, unsigned long va);
 
 #endif
 

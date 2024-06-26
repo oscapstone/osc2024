@@ -14,7 +14,6 @@ int copy_process(unsigned long clone_flags, void* fn, void* arg1, void* arg2)
     if (!new_task)
         return -1;
 
-    // new_task->kernel_stack = kmalloc(THREAD_STACK_SIZE, 0);
     new_task->kernel_stack = (void*)allocate_kernel_pages(KER_STK_SZ, 0);
 
     if (!new_task->kernel_stack)
@@ -37,25 +36,8 @@ int copy_process(unsigned long clone_flags, void* fn, void* arg1, void* arg2)
         child_regs->regs[0] = 0;
         copy_virt_memory(new_task);
 
-
-        // new_task->user_stack = kmalloc(THREAD_STACK_SIZE, 0);
-
-        // if (!new_task->user_stack)
-        //     return -1;
-
-        // child_regs->sp =
-        //     (unsigned long)new_task->user_stack + THREAD_STACK_SIZE;
-
-        // if (current_task->user_stack) {
-        //     unsigned long offset = (unsigned long)current_task->user_stack +
-        //                            THREAD_STACK_SIZE - curr_regs->sp;
-        //     child_regs->sp -= offset;
-        //     memcpy((void*)child_regs->sp, (const void*)curr_regs->sp,
-        //     offset);
-        // }
-
-        // for (int i = 0; i < NR_SIGNAL; i++)
-        //     new_task->sig_handler[i] = current_task->sig_handler[i];
+        for (int i = 0; i < NR_SIGNAL; i++)
+            new_task->sig_handler[i] = current_task->sig_handler[i];
     }
 
     if (clone_flags & PF_WAIT)
@@ -85,16 +67,25 @@ struct pt_regs* task_pt_regs(struct task_struct* task)
 
 int move_to_user_mode(unsigned long pc, unsigned long size)
 {
-    preempt_disable();
     struct pt_regs* regs = task_pt_regs(current_task);
     if (!regs)
         return -1;
 
     memset(regs, 0, sizeof(struct pt_regs));
 
+    if (current_task->prog) {
+        struct vm_area_struct* prog_vm_area = find_vm_area(current_task, PROG);
+        list_del(&prog_vm_area->list);
+        invalidate_pages(current_task, prog_vm_area->va_start,
+                         prog_vm_area->area_sz);
+        kfree(prog_vm_area);
+        kfree(current_task->prog);
+        current_task->prog = NULL;
+        current_task->prog_size = 0;
+    }
+
+
     current_task->prog_size = size;
-
-
 
     uart_printf("allocate user pages\n");
     void* target = (void*)allocate_user_pages(current_task, PROG, USR_CODE_ADDR,
@@ -129,13 +120,6 @@ int move_to_user_mode(unsigned long pc, unsigned long size)
     current_task->user_stack = stack;
 
 
-    // uart_printf("allocate user pages\n");
-    // void* io = (void*)allocate_user_pages(current_task, IO,
-    //                                       IO_PM_START_ADDR + VA_START,
-    //                                       IO_PM_END_ADDR - IO_PM_START_ADDR,
-    //                                       0);
-    // uart_printf("allocate done\n");
-    //
     map_pages(current_task, IO, IO_PM_START_ADDR, IO_PM_START_ADDR,
               IO_PM_END_ADDR - IO_PM_START_ADDR);
     add_vm_area(current_task, IO, IO_PM_START_ADDR, IO_PM_START_ADDR,
@@ -143,18 +127,9 @@ int move_to_user_mode(unsigned long pc, unsigned long size)
 
 
 
-    // current_task->user_stack =
-    // kmalloc(THREAD_STACK_SIZE, 0);
-
-    // if (!current_task->user_stack)
-    //     return -1;
-
 set_sp:
     regs->sp = USR_STK_ADDR + USR_STK_SZ;
-    //     regs->sp = (unsigned long)current_task->user_stack +
-    //     THREAD_STACK_SIZE;
     set_pgd(current_task->mm.pgd);
 
-    preempt_enable();
     return 0;
 }

@@ -148,9 +148,9 @@ void coalesce(struct page* page, size_t order)
 #endif
             break;
         }
-        order++;
         pfn = get_left_pfn(pfn, order);
         page = pfn_to_page(pfn);
+        order++;
     }
 
 #ifdef DEBUG
@@ -434,7 +434,7 @@ struct page* alloc_pages(size_t order, gfp_t flags)
             struct page* right_half = page + (1 << (order - 1));
 #ifdef DEBUG
             uart_printf(
-                "  Usable pages order is larget than requested order, "
+                "  Usable pages order is larger than requested order, "
                 "split it "
                 "down to request order\n");
             uart_printf(
@@ -478,7 +478,7 @@ void* alloc_pages_exact(size_t size, gfp_t flags)
 void free_pages(struct page* page, size_t order)
 {
 #ifdef DEBUG
-    uart_printf("free pages with %d order\n", order);
+    uart_printf("free page 0x%x with %d order\n", page_to_phys(page), order);
 #endif
     if (!page || PageBuddy(page) || PageTail(page))
         return;
