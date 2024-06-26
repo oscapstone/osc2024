@@ -95,3 +95,11 @@ Goals of this lab:
 * Understand how to mount a file system and look up a file across file systems.
 * Understand how special file works.
 
+### Lab 8: Virtual File System
+In previous lab, files were stored in memory, which is volatile. In this lab, you’ll implement FAT32 that stores data in SD card.
+
+Goals of this lab:
+
+* Understand how to interact with SD card.
+* Implement FAT32 file system.
+* Understand memory cache for slow storage mediums.
