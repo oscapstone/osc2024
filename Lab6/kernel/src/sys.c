@@ -7,8 +7,6 @@
 #include "sched.h"
 #include "signal.h"
 
-extern volatile unsigned int __attribute__((aligned(16))) mbox_buf[36];
-
 int sys_getpid(void)
 {
     return current_task->pid;
