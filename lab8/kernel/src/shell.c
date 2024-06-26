@@ -417,7 +417,7 @@ int do_cmd_exec(int argc, char **argv)
     strcpy(abs_path, filepath);
     get_absolute_path(abs_path, curr_thread->curr_working_dir);
 
-    strcpy(abs_path,"/initramfs/vfs2.img");//
+    strcpy(abs_path, "/initramfs/vfs2.img"); //
     if (vfs_lookup(abs_path, &target_file) != 0)
     {
         WARING("File : %s Does not Exit!!\n", abs_path);
@@ -487,11 +487,36 @@ int do_cmd_ttest(int argc, char **argv)
 
 int do_cmd_ftest(int argc, char **argv)
 {
+    // ============================== test for fat file read&write start==================================
+    struct file *testfile;
+    char testbuf[512] = {};
+    vfs_open("/boot/FAT_R.TXT", 0, &testfile);
+    vfs_read(testfile, testbuf, 25);
+    uart_sendlinek("%s", testbuf);
+    vfs_close(testfile);
+
+    struct file *testfilew;
+    char testbufw[512] = "abcdefg";
+    vfs_open("/boot/FAT_R.TXT", 0, &testfilew);
+    vfs_write(testfilew, testbufw, 8);
+    // uart_sendlinek("%s", testbufw);
+    vfs_close(testfilew);
+
     struct file *testfiler;
-    char testbufr[0x30] = {};
-    vfs_open("/boot/WORLD", 0, &testbufr);
+    char testbufr[512] = {};
+    vfs_open("/boot/FAT_R.TXT", 0, &testfiler);
     vfs_read(testfiler, testbufr, 25);
     uart_sendlinek("%s", testbufr);
+    vfs_close(testfiler);
+
+    // char test[512] = ""
+    // char testbufw[512] = "abcdefghijk\n";
+    // uart_sendlinek("%s", testbufw);
+
+    // char *t = &testbufw[10];
+    // memcpy(t,"abcdefg",7);
+    // uart_sendlinek("%s", testbufw);
+    // ============================== test for fat file read&write end ==================================
 
     // ============================== test for file operation start==================================
     // uart_sendlinek("\n\n");

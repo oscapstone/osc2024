@@ -447,12 +447,20 @@ void vfs_cd(char *filepath)
     uart_sendlinek("Before change directory : %s\n", curr_thread->curr_working_dir);
 
     char abs_path[MAX_PATH_NAME];
+    struct vnode *tmp;
+
     strcpy(abs_path, filepath);
     get_absolute_path(abs_path, curr_thread->curr_working_dir);
     // uart_sendlinek("abs_path : %s\n",abs_path);
-    strcpy(curr_thread->curr_working_dir, abs_path);
-
-    uart_sendlinek("In directory : %s\n", curr_thread->curr_working_dir);
+    if (vfs_lookup(abs_path, tmp) == 0)
+    {
+        strcpy(curr_thread->curr_working_dir, abs_path);
+        uart_sendlinek("In directory : %s\n", curr_thread->curr_working_dir);
+    }
+    else
+    {
+        uart_sendlinek("No such directory : %s\n", abs_path);
+    }
 }
 
 void displaylayer(int level)
