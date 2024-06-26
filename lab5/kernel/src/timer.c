@@ -73,7 +73,7 @@ unsigned long long get_cpu_tick_plus_s(unsigned long long seconds){
 uint64_t get_tick_plus_t(uint64_t tick) {
     uint64_t cntpct_el0 = 0;
     __asm__ __volatile__("mrs %0, cntpct_el0\n\t" : "=r"(cntpct_el0)); // tick auchor
-    //DEBUG("cntpct_el0: %d\r\n", cntpct_el0);
+    //uart_puts("cntpct_el0: %d\r\n", cntpct_el0);
     return (cntpct_el0 + tick);
 }
 
@@ -126,12 +126,12 @@ void add_timer(void *callback, unsigned long long timeout, char* args) {
 }
 
 void add_timer_by_tick(void *callback, uint64_t tick, void *args) {
-    // DEBUG("add_timer_by_tick: %d\r\n", tick);
+    // uart_puts("add_timer_by_tick: %d\r\n", tick);
     timer_event_t *e = kmalloc(sizeof(timer_event_t)); // free by timer_event_callback
     // store all the related information in timer_event
     e->args = args;
     e->interrupt_time = get_tick_plus_t(tick);
-    // DEBUG("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
+    // uart_puts("the_timer_event->interrupt_time: %d\r\n", the_timer_event->interrupt_time);
     e->callback = callback;
     INIT_LIST_HEAD(&e->listhead);
 

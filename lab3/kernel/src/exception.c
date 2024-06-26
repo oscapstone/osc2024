@@ -143,7 +143,7 @@ void irqtask_run_preemptive() {
         }
         
         // struct list_head* curr;
-        // uart_puts("DEBUG: ");
+        // uart_puts("uart_puts: ");
         // list_for_each(curr, irqtask_list) {
         //     put_int(((irqtask_t *)curr)->priority);
         //     uart_puts(" ");
