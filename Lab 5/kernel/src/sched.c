@@ -247,12 +247,12 @@ scheduler_add(task_ptr tsk)
 void
 scheduler_init()
 {   
+    shell_task = 0;
     task_count = 0;
     task_init(&init_task);
-    scheduler_add(&init_task);
+    list_add_tail((list_head_ptr_t) &init_task, &running_queue);
  
     current = &(init_task);
-    shell_task = 0;
 
     uart_printf("[DEBUG] sched_init - init_stask: 0x%x, pid=%d\n", &init_task, init_task.pid);
     core_timer_add_tick(scheduler_tick, "", 5);	

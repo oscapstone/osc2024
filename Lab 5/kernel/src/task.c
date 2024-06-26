@@ -36,6 +36,7 @@ task_pt_regs(task_ptr tsk)
 void
 task_init(task_ptr tsk)
 {
+    uart_printf("[DEBUG] task_init\n");
     memory_zero((byteptr_t) tsk, sizeof(task_t));
     memory_zero((byteptr_t) &tsk->cpu_context, sizeof(cpu_context_t));
     ptregs_ptr childregs = task_pt_regs(tsk);
