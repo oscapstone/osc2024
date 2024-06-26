@@ -8,16 +8,33 @@
 #include "../include/mem_utils.h"
 #include <stddef.h>
 
+const char* entry_error_type[] = {"SYNC_INVALID_EL1t",   "IRQ_INVALID_EL1t",
+                                  "FIQ_INVALID_EL1t",    "ERROR_INVALID_EL1t",
+
+                                  "SYNC_INVALID_EL1h",   "IRQ_INVALID_EL1h",
+                                  "FIQ_INVALID_EL1h",    "ERROR_INVALID_EL1h",
+
+                                  "SYNC_INVALID_EL0_64", "IRQ_INVALID_EL0_64",
+                                  "FIQ_INVALID_EL0_64",  "ERROR_INVALID_EL0_64",
+
+                                  "SYNC_INVALID_EL0_32", "IRQ_INVALID_EL0_32",
+                                  "FIQ_INVALID_EL0_32",  "ERROR_INVALID_EL0_32",
+                                  "SYNC_ERROR",          "SYSCALL_ERROR"};
+
 void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
 
 static unsigned int nested_interrupted_task = 0; 
 
-static void show_exception_info()
+void show_exception_info(int type, unsigned long spsr_el1, unsigned long esr_el1, unsigned long elr_el1)
 {
-	uint64_t spsr = read_sysreg(spsr_el1);
-	uint64_t elr  = read_sysreg(elr_el1);
-	uint64_t esr  = read_sysreg(esr_el1);
+	disable_interrupt();
+
+	printf(entry_error_type[type]);
+	printf(": ");
+	uint64_t spsr = spsr_el1;
+	uint64_t elr  = elr_el1;
+	uint64_t esr  = esr_el1;
 	uart_send_string("spsr_el1: 0x");
 	uart_hex(spsr);
 	uart_send_string("\r\n");
@@ -27,31 +44,33 @@ static void show_exception_info()
 	uart_send_string("esr_el1: 0x");
 	uart_hex(esr);
 	uart_send_string("\r\n");
-}
 
-void exception_invalid_handler()
-{
-	disable_interrupt();
-	uart_send_string("---In exception_invalid_handler---\r\n");
-	show_exception_info();
 	enable_interrupt();
 }
 
-void except_el0_sync_handler() 
-{
-	disable_interrupt();
-	uart_send_string("---In exception_el0_sync_handler---\r\n");
-	show_exception_info();
-	enable_interrupt();
-}
+// void exception_invalid_handler()
+// {
+// 	disable_interrupt();
+// 	uart_send_string("---In exception_invalid_handler---\r\n");
+// 	show_exception_info();
+// 	enable_interrupt();
+// }
 
-void except_el1_sync_handler() 
-{
-	disable_interrupt();
-	uart_send_string("---In exception_el1_sync_handler---\r\n");
-	show_exception_info();
-	enable_interrupt();
-}
+// void except_el0_sync_handler() 
+// {
+// 	disable_interrupt();
+// 	uart_send_string("---In exception_el0_sync_handler---\r\n");
+// 	show_exception_info();
+// 	enable_interrupt();
+// }
+
+// void except_el1_sync_handler() 
+// {
+// 	disable_interrupt();
+// 	uart_send_string("---In exception_el1_sync_handler---\r\n");
+// 	show_exception_info();
+// 	enable_interrupt();
+// }
 
 /* for Advanced 2: nested interrupt and preemption */
 
@@ -82,20 +101,11 @@ static void task_event_add_queue(struct task_event *event)
 	list_add(&event->head, curr->prev, curr);
 }
 
-// static void print_task()
-// {
-// 	struct list_head *curr = task_queue.next;
-// 	while (curr != &task_queue) {
-// 		struct task_event *tmp_event = (struct task_event *)curr;
-
-// 	}
-// }
-
 static void exec_task()
 {
 	if (!list_is_empty((struct list_head *)&task_queue)) {
 		struct task_event *event = (struct task_event *)task_queue.next;
-				list_del((struct list_head *)event);
+		list_del((struct list_head *)event);
 		// nested_interrupted_task++;
 		// uart_send_string("# of nested interrupted event: ");
 		// uart_hex(nested_interrupted_task);

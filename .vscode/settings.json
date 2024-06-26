@@ -13,6 +13,8 @@
         "exception.h": "c",
         "stdint.h": "c",
         "cstdint": "c",
-        "list.h": "c"
+        "list.h": "c",
+        "timer_utils.h": "c",
+        "sched.h": "c"
     }
 }

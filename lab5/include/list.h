@@ -1,3 +1,6 @@
+#ifndef LIST_H
+#define LIST_H
+
 #include "mini_uart.h"
 struct list_head {
     struct list_head *prev, *next;
@@ -78,3 +81,5 @@ static inline int list_is_empty(const struct list_head * head)
 {
     return (head->next == head);
 }
+
+#endif

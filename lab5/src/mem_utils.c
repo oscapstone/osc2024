@@ -594,7 +594,7 @@ void chunk_free(char *addr)
     uint32_t size_index = find_chunk_index(size);
 
     /* 3. free the space into the chunk_list */
-    list_add_tail((struct list_head *)addr, &chunk_list_start[size_index].head);
+    list_add((struct list_head *)addr, &chunk_list_start[size_index].head, chunk_list_start[size_index].head.next);
 }
 
 // void dynamic_allocator_init(void)

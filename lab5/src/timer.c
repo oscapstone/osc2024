@@ -5,6 +5,7 @@
 #include "../include/string_utils.h"
 #include "../include/mini_uart.h"
 #include "../include/peripherals/mini_uart.h"
+#include "../include/sched.h"
 #include <stdint.h>
 
 void enable_timer_interrupt()
@@ -59,16 +60,19 @@ struct timer_event {
     uint64_t expired_time;
     timer_event_call_back callback;
     char message[32];
+    uint32_t is_periodic;
 };
 
-static struct timer_event *timer_event_create(timer_event_call_back cb, char *msg, uint64_t duration)
+static struct timer_event *timer_event_create(timer_event_call_back cb, char *msg, uint64_t duration, uint32_t is_periodic)
 {
     struct timer_event *event = chunk_alloc(sizeof(struct timer_event));
     INIT_LIST_HEAD(&event->head);
     event->command_time = get_current_time();
     event->expired_time = event->command_time + duration;
     event->callback = cb;
-    my_strncpy(event->message, msg, 32);
+    event->is_periodic = is_periodic;
+    if (msg) 
+        my_strncpy(event->message, msg, 32);
     return event;
 }
 
@@ -96,16 +100,19 @@ static void print_message(char *msg)
 
 
 /* Create an API that user program can use */
-static void timer_add_event(timer_event_call_back cb, char *msg, uint64_t duration)
+static void timer_add_event(timer_event_call_back cb, char *msg, uint64_t duration, uint32_t is_periodic)
 {
-    struct timer_event *event = timer_event_create(cb, msg, duration);
+    struct timer_event *event = timer_event_create(cb, msg, duration, is_periodic);
     timer_event_queue_add(event);
 }
 
 /* An example of API use */
-void add_timeout_event(char *data, uint64_t duaration)
+void add_timeout_event(char *data, uint64_t duration, uint32_t is_periodic)
 {
-    timer_add_event(print_message, data, duaration);
+    if (data)
+        timer_add_event(print_message, data, duration, is_periodic);
+    else
+        timer_add_event(timer_tick, data, duration, is_periodic);
 }
 
 static void delay(uint64_t time)
@@ -131,25 +138,29 @@ void timer_interrupt_handler()
     
     list_del((struct list_head *)event);
 
-    // add delay time
-    delay((uint64_t)1 << 22);
+    if (event->is_periodic) {
+        uint32_t duration = 2;
+        add_timeout_event(NULL, duration, event->is_periodic);
+    }
+
     event->callback(event->message);
 
-    uart_send_string("Command time: ");
-    uart_hex(event->command_time);
-    uart_send_string(" s\r\n");
+    // uart_send_string("Command time: ");
+    // uart_hex(event->command_time);
+    // uart_send_string(" s\r\n");
 
-    uart_send_string("Current time: ");
-    uart_hex(get_current_time());
-    uart_send_string(" s\r\n");
+    // uart_send_string("Current time: ");
+    // uart_hex(get_current_time());
+    // uart_send_string(" s\r\n");
 
     chunk_free((char *)event);
+    printf("free timer event!\n");
 
     if (!list_is_empty(&timer_event_queue)) {
         struct timer_event *first = (struct timer_event *) timer_event_queue.next;
         set_expired_time(first->expired_time - get_current_time());
         enable_timer_interrupt();
     } else { // timer_queue is empty, need to set a bigger time.
-        set_expired_time(1000 + get_current_time());
+        set_expired_time(2 + get_current_time());
     }
 }

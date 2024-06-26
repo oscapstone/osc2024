@@ -8,6 +8,7 @@
 #include "../include/timer.h"
 #include "../include/timer_utils.h"
 #include "../include/exception.h"
+#include "../include/sched.h"
 
 #define BUFFER_SIZE 100
 
@@ -62,39 +63,39 @@ void parse_command(char *buffer)
     } else if (my_strcmp(buffer, "load") == 0) {
         cpio_load_program();
     } else if (my_strcmp(buffer, "timer") == 0) {
-        // enable_timer_interrupt();
-        // TODO
-        char tmp_buffer[BUFFER_SIZE];
-        uart_send_string("Enter message: ");
-        read_command(tmp_buffer);
-        char msg[32]; 
-        my_strncpy(msg, tmp_buffer, 32);
-        uart_send_string("Enter duration: ");
-        read_command(tmp_buffer);
-        int duration = my_stoi(tmp_buffer);
-        add_timeout_event(msg, duration);
+        // // enable_timer_interrupt();
+        // // TODO
+        // char tmp_buffer[BUFFER_SIZE];
+        // uart_send_string("Enter message: ");
+        // read_command(tmp_buffer);
+        // char msg[32]; 
+        // my_strncpy(msg, tmp_buffer, 32);
+        // uart_send_string("Enter duration: ");
+        // read_command(tmp_buffer);
+        // int duration = my_stoi(tmp_buffer);
+        // add_timeout_event(msg, duration);
     } else if (my_strcmp(buffer, "async") == 0) {
         uart_async_demo();
     } else if (my_strcmp(buffer, "test") == 0){
         uart_hex(my_stoi("17"));
     } else if (my_strcmp(buffer, "malloc") == 0) {
         /* test malloc */
-        char *tmp = malloc(4);
-        if (!tmp) {
-        	uart_send_string("HEAP overflow!!!\r\n");
-        	return;
-        }
-        tmp[0] = '1';
-        tmp[1] = '2';
-        tmp[2] = '3';
-        tmp[3] = '\0';
-        uart_send_string(tmp);
-        uart_send_string("\r\n");
+        // char *tmp = malloc(4);
+        // if (!tmp) {
+        // 	uart_send_string("HEAP overflow!!!\r\n");
+        // 	return;
+        // }
+        // tmp[0] = '1';
+        // tmp[1] = '2';
+        // tmp[2] = '3';
+        // tmp[3] = '\0';
+        // uart_send_string(tmp);
+        // uart_send_string("\r\n");
         
-        /* test strlen */
-        uart_send_string("The length of tmp is: ");
-        uart_hex(my_strlen(tmp));
-        uart_send_string("\r\n");
+        // /* test strlen */
+        // uart_send_string("The length of tmp is: ");
+        // uart_hex(my_strlen(tmp));
+        // uart_send_string("\r\n");
     } else if (my_strcmp(buffer, "heap_limit") == 0){ 
         printf("heap_start: %8x\n", &_end);
         printf("heap_end:   %8x\n", show_heap_end());
@@ -126,6 +127,8 @@ void parse_command(char *buffer)
         uart_send_string("Enter addr: ");
         read_command(tmp_buffer);
         chunk_free((char *)hexstr2val(tmp_buffer, 8));
+    } else if (my_strcmp(buffer, "task_head") == 0) {
+        show_task_head();
     } else{
         uart_send_string("command ");
         uart_send_string(buffer);
@@ -154,6 +157,7 @@ void help()
     uart_send_string("d_alloc_init  dynamic allocator init\r\n");
     uart_send_string("chunk_alloc   allocate chunk to user\r\n");
     uart_send_string("chunk_free    free the chunk\r\n");
+    uart_send_string("task_head     show address of init_task\r\n");
 }
 
 void hello()
