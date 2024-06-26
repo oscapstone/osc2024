@@ -38,5 +38,6 @@ void do_cmd_memory_tester();
 void do_cmd_thread_tester();
 void do_cmd_fork_tester();
 void do_cmd_reboot();
+void do_vfs_test();
 
 #endif /* _SHELL_H_ */

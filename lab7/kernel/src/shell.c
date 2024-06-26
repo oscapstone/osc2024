@@ -12,8 +12,9 @@
 #include "syscall.h"
 #include "exception.h"
 #include "ANSI.h"
+#include "vfs.h"
 
-#define CLI_MAX_CMD 14
+#define CLI_MAX_CMD 15
 #define USTACK_SIZE 0x10000
 
 struct CLI_CMDS cmd_list[CLI_MAX_CMD] =
@@ -31,6 +32,7 @@ struct CLI_CMDS cmd_list[CLI_MAX_CMD] =
         {.command = "memTest", .help = "memory testcase generator, allocate and free"},
         {.command = "thread", .help = "thread tester with dummy function - foo()"},
         {.command = "fork", .help = "fork tester"},
+        {.command = "vfs", .help = "vfs tester"},
         {.command = "reboot", .help = "reboot the device"}};
 
 void cli_cmd_clear(char *buffer, int length)
@@ -128,6 +130,10 @@ void cli_cmd_exec(char *buffer)
     else if (strcmp(cmd, "fork") == 0)
     {
         do_cmd_fork_tester();
+    }
+    else if (strcmp(cmd, "vfs") == 0)
+    {
+        do_vfs_test();
     }
     else if (strcmp(cmd, "reboot") == 0)
     {
@@ -446,4 +452,8 @@ void do_cmd_reboot()
     *rst_addr = PM_PASSWORD | 0x20;
     volatile unsigned int *wdg_addr = (unsigned int *)PM_WDOG;
     *wdg_addr = PM_PASSWORD | 5;
+}
+
+void do_vfs_test() {
+    vfs_test();
 }
