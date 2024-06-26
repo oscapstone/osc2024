@@ -56,7 +56,7 @@ struct filesystem *find_filesystem(const char *fs_name)
 int vfs_open(const char *pathname, int flags, struct file **target)
 {
     // 1. Lookup pathname
-    // 3. Create a new file if O_CREAT is specified in flags and vnode not found
+    // 2. Create a new file if O_CREAT is specified in flags and vnode not found
     struct vnode *node;
     // If the file does not exist, create it
     if (vfs_lookup(pathname, &node) != 0 && (flags & O_CREAT))
