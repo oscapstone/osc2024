@@ -9,14 +9,14 @@ _start:
 
 /* Copy our code to the link address */
 1:  ldr x4, [x1], #8
-    str x4, [x2], #8 
+    str x4, [x2], #8
     sub w3, w3, #1
     cbnz w3, 1b
 
 /* Set the top of the stack be the start of our code */
     ldr x1, =_start
     mov sp, x1
-		
+
 /* Clear the BSS */
     ldr x1, =_bss_start
     ldr w2, =_bss_size

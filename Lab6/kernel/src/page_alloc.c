@@ -22,7 +22,7 @@ extern char kernel_end[];
 static uintptr_t usable_mem_end;
 
 /* reserved memory region - spin table */
-#define DTS_MEM_RESERVED_START  0x0
+#define DTS_MEM_RESERVED_START  0x0 + VA_START
 #define DTS_MEM_RESERVED_LENGTH 0x1000
 #define DTS_MEM_RESERVED_END    (DTS_MEM_RESERVED_START + DTS_MEM_RESERVED_LENGTH)
 
@@ -440,7 +440,7 @@ struct page* alloc_pages(size_t order, gfp_t flags)
             uart_printf(
                 "  Put right half of the pages (0x%x) to freelist with %d "
                 "order\n",
-                page_to_phys(right_half), order);
+                page_to_phys(right_half), order - 1);
 #endif
             add_page_to_freelist(right_half, order - 1);
             order--;
@@ -467,7 +467,7 @@ struct page* alloc_pages(size_t order, gfp_t flags)
 void* alloc_pages_exact(size_t size, gfp_t flags)
 {
     size = ALIGN(size, PAGE_SIZE);
-    size_t nr_pages = size >> PAGE_SHIFT;
+    size_t nr_pages = (size >> PAGE_SHIFT) + !!(size & (PAGE_SIZE - 1));
     size_t order = get_order(size);
     struct page* page = alloc_pages(order, flags & ~__GFP_COMP);
     size_t remain_pages = (1 << order) - nr_pages;

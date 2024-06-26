@@ -1,7 +1,8 @@
 SECTIONS
 {
-    . = 0x80000;
+    . = 0xffff000000000000;
 
+    . += 0x80000;
     PROVIDE(kernel_start = .);
 
     .text.boot : { KEEP(*(.text.boot))  }
@@ -15,6 +16,11 @@ SECTIONS
         *(.bss .bss.*)
         bss_end = .;
     }
+
+    . = ALIGN(0x1000);
+    PROVIDE(pg_dir = .);
+    .data.pgd : { . += (4 * (1 << 12)); }
+
 
     PROVIDE(kernel_end = .);
 

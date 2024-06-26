@@ -54,31 +54,20 @@ static inline void cpio_print_content(char* file_addr, unsigned int file_size)
 
 static inline void cpio_exec_program(char* file_addr, unsigned int file_size)
 {
-    void* target = kmalloc(file_size, 0);
-    memcpy(target, file_addr, file_size);
-    copy_process(PF_KTHREAD | PF_WAIT, kernel_process, target);
-
-    // if (!current_task->user_stack)
-    //     current_task->user_stack = kmalloc(THREAD_STACK_SIZE, 0);
-
-    // unsigned long spsr_el1 =
-    //     (SPSR_MASK_D | SPSR_MASK_A | SPSR_MASK_F | SPSR_EL0t);
-
-    // asm volatile("msr spsr_el1, %0" : : "r"(spsr_el1));
-    // asm volatile("msr elr_el1, %0" : : "r"(target));
-    // asm volatile("msr sp_el0, %0"
-    //              :
-    //              : "r"(current_task->user_stack + THREAD_STACK_SIZE));
-    // asm volatile("eret");
+    // void* target = kmalloc(file_size, 0);
+    // void* target = (void*)allocate_user_pages(current_task, 0, file_size);
+    // memcpy(target, file_addr, file_size);
+    copy_process(PF_KTHREAD | PF_WAIT, kernel_process, (void*)(file_addr),
+                 (void*)(unsigned long)file_size);
 }
 
 static inline void cpio_load_program(char* file_addr, unsigned int file_size)
 {
-    void* target = kmalloc(file_size, 0);
-    memcpy(target, file_addr, file_size);
-    move_to_user_mode((unsigned long)target);
+    // void* target = kmalloc(file_size, 0);
+    // void* target = (void*)allocate_user_pages(current_task, 0, file_size);
+    // memcpy(target, file_addr, file_size);
+    move_to_user_mode((unsigned long)file_addr, file_size);
 }
-
 
 /*
  * CPIO archive will be stored like this:

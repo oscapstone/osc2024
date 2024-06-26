@@ -10,7 +10,7 @@ all:
 	make -C user_program
 
 rootfs:
-	$(shell cp user_program/prog1.img rootfs/)
+	$(shell cp user_program/vm.img rootfs/)
 	$(shell cd rootfs && find . | cpio -o -H newc > ../initramfs.cpio && cd ..)
 
 emu:

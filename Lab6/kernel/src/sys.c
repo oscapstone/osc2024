@@ -2,9 +2,12 @@
 #include "cpio.h"
 #include "fork.h"
 #include "mailbox.h"
+#include "memory.h"
 #include "mini_uart.h"
 #include "sched.h"
 #include "signal.h"
+
+extern volatile unsigned int __attribute__((aligned(16))) mbox_buf[36];
 
 int sys_getpid(void)
 {
@@ -39,7 +42,7 @@ int sys_exec(const char* name, char const* argv[])
 
 int sys_fork(void)
 {
-    return copy_process(0, NULL, NULL);
+    return copy_process(0, NULL, NULL, NULL);
 }
 
 void sys_exit(void)
@@ -50,7 +53,11 @@ void sys_exit(void)
 
 int sys_mbox_call(unsigned char ch, unsigned int* mbox)
 {
-    return mailbox_call(ch, mbox);
+    size_t usr_mbox_sz = mbox[0];
+    memcpy((void*)mbox_buf, mbox, usr_mbox_sz);
+    int res = mailbox_call(ch, (void*)mbox_buf);
+    memcpy(mbox, (void*)mbox_buf, usr_mbox_sz);
+    return res;
 }
 
 

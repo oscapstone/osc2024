@@ -26,6 +26,7 @@ static void idle(void)
 
 void kernel_main(uintptr_t dtb_ptr)
 {
+    dtb_ptr += VA_START;
     uart_init();
     uart_printf("Welcome to Raspberry Pi 3B+\n");
     send_logo();
@@ -54,8 +55,8 @@ void kernel_main(uintptr_t dtb_ptr)
 
     // test_thread();
 
-    copy_process(PF_KTHREAD, shell, NULL);
-    // cpio_exec("syscall.img");
+    copy_process(PF_KTHREAD, shell, NULL, NULL);
+    // cpio_exec("./vm.img");
 
     // copy_process(PF_KTHREAD, kernel_process, fork_test);
     // copy_process(PF_KTHREAD, kernel_process, exec_test);

@@ -8,10 +8,12 @@
 #define current_task    (get_current_task())
 #define current_context (current_task->cpu_context)
 
-#define THREAD_STACK_SIZE 0x2000ULL
-#define PF_WAIT           0x8
-#define PF_KTHREAD        0x2
-#define NR_SIGNAL         10
+// #define THREAD_STACK_SIZE 0x2000ULL
+#define PF_WAIT    0x8
+#define PF_KTHREAD 0x2
+#define NR_SIGNAL  10
+
+extern unsigned long pg_dir;
 
 typedef enum {
     TASK_RUNNING,
@@ -40,6 +42,21 @@ struct cpu_context {
     unsigned long pc;
 };
 
+enum vm_type { TABLE, CODE, STK, IO, PROG };
+
+struct vm_area_struct {
+    enum vm_type vm_type;
+    struct list_head list;
+    unsigned long va_start;
+    unsigned long pa_start;
+    unsigned long area_sz;
+};
+
+struct mm_struct {
+    unsigned long pgd;
+    struct list_head mmap_list;
+};
+
 struct task_struct {
     struct cpu_context cpu_context;
     task_state_t state;
@@ -52,11 +69,13 @@ struct task_struct {
     void* kernel_stack;
     void* user_stack;
     void* prog;
+    unsigned long prog_size;
     void* sig_stack;
     void(*sig_handler[NR_SIGNAL]);
     bool sig_handling;
     long sig_pending;
     unsigned long flags;
+    struct mm_struct mm;
 };
 
 #define INIT_SIGNAL                                                \
@@ -64,11 +83,17 @@ struct task_struct {
         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL \
     }
 
-#define INIT_TASK                                                              \
-    {                                                                          \
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, TASK_RUNNING, 0, 1, 0,        \
-            {NULL, NULL}, 0, NULL, NULL, NULL, NULL, NULL, INIT_SIGNAL, false, \
-            0, PF_KTHREAD                                                      \
+#define INIT_TASK                                                          \
+    {                                                                      \
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, TASK_RUNNING, 0, 1, 0,    \
+            {NULL, NULL}, 0, NULL, NULL, NULL, NULL, 0, NULL, INIT_SIGNAL, \
+            false, 0, PF_KTHREAD,                                          \
+        {                                                                  \
+            0,                                                             \
+            {                                                              \
+                NULL, NULL                                                 \
+            }                                                              \
+        }                                                                  \
     }
 
 extern void cpu_switch_to(struct cpu_context* prev, struct cpu_context* next);

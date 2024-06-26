@@ -230,6 +230,6 @@ void irq_handler(void)
     run_irq_task();
     enable_all_exception();
 
-    handle_sig();
+    // handle_sig();
     // uart_printf("irq_handler end\n");
 }

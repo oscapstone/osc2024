@@ -59,7 +59,7 @@ void handle_sig(void)
 
         // registered signal handler
         if (!current_task->sig_stack)
-            current_task->sig_stack = kmalloc(THREAD_STACK_SIZE, 0);
+            current_task->sig_stack = kmalloc(USR_SIG_STK_SZ, 0);
 
         struct pt_regs* sig_regs = task_sig_regs(current_task);
         struct pt_regs* regs = task_pt_regs(current_task);
@@ -85,8 +85,8 @@ struct pt_regs* task_sig_regs(struct task_struct* task)
 {
     if (!task->sig_stack)
         return NULL;
-    return (struct pt_regs*)((unsigned long)task->sig_stack +
-                             THREAD_STACK_SIZE - sizeof(struct pt_regs));
+    return (struct pt_regs*)((unsigned long)task->sig_stack + USR_SIG_STK_SZ -
+                             sizeof(struct pt_regs));
 }
 
 void do_sig_return(void)

@@ -177,9 +177,11 @@ el0_sync:
   save_all 0
   mrs x25, esr_el1
   lsr x24, x25, #ESR_ELx_EC_SHIFT
-  cmp x24, #ESR_ELx_EC_SVC64
+  cmp x24, #ESR_ELx_EC_SVC64        // SVC in 64-bit state
   b.eq el0_svc
-  handle_invalid_entry 0 SYNC_ERROR
+  cmp x24, #ESR_ELx_EC_DABT_LOW     // data abort in EL0
+  b.eq el0_da
+  handle_invalid_entry 0, SYNC_ERROR
 
 scnr .req x25
 scno .req x26
@@ -205,11 +207,25 @@ ret_from_syscall:
   str x0, [sp, #S_X0]
   load_all 0
 
+el0_da:
+  bl enable_irq
+  mrs x0, far_el1
+  mrs x1, esr_el1
+  bl do_mem_abort
+  cmp x0, 0
+  b.eq 1f
+  handle_invalid_entry 0, DATA_ABORT_ERROR
+
+1:
+  bl disable_irq
+  load_all 0
+
 .globl ret_from_fork
 ret_from_fork:
   bl schedule_tail
   cbz x19, ret_to_user // not a kernel thread
   mov x0, x20
+  mov x1, x21
   blr x19
 
 .globl ret_to_user

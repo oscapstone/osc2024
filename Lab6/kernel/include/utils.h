@@ -4,10 +4,16 @@
 #include "bool.h"
 #include "def.h"
 
+
+#ifndef __ASSEMBLER__
+
 extern void put32(unsigned long addr, unsigned int val);
 extern unsigned int get32(unsigned long addr);
 extern void delay(unsigned long cl);
 extern unsigned int get_el(void);
+extern void set_pgd(unsigned long pgd_addr);
+
+#endif
 
 #define BITS_PER_BYTE 8
 #define BITS_PER_LONG 64

@@ -4,6 +4,7 @@
 #include "mini_uart.h"
 #include "slab.h"
 #include "timer.h"
+#include "utils.h"
 
 #define alloc_task()   (struct task_struct*)kmem_cache_alloc(task_struct, 0)
 #define free_task(ptr) kmem_cache_free(task_struct, (ptr))
@@ -20,7 +21,9 @@ LIST_HEAD(stopped_queue);
 
 struct task_struct* create_task(long priority, long preempt_count)
 {
-    struct task_struct* new_task = alloc_task();
+    // struct task_struct *new_task = alloc_task();
+    struct task_struct* new_task =
+        (struct task_struct*)((unsigned long)alloc_task());
     if (!new_task)
         return NULL;
     memset(new_task, 0, sizeof(struct task_struct));
@@ -28,6 +31,8 @@ struct task_struct* create_task(long priority, long preempt_count)
     new_task->pid = nr_tasks++;
     new_task->priority = priority;
     new_task->preempt_count = preempt_count;
+    new_task->mm.pgd = pg_dir;
+    INIT_LIST_HEAD(&new_task->mm.mmap_list);
     return new_task;
 }
 
@@ -47,7 +52,6 @@ void kill_task(struct task_struct* task)
     list_del_init(&task->list);
 
     list_add(&task->list, &stopped_queue);
-    nr_tasks--;
     preempt_enable();
     schedule();
 }
@@ -130,6 +134,8 @@ int sched_init(void)
         return 0;
 
     set_current_task(&init_task);
+    init_task.mm.pgd = pg_dir;
+    INIT_LIST_HEAD(&init_task.mm.mmap_list);
     add_task(&init_task);
     add_timer(timer_tick, NULL, SCHED_CYCLE, true);
 
@@ -184,6 +190,7 @@ void switch_to(struct task_struct* next)
 {
     if (current_task == next)
         return;
+    set_pgd(next->mm.pgd);
     cpu_switch_to(&current_task->cpu_context, &next->cpu_context);
 }
 

@@ -5,10 +5,10 @@
 #include "int.h"
 #include "mm.h"
 
-#define STACK_END   LOW_MEMORY
+#define STACK_END   LOW_MEMORY + VA_START
 #define STACK_START (STACK_END - 0x200000)
 
-#define HEAP_START LOW_MEMORY
+#define HEAP_START LOW_MEMORY + VA_START
 #define HEAP_END   (HEAP_START + 0xF08000)
 
 extern void* mem_align(void*, uint64_t);
