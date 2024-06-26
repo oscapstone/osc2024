@@ -87,10 +87,8 @@ int move_to_user_mode(unsigned long pc, unsigned long size)
 
     current_task->prog_size = size;
 
-    uart_printf("allocate user pages\n");
     void* target = (void*)allocate_user_pages(current_task, PROG, USR_CODE_ADDR,
                                               current_task->prog_size, 0);
-    uart_printf("allocate done\n");
 
     if (!target)
         return -1;
@@ -98,9 +96,7 @@ int move_to_user_mode(unsigned long pc, unsigned long size)
     regs->pc = USR_CODE_ADDR;
     current_task->prog = target;
 
-    uart_printf("memcpy to user pages\n");
     memcpy(target, (void*)pc, current_task->prog_size);
-    uart_printf("memcpy done\n");
 
 
     regs->pstate = SPSR_EL0t;
@@ -108,10 +104,8 @@ int move_to_user_mode(unsigned long pc, unsigned long size)
     if (current_task->user_stack)
         goto set_sp;
 
-    uart_printf("allocate user pages\n");
     void* stack = (void*)allocate_user_pages(current_task, STK, USR_STK_ADDR,
                                              USR_STK_SZ, 0);
-    uart_printf("allocate done\n");
 
     if (!stack)
         return -1;

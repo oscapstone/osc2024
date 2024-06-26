@@ -175,20 +175,24 @@ unsigned long* find_page_entry(struct task_struct* task, unsigned long va)
     if (task->mm.pgd == pg_dir)
         return 0;
 
-    unsigned long* pgd = (unsigned long*)task->mm.pgd;
+    unsigned long* pgd =
+        (unsigned long*)((task->mm.pgd + VA_START) & PAGE_MASK);
     unsigned long pgd_idx = (va >> PGD_SHIFT) & (PTRS_PER_TABLE - 1);
 
-    unsigned long* pud = (unsigned long*)pgd[pgd_idx];
+    unsigned long* pud =
+        (unsigned long*)((pgd[pgd_idx] + VA_START) & PAGE_MASK);
     if (!pud)
         return 0;
 
     unsigned long pud_idx = (va >> PUD_SHIFT) & (PTRS_PER_TABLE - 1);
-    unsigned long* pmd = (unsigned long*)pud[pud_idx];
+    unsigned long* pmd =
+        (unsigned long*)((pud[pud_idx] + VA_START) & PAGE_MASK);
     if (!pmd)
         return 0;
 
     unsigned long pmd_idx = (va >> PMD_SHIFT) & (PTRS_PER_TABLE - 1);
-    unsigned long* pte = (unsigned long*)pmd[pmd_idx];
+    unsigned long* pte =
+        (unsigned long*)((pmd[pmd_idx] + VA_START) & PAGE_MASK);
     if (!pte)
         return 0;
 
