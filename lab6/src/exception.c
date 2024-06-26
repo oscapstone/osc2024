@@ -137,6 +137,7 @@ void user_exception_handler_c(trapframe_t* tf) {
             sigreturn();
             break;
     }
+    el1_interrupt_disable();
     return;
 }
 
