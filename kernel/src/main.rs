@@ -314,6 +314,27 @@ fn fs_shell(idle_proc_code: &[u8]) {
     }
 }
 
+fn init_fs(initrd_start: *mut u8) {
+    // init vfs
+    let mut fss = unsafe {&mut FSS};
+    
+    let b = Box::new(fs::tmpfs::Tmpfs::new("rootfs"));
+    fss.push(NonNull::new(Box::into_raw(b)).unwrap());
+    
+    let b = Box::new(fs::tmpfs::Tmpfs::new("tmpfs"));
+    fss.push(NonNull::new(Box::into_raw(b)).unwrap());
+    
+    let b = Box::new(fs::cpiofs::CpioFS::new("initramfs", initrd_start));
+    fss.push(NonNull::new(Box::into_raw(b)).unwrap());
+    
+    let b = Box::new(fs::devfs::Devfs::new("devfs"));
+    fss.push(NonNull::new(Box::into_raw(b)).unwrap());
+
+    unsafe {GLOBAL_VFS = Some(VFS::new(fss[0]));}
+
+
+}
+
 #[no_mangle]
 fn kernel_init() -> ! {
     let dtb_addr = addr_loader::load_dtb_addr();
@@ -340,20 +361,14 @@ fn kernel_init() -> ! {
         CPIO_HANDLER = Some(CpioHandler::new(initrd_start as *mut u8));
     }
     let cpio_handler = unsafe {CPIO_HANDLER.as_mut().unwrap()};
-
+    
     // load symbol address usr_load_prog_base
-
-    // init vfs
-    let mut fss = unsafe {&mut FSS};
-    let b = Box::new(fs::tmpfs::Tmpfs::new("rootfs"));
-    fss.push(NonNull::new(Box::into_raw(b)).unwrap());
-    let b = Box::new(fs::tmpfs::Tmpfs::new("tmpfs"));
-    fss.push(NonNull::new(Box::into_raw(b)).unwrap());
-    let b = Box::new(fs::cpiofs::CpioFS::new("initramfs", initrd_start));
-    fss.push(NonNull::new(Box::into_raw(b)).unwrap());
+    
+    
+    init_fs(initrd_start as *mut u8);
 
 
-    unsafe {GLOBAL_VFS = Some(VFS::new(fss[0]));}
+   
     let mut in_buf: [u8; 128] = [0; 128];
     
     let page_alloc = unsafe {&mut PAGE_ALLOC};
@@ -375,7 +390,7 @@ fn kernel_init() -> ! {
         println!("Idle process size: {}", idle_proc_size);
         idle_proc_code.read(idle_proc_size)
     };
-    
+
     loop {
         print!("meow>> ");
         let inp = alloc::string::String::from(uart::async_getline(&mut in_buf, true));
