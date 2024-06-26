@@ -50,14 +50,6 @@ size_t uartwrite(trapframe_t *tpf, const char buf[], size_t size)
 int exec(trapframe_t *tpf, const char *name, char *const argv[])
 {
     lock();
-    // Lab5- use cpio to get file data
-    // curr_thread->datasize = get_file_size((char *)name);
-    // char *file_start = get_file_start((char *)name);
-
-    // for (unsigned int i = 0; i < curr_thread->datasize; i++)
-    // {
-    //     curr_thread->data[i] = file_start[i];
-    // }
 
     // Lab7- use virtual file system
     char abs_path[MAX_PATH_NAME];
@@ -117,15 +109,6 @@ int fork(trapframe_t *tpf)
 
     // copy vfs info
     child_thread->vfs = parent_thread->vfs;
-    // for (int i = 0; i <= MAX_FD; i++)
-    // {
-    //     if (parent_thread->vfs.file_descriptors_table[i])
-    //     {
-    //         child_thread->vfs.file_descriptors_table[i] = kmalloc(sizeof(struct file));
-    //         *child_thread->vfs.file_descriptors_table[i] = *parent_thread->vfs.file_descriptors_table[i];
-    //     }
-    // }
-    
     store_context(get_current());
 
     // for child

@@ -51,10 +51,19 @@ void cli_cmd_read(char *buffer)
             break;
 
         c = uart_async_getc();
-        if (c == '\n')
-        {
+        if (c == '\n') {
+            uart_puts("\r\n");
             break;
         }
+        if ((int)c == 127) {  
+            if (idx > 0) {
+                uart_puts("\b \b");
+                buffer[--idx] = '\0';
+            }
+            continue;
+        }
+        if ( c > 16 && c < 32 ) continue;
+        if ( c > 127 ) continue;
         buffer[idx++] = c;
     }
 }
@@ -316,26 +325,9 @@ void do_cmd_exec(char *filepath)
         // core_timer_enable(2);
         if (strcmp(c_filepath, filepath) == 0)
         {
-            // exec c_filedata
-            /*lab3
-            char* ustack = malloc(USTACK_SIZE);
-            asm("mov x1, 0x3c0\n\t"
-                "msr spsr_el1, x1\n\t" // enable interrupt (PSTATE.DAIF) -> spsr_el1[9:6]=4b0. In Basic#1 sample, EL1 interrupt is disabled.
-                "msr elr_el1, %0\n\t"   // elr_el1: Set the address to return to: c_filedata
-                "msr sp_el0, %1\n\t"    // user program stack pointer set to new stack.
-                "eret\n\t"              // Perform exception return. EL1 -> EL0
-                :: "r" (c_filedata),
-                   "r" (ustack+USTACK_SIZE));
-            break;
-            */
-
             /*lab5*/
             uart_recv_echo_flag = 0; // syscall.img has different mechanism on uart I/O.
             exec_thread(c_filedata, c_filesize);
-            // while(1){
-            //     schedule();
-            // }
-            // uart_recv_echo_flag = 1;
         }
 
         // if this is TRAILER!!! (last of file)
@@ -364,9 +356,6 @@ void do_cmd_memory_tester()
     char *b = kmalloc(0x4000);
     char *c = kmalloc(0x1001); // malloc size = 8KB
     char *d = kmalloc(0x10);   // malloc size = 32B
-    // char *e = kmalloc(0x800);
-    // char *f = kmalloc(0x800);
-    // char *g = kmalloc(0x800);
 
     kfree(a);
     kfree(aa);
@@ -442,13 +431,6 @@ void fork_test()
 void do_cmd_fork_tester()
 {
         thread_t *main_thread = thread_create(fork_test);        
-        // eret to exception level 0
-        // asm("msr tpidr_el1, %0\n\t" // Hold the "kernel(el1)" thread structure information
-        // "msr elr_el1, %1\n\t"   // When el0 -> el1, store return address for el1 -> el0
-        // "msr spsr_el1, xzr\n\t" // Enable interrupt in EL0 -> Used for thread scheduler
-        // "msr sp_el0, %2\n\t"    // el0 stack pointer for el1 process, user program stack pointer set to new stack.
-        // "mov sp, %3\n\t"        // sp is reference for the same el process. For example, el2 cannot use sp_el2, it has to use sp to find its own stack.
-        // ::"r"(&main_thread->context),"r"(main_thread->context.lr), "r"(main_thread->stack_allocated_base + USTACK_SIZE), "r"(main_thread->context.sp));
     
         asm("msr elr_el1, %0\n\t" ::"r"(main_thread->context.sp));  // When el0 -> el1, store return address for el1 -> el0 
         asm("msr spsr_el1, xzr\n\t");   // Enable interrupt in EL0 -> Used for thread scheduler
