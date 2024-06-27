@@ -6,6 +6,7 @@
 #include "timer.h"
 #include "shell.h"
 #include "alloc.h"
+#include "mmu.h"
 #include <stdint.h>
 
 // define three queues
@@ -144,12 +145,17 @@ void kill_zombies() {
 }
 
 thread_t* create_thread(void (*func)(void)) {
+    uint64_t* page_table = pt_create();
+
     thread_t* t = (thread_t*)kmalloc(sizeof(thread_t));
+    t -> page_table = page_table;
     t -> tid = cur_tid ++;
     t -> state = TASK_RUNNING;
     t -> callee_reg.lr = (unsigned long)func;
     t -> user_stack = kmalloc(T_STACK_SIZE);
     t -> kernel_stack = kmalloc(T_STACK_SIZE);
+    t -> data = NULL;
+    t -> data_size = 0;
     t -> callee_reg.sp = (unsigned long)(t->user_stack + T_STACK_SIZE);
     t -> callee_reg.fp = t -> callee_reg.sp; // set fp to sp as the pointer that fixed
     
@@ -172,7 +178,11 @@ thread_t* create_thread(void (*func)(void)) {
 }
 
 thread_t* create_fork_thread() {
+    uart_send_string("creating fork thread\n");
+    uint64_t* page_table = pt_create();
+    
     thread_t* t = (thread_t*)kmalloc(sizeof(thread_t));
+    t -> page_table = page_table;
     t -> tid = cur_tid ++;
     t -> state = TASK_RUNNING;
     t -> callee_reg.lr = 0;
@@ -180,6 +190,8 @@ thread_t* create_fork_thread() {
     t -> kernel_stack = kmalloc(T_STACK_SIZE);
     t -> callee_reg.sp = (unsigned long)(t->user_stack + T_STACK_SIZE);
     t -> callee_reg.fp = t -> callee_reg.sp; // set fp to sp as the pointer that fixed
+    t -> data = NULL;
+    t -> data_size = 0;
 
     for(int i=0;i<=SIGNAL_NUM;i++) {
         t -> signal_handler[i] = 0;

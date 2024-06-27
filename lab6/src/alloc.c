@@ -3,6 +3,7 @@
 #include "fdt.h"
 #include "initrd.h"
 #include "exception.h"
+#include "utils.h"
 #include <stdint.h>
 
 int debug = 1;
@@ -13,6 +14,9 @@ volatile char *heap_top;
 
 page* page_arr = 0;
 uint64_t total_page = 0;
+// free_list_t* free_list = 0;
+// chunk_info* chunk_info_arr = 0;
+
 free_list_t free_list[MAX_ORDER + 1];
 chunk_info chunk_info_arr[MAX_CHUNK + 1];
 
@@ -296,6 +300,9 @@ void insert_page(page* new_page, int order) {
 	if (free_list[order].head != 0) {
 		free_list[order].head -> prev = new_page;
 	}
+	if(!new_page){
+		uart_send_string("Error: insert_page with new_page = 0\n");
+	}
 	free_list[order].head = new_page;
 	free_list[order].cnt++;
 	return;
@@ -309,10 +316,10 @@ page* pop_page(int order) {
 		while(1);
 	}
 	page* ret = free_list[order].head;
-	free_list[order].head = ret->next;
 	if (free_list[order].head -> next != 0) {
-		free_list[order].head -> prev = 0;
+		free_list[order].head -> next -> prev = 0;
 	}
+	free_list[order].head = ret->next;
 	free_list[order].cnt--;
 	return ret;
 }
@@ -430,21 +437,24 @@ void* chunk_free(void* addr) {
 // Set heap base address
 void alloc_init()
 {
-	heap_top = ((volatile unsigned char *)(0x10000000));
+	
+	heap_top = ((volatile unsigned char *)PA2VA(0x10000000));
 	char* old_heap_top = heap_top;
+	// free_list = PA2VA(simple_malloc((MAX_ORDER + 1) * sizeof(free_list_t)));
+	// chunk_info_arr = PA2VA(simple_malloc((MAX_CHUNK + 1) * sizeof(chunk_info)));
 	// uart_send_string("heap_top: ");
 	// uart_hex((unsigned long long)heap_top);
 	// uart_send_string("\n");
 	init_page_arr();
 	// reserve memory
-	memory_reserve((void*)0x0000, (void*)0x1000); // spin tables
+	memory_reserve((void*)PA2VA(0x0000), (void*)PA2VA(0x4000)); // spin tables and page tables
 	memory_reserve((void*)ramfs_base, (void*)ramfs_end); // ramfs
 	// memory_reserve((void*)dtb_base, (void*)dtb_end); // dtb
 
 	// kernel, bss, stack
 	// 0x80000 = _start
 	// 0x0200000 = __stack_end
-	memory_reserve((void*)0x80000, (void*)0x0200000); 
+	memory_reserve((void*)PA2VA(0x80000), (void*)PA2VA(0x0200000)); 
 	
 	if(debug) {
 		uart_send_string("old_heap_top: ");
@@ -555,7 +565,7 @@ void* kmalloc(unsigned long long size) {
 	int idx = size2chunkidx(size);
 
 	void* addr;
-	int use_page_only = 0;
+	int use_page_only = 1;
 	if(use_page_only) {
 		addr = page_alloc(size);
 	} else if(idx >= 0) {

@@ -2,7 +2,7 @@
 #define _THREAD_H
 
 
-#define T_STACK_SIZE (2 * 0x1000) // 2^12 = 4096 = 4KB = 1 page
+#define T_STACK_SIZE (4 * 0x1000) // 2^12 = 4096 = 4KB = 1 page
 #define SIGNAL_NUM 9
 
 #include <stdint.h>
@@ -33,8 +33,10 @@ typedef struct callee_reg_t {
 typedef struct thread_t {
     // need to be put as the first variable
     callee_reg_t callee_reg;
+    uint64_t *page_table;
     int tid; // thread id
     thread_state state;
+
     void* user_stack;
     void* kernel_stack;
     void* data;
@@ -46,6 +48,7 @@ typedef struct thread_t {
     int waiting_signal[SIGNAL_NUM+1];
     int is_processing_signal;
     callee_reg_t signal_regs;
+    uint64_t signal_page_table;
 
     // use in queue
     struct thread_t *prev;

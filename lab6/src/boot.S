@@ -1,4 +1,5 @@
 #include "mm.h"
+
 #define CORE0_TIMER_IRQ_CTRL 0x40000040
 
 .section ".text.boot"
@@ -17,14 +18,15 @@ proc_hang:
 master:
     bl from_el2_to_el1
 
-// core_timer_enable:
-//    mov x20, 1
-//    msr cntp_ctl_el0, x20 // enable timer
-//    mrs x20, cntfrq_el0
-//    msr cntp_tval_el0, x20 // set expired time
-//    mov x20, 2
-//    ldr x1, =CORE0_TIMER_IRQ_CTRL
-//    str w20, [x1] // unmask timer interrupt
+    ldr x1, =__PA_stack_end
+    mov sp, x1
+    mov x19, x0
+    bl mmu_init
+    mov x0, x19
+    ldr x1, =boot_rest
+    br x1
+
+boot_rest:
 
 set_exception_vector:
     // set exception vector table

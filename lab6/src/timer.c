@@ -25,13 +25,15 @@ void print_message(void *data) {
 }
 
 void set_timeout(char* message, unsigned long long timeout) {
+    uart_send_string("Set timeout\n");
     char* message_copy = (char*)kmalloc(strlen(message)+1);
+    uart_send_string("Set timeout\n");
     strncpy_(message_copy, message, strlen(message)+1);
     if(!message_copy) return;
 
     if(!timer_head) {
         // enable timer
-        *CORE0_TIMER_IRQ_CTRL = 2;
+        core_timer_enable();
     }
 
     create_timer(print_message, message_copy, timeout);

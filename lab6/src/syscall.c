@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "mbox.h"
 #include "signal.h"
+#include "mmu.h"
 #include <stdint.h>
 
 int getpid() {
@@ -53,6 +54,7 @@ int exec(const char* name, char *const argv[]) {
     char *filedata;
     unsigned int filesize;
     // current pointer
+    thread_t* cur_thread = get_current_thread();
     cpio_t *header_pointer = (cpio_t *)(ramfs_base);
 
     // print every cpio pathname
@@ -69,8 +71,14 @@ int exec(const char* name, char *const argv[]) {
         }
         if (!strcmp(name, filepath))
         {  
-            target_addr = (char*)kmalloc(filesize);
-            memcpy(target_addr, filedata, filesize);
+            uart_send_string("filesize: ");
+            uart_hex(filesize);
+            uart_send_string("\n");
+            cur_thread -> data = (void*)kmalloc(filesize);
+            cur_thread -> data_size = filesize;
+            uart_send_string("Copying user program\n");
+            memcpy(cur_thread -> data, filedata, cur_thread -> data_size);
+            uart_send_string("Finished\n");
             break;
         }
 
@@ -80,29 +88,27 @@ int exec(const char* name, char *const argv[]) {
             return 1;
         }
     }
-    // run program from current thread
-    thread_t* cur_thread = get_current_thread();
     
     // TODO: signal handling, should clear all signal handler here
     for(int i=0;i<=SIGNAL_NUM;i++) {
         cur_thread -> signal_handler[i] = 0;
         cur_thread -> waiting_signal[i] = 0;
     }
-
-    cur_thread -> callee_reg.lr = (unsigned long)target_addr;
-
-    unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
-    unsigned long elr_el1 = cur_thread -> callee_reg.lr;
-    unsigned long user_sp = cur_thread -> callee_reg.sp;
     unsigned long kernel_sp = (unsigned long)cur_thread -> kernel_stack + T_STACK_SIZE;
 
-    // "r": Any general-purpose register, except sp
-    asm volatile("msr tpidr_el1, %0" : : "r" (cur_thread));
-    asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
-    asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
-    asm volatile("msr sp_el0, %0" : : "r" (user_sp));
-    asm volatile("mov sp, %0" :: "r" (kernel_sp));
-    asm volatile("eret"); // jump to user program
+    // cur_thread -> callee_reg.lr = (unsigned long)target_addr;
+    cur_thread -> page_table = pt_create();
+    pt_map(cur_thread -> page_table, (void*)0, cur_thread -> data_size, 
+           (void*)VA2PA(cur_thread -> data), PT_R | PT_W | PT_X); // map user program
+    pt_map(cur_thread -> page_table, (void*)0xffffffffb000, T_STACK_SIZE,
+        (void*)VA2PA(cur_thread -> user_stack), PT_R | PT_W); // map user stack
+
+    pt_map(cur_thread->page_table, (void *)0x3c000000, 0x04000000,
+            (void *)0x3c000000, PT_R | PT_W); // map mailbox
+    
+    set_page_table(cur_thread);
+    exec_user_prog((void *)0, (char *)0xffffffffeff0, kernel_sp);
+
     return 0;
 }
 
@@ -110,6 +116,9 @@ void fork(trapframe_t* tf) {
     // uart_send_string("forked\n");
     thread_t* parent_thread = get_current_thread();
     thread_t* child_thread = create_fork_thread();
+
+    child_thread -> data = (void*)kmalloc(parent_thread -> data_size);
+    child_thread -> data_size = parent_thread -> data_size;
 
     memcpy(
         (void*)child_thread->user_stack,
@@ -123,6 +132,24 @@ void fork(trapframe_t* tf) {
         (void*)parent_thread->kernel_stack,
         T_STACK_SIZE
     );
+
+    memcpy(
+        (void*)child_thread->data,
+        (void*)parent_thread->data,
+        (uint64_t)parent_thread->data_size
+    );
+
+    child_thread -> page_table = pt_create();
+
+    pt_map(child_thread->page_table, (void *)0, child_thread->data_size,
+           (void *)VA2PA(child_thread->data), PT_R | PT_W | PT_X);
+    pt_map(child_thread->page_table, (void *)0xffffffffb000, T_STACK_SIZE,
+           (void *)VA2PA(child_thread->user_stack), PT_R | PT_W);
+
+    // TODO: Why is this needed for the vm.img to run?
+    pt_map(child_thread->page_table, (void *)0x3c000000, 0x04000000,
+           (void *)0x3c000000, PT_R | PT_W);
+
     save_regs(parent_thread);
     copy_regs(&child_thread->callee_reg);
 
@@ -139,6 +166,10 @@ void fork(trapframe_t* tf) {
     child_thread -> callee_reg.sp = (uint64_t)((uint64_t)parent_sp - (uint64_t)parent_thread->kernel_stack + (uint64_t)child_thread->kernel_stack);
     child_thread -> callee_reg.fp = (uint64_t)((uint64_t)parent_fp - (uint64_t)parent_thread->kernel_stack + (uint64_t)child_thread->kernel_stack);
 
+    trapframe_t *child_tf = (trapframe_t*)(child_thread -> kernel_stack +
+        ((char*)tf - (char*)(parent_thread -> kernel_stack))
+    );
+
     void* label_address = &&SYSCALL_FORK_END;
     uart_send_string("Address of SYSCALL_FORK_END: ");
     uart_hex((uint64_t)label_address);
@@ -147,19 +178,23 @@ void fork(trapframe_t* tf) {
     child_thread -> callee_reg.lr = &&SYSCALL_FORK_END;
 
     // set child trapframe
-    trapframe_t *child_tf = (trapframe_t*)(child_thread -> kernel_stack +
-        ((char*)tf - (char*)(parent_thread -> kernel_stack))
-    );
+   
     // set child user stack sp
     child_tf -> x[0] = 0;
     child_tf -> x[30] = tf -> x[30];
-    child_tf -> sp_el0 = (void*)((uint64_t)tf -> sp_el0 - (uint64_t)parent_thread->user_stack + (uint64_t)child_thread->user_stack);
+    child_tf -> sp_el0 = tf -> sp_el0;
     child_tf -> spsr_el1 = tf -> spsr_el1;
     child_tf -> elr_el1 = tf -> elr_el1;
+    uart_send_string("elr_el1: ");
+    uart_hex(child_tf -> elr_el1);
+    uart_send_string("\n");
     tf -> x[0] = child_thread -> tid;
     push_running(child_thread);
 SYSCALL_FORK_END:
-    // uart_send_string("forked end\n");
+    uart_send_string("forked end\n");
+    uart_send_string("current tid: ");
+    uart_hex(get_current_thread()->tid);
+    uart_send_string("\n");
     asm volatile("nop");
     return;
 }
@@ -169,7 +204,23 @@ void exit(int status) {
 }
 
 int mbox_call(unsigned char ch, unsigned int *mbox) {
-    return mailbox_call(ch, mbox);
+    int mbox_size;
+    char *kmbox;
+
+    mbox_size = (int)mbox[0];
+
+    if (mbox_size <= 0)
+        return;
+
+    kmbox = kmalloc(mbox_size);
+
+    memcpy(kmbox, (char *)mbox, mbox_size);
+
+    mailbox_call(ch, (unsigned int *)kmbox);
+
+    memcpy((char *)mbox, kmbox, mbox_size);
+
+    kfree(kmbox);
 }
 
 void kill(int pid) {

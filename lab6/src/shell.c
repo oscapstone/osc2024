@@ -11,10 +11,10 @@
 #include "thread.h"
 
 void shell(){
-    uart_async_send_string("Welcome to OSC2024 shell!\n");
+    uart_send_string("Welcome to OSC2024 shell!\n");
     while(1){
-        uart_send_string("# ");
         char* str = kmalloc(100);
+        uart_send_string("# ");
         uart_recv_command(str);
         uart_send_string("\n");
         if(!strcmp(str, "hello")){
@@ -78,14 +78,14 @@ void shell(){
             reset(200);
             break;
         } else if(!strcmp(str, "help")){
-            uart_async_send_string("help\t: print this help menu\n");
-            uart_async_send_string("hello\t: print Hello World!\n");
-            uart_async_send_string("mailbox\t: print board revision and memory info\n");
-            uart_async_send_string("ls\t: list files in the ramdisk\n");
-            uart_async_send_string("cat\t: print content of a file\n");
-            uart_async_send_string("reboot\t: reboot this device\n");
-            uart_async_send_string("exec\t: execute program from initramfs\n");
-            uart_async_send_string("setTimeout\t: setTimeout MESSAGE SECONDS\n");
+            uart_send_string("help\t: print this help menu\n");
+            uart_send_string("hello\t: print Hello World!\n");
+            uart_send_string("mailbox\t: print board revision and memory info\n");
+            uart_send_string("ls\t: list files in the ramdisk\n");
+            uart_send_string("cat\t: print content of a file\n");
+            uart_send_string("reboot\t: reboot this device\n");
+            uart_send_string("exec\t: execute program from initramfs\n");
+            uart_send_string("setTimeout\t: setTimeout MESSAGE SECONDS\n");
         }
     }
     thread_exit();

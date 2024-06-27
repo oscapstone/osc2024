@@ -4,7 +4,7 @@
 #include "syscall.h"
 #include "string.h"
 #include "thread.h"
-
+#include "mmu.h"
 
 void check_and_run_signal() {
     thread_t* cur_thread = get_current_thread();
