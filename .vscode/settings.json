@@ -10,6 +10,13 @@
         "timer.h": "c",
         "*.tcc": "c",
         "gpio.h": "c",
-        "exception.h": "c"
+        "exception.h": "c",
+        "stdint.h": "c",
+        "cstdint": "c",
+        "list.h": "c",
+        "timer_utils.h": "c",
+        "sched.h": "c",
+        "mm.h": "c",
+        "task_queue.h": "c"
     }
 }
