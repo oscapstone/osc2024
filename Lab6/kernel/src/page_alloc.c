@@ -22,7 +22,7 @@ extern char kernel_end[];
 static uintptr_t usable_mem_end;
 
 /* reserved memory region - spin table */
-#define DTS_MEM_RESERVED_START  0x0
+#define DTS_MEM_RESERVED_START  0x0 + VA_START
 #define DTS_MEM_RESERVED_LENGTH 0x1000
 #define DTS_MEM_RESERVED_END    (DTS_MEM_RESERVED_START + DTS_MEM_RESERVED_LENGTH)
 
@@ -148,9 +148,9 @@ void coalesce(struct page* page, size_t order)
 #endif
             break;
         }
-        order++;
         pfn = get_left_pfn(pfn, order);
         page = pfn_to_page(pfn);
+        order++;
     }
 
 #ifdef DEBUG
@@ -434,13 +434,13 @@ struct page* alloc_pages(size_t order, gfp_t flags)
             struct page* right_half = page + (1 << (order - 1));
 #ifdef DEBUG
             uart_printf(
-                "  Usable pages order is larget than requested order, "
+                "  Usable pages order is larger than requested order, "
                 "split it "
                 "down to request order\n");
             uart_printf(
                 "  Put right half of the pages (0x%x) to freelist with %d "
                 "order\n",
-                page_to_phys(right_half), order);
+                page_to_phys(right_half), order - 1);
 #endif
             add_page_to_freelist(right_half, order - 1);
             order--;
@@ -467,7 +467,7 @@ struct page* alloc_pages(size_t order, gfp_t flags)
 void* alloc_pages_exact(size_t size, gfp_t flags)
 {
     size = ALIGN(size, PAGE_SIZE);
-    size_t nr_pages = size >> PAGE_SHIFT;
+    size_t nr_pages = (size >> PAGE_SHIFT) + !!(size & (PAGE_SIZE - 1));
     size_t order = get_order(size);
     struct page* page = alloc_pages(order, flags & ~__GFP_COMP);
     size_t remain_pages = (1 << order) - nr_pages;
@@ -478,7 +478,7 @@ void* alloc_pages_exact(size_t size, gfp_t flags)
 void free_pages(struct page* page, size_t order)
 {
 #ifdef DEBUG
-    uart_printf("free pages with %d order\n", order);
+    uart_printf("free page 0x%x with %d order\n", page_to_phys(page), order);
 #endif
     if (!page || PageBuddy(page) || PageTail(page))
         return;

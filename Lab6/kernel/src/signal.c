@@ -3,6 +3,7 @@
 #include "fork.h"
 #include "irq.h"
 #include "math.h"
+#include "mm.h"
 #include "slab.h"
 #include "utils.h"
 
@@ -59,7 +60,8 @@ void handle_sig(void)
 
         // registered signal handler
         if (!current_task->sig_stack)
-            current_task->sig_stack = kmalloc(THREAD_STACK_SIZE, 0);
+            current_task->sig_stack = (void*)allocate_user_pages(
+                current_task, STK, USR_SIG_STK_ADDR, USR_SIG_STK_SZ, 0);
 
         struct pt_regs* sig_regs = task_sig_regs(current_task);
         struct pt_regs* regs = task_pt_regs(current_task);
@@ -67,7 +69,7 @@ void handle_sig(void)
 
         regs->pc = (unsigned long)current_task->sig_handler[SIGNAL];
         regs->pstate = SPSR_EL0t;
-        regs->sp = (unsigned long)sig_regs;
+        regs->sp = USR_SIG_STK_ADDR + USR_SIG_STK_SZ - sizeof(struct pt_regs);
         regs->regs[30] = (unsigned long)sig_return;
 
         current_task->sig_pending ^= pending;
@@ -85,8 +87,8 @@ struct pt_regs* task_sig_regs(struct task_struct* task)
 {
     if (!task->sig_stack)
         return NULL;
-    return (struct pt_regs*)((unsigned long)task->sig_stack +
-                             THREAD_STACK_SIZE - sizeof(struct pt_regs));
+    return (struct pt_regs*)((unsigned long)task->sig_stack + USR_SIG_STK_SZ -
+                             sizeof(struct pt_regs));
 }
 
 void do_sig_return(void)

@@ -20,14 +20,15 @@ void test_thread(void)
 {
     uart_printf("test_thread start\n");
     for (int i = 0; i < 3; i++)
-        copy_process(PF_KTHREAD, foo, NULL);
+        copy_process(PF_KTHREAD, foo, NULL, NULL);
 }
 
 
-void kernel_process(void* user_process)
+void kernel_process(void* user_process, void* size)
 {
     uart_printf("Kernel process started. EL %d\n", get_el());
-    int err = move_to_user_mode((unsigned long)user_process);
+    int err =
+        move_to_user_mode((unsigned long)user_process, (unsigned long)size);
     if (err < 0)
         uart_printf("Error while moving process to user mode\n");
 }

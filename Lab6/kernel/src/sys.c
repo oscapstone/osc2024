@@ -2,6 +2,7 @@
 #include "cpio.h"
 #include "fork.h"
 #include "mailbox.h"
+#include "memory.h"
 #include "mini_uart.h"
 #include "sched.h"
 #include "signal.h"
@@ -39,7 +40,7 @@ int sys_exec(const char* name, char const* argv[])
 
 int sys_fork(void)
 {
-    return copy_process(0, NULL, NULL);
+    return copy_process(0, NULL, NULL, NULL);
 }
 
 void sys_exit(void)
@@ -50,7 +51,13 @@ void sys_exit(void)
 
 int sys_mbox_call(unsigned char ch, unsigned int* mbox)
 {
-    return mailbox_call(ch, mbox);
+    unsigned long offset =
+        (unsigned long)mbox - ((unsigned long)mbox & PAGE_MASK);
+    unsigned long* entry = find_page_entry(current_task, (unsigned long)mbox);
+    unsigned int* mbox_map =
+        (unsigned int*)(((*entry + VA_START) & PAGE_MASK) + offset);
+    int res = mailbox_call(ch, mbox_map);
+    return res;
 }
 
 
