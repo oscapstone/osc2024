@@ -7,6 +7,7 @@
 #include "exception.h"
 #include "thread.h"
 #include "timer.h"
+#include "utils.h"
 #include <stdint.h>
 
 #define TEST_SIZE 30
@@ -46,14 +47,14 @@ void demo_mm() {
 }
 
 void main(char* base) {
-	dtb_base = base;
+	dtb_base = PA2VA(base);
 	uart_init();
 	uart_send_string("DTB base address: ");
 	uart_hex(dtb_base);
 	uart_send_string("\n");
 	fdt_traverse(initrd_callback);
 	alloc_init();
-	// demo_mm();
+	// for(int i=0;i<1000;i++) kmalloc(PAGE_SIZE);
 	uart_send_string("mm finished\n");
 	uart_enable_interrupt();
 	core_timer_init();

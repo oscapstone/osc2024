@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "peripherals/mini_uart.h"
 #include "peripherals/gpio.h"
+#include <stdint.h>
 
 void uart_send ( char c )
 {
@@ -39,10 +40,10 @@ void uart_send_string(char* str)
 	}
 }
 
-void uart_hex(unsigned int d) {
+void uart_hex(uint64_t d) {
     unsigned int n;
     int c;
-    for (c = 28; c >= 0; c -= 4) {
+    for (c = 60; c >= 0; c -= 4) {
         // get highest tetrad
         n = (d >> c) & 0xF;
         // 0-9 => '0'-'9', 10-15 => 'A'-'F'

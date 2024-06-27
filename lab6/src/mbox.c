@@ -1,24 +1,24 @@
 #include "mbox.h"
 #include "mini_uart.h"
-
+#include "utils.h"
 
 int mailbox_call(unsigned char ch, unsigned int* mailbox){
     unsigned int r = (((unsigned long) mailbox) & ~0xF) | (ch & 0xf);
     // ~0xF is used to clear the last 4 bits of the address
     // 8 is used to set the last 4 bits to 8 (channel 8 is the mailbox channel)
 
-    while(*MAILBOX_STATUS & MAILBOX_FULL){
+    while(get32(PA2VA(MAILBOX_STATUS)) & MAILBOX_FULL){
         delay(1);
     } // wait until the mailbox is not full
 
-    *MAILBOX_WRITE = r;
+    put32(PA2VA(MAILBOX_WRITE), r); // write the address of the mailbox message to the mailbox write register (channel 8 is the mailbox channel
 
     while(1){
-        while(*MAILBOX_STATUS & MAILBOX_EMPTY){
+        while(get32(PA2VA(MAILBOX_STATUS)) & MAILBOX_EMPTY){
             delay(1);
         } // wait until the mailbox is not empty
 
-        if(r == *MAILBOX_READ){
+        if(r == get32(PA2VA(MAILBOX_READ))){
             return mailbox[1] == REQUEST_SUCCEED;
         }
     }

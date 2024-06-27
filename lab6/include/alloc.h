@@ -1,8 +1,9 @@
 #ifndef _ALLOC_H_
 #define _ALLOC_H_
+#include "utils.h"
 
-#define PAGE_BASE (void*)0x0
-#define PAGE_END  (void*)0x3b400000
+#define PAGE_BASE (void*)PA2VA(0x0)
+#define PAGE_END  (void*)PA2VA(0x3b400000)
 #define PAGE_SIZE 0x1000 // 4KB
 
 #define MAX_ORDER 11

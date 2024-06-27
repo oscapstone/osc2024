@@ -10,6 +10,7 @@
 #include "thread.h"
 #include "reboot.h"
 #include "signal.h"
+#include "utils.h"
 
 extern timer_t *timer_head;
 
@@ -56,8 +57,8 @@ void exception_handler_c() {
 void user_irq_exception_handler_c() {
     // uart_send_string("User IRQ Exception Occurs!\n");
     el1_interrupt_disable();
-    unsigned int irq = *IRQ_PENDING_1;
-    unsigned int interrupt_source = *CORE0_INTERRUPT_SOURCE;
+    unsigned int irq = get32(PA2VA(IRQ_PENDING_1));
+    unsigned int interrupt_source = get32(PA2VA(CORE0_INTERRUPT_SOURCE));
 
     if((irq & IRQ_PENDING_1_AUX_INT) && (interrupt_source & INTERRUPT_SOURCE_GPU)){
         // uart_send_string("UART interrupt\n");
@@ -74,8 +75,8 @@ void user_irq_exception_handler_c() {
 
 void irq_exception_handler_c(){
     // uart_send_string("IRQ Exception Occurs!\n");
-    unsigned int irq = *IRQ_PENDING_1;
-    unsigned int interrupt_source = *CORE0_INTERRUPT_SOURCE;
+    unsigned int irq = get32(PA2VA(IRQ_PENDING_1));
+    unsigned int interrupt_source = get32(PA2VA(CORE0_INTERRUPT_SOURCE));
 
     if((irq & IRQ_PENDING_1_AUX_INT) && (interrupt_source & INTERRUPT_SOURCE_GPU) ){
         // uart_send_string("kernel UART interrupt\n");
@@ -93,7 +94,15 @@ void irq_exception_handler_c(){
 }
 
 void user_exception_handler_c(trapframe_t* tf) {
+    unsigned long long esr_el1 = 0;
+	asm volatile("mrs %0, esr_el1":"=r"(esr_el1));
+    unsigned ec = (esr_el1 >> 26) & 0x3F;
+    if(ec != 0x15) {
+        exception_handler_c();
+        return;
+    }
     int syscall_code = tf -> x[8];
+
     el1_interrupt_enable();
     switch (syscall_code) {
         case 0:
@@ -120,6 +129,7 @@ void user_exception_handler_c(trapframe_t* tf) {
             exit(0);
             break;
         case 6:
+            uart_send_string("[INFO] system call: mbox_call\n");
             tf -> x[0] = mbox_call(
                 (unsigned char)tf -> x[0], (unsigned int*)tf -> x[1]
             );
@@ -137,6 +147,7 @@ void user_exception_handler_c(trapframe_t* tf) {
             sigreturn();
             break;
     }
+    el1_interrupt_disable();
     return;
 }
 
@@ -200,6 +211,7 @@ void core_timer_init() {
     asm volatile("msr cntp_tval_el0, %0" : : "r"(freq));
     
     *CORE0_TIMER_IRQ_CTRL = 2;
+    
 
     uint64_t tmp;
     asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
@@ -208,9 +220,9 @@ void core_timer_init() {
 }
 
 void core_timer_enable(){
-    *CORE0_TIMER_IRQ_CTRL = 2;
+    put32(PA2VA(CORE0_TIMER_IRQ_CTRL), 2);
 }
 
 void core_timer_disable() {
-    *CORE0_TIMER_IRQ_CTRL = 0;
+    put32(PA2VA(CORE0_TIMER_IRQ_CTRL), 0);
 }

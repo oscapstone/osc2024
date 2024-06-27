@@ -8,10 +8,23 @@
 #include "thread.h"
 #include "exception.h"
 #include "timer.h"
+#include "utils.h"
+#include "mmu.h"
+#include "exec.h"
 
 char *ramfs_base;
 char *ramfs_end;
 
+
+void enter_el0_run_user_prog(void *entry, char *user_sp);
+
+static void user_prog_start(void)
+{
+    uart_send_string("User program start\n");
+    enter_el0_run_user_prog((void *)0, (char *)0xffffffffeff0);
+
+    // User program should call exit() to terminate
+}
 
 // Convert hexadecimal string to int
 // @param s: hexadecimal string
@@ -157,12 +170,14 @@ void initrd_cat(const char *target)
 void initrd_callback(unsigned int node_type, char *name, void *value, unsigned int name_size){
     if(!strcmp(name, "linux,initrd-start")){
         ramfs_base = (char *)(unsigned long long)endian_big2little(*(unsigned int *)value);
+        ramfs_base = (char *)PA2VA(ramfs_base);
         uart_send_string("ramfs_base: ");
         uart_hex((unsigned long)ramfs_base);
         uart_send_string("\n");
     }
     if(!strcmp(name, "linux,initrd-end")){
         ramfs_end = (char *)(unsigned long long)endian_big2little(*(unsigned int *)value);
+        ramfs_end = (char *)PA2VA(ramfs_end);
         uart_send_string("ramfs_end: ");
         uart_hex((unsigned long)ramfs_end);
         uart_send_string("\n");
@@ -234,16 +249,20 @@ void initrd_exec_syscall() {
     char *filepath;
     char *filedata;
     unsigned int filesize;
-    char* target = "syscall.img";
+    char* target = "vm.img";
+    thread_t* t = get_current_thread();
+    uart_send_string("current thread tid: ");
+    uart_hex(t -> tid);
+    uart_send_string("\n");
     // current pointer
     cpio_t *header_pointer = (cpio_t *)(ramfs_base);
     // print_running();
     // print every cpio pathname
     while (header_pointer)
     {
-        // uart_send_string("header_pointer: ");
-        // uart_hex((unsigned long)header_pointer);
-        // uart_send_string("\n");
+        uart_send_string("header_pointer: ");
+        uart_hex((unsigned long)header_pointer);
+        uart_send_string("\n");
         int error = cpio_newc_parse_header(header_pointer, &filepath, &filesize, &filedata, &header_pointer);
         // if parse header error
         if (error)
@@ -257,9 +276,10 @@ void initrd_exec_syscall() {
             uart_send_string("filesize: ");
             uart_hex(filesize);
             uart_send_string("\n");
-            target_addr = kmalloc(filesize);
+            t -> data = (void*)kmalloc(filesize);
+            t -> data_size = filesize;
             uart_send_string("Copying user program\n");
-            memcpy(target_addr, filedata, filesize);
+            memcpy(t -> data, filedata, t -> data_size);
             uart_send_string("Finished\n");
             break;
         }
@@ -268,14 +288,13 @@ void initrd_exec_syscall() {
         // uart_send_string("\n");
         // if this is not TRAILER!!! (last of file)
         if (header_pointer == 0){
-            uart_send_string("Program not found\n");
+            // uart_send_string("Program not found\n");
             return;
         }
     }
     uart_send_string("prog addr: ");
-    uart_hex(target_addr);
+    uart_hex(t->data);
     uart_send_string("\n");
-    thread_t* t = get_current_thread();
     uart_send_string("thread tid: ");
     uart_hex(t -> tid);
     uart_send_string("\n");
@@ -286,26 +305,42 @@ void initrd_exec_syscall() {
     }
 
     unsigned long spsr_el1 = 0x0; // run in el0 and enable all interrupt (DAIF)
-    unsigned long elr_el1 = target_addr;
-    unsigned long user_sp = t -> user_stack + T_STACK_SIZE;
+    unsigned long elr_el1 = 0x0;
     unsigned long kernel_sp = (unsigned long)t -> kernel_stack + T_STACK_SIZE;
     // unsigned long kernel_sp = (unsigned long)kmalloc(T_STACK_SIZE) + T_STACK_SIZE;
     
 
-    // reset t call reg
-    t -> callee_reg.lr = target_addr;
-    // core_timer_enable();
-    // el1_interrupt_enable();
+    // t -> callee_reg.lr = user_prog_start;
+    t -> page_table = pt_create();
+    pt_map(t -> page_table, (void*)0, t -> data_size, 
+           (void*)VA2PA(t -> data), PT_R | PT_W | PT_X); // map user program
+    pt_map(t -> page_table, (void*)0xffffffffb000, T_STACK_SIZE,
+        (void*)VA2PA(t -> user_stack), PT_R | PT_W); // map user stack
+
+    pt_map(t->page_table, (void *)0x3c000000, 0x04000000,
+            (void *)0x3c000000, PT_R | PT_W); // map mailbox
     
-    asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
-    asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
-    asm volatile("msr sp_el0, %0" : : "r" (user_sp));
-    asm volatile("mov sp, %0" :: "r" (kernel_sp));
-    // print_running();
+    uart_send_string("page table addr: ");
+    uart_hex(t -> page_table);
+    uart_send_string("\n");
+
+    set_page_table(t);
     core_timer_enable();
     // el1_interrupt_enable();
-    asm volatile("eret"); // jump to user program
-    // print_running();
+    uart_send_string("exec user prog\n");
+    exec_user_prog((void *)0, (char *)0xffffffffeff0, kernel_sp);
+    // return;
+    // // core_timer_enable();
+    // // el1_interrupt_enable();
+    
+    // asm volatile("msr spsr_el1, %0" : : "r" (spsr_el1));
+    // asm volatile("msr elr_el1, %0" : : "r" (elr_el1));
+    // asm volatile("msr sp_el0, %0" : : "r" (user_sp));
+    // asm volatile("mov sp, %0" :: "r" (kernel_sp));
+    // // print_running();
+    // // el1_interrupt_enable();
+    // asm volatile("eret"); // jump to user program
+    // // print_running();
 }
 
 void initrd_run_syscall() {
