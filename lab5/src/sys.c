@@ -39,8 +39,7 @@ int sys_exec(const char *name, char const *argv[])
 
 int sys_fork(void)
 {
-    unsigned long stack = page_frame_allocate(4);
-    return copy_process(0, NULL, NULL, stack);
+    return copy_process(0, NULL, NULL);
 }
 
 void sys_exit(void)

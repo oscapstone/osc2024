@@ -5,7 +5,7 @@
 #include "../include/entry.h"
 #include "../include/mm.h"
 
-int copy_process(unsigned long clone_flags, unsigned long fn, unsigned long arg, unsigned long stack)
+int copy_process(unsigned long clone_flags, unsigned long fn, unsigned long arg)
 {
     preempt_disable();
     struct task_struct *p;
@@ -15,18 +15,34 @@ int copy_process(unsigned long clone_flags, unsigned long fn, unsigned long arg,
         return -1;
 
     struct pt_regs *childregs = task_pt_regs(p);
-    memzero((unsigned long)childregs, sizeof(struct pt_regs));
-    memzero((unsigned long)&p->cpu_context, sizeof(struct cpu_context));
+    memset(childregs, 0, sizeof(struct pt_regs));
+    memset(p, 0, sizeof(struct task_struct));
 
     if (clone_flags & PF_KTHREAD) {
         p->cpu_context.x19 = fn;
         p->cpu_context.x20 = arg;
     } else {
+        // copy content of trap frame
         struct pt_regs *cur_regs = task_pt_regs(current);
         *childregs = *cur_regs;
         childregs->regs[0] = 0;
-        childregs->sp = stack + PAGE_SIZE;
-        p->stack = stack;
+        p->stack = page_frame_allocate(4);
+
+        if (!p->stack)
+            return -1;
+        
+        // stack pointer shoule be independent
+        childregs->sp = (unsigned long)p->stack + THREAD_SIZE;
+
+        // copy content of user stack
+        if (current->stack) {
+            unsigned long offset = (unsigned long)current->stack + THREAD_SIZE - cur_regs->sp;
+            childregs->sp -= offset;
+            memcpy((void*)childregs->sp, (const void*)cur_regs->sp, offset);    
+        }
+
+        // user program should be indepedent
+        
     }
     p->flags = clone_flags;
     p->priority = current->priority;
@@ -45,14 +61,25 @@ int copy_process(unsigned long clone_flags, unsigned long fn, unsigned long arg,
 int move_to_user_mode(unsigned long pc)
 {
     struct pt_regs *regs = task_pt_regs(current);
-    memzero((unsigned long)regs, sizeof(*regs));
+    if (!regs)
+        return -1;
+    memset(regs, 0, sizeof(struct pt_regs));
     regs->pc = pc;
     regs->pstate = PSR_MODE_EL0t;
-    unsigned long stack = page_frame_allocate(4);    // allocate new user stack
-    if (!stack)
+    
+    current->prog = pc;
+
+    if (current->stack)
+        goto set_sp;
+    
+    current->stack = page_frame_allocate(4);
+
+    if (!current->stack)
         return -1;
-    regs->sp = stack + PAGE_SIZE;
-    current->stack = stack;
+
+set_sp:
+    regs->sp = (unsigned long)current->stack + THREAD_SIZE;
+
     return 0;
 }
 

@@ -637,6 +637,35 @@ void chunk_free(char *addr)
  * with `-nostdlib` compiler flag, we have to implement this function since
  * compiler may generate references to this function
  */
+void memset(void* b, int c, uint32_t len)
+{
+    uint32_t offset = mem_align(b, sizeof(void*)) - (char *)b;
+    len -= offset;
+    uint32_t word_size = len / sizeof(void*);
+    uint32_t byte_size = len % sizeof(void*);
+    unsigned char* offset_ptr = (unsigned char*)b;
+    unsigned long* word_ptr = (unsigned long*)(offset_ptr + offset);
+    unsigned char* byte_ptr = (unsigned char*)(word_ptr + word_size);
+    unsigned char ch = (unsigned char)c;
+    unsigned long byte = (unsigned long)ch;
+    unsigned long word = (byte << 56) | (byte << 48) | (byte << 40) |
+                         (byte << 32) | (byte << 24) | (byte << 16) |
+                         (byte << 8) | byte;
+
+    for (uint32_t i = 0; i < offset; i++)
+        offset_ptr[i] = ch;
+
+    for (uint32_t i = 0; i < word_size; i++)
+        word_ptr[i] = word;
+
+    for (uint32_t i = 0; i < byte_size; i++)
+        byte_ptr[i] = ch;
+}
+
+/*
+ * with `-nostdlib` compiler flag, we have to implement this function since
+ * compiler may generate references to this function
+ */
 void *memcpy(void *dst, const void *src, uint32_t n)
 {
     char* dst_cp = dst;

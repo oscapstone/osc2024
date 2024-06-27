@@ -44,11 +44,16 @@ void user_process()
 	// printf("write %d characters\n", write_char);
 	// int num = exec(NULL, NULL);
 	// printf("exec: %d\n", num);
-	// int pid = fork();
-	// printf("fork pid: %d\n", pid);
+	int pid = fork();
+	printf("fork pid: %d\n", pid);
 	// get_board_revision();
 	// sys_kill(pid);
 	exit_process();
+
+	// while (1) {
+	// 	printf("pid = %d\n", getpid());
+	// 	schedule();
+	// }
 }
 
 void kernel_process()
@@ -83,13 +88,13 @@ void kernel_main(uint64_t x0)
 	dynamic_allocator_init();
 	enable_interrupt();
 
-	/* add initial timer */
-	uint64_t cycles = read_sysreg(cntfrq_el0) >> 5;
-	char *msg = NULL;
-	uint32_t is_periodic = 1;
-	add_timeout_event(msg, cycles, is_periodic);
+	// /* add initial timer */
+	// uint64_t cycles = read_sysreg(cntfrq_el0) >> 5;
+	// char *msg = NULL;
+	// uint32_t is_periodic = 1;
+	// add_timeout_event(msg, cycles, is_periodic);
 
-	int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0, page_frame_allocate(4));
+	int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0);
 	if (res < 0) {
 		printf("error while starting kernel process");
 		return;

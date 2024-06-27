@@ -44,6 +44,7 @@ struct task_struct {
 	long pid;
 	unsigned long stack;
 	unsigned long flags;
+	unsigned long prog;
 };
 
 void show_task_head(void);

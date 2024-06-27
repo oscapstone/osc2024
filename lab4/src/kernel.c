@@ -44,5 +44,7 @@ void kernel_main(uint64_t x0)
 	
 	printf("CHAR_MIN: %d\n", CHAR_MIN);       // checking the type of char in ARM architecture
 	enable_interrupt();
+	buddy_system_init();
+	dynamic_allocator_init();
 	shell();
 }
