@@ -149,6 +149,22 @@ impl Process {
         unsafe {
             core::ptr::copy(code.as_ptr(), proc_map.text.start as *mut u8, code.len());
         }
+        let mut open_files = Vec::new();
+        let vfs = unsafe {crate::GLOBAL_VFS.as_mut().unwrap()};
+        for _ in 0..2{
+            let f = vfs.open("/dev/uart", false);
+            match f {
+                Ok(f) => {
+                    open_files.push(f);
+                }
+                Err(e) => {
+                    println_polling!("no devfs: {}", e);
+                }
+            }
+
+        }
+
+
         Self {
             pid,
             state: ProcessState::Ready,
@@ -157,7 +173,7 @@ impl Process {
             proc_map,
             elr_el1: proc_mem_start as u64,
             current_dir: "/".to_string(),
-            open_files: Vec::new(),
+            open_files: open_files,
         }
     }
 

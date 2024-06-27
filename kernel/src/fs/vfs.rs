@@ -197,9 +197,14 @@ impl File {
         file.write(buf)
     }
 
-    pub fn seek(&mut self, offset: usize) -> Result<usize, String> {
+    pub fn seek(&mut self, offset: usize, whence: i64) -> Result<usize, String> {
         let file = unsafe { self.file.as_mut() };
-        file.seek(offset)
+        if whence == 0 {
+            file.seek(offset)
+        }
+        else {
+            unimplemented!("seek: whence != 0")
+        }
     }
 
     pub fn close(&mut self) {

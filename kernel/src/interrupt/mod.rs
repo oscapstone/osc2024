@@ -189,6 +189,28 @@ fn do_file_syscall(system_call_number: u64, sp: *mut u64) {
                 process.registers.x0 = 0;
             }
         }
+        18 => {
+            // you only need to implement seek set
+            // # define SEEK_SET 0
+            // long lseek64(int fd, long offset, int whence);
+            unsafe {
+                let fd = process.registers.x0 as usize;
+                let offset = process.registers.x1 as usize;
+                let whence = process.registers.x2 as i64;
+                let file = process.open_files.get_mut(fd).unwrap();
+                let result = file.seek(offset, whence);
+                match result {
+                    Ok(offset) => {
+                        process.registers.x0 = offset as u64;
+                    }
+                    Err(e) => {
+                        println_polling!("lseek64 error: {}", e);
+                        process.registers.x0 = -1i64 as u64;
+                    }
+                }
+            }
+
+        }
         _ => {
             panic!("沒看過，加油")
         }
