@@ -8,9 +8,9 @@
 
 void enable_timer_interrupt();
 void disable_timer_interrupt();
-void set_expired_time(uint64_t duration);
+void set_expired_time(uint64_t cycles);
 uint64_t get_current_time();
-void add_timeout_event(char *data, uint64_t duration, uint32_t is_periodic);
+void add_timeout_event(char *data, uint64_t cycles, uint32_t is_periodic);
 void timer_interrupt_handler();
 
 #endif

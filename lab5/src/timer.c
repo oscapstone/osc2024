@@ -32,20 +32,18 @@ void disable_timer_interrupt()
     *CORE0_TIMER_IRQ_CTRL = 0;                  // mask timer interrupt
 }
 
-void set_expired_time(uint64_t duration)
+void set_expired_time(uint64_t cycles)
 {
-    unsigned long frq = read_sysreg(cntfrq_el0);
-    write_sysreg(cntp_tval_el0, frq * duration); // set expired time
+    write_sysreg(cntp_tval_el0, cycles);  // set expired time
 }
 
 uint64_t get_current_time()
 {
-    /* You can get the seconds after booting 
-       from the count of the timer(cntpct_el0) and the frequency of the timer(cntfrq_el0).
+    /* You can get the cycles after booting 
+       from the count of the timer(cntpct_el0).
     */
-    uint64_t frq = read_sysreg(cntfrq_el0);
     uint64_t current_count = read_sysreg(cntpct_el0);
-    return (uint64_t)(current_count / frq);    
+    return current_count;
 }
 
 /* Advanced part */
@@ -63,12 +61,12 @@ struct timer_event {
     uint32_t is_periodic;
 };
 
-static struct timer_event *timer_event_create(timer_event_call_back cb, char *msg, uint64_t duration, uint32_t is_periodic)
+static struct timer_event *timer_event_create(timer_event_call_back cb, char *msg, uint64_t cycles, uint32_t is_periodic)
 {
     struct timer_event *event = chunk_alloc(sizeof(struct timer_event));
     INIT_LIST_HEAD(&event->head);
     event->command_time = get_current_time();
-    event->expired_time = event->command_time + duration;
+    event->expired_time = event->command_time + cycles;
     event->callback = cb;
     event->is_periodic = is_periodic;
     if (msg) 
@@ -100,19 +98,19 @@ static void print_message(char *msg)
 
 
 /* Create an API that user program can use */
-static void timer_add_event(timer_event_call_back cb, char *msg, uint64_t duration, uint32_t is_periodic)
+static void timer_add_event(timer_event_call_back cb, char *msg, uint64_t cycles, uint32_t is_periodic)
 {
-    struct timer_event *event = timer_event_create(cb, msg, duration, is_periodic);
+    struct timer_event *event = timer_event_create(cb, msg, cycles, is_periodic);
     timer_event_queue_add(event);
 }
 
 /* An example of API use */
-void add_timeout_event(char *data, uint64_t duration, uint32_t is_periodic)
+void add_timeout_event(char *data, uint64_t cycles, uint32_t is_periodic)
 {
     if (data)
-        timer_add_event(print_message, data, duration, is_periodic);
+        timer_add_event(print_message, data, cycles, is_periodic);
     else
-        timer_add_event(timer_tick, data, duration, is_periodic);
+        timer_add_event(timer_tick, data, cycles, is_periodic);
 }
 
 static void delay(uint64_t time)
@@ -139,8 +137,8 @@ void timer_interrupt_handler()
     list_del((struct list_head *)event);
 
     if (event->is_periodic) {
-        uint32_t duration = 2;
-        add_timeout_event(NULL, duration, event->is_periodic);
+        uint64_t cycles = read_sysreg(cntfrq_el0) >> 5;
+        add_timeout_event(NULL, cycles, event->is_periodic);
     }
 
     event->callback(event->message);
@@ -161,6 +159,6 @@ void timer_interrupt_handler()
         set_expired_time(first->expired_time - get_current_time());
         enable_timer_interrupt();
     } else { // timer_queue is empty, need to set a bigger time.
-        set_expired_time(2 + get_current_time());
+        set_expired_time(get_current_time() + read_sysreg(cntfrq_el0) >> 5);
     }
 }

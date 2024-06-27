@@ -10,6 +10,7 @@
 #include "../include/thread.h"
 #include "../include/sys.h"
 #include "../include/mailbox.h"
+#include "../include/timer_utils.h"
 #include <limits.h>
 
 extern char *cpio_addr;
@@ -82,6 +83,12 @@ void kernel_main(uint64_t x0)
 	dynamic_allocator_init();
 	enable_interrupt();
 
+	/* add initial timer */
+	uint64_t cycles = read_sysreg(cntfrq_el0) >> 5;
+	char *msg = NULL;
+	uint32_t is_periodic = 1;
+	add_timeout_event(msg, cycles, is_periodic);
+
 	int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0, page_frame_allocate(4));
 	if (res < 0) {
 		printf("error while starting kernel process");
@@ -97,11 +104,7 @@ void kernel_main(uint64_t x0)
 	// 	copy_process((unsigned long)&foo, (unsigned long)0);    // 0 is unused
 	// }
 	
-	/* add initial timer */
-	int duration = 2;
-	char *msg = NULL;
-	uint32_t is_periodic = 1;
-	add_timeout_event(msg, duration, is_periodic);
+
 
 	// idle();
 }
