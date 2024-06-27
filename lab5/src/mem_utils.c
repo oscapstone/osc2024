@@ -127,16 +127,16 @@ static void page_allocate_adjust(uint32_t frame_index, uint32_t find_order, uint
     /* this function is used to modify the free list from "find_order" to "order". */
     for (int i = find_order; i > (int)order; i--) {
         /* partition the contiguous memory into two and reserve the last half part into lower list */
-        printf("Now i = %d, and order = %d\n", i, order);
+        // printf("Now i = %d, and order = %d\n", i, order);
         /* a. get the start address of the first half part */
         char *start_address = (char *)(START_ADDR + (PAGE_SIZE * frame_index));
-        printf("First part start address: 0x%8x\n", start_address);
+        // printf("First part start address: 0x%8x\n", start_address);
         
         /* b. get the start address of the last half part */
         uint32_t half_index = get_half_index(frame_index, i - 1);
-        printf("Half frame index: %d\n", half_index);
+        // printf("Half frame index: %d\n", half_index);
         char *half_address = (char *)(START_ADDR + (PAGE_SIZE * half_index));
-        printf("Second part start_address: 0x%8x\n", half_address);
+        // printf("Second part start_address: 0x%8x\n", half_address);
         
         /* c. put "half_index" in the free list of next order. */
         list_add(&array_start[half_index].head, &freelist_start[i-1].head, freelist_start[i-1].head.next);
@@ -293,7 +293,7 @@ void *malloc(unsigned int size)
     
     char *now_addr = HEAP_ADDR;
     HEAP_ADDR += size;
-    printf("Now heap addr: %8x\n", HEAP_ADDR);                 // try to print current heap address
+    // printf("Now heap addr: %8x\n", HEAP_ADDR);                 // try to print current heap address
     return now_addr;
 }
 
@@ -306,22 +306,22 @@ void *show_heap_end(void)
 static frame_array_t *frame_array_init(void)
 {
     /* print the sizeof frame_array_t and observe the struct packing */
-    printf("sizeof(frame_array_t): %d\n", sizeof(frame_array_t));
-    printf("sizeof(struct list_head): %d\n", sizeof(struct list_head));
+    // printf("sizeof(frame_array_t): %d\n", sizeof(frame_array_t));
+    // printf("sizeof(struct list_head): %d\n", sizeof(struct list_head));
     
     /* allocation of memory for frame array */
     uint32_t num_entries = NUM_ENTRIES;
     array_start = (frame_array_t *)malloc(sizeof(frame_array_t) * NUM_ENTRIES);
-    printf("frame_array start: %8x\n", array_start);
-    printf("Number of entries: %8d\n", num_entries);
-    printf("frame_array_end: %8x\n", array_start + NUM_ENTRIES);
+    // printf("frame_array start: %8x\n", array_start);
+    // printf("Number of entries: %8d\n", num_entries);
+    // printf("frame_array_end: %8x\n", array_start + NUM_ENTRIES);
 
     /* Initialize the value of each entry: all 0 */
     for (int i = 0; i < num_entries; i++) 
         array_start[i].usage = 0;
 
-    printf("array[0]: %d\n", array_start[0].usage);
-    printf("array[1]: %d\n", array_start[1].usage);
+    // printf("array[0]: %d\n", array_start[0].usage);
+    // printf("array[1]: %d\n", array_start[1].usage);
     
     /* return the start address of the frame array. */
     return array_start;
@@ -331,7 +331,7 @@ static free_list_t *freelist_init(void)
 {
     /* allocation of memory for free list */
     uint32_t biggest_order = find_biggest_order(NUM_ENTRIES);
-    printf("sizeof(free_list_t): %d\n", sizeof(free_list_t));
+    // printf("sizeof(free_list_t): %d\n", sizeof(free_list_t));
     
     freelist_start = (free_list_t *)malloc(sizeof(free_list_t) * (biggest_order + 1));
     
@@ -353,7 +353,7 @@ static chunk_list_t *chunk_list_init(void)
 {
     /* allocation of memrory for chunk_list */
     uint32_t num_chunk_list = 9;              // 16, 32, 64, 128, 256, 512, 1024, 2048, 4096;
-    printf("sizeof(chunk_list_t): %d\n", sizeof(chunk_list_t));
+    // printf("sizeof(chunk_list_t): %d\n", sizeof(chunk_list_t));
 
     chunk_list_start = (chunk_list_t *)malloc(sizeof(chunk_list_t) * num_chunk_list);
 
@@ -361,7 +361,7 @@ static chunk_list_t *chunk_list_init(void)
     for (int i = 0; i < num_chunk_list; i++) {
         INIT_LIST_HEAD(&chunk_list_start[i].head);
         chunk_list_start[i].chunk_size = 16 * pow2(i);
-        printf("chunk size of chunk_list[%d]: %d\n", i, chunk_list_start[i].chunk_size);
+        // printf("chunk size of chunk_list[%d]: %d\n", i, chunk_list_start[i].chunk_size);
     }
 
     return chunk_list_start;
@@ -375,13 +375,13 @@ void buddy_system_init(void)
     /* get the biggest order of free list.
        caution: the index of free list is zero-ordered */
     uint32_t biggest_order = find_biggest_order(NUM_ENTRIES);
-    printf("NUMENTRIES: %d\n", NUM_ENTRIES);
-    printf("biggest order: %d\n", biggest_order);
+    // printf("NUMENTRIES: %d\n", NUM_ENTRIES);
+    // printf("biggest order: %d\n", biggest_order);
 
     /* kernel size */
     char *kernel_start = 0x80000;
     char *kernel_end = (char *)(&_end + HEAP_SIZE);
-    printf("kernel_end :%8x\n", kernel_end);
+    // printf("kernel_end :%8x\n", kernel_end);
 
     /* reserve area */
     memory_reserve((char *)0x0000, (char *)0x1000);
@@ -397,19 +397,19 @@ void buddy_system_init(void)
     bottom_up_merge(0, (uint32_t)NUM_ENTRIES);
 
     /* print the log of each free list, which is helpful for debugging */
-    show_entire_list(biggest_order);
+    // show_entire_list(biggest_order);
 }
 
 void *page_frame_allocate(uint32_t size)
 {
     /* 1. align the size into multiple of 4KB */
-    printf("Before alignment: %d\n", size);
+    // printf("Before alignment: %d\n", size);
     size = multiple_of_four(size);
-    printf("After alignment: %d\n", size);
+    // printf("After alignment: %d\n", size);
 
     /* 2. align the multiple of 4KB into the nearest power of 2 */
     uint32_t order = nearest_order(size);
-    printf("Nearest order: %d\n", order);
+    // printf("Nearest order: %d\n", order);
 
     /* 3. search the free list from the order until the maximum order */
     uint32_t max_order = find_biggest_order(NUM_ENTRIES);
@@ -426,8 +426,8 @@ void *page_frame_allocate(uint32_t size)
         }
     }
     // show_entire_list(max_order);
-    printf("First frame index: %d\n", frame_index);
-    printf("Find order: %d\n", find_order);
+    // printf("First frame index: %d\n", frame_index);
+    // printf("Find order: %d\n", find_order);
 
     /* 4. adjust the content of free list in order from [find_order] to [order] */
     if (find_order != -1) {
@@ -440,19 +440,19 @@ void *page_frame_allocate(uint32_t size)
         // show_entire_list(max_order);
         
         /* b. get the start address of the first half part */
-        printf("First frame index: %d\n", frame_index);
+        // printf("First frame index: %d\n", frame_index);
         char *start_address = (char *)(START_ADDR + (PAGE_SIZE * frame_index));
-        printf("First part start address: 0x%8x\n", start_address);
+        // printf("First part start address: 0x%8x\n", start_address);
 
         /* c. check how many pages need to be allocated */
         uint32_t num_pages = size / 4;                   // 4 means 4KB
-        printf("Number of pages: %d\n", num_pages);
+        // printf("Number of pages: %d\n", num_pages);
 
         /* d. adjust the information of allocated pages: 
               1. it may be used by the dynamic allocator, then change the first allocated frame array "contiguous_pages"
               2. other frame array "usage" would be "UNALLOCABLE" */
         uint32_t pages_of_order = pow2(order);
-        printf("Pages of order = %d\n", pages_of_order);
+        // printf("Pages of order = %d\n", pages_of_order);
         for (uint32_t i = frame_index; i < (frame_index + num_pages); i++) {
             if (i == frame_index)
                 array_start[i].contiguous_pages = num_pages;
@@ -470,7 +470,7 @@ void *page_frame_allocate(uint32_t size)
         bottom_up_merge(frame_index, pages_of_order);
 
         // /* g. show the entire list */
-        show_entire_list(max_order);
+        // show_entire_list(max_order);
 
         // /* h. return the start_address */
         return start_address;
@@ -486,11 +486,11 @@ void page_frame_free(char *addr)
 {
     /* 1. check the address and find its corresponding frame index */
     uint32_t frame_index = count_frame_index(addr);
-    printf("The start frame index: %d\n", frame_index);
+    // printf("The start frame index: %d\n", frame_index);
     
     /* 2. check the "countiguous_pages" in this frame index */
     uint32_t free_pages = array_start[frame_index].contiguous_pages;
-    printf("%d pages that need to be free\n", free_pages);
+    // printf("%d pages that need to be free\n", free_pages);
 
     /* 3. modify the "usage" of pages that need to be free (set to zero), add to the free list of order 0 */
     array_start[frame_index].contiguous_pages = 0;
@@ -506,7 +506,7 @@ void page_frame_free(char *addr)
 
     /* 5. Show the result of frame array or free list */
     uint32_t max_order = find_biggest_order(NUM_ENTRIES);
-    show_entire_list(max_order);
+    // show_entire_list(max_order);
 }
 
 void show_memory_layout()
@@ -557,8 +557,8 @@ void *chunk_alloc(uint32_t size)
     /* 1. find the chunk_list index */
     uint32_t size_index = find_chunk_index(size);
     size = 16 * pow2(size_index);
-    printf("Corresponding size: %d\n", size);
-    printf("index of chunk list: %d\n", size_index);
+    // printf("Corresponding size: %d\n", size);
+    // printf("index of chunk list: %d\n", size_index);
 
     /* 2. check the chunk_list_start[size_index].head if it is empty */
     if (list_is_empty(&chunk_list_start[size_index].head)) {

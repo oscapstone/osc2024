@@ -79,7 +79,7 @@ void kill_zombies(void)
     struct list_head *curr, *safety;
     for (curr = task_head_start.next, safety = curr->next; curr != &task_head_start; curr = safety, safety = safety->next) {
         if (((struct task_struct *)curr)->state == TASK_ZOMBIE) {
-            printf("Delete the process\n");
+            // printf("Delete the process\n");
             list_del(curr);
         }
     }
@@ -148,8 +148,9 @@ void switch_to(struct task_struct *next)
         return;
     struct task_struct *prev = current;
     current = next;
+    
     // print new process information
-    show_task_head();
+    // show_task_head();
     cpu_switch_to(&prev->cpu_context, &next->cpu_context);
 }
 

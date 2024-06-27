@@ -130,7 +130,7 @@ static void delay(uint64_t time)
 
 void timer_interrupt_handler()
 {
-    uart_send_string("In timer interrupt handler: \r\n");
+    // uart_send_string("In timer interrupt handler: \r\n");
 
     struct timer_event *event = (struct timer_event *) timer_event_queue.next;
     
@@ -152,7 +152,7 @@ void timer_interrupt_handler()
     // uart_send_string(" s\r\n");
 
     chunk_free((char *)event);
-    printf("free timer event!\n");
+    // printf("free timer event!\n");
 
     if (!list_is_empty(&timer_event_queue)) {
         struct timer_event *first = (struct timer_event *) timer_event_queue.next;
