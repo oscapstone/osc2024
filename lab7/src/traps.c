@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #include "irq.h"
-#include "sched.h"
+#include "proc.h"
 #include "syscall.h"
 #include "traps.h"
 #include "uart.h"
@@ -17,7 +17,7 @@ void print_registers(uint64_t elr, uint64_t esr, uint64_t spsr)
     uart_puts("\n\n");
 }
 
-void exception_entry(trap_frame *tf)
+void exception_entry(pt_regs *tf)
 {
     unsigned long elr, esr, spsr;
     asm volatile("mrs %0, elr_el1" : "=r"(elr));
@@ -62,6 +62,34 @@ void exception_entry(trap_frame *tf)
         break;
     case 9:
         sys_sigkill(tf->x0, tf->x1);
+        break;
+    case 11:
+        tf->x0 = sys_open((const char *)tf->x0, tf->x1);
+        break;
+    case 12:
+        tf->x0 = sys_close(tf->x0);
+        break;
+    case 13:
+        tf->x0 = sys_write(tf->x0, (const void *)tf->x1, tf->x2);
+        break;
+    case 14:
+        tf->x0 = sys_read(tf->x0, (void *)tf->x1, tf->x2);
+        break;
+    case 15:
+        tf->x0 = sys_mkdir((const char *)tf->x0, tf->x1);
+        break;
+    case 16:
+        tf->x0 = sys_mount((const char *)tf->x0, (const char *)tf->x1,
+                           (const char *)tf->x2, tf->x3, (const void *)tf->x4);
+        break;
+    case 17:
+        tf->x0 = sys_chdir((const char *)tf->x0);
+        break;
+    case 18:
+        tf->x0 = sys_lseek64(tf->x0, tf->x1, tf->x2);
+        break;
+    case 19:
+        tf->x0 = sys_ioctl(tf->x0, tf->x1, (void *)tf->x2);
         break;
     case 139:
         sys_sigreturn(tf);

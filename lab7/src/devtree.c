@@ -3,7 +3,6 @@
 #include "uart.h"
 #include "utils.h"
 
-// TODO: Convert to virtual memory address
 // Assign a non-zero value to be stored in the .data section
 void *DTB_BASE = (void *)0xF;
 
@@ -26,7 +25,7 @@ void fdt_traverse(void (*callback)(void *))
     uart_hex((uintptr_t)DTB_BASE);
     uart_putc('\n');
 
-    uintptr_t dtb_ptr = (uintptr_t)DTB_BASE;
+    uintptr_t dtb_ptr = (uintptr_t)PHYS_TO_VIRT(DTB_BASE);
     struct fdt_header *header = (struct fdt_header *)dtb_ptr;
 
     // Check the magic number

@@ -1,7 +1,7 @@
 #ifndef TRAPS_H
 #define TRAPS_H
 
-typedef struct trap_frame {
+typedef struct pt_regs {
     unsigned long x0;
     unsigned long x1;
     unsigned long x2;
@@ -36,6 +36,6 @@ typedef struct trap_frame {
     unsigned long spsr_el1;
     unsigned long elr_el1;
     unsigned long sp_el0;
-} trap_frame; // TODO: Rename to pt_regs
+} pt_regs;
 
 #endif // TRAPS_H

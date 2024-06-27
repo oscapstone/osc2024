@@ -1,13 +1,14 @@
-#ifndef SCHED_H
-#define SCHED_H
+#ifndef PROC_H
+#define PROC_H
 
 #include "signal.h"
 #include "traps.h"
+#include "vfs.h"
 #include "vm.h"
 
 #define STACK_SIZE 0x4000
 
-struct thread_struct {
+struct cpu_context {
     unsigned long x19;
     unsigned long x20;
     unsigned long x21;
@@ -21,7 +22,7 @@ struct thread_struct {
     unsigned long fp;
     unsigned long lr;
     unsigned long sp;
-}; // TODO: Rename to cpu_context
+};
 
 enum task_state {
     TASK_RUNNING,
@@ -29,18 +30,21 @@ enum task_state {
 };
 
 struct task_struct {
-    struct thread_struct context;
+    struct cpu_context context;
     int pid;
     enum task_state state;
+    void *start;
+    long code_size;
     void *stack;
     void *user_stack;
     void (*sighand[NSIG + 1])();
     int sigpending;
     int siglock;
-    trap_frame sigframe;
+    pt_regs sigframe;
     void *sig_stack;
     void *pgd;
-    struct vm_area_struct *mmap;
+    char cwd[PATH_MAX];
+    struct file *fdt[MAX_FD];
     struct task_struct *prev;
     struct task_struct *next;
 };
@@ -57,4 +61,4 @@ void idle();
 void display_run_queue();
 void thread_test();
 
-#endif // SCHED_H
+#endif // PROC_H

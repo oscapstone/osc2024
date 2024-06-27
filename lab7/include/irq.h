@@ -19,6 +19,6 @@
 
 void enable_interrupt();
 void disable_interrupt();
-void irq_entry(trap_frame *tf);
+void irq_entry(pt_regs *tf);
 
 #endif // IRQ_H

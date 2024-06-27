@@ -1,5 +1,4 @@
 #include "mm.h"
-#include "alloc.h"
 #include "devtree.h"
 #include "string.h"
 #include "uart.h"
@@ -8,6 +7,7 @@
 
 extern char *__bss_end;
 extern void *DTB_BASE;
+static char *heap_top;
 
 #define BUDDY_MAX_ORDER 10
 #define CACHE_MAX_ORDER 6
@@ -251,20 +251,26 @@ void *kmalloc(unsigned int size)
 
 void kfree(void *ptr)
 {
-    // FIXME: Use page->cache to retrieve the cache order
     // If the pointer is page-aligned and its corresponding
     // page is not divided into cache objects, then free the
     // page directly. Otherwise, free the cache object.
-    if ((intptr_t)VIRT_TO_PHYS(ptr) % PAGE_SIZE == 0) {
-        struct page *page = &mem_map[(intptr_t)VIRT_TO_PHYS(ptr) / PAGE_SIZE];
-        if (page->cache == -1) {
-            free_pages(page, page->order);
-            return;
-        }
+    struct page *page = &mem_map[(intptr_t)VIRT_TO_PHYS(ptr) / PAGE_SIZE];
+    if (((intptr_t)VIRT_TO_PHYS(ptr) % PAGE_SIZE == 0) && page->cache == -1) {
+        free_pages(page, page->order);
+    } else {
+        struct object *object = ptr;
+        kmem_cache_free(object, page->cache);
     }
-    // TODO: Check if the pointer is a valid cache object
-    struct object *object = ptr;
-    kmem_cache_free(object, object->order);
+}
+
+void *simple_malloc(int size)
+{
+    void *p = (void *)&__bss_end;
+    // If requested memory size < 0, return NULL
+    if (size < 0)
+        return 0;
+    heap_top += size;
+    return p;
 }
 
 void mem_init()

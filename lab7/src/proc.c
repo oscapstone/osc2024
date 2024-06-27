@@ -1,4 +1,4 @@
-#include "sched.h"
+#include "proc.h"
 #include "mm.h"
 #include "string.h"
 #include "uart.h"
@@ -59,6 +59,7 @@ void kill_zombies()
             remove(&run_queue, task);
             kfree(task->stack);
             kfree(task->user_stack);
+            kfree(task);
         }
         task = next;
     } while (task != run_queue);
@@ -94,6 +95,8 @@ struct task_struct *kthread_create(void (*func)())
     struct task_struct *task = kmalloc(sizeof(struct task_struct));
     task->pid = thread_count++;
     task->state = TASK_RUNNING;
+    task->start = func;
+    task->code_size = 0;
     task->stack = kmalloc(STACK_SIZE);
     task->user_stack = kmalloc(STACK_SIZE);
     memset(task->sighand, 0, sizeof(task->sighand));
@@ -101,8 +104,9 @@ struct task_struct *kthread_create(void (*func)())
     task->siglock = 0;
     task->pgd = kmalloc(PAGE_SIZE);
     memset(task->pgd, 0, PAGE_SIZE);
-    task->mmap = 0;
-    // TODO: Check VIRT_TO_PHYS needed or not
+    memset(task->cwd, 0, PATH_MAX);
+    strncpy(task->cwd, "/", 1);
+    memset(task->fdt, 0, sizeof(task->fdt));
     task->context.lr = (unsigned long)func;
     task->context.sp = (unsigned long)task->stack + STACK_SIZE;
     task->context.fp = (unsigned long)task->stack + STACK_SIZE;

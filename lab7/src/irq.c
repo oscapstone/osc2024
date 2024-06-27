@@ -1,6 +1,6 @@
 #include "irq.h"
-#include "alloc.h"
-#include "sched.h"
+#include "mm.h"
+#include "proc.h"
 #include "timer.h"
 #include "uart.h"
 
@@ -17,8 +17,7 @@ static irq_task_t *head = 0;
 // Note: call this function with interrupt disabled!
 void irq_add_task(void (*callback)(), int priority)
 {
-    // TODO: Replace with kmalloc
-    irq_task_t *task = (irq_task_t *)simple_malloc(sizeof(irq_task_t));
+    irq_task_t *task = (irq_task_t *)kmalloc(sizeof(irq_task_t));
     task->func = callback;
     task->priority = priority;
     task->dirty = 0;
@@ -58,7 +57,7 @@ void disable_interrupt()
     asm volatile("msr DAIFSet, 0xF;");
 }
 
-void irq_entry(trap_frame *tf)
+void irq_entry(pt_regs *tf)
 {
     // Enter the critical section ->
     // temporarily disable interrupts
@@ -104,6 +103,7 @@ void irq_entry(trap_frame *tf)
             task->next->prev = task->prev;
         if (task == head)
             head = task->next;
+        kfree(task);
         enable_interrupt();
     }
 
