@@ -1,6 +1,6 @@
 #include "timer.h"
-#include "alloc.h"
-#include "sched.h"
+#include "mm.h"
+#include "proc.h"
 #include "string.h"
 #include "uart.h"
 
@@ -50,8 +50,10 @@ void timer_irq_handler()
 
     // Check the timer queue
     while (head != 0 && timer_get_uptime() >= head->time) {
+        timer_t *tmp = head;
         head->func(head->arg); // Execute the callback function
-        head = head->next;     // Delete the node FIXME: free the node
+        head = head->next;
+        kfree(tmp);
     }
 
     timer_enable_interrupt();
@@ -69,8 +71,7 @@ uint64_t timer_get_uptime()
 void timer_add(void (*callback)(void *), void *arg, int after)
 {
     // Insert the new timer node into the linked list (sorted by time)
-    // TODO: Replace with kmalloc
-    timer_t *timer = (timer_t *)simple_malloc(sizeof(timer_t));
+    timer_t *timer = (timer_t *)kmalloc(sizeof(timer_t));
     timer->func = callback;
     timer->arg = arg;
     timer->time = timer_get_uptime() + after;

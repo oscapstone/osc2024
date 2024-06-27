@@ -2,7 +2,7 @@
 #include "dev_framebuffer.h"
 #include "dev_uart.h"
 #include "mm.h"
-#include "sched.h"
+#include "proc.h"
 #include "string.h"
 #include "vfs_ramfs.h"
 #include "vfs_tmpfs.h"

@@ -1,4 +1,5 @@
 #include "dev_uart.h"
+#include "mm.h"
 #include "uart.h"
 
 struct file_operations dev_uart_fops = {
@@ -23,7 +24,7 @@ int dev_uart_open(struct vnode *file_node, struct file **target)
 
 int dev_uart_close(struct file *file)
 {
-    // kfree(file);
+    kfree(file);
     return 0;
 }
 

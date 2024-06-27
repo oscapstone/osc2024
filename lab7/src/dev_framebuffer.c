@@ -1,6 +1,7 @@
 #include "dev_framebuffer.h"
 #include "irq.h"
 #include "mbox.h"
+#include "mm.h"
 #include "string.h"
 #include "uart.h"
 #include "vm.h"
@@ -88,7 +89,7 @@ int dev_fb_open(struct vnode *file_node, struct file **target)
 
 int dev_fb_close(struct file *file)
 {
-    // kfree(file);
+    kfree(file);
     return 0;
 }
 

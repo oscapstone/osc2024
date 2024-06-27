@@ -1,5 +1,5 @@
 #include "utils.h"
-#include "sched.h"
+#include "proc.h"
 
 int align4(int n)
 {

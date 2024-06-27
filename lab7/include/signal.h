@@ -7,6 +7,6 @@
 
 void signal(int signum, void (*handler)());
 void kill(int pid, int sig);
-void do_signal(trap_frame *regs);
+void do_signal(pt_regs *regs);
 
 #endif // SIGNAL_H

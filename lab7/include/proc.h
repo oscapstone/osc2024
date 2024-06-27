@@ -1,5 +1,5 @@
-#ifndef SCHED_H
-#define SCHED_H
+#ifndef PROC_H
+#define PROC_H
 
 #include "signal.h"
 #include "traps.h"
@@ -8,7 +8,7 @@
 
 #define STACK_SIZE 0x4000
 
-struct thread_struct {
+struct cpu_context {
     unsigned long x19;
     unsigned long x20;
     unsigned long x21;
@@ -22,7 +22,7 @@ struct thread_struct {
     unsigned long fp;
     unsigned long lr;
     unsigned long sp;
-}; // TODO: Rename to cpu_context
+};
 
 enum task_state {
     TASK_RUNNING,
@@ -30,7 +30,7 @@ enum task_state {
 };
 
 struct task_struct {
-    struct thread_struct context;
+    struct cpu_context context;
     int pid;
     enum task_state state;
     void *start;
@@ -40,7 +40,7 @@ struct task_struct {
     void (*sighand[NSIG + 1])();
     int sigpending;
     int siglock;
-    trap_frame sigframe;
+    pt_regs sigframe;
     void *sig_stack;
     void *pgd;
     char cwd[PATH_MAX];
@@ -61,4 +61,4 @@ void idle();
 void display_run_queue();
 void thread_test();
 
-#endif // SCHED_H
+#endif // PROC_H

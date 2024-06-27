@@ -1,4 +1,4 @@
-#include "sched.h"
+#include "proc.h"
 #include "mm.h"
 #include "string.h"
 #include "uart.h"
@@ -59,6 +59,7 @@ void kill_zombies()
             remove(&run_queue, task);
             kfree(task->stack);
             kfree(task->user_stack);
+            kfree(task);
         }
         task = next;
     } while (task != run_queue);

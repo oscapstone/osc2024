@@ -23,7 +23,6 @@ int hextoi(char *s, int n);
 void initrd_list();
 void initrd_cat(const char *target);
 void initrd_exec(const char *target);
-void initrd_sys_exec(const char *target);
 void initrd_callback(void *addr);
 
 #endif // INITRD_H

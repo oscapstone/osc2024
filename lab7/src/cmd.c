@@ -1,9 +1,8 @@
 #include "cmd.h"
-#include "alloc.h"
 #include "initrd.h"
 #include "mbox.h"
 #include "mm.h"
-#include "sched.h"
+#include "proc.h"
 #include "shell.h"
 #include "string.h"
 #include "syscall.h"
@@ -94,8 +93,7 @@ void clear()
 
 void timeout()
 {
-    // TODO: Replace with kmalloc
-    char *msg = simple_malloc(SHELL_BUF_SIZE);
+    char *msg = kmalloc(SHELL_BUF_SIZE);
     uart_puts("Message: ");
     read_user_input(msg);
 
@@ -103,7 +101,7 @@ void timeout()
     uart_puts("Seconds: ");
     read_user_input(sec);
 
-    strcat(msg, "\n"); // Add newline at the end
+    strcat(msg, "\n");
     set_timeout(msg, atoi(sec));
 }
 
@@ -115,7 +113,6 @@ void demo()
     uart_puts("(3) Buddy system\n");
     uart_puts("(4) Dynamic allocator\n");
     uart_puts("(5) Thread creation\n");
-    uart_puts("(6) Fork system call\n");
     uart_puts("Select: ");
     read_user_input(select);
     switch (atoi(select)) {
@@ -162,10 +159,6 @@ void demo()
     case 5:
         for (int i = 0; i < 3; i++)
             kthread_create(thread_test);
-        idle();
-        break;
-    case 6:
-        kthread_create(run_fork_test);
         idle();
         break;
     default:

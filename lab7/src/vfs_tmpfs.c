@@ -58,7 +58,7 @@ int tmpfs_open(struct vnode *file_node, struct file **target)
 
 int tmpfs_close(struct file *file)
 {
-    // kfree(file);
+    kfree(file);
     return 0;
 }
 

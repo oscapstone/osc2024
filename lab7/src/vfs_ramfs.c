@@ -87,7 +87,7 @@ int ramfs_open(struct vnode *file_node, struct file **target)
 
 int ramfs_close(struct file *file)
 {
-    // TODO: kfree(file);
+    kfree(file);
     return 0;
 }
 

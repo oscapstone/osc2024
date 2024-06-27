@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #include "irq.h"
-#include "sched.h"
+#include "proc.h"
 #include "syscall.h"
 #include "traps.h"
 #include "uart.h"
@@ -17,7 +17,7 @@ void print_registers(uint64_t elr, uint64_t esr, uint64_t spsr)
     uart_puts("\n\n");
 }
 
-void exception_entry(trap_frame *tf)
+void exception_entry(pt_regs *tf)
 {
     unsigned long elr, esr, spsr;
     asm volatile("mrs %0, elr_el1" : "=r"(elr));

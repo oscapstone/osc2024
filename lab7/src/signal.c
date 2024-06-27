@@ -1,6 +1,6 @@
 #include "signal.h"
 #include "mm.h"
-#include "sched.h"
+#include "proc.h"
 #include "string.h"
 
 extern void sigreturn(); // Defined in entry.S
@@ -16,7 +16,7 @@ void kill(int pid, int sig)
     task->sigpending |= 1 << (sig - 1); // Set the signal pending bit
 }
 
-void do_signal(trap_frame *regs)
+void do_signal(pt_regs *regs)
 {
     // Prevent nested signal handling
     if (get_current()->siglock)
@@ -35,7 +35,7 @@ void do_signal(trap_frame *regs)
             }
 
             // Save the sigframe
-            memcpy(&get_current()->sigframe, regs, sizeof(trap_frame));
+            memcpy(&get_current()->sigframe, regs, sizeof(pt_regs));
             get_current()->sig_stack = kmalloc(STACK_SIZE);
             map_pages((unsigned long)get_current()->pgd, 0xFFFFFFFF7000, 0x4000,
                       (unsigned long)VIRT_TO_PHYS(get_current()->sig_stack), 0);

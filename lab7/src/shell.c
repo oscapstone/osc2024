@@ -20,8 +20,6 @@ void run_shell()
 
 void read_user_input(char *buf)
 {
-    // FIXME: buffer overflow is not handled!
-
     int idx = 0;
 
     while (1) {
