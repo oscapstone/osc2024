@@ -7,6 +7,7 @@
 #include "../include/task_queue.h"
 #include "../include/sched.h"
 #include "../include/exception.h"
+#include "../include/fork.h"
 #include <stdint.h>
 
 #define UNUSED(x) UNUSED_##x __attribute__((__unused__))
@@ -20,9 +21,12 @@ uint32_t nr_tasks = 1;
 /* scheduler function */
 void show_task_head()
 {
-    printf("The address of task_head: %8x\n", current);
-    printf("The address that task_head_start.next: %8x\n", task_head_start.next);
-    printf("The address that task_head_start.prev: %8x\n", task_head_start.prev);    
+    printf("The value of x19 in current process: %8x\n", current->cpu_context.x19);
+    printf("The value of pc in current process: %8x\n", current->cpu_context.pc);
+    printf("The value of pc in trap_frame: %8x\n", task_pt_regs(current)->pc);
+    printf("Current pid : %d\n", current->pid);
+    // printf("The address that task_head_start.next: %8x\n", task_head_start.next);
+    // printf("The address that task_head_start.prev: %8x\n", task_head_start.prev);    
 }
 
 void kill_process(int pid)
@@ -144,6 +148,8 @@ void switch_to(struct task_struct *next)
         return;
     struct task_struct *prev = current;
     current = next;
+    // print new process information
+    show_task_head();
     cpu_switch_to(&prev->cpu_context, &next->cpu_context);
 }
 

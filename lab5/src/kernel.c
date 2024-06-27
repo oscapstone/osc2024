@@ -11,6 +11,7 @@
 #include "../include/sys.h"
 #include "../include/mailbox.h"
 #include "../include/timer_utils.h"
+#include "../include/cpio.h"
 #include <limits.h>
 
 extern char *cpio_addr;
@@ -32,34 +33,34 @@ extern volatile unsigned int  __attribute__((aligned(16))) mbox_buf[8];
 // 	}
 // }
 
-void user_process()
-{
-	// char buf[30] = {0};
-	// printf("User process started\n");
-	// int pid = getpid();
-	// printf("user->pid: %d\n", pid);
-	// uint32_t read_char = uart_read(buf, 30);
-	// printf("read %d characters\n", read_char);
-	// uint32_t write_char = uart_write(buf, 30);
-	// printf("write %d characters\n", write_char);
-	// int num = exec(NULL, NULL);
-	// printf("exec: %d\n", num);
-	int pid = fork();
-	printf("fork pid: %d\n", pid);
-	// get_board_revision();
-	// sys_kill(pid);
-	exit_process();
+// void user_process()
+// {
+// 	// char buf[30] = {0};
+// 	// printf("User process started\n");
+// 	// int pid = getpid();
+// 	// printf("user->pid: %d\n", pid);
+// 	// uint32_t read_char = uart_read(buf, 30);
+// 	// printf("read %d characters\n", read_char);
+// 	// uint32_t write_char = uart_write(buf, 30);
+// 	// printf("write %d characters\n", write_char);
+// 	// int num = exec(NULL, NULL);
+// 	// printf("exec: %d\n", num);
+// 	int pid = fork();
+// 	printf("fork pid: %d\n", pid);
+// 	// get_board_revision();
+// 	// sys_kill(pid);
+// 	exit_process();
 
-	// while (1) {
-	// 	printf("pid = %d\n", getpid());
-	// 	schedule();
-	// }
-}
+// 	// while (1) {
+// 	// 	printf("pid = %d\n", getpid());
+// 	// 	schedule();
+// 	// }
+// }
 
 void kernel_process()
 {
 	printf("Kernel process started.\n");
-	int err = move_to_user_mode((unsigned long)&user_process);         // set trap frame
+	int err = move_to_user_mode((unsigned long)&fork_test);         // set trap frame
 	if (err < 0)
 		printf("Error while moving process to user mode.\n");
 }
@@ -88,28 +89,34 @@ void kernel_main(uint64_t x0)
 	dynamic_allocator_init();
 	enable_interrupt();
 
-	// /* add initial timer */
-	// uint64_t cycles = read_sysreg(cntfrq_el0) >> 5;
-	// char *msg = NULL;
-	// uint32_t is_periodic = 1;
-	// add_timeout_event(msg, cycles, is_periodic);
+	uint64_t tmp;
+	asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+	tmp |= 1;
+	asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
 
-	int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0);
-	if (res < 0) {
-		printf("error while starting kernel process");
-		return;
-	}
+	// /* add initial timer */
+	uint64_t cycles = read_sysreg(cntfrq_el0) >> 5;
+	char *msg = NULL;
+	uint32_t is_periodic = 1;
+	add_timeout_event(msg, cycles, is_periodic);
+
+	// int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0);
+	// if (res < 0) {
+	// 	printf("error while starting kernel process");
+	// 	return;
+	// }
+
+
+	copy_process(PF_KTHREAD, (unsigned long)&cpio_load_program, 0);
 
 	while (1) {
 		schedule();
 	}
-
+	
 	// int num = 10;
 	// for (int i = 0; i < num; i++) { 
-	// 	copy_process((unsigned long)&foo, (unsigned long)0);    // 0 is unused
+	// 	copy_process(PF_KTHREAD, (unsigned long)&foo, (unsigned long)0);    // 0 is unused
 	// }
 	
-
-
 	// idle();
 }

@@ -3,10 +3,30 @@
 #include "../include/string_utils.h"
 #include "../include/shell.h"
 #include "../include/mem_utils.h"
+#include "../include/mm.h"
+#include "../include/fork.h"
 
 extern char *cpio_addr;
 #define KSTACK_SIZE 0x2000
 #define USTACK_SIZE 0x2000
+
+static void cpio_load(char *file_addr, unsigned int file_size)
+{
+    /* first, compute the size */
+    printf("File size = %d byte\n", file_size);
+
+    /* second, how many KB it has */
+    uint32_t remainder = file_size % 4096;
+    if (remainder)
+        remainder = 1;
+    uint32_t kilo_byte = (file_size >> PAGE_SHIFT) + remainder;
+    printf("File size = %d KB\n", kilo_byte);
+
+    /* third, allocate spaces for file */
+    void *target = page_frame_allocate(kilo_byte);
+    memcpy(target, file_addr, file_size);
+    move_to_user_mode((unsigned long)target);
+}
 
 void cpio_ls()
 {
@@ -149,12 +169,15 @@ void cpio_load_program()
     }
 
     /* 10. Now we have start address of the content of img file, load the content to specific address. */
-    uart_hex(size);
-    uart_send_string("\r\n");
+    // uart_hex(size);
+    // uart_send_string("\r\n");
 
-    asm volatile("mov x0, 0x3c0  \n");
-    asm volatile("msr spsr_el1, x0   \n");
-    asm volatile("msr elr_el1, %0    \n" ::"r"(addr));
-    asm volatile("msr sp_el0, %0    \n" ::"r"(addr + USTACK_SIZE));
-    asm volatile("eret   \n");
+    // asm volatile("mov x0, 0x3c0  \n");
+    // asm volatile("msr spsr_el1, x0   \n");
+    // asm volatile("msr elr_el1, %0    \n" ::"r"(addr));
+    // asm volatile("msr sp_el0, %0    \n" ::"r"(addr + USTACK_SIZE));
+    // asm volatile("eret   \n");
+
+    /* 11. use static function to load program and execute */
+    cpio_load(addr, size);
 }

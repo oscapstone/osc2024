@@ -1,7 +1,7 @@
 ARMGNU ?= aarch64-linux-gnu
 
-COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only -g
-ASMOPS = -Iinclude -g
+COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only
+ASMOPS = -Iinclude 
 
 BUILD_DIR = build
 SRC_DIR = src
@@ -9,7 +9,7 @@ SRC_DIR = src
 all : kernel8.img
 
 qe: kernel8.img
-	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial stdio -display none -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb -S -s
+	qemu-system-aarch64 -M raspi3b -kernel $< -serial null -serial stdio -initrd initramfs.cpio -dtb bcm2710-rpi-3-b-plus.dtb
 
 clean :
 	rm -rf $(BUILD_DIR) *.img 

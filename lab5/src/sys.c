@@ -3,6 +3,7 @@
 #include "../include/sched.h"
 #include "../include/mem_utils.h"
 #include "../include/mailbox.h"
+#include "../include/sys.h"
 
 int sys_getpid(void)
 {

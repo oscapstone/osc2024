@@ -16,6 +16,7 @@
         "list.h": "c",
         "timer_utils.h": "c",
         "sched.h": "c",
-        "mm.h": "c"
+        "mm.h": "c",
+        "task_queue.h": "c"
     }
 }

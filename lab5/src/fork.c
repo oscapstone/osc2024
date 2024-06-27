@@ -39,10 +39,7 @@ int copy_process(unsigned long clone_flags, unsigned long fn, unsigned long arg)
             unsigned long offset = (unsigned long)current->stack + THREAD_SIZE - cur_regs->sp;
             childregs->sp -= offset;
             memcpy((void*)childregs->sp, (const void*)cur_regs->sp, offset);    
-        }
-
-        // user program should be indepedent
-        
+        }        
     }
     p->flags = clone_flags;
     p->priority = current->priority;
@@ -67,7 +64,7 @@ int move_to_user_mode(unsigned long pc)
     regs->pc = pc;
     regs->pstate = PSR_MODE_EL0t;
     
-    current->prog = pc;
+    // current->prog = pc;
 
     if (current->stack)
         goto set_sp;
