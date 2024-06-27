@@ -53,9 +53,10 @@ int sys_exec(const char *name, char *const argv[]){
   t->stack = kmalloc(THREAD_STACK_SIZE);
   // memset(t->stack, 0, THREAD_STACK_SIZE);
   add_vma(&t->vma_list, 0x0, virt_to_phys(p), program_size, 0b111);
+  add_vma(&t->vma_list, 0x80000, virt_to_phys(thread_wrapper), 0x1000, 0b101);
   add_vma(&t->vma_list, 0xffffffffb000, virt_to_phys(t->stack), 0x4000, 0b111);
   add_vma(&t->vma_list, 0x3c000000, 0x3c000000, 0x3000000, 0b111);
-  add_vma(&t->vma_list, 0x100000, virt_to_phys(handler_container), 0x2000, 0b101);
+  add_vma(&t->vma_list, 0x100000, virt_to_phys(handler_container), 0x1000, 0b101);
   // map_pages((pagetable_t)t->regs.pgd, 0x0, virt_to_phys(t->code), program_size, 0);
   // map_pages((pagetable_t)t->regs.pgd, 0xffffffffb000, virt_to_phys(t->stack), 0x4000, 0);
   // map_pages((pagetable_t)t->regs.pgd, 0x3c000000, 0x3c000000, 0x1000000, 0);
@@ -65,7 +66,7 @@ int sys_exec(const char *name, char *const argv[]){
   for(int i = 0; i < MAX_SIGNAL+1; i++){
     t->signal_handler[i] = 0;
   }
-  t->regs.lr = 0x0;
+  t->regs.lr = 0x80000;
   t->regs.sp = 0xfffffffff000;
   t->regs.fp = t->regs.sp;
 
@@ -80,7 +81,7 @@ int sys_exec(const char *name, char *const argv[]){
     "tlbi vmalle1is;"
     "dsb ish;"
     "isb;"
-    "eret;" :: "r" (t), "r" (t->regs.lr), "r" (t->regs.sp), "r" (t->kernel_stack+THREAD_STACK_SIZE), "r"(t->regs.pgd)
+    "eret;" :: "r" (t), "r" (t->regs.lr + ((unsigned long)thread_wrapper % 0x1000)), "r" (t->regs.sp), "r" (t->kernel_stack+THREAD_STACK_SIZE), "r"(t->regs.pgd)
   );
   return 0;
 }
@@ -208,7 +209,7 @@ void* sys_mmap(void* addr, unsigned long len, int prot, int flags, int fd, int f
   do{
     prev = cur;
     cur = cur->next;
-  }while(cur != t->vma_list && cur->va < (start + size));
+  }while(cur != t->vma_list && cur->va <= (start + size));
 
 
   if(!addr || (prev && (prev->va + prev->sz) > start) || (cur && cur->va < (start + size))){

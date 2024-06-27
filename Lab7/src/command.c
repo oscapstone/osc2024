@@ -11,6 +11,9 @@
 #include "syscall.h"
 #include "vm.h"
 #include "signal.h"
+#include "vfs.h"
+
+extern int isFsInitialized; // used in vfs.c:vfs_lookup
 
 Command commands[] = {
     {"help", "print all available commands.", help},
@@ -21,10 +24,10 @@ Command commands[] = {
     {"cat", "print on the standard output", cat},
     {"exec", "excution a user program", exec},
     {"settimeout", "prints MESSAGE after SECONDS with the current time and the command executed time", setTimeout},
-    {"test", "demo test", test}
-};
+    {"test", "demo test", test}};
 
-int help(void* args[]){
+int help(void *args[])
+{
   for (int i = 0; i < MAX_COMM_NUM; i++)
   {
     uart_sends(commands[i].name);
@@ -35,30 +38,36 @@ int help(void* args[]){
   return 0;
 }
 
-int hello(void* args[]){
+int hello(void *args[])
+{
   uart_sends("Hello world!\n");
   return 0;
 }
 
-int lshw(void* args[]){
+int lshw(void *args[])
+{
   get_board_revision();
   get_arm_memory();
   return 0;
 }
 
-int reboot(void* args[]){
+int reboot(void *args[])
+{
   *PM_RSTC = (PM_PASSWORD | 0x20);
   *PM_WDOG = (PM_PASSWORD | 20);
   return 0;
 }
 
-int ls(void* args[]){
+int ls(void *args[])
+{
   initrd_list();
   return 0;
 }
 
-int cat(void* args[]){
-  if(!args){
+int cat(void *args[])
+{
+  if (!args)
+  {
     return -1;
   }
   char filename[257];
@@ -68,17 +77,20 @@ int cat(void* args[]){
   return 0;
 }
 
-int exec(void* args[]){
-  if(!args){
+int exec(void *args[])
+{
+  if (!args)
+  {
     return -1;
   }
   char filename[257];
   strcpy(filename, args[1]);
-  void* exec_data = fetch_exec(filename);
-  if(exec_data){
+  void *exec_data = fetch_exec(filename);
+  if (exec_data)
+  {
     unsigned int size = get_exec_size();
     void *p = kmalloc(size);
-    memcpy((void*)p, exec_data, size);
+    memcpy((void *)p, exec_data, size);
     thread *t = thread_create(p);
     t->stack = kmalloc(THREAD_STACK_SIZE);
 
@@ -90,21 +102,28 @@ int exec(void* args[]){
     t->regs.lr = 0x80000;
     t->regs.sp = 0xfffffffff000;
     t->regs.fp = t->regs.sp;
+
+    vfs_open("/dev/uart", 0, &t->fd_table[0]);
+    vfs_open("/dev/uart", 0, &t->fd_table[1]);
+    vfs_open("/dev/uart", 0, &t->fd_table[2]);
+
+    isFsInitialized = 1;
     asm volatile(
-      "msr tpidr_el1, %0;"
-      "msr spsr_el1, xzr;" // spsr_el1 bit[9:6] are D, A, I, and F; bit[3:0]: el0t
-      "msr elr_el1, %1;"
-      "msr sp_el0, %2;"
-      "dsb ish;"
-      "msr ttbr0_el1, %3;"
-      "tlbi vmalle1is;"
-      "dsb ish;"
-      "isb;"
-      "mov sp, %4;"
-      "eret;" :: "r" (t), "r" (t->regs.lr + ((unsigned long)thread_wrapper % 0x1000)), "r" (t->regs.sp), "r"(t->regs.pgd), "r" (t->kernel_stack+0x4000)
-    );
+        "msr tpidr_el1, %0;"
+        "msr spsr_el1, xzr;" // spsr_el1 bit[9:6] are D, A, I, and F; bit[3:0]: el0t
+        "msr elr_el1, %1;"
+        "msr sp_el0, %2;"
+        "dsb ish;"
+        "msr ttbr0_el1, %3;"
+        "tlbi vmalle1is;"
+        "dsb ish;"
+        "isb;"
+        "mov sp, %4;"
+        "eret;" ::"r"(t),
+        "r"(t->regs.lr + ((unsigned long)thread_wrapper % 0x1000)), "r"(t->regs.sp), "r"(t->regs.pgd), "r"(t->kernel_stack + 0x4000));
   }
-  else{
+  else
+  {
     uart_sends("exec: ");
     uart_sends(filename);
     uart_sends(" No such file or directory\n");
@@ -112,15 +131,18 @@ int exec(void* args[]){
   return 0;
 }
 
-int setTimeout(void* args[]){
-  if(!args){
+int setTimeout(void *args[])
+{
+  if (!args)
+  {
     return -1;
   }
-  set_timeout((char*)args[1], atoi(args[2]));
+  set_timeout((char *)args[1], atoi(args[2]));
   return 0;
 }
 
-int test(void* args[]){
+int test(void *args[])
+{
   uart_sends("demo option:\n");
   uart_sends("1. uart_async_test\n");
   uart_sends("2. thread_test\n");
@@ -128,16 +150,17 @@ int test(void* args[]){
   uart_sends("> ");
   char opt[256];
   gets(opt);
-  switch(atoi(opt)){
-    case 1:
-      uart_async_test();
-      break;
-    case 2:
-      thread_test();
-      break;
-    case 3:
-      sys_fork_test();
-      break;
+  switch (atoi(opt))
+  {
+  case 1:
+    uart_async_test();
+    break;
+  case 2:
+    thread_test();
+    break;
+  case 3:
+    sys_fork_test();
+    break;
   }
 
   return 0;

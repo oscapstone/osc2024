@@ -8,8 +8,10 @@
 #define TASK_ZOMBIE 2
 
 #define THREAD_STACK_SIZE 0x4000
+#define THREAD_FD_TABLE_SIZE 16
 
-typedef struct{
+typedef struct
+{
   unsigned long x19;
   unsigned long x20;
   unsigned long x21;
@@ -26,7 +28,8 @@ typedef struct{
   unsigned long pgd;
 } callee_reg;
 
-typedef struct thread{
+typedef struct thread
+{
   callee_reg regs;
   int tid;
   int state;
@@ -34,13 +37,17 @@ typedef struct thread{
   void *kernel_stack;
 
   /* signal */
-  void (*signal_handler[MAX_SIGNAL+1])();
+  void (*signal_handler[MAX_SIGNAL + 1])();
   int signal_processing;
   int signal_pending;
   callee_reg signal_regs;
 
   /* vma */
-  struct vm_area* vma_list;
+  struct vm_area *vma_list;
+
+  /* file */
+  struct file *fd_table[THREAD_FD_TABLE_SIZE];
+  struct vnode *cwd;
 
   /* queue */
   struct thread *next;
@@ -48,7 +55,7 @@ typedef struct thread{
 } thread;
 
 extern void switch_to(thread *current, thread *next);
-extern thread* get_current();
+extern thread *get_current();
 
 void thread_init();
 thread *thread_create(void (*func)(void));
