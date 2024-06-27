@@ -19,4 +19,11 @@ void show_memory_layout(void);
 void *chunk_alloc(uint32_t size);
 void chunk_free(char *addr);
 
+/*
+ * with `-nostdlib` compiler flag, we have to implement this function since
+ * compiler may generate references to this function
+ */
+void memset(void *b, int c, uint32_t len);
+void *memcpy(void *dst, const void *src, uint32_t n);
+
 #endif

@@ -632,3 +632,17 @@ void chunk_free(char *addr)
 //     array_start[frame_index].now_chunks++;
 //     list_add((struct list_head *)addr, &array_start[frame_index].d_head, array_start[frame_index].d_head.next);
 // }
+
+/*
+ * with `-nostdlib` compiler flag, we have to implement this function since
+ * compiler may generate references to this function
+ */
+void *memcpy(void *dst, const void *src, uint32_t n)
+{
+    char* dst_cp = dst;
+    char* src_cp = (char*)src;
+    for (uint32_t i = 0; i < n; i++)
+        dst_cp[i] = src_cp[i];
+
+    return dst;
+}

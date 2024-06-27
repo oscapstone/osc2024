@@ -26,11 +26,11 @@
         add x21, sp, #S_FRAME_SIZE
     .endif /* \el == 0 */
 
-    stp x30, x21, [sp, 16 * 15]
+    mrs x22, elr_el1
+    mrs x23, spsr_el1
 
     // push information for nested interrupt
-    mrs x22, spsr_el1
-    mrs x23, elr_el1
+    stp x30, x21, [sp, 16 * 15]
     stp x22, x23, [sp, 16 * 16]
 .endm
 
@@ -43,8 +43,8 @@
         msr SP_EL0, x21
     .endif /* \el == 0 */
 
-    msr spsr_el1, x22
-    msr elr_el1, x23
+    msr elr_el1, x22
+    msr spsr_el1, x23
 
     ldp x0, x1, [sp ,16 * 0]
     ldp x2, x3, [sp ,16 * 1]
@@ -181,20 +181,20 @@ el0_sync:
     b.eq el0_svc
     handle_invalid_entry 0 SYNC_ERROR
 
-scnr .req x25
-scno .req x26
-stbl .req x27
+scnr .req x25                               // number of system calls
+scno .req x26                               // syscall number
+stbl .req x27                               // syscall table pointer
 
 el0_svc:
-    adr stbl, sys_call_table
-    uxtw scno, w8
-    mov scnr, #__NR_syscalls
+    adr stbl, sys_call_table                // load syscall table pointer
+    uxtw scno, w8                           // syscall number in w8
+    mov scnr, #__NR_syscalls                
     bl enable_interrupt
-    cmp scno, scnr
+    cmp scno, scnr                          // check upper syscall limit
     b.hs ni_sys
 
-    ldr x16, [stbl, scno, lsl #3]
-    blr x16
+    ldr x16, [stbl, scno, lsl #3]           // address in the syscall table
+    blr x16                                 // call sys_* routine
     b ret_from_syscall
 
 ni_sys:
@@ -208,8 +208,9 @@ ret_from_syscall:
 .globl ret_from_fork
 ret_from_fork:
 	bl	schedule_tail
+    cbz x19, ret_to_user              // not a kernel thread
 	mov	x0, x20
-	blr	x19 		//should never return
+	blr	x19 		                  
 
 ret_to_user:
     bl disable_interrupt

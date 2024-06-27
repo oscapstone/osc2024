@@ -10,7 +10,9 @@
 #define THREAD_SIZE				 4096
 
 #define TASK_RUNNING				0
-#define TASK_STOPPED                1
+#define TASK_ZOMBIE                 1
+
+#define PF_KTHREAD               0x00000002
 
 extern struct task_struct *current;
 extern struct list_head task_head_start;
@@ -40,6 +42,8 @@ struct task_struct {
 	long priority;
 	long preempt_count;
 	long pid;
+	unsigned long stack;
+	unsigned long flags;
 };
 
 void show_task_head(void);
@@ -53,10 +57,11 @@ extern void cpu_switch_to(struct task_struct* prev, struct task_struct* next);
 void idle(void);
 void kill_zombies(void);
 void exit_process(void);
+void kill_process(int pid);
 
 #define INIT_TASK(my_task) \
 /*cpu_context*/	{ {{{&my_task.cpu_context.task_head, &my_task.cpu_context.task_head}},0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-/* state etc */	0,0,1,0 \
+/* state etc */	0,0,1,0, 0, 0, PF_KTHREAD \
 }
 
 #endif

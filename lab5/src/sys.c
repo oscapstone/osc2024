@@ -2,28 +2,60 @@
 #include "../include/mini_uart.h"
 #include "../include/sched.h"
 #include "../include/mem_utils.h"
+#include "../include/mailbox.h"
 
-void sys_write(char *buf)
+int sys_getpid(void)
 {
-    printf(buf);
+    return current->pid;
 }
 
-int sys_clone(unsigned long stack)
+uint32_t sys_uart_read(char *buff, uint32_t size)
 {
-    //
+    uint32_t i;
+    for (i = 0; i < size; i++) {
+        buff[i] = uart_recv();
+        if (buff[i] == '\r')
+            break;
+    }
+    return i;
+}
+uint32_t sys_uart_write(const char *buff, uint32_t size)
+{
+    uint32_t i;
+    for (i = 0; i < size; i++) {
+        uart_send(buff[i]);
+        if (buff[i] == '\r') {
+            uart_send('\n');
+            break;
+        }
+    }
+    return i;
 }
 
-unsigned long sys_malloc()
+int sys_exec(const char *name, char const *argv[])
 {
-    unsigned long addr = page_frame_allocate(4);
-    if (!addr)
-        return -1;
-    return addr;
+    return 1;
 }
 
-void sys_exit()
+int sys_fork(void)
+{
+    unsigned long stack = page_frame_allocate(4);
+    return copy_process(0, NULL, NULL, stack);
+}
+
+void sys_exit(void)
 {
     exit_process();
 }
 
-void * const sys_call_table[] = {sys_write, sys_malloc, sys_clone, sys_exit};
+int sys_mbox_call(unsigned char ch, unsigned int *mbox)
+{
+    return mbox_call(ch, mbox);
+}
+
+void sys_kill(int pid)
+{
+    kill_process(pid);
+}
+
+void * const sys_call_table[] = {sys_getpid, sys_uart_read, sys_uart_write, sys_exec, sys_fork, sys_exit, sys_mbox_call, sys_kill};

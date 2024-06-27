@@ -20,7 +20,7 @@
 #define TAG_REQUEST_CODE    0x00000000
 #define END_TAG             0x00000000
 
-int mbox_call();
+int mbox_call(unsigned char ch, unsigned int *mbox);
 void get_board_revision();
 void get_base_address();
 

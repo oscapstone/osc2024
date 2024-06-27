@@ -1,46 +1,49 @@
 #include "sys.h"
 
-.global call_sys_write
-call_sys_write:
-    mov w8, #SYS_WRITE_NUMBER
+.global getpid
+getpid:
+    mov w8, #SYS_GET_PID_NUMBER
     svc #0
     ret
 
-.global call_sys_malloc
-call_sys_malloc:
-    mov w8, #SYS_MALLOC_NUMBER
+.global uart_read
+uart_read:
+    mov w8, #SYS_UART_READ_NUMBER
     svc #0
     ret
 
-.global call_sys_exit
-call_sys_exit:
+.global uart_write
+uart_write:
+    mov w8, #SYS_UART_WRITE_NUMBER 
+    svc #0
+    ret
+
+.global exec
+exec:
+    mov w8, #SYS_EXEC_NUMBER
+    svc #0
+    ret
+
+.global fork
+fork:
+    mov w8, #SYS_FORK_NUMBER 
+    svc #0
+    ret
+
+.global exit
+exit:
     mov w8, #SYS_EXIT_NUMBER
     svc #0
     ret
 
-.global call_sys_clone
-call_sys_clone:
-    /* Save args for the child. */
-    mov x10, x0                              /* fn */
-    mov x11, x1                              /* arg */
-    mov x12, x2                              /* stack */
-
-    /* Do the system call */
-    mov x0, x2                               /* stack */
-    mov x8, #SYS_CLONE_NUMBER
-    svc 0x0
-
-    cmp x0, #0
-    beq thread_start
+.global mailbox_call
+mailbox_call:
+    mov w8, #SYS_MBOX_CALL_NUMBER
+    svc #0
     ret
 
-thread_start:
-    mov x29, 0
-
-    /* pick the function arg and execute. */
-    mov x0, x11
-    blr x10
-
-    /* we are done, pass the return value through x0. */
-    mov x8, #SYS_EXIT_NUMBER
-    svc 0x0
+.global kill
+kill:
+    mov w8, #SYS_KILL_NUMBER
+    svc #0
+    ret

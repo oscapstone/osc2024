@@ -25,6 +25,22 @@ void show_task_head()
     printf("The address that task_head_start.prev: %8x\n", task_head_start.prev);    
 }
 
+void kill_process(int pid)
+{
+    int find = 0;
+    for (struct list_head *curr = task_head_start.next; curr != &task_head_start; curr = curr->next) {
+        if (((struct task_struct *)curr)->pid == pid) {
+            ((struct task_struct *)curr)->state = TASK_ZOMBIE;
+            find = 1;
+            break;
+        }
+    }
+    if (find)
+        kill_zombies();
+    else
+        printf("No process id: %d exist\n", pid);
+}
+
 void exit_process(void)
 {
     /* print out the pid to check the if it access the correct process */
@@ -34,10 +50,17 @@ void exit_process(void)
     preempt_disable();
 
     /* modify the process state */
-    current->state = TASK_STOPPED;
+    current->state = TASK_ZOMBIE;
+
+    /* free current->stack */
+    if (current->stack)
+        page_frame_free((char *)current->stack);
 
     /* enable preemption */
     preempt_enable();
+
+    /* kill zombies */
+    kill_zombies();
 
     /* After enable preemption, it "must" call schedule or it would go to strange address */
     schedule();
@@ -51,7 +74,7 @@ void kill_zombies(void)
     /* then, traverse the task list to remove stopped task */
     struct list_head *curr, *safety;
     for (curr = task_head_start.next, safety = curr->next; curr != &task_head_start; curr = safety, safety = safety->next) {
-        if (((struct task_struct *)curr)->state == TASK_STOPPED) {
+        if (((struct task_struct *)curr)->state == TASK_ZOMBIE) {
             printf("Delete the process\n");
             list_del(curr);
         }
