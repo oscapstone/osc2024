@@ -1,8 +1,8 @@
 use super::{exception_handler::trap_frame, shell::INITRAMFS};
 use crate::cpu::mmu::{self, vm_setup, vm_to_pm};
 use crate::os::stdio::{print_hex_now, println_now};
-use alloc::{alloc::dealloc, string::String, vec::Vec};
-use core::ptr::{read_volatile, write_volatile};
+
+use alloc::{alloc::dealloc, collections::btree_map::BTreeMap, string::String, vec::Vec};
 use core::{alloc::Layout, arch::asm};
 
 static mut THREADS: Option<Vec<Thread>> = None;
@@ -64,7 +64,21 @@ struct Thread {
     stack: *mut u8,
     stack_size: usize,
     state: ThreadState,
+
+    fds: BTreeMap<usize, usize>, // fd, file handle index
+    working_dir: String,
+
     page_table: *mut u8,
+}
+
+impl Thread {
+    pub fn get_working_dir(&self) -> &String {
+        &self.working_dir
+    }
+
+    pub fn set_working_dir(&mut self, working_dir: String) {
+        self.working_dir = working_dir;
+    }
 }
 
 impl Default for Thread {
@@ -76,9 +90,19 @@ impl Default for Thread {
             stack: core::ptr::null_mut(),
             stack_size: 0,
             state: ThreadState::Dead,
+            fds: BTreeMap::new(),
+            working_dir: String::new(),
             page_table: core::ptr::null_mut(),
         }
     }
+}
+
+pub fn init_fds() -> BTreeMap<usize, usize> {
+    let mut fds = BTreeMap::new();
+    fds.insert(0, 0);
+    fds.insert(1, 1);
+    fds.insert(2, 2);
+    fds
 }
 
 pub fn init() {
@@ -98,6 +122,9 @@ pub fn create_thread(
 
     let page_table = mmu::vm_setup(program, program_size, stack, stack_size);
 
+    let fds = init_fds();
+    let working_dir = String::from("/");
+
     threads.push(Thread {
         id,
         program,
@@ -109,6 +136,8 @@ pub fn create_thread(
             sp: 0xFFFF_FFFF_FFF0,
             ..Default::default()
         }),
+        fds,
+        working_dir,
         page_table,
     });
 
@@ -117,7 +146,6 @@ pub fn create_thread(
     id
 }
 
-#[no_mangle]
 pub fn run_thread(id: Option<usize>) {
     unsafe {
         let threads = THREADS.as_mut().unwrap();
@@ -176,7 +204,7 @@ pub fn run_thread(id: Option<usize>) {
     }
 }
 
-pub fn get_id_by_pc(pc: usize) -> Option<usize> {
+pub fn get_running_thread_id() -> Option<usize> {
     let threads = unsafe { THREADS.as_ref().unwrap() };
 
     threads
@@ -184,8 +212,6 @@ pub fn get_id_by_pc(pc: usize) -> Option<usize> {
         .find(|thread| {
             if let ThreadState::Running(context) = &thread.state {
                 true
-                // (thread.program as usize) <= pc
-                //     && pc < (thread.program as usize + thread.program_size)
             } else {
                 false
             }
@@ -558,6 +584,8 @@ pub fn fork() -> Option<usize> {
             );
         }
 
+        let new_fds = init_fds();
+
         println!("Old pc: {:X}", current_thread_context.pc);
         threads.push(Thread {
             id: new_pid,
@@ -569,6 +597,8 @@ pub fn fork() -> Option<usize> {
                 x0: 0,
                 ..*current_thread_context
             }),
+            fds: new_fds,
+            working_dir: current_thread.working_dir.clone(),
             page_table,
         });
         println!("New program start: {:X}", program_ptr as usize);
@@ -590,11 +620,7 @@ pub fn exec(program_name: String, program_args: Vec<String>) {
         matches!(state, ThreadState::Running(_))
     });
 
-    if current_thread.is_none() {
-        panic!("No running thread to exec");
-    }
-
-    let current_thread = current_thread.unwrap();
+    let current_thread = current_thread.expect("No running thread to exec");
     let stack_size = 4096;
 
     unsafe {
@@ -621,31 +647,46 @@ pub fn exec(program_name: String, program_args: Vec<String>) {
                 .expect("Layout error"),
         );
 
-        current_thread.program = alloc::alloc::alloc(
+        // Construct new program
+
+        let program = alloc::alloc::alloc(
             Layout::from_size_align(filesize, THREAD_ALIGNMENT).expect("Layout error"),
         );
-        current_thread.stack = alloc::alloc::alloc(
-            Layout::from_size_align(4096, THREAD_ALIGNMENT).expect("Layout error"),
-        );
+        let program_size = (filesize + (0x1000 - 1)) & !(0x1000 - 1);
 
-        // Clear memory
         core::ptr::write_bytes(current_thread.program, 0, current_thread.program_size);
-
         INITRAMFS
             .as_ref()
             .unwrap()
-            .load_file_to_memory(program_name.as_str(), current_thread.program);
+            .load_file_to_memory(program_name.as_str(), current_thread.program, 0, filesize);
 
-        current_thread.program_size = filesize;
-        current_thread.stack_size = stack_size;
-
-        current_thread.page_table = vm_setup(
-            current_thread.program,
-            current_thread.program_size,
-            current_thread.stack,
-            current_thread.stack_size,
+        let stack_size = 4096;
+        let stack = alloc::alloc::alloc(
+            Layout::from_size_align(stack_size, THREAD_ALIGNMENT).expect("Layout error"),
         );
 
+        let fds = init_fds();
+        let working_dir = String::from("/");
+        let page_table = vm_setup(program, program_size, stack, stack_size);
+        let state = ThreadState::Running(ThreadContext {
+            pc: 0,
+            sp: 0xFFFF_FFFF_FFF0,
+            ..ThreadContext::default()
+        });
+
+        *current_thread = Thread {
+            program,
+            program_size,
+            stack,
+            stack_size,
+            state,
+            fds,
+            working_dir,
+            page_table,
+            ..current_thread.clone()
+        };
+
+        // Clear TLB and switch to new page table
         asm!(
             "dsb ish",
             "msr ttbr0_el1, {PGD_addr}",
@@ -655,12 +696,6 @@ pub fn exec(program_name: String, program_args: Vec<String>) {
             PGD_addr = in(reg) current_thread.page_table
         );
     }
-
-    current_thread.state = ThreadState::Running(ThreadContext {
-        pc: 0,
-        sp: 0xFFFF_FFFF_FFF0,
-        ..ThreadContext::default()
-    });
 }
 
 pub fn kill(id: usize) {
@@ -695,7 +730,7 @@ pub fn switch_to_thread(id: Option<usize>, trap_frame_ptr: *mut u64) {
     };
 
     assert!(matches!(target_thread.state, ThreadState::Running(_)));
-    
+
     unsafe {
         asm!(
             "dsb ish",
@@ -706,6 +741,51 @@ pub fn switch_to_thread(id: Option<usize>, trap_frame_ptr: *mut u64) {
             PGD_addr = in(reg) target_thread.page_table
         );
     }
-    
+
     restore_context(trap_frame_ptr);
+}
+
+pub fn get_working_dir(id: usize) -> Option<String> {
+    let threads = unsafe { THREADS.as_ref().unwrap() };
+
+    threads
+        .iter()
+        .find(|thread| thread.id == id)
+        .map(|thread| thread.get_working_dir().clone())
+}
+
+pub fn set_working_dir(id: usize, working_dir: String) {
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+
+    let target_thread = threads
+        .iter_mut()
+        .find(|thread| thread.id == id)
+        .expect("Thread not found");
+
+    target_thread.set_working_dir(working_dir);
+}
+
+pub fn get_fd(pid: usize, fd: usize) -> Option<usize> {
+    let threads = unsafe { THREADS.as_ref().unwrap() };
+
+    let fds = threads
+        .iter()
+        .find(|thread| thread.id == pid)
+        .map(|thread| &thread.fds).unwrap();
+
+    fds.get(&fd).copied()
+}
+
+pub fn add_fd(pid: usize, file_handle: usize) -> usize {
+    let threads = unsafe { THREADS.as_mut().unwrap() };
+
+    let target_thread = threads
+        .iter_mut()
+        .find(|thread| thread.id == pid)
+        .expect("Thread not found");
+
+    let new_fd = target_thread.fds.len();
+    target_thread.fds.insert(new_fd, file_handle);
+
+    new_fd
 }

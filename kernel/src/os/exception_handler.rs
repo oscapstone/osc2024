@@ -42,10 +42,15 @@ unsafe extern "C" fn svc_handler_rust(trap_frame_ptr: *mut u64) {
     let esr_el1: u64;
     let elr_el1: u64;
     let sp_el0: u64;
+    let sp_el1: u64;
+
     asm!("mrs {esr_el1}, esr_el1", esr_el1 = out(reg) esr_el1);
     asm!("mrs {elr_el1}, elr_el1", elr_el1 = out(reg) elr_el1);
     asm!("mrs {sp_el0}, sp_el0", sp_el0 = out(reg) sp_el0);
+    asm!("mrs {sp_el1}, sp_el1", sp_el1 = out(reg) sp_el1);
     thread::TRAP_FRAME_PTR = Some(trap_frame_ptr);
+
+    assert_eq!(elr_el1, trap_frame::get(trap_frame_ptr, trap_frame::Register::PC), "ELR_EL1 and PC mismatch");
 
     // println!("ESR_EL1: {:08x}", esr_el1);
     // println!("ELR_EL1: {:08x}", elr_el1);
@@ -62,6 +67,13 @@ unsafe extern "C" fn svc_handler_rust(trap_frame_ptr: *mut u64) {
             5 => system_call::exit(trap_frame_ptr),
             6 => system_call::mailbox_call(trap_frame_ptr),
             7 => system_call::kill(trap_frame_ptr),
+            11 => system_call::open(trap_frame_ptr),
+            12 => system_call::close(trap_frame_ptr),
+            13 => system_call::write(trap_frame_ptr),
+            14 => system_call::read(trap_frame_ptr),
+            15 => system_call::mkdir(trap_frame_ptr),
+            16 => system_call::mount(trap_frame_ptr),
+            17 => system_call::chdir(trap_frame_ptr),
             _ => panic!("Unknown system call number: {}", system_call_num),
         }
         // println!("System call number: {}", system_call_num);
@@ -70,6 +82,7 @@ unsafe extern "C" fn svc_handler_rust(trap_frame_ptr: *mut u64) {
         println_now(format!("ESR_EL1: {:08x}", esr_el1).as_str());
         println_now(format!("ELR_EL1: {:08x}", elr_el1).as_str());
         println_now(format!("SP_EL0: {:08x}", sp_el0).as_str());
+        println_now(format!("SP_EL1: {:08x}", sp_el1).as_str());
         panic!();
     }
 

@@ -3,6 +3,7 @@ use crate::os::stdio::{print_hex_now, println_now};
 use crate::os::{allocator, shell, thread, timer};
 use crate::println;
 use core::arch::{asm, global_asm};
+use crate::os::file_system::{vfs, tmpfs, initramfs};
 
 global_asm!(include_str!("boot.s"));
 
@@ -25,9 +26,14 @@ pub unsafe fn _start_rust() {
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
 
+    vfs::register_fs(tmpfs::init());
+    vfs::mount("tmpfs", "/");
+    vfs::register_fs(initramfs::init());
+    vfs::mount("initramfs", "/initramfs/");
+
     let dt = DeviceTree::init();
 
-    println_now("Device tree initialized");
+    // println_now("Device tree initialized");
 
     let initrd_start = match dt.get("linux,initrd-start") {
         Some(v) => {
@@ -46,7 +52,7 @@ pub unsafe fn _start_rust() {
     };
     // let initrd_start = 0x8000000;
 
-    println_now("before print information");
+    // println_now("before print information");
 
     print_information();
 
@@ -62,5 +68,5 @@ fn print_information() {
     let memory = mailbox::get(mailbox::MailboxTag::GetArmMemory);
     println!("Memory base: {:#010X}", memory.0);
     println!("Memory size: {:#010X}", memory.1);
-    println!("Boot time: {} ms", timer::get_time_ms());
+    // println!("Boot time: {} ms", timer::get_time_ms());
 }

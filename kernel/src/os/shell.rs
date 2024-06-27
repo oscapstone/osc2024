@@ -13,6 +13,8 @@ fn print_time(time: u64) {
 }
 
 pub static mut INITRAMFS: Option<cpio::CpioArchive> = None;
+pub static mut PATH: String = String::new();
+pub static mut OPENED_FILE: Option<(String, usize)> = None;
 
 fn push_all_commands(commands: &mut Vec<commands::command>) {
     commands.push(commands::command::new(
@@ -60,6 +62,45 @@ fn push_all_commands(commands: &mut Vec<commands::command>) {
         "Print current exception level",
         commands::current_el,
     ));
+    commands.push(commands::command::new(
+        "cd",
+        "change directory",
+        commands::change_directory,
+    ));
+    commands.push(commands::command::new(
+        "mkdir",
+        "make directory",
+        commands::make_directory,
+    ));
+    commands.push(commands::command::new(
+        "touch",
+        "create file",
+        commands::touch,
+    ));
+    commands.push(commands::command::new(
+        "open",
+        "open a file",
+        commands::open,
+    ));
+    commands.push(commands::command::new(
+        "close",
+        "close opened file",
+        commands::close,
+    ));
+    commands.push(commands::command::new(
+        "read",
+        "read from a file",
+        commands::read,
+    ));
+}
+
+fn print_prompt(input_buffer: &String) {
+    unsafe {
+        if OPENED_FILE.is_some() {
+            print!("[{}] ", OPENED_FILE.clone().unwrap().0);
+        }
+        print!("{} > {}", PATH.clone(), input_buffer);
+    }
 }
 
 fn get_input(commands: &Vec<commands::command>) -> String {
@@ -123,8 +164,7 @@ fn get_input(commands: &Vec<commands::command>) -> String {
                                 width = padding
                             );
                         }
-                        print!("> ");
-                        print!("{}", input_buffer);
+                        print_prompt(&input_buffer);
                     }
                 }
                 127 => {
@@ -145,6 +185,8 @@ fn get_input(commands: &Vec<commands::command>) -> String {
 pub fn start(initrd_start: u64) {
     unsafe {
         INITRAMFS = Some(cpio::CpioArchive::load(initrd_start as *const u8));
+        PATH = String::from("/");
+        OPENED_FILE = None;
     }
 
     let mut commands = Vec::new();
@@ -152,7 +194,7 @@ pub fn start(initrd_start: u64) {
     commands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 
     'shell: loop {
-        print!("> ");
+        print_prompt(&String::new());
 
         let input = get_input(&commands);
         let mut input = input.split_whitespace();
