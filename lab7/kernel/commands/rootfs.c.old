@@ -1,0 +1,43 @@
+#include <kernel/commands.h>
+#include <kernel/fs/vfs.h>
+#include <kernel/sched.h>
+#include <kernel/io.h>
+
+static void rootfs_ls(int argc, char** argv) {
+    char *pathname;
+    if (argc == 1) {
+        pathname = get_current()->cwd;
+    } else if (argc == 2) {
+        pathname = argv[1];
+    } else {
+        puts("\nUsage: ls [path]");
+        return;
+    }
+
+    struct vnode* vnode;
+    int ret = vfs_lookup(pathname, &vnode);
+
+    if (ret != 0) {
+        puts("\r\n[ERROR] Cannot find the directory");
+        return;
+    }
+    if (vnode->mount != NULL) {  // check if it is a mount point
+        ret = vnode->mount->root->v_ops->list(vnode->mount->root);
+    } else {
+        ret = vnode->v_ops->list(vnode);
+    }
+    if (ret != 0) {
+        puts("\r\n[ERROR] Cannot list the directory");
+        return;
+    }
+}
+
+command_t rootfs_ls_command = {
+    .name = "ls",
+    .function = rootfs_ls,
+    .description = "List files in the root filesystem",
+} command_t rootfs_cat_command;
+command_t rootfs_mkdir_command;
+command_t rootfs_cd_command;
+command_t rootfs_cwd_command;
+command_t rootfs_touch_command;
