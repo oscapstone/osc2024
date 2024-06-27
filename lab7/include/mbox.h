@@ -1,7 +1,7 @@
 #ifndef _MBOX_H_
 #define _MBOX_H_
 
-extern volatile unsigned int pt[64];
+extern volatile unsigned int pt[36];
 
 // Mailbox Register MMIO
 // https://jsandler18.github.io/extra/mailbox.html
@@ -25,7 +25,7 @@ typedef enum {
 // Status Code from Broadcom Videocode Driver
 // brcm_usrlib/dag/vmcsx/vcinclude/bcm2708_chip/arm_control.h
 enum mbox_status_reg_bits {
-    BCM_ARM_VC_MS_FULL  = 0x80000000,
+    BCM_ARM_VC_MS_FULL = 0x80000000,
     BCM_ARM_VC_MS_EMPTY = 0x40000000,
     BCM_ARM_VC_MS_LEVEL = 0x400000FF,
 };
@@ -33,7 +33,7 @@ enum mbox_status_reg_bits {
 enum mbox_buffer_status_code {
     MBOX_REQUEST_PROCESS = 0x00000000,
     MBOX_REQUEST_SUCCEED = 0x80000000,
-    MBOX_REQUEST_FAILED  = 0x80000001,
+    MBOX_REQUEST_FAILED = 0x80000001,
 };
 
 // Tag
@@ -54,9 +54,8 @@ typedef enum {
 
 } mbox_tag_type;
 
-
 #define MBOX_TAG_REQUEST_CODE 0x00000000
-#define MBOX_TAG_LAST_BYTE    0x00000000
+#define MBOX_TAG_LAST_BYTE 0x00000000
 
 int mbox_call(mbox_channel_type, unsigned int);
 

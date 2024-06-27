@@ -1,5 +1,6 @@
 #include "exception.h"
 #include "bcm2837/rpi_uart1.h"
+#include "dev_framebuffer.h"
 #include "irqtask.h"
 #include "sched.h"
 #include "signal.h"
@@ -63,6 +64,12 @@ void sync_64_router(trapframe_t *tpf)
     case 17:
         chdir(tpf, (char *)tpf->x0);
         break;
+    case 18:
+        lseek64(tpf, tpf->x0, tpf->x1, tpf->x2);
+        break;
+    case 19:
+        ioctl(tpf, tpf->x0, tpf->x1, (void *)tpf->x2);
+        break;
     case 50:
         sigreturn(tpf);
         break;
@@ -93,12 +100,16 @@ void irq_router(trapframe_t *tpf)
         irqtask_run_preemptive();
         core_timer_enable();
 
+        el1_interrupt_disable();
+
         if (run_queue->next->next != run_queue)
             schedule();
     }
     if ((tpf->spsr_el1 & 0b1100) == 0) {
         check_signal(tpf);
     }
+
+    el1_interrupt_disable();
 }
 
 static unsigned long long lock_count = 0;

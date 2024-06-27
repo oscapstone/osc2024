@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "cpio.h"
+#include "dev_framebuffer.h"
 #include "exception.h"
 #include "mbox.h"
 #include "memory.h"
@@ -293,4 +294,35 @@ int chdir(trapframe_t *tpf, const char *path)
 
     // tpf->x0 = 0;
     return 0;
+}
+
+long lseek64(trapframe_t *tpf, int fd, long offset, int whence)
+{
+    if (whence == SEEK_SET) {
+        curr_thread->FDT[fd]->f_pos = offset;
+        tpf->x0 = offset;
+    }
+    else {
+        tpf->x0 = -1;
+    }
+
+    return tpf->x0;
+}
+
+extern unsigned int height;
+extern unsigned int isrgb;
+extern unsigned int pitch;
+extern unsigned int width;
+int ioctl(trapframe_t *tpf, int fb, unsigned long request, void *info)
+{
+    if (request == 0) {
+        struct framebuffer_info *fb_info = info;
+        fb_info->height = height;
+        fb_info->isrgb = isrgb;
+        fb_info->pitch = pitch;
+        fb_info->width = width;
+    }
+
+    tpf->x0 = 0;
+    return tpf->x0;
 }

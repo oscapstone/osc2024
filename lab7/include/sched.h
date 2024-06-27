@@ -52,7 +52,7 @@ typedef struct thread {
 
     // vfs
     char cur_working_dir[MAX_PATH_NAME + 1];
-    struct file *FDT[MAX_FD]; // file descriptor table
+    struct file *FDT[MAX_FD + 1]; // file descriptor table
 } thread_t;
 
 extern thread_t *curr_thread;

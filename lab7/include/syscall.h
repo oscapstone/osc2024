@@ -24,6 +24,8 @@ long read(trapframe_t *tpf, int fd, void *buf, unsigned long count);
 int mkdir(trapframe_t *tpf, const char *pathname, unsigned mode);
 int mount(trapframe_t *tpf, const char *src, const char *target, const char *filesystem, unsigned long flags, const void *data);
 int chdir(trapframe_t *tpf, const char *path);
+long lseek64(trapframe_t *tpf, int fd, long offset, int whence);
+int ioctl(trapframe_t *tpd, int fd, unsigned long request, void *info);
 
 unsigned int get_file_size(char *thefilepath);
 char *get_file_start(char *thefilepath);

@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "dev_framebuffer.h"
 #include "dev_uart.h"
 #include "initramfs.h"
 #include "memory.h"
@@ -143,7 +144,7 @@ int vfs_lookup(const char *pathname, struct vnode **target)
                 return -1;
 
             // redirect to new mounted filesystem
-            if (dirnode->mount)
+            while (dirnode->mount)
                 dirnode = dirnode->mount->root;
         }
         else {
@@ -157,7 +158,7 @@ int vfs_lookup(const char *pathname, struct vnode **target)
         return -1;
 
     // redirect to new mounted filesystem
-    if (dirnode->mount)
+    while (dirnode->mount)
         dirnode = dirnode->mount->root;
 
     *target = dirnode;
@@ -180,6 +181,10 @@ void init_rootfs()
     vfs_mkdir("/dev");
     int uart_id = init_dev_uart();
     vfs_mknod("/dev/uart", uart_id);
+
+    // framebuffer
+    int fb_id = init_dev_framebuffer();
+    vfs_mknod("/dev/framebuffer", fb_id);
 }
 
 char *get_abs_path(char *path, char *cur_working_dir)

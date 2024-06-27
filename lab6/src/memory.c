@@ -15,7 +15,7 @@ extern char _stack_end;
 extern char _stack_top;
 
 #ifdef DEBUG
-#define memory_sendline(fmt, args...) uart_sendline(fmt, ##args)
+#define memory_sendline(fmt, args...) uart_printf(fmt, ##args)
 #else
 #define memory_sendline(fmt, args...) (void)0
 #endif
@@ -91,7 +91,7 @@ void init_allocator()
     */
     memory_sendline("\r\n* Startup Allocation *\r\n");
     memory_sendline("buddy system: usable memory region: 0x%x ~ 0x%x\n", BUDDY_MEMORY_BASE, BUDDY_MEMORY_BASE + BUDDY_MEMORY_PAGE_COUNT * PAGESIZE);
-    dtb_find_and_store_reserved_memory(); // find spin tables in dtb
+    // dtb_find_and_store_reserved_memory(); // find spin tables in dtb
     memory_reserve(PHYS_TO_VIRT(MMU_PGD_ADDR),
                    PHYS_TO_VIRT(MMU_PTE_ADDR + 0x2000)); // // PGD's page frame at 0x1000 // PUD's page frame at 0x2000 PMD 0x3000-0x5000
     memory_reserve((unsigned long long)&_kernel_start, (unsigned long long)&_kernel_end); // kernel

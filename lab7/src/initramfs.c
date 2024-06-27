@@ -30,7 +30,7 @@ int register_initramfs()
 int initramfs_setup_mount(struct filesystem *fs, struct mount *_mount)
 {
     _mount->fs = fs;
-    _mount->root = initramfs_create_vnode(_mount, TMPFS_DIR);
+    _mount->root = initramfs_create_vnode(0, TMPFS_DIR);
 
     struct initramfs_inode *ramdir_inode = _mount->root->internal; // root inode
 

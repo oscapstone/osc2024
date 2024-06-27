@@ -60,6 +60,13 @@ void kill_zombies()
             kfree(((thread_t *)curr)->kernel_stack_alloced_ptr); // free stack
             free_page_tables(((thread_t *)curr)->context.pgd, 0);
             kfree(((thread_t *)curr)->data); // free data (don't free data because of fork)
+
+            for (int i = 0; i < MAX_FD; i++) {
+                if (((thread_t *)curr)->FDT[i]) {
+                    vfs_close(((thread_t *)curr)->FDT[i]);
+                }
+            }
+
             ((thread_t *)curr)->iszombie = 0;
             ((thread_t *)curr)->isused = 0;
         }
