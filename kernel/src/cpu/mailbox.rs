@@ -3,11 +3,12 @@ use core::{
     ptr::{read_volatile, write_volatile},
     usize,
 };
+use alloc::format;
 
-const MAILBOX_BASE: u32 = 0x3F00_B880;
-const MAILBOX_READ: u32 = MAILBOX_BASE + 0x00;
-const MAILBOX_STATUS: u32 = MAILBOX_BASE + 0x18;
-const MAILBOX_WRITE: u32 = MAILBOX_BASE + 0x20;
+const MAILBOX_BASE: usize = 0xFFFF_0000_3F00_B880;
+const MAILBOX_READ: usize = MAILBOX_BASE + 0x00;
+const MAILBOX_STATUS: usize = MAILBOX_BASE + 0x18;
+const MAILBOX_WRITE: usize = MAILBOX_BASE + 0x20;
 
 const MAILBOX_EMPTY: u32 = 0x4000_0000;
 const MAILBOX_FULL: u32 = 0x8000_0000;
@@ -27,8 +28,11 @@ pub enum MailboxTag {
 
 #[inline(never)]
 pub fn mailbox_call(channel: u8, mailbox: *mut u32) {
-    let mut mailbox_addr = mailbox as u32;
+    let mut mailbox_addr = mailbox.mask(0xFFFF_FFFF) as u32;
     mailbox_addr = mailbox_addr & !0xF | (channel as u32 & 0xF);
+
+    // println_now(format!("MBOX_ADDR {:x}", mailbox as usize).as_str());
+    // println_now(format!("MBOX_ADDR {:x}", mailbox_addr).as_str());
 
     unsafe {
         while (read_volatile(MAILBOX_STATUS as *const u32) & MAILBOX_FULL) != 0 {}
@@ -61,6 +65,8 @@ pub fn get(tag: MailboxTag) -> (u32, u32) {
     unsafe {
         let mailbox_ptr = mailbox.as_mut_ptr().add(start_idx);
 
+        // println_now(format!("MBOX_ADDR {:x}", mailbox_ptr as usize).as_str());
+
         match tag {
             MailboxTag::GetBoardRevision => {
                 write_volatile(mailbox_ptr.add(0), 7 * 4); // buffer size in bytes
@@ -77,7 +83,7 @@ pub fn get(tag: MailboxTag) -> (u32, u32) {
         write_volatile(mailbox_ptr.add(5), 0); // value buffer
         write_volatile(mailbox_ptr.add(6), END_TAG);
 
-        mailbox_call(8, mailbox.as_mut_ptr().add(start_idx) as *mut u32);
+        mailbox_call(8, mailbox_ptr);
     }
 
     match tag {

@@ -2,8 +2,8 @@ use crate::cpu::{device_tree::DeviceTree, mailbox, uart};
 use crate::os::stdio::{print_hex_now, println_now};
 use crate::os::{allocator, shell, thread, timer};
 use crate::println;
-use alloc::boxed::Box;
 use core::arch::{asm, global_asm};
+use crate::os::file_system::{vfs, tmpfs, initramfs};
 
 global_asm!(include_str!("boot.s"));
 
@@ -13,21 +13,27 @@ pub unsafe fn _start_rust() {
     timer::init();
     thread::init();
     allocator::init();
-    allocator::reserve(0x0000_0000 as *mut u8, 0x0000_1000); // Device reserved memory
-    allocator::reserve(0x0003_0000 as *mut u8, 0x0004_0000); // Stack
-    allocator::reserve(0x0007_5000 as *mut u8, 0x0000_0004); // CS counter
-    allocator::reserve(0x0007_5100 as *mut u8, 0x0000_0004); // device tree address
-    allocator::reserve(0x0008_0000 as *mut u8, 0x0008_0000); // Code
-    allocator::reserve(0x0800_0000 as *mut u8, 0x0010_0000); // Initramfs
+    allocator::reserve(0xFFFF_0000_0000_2000 as *mut u8, 0x3000);
+    allocator::reserve(0xFFFF_0000_0000_0000 as *mut u8, 0x0000_1000); // Device reserved memory
+    allocator::reserve(0xFFFF_0000_0003_0000 as *mut u8, 0x0004_0000); // Stack
+    allocator::reserve(0xFFFF_0000_0007_5000 as *mut u8, 0x0000_0004); // CS counter
+    allocator::reserve(0xFFFF_0000_0007_5100 as *mut u8, 0x0000_0004); // device tree address
+    allocator::reserve(0xFFFF_0000_0008_0000 as *mut u8, 0x0008_0000); // Code
+    allocator::reserve(0xFFFF_0000_0800_0000 as *mut u8, 0x0010_0000); // Initramfs
     allocator::reserve(DeviceTree::get_address(), 0x0100_0000); // Device Tree
-    allocator::reserve(0x0880_0000 as *mut u8, 0x0780_0000); // Simple Allocator
-
+    allocator::reserve(0xFFFF_0000_0880_0000 as *mut u8, 0x0780_0000); // Simple Allocator
+    
     // Enable interrupts
     asm!("msr DAIFClr, 0xf");
 
+    vfs::register_fs(tmpfs::init());
+    vfs::mount("tmpfs", "/");
+    vfs::register_fs(initramfs::init());
+    vfs::mount("initramfs", "/initramfs/");
+
     let dt = DeviceTree::init();
 
-    println_now("Device tree initialized");
+    // println_now("Device tree initialized");
 
     let initrd_start = match dt.get("linux,initrd-start") {
         Some(v) => {
@@ -37,7 +43,7 @@ pub unsafe fn _start_rust() {
             }
             val = val.swap_bytes();
             println!("Initrd start address: {:#X}", val);
-            val
+            val as u64 + 0xFFFF_0000_0000_0000
         }
         None => {
             println!("No initrd");
@@ -46,12 +52,13 @@ pub unsafe fn _start_rust() {
     };
     // let initrd_start = 0x8000000;
 
-    println_now("before print information");
+    // println_now("before print information");
 
     print_information();
 
     shell::start(initrd_start);
-    loop {}
+
+    panic!("Shell stoped.");
 }
 
 fn print_information() {
@@ -61,5 +68,5 @@ fn print_information() {
     let memory = mailbox::get(mailbox::MailboxTag::GetArmMemory);
     println!("Memory base: {:#010X}", memory.0);
     println!("Memory size: {:#010X}", memory.1);
-    println!("Boot time: {} ms", timer::get_time_ms());
+    // println!("Boot time: {} ms", timer::get_time_ms());
 }

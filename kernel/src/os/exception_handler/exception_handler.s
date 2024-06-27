@@ -87,9 +87,15 @@ exception_vector_table:
     add sp, sp, 36 * 8
 .endm
 
-# Dummy handlers
+// Dummy handlers
 .global exception_handler
-exception_handler:
+    exception_handler:
+    save_all
+    bl disable_irq
+    mov x0, sp
+    bl exception_handler_rust
+    bl enable_irq
+    load_all
     eret
 
 .global irq_handler

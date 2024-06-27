@@ -112,7 +112,7 @@ impl Default for DeviceTree {
 }
 
 impl DeviceTree {
-    const DEVICE_TREE_ADDRESS: *const u32 = 0x75100 as *const u32;
+    const DEVICE_TREE_ADDRESS: *const u64 = 0x75100 as *const u64;
     const FDT_BEGIN_NODE: u32 = 0x00000001;
     const FDT_END_NODE: u32 = 0x00000002;
     const FDT_PROP: u32 = 0x00000003;
@@ -124,12 +124,12 @@ impl DeviceTree {
     }
 
     pub fn get_address() -> *mut u8 {
-        unsafe { *(DeviceTree::DEVICE_TREE_ADDRESS) as *mut u8 }
+        (unsafe { *(DeviceTree::DEVICE_TREE_ADDRESS) } | 0xFFFF_0000_0000_0000) as *mut u8
     }
 
     pub fn init() -> DeviceTree {
         let mut ret = DeviceTree {
-            device_tree_ptr: unsafe { *(DeviceTree::DEVICE_TREE_ADDRESS) } as *const u8,
+            device_tree_ptr: DeviceTree::get_address(),
             ..Default::default()
         };
 
@@ -194,9 +194,9 @@ impl DeviceTree {
     }
 
     fn construct_node(&self, now_node: &mut Node, offset: usize, depth: u32) -> usize {
-        // println("Constructing node");
-        // print_dec(offset as u32);
-        // print_dec(depth);
+        // println_now("Constructing node");
+        // print_hex_now(offset as u32);
+        // print_hex_now(depth);
         let mut i = offset;
         loop {
             // unsafe {

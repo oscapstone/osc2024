@@ -3,6 +3,8 @@ use crate::println;
 use crate::os::stdio::*;
 use alloc::vec::Vec;
 
+use alloc::format;
+
 #[allow(dead_code)]
 pub enum CpioHeaderField {
     Magic,
@@ -36,7 +38,7 @@ impl CpioArchive {
         let mut files = Vec::new();
         let mut current_ptr = self.header_ptr;
         loop {
-            files.push(self.get_file_name(current_ptr));
+            files.push(self.get_file_name(current_ptr).trim_end_matches('\0'));
 
             match self.get_next_file_ptr(current_ptr) {
                 Some(ptr) => current_ptr = ptr,
@@ -73,7 +75,7 @@ impl CpioArchive {
                 None => break,
             }
         }
-        println("File not found");
+        println("CPIO: File not found");
     }
 
     pub fn get_filesize_by_name(&self, filename: &str) -> Option<u32> {
@@ -83,18 +85,21 @@ impl CpioArchive {
         }
     }
 
-    pub fn load_file_to_memory(&self, filename: &str, addr: *mut u8) -> bool {
+    pub fn load_file_to_memory(&self, filename: &str, addr: *mut u8, offset: usize, len: usize) -> usize {
         println!("Loading file to memory: {:X?}", addr as u64);
         match self.get_file_content_by_name(filename) {
             Some(content) => {
-                unsafe {
-                    for i in 0..content.len() {
-                        core::ptr::write(addr.add(i), content[i]);
-                    }
+                if content.len() < offset + len {
+                    return 0;
                 }
-                true
+
+                let len = core::cmp::min(len, content.len() - offset);
+                unsafe {
+                    addr.copy_from(content.as_ptr().add(offset), len);
+                }
+                len
             }
-            None => false,
+            None => 0,
         }
     }
 

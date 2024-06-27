@@ -1,6 +1,8 @@
 .section .text._start
 
-_stack_start    = 0x70000
+_STACK_START                = 0xffff000000070000
+_CS_COUNTER_ADDRESS         = 0x75000
+_DEVICE_TREE_ADDRESS        = 0x75100
 
 .global _start
 .global _bss_start
@@ -12,23 +14,35 @@ _stack_start    = 0x70000
 .endm
 
 _start:
-    # Store the address of the device tree
-    # Should be removed when building for a real hardware
-    ldr x1, =0x75100
+    ldr x1, =_DEVICE_TREE_ADDRESS
     str x0, [x1]
 
-    mrs x0, mpidr_el1
-    cbz x0, .L_parking_loop
+    // Clear CS counter
+    ldr x0, =_CS_COUNTER_ADDRESS
+    str xzr, [x0]
 
-    # Initailize stack pointer
-    ldr x0, =_stack_start
+    // Change EL
+    bl .from_el2_to_el1
+
+    mrs x0, CurrentEL
+    cmp x0, #0x4 // Check if we are in EL1
+    bne .from_el2_to_el1
+
+    // Initailize stack pointer
+    ldr x0, =0x70000
     mov sp, x0
 
-    # CS counter
-    ldr x0, =0x75000
-    str xzr, [x0]
+    bl setup_mmu
+
+    ldr x1, = boot_rest // indirect branch to the virtual address
+    br x1
+
+boot_rest:
+    // Initailize stack pointer
+    ldr x0, =_STACK_START
+    mov sp, x0
     
-    # Initialize bss
+    // Initialize bss
     ADR_REL x0, _bss_start
     ADR_REL x1, _bss_end
 .L_clear_bss:
@@ -38,17 +52,11 @@ _start:
     b .L_clear_bss
 .L_done_clearing:
 
-    bl .from_el2_to_el1
-
-    mrs x0, CurrentEL
-    cmp x0, #0x4 // Check if we are in EL1
-    bne .from_el2_to_el1
-
-.set_exception_vector_table:
+    // Initialize exception vector table
     adr x0, exception_vector_table
     msr vbar_el1, x0
 
-    # Call rust main function
+    // Call rust main function
     b   _start_rust
 
 .from_el2_to_el1:
@@ -60,10 +68,6 @@ _start:
     mov x0, sp
     msr sp_el1, x0
     eret // return to EL1
-
-.L_parking_loop:
-    wfe
-    b   .L_parking_loop
 
 .size	_start, . - _start
 .type	_start, function

@@ -1,11 +1,7 @@
 use super::file_system::cpio;
-use super::stdio::{get_line, print, print_hex_now, println_now};
 use crate::cpu::uart::recv_async;
-use crate::os::timer;
 use crate::println;
-use alloc::boxed::Box;
 use alloc::string::{String, ToString};
-use core::arch::asm;
 pub mod commands;
 use alloc::vec::Vec;
 
@@ -17,6 +13,8 @@ fn print_time(time: u64) {
 }
 
 pub static mut INITRAMFS: Option<cpio::CpioArchive> = None;
+pub static mut PATH: String = String::new();
+pub static mut OPENED_FILE: Option<(String, usize)> = None;
 
 fn push_all_commands(commands: &mut Vec<commands::command>) {
     commands.push(commands::command::new(
@@ -64,6 +62,45 @@ fn push_all_commands(commands: &mut Vec<commands::command>) {
         "Print current exception level",
         commands::current_el,
     ));
+    commands.push(commands::command::new(
+        "cd",
+        "change directory",
+        commands::change_directory,
+    ));
+    commands.push(commands::command::new(
+        "mkdir",
+        "make directory",
+        commands::make_directory,
+    ));
+    commands.push(commands::command::new(
+        "touch",
+        "create file",
+        commands::touch,
+    ));
+    commands.push(commands::command::new(
+        "open",
+        "open a file",
+        commands::open,
+    ));
+    commands.push(commands::command::new(
+        "close",
+        "close opened file",
+        commands::close,
+    ));
+    commands.push(commands::command::new(
+        "read",
+        "read from a file",
+        commands::read,
+    ));
+}
+
+fn print_prompt(input_buffer: &String) {
+    unsafe {
+        if OPENED_FILE.is_some() {
+            print!("[{}] ", OPENED_FILE.clone().unwrap().0);
+        }
+        print!("{} > {}", PATH.clone(), input_buffer);
+    }
 }
 
 fn get_input(commands: &Vec<commands::command>) -> String {
@@ -71,70 +108,85 @@ fn get_input(commands: &Vec<commands::command>) -> String {
 
     loop {
         if let Some(c) = unsafe { recv_async() } {
-            if c == b'\r' {
-                println!("");
-                break input_buffer;
-            } else if c == b'\t' {
-                let mut matched_commands = Vec::new();
-                for command in commands.iter() {
-                    let name = command.get_name();
-                    if name.starts_with(input_buffer.as_str()) {
-                        matched_commands.push(command);
-                    }
+            match c {
+                b'\r' => {
+                    println!("");
+                    break input_buffer;
                 }
-
-                if matched_commands.len() == 1 {
-                    let match_name = matched_commands[0].get_name();
-                    let match_name_remaining = &match_name[input_buffer.len()..];
-                    input_buffer.push_str(match_name_remaining);
-                    input_buffer.push(' ');
-                    print!("{} ", match_name_remaining);
-                } else {
-                    if matched_commands.len() > 1 {
-                        // find the common prefix
-                        'prefix: for idx in input_buffer.len().. {
-                            match matched_commands[0].get_name().as_bytes().get(idx) {
-                                Some(c) => {
-                                    for cmd in &matched_commands {
-                                        if cmd.get_name().as_bytes().get(idx).unwrap_or(&0).clone()
-                                            != *c
-                                        {
-                                            break 'prefix;
-                                        }
-                                    }
-                                    input_buffer.push(*c as char);
-                                }
-                                None => break,
-                            }
+                b'\t' => {
+                    let mut matched_commands = Vec::new();
+                    for command in commands.iter() {
+                        let name = command.get_name();
+                        if name.starts_with(input_buffer.as_str()) {
+                            matched_commands.push(command);
                         }
                     }
 
-                    let padding = commands.iter().map(|cmd| cmd.get_name().len()).max().unwrap_or(0);
+                    if matched_commands.len() == 1 {
+                        let match_name = matched_commands[0].get_name();
+                        let match_name_remaining = &match_name[input_buffer.len()..];
+                        input_buffer.push_str(match_name_remaining);
+                        input_buffer.push(' ');
+                        print!("{} ", match_name_remaining);
+                    } else {
+                        if matched_commands.len() > 1 {
+                            // find the common prefix
+                            let first_command_name = matched_commands[0].get_name().as_bytes();
+                            for idx in input_buffer.len().. {
+                                if let Some(c) = first_command_name.get(idx) {
+                                    let all_command_matched = matched_commands.iter().all(|cmd| {
+                                        *cmd.get_name().as_bytes().get(idx).unwrap_or(&0) == *c
+                                    });
+                                    if !all_command_matched {
+                                        break;
+                                    }
 
-                    // print all matches
-                    println!("");
-                    for cmd in matched_commands.iter() {
-                        println!("{: <width$}: {}", cmd.get_name(), cmd.get_description(), width = padding);
+                                    input_buffer.push(*c as char);
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+
+                        let padding = commands
+                            .iter()
+                            .map(|cmd| cmd.get_name().len())
+                            .max()
+                            .unwrap_or(0);
+
+                        // print all matches
+                        println!("");
+                        for cmd in matched_commands.iter() {
+                            println!(
+                                "{: <width$}: {}",
+                                cmd.get_name(),
+                                cmd.get_description(),
+                                width = padding
+                            );
+                        }
+                        print_prompt(&input_buffer);
                     }
-                    print!("> ");
-                    print!("{}", input_buffer);
                 }
-            } else if c == 127 {
-                if !input_buffer.is_empty() {
-                    input_buffer.pop();
-                    print!("\x08 \x08");
+                127 => {
+                    if !input_buffer.is_empty() {
+                        input_buffer.pop();
+                        print!("\x08 \x08");
+                    }
                 }
-            } else {
-                input_buffer.push(c as char);
-                print!("{}", c as char);
+                c => {
+                    input_buffer.push(c as char);
+                    print!("{}", c as char);
+                }
             }
         }
     }
 }
 
-pub fn start(initrd_start: u32) {
+pub fn start(initrd_start: u64) {
     unsafe {
         INITRAMFS = Some(cpio::CpioArchive::load(initrd_start as *const u8));
+        PATH = String::from("/");
+        OPENED_FILE = None;
     }
 
     let mut commands = Vec::new();
@@ -142,10 +194,10 @@ pub fn start(initrd_start: u32) {
     commands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 
     'shell: loop {
-        print!("> ");
+        print_prompt(&String::new());
 
         let input = get_input(&commands);
-        let mut input = input.trim().split_whitespace();
+        let mut input = input.split_whitespace();
 
         let input_command = input.next().unwrap_or("");
         let input_args: Vec<&str> = input.collect();
@@ -158,9 +210,18 @@ pub fn start(initrd_start: u32) {
         };
 
         if input_command == "help" {
-            let padding = commands.iter().map(|cmd| cmd.get_name().len()).max().unwrap_or(0);
+            let padding = commands
+                .iter()
+                .map(|cmd| cmd.get_name().len())
+                .max()
+                .unwrap_or(0);
             for cmd in commands.iter() {
-                println!("{: <width$}: {}", cmd.get_name(), cmd.get_description(), width = padding);
+                println!(
+                    "{: <width$}: {}",
+                    cmd.get_name(),
+                    cmd.get_description(),
+                    width = padding
+                );
             }
             continue 'shell;
         }

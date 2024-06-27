@@ -2,8 +2,7 @@
 #![no_std]
 #![feature(allocator_api)]
 #![feature(btreemap_alloc)]
-#![allow(unused_variables)]
-#![allow(non_camel_case_types)]
+#![feature(ptr_mask)]
 
 mod cpu;
 mod os;
