@@ -1,7 +1,7 @@
 #include "boot.h"
 
 int main() {
-  uart_init();
+  init_uart();
   uart_puts("\033[2J\033[H");
   uart_puts(
       "UART Bootloader\n"

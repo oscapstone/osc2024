@@ -62,8 +62,9 @@ void initramfs_cat(const char *target) {
     strncpy(pathname, fptr + sizeof(cpio_t), namesize);
     if (!strcmp(target, pathname)) {
       // Print its content
-      char data[filesize];
+      char data[filesize + 1];
       strncpy(data, fptr + headsize, filesize);
+      data[filesize] = '\0';
       uart_puts(data);
       uart_putc('\n');
       return;
