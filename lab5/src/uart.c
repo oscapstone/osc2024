@@ -1,7 +1,5 @@
 #include "uart.h"
 
-#include <stdio.h>
-
 #include "irq.h"
 #include "mem.h"
 #include "str.h"
